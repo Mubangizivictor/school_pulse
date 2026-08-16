@@ -76,7 +76,8 @@ class SchoolCalendarBloc
     final result = await repository.upsertEvent(event.event);
     result.fold(
       (failure) => emit(SchoolCalendarError(failure.message)),
-      (_) => emit(const SchoolCalendarActionSuccess('Event saved')),
+      (id) =>
+          emit(SchoolCalendarActionSuccess('Event saved', savedEventId: id)),
     );
 
     add(
@@ -101,7 +102,11 @@ class SchoolCalendarBloc
       return;
     }
 
-    final result = await repository.deleteEvent(event.schoolId, event.eventId);
+    final result = await repository.deleteEvent(
+      event.schoolId,
+      event.eventId,
+      scope: event.scope,
+    );
     result.fold(
       (failure) => emit(SchoolCalendarError(failure.message)),
       (_) => emit(const SchoolCalendarActionSuccess('Event removed')),

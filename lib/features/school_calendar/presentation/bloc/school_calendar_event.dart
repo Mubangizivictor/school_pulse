@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import '../../domain/entities/calendar_event.dart';
+import '../../domain/entities/recurrence_rule.dart';
 
 abstract class SchoolCalendarEvent extends Equatable {
   const SchoolCalendarEvent();
@@ -39,13 +40,15 @@ class DeleteCalendarEventRequested extends SchoolCalendarEvent {
   final String schoolId;
   final String eventId;
   final UserEntity operatorUser;
+  final RecurrenceEditScope scope;
 
   const DeleteCalendarEventRequested({
     required this.schoolId,
     required this.eventId,
     required this.operatorUser,
+    this.scope = RecurrenceEditScope.allOccurrences,
   });
 
   @override
-  List<Object?> get props => [schoolId, eventId, operatorUser];
+  List<Object?> get props => [schoolId, eventId, operatorUser, scope];
 }

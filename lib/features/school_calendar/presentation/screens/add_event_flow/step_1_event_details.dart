@@ -40,16 +40,32 @@ class _Step1EventDetailsState extends State<Step1EventDetails> {
   Future<void> _pickDate({required bool isStart}) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: isStart
+          ? widget.draft.startDate ?? DateTime.now()
+          : widget.draft.endDate ?? widget.draft.startDate ?? DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
     if (picked == null) return;
     setState(() {
       if (isStart) {
-        widget.draft.startDate = picked;
+        final old = widget.draft.startDate;
+        widget.draft.startDate = DateTime(
+          picked.year,
+          picked.month,
+          picked.day,
+          old?.hour ?? 8,
+          old?.minute ?? 0,
+        );
       } else {
-        widget.draft.endDate = picked;
+        final old = widget.draft.endDate;
+        widget.draft.endDate = DateTime(
+          picked.year,
+          picked.month,
+          picked.day,
+          old?.hour ?? 17,
+          old?.minute ?? 0,
+        );
       }
     });
   }
@@ -60,7 +76,31 @@ class _Step1EventDetailsState extends State<Step1EventDetails> {
   bool get _isValid =>
       widget.draft.title.trim().isNotEmpty &&
       widget.draft.startDate != null &&
-      widget.draft.endDate != null;
+      widget.draft.endDate != null &&
+      !widget.draft.endDate!.isBefore(widget.draft.startDate!);
+
+  Future<void> _pickTime({required bool isStart}) async {
+    final date = isStart ? widget.draft.startDate : widget.draft.endDate;
+    if (date == null) return;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(date),
+    );
+    if (picked == null) return;
+    setState(() {
+      final changed = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        picked.hour,
+        picked.minute,
+      );
+      if (isStart)
+        widget.draft.startDate = changed;
+      else
+        widget.draft.endDate = changed;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +156,38 @@ class _Step1EventDetailsState extends State<Step1EventDetails> {
             ),
           ],
         ),
+        if (!widget.draft.allDay) ...[
+          const SizedBox(height: AppSpacing.l),
+          Row(
+            children: [
+              Expanded(
+                child: _DateField(
+                  label: 'Start Time',
+                  value: widget.draft.startDate == null
+                      ? 'Select time'
+                      : TimeOfDay.fromDateTime(
+                          widget.draft.startDate!,
+                        ).format(context),
+                  onTap: () => _pickTime(isStart: true),
+                  icon: Icons.access_time,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.m),
+              Expanded(
+                child: _DateField(
+                  label: 'End Time',
+                  value: widget.draft.endDate == null
+                      ? 'Select time'
+                      : TimeOfDay.fromDateTime(
+                          widget.draft.endDate!,
+                        ).format(context),
+                  onTap: () => _pickTime(isStart: false),
+                  icon: Icons.access_time,
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: AppSpacing.xl),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -155,11 +227,13 @@ class _DateField extends StatelessWidget {
   final String label;
   final String value;
   final VoidCallback onTap;
+  final IconData icon;
 
   const _DateField({
     required this.label,
     required this.value,
     required this.onTap,
+    this.icon = Icons.calendar_today,
   });
 
   @override
@@ -184,11 +258,7 @@ class _DateField extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(child: Text(value)),
-                Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: AppColors.textMuted(context),
-                ),
+                Icon(icon, size: 16, color: AppColors.textMuted(context)),
               ],
             ),
           ),

@@ -1,183 +1,277 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/design_system/theme/app_spacing.dart';
-import '../../../domain/entities/recurrence_rule.dart';
+import 'package:school_pulse/features/notifications/domain/services/notification_sender.dart';
+import '../../../data/calendar_attachments_uploader.dart';
 import 'add_event_draft.dart';
 
+/// Step two owns event context: category, location, organizer, audience and
+/// attachments. The filename is retained to avoid breaking callers while
+/// replacing the previous recurrence-only step.
 class Step2Recurrence extends StatefulWidget {
   final AddEventDraft draft;
   final VoidCallback onBack;
   final VoidCallback onNext;
-
   const Step2Recurrence({
     super.key,
     required this.draft,
     required this.onBack,
     required this.onNext,
   });
-
   @override
   State<Step2Recurrence> createState() => _Step2RecurrenceState();
 }
 
+const _audienceOptions = <NotificationAudienceKind, String>{
+  NotificationAudienceKind.school: 'All School',
+  NotificationAudienceKind.allStaff: 'Staff',
+  NotificationAudienceKind.allParents: 'Parents',
+  NotificationAudienceKind.studentParents: 'Students',
+  NotificationAudienceKind.roles: 'Specific Roles',
+};
+
+const _roleOptions = [
+  'Admin',
+  'Teacher',
+  'Class Teacher',
+  'Accountant',
+  'Librarian',
+  'Transport Officer',
+  'Nurse',
+  'Front Desk',
+];
+
 class _Step2RecurrenceState extends State<Step2Recurrence> {
-  static const _weekdayLabels = {
-    Weekday.monday: 'M',
-    Weekday.tuesday: 'T',
-    Weekday.wednesday: 'W',
-    Weekday.thursday: 'T',
-    Weekday.friday: 'F',
-    Weekday.saturday: 'S',
-    Weekday.sunday: 'S',
-  };
+  late final location = TextEditingController(text: widget.draft.location);
+  late final organizer = TextEditingController(text: widget.draft.organizer);
 
   @override
-  Widget build(BuildContext context) {
-    final draft = widget.draft;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Repeat this event',
-              style: TextStyle(color: AppColors.textPrimary(context)),
-            ),
-            Switch(
-              value: draft.repeats,
-              onChanged: (v) => setState(() => draft.repeats = v),
-            ),
-          ],
+  void dispose() {
+    location.dispose();
+    organizer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickAttachment() async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: CalendarAttachmentsUploader.allowedExtensions.toList(),
+      withData: false,
+    );
+    final file = result?.files.single;
+    if (file?.path == null) return;
+    final sizeBytes = file!.size;
+    if (sizeBytes > CalendarAttachmentsUploader.maxSizeBytes) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${file.name} is larger than 10 MB')),
+        );
+      }
+      return;
+    }
+    setState(() {
+      widget.draft.stagedAttachments.add(
+        StagedCalendarAttachment(
+          file: File(file.path!),
+          fileName: file.name,
+          sizeBytes: sizeBytes,
         ),
-        if (draft.repeats) ...[
-          const SizedBox(height: AppSpacing.xl),
-          Text(
-            'Repeat',
-            style: TextStyle(color: AppColors.textSecondary(context)),
-          ),
-          const SizedBox(height: AppSpacing.s),
-          DropdownButtonFormField<RecurrenceFrequency>(
-            initialValue: draft.frequency,
-            decoration: const InputDecoration(border: OutlineInputBorder()),
-            items: RecurrenceFrequency.values
-                .map(
-                  (f) => DropdownMenuItem(
-                    value: f,
-                    child: Text(
-                      'Every ${f.name[0].toUpperCase()}${f.name.substring(1)}',
-                    ),
-                  ),
-                )
-                .toList(),
-            onChanged: (v) => setState(() => draft.frequency = v!),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          Text(
-            'Repeats On',
-            style: TextStyle(color: AppColors.textSecondary(context)),
-          ),
-          const SizedBox(height: AppSpacing.s),
-          Wrap(
-            spacing: AppSpacing.s,
-            children: Weekday.values.map((w) {
-              final selected = draft.repeatsOn.contains(w);
-              return ChoiceChip(
-                label: Text(_weekdayLabels[w]!),
-                selected: selected,
-                onSelected: (v) => setState(() {
-                  if (v) {
-                    draft.repeatsOn.add(w);
-                  } else {
-                    draft.repeatsOn.remove(w);
-                  }
-                }),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          Text(
-            'Ends',
-            style: TextStyle(color: AppColors.textSecondary(context)),
-          ),
-          RadioGroup<RecurrenceEndType>(
-            groupValue: draft.endType,
-            onChanged: (v) => setState(() => draft.endType = v!),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RadioListTile<RecurrenceEndType>(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Never'),
-                  value: RecurrenceEndType.never,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _select(
+        'Category',
+        widget.draft.category,
+        ['Academic', 'Meeting', 'Activity', 'Sports', 'Other'],
+        (v) => setState(() => widget.draft.category = v ?? ''),
+      ),
+      const SizedBox(height: 18),
+      _field(
+        'Location',
+        'Enter location',
+        location,
+        (v) => widget.draft.location = v,
+      ),
+      const SizedBox(height: 18),
+      _field(
+        'Organized By',
+        'School Administration',
+        organizer,
+        (v) => widget.draft.organizer = v,
+      ),
+      const SizedBox(height: 18),
+      DropdownButtonFormField<NotificationAudienceKind>(
+        initialValue: widget.draft.audienceKind,
+        decoration: const InputDecoration(
+          labelText: 'Visible To',
+          border: OutlineInputBorder(),
+          isDense: true,
+        ),
+        items: _audienceOptions.entries
+            .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+            .toList(),
+        onChanged: (v) => setState(
+          () =>
+              widget.draft.audienceKind = v ?? NotificationAudienceKind.school,
+        ),
+      ),
+      if (widget.draft.audienceKind == NotificationAudienceKind.roles) ...[
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _roleOptions
+              .map(
+                (role) => FilterChip(
+                  label: Text(role),
+                  selected: widget.draft.audienceRoles.contains(role),
+                  onSelected: (selected) => setState(() {
+                    if (selected) {
+                      widget.draft.audienceRoles.add(role);
+                    } else {
+                      widget.draft.audienceRoles.remove(role);
+                    }
+                  }),
                 ),
-                RadioListTile<RecurrenceEndType>(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('On date'),
-                  value: RecurrenceEndType.onDate,
+              )
+              .toList(),
+        ),
+      ],
+      const SizedBox(height: 18),
+      Text(
+        'Attachments (Optional)',
+        style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+      ),
+      const SizedBox(height: 6),
+      InkWell(
+        onTap: _pickAttachment,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          height: 78,
+          width: double.infinity,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.border(context)),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.cloud_upload_outlined,
+                color: AppColors.primary(context),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Tap to attach a file (PDF, image, doc — up to 10 MB)',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textMuted(context),
                 ),
-                if (draft.endType == RecurrenceEndType.onDate)
-                  OutlinedButton(
-                    onPressed: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        setState(() => draft.recurrenceEndDate = picked);
-                      }
-                    },
-                    child: Text(
-                      draft.recurrenceEndDate == null
-                          ? 'Select date'
-                          : '${draft.recurrenceEndDate!.day}/${draft.recurrenceEndDate!.month}/${draft.recurrenceEndDate!.year}',
-                    ),
-                  ),
-                RadioListTile<RecurrenceEndType>(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('After'),
-                  value: RecurrenceEndType.afterOccurrences,
-                ),
-                if (draft.endType == RecurrenceEndType.afterOccurrences)
-                  TextFormField(
-                    initialValue: draft.occurrences > 0
-                        ? '${draft.occurrences}'
-                        : '',
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      suffixText: 'occurrences',
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (v) => setState(
-                      () => draft.occurrences = int.tryParse(v) ?? 0,
-                    ),
-                  ),
-              ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      if (widget.draft.existingAttachments.isNotEmpty ||
+          widget.draft.stagedAttachments.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        ...widget.draft.existingAttachments.map(
+          (a) => _AttachmentTile(
+            name: a.name,
+            onRemove: () =>
+                setState(() => widget.draft.existingAttachments.remove(a)),
+          ),
+        ),
+        ...widget.draft.stagedAttachments.map(
+          (a) => _AttachmentTile(
+            name: a.fileName,
+            onRemove: () =>
+                setState(() => widget.draft.stagedAttachments.remove(a)),
+          ),
+        ),
+      ],
+      const SizedBox(height: 30),
+      Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: widget.onBack,
+              child: const Text('Back'),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 2,
+            child: FilledButton(
+              onPressed: widget.onNext,
+              child: const Text('Next'),
             ),
           ),
         ],
-        const SizedBox(height: AppSpacing.x3l),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: widget.onBack,
-                child: const Text('Back'),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.m),
-            Expanded(
-              flex: 2,
-              child: FilledButton(
-                onPressed: widget.onNext,
-                child: const Text('Next'),
-              ),
-            ),
-          ],
+      ),
+    ],
+  );
+  Widget _field(
+    String label,
+    String hint,
+    TextEditingController controller,
+    ValueChanged<String> changed,
+  ) => TextField(
+    controller: controller,
+    onChanged: changed,
+    decoration: InputDecoration(
+      labelText: label,
+      hintText: hint,
+      border: const OutlineInputBorder(),
+      isDense: true,
+    ),
+  );
+  Widget _select(
+    String label,
+    String current,
+    List<String> values,
+    ValueChanged<String?> changed,
+  ) => DropdownButtonFormField<String>(
+    initialValue: values.contains(current) ? current : null,
+    decoration: InputDecoration(
+      labelText: label,
+      border: const OutlineInputBorder(),
+      isDense: true,
+    ),
+    items: values
+        .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+        .toList(),
+    onChanged: changed,
+  );
+}
+
+class _AttachmentTile extends StatelessWidget {
+  final String name;
+  final VoidCallback onRemove;
+  const _AttachmentTile({required this.name, required this.onRemove});
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Row(
+      children: [
+        Icon(Icons.attach_file, size: 16, color: AppColors.textMuted(context)),
+        const SizedBox(width: 6),
+        Expanded(child: Text(name, overflow: TextOverflow.ellipsis)),
+        IconButton(
+          icon: const Icon(Icons.close, size: 16),
+          onPressed: onRemove,
+          visualDensity: VisualDensity.compact,
         ),
       ],
-    );
-  }
+    ),
+  );
 }

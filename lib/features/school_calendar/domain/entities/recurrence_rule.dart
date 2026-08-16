@@ -8,6 +8,9 @@ enum Weekday { monday, tuesday, wednesday, thursday, friday, saturday, sunday }
 /// date, or after a fixed number of occurrences.
 enum RecurrenceEndType { never, onDate, afterOccurrences }
 
+/// Which occurrences of a recurring event a delete/edit applies to.
+enum RecurrenceEditScope { thisOccurrence, thisAndFuture, allOccurrences }
+
 class RecurrenceRule extends Equatable {
   final RecurrenceFrequency frequency;
   final List<Weekday> repeatsOn;

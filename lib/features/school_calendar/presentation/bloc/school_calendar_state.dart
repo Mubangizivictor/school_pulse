@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/academic_year.dart';
+import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import '../../domain/entities/calendar_event.dart';
 
 abstract class SchoolCalendarState extends Equatable {
@@ -46,8 +46,13 @@ class SchoolCalendarActionDenied extends SchoolCalendarState {
 
 class SchoolCalendarActionSuccess extends SchoolCalendarState {
   final String message;
-  const SchoolCalendarActionSuccess(this.message);
+
+  /// The saved event's id, populated only for a save (not a delete), so
+  /// the caller can upload staged attachments to its Storage path.
+  final String? savedEventId;
+
+  const SchoolCalendarActionSuccess(this.message, {this.savedEventId});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, savedEventId];
 }
