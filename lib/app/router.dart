@@ -60,6 +60,7 @@ import 'package:school_pulse/features/structure/presentation/screens/campus_faci
 import 'package:school_pulse/features/structure/presentation/screens/institution_settings_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/operations_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/feature_toggles_screen.dart';
+import 'package:school_pulse/features/module_control/presentation/module_control_center_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_setup_wizard_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/setup_progress_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_validation_screen.dart';
@@ -1589,6 +1590,24 @@ final router = GoRouter(
                 GoRoute(
                   path: 'feature-toggles',
                   builder: (context, state) => const FeatureTogglesScreen(),
+                ),
+                GoRoute(
+                  path: 'modules',
+                  redirect: (context, state) {
+                    final auth = context.read<AuthBloc>().state;
+                    if (auth is! AuthAuthenticated) return '/welcome';
+                    const roles = {
+                      UserRole.schoolAdmin,
+                      UserRole.director,
+                      UserRole.headTeacher,
+                      UserRole.deputyHead,
+                    };
+                    return auth.user.roles.any(roles.contains)
+                        ? null
+                        : UserRoleRouting.dashboardPath(auth.user.role);
+                  },
+                  builder: (context, state) =>
+                      const ModuleControlCenterScreen(),
                 ),
                 GoRoute(
                   path: 'wizard',

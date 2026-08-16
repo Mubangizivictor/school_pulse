@@ -1092,6 +1092,41 @@ service cloud.firestore {
         (document != 'institution_profile' && isStaff())
       );
     }
+    // Central module configuration. Subscription entitlement is written only
+    // by trusted server-side billing code; tenant admins can update local
+    // enablement but cannot forge entitlement or re-parent configuration.
+    match /schools/{schoolId}/module_configuration/{moduleKey} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if false;
+      allow update: if isSameSchool(schoolId) &&
+        hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']) &&
+        request.resource.data.institutionId == schoolId &&
+        resource.data.institutionId == schoolId &&
+        request.resource.data.moduleKey == moduleKey &&
+        request.resource.data.entitled == resource.data.entitled &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'enabled', 'configurationVersion', 'updatedAt', 'updatedBy', 'reason',
+          'enabledAt', 'disabledAt'
+        ]);
+      allow delete: if false;
+    }
+    // Policies remain tenant-bound and immutable by ownership. A version
+    // subcollection is append-only, so previous decisions are never erased.
+    match /schools/{schoolId}/institution_policies/{policyId} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']) && request.resource.data.institutionId == schoolId;
+      allow update: if isSameSchool(schoolId) && hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']) && request.resource.data.institutionId == resource.data.institutionId && resource.data.institutionId == schoolId;
+      allow delete: if false;
+      match /versions/{version} {
+        allow read: if isSameSchool(schoolId);
+        allow create: if isSameSchool(schoolId) && hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']) && request.resource.data.institutionId == schoolId;
+        allow update, delete: if false;
+      }
+    }
+    match /schools/{schoolId}/module_policy_audit/{auditId} {
+      allow read: if isSameSchool(schoolId) && hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']);
+      allow write: if false;
+    }
     match /campuses/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
