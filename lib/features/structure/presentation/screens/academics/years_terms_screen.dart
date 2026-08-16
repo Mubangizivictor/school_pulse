@@ -8,6 +8,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import '../../../domain/entities/structure_entities.dart';
 import '../../../domain/services/structure_dependency_service.dart';
+import '../../../domain/services/academic_year_setup_policy.dart';
 import '../../bloc/structure_bloc.dart';
 import '../../bloc/structure_event.dart';
 import '../../bloc/structure_state.dart';
@@ -817,7 +818,12 @@ class _YearFormScreenState extends State<_YearFormScreen> {
   );
   late DateTime? _startDate = widget.existing?.startDate;
   late DateTime? _endDate = widget.existing?.endDate;
-  late bool _setCurrent = widget.existing?.isCurrent ?? false;
+  // A school needs one current year before the rest of its academic setup can
+  // be used. Make the first active year current by default, while retaining
+  // the saved value whenever an existing year is being edited.
+  late bool _setCurrent =
+      widget.existing?.isCurrent ??
+      AcademicYearSetupPolicy.shouldSetNewYearCurrent(widget.years);
   final _dateFmt = DateFormat('MMM d, yyyy');
 
   @override

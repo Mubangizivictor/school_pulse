@@ -77,7 +77,8 @@ void main() {
       final state = StructureState(
         timetableConfig: const TimetableConfig(
           teachingDays: ['Monday', 'Tuesday'],
-          weekendDays: ['Saturday', 'Sunday'],
+          // Simulates a legacy value that does not match teaching days.
+          weekendDays: ['Monday', 'Saturday'],
           periodsPerDay: 8,
           schoolStartTime: '08:00',
           schoolEndTime: '16:00',
@@ -87,6 +88,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Monday, Tuesday'), findsOneWidget);
+      expect(find.text('Non-teaching Days'), findsOneWidget);
+      expect(
+        find.text('Wednesday, Thursday, Friday, Saturday, Sunday'),
+        findsOneWidget,
+      );
+      expect(find.text('Weekend Days'), findsNothing);
       expect(find.text('8'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Edit Timetable'), 200);
       expect(find.text('Edit Timetable'), findsOneWidget);

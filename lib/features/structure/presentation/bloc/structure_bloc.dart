@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/repositories/structure_repository.dart';
+import '../../domain/services/capacity_validation_service.dart';
 import 'structure_event.dart';
 import 'structure_state.dart';
 
 class StructureBloc extends Bloc<StructureEvent, StructureState> {
   final StructureRepository repository;
+  final CapacityValidationService _capacityValidation =
+      const CapacityValidationService();
 
   StreamSubscription? _levelsSub;
   StreamSubscription? _yearsSub;
@@ -235,9 +238,24 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
           repository.setCurrentAcademicTerm(event.termId, event.schoolId),
     );
 
-    on<SaveClassRequested>(
-      (event, emit) => repository.addClass(event.schoolClass),
-    );
+    on<SaveClassRequested>((event, emit) async {
+      final existing = state.classes
+          .where((c) => c.id == event.schoolClass.id)
+          .firstOrNull;
+      if (existing != null &&
+          existing.capacity != event.schoolClass.capacity) {
+        final result = _capacityValidation.validateClassCapacityChange(
+          candidate: event.schoolClass,
+          newCapacity: event.schoolClass.capacity,
+          streams: state.streams,
+        );
+        if (!result.isValid) {
+          emit(state.copyWith(errorMessage: result.errorMessage));
+          return;
+        }
+      }
+      await repository.addClass(event.schoolClass);
+    });
     on<DeleteClassRequested>(
       (event, emit) => repository.deleteClass(event.classId),
     );
@@ -245,9 +263,18 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       (event, emit) => repository.archiveClass(event.classId),
     );
 
-    on<SaveStreamRequested>(
-      (event, emit) => repository.addStream(event.stream),
-    );
+    on<SaveStreamRequested>((event, emit) async {
+      final result = _capacityValidation.validateStreamSave(
+        candidate: event.stream,
+        existingStreams: state.streams,
+        classes: state.classes,
+      );
+      if (!result.isValid) {
+        emit(state.copyWith(errorMessage: result.errorMessage));
+        return;
+      }
+      await repository.addStream(event.stream);
+    });
     on<DeleteStreamRequested>(
       (event, emit) => repository.deleteStream(event.streamId),
     );

@@ -583,6 +583,38 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     }
   }
 
+  Future<void> _removeBrandingImage({required bool isLogo}) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Remove ${isLogo ? 'logo' : 'badge'}?'),
+        content: Text(
+          'The institution will fall back to its initials until a new '
+          '${isLogo ? 'logo' : 'badge'} is uploaded.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() {
+      if (isLogo) {
+        _logoUrl = '';
+      } else {
+        _badgeUrl = '';
+      }
+    });
+    _markDirty();
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -653,6 +685,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                       imageUrl: _logoUrl,
                       isUploading: _isUploadingLogo,
                       onPick: () => _pickBrandingImage(isLogo: true),
+                      onRemove: () => _removeBrandingImage(isLogo: true),
                     ),
                     right: _BrandImagePicker(
                       label: 'School Badge / Crest',
@@ -660,6 +693,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                       imageUrl: _badgeUrl,
                       isUploading: _isUploadingBadge,
                       onPick: () => _pickBrandingImage(isLogo: false),
+                      onRemove: () => _removeBrandingImage(isLogo: false),
                     ),
                   ),
                 ],
@@ -1128,6 +1162,7 @@ class _BrandImagePicker extends StatelessWidget {
     required this.imageUrl,
     required this.isUploading,
     required this.onPick,
+    this.onRemove,
   });
 
   final String label;
@@ -1135,6 +1170,7 @@ class _BrandImagePicker extends StatelessWidget {
   final String imageUrl;
   final bool isUploading;
   final VoidCallback onPick;
+  final VoidCallback? onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -1216,6 +1252,21 @@ class _BrandImagePicker extends StatelessWidget {
             label: Text(actionLabel, style: const TextStyle(fontSize: 12.5)),
           ),
         ),
+        if (hasImage && onRemove != null) ...[
+          const SizedBox(height: 6),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+              onPressed: isUploading ? null : onRemove,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                foregroundColor: scheme.error,
+              ),
+              icon: const Icon(Icons.delete_outline, size: 15),
+              label: const Text('Remove', style: TextStyle(fontSize: 12.5)),
+            ),
+          ),
+        ],
       ],
     );
   }

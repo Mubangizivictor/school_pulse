@@ -137,6 +137,18 @@ async function approvalCaller(request, schoolId) {
   return user;
 }
 function isApprovalAdmin(user) { return APPROVAL_ADMIN_ROLES.includes(user.role) || (user.roles || []).some((r) => APPROVAL_ADMIN_ROLES.includes(r)) || (user.permissions || []).includes("approvals.approve"); }
+async function hasValidApprovalDelegation(schoolId, uid, moduleKey, requestType) {
+  const now = admin.firestore.Timestamp.now();
+  const snap = await admin.firestore().collection(`schools/${schoolId}/approval_delegations`)
+    .where("delegateId", "==", uid).where("status", "==", "active").get();
+  return snap.docs.some((doc) => {
+    const v = doc.data();
+    if (!(v.start <= now && now <= v.end)) return false;
+    if ((v.modules || []).length && !v.modules.includes(moduleKey)) return false;
+    if ((v.requestTypes || []).length && !v.requestTypes.includes(requestType)) return false;
+    return true;
+  });
+}
 
 exports.submitApprovalRequest = onCall(async (request) => {
   const d = request.data || {}; const schoolId = String(d.institutionId || ""); const user = await approvalCaller(request, schoolId);

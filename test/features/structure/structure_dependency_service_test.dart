@@ -40,6 +40,40 @@ void main() {
     });
   });
 
+  group('countStudentsInStream', () {
+    test('returns 0 when no students are in the stream', () async {
+      final count = await service.countStudentsInStream(
+        'school-1',
+        'stream-1',
+      );
+      expect(count, 0);
+    });
+
+    test('counts only students in the given school and stream', () async {
+      await firestore.collection('students').add({
+        'schoolId': 'school-1',
+        'classId': 'class-1',
+        'streamId': 'stream-1',
+      });
+      await firestore.collection('students').add({
+        'schoolId': 'school-1',
+        'classId': 'class-1',
+        'streamId': 'stream-2',
+      });
+      await firestore.collection('students').add({
+        'schoolId': 'school-2',
+        'classId': 'class-1',
+        'streamId': 'stream-1',
+      });
+
+      final count = await service.countStudentsInStream(
+        'school-1',
+        'stream-1',
+      );
+      expect(count, 1);
+    });
+  });
+
   group('countClassesInLevel', () {
     test('returns 0 when no classes reference the level', () async {
       final count = await service.countClassesInLevel('school-1', 'level-1');

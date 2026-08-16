@@ -8,6 +8,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import '../../../domain/entities/structure_entities.dart';
+import '../../../domain/services/capacity_validation_service.dart';
 import '../../../domain/services/structure_dependency_service.dart';
 import '../../bloc/structure_bloc.dart';
 import '../../bloc/structure_event.dart';
@@ -105,12 +106,14 @@ class _ClassesStreamsScreenState extends State<ClassesStreamsScreen> {
                     schoolId: schoolId,
                     bloc: bloc,
                     levels: state.levels,
+                    streams: state.streams,
                   )
                 : _openStreamForm(
                     context,
                     schoolId: schoolId,
                     bloc: bloc,
                     classes: state.classes,
+                    streams: state.streams,
                   ),
             icon: const Icon(Icons.add),
             label: Text(_tab == 0 ? 'Add Class' : 'Add Stream'),
@@ -242,11 +245,14 @@ class _ClassesTab extends StatelessWidget {
               streamCount: state.streams
                   .where((s) => s.classId == schoolClass.id)
                   .length,
+              allocatedCapacity: const CapacityValidationService()
+                  .activeStreamCapacity(state.streams, schoolClass.id),
               onTap: () => _openClassForm(
                 context,
                 schoolId: schoolId,
                 bloc: bloc,
                 levels: state.levels,
+                streams: state.streams,
                 existing: schoolClass,
               ),
             ),
@@ -260,12 +266,14 @@ class _ClassCard extends StatelessWidget {
   final SchoolClass schoolClass;
   final EducationalLevel? level;
   final int streamCount;
+  final int allocatedCapacity;
   final VoidCallback onTap;
 
   const _ClassCard({
     required this.schoolClass,
     required this.level,
     required this.streamCount,
+    required this.allocatedCapacity,
     required this.onTap,
   });
 
@@ -328,8 +336,12 @@ class _ClassCard extends StatelessWidget {
                     if (level != null) level!.name,
                     if (streamCount > 0)
                       '$streamCount Stream${streamCount == 1 ? '' : 's'}',
-                    if (schoolClass.capacity > 0)
+                    if (schoolClass.capacity > 0 && streamCount > 0)
+                      '$allocatedCapacity / ${schoolClass.capacity} allocated',
+                    if (schoolClass.capacity > 0 && streamCount == 0)
                       'Capacity ${schoolClass.capacity}',
+                    if (schoolClass.capacity > 0 && streamCount > 0)
+                      '${(schoolClass.capacity - allocatedCapacity).clamp(0, schoolClass.capacity)} seats unallocated',
                   ].join(' • '),
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
@@ -489,6 +501,7 @@ class _StreamsTab extends StatelessWidget {
                   schoolId: schoolId,
                   bloc: bloc,
                   classes: state.classes,
+                  streams: state.streams,
                   existing: stream,
                 ),
               ),
@@ -622,6 +635,7 @@ void _openClassForm(
   required String schoolId,
   required StructureBloc bloc,
   required List<EducationalLevel> levels,
+  List<ClassStream> streams = const [],
   SchoolClass? existing,
 }) {
   Navigator.of(context).push(
@@ -629,15 +643,19 @@ void _openClassForm(
       builder: (_) => _ClassFormScreen(
         schoolId: schoolId,
         levels: levels,
+        streams: streams,
         existing: existing,
         onSave: (c) => bloc.add(SaveClassRequested(c)),
         onDelete: existing == null
             ? null
             : () async {
-                final dependentCount = await di
+                final studentCount = await di
                     .sl<StructureDependencyService>()
                     .countStudentsInClass(schoolId, existing.id);
-                return dependentCount;
+                final streamCount = streams
+                    .where((s) => s.classId == existing.id)
+                    .length;
+                return studentCount + streamCount;
               },
         onDeleteConfirmed: existing == null
             ? null
@@ -658,6 +676,7 @@ void _openStreamForm(
   required String schoolId,
   required StructureBloc bloc,
   required List<SchoolClass> classes,
+  List<ClassStream> streams = const [],
   ClassStream? existing,
 }) {
   Navigator.of(context).push(
@@ -665,6 +684,7 @@ void _openStreamForm(
       builder: (_) => _StreamFormScreen(
         schoolId: schoolId,
         classes: classes,
+        streams: streams,
         existing: existing,
         onSave: (s) => bloc.add(SaveStreamRequested(s)),
         onDelete: existing == null
@@ -672,7 +692,7 @@ void _openStreamForm(
             : () async {
                 final dependentCount = await di
                     .sl<StructureDependencyService>()
-                    .countStudentsInClass(schoolId, existing.classId);
+                    .countStudentsInStream(schoolId, existing.id);
                 return dependentCount;
               },
         onDeleteConfirmed: existing == null
@@ -692,6 +712,7 @@ void _openStreamForm(
 class _ClassFormScreen extends StatefulWidget {
   final String schoolId;
   final List<EducationalLevel> levels;
+  final List<ClassStream> streams;
   final SchoolClass? existing;
   final void Function(SchoolClass) onSave;
   final Future<int> Function()? onDelete;
@@ -700,6 +721,7 @@ class _ClassFormScreen extends StatefulWidget {
   const _ClassFormScreen({
     required this.schoolId,
     required this.levels,
+    this.streams = const [],
     this.existing,
     required this.onSave,
     this.onDelete,
@@ -810,6 +832,15 @@ class _ClassFormScreenState extends State<_ClassFormScreen> {
                   if (n == null || n <= 0) {
                     return 'Enter a positive number';
                   }
+                  if (widget.existing != null) {
+                    final result = const CapacityValidationService()
+                        .validateClassCapacityChange(
+                          candidate: widget.existing!,
+                          newCapacity: n,
+                          streams: widget.streams,
+                        );
+                    if (!result.isValid) return result.errorMessage;
+                  }
                   return null;
                 },
               ),
@@ -913,6 +944,7 @@ class _ClassFormScreenState extends State<_ClassFormScreen> {
 class _StreamFormScreen extends StatefulWidget {
   final String schoolId;
   final List<SchoolClass> classes;
+  final List<ClassStream> streams;
   final ClassStream? existing;
   final void Function(ClassStream) onSave;
   final Future<int> Function()? onDelete;
@@ -921,6 +953,7 @@ class _StreamFormScreen extends StatefulWidget {
   const _StreamFormScreen({
     required this.schoolId,
     required this.classes,
+    this.streams = const [],
     this.existing,
     required this.onSave,
     this.onDelete,
@@ -1022,11 +1055,28 @@ class _StreamFormScreenState extends State<_StreamFormScreen> {
                 decoration: const InputDecoration(hintText: 'e.g. 30'),
                 keyboardType: TextInputType.number,
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty) return null;
-                  final n = int.tryParse(v.trim());
-                  if (n == null || n <= 0) {
-                    return 'Enter a positive number';
+                  var n = 0;
+                  if (v != null && v.trim().isNotEmpty) {
+                    n = int.tryParse(v.trim()) ?? -1;
+                    if (n <= 0) return 'Enter a positive number';
                   }
+                  if (_classId == null) return null;
+                  final candidate = ClassStream(
+                    id: widget.existing?.id ?? '',
+                    schoolId: widget.existing?.schoolId ?? widget.schoolId,
+                    name: _nameController.text.trim(),
+                    code: _codeController.text.trim(),
+                    classId: _classId!,
+                    capacity: n,
+                    isActive: _isActive,
+                  );
+                  final result = const CapacityValidationService()
+                      .validateStreamSave(
+                        candidate: candidate,
+                        existingStreams: widget.streams,
+                        classes: widget.classes,
+                      );
+                  if (!result.isValid) return result.errorMessage;
                   return null;
                 },
               ),

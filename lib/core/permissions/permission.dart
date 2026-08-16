@@ -365,6 +365,21 @@ class Permission {
   static const structureGradingView = 'structure.grading.view';
   static const structureGradingManage = 'structure.grading.manage';
 
+  // Central Approval Center. Mirrors the module-agnostic workflow engine at
+  // schools/{id}/approval_requests - source modules keep their own
+  // permissions for the underlying record; these only gate the workflow.
+  static const approvalsView = 'approvals.view';
+  static const approvalsSubmit = 'approvals.submit';
+  static const approvalsApprove = 'approvals.approve';
+  static const approvalsReject = 'approvals.reject';
+  static const approvalsReturn = 'approvals.return';
+  static const approvalsDelegate = 'approvals.delegate';
+  static const approvalsEscalate = 'approvals.escalate';
+  static const approvalsBulk = 'approvals.bulk';
+  static const approvalsViewSensitive = 'approvals.view_sensitive';
+  static const approvalsManagePolicies = 'approvals.manage_policies';
+  static const approvalsViewAudit = 'approvals.view_audit';
+
   /// Every permission ID declared above, grouped by category for UI
   /// consumers (e.g. the role-permission-override editor) that need to
   /// present the full catalog without hand-copying it - Dart has no
@@ -528,5 +543,17 @@ class Permission {
 
     ('Structure', structureGradingView),
     ('Structure', structureGradingManage),
+
+    ('Central Approval Center', approvalsView),
+    ('Central Approval Center', approvalsSubmit),
+    ('Central Approval Center', approvalsApprove),
+    ('Central Approval Center', approvalsReject),
+    ('Central Approval Center', approvalsReturn),
+    ('Central Approval Center', approvalsDelegate),
+    ('Central Approval Center', approvalsEscalate),
+    ('Central Approval Center', approvalsBulk),
+    ('Central Approval Center', approvalsViewSensitive),
+    ('Central Approval Center', approvalsManagePolicies),
+    ('Central Approval Center', approvalsViewAudit),
   ];
 }

@@ -251,6 +251,20 @@ class RolePermissionDefaults {
     Permission.academicPeriodReopen,
   };
 
+  static const Set<String> _approvalAdminPermissions = {
+    Permission.approvalsView,
+    Permission.approvalsSubmit,
+    Permission.approvalsApprove,
+    Permission.approvalsReject,
+    Permission.approvalsReturn,
+    Permission.approvalsDelegate,
+    Permission.approvalsEscalate,
+    Permission.approvalsBulk,
+    Permission.approvalsViewSensitive,
+    Permission.approvalsManagePolicies,
+    Permission.approvalsViewAudit,
+  };
+
   static const Map<UserRole, Set<String>> defaults = {
     UserRole.gatekeeper: {
       ..._gatekeeperPermissions,
@@ -282,6 +296,7 @@ class RolePermissionDefaults {
       ..._notificationAdminPermissions,
       ..._attendanceAdminPermissions,
       ..._calendarAdminPermissions,
+      ..._approvalAdminPermissions,
       Permission.announcementManage,
       Permission.structureGradingView,
       Permission.structureGradingManage,
@@ -298,6 +313,7 @@ class RolePermissionDefaults {
       ..._admissionsPermissions,
       ..._notificationAdminPermissions,
       ..._attendanceAdminPermissions,
+      ..._approvalAdminPermissions,
       Permission.announcementManage,
       Permission.structureGradingView,
       Permission.structureGradingManage,
@@ -314,6 +330,7 @@ class RolePermissionDefaults {
       ..._admissionsPermissions,
       ..._notificationAdminPermissions,
       ..._attendanceAdminPermissions,
+      ..._approvalAdminPermissions,
       Permission.announcementManage,
       Permission.structureGradingView,
       Permission.structureGradingManage,
@@ -325,6 +342,7 @@ class RolePermissionDefaults {
       ..._admissionsPermissions,
       ..._notificationAdminPermissions,
       ..._attendanceAdminPermissions,
+      ..._approvalAdminPermissions,
       Permission.structureGradingView,
       Permission.structureGradingManage,
       ..._appointmentOfficePermissions,
@@ -333,6 +351,7 @@ class RolePermissionDefaults {
       Permission.reportsView,
       ..._admissionsPermissions,
       ..._notificationOfficePermissions,
+      ..._approvalAdminPermissions,
       Permission.attendanceClassScan,
       Permission.attendanceSubjectScan,
     },
@@ -345,6 +364,7 @@ class RolePermissionDefaults {
     UserRole.bursar: {
       ..._bursarPermissions,
       ..._notificationOfficePermissions,
+      ..._approvalAdminPermissions,
       Permission.reportsView,
       Permission.reportsViewSensitive,
     },

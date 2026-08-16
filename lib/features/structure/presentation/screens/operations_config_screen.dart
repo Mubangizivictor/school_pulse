@@ -150,8 +150,8 @@ class _TimetableOverview extends StatelessWidget {
               onTap: () => _open(context, _EditTimetable(config: config)),
             ),
             _SettingsRow(
-              title: 'Weekend Days',
-              value: _daySummary(config.weekendDays),
+              title: 'Non-teaching Days',
+              value: _daySummary(_nonTeachingDays(config.teachingDays)),
               onTap: () => _open(context, _EditTimetable(config: config)),
             ),
             _SettingsRow(
@@ -205,6 +205,23 @@ class _TimetableOverview extends StatelessWidget {
       days.isEmpty ? 'Not set' : days.join(', ');
 }
 
+const _schoolWeekDays = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
+/// Non-teaching days must always be the complement of teaching days. Keeping
+/// this derived avoids a day being classified differently in separate fields.
+List<String> _nonTeachingDays(Iterable<String> teachingDays) {
+  final teaching = teachingDays.toSet();
+  return _schoolWeekDays.where((day) => !teaching.contains(day)).toList();
+}
+
 class _EditTimetable extends StatefulWidget {
   const _EditTimetable({required this.config});
   final TimetableConfig config;
@@ -213,17 +230,7 @@ class _EditTimetable extends StatefulWidget {
 }
 
 class _EditTimetableState extends State<_EditTimetable> {
-  static const _days = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
-  ];
   late Set<String> teaching = widget.config.teachingDays.toSet();
-  late Set<String> weekend = widget.config.weekendDays.toSet();
   late final TextEditingController periods = TextEditingController(
     text: widget.config.periodsPerDay == 0
         ? ''
@@ -282,7 +289,9 @@ class _EditTimetableState extends State<_EditTimetable> {
       UpdateTimetableConfigRequested(
         widget.config.copyWith(
           teachingDays: teaching.toList(),
-          weekendDays: weekend.toList(),
+          // This field only exists for backwards-compatible document reads.
+          // Non-teaching days are derived from teachingDays everywhere else.
+          weekendDays: const [],
           periodsPerDay: count,
           schoolStartTime: start,
           schoolEndTime: end,
@@ -303,7 +312,7 @@ class _EditTimetableState extends State<_EditTimetable> {
       if (didPop) return;
       final discard = await _confirmDiscard();
       if (!mounted || !discard) return;
-      Navigator.pop(context);
+      Navigator.of(this.context).pop();
     },
     child: Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -326,44 +335,24 @@ class _EditTimetableState extends State<_EditTimetable> {
           ),
           const SizedBox(height: 10),
           _DayChips(
-            days: _days,
+            days: _schoolWeekDays,
             selected: teaching,
             onChanged: (day, on) => setState(() {
               _dirty = true;
               if (on) {
                 teaching.add(day);
-                weekend.remove(day);
               } else {
                 teaching.remove(day);
               }
             }),
           ),
-          const SizedBox(height: 22),
-          const Text(
-            'Weekend Days',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
-            'Select the weekend days',
+            'Non-teaching days are calculated automatically from this selection.',
             style: TextStyle(
               fontSize: 12,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-          ),
-          const SizedBox(height: 10),
-          _DayChips(
-            days: _days,
-            selected: weekend,
-            onChanged: (day, on) => setState(() {
-              _dirty = true;
-              if (on) {
-                weekend.add(day);
-                teaching.remove(day);
-              } else {
-                weekend.remove(day);
-              }
-            }),
           ),
           const SizedBox(height: 22),
           const _Heading('Periods Per Day'),

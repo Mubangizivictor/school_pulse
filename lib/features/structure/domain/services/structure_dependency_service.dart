@@ -23,6 +23,19 @@ class StructureDependencyService {
     return snap.count ?? 0;
   }
 
+  /// Students directly assigned to this stream - narrower than
+  /// [countStudentsInClass], used to decide whether a single stream (not
+  /// its whole parent class) is safe to hard-delete.
+  Future<int> countStudentsInStream(String schoolId, String streamId) async {
+    final snap = await firestore
+        .collection('students')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('streamId', isEqualTo: streamId)
+        .count()
+        .get();
+    return snap.count ?? 0;
+  }
+
   /// A single school-wide aggregate count - used for the Classes & Streams
   /// overview's "Total Students" tile. Deliberately one `.count()` query
   /// rather than summing per-class counts, so the overview never fans out
