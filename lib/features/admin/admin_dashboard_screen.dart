@@ -237,7 +237,7 @@ class _HeroSummaryCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.xl),
+      padding: const EdgeInsets.all(AppSpacing.l),
       decoration: BoxDecoration(
         borderRadius: AppRadius.extraLarge,
         gradient: LinearGradient(
@@ -267,14 +267,14 @@ class _HeroSummaryCard extends StatelessWidget {
                       'Welcome back,',
                       style: TextStyle(
                         color: scheme.onPrimary.withValues(alpha: 0.85),
-                        fontSize: 14,
+                        fontSize: 13,
                       ),
                     ),
                     Text(
                       firstName,
                       style: TextStyle(
                         color: scheme.onPrimary,
-                        fontSize: 26,
+                        fontSize: 24,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -283,7 +283,7 @@ class _HeroSummaryCard extends StatelessWidget {
                       "Here's what's happening today.",
                       style: TextStyle(
                         color: scheme.onPrimary.withValues(alpha: 0.85),
-                        fontSize: 13,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -296,8 +296,8 @@ class _HeroSummaryCard extends StatelessWidget {
                       : null;
                   return Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.l,
-                      vertical: AppSpacing.m,
+                      horizontal: AppSpacing.m,
+                      vertical: AppSpacing.s,
                     ),
                     decoration: BoxDecoration(
                       color: scheme.onPrimary.withValues(alpha: 0.16),
@@ -316,7 +316,7 @@ class _HeroSummaryCard extends StatelessWidget {
                           label ?? 'This Term',
                           style: TextStyle(
                             color: scheme.onPrimary,
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -327,7 +327,7 @@ class _HeroSummaryCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.l),
           const _KpiRow(),
         ],
       ),
@@ -464,8 +464,8 @@ class _KpiTile extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.l,
-        vertical: AppSpacing.l,
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.m,
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -481,20 +481,20 @@ class _KpiTile extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontWeight: FontWeight.w800,
-              fontSize: 26,
+              fontSize: 20,
               letterSpacing: -0.8,
               height: 1.1,
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             data.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              fontSize: 13,
+              fontSize: 12,
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
@@ -503,7 +503,7 @@ class _KpiTile extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 10,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
@@ -688,7 +688,7 @@ class _QuickAccessSectionState extends State<_QuickAccessSection> {
             crossAxisCount: 3,
             mainAxisSpacing: AppSpacing.m,
             crossAxisSpacing: AppSpacing.m,
-            childAspectRatio: 1.7,
+            childAspectRatio: 2.05,
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
@@ -711,7 +711,7 @@ class _QuickAccessTile extends StatelessWidget {
     return AppCard(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.s,
-        vertical: AppSpacing.m,
+        vertical: 6,
       ),
       showShadow: false,
       onTap: () => context.go(item.route),
@@ -719,7 +719,7 @@ class _QuickAccessTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
               color: item.color.withValues(alpha: 0.12),
               borderRadius: AppRadius.medium,
