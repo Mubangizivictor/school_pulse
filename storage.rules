@@ -182,6 +182,24 @@ service firebase.storage {
       allow delete: if isSameSchool(schoolId);
     }
 
+    // Communication Center image/attachments. Same defense-in-depth
+    // backstop as calendar attachments above: the app gates upload on
+    // communications.create/edit_draft before this is ever reached, this
+    // rule only enforces tenant scope, size and content type.
+    match /schools/{schoolId}/communication_campaigns/{campaignId}/{fileName} {
+      allow read: if isSameSchool(schoolId);
+      allow write: if isSameSchool(schoolId)
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(png|jpeg|webp)');
+      allow delete: if isSameSchool(schoolId);
+    }
+    match /schools/{schoolId}/communication_campaigns/{campaignId}/attachments/{fileName} {
+      allow read: if isSameSchool(schoolId);
+      allow write: if isSameSchool(schoolId)
+        && request.resource.size < 15 * 1024 * 1024;
+      allow delete: if isSameSchool(schoolId);
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

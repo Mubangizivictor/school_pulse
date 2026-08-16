@@ -113,6 +113,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                               'structure',
                               'integrations',
                               'data_management',
+                              'communication',
                             ]
                             .map(
                               (v) => DropdownMenuItem(

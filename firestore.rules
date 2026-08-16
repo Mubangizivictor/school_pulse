@@ -2119,11 +2119,9 @@ service cloud.firestore {
       allow read: if isSameSchool(schoolId) && hasCommunicationsPermission(schoolId, 'communications.manage_templates');
       allow write: if false;
     }
-
-    match /schools/{schoolId}/communication_audit/{auditId} {
-      allow read: if isSameSchool(schoolId) && hasCommunicationsPermission(schoolId, 'communications.view_audit');
-      allow write: if false;
-    }
+    // Communication audit trail lives in institutions/{id}/audit_events (see
+    // above) alongside Support/Security/Data Management - not a separate
+    // collection - so audit_log_screen.dart surfaces it without new UI.
 
     // Unified Attendance (attendance_hub). Marking is gated per-category by
     // the matching attendance.*.scan permission (or attendance.override),

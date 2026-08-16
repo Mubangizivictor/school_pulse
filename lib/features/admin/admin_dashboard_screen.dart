@@ -592,6 +592,13 @@ final Map<String, _QuickAccessItem> _quickAccessCatalog = {
     color: Colors.blueGrey,
     route: '/staff/admin/data-management',
   ),
+  'communication_center': const _QuickAccessItem(
+    id: 'communication_center',
+    label: 'Communication Center',
+    icon: Icons.campaign_rounded,
+    color: Colors.teal,
+    route: '/staff/admin/communication-center',
+  ),
 };
 
 class _QuickAccessSection extends StatefulWidget {

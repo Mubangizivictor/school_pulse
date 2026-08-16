@@ -177,6 +177,10 @@ import 'package:school_pulse/features/announcements/domain/repositories/announce
 import 'package:school_pulse/features/announcements/data/repositories/announcement_repository_impl.dart';
 import 'package:school_pulse/features/announcements/data/datasources/announcement_remote_data_source.dart';
 import 'package:school_pulse/features/announcements/presentation/bloc/announcement_bloc.dart';
+import 'package:school_pulse/features/communication_center/domain/repositories/communication_repository.dart';
+import 'package:school_pulse/features/communication_center/data/repositories/communication_repository_impl.dart';
+import 'package:school_pulse/features/communication_center/data/datasources/communication_remote_data_source.dart';
+import 'package:school_pulse/features/communication_center/presentation/bloc/communication_bloc.dart';
 
 // School Directory
 import 'package:school_pulse/features/school_directory/domain/repositories/school_directory_repository.dart';
@@ -843,6 +847,17 @@ Future<void> init() async {
   );
   sl.registerFactory(
     () => AnnouncementBloc(repository: sl(), permissionEvaluator: sl()),
+  );
+
+  // Features - Communication Center
+  sl.registerLazySingleton<CommunicationRemoteDataSource>(
+    () => CommunicationRemoteDataSource(firestore: sl(), functions: sl()),
+  );
+  sl.registerLazySingleton<CommunicationRepository>(
+    () => CommunicationRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerFactory(
+    () => CommunicationBloc(repository: sl(), permissionEvaluator: sl()),
   );
 
   // Features - School Directory
@@ -1546,6 +1561,10 @@ Future<void> init() async {
       auditService: sl(),
       networkInfo: sl(),
     ),
+  );
+
+  sl.registerLazySingleton(
+    () => MarksBloc(marksRepository: sl(), studentRepository: sl()),
   );
 
   sl.registerLazySingleton<LessonRepository>(

@@ -100,6 +100,19 @@ async function authenticatedCaller(request, schoolId) {
 function campaignRef(schoolId, campaignId) {
   return db().collection("schools").doc(schoolId).collection("communication_campaigns").doc(campaignId);
 }
+// Writes into the institution's shared operational trace (audit_events),
+// the same collection Support/Security/Data Management already use - see
+// lib/features/admin/audit_log_screen.dart. No separate communication-only
+// audit collection or screen.
+async function appendCommunicationAudit(schoolId, actor, action, extra) {
+  const ref = db().collection("institutions").doc(schoolId).collection("audit_events").doc();
+  await ref.create({
+    auditEventId: ref.id, institutionId: schoolId, moduleKey: "communication",
+    action, actorId: actor.id, actorNameSnapshot: actor.name || actor.displayName || "School administration",
+    status: "success", sensitivity: "normal", source: "cloud_function",
+    createdAt: FieldValue.serverTimestamp(), ...extra,
+  });
+}
 function notificationAudience(audience) {
   // These names deliberately match the existing notification resolver.
   return audience;
@@ -192,9 +205,8 @@ exports.saveCommunicationDraft = onCall(async (request) => {
     correlationId: existing.exists ? existing.data().correlationId : id, createdAt: existing.exists ? existing.data().createdAt : now,
     updatedAt: now,
   }, { merge: true });
-  await db().collection("schools").doc(schoolId).collection("communication_audit").add({
-    action: existing.exists ? "draft_edited" : "draft_created", campaignId: id, actorId: caller.id,
-    audience: campaign.audienceDefinition, channels: campaign.deliveryChannels || ["inApp", "push"], createdAt: now,
+  await appendCommunicationAudit(schoolId, caller, existing.exists ? "draft_edited" : "draft_created", {
+    targetDisplaySnapshot: campaign.title.trim(), targetId: id, correlationId: id,
   });
   return { campaignId: id };
 });
@@ -233,11 +245,28 @@ exports.supersedeCommunicationCampaign = onCall(async (request) => {
     });
     tx.update(ref, { status: "archived", supersededByCampaignId: newRef.id, updatedAt: now });
   });
-  await db().collection("schools").doc(schoolId).collection("communication_audit").add({
-    action: "campaign_superseded", campaignId: newRef.id, originalCampaignId: campaignId,
-    actorId: caller.id, createdAt: now,
+  await appendCommunicationAudit(schoolId, caller, "campaign_superseded", {
+    targetDisplaySnapshot: original.title, targetId: newRef.id, correlationId: campaignId,
+    metadata: { originalCampaignId: campaignId },
   });
   return { campaignId: newRef.id };
+});
+
+// Estimated reach shown before sending. Uses the same resolver publish uses,
+// but returns only a count - never the recipient ids - so a sender previews
+// who they are about to reach without the client holding a member list it
+// has no rules-based right to read directly.
+exports.previewCommunicationAudience = onCall(async (request) => {
+  const { schoolId, audienceDefinition } = request.data || {};
+  if (!schoolId) throw new HttpsError("invalid-argument", "schoolId is required.");
+  if (!allowedAudiences.has(audienceDefinition && audienceDefinition.kind)) {
+    throw new HttpsError("invalid-argument", "Unsupported audience definition.");
+  }
+  const caller = await authenticatedCaller(request, schoolId);
+  await assertPermission(schoolId, caller, "communications.create", "You cannot preview this audience.");
+  await assertAudienceSendPermission(schoolId, caller, audienceDefinition);
+  const recipientIds = await resolveRecipients(schoolId, audienceDefinition);
+  return { estimatedRecipients: recipientIds.length };
 });
 
 exports.publishCommunicationCampaign = onCall(async (request) => {
@@ -277,10 +306,9 @@ exports.publishCommunicationCampaign = onCall(async (request) => {
       publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
     });
   });
-  await db().collection("schools").doc(schoolId).collection("communication_audit").add({
-    action: "campaign_published", campaignId, actorId: caller.id,
-    audience: campaign.audienceDefinition, recipientCount: recipientIds.length,
-    channels: campaign.deliveryChannels || ["inApp", "push"], createdAt: FieldValue.serverTimestamp(),
+  await appendCommunicationAudit(schoolId, caller, "campaign_published", {
+    targetDisplaySnapshot: campaign.title, targetId: campaignId, correlationId: campaignId,
+    metadata: { recipientCount: recipientIds.length, channels: campaign.deliveryChannels || ["inApp", "push"] },
   });
   return { status: "publishing", notificationRequestId: notificationRef.id, recipientCount: recipientIds.length };
 });
@@ -298,8 +326,8 @@ exports.cancelCommunicationCampaign = onCall(async (request) => {
     throw new HttpsError("failed-precondition", "Only scheduled communications can be cancelled.");
   }
   await ref.update({ status: "cancelled", cancelledAt: FieldValue.serverTimestamp(), cancelledBy: caller.id, updatedAt: FieldValue.serverTimestamp() });
-  await db().collection("schools").doc(schoolId).collection("communication_audit").add({
-    action: "campaign_cancelled", campaignId, actorId: caller.id, createdAt: FieldValue.serverTimestamp(),
+  await appendCommunicationAudit(schoolId, caller, "campaign_cancelled", {
+    targetDisplaySnapshot: campaign.title, targetId: campaignId, correlationId: campaignId,
   });
   return { status: "cancelled" };
 });
@@ -369,8 +397,8 @@ exports.saveCommunicationTemplate = onCall(async (request) => {
     createdBy: existing.exists ? existing.data().createdBy : caller.id,
     createdAt: existing.exists ? existing.data().createdAt : now, updatedAt: now,
   }, { merge: true });
-  await db().collection("schools").doc(schoolId).collection("communication_audit").add({
-    action: existing.exists ? "template_changed" : "template_created", templateId: ref.id, actorId: caller.id, createdAt: now,
+  await appendCommunicationAudit(schoolId, caller, existing.exists ? "template_changed" : "template_created", {
+    targetDisplaySnapshot: template.name.trim(), targetId: ref.id,
   });
   return { templateId: ref.id };
 });
@@ -381,9 +409,7 @@ exports.deleteCommunicationTemplate = onCall(async (request) => {
   const caller = await authenticatedCaller(request, schoolId);
   await assertPermission(schoolId, caller, "communications.manage_templates", "You cannot manage communication templates.");
   await templateRef(schoolId, templateId).delete();
-  await db().collection("schools").doc(schoolId).collection("communication_audit").add({
-    action: "template_deleted", templateId, actorId: caller.id, createdAt: FieldValue.serverTimestamp(),
-  });
+  await appendCommunicationAudit(schoolId, caller, "template_deleted", { targetId: templateId });
   return { deleted: true };
 });
 

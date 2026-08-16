@@ -77,6 +77,10 @@ import 'package:school_pulse/features/admin/admin_staff_attendance_screen.dart';
 import 'package:school_pulse/features/appointments/presentation/screens/appointments_workspace_screen.dart';
 import 'package:school_pulse/features/admin/audit_log_screen.dart';
 import 'package:school_pulse/features/admin/support_center_screen.dart';
+import 'package:school_pulse/features/communication_center/presentation/screens/communication_center_screen.dart';
+import 'package:school_pulse/features/communication_center/presentation/screens/communication_compose_screen.dart';
+import 'package:school_pulse/features/communication_center/presentation/screens/communication_detail_screen.dart';
+import 'package:school_pulse/features/communication_center/presentation/screens/communication_templates_screen.dart';
 import 'package:school_pulse/features/admin/security_center_screen.dart';
 import 'package:school_pulse/features/admin/broadcast_history_screen.dart';
 import 'package:school_pulse/features/admin/subscription_screen.dart';
@@ -1920,6 +1924,47 @@ final router = GoRouter(
                     : UserRoleRouting.dashboardPath(auth.user.role);
               },
               builder: (context, state) => const SupportCenterScreen(),
+            ),
+            GoRoute(
+              path: 'communication-center',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                // securityHead only holds communications.send_emergency, but
+                // still needs to reach the center to raise one - the bloc
+                // gates individual actions by permission from there.
+                const permitted = {
+                  UserRole.director,
+                  UserRole.headTeacher,
+                  UserRole.schoolAdmin,
+                  UserRole.deputyHead,
+                  UserRole.securityHead,
+                };
+                return auth.user.roles.any(permitted.contains)
+                    ? null
+                    : UserRoleRouting.dashboardPath(auth.user.role);
+              },
+              builder: (context, state) => const CommunicationCenterScreen(),
+              routes: [
+                GoRoute(
+                  path: 'compose',
+                  builder: (context, state) => CommunicationComposeScreen(
+                    campaignId: state.uri.queryParameters['campaignId'],
+                    templateId: state.uri.queryParameters['templateId'],
+                  ),
+                ),
+                GoRoute(
+                  path: ':campaignId',
+                  builder: (context, state) => CommunicationDetailScreen(
+                    campaignId: state.pathParameters['campaignId']!,
+                  ),
+                ),
+                GoRoute(
+                  path: 'templates',
+                  builder: (context, state) =>
+                      const CommunicationTemplatesScreen(),
+                ),
+              ],
             ),
             GoRoute(
               path: 'security',
