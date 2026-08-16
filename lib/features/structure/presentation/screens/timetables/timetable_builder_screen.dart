@@ -6,7 +6,9 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import '../../../domain/entities/timetable.dart';
 import '../../../domain/entities/timetable_config.dart';
+import '../../../domain/services/timetable_pdf_generator.dart';
 import '../../bloc/structure_bloc.dart';
+import '../../bloc/structure_state.dart';
 import '../../bloc/timetable_bloc.dart';
 import '../../bloc/timetable_event.dart';
 import '../../bloc/timetable_state.dart';
@@ -48,6 +50,49 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
     context.read<TimetableBloc>().add(
       TimetablePublishRequested(publishedBy: userId),
     );
+  }
+
+  Future<void> _print(
+    Timetable timetable,
+    TimetableConfig config,
+    List<TimetableLesson> lessons,
+    StructureState structureState,
+  ) async {
+    final className = structureState.classes
+        .where((c) => c.id == timetable.classId)
+        .map((c) => c.name)
+        .firstOrNull;
+    final streamName = structureState.streams
+        .where((s) => s.id == timetable.streamId)
+        .map((s) => s.name)
+        .firstOrNull;
+    final academicYearName = structureState.academicYears
+        .where((y) => y.id == timetable.academicYearId)
+        .map((y) => y.name)
+        .firstOrNull;
+    final termName = structureState.academicTerms
+        .where((t) => t.id == timetable.termId)
+        .map((t) => t.name)
+        .firstOrNull;
+
+    final pdfData = await TimetablePdfGenerator.generate(
+      timetable: timetable,
+      config: config,
+      lessons: lessons,
+      schoolName: structureState.institutionProfile.name.isNotEmpty
+          ? structureState.institutionProfile.name
+          : structureState.institutionProfile.displayName,
+      academicYearName: academicYearName ?? '',
+      termName: termName ?? '',
+      classLabel: [
+        className ?? timetable.name,
+        if (streamName != null) streamName,
+      ].join(' - '),
+      schoolLogoUrl: structureState.institutionProfile.logoUrl.isEmpty
+          ? null
+          : structureState.institutionProfile.logoUrl,
+    );
+    await TimetablePdfGenerator.print(pdfData);
   }
 
   @override
@@ -95,6 +140,12 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
           appBar: AdminAppBar(
             title: 'Timetable Builder',
             actions: [
+              IconButton(
+                tooltip: 'Print',
+                icon: const Icon(Icons.print_outlined),
+                onPressed: () =>
+                    _print(timetable, config, state.lessons, structureState),
+              ),
               if (timetable.status == TimetableStatus.draft)
                 TextButton(
                   onPressed: state.isSaving ? null : _publish,
