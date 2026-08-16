@@ -195,7 +195,7 @@ import 'package:school_pulse/features/dean/presentation/screens/observations/cla
 import 'package:school_pulse/features/religion/presentation/religious_leader_dashboard_screen.dart';
 import 'package:school_pulse/features/exams/presentation/exams_dashboard_screen.dart';
 import 'package:school_pulse/features/hr/presentation/screens/hr_dashboard_screen.dart';
-import 'package:school_pulse/features/director/presentation/screens/director_approval_center_screen.dart';
+import 'package:school_pulse/features/approvals/presentation/screens/approval_center_screen.dart';
 import 'package:school_pulse/features/director/presentation/screens/director_dashboard_screen.dart';
 import 'package:school_pulse/features/director/presentation/screens/director_reports_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/student_id_card_screen.dart';
@@ -1440,7 +1440,7 @@ final router = GoRouter(
           routes: [
             GoRoute(
               path: 'approvals',
-              builder: (context, state) => const DirectorApprovalCenterScreen(),
+              builder: (context, state) => const ApprovalCenterScreen(),
             ),
             GoRoute(
               path: 'reports',
@@ -1452,6 +1452,10 @@ final router = GoRouter(
           path: '/staff/admin',
           builder: (context, state) => const AdminDashboardScreen(),
           routes: [
+            GoRoute(
+              path: 'approvals',
+              builder: (context, state) => const ApprovalCenterScreen(),
+            ),
             GoRoute(
               path: 'users',
               builder: (context, state) => const UserManagementPage(),

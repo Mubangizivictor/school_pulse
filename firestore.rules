@@ -1598,6 +1598,30 @@ service cloud.firestore {
       allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId) || isSuperAdmin();
       allow write: if isSuperAdmin();
     }
+
+    // Central Approval Center. Decisions, policy edits, delegations and
+    // escalations are callable-function only, so clients cannot forge an
+    // approver, bypass source-version checks, or mutate an audit trail.
+    match /schools/{schoolId}/approval_requests/{requestId} {
+      allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId);
+      allow create, update, delete: if false;
+      match /actions/{actionId} {
+        allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId);
+        allow write: if false;
+      }
+    }
+    match /schools/{schoolId}/approval_policies/{policyId} {
+      allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/approval_delegations/{delegationId} {
+      allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/approval_escalations/{escalationId} {
+      allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId);
+      allow write: if false;
+    }
     // Deprecated as of Phase 1 institution model - schools/{id} is now the
     // sole tenant source of truth (classification/divisions/displayLabel
     // live there). No new docs are written here going forward; existing

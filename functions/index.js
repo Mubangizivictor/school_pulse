@@ -124,6 +124,49 @@ const RESPONSIBILITY_DEFAULT_PERMISSIONS = {
 // this aloud or copy it onto a note for the teacher.
 const PASSWORD_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
 
+// Central approval workflow -------------------------------------------------
+// Source modules submit immutable snapshots here; only these functions mutate
+// workflow state. Source execution remains in the originating module.
+const APPROVAL_ADMIN_ROLES = ["director", "headTeacher", "deputyHead", "schoolAdmin", "bursar", "deanOfStudies"];
+function approvalRef(schoolId, requestId) { return admin.firestore().doc(`schools/${schoolId}/approval_requests/${requestId}`); }
+async function approvalCaller(request, schoolId) {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in is required.");
+  const user = (await admin.firestore().doc(`users/${request.auth.uid}`).get()).data();
+  if (!user || user.schoolId !== schoolId || user.isActive === false) throw new HttpsError("permission-denied", "No active membership for this institution.");
+  return user;
+}
+function isApprovalAdmin(user) { return APPROVAL_ADMIN_ROLES.includes(user.role) || (user.roles || []).some((r) => APPROVAL_ADMIN_ROLES.includes(r)) || (user.permissions || []).includes("approvals.approve"); }
+
+exports.submitApprovalRequest = onCall(async (request) => {
+  const d = request.data || {}; const schoolId = String(d.institutionId || ""); const user = await approvalCaller(request, schoolId);
+  if (!(user.permissions || []).includes("approvals.submit") && !isApprovalAdmin(user)) throw new HttpsError("permission-denied", "You cannot submit approval requests.");
+  for (const key of ["moduleKey", "requestType", "sourceRecordType", "sourceRecordId", "title", "approvalPolicyId", "sourceRecordVersion"]) if (!d[key]) throw new HttpsError("invalid-argument", `${key} is required.`);
+  const db = admin.firestore(); const requestId = d.idempotencyKey || `${d.sourceRecordId}_${d.requestType}`;
+  const ref = approvalRef(schoolId, requestId); const policy = await db.doc(`schools/${schoolId}/approval_policies/${d.approvalPolicyId}`).get();
+  if (!policy.exists || policy.data().status !== "active") throw new HttpsError("failed-precondition", "The approval policy is not active.");
+  await db.runTransaction(async (tx) => { const existing = await tx.get(ref); if (existing.exists && ["submitted", "pending", "inReview", "awaitingInformation", "escalated", "delegated"].includes(existing.data().currentStatus)) throw new HttpsError("already-exists", "An active request already exists for this source record."); const now = admin.firestore.FieldValue.serverTimestamp(); tx.set(ref, { approvalRequestId: requestId, institutionId: schoolId, moduleKey: d.moduleKey, requestType: d.requestType, sourceRecordType: d.sourceRecordType, sourceRecordId: d.sourceRecordId, sourceRoute: d.sourceRoute || "", title: d.title, summary: d.summary || "", requestedBy: request.auth.uid, requesterRole: user.role || "", requesterDepartment: user.departmentId || null, requesterCampus: user.campusId || null, requesterDivision: user.divisionId || null, currentStage: (policy.data().stages || [])[0]?.stageId || "", currentStatus: "pending", priority: d.priority || "normal", sensitivity: d.sensitivity || "normal", amount: d.amount || null, oldValue: d.oldValue || null, proposedValue: d.proposedValue || null, reason: d.reason || null, attachments: d.attachments || [], requiredApprovers: [], approvalPolicyId: d.approvalPolicyId, escalationPolicyId: d.escalationPolicyId || null, sourceRecordVersion: String(d.sourceRecordVersion), createdAt: now, submittedAt: now, dueAt: d.dueAt ? admin.firestore.Timestamp.fromDate(new Date(d.dueAt)) : null, resolvedAt: null, version: 1, correlationId: d.correlationId || requestId }); });
+  await ref.collection("actions").add({ actorId: request.auth.uid, action: "submitted", stage: "", comment: "", timestamp: admin.firestore.FieldValue.serverTimestamp(), correlationId: d.correlationId || requestId });
+  return { requestId };
+});
+
+exports.decideApprovalRequest = onCall(async (request) => {
+  const d = request.data || {}; const schoolId = String(d.institutionId || ""); const user = await approvalCaller(request, schoolId); const uid = request.auth.uid;
+  if (!isApprovalAdmin(user)) throw new HttpsError("permission-denied", "Your current assignment does not allow approval.");
+  if (!["approved", "rejected", "returned", "informationRequested", "cancelled"].includes(d.decision)) throw new HttpsError("invalid-argument", "Unsupported approval decision.");
+  if (["rejected", "returned"].includes(d.decision) && !String(d.comment || "").trim()) throw new HttpsError("invalid-argument", "A reason is required.");
+  const ref = approvalRef(schoolId, String(d.requestId)); const db = admin.firestore();
+  await db.runTransaction(async (tx) => { const snap = await tx.get(ref); if (!snap.exists) throw new HttpsError("not-found", "Approval request not found."); const row = snap.data(); if (row.currentStatus !== "pending" && row.currentStatus !== "partiallyApproved") throw new HttpsError("failed-precondition", "This request is no longer awaiting a decision."); if (row.requestedBy === uid) throw new HttpsError("permission-denied", "Self approval is not allowed."); if (d.expectedVersion != null && row.version !== d.expectedVersion) throw new HttpsError("aborted", "The request changed; reload it before deciding."); const policySnap = await tx.get(db.doc(`schools/${schoolId}/approval_policies/${row.approvalPolicyId}`)); if (!policySnap.exists || policySnap.data().status !== "active") throw new HttpsError("failed-precondition", "The workflow policy is no longer active."); const policy = policySnap.data(); const stages = policy.stages || []; const index = stages.findIndex((s) => s.stageId === row.currentStage); const stage = stages[index] || {}; const next = d.decision === "approved" && index >= 0 && index < stages.length - 1 ? stages[index + 1] : null; const status = d.decision === "approved" ? (next ? "pending" : "approved") : d.decision === "informationRequested" ? "awaitingInformation" : d.decision; tx.update(ref, { currentStatus: status, currentStage: next ? next.stageId : row.currentStage, version: admin.firestore.FieldValue.increment(1), resolvedAt: next || d.decision === "informationRequested" ? null : admin.firestore.FieldValue.serverTimestamp() }); tx.set(ref.collection("actions").doc(), { actorId: uid, action: d.decision, stage: row.currentStage, comment: String(d.comment || ""), timestamp: admin.firestore.FieldValue.serverTimestamp(), correlationId: row.correlationId || "" }); });
+  return { ok: true };
+});
+
+exports.createApprovalDelegation = onCall(async (request) => {
+  const d = request.data || {}; const schoolId = String(d.institutionId || ""); const user = await approvalCaller(request, schoolId); if (!isApprovalAdmin(user)) throw new HttpsError("permission-denied", "Only an active approver may delegate."); const start = new Date(d.startsAt), end = new Date(d.endsAt); if (!(start < end) || end <= new Date()) throw new HttpsError("invalid-argument", "Delegation dates are invalid."); const delegate = await admin.firestore().doc(`users/${d.delegateId}`).get(); if (!delegate.exists || delegate.data().schoolId !== schoolId || delegate.data().isActive === false) throw new HttpsError("failed-precondition", "Delegate must be an active member of this institution."); await admin.firestore().collection(`schools/${schoolId}/approval_delegations`).add({ institutionId: schoolId, delegatorId: request.auth.uid, delegateId: d.delegateId, modules: d.modules || [], requestTypes: d.requestTypes || [], permissions: ["approvals.approve"], start: admin.firestore.Timestamp.fromDate(start), end: admin.firestore.Timestamp.fromDate(end), reason: String(d.reason || ""), status: "active", createdAt: admin.firestore.FieldValue.serverTimestamp() }); return { ok: true };
+});
+
+exports.escalateApprovalRequest = onCall(async (request) => {
+  const d = request.data || {}; const schoolId = String(d.institutionId || ""); const user = await approvalCaller(request, schoolId); if (!isApprovalAdmin(user)) throw new HttpsError("permission-denied", "You cannot escalate this request."); const ref = approvalRef(schoolId, String(d.requestId)); await ref.update({ currentStatus: "escalated", version: admin.firestore.FieldValue.increment(1) }); await ref.collection("actions").add({ actorId: request.auth.uid, action: "escalated", stage: "", comment: String(d.reason || ""), timestamp: admin.firestore.FieldValue.serverTimestamp() }); return { ok: true };
+});
+
 function generateTemporaryPassword() {
   const bytes = randomBytes(12);
   let password = "";
