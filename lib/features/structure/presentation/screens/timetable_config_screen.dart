@@ -55,7 +55,20 @@ class _TimetableConfigBody extends StatelessWidget {
     final config = state.timetableConfig;
 
     void update(TimetableConfig Function(TimetableConfig) apply) {
-      bloc.add(UpdateTimetableConfigRequested(apply(config), schoolId));
+      // Clear the retired legacy field whenever this document is touched.
+      // A day can therefore never remain both teaching and "weekend".
+      final next = apply(config).copyWith(weekendDays: const []);
+      final start = timetableMinutes(next.schoolStartTime);
+      final end = timetableMinutes(next.schoolEndTime);
+      if (start != null && end != null && end <= start) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('School end time must be after start time.'),
+          ),
+        );
+        return;
+      }
+      bloc.add(UpdateTimetableConfigRequested(next, schoolId));
     }
 
     return ListView(
@@ -83,9 +96,6 @@ class _TimetableConfigBody extends StatelessWidget {
                   teachingDays: v
                       ? [...c.teachingDays, day]
                       : c.teachingDays.where((d) => d != day).toList(),
-                  weekendDays: v
-                      ? c.weekendDays.where((d) => d != day).toList()
-                      : c.weekendDays,
                 ),
               ),
               selectedColor: AppColors.primary(context),
@@ -102,45 +112,12 @@ class _TimetableConfigBody extends StatelessWidget {
           }).toList(),
         ),
         const SizedBox(height: AppSpacing.xl),
+        const SizedBox(height: AppSpacing.s),
         Text(
-          'Weekend Days',
+          'Non-teaching days are inferred from the selected teaching days.',
           style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
-        ),
-        const SizedBox(height: AppSpacing.m),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: kWeekDays.map((day) {
-            final selected = config.weekendDays.contains(day);
-            return ChoiceChip(
-              label: Text(day),
-              selected: selected,
-              onSelected: (v) => update(
-                (c) => c.copyWith(
-                  weekendDays: v
-                      ? [...c.weekendDays, day]
-                      : c.weekendDays.where((d) => d != day).toList(),
-                  teachingDays: v
-                      ? c.teachingDays.where((d) => d != day).toList()
-                      : c.teachingDays,
-                ),
-              ),
-              selectedColor: AppColors.primary(context),
-              labelStyle: TextStyle(
-                color: selected
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-              side: BorderSide(color: Theme.of(context).colorScheme.outline),
-              showCheckmark: false,
-            );
-          }).toList(),
         ),
         const SizedBox(height: AppSpacing.xl),
         Row(
@@ -160,28 +137,49 @@ class _TimetableConfigBody extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: PulseTextField(
+                key: ValueKey(
+                  'duration-${config.defaultPeriodDurationMinutes}',
+                ),
+                label: 'Default Lesson Duration (minutes)',
+                hint: 'e.g. 45',
+                keyboardType: TextInputType.number,
+                controller: TextEditingController(
+                  text: config.defaultPeriodDurationMinutes == 0
+                      ? ''
+                      : config.defaultPeriodDurationMinutes.toString(),
+                ),
+                onChanged: (v) => update(
+                  (c) => c.copyWith(
+                    defaultPeriodDurationMinutes: (int.tryParse(v) ?? 0) > 0
+                        ? int.parse(v)
+                        : c.defaultPeriodDurationMinutes,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: AppSpacing.m),
         Row(
           children: [
             Expanded(
-              child: PulseTextField(
-                key: ValueKey('start-${config.schoolStartTime}'),
+              child: _SchoolTimePicker(
                 label: 'School Start Time',
-                hint: 'HH:MM',
-                controller: TextEditingController(text: config.schoolStartTime),
-                onChanged: (v) => update((c) => c.copyWith(schoolStartTime: v)),
+                value: config.schoolStartTime,
+                onChanged: (value) =>
+                    update((c) => c.copyWith(schoolStartTime: value)),
               ),
             ),
             const SizedBox(width: 14),
             Expanded(
-              child: PulseTextField(
-                key: ValueKey('end-${config.schoolEndTime}'),
+              child: _SchoolTimePicker(
                 label: 'School End Time',
-                hint: 'HH:MM',
-                controller: TextEditingController(text: config.schoolEndTime),
-                onChanged: (v) => update((c) => c.copyWith(schoolEndTime: v)),
+                value: config.schoolEndTime,
+                onChanged: (value) =>
+                    update((c) => c.copyWith(schoolEndTime: value)),
               ),
             ),
           ],
@@ -192,6 +190,10 @@ class _TimetableConfigBody extends StatelessWidget {
           actionLabel: 'Add Slot',
           onAction: () => showTimetableSlotFormDialog(
             context,
+            teachingDays: config.teachingDays,
+            occupiedSlots: config.slots,
+            schoolStartTime: config.schoolStartTime,
+            schoolEndTime: config.schoolEndTime,
             onSave: (slot) =>
                 update((c) => c.copyWith(slots: [...c.slots, slot])),
           ),
@@ -211,6 +213,10 @@ class _TimetableConfigBody extends StatelessWidget {
             onEdit: () => showTimetableSlotFormDialog(
               context,
               existing: slot,
+              teachingDays: config.teachingDays,
+              occupiedSlots: config.slots,
+              schoolStartTime: config.schoolStartTime,
+              schoolEndTime: config.schoolEndTime,
               onSave: (updated) => update((c) {
                 final slots = [...c.slots];
                 slots[index] = updated;
@@ -234,6 +240,40 @@ class _TimetableConfigBody extends StatelessWidget {
         }),
         const SizedBox(height: AppSpacing.x4l),
       ],
+    );
+  }
+}
+
+class _SchoolTimePicker extends StatelessWidget {
+  const _SchoolTimePicker({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () async {
+        final minutes = timetableMinutes(value) ?? 8 * 60;
+        final selected = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60),
+        );
+        if (selected != null) onChanged(timetableTime(selected));
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          suffixIcon: const Icon(Icons.schedule_outlined),
+        ),
+        child: Text(value.isEmpty ? 'Select time' : value),
+      ),
     );
   }
 }
