@@ -13,8 +13,6 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
 import 'package:school_pulse/features/branding/presentation/widgets/school_badge.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
-import 'package:school_pulse/features/admin/admin_search_delegate.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -39,11 +37,10 @@ class AdminDashboardScreen extends StatelessWidget {
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                // Keep the school-admin identity, search, alerts, and account
-                // actions available while the dashboard content scrolls. Other
-                // admin pages use [AdminAppBar], which is scaffold-pinned by
-                // default; the dashboard needs a pinned sliver because it owns
-                // its scroll view directly.
+                // Keep the school-admin identity visible while the dashboard
+                // content scrolls. Other admin pages use [AdminAppBar], which
+                // is scaffold-pinned by default; the dashboard needs a pinned
+                // sliver because it owns its scroll view directly.
                 SliverAppBar(
                   pinned: true,
                   automaticallyImplyLeading: false,
@@ -124,28 +121,15 @@ class _DashboardHeader extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              'School Admin',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 19,
-                                fontWeight: FontWeight.w800,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            size: 20,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
-                          ),
-                        ],
+                      Text(
+                        'School Admin',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
                       Text(
                         branding?.schoolName ?? 'School Pulse',
@@ -160,59 +144,10 @@ class _DashboardHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Search',
-                  icon: const Icon(Icons.search_rounded),
-                  onPressed: () {
-                    final authState = context.read<AuthBloc>().state;
-                    if (authState is! AuthAuthenticated) return;
-                    showSearch(
-                      context: context,
-                      delegate: AdminSearchDelegate(
-                        schoolId: authState.user.schoolId,
-                      ),
-                    );
-                  },
-                ),
-                NotificationBellButton(
-                  backgroundColor: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainer,
-                ),
-                const SizedBox(width: AppSpacing.s),
-                _ProfileButton(),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _ProfileButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final authState = context.watch<AuthBloc>().state;
-    final photoUrl = authState is AuthAuthenticated
-        ? authState.user.photoUrl
-        : null;
-    return InkWell(
-      borderRadius: AppRadius.full,
-      onTap: () => context.push('/staff/more'),
-      child: CircleAvatar(
-        radius: 18,
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-        backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
-            ? NetworkImage(photoUrl)
-            : null,
-        child: (photoUrl == null || photoUrl.isEmpty)
-            ? Icon(
-                Icons.person_outline_rounded,
-                size: 18,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              )
-            : null,
       ),
     );
   }
