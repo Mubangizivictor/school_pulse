@@ -14,6 +14,7 @@ const COLLECTION = 'transactional_email_queue';
 // outage) should not retry forever.
 const RETRY_DELAYS_MS = [2 * 60 * 1000, 20 * 60 * 1000]; // +2min, +20min
 const MAX_ATTEMPTS = RETRY_DELAYS_MS.length + 1;
+const PROCESSING_TIMEOUT_MS = 5 * 60 * 1000;
 
 /**
  * Enqueue a templated transactional email for later delivery. This is the
@@ -64,7 +65,7 @@ async function attemptDelivery(snap) {
   const ref = snap.ref;
   const attempts = Number(queueDoc.attempts || 0) + 1;
 
-  await ref.set({ status: 'processing', attempts }, { merge: true });
+  await ref.set({ status: 'processing', attempts, processingStartedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 
   try {
     const result = await sendTemplatedEmail({
@@ -82,6 +83,7 @@ async function attemptDelivery(snap) {
         sentAt: admin.firestore.FieldValue.serverTimestamp(),
         resendId: result.resendId || null,
         error: result.status === 'no_recipient' ? 'no_recipient' : null,
+        processingStartedAt: null,
       }, { merge: true });
       return;
     }
@@ -110,13 +112,17 @@ async function scheduleRetryOrFail(ref, attempts, error, retryable) {
     status: 'retrying',
     error: String(error).slice(0, 600),
     scheduledAt: admin.firestore.Timestamp.fromMillis(Date.now() + delay),
+    processingStartedAt: null,
   }, { merge: true });
 }
 
 const EMAIL_SECRETS = [RESEND_API_KEY];
 
 exports.processTransactionalEmailQueue = onDocumentCreated(
-  { region: 'europe-west1', document: `${COLLECTION}/{eventId}`, secrets: EMAIL_SECRETS },
+  // PDF attachments are loaded into memory immediately before the Resend
+  // call. A serialized 512 MiB worker prevents several PDF buffers from
+  // exhausting the default 256 MiB Cloud Run instance at once.
+  { region: 'europe-west1', document: `${COLLECTION}/{eventId}`, secrets: EMAIL_SECRETS, memory: '512MiB', concurrency: 1 },
   async (event) => {
     const snap = event.data;
     if (!snap) return;
@@ -141,8 +147,22 @@ exports.retryTransactionalEmailQueue = onSchedule(
     for (const doc of due.docs) {
       await attemptDelivery(doc);
     }
+    // A container can be terminated after claiming a queue record but before
+    // it reaches the shared retry handler. Recover only records that have
+    // been processing longer than the worker timeout; fresh work is never
+    // double-sent and sendTemplatedEmail still owns delivery idempotency.
+    const processing = await db.collection(COLLECTION).where('status', '==', 'processing').limit(100).get();
+    const staleBefore = Date.now() - PROCESSING_TIMEOUT_MS;
+    for (const doc of processing.docs) {
+      const startedAt = doc.data()?.processingStartedAt;
+      const startedMs = typeof startedAt?.toMillis === 'function' ? startedAt.toMillis() : 0;
+      if (startedMs > 0 && startedMs <= staleBefore) {
+        await doc.ref.set({ status: 'retrying', scheduledAt: admin.firestore.Timestamp.now(), error: 'processing_timeout_recovered', processingStartedAt: null }, { merge: true });
+        await attemptDelivery((await doc.ref.get()));
+      }
+    }
   },
 );
 
 module.exports.enqueueTemplatedEmail = enqueueTemplatedEmail;
-module.exports.__test__ = { scheduleRetryOrFail, MAX_ATTEMPTS, RETRY_DELAYS_MS };
+module.exports.__test__ = { scheduleRetryOrFail, MAX_ATTEMPTS, RETRY_DELAYS_MS, PROCESSING_TIMEOUT_MS };
