@@ -4,7 +4,7 @@ const QRCode = require('qrcode');
 const { renderOfficialStamp } = require('./stamp_renderer');
 
 const LOGO_PATH = path.join(__dirname, 'assets', 'logo', 'logo_for_light_mode.png');
-const PAGE = Object.freeze({ left: 54, right: 541, footerTop: 736 });
+const PAGE = Object.freeze({ left: 54, right: 541, footerTop: 770 });
 
 function text(value, max = 300) { return String(value ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, max); }
 function rowValues(row) { return Array.isArray(row) ? row : [row?.label, row?.value]; }
@@ -13,12 +13,13 @@ function rule(pdf, y, color = '#D7DCE8') { pdf.strokeColor(color).lineWidth(0.7)
 
 function header(pdf, snapshot) {
   // The official logo is intentionally the only header element.
-  pdf.image(LOGO_PATH, 129, 25, { fit: [337, 86], align: 'center', valign: 'center' });
+  pdf.image(LOGO_PATH, 81, 13, { fit: [433, 104], align: 'center', valign: 'center' });
   rule(pdf, 108, '#B9C5E5');
-  pdf.fillColor('#102B79').font('Helvetica-Bold').fontSize(19).text(text(snapshot.title, 70), PAGE.left, 121, { width: 390, lineGap: 1 });
+  pdf.fillColor('#102B79').font('Helvetica-Bold').fontSize(19).text(text(snapshot.title, 70), PAGE.left, 121, { width: PAGE.right - PAGE.left, align: 'center', lineGap: 1 });
   const titleBottom = pdf.y;
-  pdf.fillColor('#FF4B23').rect(PAGE.left, titleBottom + 8, 48, 2).fill();
-  return titleBottom + 23;
+  pdf.fillColor('#475467').font('Helvetica').fontSize(8.5).text('Powered by VictorBee Technologies', PAGE.left, titleBottom + 7, { width: PAGE.right - PAGE.left, align: 'center' });
+  pdf.fillColor('#FF4B23').rect(274, titleBottom + 23, 48, 2).fill();
+  return titleBottom + 38;
 }
 
 function referenceCard(pdf, snapshot, y) {
@@ -68,14 +69,23 @@ function verificationCard(pdf, snapshot, qr, y) {
   pdf.image(qr, 190, y + 11, { width: 89, height: 89 });
 }
 
+function authorizationCard(pdf, snapshot, y) {
+  const x = 315; const width = PAGE.right - x; const h = 112;
+  pdf.roundedRect(x, y, width, h, 6).lineWidth(0.8).strokeColor('#1B65DC').stroke();
+  pdf.fillColor('#344054').font('Helvetica-Oblique').fontSize(8.2).text('Yours sincerely,', x + 13, y + 10, { width: width - 26 });
+  // Draw identity first, then lay the transparent stamp over it as the
+  // authorization mark rather than reserving a detached stamp area.
+  pdf.fillColor('#102B79').font('Helvetica-Bold').fontSize(8.6).text('Victor Mubangizi', x + 13, y + 81, { width: width - 26 });
+  renderOfficialStamp(pdf, { x: x + 53, y: y + 19, width: 151, dateLabel: snapshot.stampDate });
+  pdf.fillColor('#475467').font('Helvetica').fontSize(7.8).text('Director | VictorBee Technologies', x + 13, y + 98, { width: width - 26 });
+}
+
 function footer(pdf) {
   const y = PAGE.footerTop;
-  pdf.rect(0, y, 595, 106).fillColor('#092C7B').fill();
+  pdf.rect(0, y, 595, 72).fillColor('#092C7B').fill();
   pdf.save().strokeColor('#FF4B23').lineWidth(4).moveTo(0, y + 8).bezierCurveTo(150, y + 55, 320, y - 16, 595, y + 10).stroke().restore();
-  pdf.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(9).text('Mbarara, Uganda', 54, y + 34);
-  pdf.font('Helvetica').fontSize(8.5).text('0793128137', 54, y + 50).text('info@victorbee.com', 54, y + 66);
-  pdf.font('Helvetica-Bold').fontSize(10).text('SCHOOL PULSE', 360, y + 43, { width: 181, align: 'right' });
-  pdf.font('Helvetica-Oblique').fontSize(8.5).text('Educate. Empower. Excel.', 360, y + 60, { width: 181, align: 'right' });
+  pdf.fillColor('#FFFFFF').font('Helvetica').fontSize(8.2).text('Mbarara, Uganda  |  0793128137  |  info@victorbee.com', 54, y + 43, { width: 335 });
+  pdf.font('Helvetica-Bold').fontSize(9).text('Powered by VictorBee Technologies', 320, y + 42, { width: 221, align: 'right' });
 }
 
 async function renderOfficialPdf(snapshot) {
@@ -85,12 +95,8 @@ async function renderOfficialPdf(snapshot) {
     const pdf = new PDFDocument({ size: 'A4', margin: 0, compress: false, info: { Title: `${text(snapshot.title, 70)} - ${text(snapshot.documentNumber, 60)}`, Author: 'School Pulse', Creator: 'VictorBee Technologies / School Pulse', Subject: 'Official School Pulse document' } });
     const buffers = []; pdf.on('data', (part) => buffers.push(part)); pdf.on('end', () => resolve(Buffer.concat(buffers))); pdf.on('error', reject);
     const contentStart = referenceCard(pdf, snapshot, header(pdf, snapshot)); const detailsBottom = rows(pdf, snapshot, contentStart); const confirmationBottom = confirmation(pdf, snapshot, detailsBottom + 12);
-    const stampWidth = 174; const signatureX = PAGE.right - stampWidth;
-    pdf.fillColor('#344054').font('Helvetica-Oblique').fontSize(8.5).text('Yours sincerely,', signatureX, confirmationBottom + 11, { width: stampWidth });
-    renderOfficialStamp(pdf, { x: signatureX, y: confirmationBottom + 25, width: stampWidth, dateLabel: snapshot.stampDate });
-    pdf.fillColor('#102B79').font('Helvetica-Bold').fontSize(8.8).text('Victor Mubangizi', signatureX, confirmationBottom + 115, { width: stampWidth });
-    pdf.fillColor('#475467').font('Helvetica').fontSize(8.2).text('Director', signatureX, confirmationBottom + 128, { width: stampWidth }).text('VictorBee Technologies', signatureX, confirmationBottom + 140, { width: stampWidth });
-    verificationCard(pdf, snapshot, qr, confirmationBottom + 7); footer(pdf); pdf.end();
+    const cardY = confirmationBottom + 7;
+    verificationCard(pdf, snapshot, qr, cardY); authorizationCard(pdf, snapshot, cardY); footer(pdf); pdf.end();
   });
 }
 
