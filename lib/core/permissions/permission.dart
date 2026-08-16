@@ -240,6 +240,19 @@ class Permission {
   // read-only access to published announcements without this permission.
   static const announcementManage = 'announcement.manage';
 
+  // Structure - governs the school's structural configuration (levels,
+  // classes/streams, subjects, departments, years/terms, grading systems,
+  // and other Academics/Operations setup screens under Structure). IDs are
+  // pre-declared here following this catalog's established pattern, but are
+  // not yet enforced anywhere - Structure today is gated only by the
+  // coarse Firestore `isStaff()` rule, matching every one of its sibling
+  // sub-entities. A future pass should wire real StructureBloc-level
+  // enforcement (await PermissionEvaluator.can(...) folded into bloc state,
+  // as done in class_reports_bloc.dart/class_announcements_bloc.dart)
+  // consistently across all of Structure at once, not just grading.
+  static const structureGradingView = 'structure.grading.view';
+  static const structureGradingManage = 'structure.grading.manage';
+
   /// Every permission ID declared above, grouped by category for UI
   /// consumers (e.g. the role-permission-override editor) that need to
   /// present the full catalog without hand-copying it - Dart has no
@@ -400,5 +413,8 @@ class Permission {
 
     ('School Calendar', calendarManage),
     ('Announcements', announcementManage),
+
+    ('Structure', structureGradingView),
+    ('Structure', structureGradingManage),
   ];
 }

@@ -137,7 +137,7 @@ class StructureSetupProgressCalculator {
       ),
       StructureProgressSection(
         title: 'Grading Systems',
-        route: '/staff/admin/structure/assessment?tab=2',
+        route: '/staff/admin/structure/academics/grading-systems',
         isConfigured: state.gradingSystems.isNotEmpty,
       ),
       StructureProgressSection(

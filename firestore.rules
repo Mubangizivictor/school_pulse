@@ -815,10 +815,10 @@ service cloud.firestore {
       allow read: if isSameSchool(schoolId);
       allow write: if isStaff() && isSameSchool(schoolId);
     }
-    match /schools/{schoolId}/gradingSystems/{id} {
-      allow read: if isSameSchool(schoolId);
-      allow write: if isStaff() && isSameSchool(schoolId);
-    }
+    // Grading system configuration lives at the top-level
+    // structure_grading_systems/grade_bands collections (see below), not
+    // nested under schools/{schoolId} - this nested path was never written
+    // by any live code path and has been removed as dead configuration.
     match /schools/{schoolId}/assessmentMarks/{id} {
       allow read: if isStaff() && isSameSchool(schoolId);
       allow write: if isStaff() && isSameSchool(schoolId) && schoolCanWrite(schoolId);
@@ -1057,10 +1057,16 @@ service cloud.firestore {
     }
     match /staff_designations/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+      // Role definitions are tenant-owned configuration.  A general staff
+      // account must never create a role and then use its label as a route to
+      // escalation; only the existing school administration set manages it.
+      allow create: if hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']) &&
+        isSameSchool(request.resource.data.schoolId);
+      allow update: if hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']) &&
+        isSameSchool(request.resource.data.schoolId) &&
         schoolIdUnchanged();
-      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      // Definitions with history are archived instead of hard-deleted.
+      allow delete: if false;
     }
     match /staff_roles/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));

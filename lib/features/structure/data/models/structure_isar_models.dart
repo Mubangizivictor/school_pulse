@@ -240,6 +240,7 @@ class SubjectIsar {
   late String departmentId;
   late String color;
   late String description;
+  String subjectType = 'Core';
   late bool isElective;
   late bool isPractical;
   late int creditUnits;
@@ -258,6 +259,7 @@ class SubjectIsar {
       ..departmentId = e.departmentId
       ..color = e.color
       ..description = e.description
+      ..subjectType = e.subjectType
       ..isElective = e.isElective
       ..isPractical = e.isPractical
       ..creditUnits = e.creditUnits
@@ -275,6 +277,7 @@ class SubjectIsar {
       departmentId: departmentId,
       color: color,
       description: description,
+      subjectType: subjectType,
       isElective: isElective,
       isPractical: isPractical,
       creditUnits: creditUnits,
@@ -342,6 +345,17 @@ class StaffDesignationIsar {
   late String description;
   late int displayOrder;
   late bool isActive;
+  late String scopeType;
+  late String roleNature;
+  late bool requiresScope;
+  late bool allowMultipleStaff;
+  late bool allowConcurrentAssignments;
+  late bool allowTemporaryAssignments;
+  late bool isSystemPreset;
+  late bool isArchived;
+  late String iconName;
+  late String colorHex;
+  List<String> permissions = const [];
 
   StaffDesignationIsar();
 
@@ -354,7 +368,18 @@ class StaffDesignationIsar {
       ..category = e.category
       ..description = e.description
       ..displayOrder = e.displayOrder
-      ..isActive = e.isActive;
+      ..isActive = e.isActive
+      ..scopeType = e.scopeType
+      ..roleNature = e.roleNature
+      ..requiresScope = e.requiresScope
+      ..allowMultipleStaff = e.allowMultipleStaff
+      ..allowConcurrentAssignments = e.allowConcurrentAssignments
+      ..allowTemporaryAssignments = e.allowTemporaryAssignments
+      ..isSystemPreset = e.isSystemPreset
+      ..isArchived = e.isArchived
+      ..iconName = e.iconName
+      ..colorHex = e.colorHex
+      ..permissions = e.permissions.toList();
   }
 
   StaffDesignation toEntity() {
@@ -367,43 +392,17 @@ class StaffDesignationIsar {
       description: description,
       displayOrder: displayOrder,
       isActive: isActive,
-    );
-  }
-}
-
-@collection
-class StaffRoleIsar {
-  Id id = Isar.autoIncrement;
-
-  @Index(unique: true, replace: true)
-  late String roleId;
-
-  late String schoolId;
-  late String name;
-  late String designationId;
-  late String description;
-  late bool isActive;
-
-  StaffRoleIsar();
-
-  factory StaffRoleIsar.fromEntity(StaffRole e) {
-    return StaffRoleIsar()
-      ..roleId = e.id
-      ..schoolId = e.schoolId
-      ..name = e.name
-      ..designationId = e.designationId
-      ..description = e.description
-      ..isActive = e.isActive;
-  }
-
-  StaffRole toEntity() {
-    return StaffRole(
-      id: roleId,
-      schoolId: schoolId,
-      name: name,
-      designationId: designationId,
-      description: description,
-      isActive: isActive,
+      scopeType: scopeType,
+      roleNature: roleNature,
+      requiresScope: requiresScope,
+      allowMultipleStaff: allowMultipleStaff,
+      allowConcurrentAssignments: allowConcurrentAssignments,
+      allowTemporaryAssignments: allowTemporaryAssignments,
+      isSystemPreset: isSystemPreset,
+      isArchived: isArchived,
+      iconName: iconName,
+      colorHex: colorHex,
+      permissions: permissions.toSet(),
     );
   }
 }
@@ -920,6 +919,18 @@ class GradingSystemDefIsar {
   late String type;
   late bool isDefault;
   late bool isActive;
+  late String description;
+  late String scaleType;
+  late String gradeFormat;
+  late int decimalPlaces;
+  double? passingScore;
+  String? passingGradeCode;
+  late bool allowIncomplete;
+  late String appliesTo;
+  List<String> levelIds = const [];
+  List<String> classIds = const [];
+  List<String> academicYearIds = const [];
+  late int version;
 
   GradingSystemDefIsar();
 
@@ -930,7 +941,19 @@ class GradingSystemDefIsar {
       ..name = e.name
       ..type = e.type
       ..isDefault = e.isDefault
-      ..isActive = e.isActive;
+      ..isActive = e.isActive
+      ..description = e.description
+      ..scaleType = e.scaleType
+      ..gradeFormat = e.gradeFormat
+      ..decimalPlaces = e.decimalPlaces
+      ..passingScore = e.passingScore
+      ..passingGradeCode = e.passingGradeCode
+      ..allowIncomplete = e.allowIncomplete
+      ..appliesTo = e.appliesTo
+      ..levelIds = e.levelIds
+      ..classIds = e.classIds
+      ..academicYearIds = e.academicYearIds
+      ..version = e.version;
   }
 
   GradingSystemDef toEntity() {
@@ -941,6 +964,18 @@ class GradingSystemDefIsar {
       type: type,
       isDefault: isDefault,
       isActive: isActive,
+      description: description,
+      scaleType: scaleType,
+      gradeFormat: gradeFormat,
+      decimalPlaces: decimalPlaces,
+      passingScore: passingScore,
+      passingGradeCode: passingGradeCode,
+      allowIncomplete: allowIncomplete,
+      appliesTo: appliesTo,
+      levelIds: levelIds,
+      classIds: classIds,
+      academicYearIds: academicYearIds,
+      version: version,
     );
   }
 }
@@ -959,6 +994,11 @@ class GradeBandIsar {
   late double maxScore;
   late String remarks;
   late int order;
+  late String label;
+  double? gradePoint;
+  late bool isPassing;
+  late String colorHex;
+  late bool hasNumericBoundary;
 
   GradeBandIsar();
 
@@ -971,7 +1011,12 @@ class GradeBandIsar {
       ..minScore = e.minScore
       ..maxScore = e.maxScore
       ..remarks = e.remarks
-      ..order = e.order;
+      ..order = e.order
+      ..label = e.label
+      ..gradePoint = e.gradePoint
+      ..isPassing = e.isPassing
+      ..colorHex = e.colorHex
+      ..hasNumericBoundary = e.hasNumericBoundary;
   }
 
   GradeBand toEntity() {
@@ -984,6 +1029,11 @@ class GradeBandIsar {
       maxScore: maxScore,
       remarks: remarks,
       order: order,
+      label: label,
+      gradePoint: gradePoint,
+      isPassing: isPassing,
+      colorHex: colorHex,
+      hasNumericBoundary: hasNumericBoundary,
     );
   }
 }

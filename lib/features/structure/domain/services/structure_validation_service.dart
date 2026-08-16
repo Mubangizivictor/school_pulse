@@ -93,7 +93,7 @@ class StructureValidationService {
               message:
                   'In "${system.name}", "${current.grade}" (${current.minScore}-${current.maxScore}) overlaps with "${next.grade}" (${next.minScore}-${next.maxScore}).',
               severity: ValidationSeverity.error,
-              fixRoute: '/staff/admin/structure/assessment?tab=2',
+              fixRoute: '/staff/admin/structure/academics/grading-systems',
             ),
           );
         }

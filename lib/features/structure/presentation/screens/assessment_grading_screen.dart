@@ -12,9 +12,13 @@ import '../widgets/assessment_grading_dialogs.dart';
 import '../widgets/structure_empty_hint.dart';
 import '../widgets/structure_ui_kit.dart';
 
-/// Fee Categories, Assessment Types, and Grading Systems - defined here as
-/// Structure's own configuration copies (Finance/Exams maintain their own
-/// already-wired versions; this module does not replace them).
+/// Fee Categories and Assessment Types - defined here as Structure's own
+/// configuration copies (Finance/Exams maintain their own already-wired
+/// versions; this module does not replace them). Grading Systems used to
+/// have a third tab here, duplicating GradingSystemsScreen's
+/// GradingSystemDef/GradeBand configuration against the same Firestore
+/// collections; that tab has been removed so grading configuration has a
+/// single home (Structure > Academics > Grading Systems).
 class AssessmentGradingScreen extends StatefulWidget {
   const AssessmentGradingScreen({super.key, this.initialTab = 0});
 
@@ -26,11 +30,7 @@ class AssessmentGradingScreen extends StatefulWidget {
 }
 
 class _AssessmentGradingScreenState extends State<AssessmentGradingScreen> {
-  static const _sections = [
-    'Fee categories',
-    'Assessment types',
-    'Grading systems',
-  ];
+  static const _sections = ['Fee categories', 'Assessment types'];
   late int _selectedIndex;
 
   @override
@@ -66,7 +66,6 @@ class _AssessmentGradingScreenState extends State<AssessmentGradingScreen> {
                 children: [
                   _FeeCategoriesTab(state: state),
                   _AssessmentTypesTab(state: state),
-                  _GradingSystemsTab(state: state),
                 ],
               ),
             ),
@@ -185,114 +184,6 @@ class _AssessmentTypesTab extends StatelessWidget {
         icon: const Icon(Icons.add),
         label: const Text('Add Type'),
       ),
-    );
-  }
-}
-
-class _GradingSystemsTab extends StatelessWidget {
-  final StructureState state;
-  const _GradingSystemsTab({required this.state});
-
-  @override
-  Widget build(BuildContext context) {
-    final bloc = context.read<StructureBloc>();
-    final schoolId =
-        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
-    return ListView(
-      padding: const EdgeInsets.all(12),
-      children: [
-        StructureSectionHeader(
-          title: 'Grading Systems',
-          actionLabel: 'Add System',
-          onAction: () => showGradingSystemFormDialog(
-            context,
-            schoolId: schoolId,
-            onSave: (s) => bloc.add(SaveGradingSystemRequested(s)),
-          ),
-        ),
-        if (state.gradingSystems.isEmpty)
-          const StructureEmptyHint(
-            'No grading systems defined yet.\ne.g. A-F, 1-9, Percentage, Competency Based.',
-          ),
-        ...state.gradingSystems.map(
-          (system) => StructureListRow(
-            icon: Icons.grade_outlined,
-            color: Colors.deepOrange,
-            title: system.name,
-            subtitle: system.type,
-            isActive: system.isActive,
-            badge: system.isDefault
-                ? const Chip(
-                    label: Text('Default', style: TextStyle(fontSize: 11)),
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  )
-                : null,
-            onEdit: () => showGradingSystemFormDialog(
-              context,
-              existing: system,
-              schoolId: schoolId,
-              onSave: (u) => bloc.add(SaveGradingSystemRequested(u)),
-            ),
-            onDelete: () async {
-              final confirmed = await showDeleteConfirmDialog(
-                context,
-                title: 'Delete System',
-                message: 'Delete "${system.name}"?',
-              );
-              if (confirmed == true) {
-                bloc.add(DeleteGradingSystemRequested(system.id));
-              }
-            },
-          ),
-        ),
-        const SizedBox(height: 20),
-        StructureSectionHeader(
-          title: 'Grade Bands',
-          actionLabel: 'Add Band',
-          onAction: state.gradingSystems.isEmpty
-              ? null
-              : () => showGradeBandFormDialog(
-                  context,
-                  gradingSystems: state.gradingSystems,
-                  schoolId: schoolId,
-                  onSave: (b) => bloc.add(SaveGradeBandRequested(b)),
-                ),
-        ),
-        if (state.gradingSystems.isEmpty)
-          const StructureEmptyHint('Add a grading system first.')
-        else if (state.gradeBands.isEmpty)
-          const StructureEmptyHint('No grade bands defined yet.'),
-        ...state.gradeBands.map((band) {
-          final system = state.gradingSystems
-              .where((s) => s.id == band.gradingSystemId)
-              .firstOrNull;
-          return StructureListRow(
-            icon: Icons.stacked_bar_chart_outlined,
-            color: Colors.deepOrange,
-            title: band.grade,
-            subtitle:
-                '${system?.name ?? 'Unknown system'} - ${band.minScore} to ${band.maxScore}${band.remarks.isNotEmpty ? ' - ${band.remarks}' : ''}',
-            onEdit: () => showGradeBandFormDialog(
-              context,
-              existing: band,
-              gradingSystems: state.gradingSystems,
-              schoolId: schoolId,
-              onSave: (u) => bloc.add(SaveGradeBandRequested(u)),
-            ),
-            onDelete: () async {
-              final confirmed = await showDeleteConfirmDialog(
-                context,
-                title: 'Delete Band',
-                message: 'Delete "${band.grade}"?',
-              );
-              if (confirmed == true) {
-                bloc.add(DeleteGradeBandRequested(band.id));
-              }
-            },
-          );
-        }),
-      ],
     );
   }
 }

@@ -164,6 +164,8 @@ class RolePermissionDefaults {
       ..._attendanceAdminPermissions,
       Permission.calendarManage,
       Permission.announcementManage,
+      Permission.structureGradingView,
+      Permission.structureGradingManage,
       ..._appointmentOfficePermissions,
     },
     UserRole.director: {
@@ -172,6 +174,8 @@ class RolePermissionDefaults {
       ..._notificationAdminPermissions,
       ..._attendanceAdminPermissions,
       Permission.announcementManage,
+      Permission.structureGradingView,
+      Permission.structureGradingManage,
       ..._appointmentOfficePermissions,
     },
     UserRole.headTeacher: {
@@ -180,6 +184,8 @@ class RolePermissionDefaults {
       ..._notificationAdminPermissions,
       ..._attendanceAdminPermissions,
       Permission.announcementManage,
+      Permission.structureGradingView,
+      Permission.structureGradingManage,
       ..._appointmentOfficePermissions,
     },
     UserRole.deputyHead: {
@@ -187,6 +193,8 @@ class RolePermissionDefaults {
       ..._admissionsPermissions,
       ..._notificationAdminPermissions,
       ..._attendanceAdminPermissions,
+      Permission.structureGradingView,
+      Permission.structureGradingManage,
       ..._appointmentOfficePermissions,
     },
     UserRole.deanOfStudies: {

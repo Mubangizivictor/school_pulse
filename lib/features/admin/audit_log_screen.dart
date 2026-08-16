@@ -18,6 +18,7 @@ class AuditLogScreen extends StatelessWidget {
     'send': Icons.send,
     'gpp_maybe': Icons.gpp_maybe,
     'inventory_2': Icons.inventory_2,
+    'grading': Icons.grading,
   };
 
   @override
