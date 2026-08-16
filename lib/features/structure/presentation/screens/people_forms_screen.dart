@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+import 'package:school_pulse/core/permissions/permission.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
@@ -11,8 +12,42 @@ import 'package:school_pulse/injection_container.dart' as di;
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
-import '../widgets/structure_dialogs.dart' show showDeleteConfirmDialog;
+import '../widgets/structure_dialogs.dart'
+    show showDeleteConfirmDialog, kSubjectColorSwatches;
 import '../widgets/structure_ui_kit.dart';
+
+/// Curated icon set for staff designations - a fixed catalog (rather than a
+/// free icon-font picker) keeps `iconName` values stable and renderable
+/// across every screen that displays a designation.
+const Map<String, IconData> kStaffDesignationIcons = {
+  'badge_outlined': Icons.badge_outlined,
+  'person_outline_rounded': Icons.person_outline_rounded,
+  'school_outlined': Icons.school_outlined,
+  'admin_panel_settings_outlined': Icons.admin_panel_settings_outlined,
+  'shield_outlined': Icons.shield_outlined,
+  'menu_book_outlined': Icons.menu_book_outlined,
+  'account_balance_outlined': Icons.account_balance_outlined,
+  'local_hospital_outlined': Icons.local_hospital_outlined,
+  'directions_bus_outlined': Icons.directions_bus_outlined,
+  'restaurant_outlined': Icons.restaurant_outlined,
+  'security_outlined': Icons.security_outlined,
+  'engineering_outlined': Icons.engineering_outlined,
+  'sports_outlined': Icons.sports_outlined,
+  'groups_outlined': Icons.groups_outlined,
+  'inventory_2_outlined': Icons.inventory_2_outlined,
+};
+
+IconData staffDesignationIcon(String name) =>
+    kStaffDesignationIcons[name] ?? Icons.badge_outlined;
+
+Color staffDesignationColor(String hex) {
+  if (hex.isEmpty) return kSubjectColorSwatches.first;
+  try {
+    return Color(int.parse(hex.replaceFirst('#', '0xff')));
+  } catch (_) {
+    return kSubjectColorSwatches.first;
+  }
+}
 
 const List<String> kStaffDesignationCategorySuggestions = [
   'Leadership',
@@ -23,7 +58,44 @@ const List<String> kStaffDesignationCategorySuggestions = [
   'Boarding',
   'Operations',
   'Support Staff',
-  'Other',
+  'Health',
+  'Security',
+  'Transport',
+  'Library',
+  'Stores / Procurement',
+  'Catering',
+  'Religious Life',
+  'Sports & Activities',
+  'Admissions',
+  'ICT',
+  'Custom / Other',
+];
+
+const List<String> kStaffRoleScopeTypes = [
+  'wholeSchool',
+  'level',
+  'class',
+  'stream',
+  'department',
+  'subject',
+  'dormitory',
+  'house',
+  'club',
+  'sport',
+  'route',
+  'vehicle',
+  'gate',
+  'libraryBranch',
+  'store',
+  'custom',
+];
+
+const List<String> kStaffRoleNatures = [
+  'Standard',
+  'Leadership',
+  'Academic Responsibility',
+  'Operational',
+  'Support',
 ];
 
 /// Reference-style full pages for organisation records. These are pages, not
@@ -181,7 +253,9 @@ class DepartmentDetailsScreen extends StatelessWidget {
   final Department department;
 
   @override
-  Widget build(BuildContext context) => BlocBuilder<StructureBloc, StructureState>(
+  Widget build(
+    BuildContext context,
+  ) => BlocBuilder<StructureBloc, StructureState>(
     builder: (context, state) {
       final current = state.departments.firstWhere(
         (d) => d.id == department.id,
@@ -196,12 +270,17 @@ class DepartmentDetailsScreen extends StatelessWidget {
           MaterialPageRoute(
             builder: (_) => BlocProvider.value(
               value: context.read<StructureBloc>(),
-              child: DepartmentFormScreen(schoolId: schoolId, existing: current),
+              child: DepartmentFormScreen(
+                schoolId: schoolId,
+                existing: current,
+              ),
             ),
           ),
         ),
         onToggleActive: () => context.read<StructureBloc>().add(
-          SaveDepartmentRequested(current.copyWith(isActive: !current.isActive)),
+          SaveDepartmentRequested(
+            current.copyWith(isActive: !current.isActive),
+          ),
         ),
         onDelete: () async {
           final confirmed = await showDeleteConfirmDialog(
@@ -210,7 +289,9 @@ class DepartmentDetailsScreen extends StatelessWidget {
             message: 'Delete "${current.name}"? This cannot be undone.',
           );
           if (confirmed == true && context.mounted) {
-            context.read<StructureBloc>().add(DeleteDepartmentRequested(current.id));
+            context.read<StructureBloc>().add(
+              DeleteDepartmentRequested(current.id),
+            );
             Navigator.of(context).pop();
           }
         },
@@ -224,7 +305,11 @@ class DepartmentDetailsScreen extends StatelessWidget {
             'Description',
             current.description.isEmpty ? 'Not set' : current.description,
           ),
-          _StaffCountRow(label: 'Staff', filterId: current.id, byDepartment: true),
+          _StaffCountRow(
+            label: 'Staff',
+            filterId: current.id,
+            byDepartment: true,
+          ),
           _DetailRow(
             'Subjects',
             '${state.subjects.where((s) => s.departmentId == current.id).length} connected',
@@ -255,6 +340,15 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
   late final TextEditingController _description;
   late final TextEditingController _order;
   late bool _active;
+  late bool _requiresScope;
+  late bool _multipleStaff;
+  late bool _concurrentRoles;
+  late bool _temporaryAssignments;
+  late String _scopeType;
+  late String _nature;
+  late String _iconName;
+  late Color _color;
+  late Set<String> _permissions;
 
   @override
   void initState() {
@@ -269,6 +363,15 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
           : widget.existing!.displayOrder.toString(),
     );
     _active = widget.existing?.isActive ?? true;
+    _requiresScope = widget.existing?.requiresScope ?? false;
+    _multipleStaff = widget.existing?.allowMultipleStaff ?? true;
+    _concurrentRoles = widget.existing?.allowConcurrentAssignments ?? true;
+    _temporaryAssignments = widget.existing?.allowTemporaryAssignments ?? true;
+    _scopeType = widget.existing?.scopeType ?? 'wholeSchool';
+    _nature = widget.existing?.roleNature ?? 'Standard';
+    _iconName = widget.existing?.iconName ?? 'badge_outlined';
+    _color = staffDesignationColor(widget.existing?.colorHex ?? '');
+    _permissions = {...?widget.existing?.permissions};
   }
 
   @override
@@ -283,6 +386,20 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
+    final code = _code.text.trim();
+    final duplicate = context.read<StructureBloc>().state.designations.any(
+      (role) =>
+          role.id != widget.existing?.id &&
+          role.code.trim().toLowerCase() == code.toLowerCase(),
+    );
+    if (duplicate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Role code must be unique for this school.'),
+        ),
+      );
+      return;
+    }
     context.read<StructureBloc>().add(
       SaveDesignationRequested(
         StaffDesignation(
@@ -294,10 +411,88 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
           description: _description.text.trim(),
           displayOrder: int.tryParse(_order.text.trim()) ?? 0,
           isActive: _active,
+          scopeType: _scopeType,
+          roleNature: _nature,
+          requiresScope: _requiresScope,
+          allowMultipleStaff: _multipleStaff,
+          allowConcurrentAssignments: _concurrentRoles,
+          allowTemporaryAssignments: _temporaryAssignments,
+          isSystemPreset: widget.existing?.isSystemPreset ?? false,
+          isArchived: widget.existing?.isArchived ?? false,
+          iconName: _iconName,
+          colorHex:
+              '#${_color.toARGB32().toRadixString(16).substring(2)}',
+          permissions: _permissions,
         ),
       ),
     );
     Navigator.of(context).pop();
+  }
+
+  Future<void> _pickPermissions() async {
+    var selected = {..._permissions};
+    final grouped = <String, List<String>>{};
+    for (final (category, id) in Permission.all) {
+      grouped.putIfAbsent(category, () => []).add(id);
+    }
+    final categories = grouped.keys.toList()..sort();
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (c) => StatefulBuilder(
+        builder: (c, set) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(c).size.height * .8,
+            child: Column(
+              children: [
+                const ListTile(title: Text('Select permissions')),
+                Expanded(
+                  child: ListView(
+                    children: categories.expand((category) {
+                      final ids = grouped[category]!;
+                      return [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                          child: Text(
+                            category.toUpperCase(),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                              color: AppColors.textMuted(c),
+                              letterSpacing: .6,
+                            ),
+                          ),
+                        ),
+                        ...ids.map(
+                          (id) => CheckboxListTile(
+                            dense: true,
+                            title: Text(id),
+                            value: selected.contains(id),
+                            onChanged: (v) => set(
+                              () => v!
+                                  ? selected.add(id)
+                                  : selected.remove(id),
+                            ),
+                          ),
+                        ),
+                      ];
+                    }).toList(),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(c),
+                    child: Text('Apply (${selected.length} selected)'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    setState(() => _permissions = selected);
   }
 
   @override
@@ -307,6 +502,7 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
     onSubmit: _save,
     formKey: _formKey,
     children: [
+      const _RoleFormSection('Basic information'),
       _FormField(
         controller: _name,
         label: 'Role / Designation Name',
@@ -332,6 +528,62 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
         hint: 'Brief description of this role',
         maxLines: 3,
       ),
+      const _RoleFormSection('Role behavior'),
+      DropdownButtonFormField<String>(
+        initialValue: _scopeType,
+        decoration: const InputDecoration(labelText: 'Scope type *'),
+        items: kStaffRoleScopeTypes
+            .map(
+              (value) => DropdownMenuItem(
+                value: value,
+                child: Text(_scopeLabel(value)),
+              ),
+            )
+            .toList(),
+        onChanged: (value) => setState(() => _scopeType = value!),
+      ),
+      const SizedBox(height: 16),
+      DropdownButtonFormField<String>(
+        initialValue: _nature,
+        decoration: const InputDecoration(labelText: 'Role nature *'),
+        items: kStaffRoleNatures
+            .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+            .toList(),
+        onChanged: (value) => setState(() => _nature = value!),
+      ),
+      const SizedBox(height: 8),
+      SwitchListTile.adaptive(
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Requires scope'),
+        subtitle: const Text(
+          'Request a defined responsibility area when assigned.',
+        ),
+        value: _requiresScope,
+        onChanged: (value) => setState(() => _requiresScope = value),
+      ),
+      const _RoleFormSection('Assignment rules'),
+      SwitchListTile.adaptive(
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Can be assigned to multiple staff'),
+        value: _multipleStaff,
+        onChanged: (value) => setState(() => _multipleStaff = value),
+      ),
+      SwitchListTile.adaptive(
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Allow other active roles'),
+        subtitle: const Text(
+          'This responsibility will not replace a staff member’s existing roles.',
+        ),
+        value: _concurrentRoles,
+        onChanged: (value) => setState(() => _concurrentRoles = value),
+      ),
+      SwitchListTile.adaptive(
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Allow temporary assignment'),
+        value: _temporaryAssignments,
+        onChanged: (value) => setState(() => _temporaryAssignments = value),
+      ),
+      const _RoleFormSection('Display & status'),
       _FormField(
         controller: _order,
         label: 'Display Order',
@@ -339,12 +591,134 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
         helper: 'Lower numbers appear first',
         keyboardType: TextInputType.number,
       ),
+      const Padding(
+        padding: EdgeInsets.only(bottom: 6),
+        child: Text('Icon'),
+      ),
+      Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: kStaffDesignationIcons.entries.map((entry) {
+          final selected = entry.key == _iconName;
+          return InkWell(
+            onTap: () => setState(() => _iconName = entry.key),
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: selected
+                    ? _color.withValues(alpha: .15)
+                    : Colors.transparent,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? _color : Colors.grey.shade300,
+                  width: selected ? 2 : 1,
+                ),
+              ),
+              child: Icon(entry.value, color: selected ? _color : null),
+            ),
+          );
+        }).toList(),
+      ),
+      const SizedBox(height: 16),
+      const Padding(
+        padding: EdgeInsets.only(bottom: 6),
+        child: Text('Color'),
+      ),
+      Wrap(
+        spacing: 12,
+        children: kSubjectColorSwatches.map((swatch) {
+          final selected = swatch.toARGB32() == _color.toARGB32();
+          return InkWell(
+            onTap: () => setState(() => _color = swatch),
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: swatch,
+                shape: BoxShape.circle,
+                border: selected
+                    ? Border.all(color: Colors.black87, width: 3)
+                    : null,
+              ),
+              child: selected
+                  ? const Icon(Icons.check, color: Colors.white, size: 16)
+                  : null,
+            ),
+          );
+        }).toList(),
+      ),
       _ActiveSwitch(
         value: _active,
         onChanged: (value) => setState(() => _active = value),
       ),
+      const _RoleFormSection('Permissions'),
+      ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(
+          _permissions.isEmpty
+              ? 'No permissions granted'
+              : '${_permissions.length} permission${_permissions.length == 1 ? '' : 's'} granted',
+        ),
+        subtitle: const Text(
+          'Staff assigned this role gain these permissions through '
+          'EffectiveAccessResolver.',
+        ),
+        trailing: OutlinedButton.icon(
+          onPressed: _pickPermissions,
+          icon: const Icon(Icons.tune),
+          label: const Text('Select'),
+        ),
+      ),
     ],
   );
+}
+
+class _RoleFormSection extends StatelessWidget {
+  const _RoleFormSection(this.title);
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 12, bottom: 8),
+    child: Text(
+      title.toUpperCase(),
+      style: TextStyle(
+        color: AppColors.primary(context),
+        fontWeight: FontWeight.w700,
+        fontSize: 12,
+        letterSpacing: .6,
+      ),
+    ),
+  );
+}
+
+String _scopeLabel(String value) => value
+    .replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(1)}')
+    .replaceFirstMapped(
+      RegExp(r'^.'),
+      (match) => match.group(0)!.toUpperCase(),
+    );
+
+class _RoleRulesRow extends StatelessWidget {
+  const _RoleRulesRow(this.role);
+  final StaffDesignation role;
+
+  @override
+  Widget build(BuildContext context) {
+    final rules = [
+      if (role.requiresScope) 'Scope required',
+      if (role.allowMultipleStaff) 'Multiple staff',
+      if (role.allowConcurrentAssignments) 'Multi-role staff',
+      if (role.allowTemporaryAssignments) 'Temporary allowed',
+    ];
+    return _DetailRow(
+      'Assignment rules',
+      rules.isEmpty ? 'No special rules' : rules.join(' • '),
+    );
+  }
 }
 
 class DesignationDetailsScreen extends StatelessWidget {
@@ -357,7 +731,9 @@ class DesignationDetailsScreen extends StatelessWidget {
   final StaffDesignation designation;
 
   @override
-  Widget build(BuildContext context) => BlocBuilder<StructureBloc, StructureState>(
+  Widget build(
+    BuildContext context,
+  ) => BlocBuilder<StructureBloc, StructureState>(
     builder: (context, state) {
       final current = state.designations.firstWhere(
         (d) => d.id == designation.id,
@@ -365,39 +741,72 @@ class DesignationDetailsScreen extends StatelessWidget {
       );
       return _RecordDetailsShell(
         title: current.name,
-        icon: Icons.person_outline_rounded,
-        color: Colors.deepPurple,
+        icon: staffDesignationIcon(current.iconName),
+        color: staffDesignationColor(current.colorHex),
         isActive: current.isActive,
         onEdit: () => Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => BlocProvider.value(
               value: context.read<StructureBloc>(),
-              child: DesignationFormScreen(schoolId: schoolId, existing: current),
+              child: DesignationFormScreen(
+                schoolId: schoolId,
+                existing: current,
+              ),
             ),
           ),
         ),
         onToggleActive: () => context.read<StructureBloc>().add(
-          SaveDesignationRequested(current.copyWith(isActive: !current.isActive)),
+          SaveDesignationRequested(
+            current.copyWith(isActive: !current.isActive),
+          ),
         ),
         onDelete: () async {
+          if (current.isArchived) {
+            context.read<StructureBloc>().add(
+              RestoreDesignationRequested(current.id),
+            );
+            return;
+          }
           final confirmed = await showDeleteConfirmDialog(
             context,
-            title: 'Delete Staff Role',
-            message: 'Delete "${current.name}"? This cannot be undone.',
+            title: 'Archive Staff Role',
+            message:
+                'Archive "${current.name}"? Existing assignment history is retained and no new assignments can be made.',
           );
           if (confirmed == true && context.mounted) {
-            context.read<StructureBloc>().add(DeleteDesignationRequested(current.id));
+            context.read<StructureBloc>().add(
+              ArchiveDesignationRequested(current.id),
+            );
             Navigator.of(context).pop();
           }
         },
+        deleteLabel: current.isArchived ? 'Restore' : 'Archive',
         rows: [
+          if (current.isArchived)
+            const _DetailRow('Status', 'Archived — read only history'),
           _DetailRow('Code', current.code.isEmpty ? 'Not set' : current.code),
-          _DetailRow('Category', current.category.isEmpty ? 'Not set' : current.category),
+          _DetailRow(
+            'Category',
+            current.category.isEmpty ? 'Not set' : current.category,
+          ),
+          _DetailRow('Scope model', _scopeLabel(current.scopeType)),
+          _DetailRow('Role nature', current.roleNature),
+          _RoleRulesRow(current),
           _DetailRow(
             'Description',
             current.description.isEmpty ? 'Not set' : current.description,
           ),
-          _StaffCountRow(label: 'Assigned Staff', filterId: current.id, byDepartment: false),
+          _DetailRow(
+            'Permissions',
+            current.permissions.isEmpty
+                ? 'No permissions granted — role label does not grant access on its own.'
+                : current.permissions.join(', '),
+          ),
+          _StaffCountRow(
+            label: 'Assigned Staff',
+            filterId: current.id,
+            byDepartment: false,
+          ),
         ],
       );
     },
@@ -466,6 +875,7 @@ class _RecordDetailsShell extends StatelessWidget {
     required this.onToggleActive,
     required this.onDelete,
     required this.rows,
+    this.deleteLabel = 'Delete',
   });
   final String title;
   final IconData icon;
@@ -475,6 +885,7 @@ class _RecordDetailsShell extends StatelessWidget {
   final VoidCallback onToggleActive;
   final VoidCallback onDelete;
   final List<Widget> rows;
+  final String deleteLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -483,10 +894,7 @@ class _RecordDetailsShell extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Details'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: onEdit,
-          ),
+          IconButton(icon: const Icon(Icons.edit_outlined), onPressed: onEdit),
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'toggle') onToggleActive();
@@ -497,9 +905,12 @@ class _RecordDetailsShell extends StatelessWidget {
                 value: 'toggle',
                 child: Text(isActive ? 'Deactivate' : 'Activate'),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'delete',
-                child: Text('Delete', style: TextStyle(color: Colors.red)),
+                child: Text(
+                  deleteLabel,
+                  style: const TextStyle(color: Colors.red),
+                ),
               ),
             ],
           ),
@@ -582,7 +993,10 @@ class _DetailRow extends StatelessWidget {
               child: Text(
                 value,
                 textAlign: TextAlign.right,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
               ),
             ),
           ],
@@ -637,7 +1051,9 @@ class _StaffNameRowState extends State<_StaffNameRow> {
     widget.label,
     !_loaded
         ? '...'
-        : (widget.staffId.isEmpty ? 'Not assigned' : (_name ?? 'Unknown staff')),
+        : (widget.staffId.isEmpty
+              ? 'Not assigned'
+              : (_name ?? 'Unknown staff')),
   );
 }
 
@@ -829,7 +1245,9 @@ class _LoadingSelector extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: .35),
+              color: Theme.of(
+                context,
+              ).colorScheme.outline.withValues(alpha: .35),
             ),
             borderRadius: BorderRadius.circular(7),
           ),

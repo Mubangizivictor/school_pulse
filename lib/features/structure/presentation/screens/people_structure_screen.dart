@@ -114,9 +114,11 @@ class _DepartmentsListState extends State<_DepartmentsList> {
                   d.code.toLowerCase().contains(_query.toLowerCase()),
             )
             .toList()
-          ..sort((a, b) => a.displayOrder != b.displayOrder
-              ? a.displayOrder.compareTo(b.displayOrder)
-              : a.name.compareTo(b.name));
+          ..sort(
+            (a, b) => a.displayOrder != b.displayOrder
+                ? a.displayOrder.compareTo(b.displayOrder)
+                : a.name.compareTo(b.name),
+          );
     return Scaffold(
       body: Column(
         children: [
@@ -195,6 +197,7 @@ class _DesignationsList extends StatefulWidget {
 
 class _DesignationsListState extends State<_DesignationsList> {
   String _query = '';
+  String _filter = 'All';
   @override
   Widget build(BuildContext context) {
     final schoolId =
@@ -202,18 +205,48 @@ class _DesignationsListState extends State<_DesignationsList> {
     final items =
         widget.designations
             .where((r) => r.name.toLowerCase().contains(_query.toLowerCase()))
+            .where(
+              (role) => switch (_filter) {
+                'Active' => role.isActive && !role.isArchived,
+                'Inactive' => !role.isActive && !role.isArchived,
+                'System' => role.isSystemPreset,
+                'Custom' => !role.isSystemPreset,
+                _ => true,
+              },
+            )
             .toList()
-          ..sort((a, b) => a.displayOrder != b.displayOrder
-              ? a.displayOrder.compareTo(b.displayOrder)
-              : a.name.compareTo(b.name));
+          ..sort(
+            (a, b) => a.displayOrder != b.displayOrder
+                ? a.displayOrder.compareTo(b.displayOrder)
+                : a.name.compareTo(b.name),
+          );
     return Scaffold(
       body: Column(
         children: [
+          _RoleSummary(designations: widget.designations, staff: widget.staff),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: StructureSearchBar(
               hint: 'Search roles...',
               onChanged: (v) => setState(() => _query = v),
+            ),
+          ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Row(
+              children: ['All', 'Active', 'Inactive', 'System', 'Custom']
+                  .map(
+                    (filter) => Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(filter),
+                        selected: _filter == filter,
+                        onSelected: (_) => setState(() => _filter = filter),
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
           ),
           Expanded(
@@ -230,12 +263,14 @@ class _DesignationsListState extends State<_DesignationsList> {
                           .where((s) => s.designationId == designation.id)
                           .length;
                       return StructureRecordCard(
-                        icon: Icons.person_outline_rounded,
-                        color: Colors.deepPurple,
+                        icon: staffDesignationIcon(designation.iconName),
+                        color: staffDesignationColor(designation.colorHex),
                         title: designation.name,
                         subtitle: [
+                          if (designation.code.isNotEmpty) designation.code,
                           if (designation.category.isNotEmpty)
                             designation.category,
+                          _scopeName(designation.scopeType),
                           if (widget.staffLoaded) '$staffCount Staff',
                         ].join(' - '),
                         isActive: designation.isActive,
@@ -270,6 +305,68 @@ class _DesignationsListState extends State<_DesignationsList> {
     );
   }
 }
+
+class _RoleSummary extends StatelessWidget {
+  const _RoleSummary({required this.designations, required this.staff});
+  final List<StaffDesignation> designations;
+  final List<UserEntity> staff;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = designations.where((role) => role.isActive).length;
+    final custom = designations.where((role) => !role.isSystemPreset).length;
+    final metrics = [
+      ('Total roles', designations.length),
+      ('Active', active),
+      (
+        'Assigned staff',
+        staff.where((s) => s.designationId?.isNotEmpty ?? false).length,
+      ),
+      ('Custom', custom),
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Row(
+        children: metrics
+            .map(
+              (metric) => Expanded(
+                child: Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 8,
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '${metric.$2}',
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          metric.$1,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+}
+
+String _scopeName(String value) => value
+    .replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(1)}')
+    .replaceFirstMapped(
+      RegExp(r'^.'),
+      (match) => match.group(0)!.toUpperCase(),
+    );
 
 class _AddButton extends StatelessWidget {
   const _AddButton({required this.label, required this.onPressed});
