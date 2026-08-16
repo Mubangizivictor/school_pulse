@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -52,7 +55,7 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
     );
   }
 
-  Future<void> _print(
+  Future<({Uint8List pdfData, String classLabel})> _buildPdf(
     Timetable timetable,
     TimetableConfig config,
     List<TimetableLesson> lessons,
@@ -74,6 +77,10 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
         .where((t) => t.id == timetable.termId)
         .map((t) => t.name)
         .firstOrNull;
+    final classLabel = [
+      className ?? timetable.name,
+      if (streamName != null) streamName,
+    ].join(' - ');
 
     final pdfData = await TimetablePdfGenerator.generate(
       timetable: timetable,
@@ -84,15 +91,33 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
           : structureState.institutionProfile.displayName,
       academicYearName: academicYearName ?? '',
       termName: termName ?? '',
-      classLabel: [
-        className ?? timetable.name,
-        if (streamName != null) streamName,
-      ].join(' - '),
+      classLabel: classLabel,
       schoolLogoUrl: structureState.institutionProfile.logoUrl.isEmpty
           ? null
           : structureState.institutionProfile.logoUrl,
     );
-    await TimetablePdfGenerator.print(pdfData);
+    return (pdfData: pdfData, classLabel: classLabel);
+  }
+
+  Future<void> _print(
+    Timetable timetable,
+    TimetableConfig config,
+    List<TimetableLesson> lessons,
+    StructureState structureState,
+  ) async {
+    final built = await _buildPdf(timetable, config, lessons, structureState);
+    await TimetablePdfGenerator.print(built.pdfData);
+  }
+
+  Future<void> _save(
+    Timetable timetable,
+    TimetableConfig config,
+    List<TimetableLesson> lessons,
+    StructureState structureState,
+  ) async {
+    final built = await _buildPdf(timetable, config, lessons, structureState);
+    final fileName = '${built.classLabel.replaceAll(' ', '_')}_Timetable.pdf';
+    await TimetablePdfGenerator.save(built.pdfData, fileName);
   }
 
   @override
@@ -141,10 +166,22 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
             title: 'Timetable Builder',
             actions: [
               IconButton(
+                tooltip: 'School Day Settings',
+                icon: const Icon(Icons.settings_outlined),
+                onPressed: () =>
+                    context.push('/staff/admin/structure/timetable-config'),
+              ),
+              IconButton(
                 tooltip: 'Print',
                 icon: const Icon(Icons.print_outlined),
                 onPressed: () =>
                     _print(timetable, config, state.lessons, structureState),
+              ),
+              IconButton(
+                tooltip: 'Save',
+                icon: const Icon(Icons.download_outlined),
+                onPressed: () =>
+                    _save(timetable, config, state.lessons, structureState),
               ),
               if (timetable.status == TimetableStatus.draft)
                 TextButton(
