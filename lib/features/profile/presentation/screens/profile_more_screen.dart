@@ -38,8 +38,7 @@ class ProfileMoreScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
             _MoreHeader(
-              onSettingsTap: () =>
-                  context.push('/staff/more/security-privacy'),
+              onSettingsTap: () => context.push('/staff/more/security-privacy'),
             ),
             const SizedBox(height: 20),
             _ProfileCard(
@@ -57,8 +56,7 @@ class ProfileMoreScreen extends StatelessWidget {
                   iconColor: AppColors.electricBlue,
                   title: 'Personal Information',
                   subtitle: 'Update your personal details',
-                  onTap: () =>
-                      context.push('/staff/more/personal-information'),
+                  onTap: () => context.push('/staff/more/personal-information'),
                 ),
                 _MoreTileData(
                   icon: Icons.notifications_none_rounded,
@@ -148,10 +146,7 @@ class ProfileMoreScreen extends StatelessWidget {
             const SizedBox(height: 20),
             const _SectionLabel(title: 'APP SETTINGS'),
             const SizedBox(height: 8),
-            AppCard(
-              padding: EdgeInsets.zero,
-              child: const ThemeSwitchTile(),
-            ),
+            AppCard(padding: EdgeInsets.zero, child: const ThemeSwitchTile()),
             const SizedBox(height: 24),
             SecondaryButton(
               label: 'Logout',
@@ -354,7 +349,11 @@ class _Avatar extends StatelessWidget {
   final String? photoUrl;
   final double size;
 
-  const _Avatar({required this.name, required this.photoUrl, required this.size});
+  const _Avatar({
+    required this.name,
+    required this.photoUrl,
+    required this.size,
+  });
 
   @override
   Widget build(BuildContext context) {

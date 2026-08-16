@@ -93,23 +93,14 @@ void main() {
     });
   });
 
-  group('Section selector', () {
-    testWidgets('opens a bottom sheet with the active section checked', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_wrap(const StructureState()));
-      await tester.pumpAndSettle();
+  testWidgets('opens the requested operation directly without a tab selector', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_wrap(const StructureState(), initialTab: 1));
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Timetable').first);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Choose section'), findsOneWidget);
-      expect(find.text('Attendance Defaults'), findsOneWidget);
-      expect(find.text('Communication Defaults'), findsOneWidget);
-      expect(find.text('Academic Calendar'), findsOneWidget);
-      expect(find.text('Exam Configuration'), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle), findsOneWidget);
-    });
+    expect(find.text('Attendance Defaults'), findsOneWidget);
+    expect(find.text('Timetable'), findsNothing);
   });
 
   group('Manage time slots', () {

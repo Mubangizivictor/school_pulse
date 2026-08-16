@@ -109,7 +109,7 @@ class AppTheme {
           backgroundColor: primaryColor,
           foregroundColor: AppColors.pureWhite,
           elevation: 0,
-          minimumSize: const Size(double.infinity, 52),
+          minimumSize: const Size(0, 52),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x3l),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
           textStyle: AppTypography.labelLarge.copyWith(
@@ -122,7 +122,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: primaryColor,
           side: BorderSide(color: primaryColor, width: 1.5),
-          minimumSize: const Size(double.infinity, 52),
+          minimumSize: const Size(0, 52),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x3l),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
           textStyle: AppTypography.labelLarge.copyWith(

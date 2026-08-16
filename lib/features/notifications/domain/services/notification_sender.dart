@@ -75,6 +75,44 @@ class NotificationAudience {
     if (studentIds.isNotEmpty) 'studentIds': studentIds,
   };
 
+  /// Reconstructs an audience from [toMap]'s output. Used by callers (e.g.
+  /// School Calendar) that persist the audience choice on their own entity
+  /// and need to round-trip it back into a typed value for redisplay/edit.
+  factory NotificationAudience.fromMap(Map<String, dynamic>? map) {
+    if (map == null) return const NotificationAudience.school();
+    NotificationAudienceKind kind;
+    switch (map['kind'] as String?) {
+      case 'users':
+        kind = NotificationAudienceKind.users;
+        break;
+      case 'roles':
+        kind = NotificationAudienceKind.roles;
+        break;
+      case 'class_parents':
+        kind = NotificationAudienceKind.classParents;
+        break;
+      case 'student_parents':
+        kind = NotificationAudienceKind.studentParents;
+        break;
+      case 'all_staff':
+        kind = NotificationAudienceKind.allStaff;
+        break;
+      case 'all_parents':
+        kind = NotificationAudienceKind.allParents;
+        break;
+      case 'school':
+      default:
+        kind = NotificationAudienceKind.school;
+    }
+    return NotificationAudience(
+      kind: kind,
+      userIds: (map['userIds'] as List?)?.cast<String>() ?? const [],
+      roles: (map['roles'] as List?)?.cast<String>() ?? const [],
+      classNames: (map['classNames'] as List?)?.cast<String>() ?? const [],
+      studentIds: (map['studentIds'] as List?)?.cast<String>() ?? const [],
+    );
+  }
+
   /// Human description used in confirmation dialogs, so a sender sees who they
   /// are about to reach before committing.
   String get description {

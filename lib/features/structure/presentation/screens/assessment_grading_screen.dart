@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -51,26 +50,14 @@ class _AssessmentGradingScreenState extends State<AssessmentGradingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const AdminAppBar(title: 'Assessment & Grading'),
-      body: Column(
-        children: [
-          StructureSectionPicker(
-            sections: _sections,
-            selectedIndex: _selectedIndex,
-            onSelected: (index) =>
-                context.go('/staff/admin/structure/assessment?tab=$index'),
-          ),
-          Expanded(
-            child: BlocBuilder<StructureBloc, StructureState>(
-              builder: (context, state) => IndexedStack(
-                index: _selectedIndex,
-                children: [
-                  _FeeCategoriesTab(state: state),
-                  _AssessmentTypesTab(state: state),
-                ],
-              ),
-            ),
-          ),
-        ],
+      body: BlocBuilder<StructureBloc, StructureState>(
+        builder: (context, state) {
+          final pages = [
+            _FeeCategoriesTab(state: state),
+            _AssessmentTypesTab(state: state),
+          ];
+          return pages[_selectedIndex];
+        },
       ),
     );
   }

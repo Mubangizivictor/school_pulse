@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
@@ -55,30 +54,18 @@ class _CampusFacilitiesScreenState extends State<CampusFacilitiesScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const AdminAppBar(title: 'Houses & Campus Life'),
-      body: Column(
-        children: [
-          StructureSectionPicker(
-            sections: _sections,
-            selectedIndex: _selectedIndex,
-            onSelected: (index) =>
-                context.go('/staff/admin/structure/campus?tab=$index'),
-          ),
-          Expanded(
-            child: BlocBuilder<StructureBloc, StructureState>(
-              builder: (context, state) => IndexedStack(
-                index: _selectedIndex,
-                children: [
-                  _CampusesTab(state: state),
-                  _HousesTab(state: state),
-                  _ClubsTab(state: state),
-                  _FacilitiesTab(state: state),
-                  _HostelStructureTab(state: state),
-                  _TransportStructureTab(state: state),
-                ],
-              ),
-            ),
-          ),
-        ],
+      body: BlocBuilder<StructureBloc, StructureState>(
+        builder: (context, state) {
+          final pages = [
+            _CampusesTab(state: state),
+            _HousesTab(state: state),
+            _ClubsTab(state: state),
+            _FacilitiesTab(state: state),
+            _HostelStructureTab(state: state),
+            _TransportStructureTab(state: state),
+          ];
+          return pages[_selectedIndex];
+        },
       ),
     );
   }

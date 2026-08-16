@@ -143,7 +143,7 @@ class _TimetableConfigBody extends StatelessWidget {
                 key: ValueKey(
                   'duration-${config.defaultPeriodDurationMinutes}',
                 ),
-                label: 'Default Lesson Duration (minutes)',
+                label: 'Lesson Duration (min)',
                 hint: 'e.g. 45',
                 keyboardType: TextInputType.number,
                 controller: TextEditingController(

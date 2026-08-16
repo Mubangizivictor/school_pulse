@@ -15,17 +15,45 @@ import '../../widgets/academics_ui_kit.dart';
 import '../../widgets/structure_dialogs.dart' show showDeleteConfirmDialog;
 import '../../widgets/structure_empty_hint.dart';
 
+enum _YearFilter { all, current, upcoming, completed, inactive }
+
+enum _TermFilter { all, current, upcoming, completed, inactive }
+
+enum _YearOrder { newest, oldest, name }
+
+enum _TermOrder { displayOrder, startDate, name }
+
 class YearsTermsScreen extends StatefulWidget {
-  const YearsTermsScreen({super.key});
+  const YearsTermsScreen({super.key, this.showTerms = false});
+  final bool showTerms;
 
   @override
   State<YearsTermsScreen> createState() => _YearsTermsScreenState();
 }
 
 class _YearsTermsScreenState extends State<YearsTermsScreen> {
-  int _tab = 0;
+  late int _tab;
   String _query = '';
+  _YearFilter _yearFilter = _YearFilter.all;
+  _TermFilter _termFilter = _TermFilter.all;
+  String? _termYearId;
+  _YearOrder _yearOrder = _YearOrder.newest;
+  _TermOrder _termOrder = _TermOrder.displayOrder;
   final _dateFmt = DateFormat('MMM d, yyyy');
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = widget.showTerms ? 1 : 0;
+  }
+
+  @override
+  void didUpdateWidget(covariant YearsTermsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.showTerms != widget.showTerms) {
+      _tab = widget.showTerms ? 1 : 0;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +63,9 @@ class _YearsTermsScreenState extends State<YearsTermsScreen> {
       builder: (context, state) {
         final bloc = context.read<StructureBloc>();
         return Scaffold(
-          appBar: const AdminAppBar(title: 'Years & Terms'),
+          appBar: AdminAppBar(
+            title: _tab == 0 ? 'Academic Years' : 'Terms & Semesters',
+          ),
           body: Column(
             children: [
               Padding(
@@ -44,19 +74,17 @@ class _YearsTermsScreenState extends State<YearsTermsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Manage academic years and their associated terms or semesters.',
+                      _tab == 0
+                          ? 'Create and select the current academic year.'
+                          : 'Manage terms or semesters for your academic years.',
                       style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 12),
-                    AcademicsSegmentedTabs(
-                      labels: const ['Years', 'Terms/Semesters'],
-                      selectedIndex: _tab,
-                      onSelected: (i) => setState(() => _tab = i),
                     ),
                     const SizedBox(height: 12),
                     AppSearchFieldCompat(
                       hint: _tab == 0 ? 'Search years...' : 'Search terms...',
                       onChanged: (v) => setState(() => _query = v),
+                      onFilter: () =>
+                          _showFilters(context, state.academicYears),
                     ),
                   ],
                 ),
@@ -69,6 +97,10 @@ class _YearsTermsScreenState extends State<YearsTermsScreen> {
                         schoolId: schoolId,
                         query: _query,
                         dateFmt: _dateFmt,
+                        filter: _yearFilter,
+                        order: _yearOrder,
+                        onOrderChanged: (value) =>
+                            setState(() => _yearOrder = value),
                       )
                     : _TermsList(
                         state: state,
@@ -76,24 +108,116 @@ class _YearsTermsScreenState extends State<YearsTermsScreen> {
                         schoolId: schoolId,
                         query: _query,
                         dateFmt: _dateFmt,
+                        filter: _termFilter,
+                        academicYearId: _termYearId,
+                        order: _termOrder,
+                        onOrderChanged: (value) =>
+                            setState(() => _termOrder = value),
                       ),
               ),
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _tab == 0
-                ? _openYearForm(context, schoolId: schoolId, bloc: bloc)
+                ? _openYearForm(
+                    context,
+                    schoolId: schoolId,
+                    bloc: bloc,
+                    years: state.academicYears,
+                  )
+                : state.academicYears.isEmpty
+                ? _openYearForm(
+                    context,
+                    schoolId: schoolId,
+                    bloc: bloc,
+                    years: state.academicYears,
+                  )
                 : _openTermForm(
                     context,
                     schoolId: schoolId,
                     bloc: bloc,
                     years: state.academicYears,
+                    terms: state.academicTerms,
                   ),
             icon: const Icon(Icons.add),
             label: Text(_tab == 0 ? 'Add Year' : 'Add Term'),
           ),
         );
       },
+    );
+  }
+
+  Future<void> _showFilters(
+    BuildContext context,
+    List<AcademicYear> years,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _tab == 0 ? 'Filter academic years' : 'Filter terms',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (_tab == 0)
+                ..._YearFilter.values.map(
+                  (filter) => RadioListTile<_YearFilter>(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(_yearFilterLabel(filter)),
+                    value: filter,
+                    groupValue: _yearFilter,
+                    onChanged: (value) {
+                      if (value != null) setState(() => _yearFilter = value);
+                      Navigator.pop(sheetContext);
+                    },
+                  ),
+                )
+              else ...[
+                ..._TermFilter.values.map(
+                  (filter) => RadioListTile<_TermFilter>(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(_termFilterLabel(filter)),
+                    value: filter,
+                    groupValue: _termFilter,
+                    onChanged: (value) {
+                      if (value != null) setState(() => _termFilter = value);
+                      Navigator.pop(sheetContext);
+                    },
+                  ),
+                ),
+                const Divider(),
+                DropdownButtonFormField<String?>(
+                  value: _termYearId,
+                  decoration: const InputDecoration(labelText: 'Academic year'),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('All academic years'),
+                    ),
+                    ...years.map(
+                      (year) => DropdownMenuItem<String?>(
+                        value: year.id,
+                        child: Text(year.name),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() => _termYearId = value),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -104,10 +228,12 @@ class _YearsTermsScreenState extends State<YearsTermsScreen> {
 class AppSearchFieldCompat extends StatelessWidget {
   final String hint;
   final ValueChanged<String> onChanged;
+  final VoidCallback onFilter;
   const AppSearchFieldCompat({
     super.key,
     required this.hint,
     required this.onChanged,
+    required this.onFilter,
   });
 
   @override
@@ -117,6 +243,11 @@ class AppSearchFieldCompat extends StatelessWidget {
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: const Icon(Icons.search),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.filter_list_outlined),
+          onPressed: onFilter,
+          tooltip: 'Filter',
+        ),
         filled: true,
         fillColor: Theme.of(context).colorScheme.surface,
         border: OutlineInputBorder(
@@ -134,6 +265,9 @@ class _YearsList extends StatelessWidget {
   final String schoolId;
   final String query;
   final DateFormat dateFmt;
+  final _YearFilter filter;
+  final _YearOrder order;
+  final ValueChanged<_YearOrder> onOrderChanged;
 
   const _YearsList({
     required this.state,
@@ -141,15 +275,26 @@ class _YearsList extends StatelessWidget {
     required this.schoolId,
     required this.query,
     required this.dateFmt,
+    required this.filter,
+    required this.order,
+    required this.onOrderChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final years =
-        state.academicYears
-            .where((y) => y.name.toLowerCase().contains(query.toLowerCase()))
-            .toList()
-          ..sort((a, b) => b.startDate.compareTo(a.startDate));
+    final years = state.academicYears.where((y) {
+      final matchesQuery =
+          y.name.toLowerCase().contains(query.toLowerCase()) ||
+          y.description.toLowerCase().contains(query.toLowerCase());
+      return matchesQuery && _matchesYearFilter(y, filter);
+    }).toList();
+    years.sort(
+      (a, b) => switch (order) {
+        _YearOrder.newest => b.startDate.compareTo(a.startDate),
+        _YearOrder.oldest => a.startDate.compareTo(b.startDate),
+        _YearOrder.name => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      },
+    );
 
     if (years.isEmpty) {
       return StructureEmptyHint(
@@ -159,11 +304,26 @@ class _YearsList extends StatelessWidget {
       );
     }
 
+    final allYears = state.academicYears;
+    final totalTerms = state.academicTerms.length;
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-      itemCount: years.length,
+      itemCount: years.length + 2,
       itemBuilder: (context, index) {
-        final year = years[index];
+        if (index == 0)
+          return _YearSummary(years: allYears, totalTerms: totalTerms);
+        if (index == 1)
+          return _SectionHeader<_YearOrder>(
+            label: 'ACADEMIC YEARS (${years.length})',
+            value: order,
+            items: const {
+              _YearOrder.newest: 'Newest first',
+              _YearOrder.oldest: 'Oldest first',
+              _YearOrder.name: 'Name',
+            },
+            onChanged: onOrderChanged,
+          );
+        final year = years[index - 2];
         final termCount = state.academicTerms
             .where((t) => t.academicYearId == year.id)
             .length;
@@ -171,14 +331,7 @@ class _YearsList extends StatelessWidget {
           icon: Icons.calendar_today_outlined,
           color: Colors.blue,
           title: year.name,
-          statusChip: year.isCurrent
-              ? const AcademicsStatusChip(label: 'Current', color: Colors.green)
-              : (year.isArchived
-                    ? const AcademicsStatusChip(
-                        label: 'Completed',
-                        color: Colors.grey,
-                      )
-                    : null),
+          statusChip: _StatusChip.forYear(year),
           subtitle:
               '${dateFmt.format(year.startDate)} - ${dateFmt.format(year.endDate)}',
           trailingLabel: '$termCount Term${termCount == 1 ? '' : 's'}',
@@ -186,6 +339,7 @@ class _YearsList extends StatelessWidget {
             context,
             schoolId: schoolId,
             bloc: bloc,
+            years: state.academicYears,
             existing: year,
           ),
         );
@@ -200,6 +354,10 @@ class _TermsList extends StatelessWidget {
   final String schoolId;
   final String query;
   final DateFormat dateFmt;
+  final _TermFilter filter;
+  final String? academicYearId;
+  final _TermOrder order;
+  final ValueChanged<_TermOrder> onOrderChanged;
 
   const _TermsList({
     required this.state,
@@ -207,6 +365,10 @@ class _TermsList extends StatelessWidget {
     required this.schoolId,
     required this.query,
     required this.dateFmt,
+    required this.filter,
+    required this.academicYearId,
+    required this.order,
+    required this.onOrderChanged,
   });
 
   @override
@@ -214,11 +376,24 @@ class _TermsList extends StatelessWidget {
     if (state.academicYears.isEmpty) {
       return const StructureEmptyHint('Add an academic year first.');
     }
-    final terms =
-        state.academicTerms
-            .where((t) => t.name.toLowerCase().contains(query.toLowerCase()))
-            .toList()
-          ..sort((a, b) => a.order.compareTo(b.order));
+    final yearsById = {for (final year in state.academicYears) year.id: year};
+    final terms = state.academicTerms.where((term) {
+      final yearName = yearsById[term.academicYearId]?.name ?? '';
+      return (term.name.toLowerCase().contains(query.toLowerCase()) ||
+              yearName.toLowerCase().contains(query.toLowerCase())) &&
+          _matchesTermFilter(term, filter) &&
+          (academicYearId == null || term.academicYearId == academicYearId);
+    }).toList();
+    terms.sort(
+      (a, b) => switch (order) {
+        _TermOrder.displayOrder =>
+          a.order != b.order
+              ? a.order.compareTo(b.order)
+              : a.startDate.compareTo(b.startDate),
+        _TermOrder.startDate => a.startDate.compareTo(b.startDate),
+        _TermOrder.name => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      },
+    );
 
     if (terms.isEmpty) {
       return StructureEmptyHint(
@@ -228,34 +403,231 @@ class _TermsList extends StatelessWidget {
       );
     }
 
-    return ListView.builder(
+    final grouped = <AcademicYear, List<AcademicTerm>>{};
+    for (final year in state.academicYears) {
+      final termsForYear = terms
+          .where((term) => term.academicYearId == year.id)
+          .toList();
+      if (termsForYear.isNotEmpty) grouped[year] = termsForYear;
+    }
+    return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-      itemCount: terms.length,
-      itemBuilder: (context, index) {
-        final term = terms[index];
-        final year = state.academicYears
-            .where((y) => y.id == term.academicYearId)
-            .firstOrNull;
-        return AppCardTapRow(
-          icon: Icons.event_note_outlined,
-          color: Colors.indigo,
-          title: term.name,
-          statusChip: term.isCurrent
-              ? const AcademicsStatusChip(label: 'Current', color: Colors.green)
-              : null,
-          subtitle:
-              '${year?.name ?? 'Unknown year'} - ${dateFmt.format(term.startDate)} to ${dateFmt.format(term.endDate)}',
-          onTap: () => _openTermForm(
-            context,
-            schoolId: schoolId,
-            bloc: bloc,
-            years: state.academicYears,
-            existing: term,
-          ),
-        );
-      },
+      children: [
+        _TermSummary(terms: state.academicTerms),
+        _SectionHeader<_TermOrder>(
+          label: 'TERMS/SEMESTERS (${terms.length})',
+          value: order,
+          items: const {
+            _TermOrder.displayOrder: 'Display order',
+            _TermOrder.startDate: 'Start date',
+            _TermOrder.name: 'Name',
+          },
+          onChanged: onOrderChanged,
+        ),
+        ...grouped.entries.expand(
+          (entry) => [
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 8),
+              child: Text(
+                entry.key.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            ...entry.value.map(
+              (term) => AppCardTapRow(
+                icon: Icons.event_note_outlined,
+                color: Colors.indigo,
+                title: term.name,
+                statusChip: _StatusChip.forTerm(term),
+                subtitle:
+                    '${dateFmt.format(term.startDate)} - ${dateFmt.format(term.endDate)}',
+                onTap: () => _openTermForm(
+                  context,
+                  schoolId: schoolId,
+                  bloc: bloc,
+                  years: state.academicYears,
+                  terms: state.academicTerms,
+                  existing: term,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
+}
+
+String _yearFilterLabel(_YearFilter value) => switch (value) {
+  _YearFilter.all => 'All',
+  _YearFilter.current => 'Current',
+  _YearFilter.upcoming => 'Upcoming',
+  _YearFilter.completed => 'Past / completed',
+  _YearFilter.inactive => 'Inactive',
+};
+
+String _termFilterLabel(_TermFilter value) => switch (value) {
+  _TermFilter.all => 'All',
+  _TermFilter.current => 'Current',
+  _TermFilter.upcoming => 'Upcoming',
+  _TermFilter.completed => 'Completed',
+  _TermFilter.inactive => 'Inactive',
+};
+
+bool _matchesYearFilter(AcademicYear year, _YearFilter filter) {
+  final now = DateTime.now();
+  return switch (filter) {
+    _YearFilter.all => true,
+    _YearFilter.current => year.isCurrent,
+    _YearFilter.inactive => year.isArchived,
+    _YearFilter.upcoming =>
+      !year.isArchived && !year.isCurrent && year.startDate.isAfter(now),
+    _YearFilter.completed =>
+      !year.isArchived && !year.isCurrent && year.endDate.isBefore(now),
+  };
+}
+
+bool _matchesTermFilter(AcademicTerm term, _TermFilter filter) {
+  final now = DateTime.now();
+  return switch (filter) {
+    _TermFilter.all => true,
+    _TermFilter.current => term.isCurrent,
+    _TermFilter.inactive => term.isArchived,
+    _TermFilter.upcoming =>
+      !term.isArchived && !term.isCurrent && term.startDate.isAfter(now),
+    _TermFilter.completed =>
+      !term.isArchived && !term.isCurrent && term.endDate.isBefore(now),
+  };
+}
+
+class _StatusChip {
+  static Widget? forYear(AcademicYear year) {
+    if (year.isCurrent)
+      return const AcademicsStatusChip(label: 'Current', color: Colors.green);
+    if (year.isArchived)
+      return const AcademicsStatusChip(label: 'Inactive', color: Colors.grey);
+    if (year.startDate.isAfter(DateTime.now()))
+      return const AcademicsStatusChip(
+        label: 'Upcoming',
+        color: Colors.deepPurple,
+      );
+    if (year.endDate.isBefore(DateTime.now()))
+      return const AcademicsStatusChip(label: 'Completed', color: Colors.grey);
+    return const AcademicsStatusChip(label: 'Active', color: Colors.green);
+  }
+
+  static Widget? forTerm(AcademicTerm term) {
+    if (term.isCurrent)
+      return const AcademicsStatusChip(label: 'Current', color: Colors.green);
+    if (term.isArchived)
+      return const AcademicsStatusChip(label: 'Inactive', color: Colors.grey);
+    if (term.startDate.isAfter(DateTime.now()))
+      return const AcademicsStatusChip(
+        label: 'Upcoming',
+        color: Colors.deepPurple,
+      );
+    if (term.endDate.isBefore(DateTime.now()))
+      return const AcademicsStatusChip(label: 'Completed', color: Colors.grey);
+    return const AcademicsStatusChip(label: 'Active', color: Colors.green);
+  }
+}
+
+class _YearSummary extends StatelessWidget {
+  const _YearSummary({required this.years, required this.totalTerms});
+  final List<AcademicYear> years;
+  final int totalTerms;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: AcademicsOverviewCard(
+      tiles: [
+        AcademicsStatTile(label: 'Total Years', value: '${years.length}'),
+        AcademicsStatTile(
+          label: 'Active Years',
+          value:
+              '${years.where((y) => !y.isArchived && !y.endDate.isBefore(DateTime.now())).length}',
+        ),
+        AcademicsStatTile(label: 'Terms', value: '$totalTerms'),
+        AcademicsStatTile(
+          label: 'Current Year',
+          value: '${years.where((y) => y.isCurrent).length}',
+        ),
+      ],
+    ),
+  );
+}
+
+class _TermSummary extends StatelessWidget {
+  const _TermSummary({required this.terms});
+  final List<AcademicTerm> terms;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: AcademicsOverviewCard(
+      tiles: [
+        AcademicsStatTile(label: 'Total Terms', value: '${terms.length}'),
+        AcademicsStatTile(
+          label: 'Active Terms',
+          value:
+              '${terms.where((t) => !t.isArchived && !t.endDate.isBefore(DateTime.now())).length}',
+        ),
+        AcademicsStatTile(
+          label: 'Current Terms',
+          value: '${terms.where((t) => t.isCurrent).length}',
+        ),
+        AcademicsStatTile(
+          label: 'Upcoming',
+          value:
+              '${terms.where((t) => !t.isArchived && t.startDate.isAfter(DateTime.now())).length}',
+        ),
+      ],
+    ),
+  );
+}
+
+class _SectionHeader<T> extends StatelessWidget {
+  const _SectionHeader({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+  final String label;
+  final T value;
+  final Map<T, String> items;
+  final ValueChanged<T> onChanged;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+          ),
+        ),
+        PopupMenuButton<T>(
+          initialValue: value,
+          onSelected: onChanged,
+          itemBuilder: (context) => items.entries
+              .map(
+                (entry) =>
+                    PopupMenuItem(value: entry.key, child: Text(entry.value)),
+              )
+              .toList(),
+          child: OutlinedButton.icon(
+            onPressed: null,
+            icon: const Icon(Icons.sort, size: 16),
+            label: const Text('Order'),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 /// A tappable record row with an optional status chip - the Years/Terms
@@ -362,12 +734,14 @@ void _openYearForm(
   BuildContext context, {
   required String schoolId,
   required StructureBloc bloc,
+  required List<AcademicYear> years,
   AcademicYear? existing,
 }) {
   Navigator.of(context).push(
     MaterialPageRoute(
       builder: (_) => _YearFormScreen(
         schoolId: schoolId,
+        years: years,
         existing: existing,
         onSave: (year) => bloc.add(SaveAcademicYearRequested(year)),
         onSetCurrent: existing == null
@@ -388,6 +762,7 @@ void _openTermForm(
   required String schoolId,
   required StructureBloc bloc,
   required List<AcademicYear> years,
+  required List<AcademicTerm> terms,
   AcademicTerm? existing,
 }) {
   Navigator.of(context).push(
@@ -395,6 +770,7 @@ void _openTermForm(
       builder: (_) => _TermFormScreen(
         schoolId: schoolId,
         years: years,
+        terms: terms,
         existing: existing,
         onSave: (term) => bloc.add(SaveAcademicTermRequested(term)),
         onSetCurrent: existing == null
@@ -412,6 +788,7 @@ void _openTermForm(
 
 class _YearFormScreen extends StatefulWidget {
   final String schoolId;
+  final List<AcademicYear> years;
   final AcademicYear? existing;
   final void Function(AcademicYear) onSave;
   final VoidCallback? onSetCurrent;
@@ -419,6 +796,7 @@ class _YearFormScreen extends StatefulWidget {
 
   const _YearFormScreen({
     required this.schoolId,
+    required this.years,
     this.existing,
     required this.onSave,
     this.onSetCurrent,
@@ -434,7 +812,9 @@ class _YearFormScreenState extends State<_YearFormScreen> {
   late final _nameController = TextEditingController(
     text: widget.existing?.name,
   );
-  final _descController = TextEditingController();
+  late final _descController = TextEditingController(
+    text: widget.existing?.description,
+  );
   late DateTime? _startDate = widget.existing?.startDate;
   late DateTime? _endDate = widget.existing?.endDate;
   late bool _setCurrent = widget.existing?.isCurrent ?? false;
@@ -548,7 +928,7 @@ class _YearFormScreenState extends State<_YearFormScreen> {
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_startDate == null || _endDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -556,9 +936,23 @@ class _YearFormScreenState extends State<_YearFormScreen> {
       );
       return;
     }
-    if (_endDate!.isBefore(_startDate!)) {
+    if (!_endDate!.isAfter(_startDate!)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('End date must be after start date')),
+      );
+      return;
+    }
+    final duplicate = widget.years.any(
+      (year) =>
+          year.id != widget.existing?.id &&
+          year.name.trim().toLowerCase() ==
+              _nameController.text.trim().toLowerCase(),
+    );
+    if (duplicate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An academic year with this name already exists.'),
+        ),
       );
       return;
     }
@@ -569,20 +963,30 @@ class _YearFormScreenState extends State<_YearFormScreen> {
         name: _nameController.text.trim(),
         startDate: _startDate!,
         endDate: _endDate!,
-        isCurrent: widget.existing?.isCurrent ?? false,
+        description: _descController.text.trim(),
+        isCurrent: _setCurrent,
         isArchived: widget.existing?.isArchived ?? false,
       ),
     );
-    if (_setCurrent && widget.onSetCurrent != null) {
-      widget.onSetCurrent!();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.existing != null
+                ? 'Academic year updated.'
+                : 'Academic year saved.',
+          ),
+        ),
+      );
     }
-    Navigator.of(context).pop();
+    if (mounted) Navigator.of(context).pop();
   }
 }
 
 class _TermFormScreen extends StatefulWidget {
   final String schoolId;
   final List<AcademicYear> years;
+  final List<AcademicTerm> terms;
   final AcademicTerm? existing;
   final void Function(AcademicTerm) onSave;
   final VoidCallback? onSetCurrent;
@@ -591,6 +995,7 @@ class _TermFormScreen extends StatefulWidget {
   const _TermFormScreen({
     required this.schoolId,
     required this.years,
+    required this.terms,
     this.existing,
     required this.onSave,
     this.onSetCurrent,
@@ -689,6 +1094,7 @@ class _TermFormScreenState extends State<_TermFormScreen> {
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Set as Current Term'),
+                subtitle: const Text('Only one term can be current'),
                 value: _setCurrent,
                 onChanged: (v) => setState(() => _setCurrent = v),
               ),
@@ -720,7 +1126,7 @@ class _TermFormScreenState extends State<_TermFormScreen> {
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_startDate == null || _endDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -728,7 +1134,7 @@ class _TermFormScreenState extends State<_TermFormScreen> {
       );
       return;
     }
-    if (_endDate!.isBefore(_startDate!)) {
+    if (!_endDate!.isAfter(_startDate!)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('End date must be after start date')),
       );
@@ -745,6 +1151,42 @@ class _TermFormScreenState extends State<_TermFormScreen> {
       );
       return;
     }
+    final overlaps = widget.terms.any(
+      (term) =>
+          term.id != widget.existing?.id &&
+          term.academicYearId == _yearId &&
+          !term.isArchived &&
+          _startDate!.isBefore(term.endDate) &&
+          _endDate!.isAfter(term.startDate),
+    );
+    if (overlaps) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This term overlaps another term.')),
+      );
+      return;
+    }
+    if (_setCurrent && year != null && !year.isCurrent) {
+      final setYearCurrent = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Set current academic year?'),
+          content: Text(
+            'This term belongs to ${year.name}, which is not the current academic year. It will also be set as current.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+      if (setYearCurrent != true) return;
+    }
     widget.onSave(
       AcademicTerm(
         id: widget.existing?.id ?? const Uuid().v4(),
@@ -754,15 +1196,21 @@ class _TermFormScreenState extends State<_TermFormScreen> {
         order: int.tryParse(_orderController.text) ?? 0,
         startDate: _startDate!,
         endDate: _endDate!,
-        isCurrent: widget.existing?.isCurrent ?? false,
+        isCurrent: _setCurrent,
         periodType: widget.existing?.periodType ?? AcademicPeriodType.term,
         isArchived: widget.existing?.isArchived ?? false,
       ),
     );
-    if (_setCurrent && widget.onSetCurrent != null) {
-      widget.onSetCurrent!();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.existing != null ? 'Term updated.' : 'Term saved.',
+          ),
+        ),
+      );
     }
-    Navigator.of(context).pop();
+    if (mounted) Navigator.of(context).pop();
   }
 }
 

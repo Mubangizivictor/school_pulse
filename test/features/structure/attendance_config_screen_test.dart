@@ -44,7 +44,9 @@ Widget _wrap(Widget child, {required StructureState structureState}) {
 }
 
 void main() {
-  testWidgets('renders both tabs with empty-state hints', (tester) async {
+  testWidgets('renders card-style configuration actions and the types view', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _wrap(
         const AttendanceConfigScreen(),
@@ -53,7 +55,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Types'), findsOneWidget);
+    expect(find.text('Attendance types'), findsOneWidget);
     expect(find.text('Sessions'), findsOneWidget);
     expect(
       find.textContaining('No attendance types defined yet'),

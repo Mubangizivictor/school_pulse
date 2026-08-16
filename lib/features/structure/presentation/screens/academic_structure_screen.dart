@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
@@ -11,7 +10,6 @@ import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
 import '../widgets/structure_dialogs.dart';
 import '../widgets/structure_empty_hint.dart';
-import '../widgets/structure_ui_kit.dart';
 import '../../domain/services/structure_dependency_service.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
@@ -95,28 +93,16 @@ class _AcademicStructureScreenState extends State<AcademicStructureScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const AdminAppBar(title: 'Academic Structure'),
-      body: Column(
-        children: [
-          StructureSectionPicker(
-            sections: _sections,
-            selectedIndex: _selectedIndex,
-            onSelected: (index) =>
-                context.go('/staff/admin/structure/academic?tab=$index'),
-          ),
-          Expanded(
-            child: BlocBuilder<StructureBloc, StructureState>(
-              builder: (context, state) {
-                final pages = [
-                  _LevelsTab(state: state),
-                  _YearsAndTermsTab(state: state),
-                  _ClassesAndStreamsTab(state: state),
-                  _SubjectsTab(state: state),
-                ];
-                return IndexedStack(index: _selectedIndex, children: pages);
-              },
-            ),
-          ),
-        ],
+      body: BlocBuilder<StructureBloc, StructureState>(
+        builder: (context, state) {
+          final pages = [
+            _LevelsTab(state: state),
+            _YearsAndTermsTab(state: state),
+            _ClassesAndStreamsTab(state: state),
+            _SubjectsTab(state: state),
+          ];
+          return pages[_selectedIndex];
+        },
       ),
     );
   }

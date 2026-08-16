@@ -15,7 +15,6 @@ import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
 import '../widgets/structure_empty_hint.dart';
-import '../widgets/structure_ui_kit.dart';
 
 /// The operational settings hub. Timetable, attendance defaults and
 /// communication defaults are Structure-owned singleton documents; calendar
@@ -57,44 +56,28 @@ class _OperationsConfigScreenState extends State<OperationsConfigScreen> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     appBar: const AdminAppBar(title: 'Operations Config'),
-    body: Column(
-      children: [
-        StructureSectionPicker(
-          sections: _sections,
-          selectedIndex: _selected,
-          onSelected: (index) {
-            setState(() => _selected = index);
-            context.go('/staff/admin/structure/operations?tab=$index');
-          },
+    body: BlocBuilder<StructureBloc, StructureState>(
+      builder: (context, state) => switch (_selected) {
+        0 => _TimetableOverview(config: state.timetableConfig),
+        1 => _AttendanceDefaults(config: state.attendanceDefaultsConfig),
+        2 => _CommunicationDefaults(config: state.communicationDefaultsConfig),
+        3 => const _OwnedModuleNotice(
+          title: 'Academic Calendar',
+          icon: Icons.calendar_month_outlined,
+          message:
+              'School dates, holidays, exams and events are managed in the shared School Calendar.',
+          button: 'Open School Calendar',
+          route: '/staff/calendar',
         ),
-        Expanded(
-          child: BlocBuilder<StructureBloc, StructureState>(
-            builder: (context, state) => switch (_selected) {
-              0 => _TimetableOverview(config: state.timetableConfig),
-              1 => _AttendanceDefaults(config: state.attendanceDefaultsConfig),
-              2 => _CommunicationDefaults(
-                config: state.communicationDefaultsConfig,
-              ),
-              3 => const _OwnedModuleNotice(
-                title: 'Academic Calendar',
-                icon: Icons.calendar_month_outlined,
-                message:
-                    'School dates, holidays, exams and events are managed in the shared School Calendar.',
-                button: 'Open School Calendar',
-                route: '/staff/calendar',
-              ),
-              _ => const _OwnedModuleNotice(
-                title: 'Exam Configuration',
-                icon: Icons.assignment_outlined,
-                message:
-                    'Assessment types, grading systems and exam defaults are managed by the academic assessment configuration.',
-                button: 'Open Assessment Configuration',
-                route: '/staff/admin/structure/assessment',
-              ),
-            },
-          ),
+        _ => const _OwnedModuleNotice(
+          title: 'Exam Configuration',
+          icon: Icons.assignment_outlined,
+          message:
+              'Assessment types, grading systems and exam defaults are managed by the academic assessment configuration.',
+          button: 'Open Assessment Configuration',
+          route: '/staff/admin/structure/assessment',
         ),
-      ],
+      },
     ),
   );
 }

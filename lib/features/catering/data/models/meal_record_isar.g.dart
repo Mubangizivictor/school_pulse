@@ -22,16 +22,8 @@ const MealRecordIsarSchema = CollectionSchema(
       name: r'academicYear',
       type: IsarType.string,
     ),
-    r'classId': PropertySchema(
-      id: 1,
-      name: r'classId',
-      type: IsarType.string,
-    ),
-    r'isSynced': PropertySchema(
-      id: 2,
-      name: r'isSynced',
-      type: IsarType.bool,
-    ),
+    r'classId': PropertySchema(id: 1, name: r'classId', type: IsarType.string),
+    r'isSynced': PropertySchema(id: 2, name: r'isSynced', type: IsarType.bool),
     r'mealCategoryId': PropertySchema(
       id: 3,
       name: r'mealCategoryId',
@@ -67,11 +59,7 @@ const MealRecordIsarSchema = CollectionSchema(
       name: r'studentName',
       type: IsarType.string,
     ),
-    r'term': PropertySchema(
-      id: 10,
-      name: r'term',
-      type: IsarType.string,
-    )
+    r'term': PropertySchema(id: 10, name: r'term', type: IsarType.string),
   },
   estimateSize: _mealRecordIsarEstimateSize,
   serialize: _mealRecordIsarSerialize,
@@ -89,7 +77,7 @@ const MealRecordIsarSchema = CollectionSchema(
           name: r'studentId',
           type: IndexType.hash,
           caseSensitive: true,
-        )
+        ),
       ],
     ),
     r'servedAt': IndexSchema(
@@ -102,7 +90,7 @@ const MealRecordIsarSchema = CollectionSchema(
           name: r'servedAt',
           type: IndexType.value,
           caseSensitive: false,
-        )
+        ),
       ],
     ),
     r'isSynced': IndexSchema(
@@ -115,9 +103,9 @@ const MealRecordIsarSchema = CollectionSchema(
           name: r'isSynced',
           type: IndexType.value,
           caseSensitive: false,
-        )
+        ),
       ],
-    )
+    ),
   },
   links: {},
   embeddedSchemas: {},
@@ -229,7 +217,10 @@ List<IsarLinkBase<dynamic>> _mealRecordIsarGetLinks(MealRecordIsar object) {
 }
 
 void _mealRecordIsarAttach(
-    IsarCollection<dynamic> col, Id id, MealRecordIsar object) {
+  IsarCollection<dynamic> col,
+  Id id,
+  MealRecordIsar object,
+) {
   object.id = id;
 }
 
@@ -261,17 +252,16 @@ extension MealRecordIsarQueryWhereSort
 extension MealRecordIsarQueryWhere
     on QueryBuilder<MealRecordIsar, MealRecordIsar, QWhereClause> {
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterWhereClause> idEqualTo(
-      Id id) {
+    Id id,
+  ) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(
-        lower: id,
-        upper: id,
-      ));
+      return query.addWhereClause(IdWhereClause.between(lower: id, upper: id));
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterWhereClause> idNotEqualTo(
-      Id id) {
+    Id id,
+  ) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -294,8 +284,9 @@ extension MealRecordIsarQueryWhere
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterWhereClause> idGreaterThan(
-      Id id,
-      {bool include = false}) {
+    Id id, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.greaterThan(lower: id, includeLower: include),
@@ -304,8 +295,9 @@ extension MealRecordIsarQueryWhere
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterWhereClause> idLessThan(
-      Id id,
-      {bool include = false}) {
+    Id id, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.lessThan(upper: id, includeUpper: include),
@@ -320,194 +312,217 @@ extension MealRecordIsarQueryWhere
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(
-        lower: lowerId,
-        includeLower: includeLower,
-        upper: upperId,
-        includeUpper: includeUpper,
-      ));
+      return query.addWhereClause(
+        IdWhereClause.between(
+          lower: lowerId,
+          includeLower: includeLower,
+          upper: upperId,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterWhereClause>
-      studentIdEqualTo(String studentId) {
+  studentIdEqualTo(String studentId) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'studentId',
-        value: [studentId],
-      ));
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(indexName: r'studentId', value: [studentId]),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterWhereClause>
-      studentIdNotEqualTo(String studentId) {
+  studentIdNotEqualTo(String studentId) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'studentId',
-              lower: [],
-              upper: [studentId],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'studentId',
-              lower: [studentId],
-              includeLower: false,
-              upper: [],
-            ));
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'studentId',
+                lower: [],
+                upper: [studentId],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'studentId',
+                lower: [studentId],
+                includeLower: false,
+                upper: [],
+              ),
+            );
       } else {
         return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'studentId',
-              lower: [studentId],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'studentId',
-              lower: [],
-              upper: [studentId],
-              includeUpper: false,
-            ));
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'studentId',
+                lower: [studentId],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'studentId',
+                lower: [],
+                upper: [studentId],
+                includeUpper: false,
+              ),
+            );
       }
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterWhereClause>
-      servedAtEqualTo(DateTime servedAt) {
+  servedAtEqualTo(DateTime servedAt) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'servedAt',
-        value: [servedAt],
-      ));
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(indexName: r'servedAt', value: [servedAt]),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterWhereClause>
-      servedAtNotEqualTo(DateTime servedAt) {
+  servedAtNotEqualTo(DateTime servedAt) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'servedAt',
-              lower: [],
-              upper: [servedAt],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'servedAt',
-              lower: [servedAt],
-              includeLower: false,
-              upper: [],
-            ));
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'servedAt',
+                lower: [],
+                upper: [servedAt],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'servedAt',
+                lower: [servedAt],
+                includeLower: false,
+                upper: [],
+              ),
+            );
       } else {
         return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'servedAt',
-              lower: [servedAt],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'servedAt',
-              lower: [],
-              upper: [servedAt],
-              includeUpper: false,
-            ));
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'servedAt',
+                lower: [servedAt],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'servedAt',
+                lower: [],
+                upper: [servedAt],
+                includeUpper: false,
+              ),
+            );
       }
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterWhereClause>
-      servedAtGreaterThan(
-    DateTime servedAt, {
-    bool include = false,
-  }) {
+  servedAtGreaterThan(DateTime servedAt, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'servedAt',
-        lower: [servedAt],
-        includeLower: include,
-        upper: [],
-      ));
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'servedAt',
+          lower: [servedAt],
+          includeLower: include,
+          upper: [],
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterWhereClause>
-      servedAtLessThan(
-    DateTime servedAt, {
-    bool include = false,
-  }) {
+  servedAtLessThan(DateTime servedAt, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'servedAt',
-        lower: [],
-        upper: [servedAt],
-        includeUpper: include,
-      ));
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'servedAt',
+          lower: [],
+          upper: [servedAt],
+          includeUpper: include,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterWhereClause>
-      servedAtBetween(
+  servedAtBetween(
     DateTime lowerServedAt,
     DateTime upperServedAt, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'servedAt',
-        lower: [lowerServedAt],
-        includeLower: includeLower,
-        upper: [upperServedAt],
-        includeUpper: includeUpper,
-      ));
+      return query.addWhereClause(
+        IndexWhereClause.between(
+          indexName: r'servedAt',
+          lower: [lowerServedAt],
+          includeLower: includeLower,
+          upper: [upperServedAt],
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterWhereClause>
-      isSyncedEqualTo(bool isSynced) {
+  isSyncedEqualTo(bool isSynced) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'isSynced',
-        value: [isSynced],
-      ));
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(indexName: r'isSynced', value: [isSynced]),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterWhereClause>
-      isSyncedNotEqualTo(bool isSynced) {
+  isSyncedNotEqualTo(bool isSynced) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'isSynced',
-              lower: [],
-              upper: [isSynced],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'isSynced',
-              lower: [isSynced],
-              includeLower: false,
-              upper: [],
-            ));
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'isSynced',
+                lower: [],
+                upper: [isSynced],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'isSynced',
+                lower: [isSynced],
+                includeLower: false,
+                upper: [],
+              ),
+            );
       } else {
         return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'isSynced',
-              lower: [isSynced],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'isSynced',
-              lower: [],
-              upper: [isSynced],
-              includeUpper: false,
-            ));
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'isSynced',
+                lower: [isSynced],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'isSynced',
+                lower: [],
+                upper: [isSynced],
+                includeUpper: false,
+              ),
+            );
       }
     });
   }
@@ -516,53 +531,56 @@ extension MealRecordIsarQueryWhere
 extension MealRecordIsarQueryFilter
     on QueryBuilder<MealRecordIsar, MealRecordIsar, QFilterCondition> {
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      academicYearEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  academicYearEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'academicYear',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'academicYear',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      academicYearGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'academicYear',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      academicYearLessThan(
+  academicYearGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'academicYear',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'academicYear',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      academicYearBetween(
+  academicYearLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'academicYear',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
+  academicYearBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -570,135 +588,140 @@ extension MealRecordIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'academicYear',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'academicYear',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      academicYearStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  academicYearStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'academicYear',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'academicYear',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      academicYearEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  academicYearEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'academicYear',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'academicYear',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      academicYearContains(String value, {bool caseSensitive = true}) {
+  academicYearContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'academicYear',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'academicYear',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      academicYearMatches(String pattern, {bool caseSensitive = true}) {
+  academicYearMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'academicYear',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'academicYear',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      academicYearIsEmpty() {
+  academicYearIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'academicYear',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'academicYear', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      academicYearIsNotEmpty() {
+  academicYearIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'academicYear',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'academicYear', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      classIdEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  classIdEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'classId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'classId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      classIdGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'classId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      classIdLessThan(
+  classIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'classId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'classId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      classIdBetween(
+  classIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'classId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
+  classIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -706,122 +729,122 @@ extension MealRecordIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'classId',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'classId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      classIdStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  classIdStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'classId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'classId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      classIdEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  classIdEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'classId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'classId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      classIdContains(String value, {bool caseSensitive = true}) {
+  classIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'classId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'classId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      classIdMatches(String pattern, {bool caseSensitive = true}) {
+  classIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'classId',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'classId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      classIdIsEmpty() {
+  classIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'classId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'classId', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      classIdIsNotEmpty() {
+  classIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'classId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'classId', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition> idEqualTo(
-      Id value) {
+    Id value,
+  ) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'id', value: value),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      idGreaterThan(
-    Id value, {
-    bool include = false,
-  }) {
+  idGreaterThan(Id value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'id',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      idLessThan(
-    Id value, {
-    bool include = false,
-  }) {
+  idLessThan(Id value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'id',
+          value: value,
+        ),
+      );
     });
   }
 
@@ -832,74 +855,78 @@ extension MealRecordIsarQueryFilter
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'id',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'id',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      isSyncedEqualTo(bool value) {
+  isSyncedEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'isSynced',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'isSynced', value: value),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryIdEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  mealCategoryIdEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'mealCategoryId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'mealCategoryId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryIdGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'mealCategoryId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryIdLessThan(
+  mealCategoryIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'mealCategoryId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'mealCategoryId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryIdBetween(
+  mealCategoryIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'mealCategoryId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
+  mealCategoryIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -907,135 +934,140 @@ extension MealRecordIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'mealCategoryId',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'mealCategoryId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryIdStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  mealCategoryIdStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'mealCategoryId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'mealCategoryId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryIdEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  mealCategoryIdEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'mealCategoryId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'mealCategoryId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryIdContains(String value, {bool caseSensitive = true}) {
+  mealCategoryIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'mealCategoryId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'mealCategoryId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryIdMatches(String pattern, {bool caseSensitive = true}) {
+  mealCategoryIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'mealCategoryId',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'mealCategoryId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryIdIsEmpty() {
+  mealCategoryIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'mealCategoryId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'mealCategoryId', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryIdIsNotEmpty() {
+  mealCategoryIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'mealCategoryId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'mealCategoryId', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryNameEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  mealCategoryNameEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'mealCategoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'mealCategoryName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryNameGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'mealCategoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryNameLessThan(
+  mealCategoryNameGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'mealCategoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'mealCategoryName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryNameBetween(
+  mealCategoryNameLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'mealCategoryName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
+  mealCategoryNameBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1043,135 +1075,140 @@ extension MealRecordIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'mealCategoryName',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'mealCategoryName',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryNameStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  mealCategoryNameStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'mealCategoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'mealCategoryName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryNameEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  mealCategoryNameEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'mealCategoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'mealCategoryName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryNameContains(String value, {bool caseSensitive = true}) {
+  mealCategoryNameContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'mealCategoryName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'mealCategoryName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryNameMatches(String pattern, {bool caseSensitive = true}) {
+  mealCategoryNameMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'mealCategoryName',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'mealCategoryName',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryNameIsEmpty() {
+  mealCategoryNameIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'mealCategoryName',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'mealCategoryName', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      mealCategoryNameIsNotEmpty() {
+  mealCategoryNameIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'mealCategoryName',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'mealCategoryName', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      schoolIdEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  schoolIdEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      schoolIdGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      schoolIdLessThan(
+  schoolIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      schoolIdBetween(
+  schoolIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
+  schoolIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1179,191 +1216,195 @@ extension MealRecordIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'schoolId',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'schoolId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      schoolIdStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  schoolIdStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      schoolIdEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  schoolIdEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      schoolIdContains(String value, {bool caseSensitive = true}) {
+  schoolIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      schoolIdMatches(String pattern, {bool caseSensitive = true}) {
+  schoolIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'schoolId',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'schoolId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      schoolIdIsEmpty() {
+  schoolIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'schoolId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'schoolId', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      schoolIdIsNotEmpty() {
+  schoolIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'schoolId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'schoolId', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      servedAtEqualTo(DateTime value) {
+  servedAtEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'servedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'servedAt', value: value),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      servedAtGreaterThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  servedAtGreaterThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'servedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'servedAt',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      servedAtLessThan(
-    DateTime value, {
-    bool include = false,
-  }) {
+  servedAtLessThan(DateTime value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'servedAt',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'servedAt',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      servedAtBetween(
+  servedAtBetween(
     DateTime lower,
     DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'servedAt',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'servedAt',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      servedByEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  servedByEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'servedBy',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'servedBy',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      servedByGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'servedBy',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      servedByLessThan(
+  servedByGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'servedBy',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'servedBy',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      servedByBetween(
+  servedByLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'servedBy',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
+  servedByBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1371,135 +1412,140 @@ extension MealRecordIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'servedBy',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'servedBy',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      servedByStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  servedByStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'servedBy',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'servedBy',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      servedByEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  servedByEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'servedBy',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'servedBy',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      servedByContains(String value, {bool caseSensitive = true}) {
+  servedByContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'servedBy',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'servedBy',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      servedByMatches(String pattern, {bool caseSensitive = true}) {
+  servedByMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'servedBy',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'servedBy',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      servedByIsEmpty() {
+  servedByIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'servedBy',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'servedBy', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      servedByIsNotEmpty() {
+  servedByIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'servedBy',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'servedBy', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentIdEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  studentIdEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'studentId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'studentId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentIdGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'studentId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentIdLessThan(
+  studentIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'studentId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'studentId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentIdBetween(
+  studentIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'studentId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
+  studentIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1507,135 +1553,140 @@ extension MealRecordIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'studentId',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'studentId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentIdStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  studentIdStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'studentId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'studentId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentIdEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  studentIdEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'studentId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'studentId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentIdContains(String value, {bool caseSensitive = true}) {
+  studentIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'studentId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'studentId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentIdMatches(String pattern, {bool caseSensitive = true}) {
+  studentIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'studentId',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'studentId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentIdIsEmpty() {
+  studentIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'studentId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'studentId', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentIdIsNotEmpty() {
+  studentIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'studentId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'studentId', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentNameEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  studentNameEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'studentName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'studentName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentNameGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'studentName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentNameLessThan(
+  studentNameGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'studentName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'studentName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentNameBetween(
+  studentNameLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'studentName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
+  studentNameBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1643,135 +1694,140 @@ extension MealRecordIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'studentName',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'studentName',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentNameStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  studentNameStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'studentName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'studentName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentNameEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  studentNameEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'studentName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'studentName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentNameContains(String value, {bool caseSensitive = true}) {
+  studentNameContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'studentName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'studentName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentNameMatches(String pattern, {bool caseSensitive = true}) {
+  studentNameMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'studentName',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'studentName',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentNameIsEmpty() {
+  studentNameIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'studentName',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'studentName', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      studentNameIsNotEmpty() {
+  studentNameIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'studentName',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'studentName', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      termEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  termEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'term',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'term',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      termGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'term',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      termLessThan(
+  termGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'term',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'term',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      termBetween(
+  termLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'term',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
+  termBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1779,84 +1835,86 @@ extension MealRecordIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'term',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'term',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      termStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  termStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'term',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'term',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      termEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  termEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'term',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'term',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      termContains(String value, {bool caseSensitive = true}) {
+  termContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'term',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'term',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      termMatches(String pattern, {bool caseSensitive = true}) {
+  termMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'term',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'term',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      termIsEmpty() {
+  termIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'term',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'term', value: ''),
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterFilterCondition>
-      termIsNotEmpty() {
+  termIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'term',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'term', value: ''),
+      );
     });
   }
 }
@@ -1870,14 +1928,14 @@ extension MealRecordIsarQueryLinks
 extension MealRecordIsarQuerySortBy
     on QueryBuilder<MealRecordIsar, MealRecordIsar, QSortBy> {
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      sortByAcademicYear() {
+  sortByAcademicYear() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'academicYear', Sort.asc);
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      sortByAcademicYearDesc() {
+  sortByAcademicYearDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'academicYear', Sort.desc);
     });
@@ -1890,7 +1948,7 @@ extension MealRecordIsarQuerySortBy
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      sortByClassIdDesc() {
+  sortByClassIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'classId', Sort.desc);
     });
@@ -1903,35 +1961,35 @@ extension MealRecordIsarQuerySortBy
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      sortByIsSyncedDesc() {
+  sortByIsSyncedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isSynced', Sort.desc);
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      sortByMealCategoryId() {
+  sortByMealCategoryId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'mealCategoryId', Sort.asc);
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      sortByMealCategoryIdDesc() {
+  sortByMealCategoryIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'mealCategoryId', Sort.desc);
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      sortByMealCategoryName() {
+  sortByMealCategoryName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'mealCategoryName', Sort.asc);
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      sortByMealCategoryNameDesc() {
+  sortByMealCategoryNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'mealCategoryName', Sort.desc);
     });
@@ -1944,7 +2002,7 @@ extension MealRecordIsarQuerySortBy
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      sortBySchoolIdDesc() {
+  sortBySchoolIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.desc);
     });
@@ -1957,7 +2015,7 @@ extension MealRecordIsarQuerySortBy
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      sortByServedAtDesc() {
+  sortByServedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'servedAt', Sort.desc);
     });
@@ -1970,7 +2028,7 @@ extension MealRecordIsarQuerySortBy
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      sortByServedByDesc() {
+  sortByServedByDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'servedBy', Sort.desc);
     });
@@ -1983,21 +2041,21 @@ extension MealRecordIsarQuerySortBy
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      sortByStudentIdDesc() {
+  sortByStudentIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'studentId', Sort.desc);
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      sortByStudentName() {
+  sortByStudentName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'studentName', Sort.asc);
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      sortByStudentNameDesc() {
+  sortByStudentNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'studentName', Sort.desc);
     });
@@ -2019,14 +2077,14 @@ extension MealRecordIsarQuerySortBy
 extension MealRecordIsarQuerySortThenBy
     on QueryBuilder<MealRecordIsar, MealRecordIsar, QSortThenBy> {
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      thenByAcademicYear() {
+  thenByAcademicYear() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'academicYear', Sort.asc);
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      thenByAcademicYearDesc() {
+  thenByAcademicYearDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'academicYear', Sort.desc);
     });
@@ -2039,7 +2097,7 @@ extension MealRecordIsarQuerySortThenBy
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      thenByClassIdDesc() {
+  thenByClassIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'classId', Sort.desc);
     });
@@ -2064,35 +2122,35 @@ extension MealRecordIsarQuerySortThenBy
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      thenByIsSyncedDesc() {
+  thenByIsSyncedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isSynced', Sort.desc);
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      thenByMealCategoryId() {
+  thenByMealCategoryId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'mealCategoryId', Sort.asc);
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      thenByMealCategoryIdDesc() {
+  thenByMealCategoryIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'mealCategoryId', Sort.desc);
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      thenByMealCategoryName() {
+  thenByMealCategoryName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'mealCategoryName', Sort.asc);
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      thenByMealCategoryNameDesc() {
+  thenByMealCategoryNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'mealCategoryName', Sort.desc);
     });
@@ -2105,7 +2163,7 @@ extension MealRecordIsarQuerySortThenBy
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      thenBySchoolIdDesc() {
+  thenBySchoolIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.desc);
     });
@@ -2118,7 +2176,7 @@ extension MealRecordIsarQuerySortThenBy
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      thenByServedAtDesc() {
+  thenByServedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'servedAt', Sort.desc);
     });
@@ -2131,7 +2189,7 @@ extension MealRecordIsarQuerySortThenBy
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      thenByServedByDesc() {
+  thenByServedByDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'servedBy', Sort.desc);
     });
@@ -2144,21 +2202,21 @@ extension MealRecordIsarQuerySortThenBy
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      thenByStudentIdDesc() {
+  thenByStudentIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'studentId', Sort.desc);
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      thenByStudentName() {
+  thenByStudentName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'studentName', Sort.asc);
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QAfterSortBy>
-      thenByStudentNameDesc() {
+  thenByStudentNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'studentName', Sort.desc);
     });
@@ -2180,14 +2238,15 @@ extension MealRecordIsarQuerySortThenBy
 extension MealRecordIsarQueryWhereDistinct
     on QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct> {
   QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct>
-      distinctByAcademicYear({bool caseSensitive = true}) {
+  distinctByAcademicYear({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'academicYear', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct> distinctByClassId(
-      {bool caseSensitive = true}) {
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct> distinctByClassId({
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'classId', caseSensitive: caseSensitive);
     });
@@ -2200,23 +2259,28 @@ extension MealRecordIsarQueryWhereDistinct
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct>
-      distinctByMealCategoryId({bool caseSensitive = true}) {
+  distinctByMealCategoryId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'mealCategoryId',
-          caseSensitive: caseSensitive);
+      return query.addDistinctBy(
+        r'mealCategoryId',
+        caseSensitive: caseSensitive,
+      );
     });
   }
 
   QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct>
-      distinctByMealCategoryName({bool caseSensitive = true}) {
+  distinctByMealCategoryName({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'mealCategoryName',
-          caseSensitive: caseSensitive);
+      return query.addDistinctBy(
+        r'mealCategoryName',
+        caseSensitive: caseSensitive,
+      );
     });
   }
 
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct> distinctBySchoolId(
-      {bool caseSensitive = true}) {
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct> distinctBySchoolId({
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'schoolId', caseSensitive: caseSensitive);
     });
@@ -2228,29 +2292,32 @@ extension MealRecordIsarQueryWhereDistinct
     });
   }
 
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct> distinctByServedBy(
-      {bool caseSensitive = true}) {
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct> distinctByServedBy({
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'servedBy', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct> distinctByStudentId(
-      {bool caseSensitive = true}) {
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct> distinctByStudentId({
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'studentId', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct> distinctByStudentName(
-      {bool caseSensitive = true}) {
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct>
+  distinctByStudentName({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'studentName', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct> distinctByTerm(
-      {bool caseSensitive = true}) {
+  QueryBuilder<MealRecordIsar, MealRecordIsar, QDistinct> distinctByTerm({
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'term', caseSensitive: caseSensitive);
     });
@@ -2266,7 +2333,7 @@ extension MealRecordIsarQueryProperty
   }
 
   QueryBuilder<MealRecordIsar, String, QQueryOperations>
-      academicYearProperty() {
+  academicYearProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'academicYear');
     });
@@ -2285,14 +2352,14 @@ extension MealRecordIsarQueryProperty
   }
 
   QueryBuilder<MealRecordIsar, String, QQueryOperations>
-      mealCategoryIdProperty() {
+  mealCategoryIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'mealCategoryId');
     });
   }
 
   QueryBuilder<MealRecordIsar, String, QQueryOperations>
-      mealCategoryNameProperty() {
+  mealCategoryNameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'mealCategoryName');
     });

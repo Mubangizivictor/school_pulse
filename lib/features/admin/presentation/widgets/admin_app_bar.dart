@@ -34,15 +34,17 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Text(title),
       centerTitle: centerTitle,
       leading: leading,
-      actions: actions == null
-          ? null
-          : [...actions!, const SizedBox(width: 4)],
+      // Every school-admin page places its scrolling content in Scaffold.body,
+      // so this shared bar stays pinned above it. A subtle raised state keeps
+      // that fixed boundary clear once the content moves underneath.
+      scrolledUnderElevation: 3,
+      surfaceTintColor: Colors.transparent,
+      actions: actions == null ? null : [...actions!, const SizedBox(width: 4)],
       bottom: bottom,
     );
   }
 
   @override
-  Size get preferredSize => Size.fromHeight(
-    kToolbarHeight + (bottom?.preferredSize.height ?? 0),
-  );
+  Size get preferredSize =>
+      Size.fromHeight(kToolbarHeight + (bottom?.preferredSize.height ?? 0));
 }

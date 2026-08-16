@@ -38,11 +38,7 @@ const SchoolBrandingIsarSchema = CollectionSchema(
       name: r'loginBackgroundUrl',
       type: IsarType.string,
     ),
-    r'logoUrl': PropertySchema(
-      id: 4,
-      name: r'logoUrl',
-      type: IsarType.string,
-    ),
+    r'logoUrl': PropertySchema(id: 4, name: r'logoUrl', type: IsarType.string),
     r'primaryColor': PropertySchema(
       id: 5,
       name: r'primaryColor',
@@ -68,16 +64,12 @@ const SchoolBrandingIsarSchema = CollectionSchema(
       name: r'secondaryColor',
       type: IsarType.string,
     ),
-    r'version': PropertySchema(
-      id: 10,
-      name: r'version',
-      type: IsarType.long,
-    ),
+    r'version': PropertySchema(id: 10, name: r'version', type: IsarType.long),
     r'welcomeMessage': PropertySchema(
       id: 11,
       name: r'welcomeMessage',
       type: IsarType.string,
-    )
+    ),
   },
   estimateSize: _schoolBrandingIsarEstimateSize,
   serialize: _schoolBrandingIsarSerialize,
@@ -95,9 +87,9 @@ const SchoolBrandingIsarSchema = CollectionSchema(
           name: r'schoolId',
           type: IndexType.hash,
           caseSensitive: true,
-        )
+        ),
       ],
-    )
+    ),
   },
   links: {},
   embeddedSchemas: {},
@@ -251,12 +243,16 @@ Id _schoolBrandingIsarGetId(SchoolBrandingIsar object) {
 }
 
 List<IsarLinkBase<dynamic>> _schoolBrandingIsarGetLinks(
-    SchoolBrandingIsar object) {
+  SchoolBrandingIsar object,
+) {
   return [];
 }
 
 void _schoolBrandingIsarAttach(
-    IsarCollection<dynamic> col, Id id, SchoolBrandingIsar object) {
+  IsarCollection<dynamic> col,
+  Id id,
+  SchoolBrandingIsar object,
+) {
   object.id = id;
 }
 
@@ -278,7 +274,8 @@ extension SchoolBrandingIsarByIndex on IsarCollection<SchoolBrandingIsar> {
   }
 
   Future<List<SchoolBrandingIsar?>> getAllBySchoolId(
-      List<String> schoolIdValues) {
+    List<String> schoolIdValues,
+  ) {
     final values = schoolIdValues.map((e) => [e]).toList();
     return getAllByIndex(r'schoolId', values);
   }
@@ -310,8 +307,10 @@ extension SchoolBrandingIsarByIndex on IsarCollection<SchoolBrandingIsar> {
     return putAllByIndex(r'schoolId', objects);
   }
 
-  List<Id> putAllBySchoolIdSync(List<SchoolBrandingIsar> objects,
-      {bool saveLinks = true}) {
+  List<Id> putAllBySchoolIdSync(
+    List<SchoolBrandingIsar> objects, {
+    bool saveLinks = true,
+  }) {
     return putAllByIndexSync(r'schoolId', objects, saveLinks: saveLinks);
   }
 }
@@ -328,17 +327,14 @@ extension SchoolBrandingIsarQueryWhereSort
 extension SchoolBrandingIsarQueryWhere
     on QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QWhereClause> {
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterWhereClause>
-      idEqualTo(Id id) {
+  idEqualTo(Id id) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(
-        lower: id,
-        upper: id,
-      ));
+      return query.addWhereClause(IdWhereClause.between(lower: id, upper: id));
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterWhereClause>
-      idNotEqualTo(Id id) {
+  idNotEqualTo(Id id) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -361,7 +357,7 @@ extension SchoolBrandingIsarQueryWhere
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterWhereClause>
-      idGreaterThan(Id id, {bool include = false}) {
+  idGreaterThan(Id id, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.greaterThan(lower: id, includeLower: include),
@@ -370,7 +366,7 @@ extension SchoolBrandingIsarQueryWhere
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterWhereClause>
-      idLessThan(Id id, {bool include = false}) {
+  idLessThan(Id id, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.lessThan(upper: id, includeUpper: include),
@@ -379,63 +375,72 @@ extension SchoolBrandingIsarQueryWhere
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterWhereClause>
-      idBetween(
+  idBetween(
     Id lowerId,
     Id upperId, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IdWhereClause.between(
-        lower: lowerId,
-        includeLower: includeLower,
-        upper: upperId,
-        includeUpper: includeUpper,
-      ));
+      return query.addWhereClause(
+        IdWhereClause.between(
+          lower: lowerId,
+          includeLower: includeLower,
+          upper: upperId,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterWhereClause>
-      schoolIdEqualTo(String schoolId) {
+  schoolIdEqualTo(String schoolId) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'schoolId',
-        value: [schoolId],
-      ));
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(indexName: r'schoolId', value: [schoolId]),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterWhereClause>
-      schoolIdNotEqualTo(String schoolId) {
+  schoolIdNotEqualTo(String schoolId) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'schoolId',
-              lower: [],
-              upper: [schoolId],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'schoolId',
-              lower: [schoolId],
-              includeLower: false,
-              upper: [],
-            ));
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'schoolId',
+                lower: [],
+                upper: [schoolId],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'schoolId',
+                lower: [schoolId],
+                includeLower: false,
+                upper: [],
+              ),
+            );
       } else {
         return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'schoolId',
-              lower: [schoolId],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'schoolId',
-              lower: [],
-              upper: [schoolId],
-              includeUpper: false,
-            ));
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'schoolId',
+                lower: [schoolId],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'schoolId',
+                lower: [],
+                upper: [schoolId],
+                includeUpper: false,
+              ),
+            );
       }
     });
   }
@@ -444,71 +449,74 @@ extension SchoolBrandingIsarQueryWhere
 extension SchoolBrandingIsarQueryFilter
     on QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QFilterCondition> {
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      accentColorIsNull() {
+  accentColorIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'accentColor',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'accentColor'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      accentColorIsNotNull() {
+  accentColorIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'accentColor',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'accentColor'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      accentColorEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
+  accentColorEqualTo(String? value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'accentColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'accentColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      accentColorGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'accentColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      accentColorLessThan(
+  accentColorGreaterThan(
     String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'accentColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'accentColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      accentColorBetween(
+  accentColorLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'accentColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
+  accentColorBetween(
     String? lower,
     String? upper, {
     bool includeLower = true,
@@ -516,153 +524,158 @@ extension SchoolBrandingIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'accentColor',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'accentColor',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      accentColorStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  accentColorStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'accentColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'accentColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      accentColorEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  accentColorEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'accentColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'accentColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      accentColorContains(String value, {bool caseSensitive = true}) {
+  accentColorContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'accentColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'accentColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      accentColorMatches(String pattern, {bool caseSensitive = true}) {
+  accentColorMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'accentColor',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'accentColor',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      accentColorIsEmpty() {
+  accentColorIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'accentColor',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'accentColor', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      accentColorIsNotEmpty() {
+  accentColorIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'accentColor',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'accentColor', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      badgeUrlIsNull() {
+  badgeUrlIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'badgeUrl',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'badgeUrl'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      badgeUrlIsNotNull() {
+  badgeUrlIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'badgeUrl',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'badgeUrl'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      badgeUrlEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
+  badgeUrlEqualTo(String? value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'badgeUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'badgeUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      badgeUrlGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'badgeUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      badgeUrlLessThan(
+  badgeUrlGreaterThan(
     String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'badgeUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'badgeUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      badgeUrlBetween(
+  badgeUrlLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'badgeUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
+  badgeUrlBetween(
     String? lower,
     String? upper, {
     bool includeLower = true,
@@ -670,153 +683,158 @@ extension SchoolBrandingIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'badgeUrl',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'badgeUrl',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      badgeUrlStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  badgeUrlStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'badgeUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'badgeUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      badgeUrlEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  badgeUrlEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'badgeUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'badgeUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      badgeUrlContains(String value, {bool caseSensitive = true}) {
+  badgeUrlContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'badgeUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'badgeUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      badgeUrlMatches(String pattern, {bool caseSensitive = true}) {
+  badgeUrlMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'badgeUrl',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'badgeUrl',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      badgeUrlIsEmpty() {
+  badgeUrlIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'badgeUrl',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'badgeUrl', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      badgeUrlIsNotEmpty() {
+  badgeUrlIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'badgeUrl',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'badgeUrl', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      dashboardBannerUrlIsNull() {
+  dashboardBannerUrlIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'dashboardBannerUrl',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'dashboardBannerUrl'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      dashboardBannerUrlIsNotNull() {
+  dashboardBannerUrlIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'dashboardBannerUrl',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'dashboardBannerUrl'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      dashboardBannerUrlEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
+  dashboardBannerUrlEqualTo(String? value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'dashboardBannerUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'dashboardBannerUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      dashboardBannerUrlGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'dashboardBannerUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      dashboardBannerUrlLessThan(
+  dashboardBannerUrlGreaterThan(
     String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'dashboardBannerUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'dashboardBannerUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      dashboardBannerUrlBetween(
+  dashboardBannerUrlLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'dashboardBannerUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
+  dashboardBannerUrlBetween(
     String? lower,
     String? upper, {
     bool includeLower = true,
@@ -824,209 +842,213 @@ extension SchoolBrandingIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'dashboardBannerUrl',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'dashboardBannerUrl',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      dashboardBannerUrlStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  dashboardBannerUrlStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'dashboardBannerUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'dashboardBannerUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      dashboardBannerUrlEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  dashboardBannerUrlEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'dashboardBannerUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'dashboardBannerUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      dashboardBannerUrlContains(String value, {bool caseSensitive = true}) {
+  dashboardBannerUrlContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'dashboardBannerUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'dashboardBannerUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      dashboardBannerUrlMatches(String pattern, {bool caseSensitive = true}) {
+  dashboardBannerUrlMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'dashboardBannerUrl',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'dashboardBannerUrl',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      dashboardBannerUrlIsEmpty() {
+  dashboardBannerUrlIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'dashboardBannerUrl',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'dashboardBannerUrl', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      dashboardBannerUrlIsNotEmpty() {
+  dashboardBannerUrlIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'dashboardBannerUrl',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'dashboardBannerUrl', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      idEqualTo(Id value) {
+  idEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'id', value: value),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      idGreaterThan(
-    Id value, {
-    bool include = false,
-  }) {
+  idGreaterThan(Id value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'id',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      idLessThan(
-    Id value, {
-    bool include = false,
-  }) {
+  idLessThan(Id value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'id',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'id',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      idBetween(
+  idBetween(
     Id lower,
     Id upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'id',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'id',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      loginBackgroundUrlIsNull() {
+  loginBackgroundUrlIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'loginBackgroundUrl',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'loginBackgroundUrl'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      loginBackgroundUrlIsNotNull() {
+  loginBackgroundUrlIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'loginBackgroundUrl',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'loginBackgroundUrl'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      loginBackgroundUrlEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
+  loginBackgroundUrlEqualTo(String? value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'loginBackgroundUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'loginBackgroundUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      loginBackgroundUrlGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'loginBackgroundUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      loginBackgroundUrlLessThan(
+  loginBackgroundUrlGreaterThan(
     String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'loginBackgroundUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'loginBackgroundUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      loginBackgroundUrlBetween(
+  loginBackgroundUrlLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'loginBackgroundUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
+  loginBackgroundUrlBetween(
     String? lower,
     String? upper, {
     bool includeLower = true,
@@ -1034,153 +1056,158 @@ extension SchoolBrandingIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'loginBackgroundUrl',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'loginBackgroundUrl',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      loginBackgroundUrlStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  loginBackgroundUrlStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'loginBackgroundUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'loginBackgroundUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      loginBackgroundUrlEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  loginBackgroundUrlEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'loginBackgroundUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'loginBackgroundUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      loginBackgroundUrlContains(String value, {bool caseSensitive = true}) {
+  loginBackgroundUrlContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'loginBackgroundUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'loginBackgroundUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      loginBackgroundUrlMatches(String pattern, {bool caseSensitive = true}) {
+  loginBackgroundUrlMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'loginBackgroundUrl',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'loginBackgroundUrl',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      loginBackgroundUrlIsEmpty() {
+  loginBackgroundUrlIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'loginBackgroundUrl',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'loginBackgroundUrl', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      loginBackgroundUrlIsNotEmpty() {
+  loginBackgroundUrlIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'loginBackgroundUrl',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'loginBackgroundUrl', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      logoUrlIsNull() {
+  logoUrlIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'logoUrl',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'logoUrl'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      logoUrlIsNotNull() {
+  logoUrlIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'logoUrl',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'logoUrl'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      logoUrlEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
+  logoUrlEqualTo(String? value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'logoUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'logoUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      logoUrlGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'logoUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      logoUrlLessThan(
+  logoUrlGreaterThan(
     String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'logoUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'logoUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      logoUrlBetween(
+  logoUrlLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'logoUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
+  logoUrlBetween(
     String? lower,
     String? upper, {
     bool includeLower = true,
@@ -1188,153 +1215,158 @@ extension SchoolBrandingIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'logoUrl',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'logoUrl',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      logoUrlStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  logoUrlStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'logoUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'logoUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      logoUrlEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  logoUrlEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'logoUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'logoUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      logoUrlContains(String value, {bool caseSensitive = true}) {
+  logoUrlContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'logoUrl',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'logoUrl',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      logoUrlMatches(String pattern, {bool caseSensitive = true}) {
+  logoUrlMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'logoUrl',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'logoUrl',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      logoUrlIsEmpty() {
+  logoUrlIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'logoUrl',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'logoUrl', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      logoUrlIsNotEmpty() {
+  logoUrlIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'logoUrl',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'logoUrl', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      primaryColorIsNull() {
+  primaryColorIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'primaryColor',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'primaryColor'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      primaryColorIsNotNull() {
+  primaryColorIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'primaryColor',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'primaryColor'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      primaryColorEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
+  primaryColorEqualTo(String? value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'primaryColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'primaryColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      primaryColorGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'primaryColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      primaryColorLessThan(
+  primaryColorGreaterThan(
     String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'primaryColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'primaryColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      primaryColorBetween(
+  primaryColorLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'primaryColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
+  primaryColorBetween(
     String? lower,
     String? upper, {
     bool includeLower = true,
@@ -1342,135 +1374,140 @@ extension SchoolBrandingIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'primaryColor',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'primaryColor',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      primaryColorStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  primaryColorStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'primaryColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'primaryColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      primaryColorEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  primaryColorEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'primaryColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'primaryColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      primaryColorContains(String value, {bool caseSensitive = true}) {
+  primaryColorContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'primaryColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'primaryColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      primaryColorMatches(String pattern, {bool caseSensitive = true}) {
+  primaryColorMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'primaryColor',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'primaryColor',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      primaryColorIsEmpty() {
+  primaryColorIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'primaryColor',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'primaryColor', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      primaryColorIsNotEmpty() {
+  primaryColorIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'primaryColor',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'primaryColor', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolIdEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  schoolIdEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolIdGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolIdLessThan(
+  schoolIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolIdBetween(
+  schoolIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
+  schoolIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1478,135 +1515,140 @@ extension SchoolBrandingIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'schoolId',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'schoolId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolIdStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  schoolIdStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolIdEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  schoolIdEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolIdContains(String value, {bool caseSensitive = true}) {
+  schoolIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'schoolId',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'schoolId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolIdMatches(String pattern, {bool caseSensitive = true}) {
+  schoolIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'schoolId',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'schoolId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolIdIsEmpty() {
+  schoolIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'schoolId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'schoolId', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolIdIsNotEmpty() {
+  schoolIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'schoolId',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'schoolId', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolMottoEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  schoolMottoEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'schoolMotto',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'schoolMotto',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolMottoGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'schoolMotto',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolMottoLessThan(
+  schoolMottoGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'schoolMotto',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'schoolMotto',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolMottoBetween(
+  schoolMottoLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'schoolMotto',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
+  schoolMottoBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1614,135 +1656,140 @@ extension SchoolBrandingIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'schoolMotto',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'schoolMotto',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolMottoStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  schoolMottoStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'schoolMotto',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'schoolMotto',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolMottoEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  schoolMottoEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'schoolMotto',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'schoolMotto',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolMottoContains(String value, {bool caseSensitive = true}) {
+  schoolMottoContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'schoolMotto',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'schoolMotto',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolMottoMatches(String pattern, {bool caseSensitive = true}) {
+  schoolMottoMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'schoolMotto',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'schoolMotto',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolMottoIsEmpty() {
+  schoolMottoIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'schoolMotto',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'schoolMotto', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolMottoIsNotEmpty() {
+  schoolMottoIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'schoolMotto',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'schoolMotto', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolNameEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  schoolNameEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'schoolName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'schoolName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolNameGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'schoolName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolNameLessThan(
+  schoolNameGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'schoolName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'schoolName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolNameBetween(
+  schoolNameLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'schoolName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
+  schoolNameBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1750,153 +1797,158 @@ extension SchoolBrandingIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'schoolName',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'schoolName',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolNameStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  schoolNameStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'schoolName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'schoolName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolNameEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  schoolNameEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'schoolName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'schoolName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolNameContains(String value, {bool caseSensitive = true}) {
+  schoolNameContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'schoolName',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'schoolName',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolNameMatches(String pattern, {bool caseSensitive = true}) {
+  schoolNameMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'schoolName',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'schoolName',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolNameIsEmpty() {
+  schoolNameIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'schoolName',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'schoolName', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      schoolNameIsNotEmpty() {
+  schoolNameIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'schoolName',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'schoolName', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      secondaryColorIsNull() {
+  secondaryColorIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'secondaryColor',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'secondaryColor'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      secondaryColorIsNotNull() {
+  secondaryColorIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'secondaryColor',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'secondaryColor'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      secondaryColorEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
+  secondaryColorEqualTo(String? value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'secondaryColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'secondaryColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      secondaryColorGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'secondaryColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      secondaryColorLessThan(
+  secondaryColorGreaterThan(
     String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'secondaryColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'secondaryColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      secondaryColorBetween(
+  secondaryColorLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'secondaryColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
+  secondaryColorBetween(
     String? lower,
     String? upper, {
     bool includeLower = true,
@@ -1904,209 +1956,213 @@ extension SchoolBrandingIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'secondaryColor',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'secondaryColor',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      secondaryColorStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  secondaryColorStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'secondaryColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'secondaryColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      secondaryColorEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  secondaryColorEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'secondaryColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'secondaryColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      secondaryColorContains(String value, {bool caseSensitive = true}) {
+  secondaryColorContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'secondaryColor',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'secondaryColor',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      secondaryColorMatches(String pattern, {bool caseSensitive = true}) {
+  secondaryColorMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'secondaryColor',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'secondaryColor',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      secondaryColorIsEmpty() {
+  secondaryColorIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'secondaryColor',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'secondaryColor', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      secondaryColorIsNotEmpty() {
+  secondaryColorIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'secondaryColor',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'secondaryColor', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      versionEqualTo(int value) {
+  versionEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'version',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'version', value: value),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      versionGreaterThan(
-    int value, {
-    bool include = false,
-  }) {
+  versionGreaterThan(int value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'version',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'version',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      versionLessThan(
-    int value, {
-    bool include = false,
-  }) {
+  versionLessThan(int value, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'version',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'version',
+          value: value,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      versionBetween(
+  versionBetween(
     int lower,
     int upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'version',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'version',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      welcomeMessageIsNull() {
+  welcomeMessageIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'welcomeMessage',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'welcomeMessage'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      welcomeMessageIsNotNull() {
+  welcomeMessageIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'welcomeMessage',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'welcomeMessage'),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      welcomeMessageEqualTo(
-    String? value, {
-    bool caseSensitive = true,
-  }) {
+  welcomeMessageEqualTo(String? value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'welcomeMessage',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'welcomeMessage',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      welcomeMessageGreaterThan(
-    String? value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'welcomeMessage',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      welcomeMessageLessThan(
+  welcomeMessageGreaterThan(
     String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'welcomeMessage',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'welcomeMessage',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      welcomeMessageBetween(
+  welcomeMessageLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'welcomeMessage',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
+  welcomeMessageBetween(
     String? lower,
     String? upper, {
     bool includeLower = true,
@@ -2114,84 +2170,86 @@ extension SchoolBrandingIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'welcomeMessage',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'welcomeMessage',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      welcomeMessageStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  welcomeMessageStartsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'welcomeMessage',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'welcomeMessage',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      welcomeMessageEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+  welcomeMessageEndsWith(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'welcomeMessage',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'welcomeMessage',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      welcomeMessageContains(String value, {bool caseSensitive = true}) {
+  welcomeMessageContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'welcomeMessage',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'welcomeMessage',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      welcomeMessageMatches(String pattern, {bool caseSensitive = true}) {
+  welcomeMessageMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'welcomeMessage',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'welcomeMessage',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      welcomeMessageIsEmpty() {
+  welcomeMessageIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'welcomeMessage',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'welcomeMessage', value: ''),
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterFilterCondition>
-      welcomeMessageIsNotEmpty() {
+  welcomeMessageIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'welcomeMessage',
-        value: '',
-      ));
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'welcomeMessage', value: ''),
+      );
     });
   }
 }
@@ -2205,168 +2263,168 @@ extension SchoolBrandingIsarQueryLinks
 extension SchoolBrandingIsarQuerySortBy
     on QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QSortBy> {
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByAccentColor() {
+  sortByAccentColor() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'accentColor', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByAccentColorDesc() {
+  sortByAccentColorDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'accentColor', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByBadgeUrl() {
+  sortByBadgeUrl() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'badgeUrl', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByBadgeUrlDesc() {
+  sortByBadgeUrlDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'badgeUrl', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByDashboardBannerUrl() {
+  sortByDashboardBannerUrl() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dashboardBannerUrl', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByDashboardBannerUrlDesc() {
+  sortByDashboardBannerUrlDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dashboardBannerUrl', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByLoginBackgroundUrl() {
+  sortByLoginBackgroundUrl() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'loginBackgroundUrl', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByLoginBackgroundUrlDesc() {
+  sortByLoginBackgroundUrlDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'loginBackgroundUrl', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByLogoUrl() {
+  sortByLogoUrl() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'logoUrl', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByLogoUrlDesc() {
+  sortByLogoUrlDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'logoUrl', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByPrimaryColor() {
+  sortByPrimaryColor() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'primaryColor', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByPrimaryColorDesc() {
+  sortByPrimaryColorDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'primaryColor', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortBySchoolId() {
+  sortBySchoolId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortBySchoolIdDesc() {
+  sortBySchoolIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortBySchoolMotto() {
+  sortBySchoolMotto() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolMotto', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortBySchoolMottoDesc() {
+  sortBySchoolMottoDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolMotto', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortBySchoolName() {
+  sortBySchoolName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolName', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortBySchoolNameDesc() {
+  sortBySchoolNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolName', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortBySecondaryColor() {
+  sortBySecondaryColor() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'secondaryColor', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortBySecondaryColorDesc() {
+  sortBySecondaryColorDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'secondaryColor', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByVersion() {
+  sortByVersion() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'version', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByVersionDesc() {
+  sortByVersionDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'version', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByWelcomeMessage() {
+  sortByWelcomeMessage() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'welcomeMessage', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      sortByWelcomeMessageDesc() {
+  sortByWelcomeMessageDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'welcomeMessage', Sort.desc);
     });
@@ -2376,182 +2434,182 @@ extension SchoolBrandingIsarQuerySortBy
 extension SchoolBrandingIsarQuerySortThenBy
     on QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QSortThenBy> {
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByAccentColor() {
+  thenByAccentColor() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'accentColor', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByAccentColorDesc() {
+  thenByAccentColorDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'accentColor', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByBadgeUrl() {
+  thenByBadgeUrl() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'badgeUrl', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByBadgeUrlDesc() {
+  thenByBadgeUrlDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'badgeUrl', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByDashboardBannerUrl() {
+  thenByDashboardBannerUrl() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dashboardBannerUrl', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByDashboardBannerUrlDesc() {
+  thenByDashboardBannerUrlDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'dashboardBannerUrl', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenById() {
+  thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByIdDesc() {
+  thenByIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByLoginBackgroundUrl() {
+  thenByLoginBackgroundUrl() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'loginBackgroundUrl', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByLoginBackgroundUrlDesc() {
+  thenByLoginBackgroundUrlDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'loginBackgroundUrl', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByLogoUrl() {
+  thenByLogoUrl() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'logoUrl', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByLogoUrlDesc() {
+  thenByLogoUrlDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'logoUrl', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByPrimaryColor() {
+  thenByPrimaryColor() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'primaryColor', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByPrimaryColorDesc() {
+  thenByPrimaryColorDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'primaryColor', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenBySchoolId() {
+  thenBySchoolId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenBySchoolIdDesc() {
+  thenBySchoolIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenBySchoolMotto() {
+  thenBySchoolMotto() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolMotto', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenBySchoolMottoDesc() {
+  thenBySchoolMottoDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolMotto', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenBySchoolName() {
+  thenBySchoolName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolName', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenBySchoolNameDesc() {
+  thenBySchoolNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolName', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenBySecondaryColor() {
+  thenBySecondaryColor() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'secondaryColor', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenBySecondaryColorDesc() {
+  thenBySecondaryColorDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'secondaryColor', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByVersion() {
+  thenByVersion() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'version', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByVersionDesc() {
+  thenByVersionDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'version', Sort.desc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByWelcomeMessage() {
+  thenByWelcomeMessage() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'welcomeMessage', Sort.asc);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QAfterSortBy>
-      thenByWelcomeMessageDesc() {
+  thenByWelcomeMessageDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'welcomeMessage', Sort.desc);
     });
@@ -2561,90 +2619,98 @@ extension SchoolBrandingIsarQuerySortThenBy
 extension SchoolBrandingIsarQueryWhereDistinct
     on QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QDistinct> {
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QDistinct>
-      distinctByAccentColor({bool caseSensitive = true}) {
+  distinctByAccentColor({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'accentColor', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QDistinct>
-      distinctByBadgeUrl({bool caseSensitive = true}) {
+  distinctByBadgeUrl({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'badgeUrl', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QDistinct>
-      distinctByDashboardBannerUrl({bool caseSensitive = true}) {
+  distinctByDashboardBannerUrl({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'dashboardBannerUrl',
-          caseSensitive: caseSensitive);
+      return query.addDistinctBy(
+        r'dashboardBannerUrl',
+        caseSensitive: caseSensitive,
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QDistinct>
-      distinctByLoginBackgroundUrl({bool caseSensitive = true}) {
+  distinctByLoginBackgroundUrl({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'loginBackgroundUrl',
-          caseSensitive: caseSensitive);
+      return query.addDistinctBy(
+        r'loginBackgroundUrl',
+        caseSensitive: caseSensitive,
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QDistinct>
-      distinctByLogoUrl({bool caseSensitive = true}) {
+  distinctByLogoUrl({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'logoUrl', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QDistinct>
-      distinctByPrimaryColor({bool caseSensitive = true}) {
+  distinctByPrimaryColor({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'primaryColor', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QDistinct>
-      distinctBySchoolId({bool caseSensitive = true}) {
+  distinctBySchoolId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'schoolId', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QDistinct>
-      distinctBySchoolMotto({bool caseSensitive = true}) {
+  distinctBySchoolMotto({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'schoolMotto', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QDistinct>
-      distinctBySchoolName({bool caseSensitive = true}) {
+  distinctBySchoolName({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'schoolName', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QDistinct>
-      distinctBySecondaryColor({bool caseSensitive = true}) {
+  distinctBySecondaryColor({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'secondaryColor',
-          caseSensitive: caseSensitive);
+      return query.addDistinctBy(
+        r'secondaryColor',
+        caseSensitive: caseSensitive,
+      );
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QDistinct>
-      distinctByVersion() {
+  distinctByVersion() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'version');
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, SchoolBrandingIsar, QDistinct>
-      distinctByWelcomeMessage({bool caseSensitive = true}) {
+  distinctByWelcomeMessage({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'welcomeMessage',
-          caseSensitive: caseSensitive);
+      return query.addDistinctBy(
+        r'welcomeMessage',
+        caseSensitive: caseSensitive,
+      );
     });
   }
 }
@@ -2658,70 +2724,70 @@ extension SchoolBrandingIsarQueryProperty
   }
 
   QueryBuilder<SchoolBrandingIsar, String?, QQueryOperations>
-      accentColorProperty() {
+  accentColorProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'accentColor');
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, String?, QQueryOperations>
-      badgeUrlProperty() {
+  badgeUrlProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'badgeUrl');
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, String?, QQueryOperations>
-      dashboardBannerUrlProperty() {
+  dashboardBannerUrlProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'dashboardBannerUrl');
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, String?, QQueryOperations>
-      loginBackgroundUrlProperty() {
+  loginBackgroundUrlProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'loginBackgroundUrl');
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, String?, QQueryOperations>
-      logoUrlProperty() {
+  logoUrlProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'logoUrl');
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, String?, QQueryOperations>
-      primaryColorProperty() {
+  primaryColorProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'primaryColor');
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, String, QQueryOperations>
-      schoolIdProperty() {
+  schoolIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'schoolId');
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, String, QQueryOperations>
-      schoolMottoProperty() {
+  schoolMottoProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'schoolMotto');
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, String, QQueryOperations>
-      schoolNameProperty() {
+  schoolNameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'schoolName');
     });
   }
 
   QueryBuilder<SchoolBrandingIsar, String?, QQueryOperations>
-      secondaryColorProperty() {
+  secondaryColorProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'secondaryColor');
     });
@@ -2734,7 +2800,7 @@ extension SchoolBrandingIsarQueryProperty
   }
 
   QueryBuilder<SchoolBrandingIsar, String?, QQueryOperations>
-      welcomeMessageProperty() {
+  welcomeMessageProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'welcomeMessage');
     });

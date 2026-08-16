@@ -234,6 +234,146 @@ class AcademicsStatusChip extends StatelessWidget {
   }
 }
 
+/// One stat tile in the "Overview" grid at the top of a list screen (Total
+/// Classes / Active Classes / Total Students / Avg Class Size, and their
+/// Streams equivalents). Purely a display widget - the caller computes the
+/// value from real state, never a placeholder number.
+class AcademicsStatTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const AcademicsStatTile({
+    super.key,
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: valueColor ?? scheme.onSurface,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The "Overview" card - a titled container with a 2x2 grid of
+/// [AcademicsStatTile]s, matching the reference UI's summary section on the
+/// Classes and Streams tabs.
+class AcademicsOverviewCard extends StatelessWidget {
+  final List<AcademicsStatTile> tiles;
+
+  const AcademicsOverviewCard({super.key, required this.tiles});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      showShadow: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Overview',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: tiles[0]),
+              Expanded(child: tiles[1]),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: tiles[2]),
+              Expanded(child: tiles[3]),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A two-segment Active/Inactive status selector for Add/Edit forms -
+/// visually distinct from [AcademicsSegmentedTabs] (which switches list
+/// content) even though the shape is similar, since this one holds form
+/// state rather than navigation state.
+class AcademicsStatusToggle extends StatelessWidget {
+  final bool isActive;
+  final ValueChanged<bool> onChanged;
+
+  const AcademicsStatusToggle({
+    super.key,
+    required this.isActive,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget segment(String label, bool active, VoidCallback onTap) {
+      final selected = isActive == active;
+      return Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(vertical: 11),
+            decoration: BoxDecoration(
+              color: selected
+                  ? scheme.primaryContainer
+                  : scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: selected ? scheme.primary : Colors.transparent,
+              ),
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13.5,
+                color: selected ? scheme.primary : scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        segment('Active', true, () => onChanged(true)),
+        const SizedBox(width: 10),
+        segment('Inactive', false, () => onChanged(false)),
+      ],
+    );
+  }
+}
+
 /// Standard screen scaffold for every Academics subsection: AppBar with
 /// back chevron, breadcrumb-style subtitle, search field, scrollable list
 /// body (with an empty-state slot) and an FAB.

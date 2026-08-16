@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
@@ -23,60 +24,62 @@ class AttendanceConfigScreen extends StatefulWidget {
   State<AttendanceConfigScreen> createState() => _AttendanceConfigScreenState();
 }
 
-class _AttendanceConfigScreenState extends State<AttendanceConfigScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  static const _tabs = [Tab(text: 'Types'), Tab(text: 'Sessions')];
+class _AttendanceConfigScreenState extends State<AttendanceConfigScreen> {
+  late int _selectedIndex;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-      length: _tabs.length,
-      vsync: this,
-      initialIndex: widget.initialTab.clamp(0, _tabs.length - 1),
-    );
+    _selectedIndex = widget.initialTab.clamp(0, 1);
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  void didUpdateWidget(covariant AttendanceConfigScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTab != widget.initialTab) {
+      _selectedIndex = widget.initialTab.clamp(0, 1);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AdminAppBar(
-        title: 'Attendance Configuration',
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: _tabs,
-          indicatorColor: AppColors.primary(context),
-          labelColor: Theme.of(context).colorScheme.onSurface,
-          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
+      appBar: const AdminAppBar(title: 'Attendance Configuration'),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => context.go(
+                      '/staff/admin/structure/attendance-config?tab=0',
+                    ),
+                    child: const Text('Attendance types'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => context.go(
+                      '/staff/admin/structure/attendance-config?tab=1',
+                    ),
+                    child: const Text('Sessions'),
+                  ),
+                ),
+              ],
+            ),
           ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.normal,
-            fontSize: 14,
+          Expanded(
+            child: BlocBuilder<StructureBloc, StructureState>(
+              builder: (context, state) => _selectedIndex == 0
+                  ? _AttendanceTypesTab(state: state)
+                  : _AttendanceSessionsTab(state: state),
+            ),
           ),
-        ),
-      ),
-      body: BlocBuilder<StructureBloc, StructureState>(
-        builder: (context, state) {
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _AttendanceTypesTab(state: state),
-              _AttendanceSessionsTab(state: state),
-            ],
-          );
-        },
+        ],
       ),
     );
   }

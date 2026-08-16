@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
@@ -25,66 +26,67 @@ class CommunicationConfigScreen extends StatefulWidget {
       _CommunicationConfigScreenState();
 }
 
-class _CommunicationConfigScreenState extends State<CommunicationConfigScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  static const _tabs = [
-    Tab(text: 'Announcement Categories'),
-    Tab(text: 'Notification Categories'),
-    Tab(text: 'Message Templates'),
-  ];
+class _CommunicationConfigScreenState extends State<CommunicationConfigScreen> {
+  late int _selectedIndex;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-      length: _tabs.length,
-      vsync: this,
-      initialIndex: widget.initialTab.clamp(0, _tabs.length - 1),
-    );
+    _selectedIndex = widget.initialTab.clamp(0, 2);
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  void didUpdateWidget(covariant CommunicationConfigScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTab != widget.initialTab) {
+      _selectedIndex = widget.initialTab.clamp(0, 2);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AdminAppBar(
-        title: 'Communication Configuration',
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: _tabs,
-          indicatorColor: AppColors.primary(context),
-          labelColor: Theme.of(context).colorScheme.onSurface,
-          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
-          labelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
+      appBar: const AdminAppBar(title: 'Communication Configuration'),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton(
+                  onPressed: () => context.go(
+                    '/staff/admin/structure/communication-config?tab=0',
+                  ),
+                  child: const Text('Announcements'),
+                ),
+                OutlinedButton(
+                  onPressed: () => context.go(
+                    '/staff/admin/structure/communication-config?tab=1',
+                  ),
+                  child: const Text('Notifications'),
+                ),
+                OutlinedButton(
+                  onPressed: () => context.go(
+                    '/staff/admin/structure/communication-config?tab=2',
+                  ),
+                  child: const Text('Templates'),
+                ),
+              ],
+            ),
           ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.normal,
-            fontSize: 14,
+          Expanded(
+            child: BlocBuilder<StructureBloc, StructureState>(
+              builder: (context, state) => switch (_selectedIndex) {
+                0 => _AnnouncementCategoriesTab(state: state),
+                1 => _NotificationCategoriesTab(state: state),
+                _ => _MessageTemplatesTab(state: state),
+              },
+            ),
           ),
-        ),
-      ),
-      body: BlocBuilder<StructureBloc, StructureState>(
-        builder: (context, state) {
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _AnnouncementCategoriesTab(state: state),
-              _NotificationCategoriesTab(state: state),
-              _MessageTemplatesTab(state: state),
-            ],
-          );
-        },
+        ],
       ),
     );
   }

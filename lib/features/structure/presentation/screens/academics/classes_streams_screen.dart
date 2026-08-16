@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -25,6 +27,21 @@ class ClassesStreamsScreen extends StatefulWidget {
 class _ClassesStreamsScreenState extends State<ClassesStreamsScreen> {
   int _tab = 0;
   String _query = '';
+
+  /// One-shot, school-wide aggregate fetched once per screen visit - not
+  /// stored in StructureBloc/State since it belongs to Students, not
+  /// Structure; Structure only borrows it for this one overview tile.
+  late Future<int> _totalStudentsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    final schoolId =
+        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
+    _totalStudentsFuture = di.sl<StructureDependencyService>().countAllStudents(
+      schoolId,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,19 +75,21 @@ class _ClassesStreamsScreenState extends State<ClassesStreamsScreen> {
                           ? 'Search classes...'
                           : 'Search streams...',
                       onChanged: (v) => setState(() => _query = v),
+                      onFilter: () => _showFilterSheet(context, _tab == 0),
                     ),
                   ],
                 ),
               ),
               Expanded(
                 child: _tab == 0
-                    ? _ClassesList(
+                    ? _ClassesTab(
                         state: state,
                         bloc: bloc,
                         schoolId: schoolId,
                         query: _query,
+                        totalStudentsFuture: _totalStudentsFuture,
                       )
-                    : _StreamsList(
+                    : _StreamsTab(
                         state: state,
                         bloc: bloc,
                         schoolId: schoolId,
@@ -102,78 +121,286 @@ class _ClassesStreamsScreenState extends State<ClassesStreamsScreen> {
   }
 }
 
-class _ClassesList extends StatelessWidget {
+/// Placeholder for a future Level/status filter sheet - wired to the
+/// shared search field's built-in filter icon now so the tap target
+/// exists; the sheet itself is a natural follow-up once filtering
+/// requirements are settled (Active/Inactive, Level, Parent Class).
+void _showFilterSheet(BuildContext context, bool isClassesTab) {
+  showModalBottomSheet(
+    context: context,
+    showDragHandle: true,
+    builder: (context) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isClassesTab ? 'Filter classes' : 'Filter streams',
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Sorting follows configured Level/Class order by default. '
+              'Active/Level filters are coming soon.',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _ClassesTab extends StatelessWidget {
   final StructureState state;
   final StructureBloc bloc;
   final String schoolId;
   final String query;
+  final Future<int> totalStudentsFuture;
 
-  const _ClassesList({
+  const _ClassesTab({
     required this.state,
     required this.bloc,
     required this.schoolId,
     required this.query,
+    required this.totalStudentsFuture,
   });
 
   @override
   Widget build(BuildContext context) {
     if (state.levels.isEmpty) {
-      return const StructureEmptyHint(
-        'Add an educational level first (see the Levels section).',
+      return _SetupLevelsFirstHint(
+        onSave: () => _openClassForm(
+          context,
+          schoolId: schoolId,
+          bloc: bloc,
+          levels: state.levels,
+        ),
       );
     }
+
     final classes =
         state.classes
             .where((c) => c.name.toLowerCase().contains(query.toLowerCase()))
             .toList()
           ..sort((a, b) => a.name.compareTo(b.name));
 
-    if (classes.isEmpty) {
-      return StructureEmptyHint(
-        query.isEmpty
-            ? 'No classes defined yet.'
-            : 'No classes match "$query".',
-      );
-    }
+    final activeCount = state.classes.where((c) => c.isActive).length;
+    final avgSize = state.classes.isEmpty
+        ? 0
+        : (state.classes.fold<int>(0, (sum, c) => sum + c.capacity) /
+                  state.classes.length)
+              .round();
 
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-      itemCount: classes.length,
-      itemBuilder: (context, index) {
-        final schoolClass = classes[index];
-        final level = state.levels
-            .where((l) => l.id == schoolClass.levelId)
-            .firstOrNull;
-        final streamCount = state.streams
-            .where((s) => s.classId == schoolClass.id)
-            .length;
-        return AcademicsListCard(
-          icon: Icons.school_outlined,
-          color: Colors.amber.shade800,
-          title: schoolClass.name,
-          subtitle:
-              '${streamCount > 0 ? '$streamCount Stream${streamCount == 1 ? '' : 's'} • ' : ''}${level?.name ?? 'No level'}',
-          isActive: schoolClass.isActive,
-          onTap: () => _openClassForm(
-            context,
-            schoolId: schoolId,
-            bloc: bloc,
-            levels: state.levels,
-            existing: schoolClass,
-          ),
-        );
-      },
+      children: [
+        FutureBuilder<int>(
+          future: totalStudentsFuture,
+          builder: (context, snapshot) {
+            final totalStudents = snapshot.data;
+            return AcademicsOverviewCard(
+              tiles: [
+                AcademicsStatTile(
+                  label: 'Total Classes',
+                  value: '${state.classes.length}',
+                ),
+                AcademicsStatTile(
+                  label: 'Active Classes',
+                  value: '$activeCount',
+                  valueColor: Colors.green.shade700,
+                ),
+                AcademicsStatTile(
+                  label: 'Total Students',
+                  value: totalStudents == null ? '—' : '$totalStudents',
+                ),
+                AcademicsStatTile(
+                  label: 'Avg. Class Size',
+                  value: state.classes.isEmpty ? '—' : '$avgSize',
+                  valueColor: Colors.orange.shade800,
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        if (classes.isEmpty)
+          StructureEmptyHint(
+            query.isEmpty
+                ? 'No classes yet.\nCreate your first class to continue setting up your school.'
+                : 'No classes match "$query".',
+          )
+        else
+          for (final schoolClass in classes) ...[
+            _ClassCard(
+              schoolClass: schoolClass,
+              level: state.levels
+                  .where((l) => l.id == schoolClass.levelId)
+                  .firstOrNull,
+              streamCount: state.streams
+                  .where((s) => s.classId == schoolClass.id)
+                  .length,
+              onTap: () => _openClassForm(
+                context,
+                schoolId: schoolId,
+                bloc: bloc,
+                levels: state.levels,
+                existing: schoolClass,
+              ),
+            ),
+          ],
+      ],
     );
   }
 }
 
-class _StreamsList extends StatelessWidget {
+class _ClassCard extends StatelessWidget {
+  final SchoolClass schoolClass;
+  final EducationalLevel? level;
+  final int streamCount;
+  final VoidCallback onTap;
+
+  const _ClassCard({
+    required this.schoolClass,
+    required this.level,
+    required this.streamCount,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AppCard(
+      onTap: onTap,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      showShadow: false,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.indigo.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.school_outlined,
+              color: Colors.indigo,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        schoolClass.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          decoration: schoolClass.isActive
+                              ? null
+                              : TextDecoration.lineThrough,
+                          color: schoolClass.isActive ? null : Colors.grey,
+                        ),
+                      ),
+                    ),
+                    if (!schoolClass.isActive) ...[
+                      const SizedBox(width: 8),
+                      const AcademicsStatusChip(
+                        label: 'Inactive',
+                        color: Colors.grey,
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  [
+                    if (level != null) level!.name,
+                    if (streamCount > 0)
+                      '$streamCount Stream${streamCount == 1 ? '' : 's'}',
+                    if (schoolClass.capacity > 0)
+                      'Capacity ${schoolClass.capacity}',
+                  ].join(' • '),
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, color: scheme.outline),
+        ],
+      ),
+    );
+  }
+}
+
+class _SetupLevelsFirstHint extends StatelessWidget {
+  final VoidCallback onSave;
+
+  const _SetupLevelsFirstHint({required this.onSave});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+      children: [
+        AppCard(
+          onTap: () =>
+              context.push('/staff/admin/structure/academics/levels'),
+          showShadow: false,
+          color: Colors.orange.withValues(alpha: 0.08),
+          borderColor: Colors.orange.withValues(alpha: 0.35),
+          child: Row(
+            children: [
+              const Icon(Icons.description_outlined, color: Colors.orange),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Set up Levels first',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Create academic levels to organize your classes better.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: scheme.outline),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StreamsTab extends StatelessWidget {
   final StructureState state;
   final StructureBloc bloc;
   final String schoolId;
   final String query;
 
-  const _StreamsList({
+  const _StreamsTab({
     required this.state,
     required this.bloc,
     required this.schoolId,
@@ -183,8 +410,16 @@ class _StreamsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state.classes.isEmpty) {
-      return const StructureEmptyHint('Add a class first.');
+      return _CreateClassFirstHint(
+        onTap: () => _openClassForm(
+          context,
+          schoolId: schoolId,
+          bloc: bloc,
+          levels: state.levels,
+        ),
+      );
     }
+
     final streams = state.streams
         .where((s) => s.name.toLowerCase().contains(query.toLowerCase()))
         .toList();
@@ -194,48 +429,190 @@ class _StreamsList extends StatelessWidget {
     }
     final classIds = state.classes.map((c) => c.id).where(byClass.containsKey);
 
-    if (streams.isEmpty) {
-      return StructureEmptyHint(
-        query.isEmpty
-            ? 'No streams defined yet.\nAdd East/West, A/B/C, or whatever sections this school uses.'
-            : 'No streams match "$query".',
-      );
-    }
+    final activeCount = state.streams.where((s) => s.isActive).length;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
       children: [
-        for (final classId in classIds) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
-            child: Text(
-              state.classes.where((c) => c.id == classId).firstOrNull?.name ??
-                  'Unknown class',
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 13.5,
+        AcademicsOverviewCard(
+          tiles: [
+            AcademicsStatTile(
+              label: 'Total Streams',
+              value: '${state.streams.length}',
+            ),
+            AcademicsStatTile(
+              label: 'Active Streams',
+              value: '$activeCount',
+              valueColor: Colors.green.shade700,
+            ),
+            AcademicsStatTile(
+              label: 'Total Classes',
+              value: '${state.classes.length}',
+            ),
+            AcademicsStatTile(
+              label: 'Avg. Stream Size',
+              value: state.streams.isEmpty
+                  ? '—'
+                  : '${(state.streams.fold<int>(0, (sum, s) => sum + s.capacity) / state.streams.length).round()}',
+              valueColor: Colors.orange.shade800,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (streams.isEmpty)
+          StructureEmptyHint(
+            query.isEmpty
+                ? 'No streams yet.\nStreams are optional - add Blue/Red, A/B, or whatever sections this school uses.'
+                : 'No streams match "$query".',
+          )
+        else
+          for (final classId in classIds) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 6),
+              child: Text(
+                state.classes.where((c) => c.id == classId).firstOrNull?.name ??
+                    'Unknown class',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13.5,
+                ),
               ),
+            ),
+            for (final stream in byClass[classId]!)
+              _StreamCard(
+                stream: stream,
+                parentClassName:
+                    state.classes.where((c) => c.id == classId).firstOrNull?.name ??
+                    '',
+                onTap: () => _openStreamForm(
+                  context,
+                  schoolId: schoolId,
+                  bloc: bloc,
+                  classes: state.classes,
+                  existing: stream,
+                ),
+              ),
+          ],
+      ],
+    );
+  }
+}
+
+class _StreamCard extends StatelessWidget {
+  final ClassStream stream;
+  final String parentClassName;
+  final VoidCallback onTap;
+
+  const _StreamCard({
+    required this.stream,
+    required this.parentClassName,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AppCard(
+      onTap: onTap,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      showShadow: false,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.teal.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.groups_2_outlined,
+              color: Colors.teal,
+              size: 20,
             ),
           ),
-          for (final stream in byClass[classId]!)
-            AcademicsListCard(
-              icon: Icons.groups_2_outlined,
-              color: Colors.indigo,
-              title: stream.name,
-              subtitle: stream.capacity > 0
-                  ? 'Capacity ${stream.capacity}'
-                  : '',
-              isActive: stream.isActive,
-              onTap: () => _openStreamForm(
-                context,
-                schoolId: schoolId,
-                bloc: bloc,
-                classes: state.classes,
-                existing: stream,
-              ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        stream.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          decoration: stream.isActive
+                              ? null
+                              : TextDecoration.lineThrough,
+                          color: stream.isActive ? null : Colors.grey,
+                        ),
+                      ),
+                    ),
+                    if (!stream.isActive) ...[
+                      const SizedBox(width: 8),
+                      const AcademicsStatusChip(
+                        label: 'Inactive',
+                        color: Colors.grey,
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  [
+                    parentClassName,
+                    if (stream.capacity > 0) 'Capacity ${stream.capacity}',
+                  ].join(' • '),
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+                ),
+              ],
             ),
+          ),
+          Icon(Icons.chevron_right, color: scheme.outline),
         ],
-      ],
+      ),
+    );
+  }
+}
+
+class _CreateClassFirstHint extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _CreateClassFirstHint({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Create a class first',
+              style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Streams belong to a class - add a class before adding streams.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onTap,
+              icon: const Icon(Icons.add),
+              label: const Text('Add Class'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -292,7 +669,21 @@ void _openStreamForm(
         onSave: (s) => bloc.add(SaveStreamRequested(s)),
         onDelete: existing == null
             ? null
-            : () => bloc.add(DeleteStreamRequested(existing.id)),
+            : () async {
+                final dependentCount = await di
+                    .sl<StructureDependencyService>()
+                    .countStudentsInClass(schoolId, existing.classId);
+                return dependentCount;
+              },
+        onDeleteConfirmed: existing == null
+            ? null
+            : (action) {
+                if (action == 'delete') {
+                  bloc.add(DeleteStreamRequested(existing.id));
+                } else if (action == 'archive') {
+                  bloc.add(ArchiveStreamRequested(existing.id));
+                }
+              },
       ),
     ),
   );
@@ -337,8 +728,12 @@ class _ClassFormScreenState extends State<_ClassFormScreen> {
   );
   late String? _levelId = widget.existing?.levelId.isNotEmpty == true
       ? widget.existing!.levelId
-      : (widget.levels.isNotEmpty ? widget.levels.first.id : null);
+      : (widget.levels.where((l) => l.isActive).firstOrNull?.id);
   late bool _isActive = widget.existing?.isActive ?? true;
+  bool _isSaving = false;
+
+  List<EducationalLevel> get _activeLevels =>
+      widget.levels.where((l) => l.isActive).toList();
 
   @override
   void dispose() {
@@ -359,35 +754,18 @@ class _ClassFormScreenState extends State<_ClassFormScreen> {
           : 'Create a new class in your school.',
       saveLabel: isEdit ? 'Save Changes' : 'Save Class',
       onSave: _submit,
+      isSaving: _isSaving,
       fields: [
         Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _AcademicsFieldLabel('Class Name *'),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(hintText: 'e.g. Primary 1'),
-                validator: (v) => v == null || v.trim().isEmpty
-                    ? 'Class name is required'
-                    : null,
-              ),
-              const SizedBox(height: 16),
-              const _AcademicsFieldLabel('Class Code *'),
-              TextFormField(
-                controller: _codeController,
-                decoration: const InputDecoration(hintText: 'e.g. P1'),
-                validator: (v) => v == null || v.trim().isEmpty
-                    ? 'Class code is required'
-                    : null,
-              ),
-              const SizedBox(height: 16),
               const _AcademicsFieldLabel('Level *'),
               DropdownButtonFormField<String>(
                 initialValue: _levelId,
                 decoration: const InputDecoration(hintText: 'Select level'),
-                items: widget.levels
+                items: _activeLevels
                     .map(
                       (l) => DropdownMenuItem(value: l.id, child: Text(l.name)),
                     )
@@ -395,34 +773,69 @@ class _ClassFormScreenState extends State<_ClassFormScreen> {
                 onChanged: (v) => setState(() => _levelId = v),
                 validator: (v) => v == null ? 'Select a level' : null,
               ),
+              const _AcademicsFieldHint(
+                'Choose the academic level this class belongs to.',
+              ),
+              const SizedBox(height: 16),
+              const _AcademicsFieldLabel('Class Name *'),
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  hintText: 'e.g. Primary 1, Senior 1',
+                ),
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Class name is required'
+                    : null,
+              ),
+              const _AcademicsFieldHint('Use a clear and familiar name.'),
+              const SizedBox(height: 16),
+              const _AcademicsFieldLabel('Class Code *'),
+              TextFormField(
+                controller: _codeController,
+                decoration: const InputDecoration(hintText: 'e.g. P1, S1'),
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Class code is required'
+                    : null,
+              ),
+              const _AcademicsFieldHint('Short code used across the system.'),
               const SizedBox(height: 16),
               const _AcademicsFieldLabel('Capacity'),
               TextFormField(
                 controller: _capacityController,
                 decoration: const InputDecoration(hintText: 'e.g. 45'),
                 keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  final n = int.tryParse(v.trim());
+                  if (n == null || n <= 0) {
+                    return 'Enter a positive number';
+                  }
+                  return null;
+                },
               ),
+              const _AcademicsFieldHint('Maximum number of students.'),
               const SizedBox(height: 16),
-              const _AcademicsFieldLabel('Description'),
+              const _AcademicsFieldLabel('Description (Optional)'),
               TextFormField(
                 controller: _descController,
                 decoration: const InputDecoration(
-                  hintText: 'Optional description',
+                  hintText: 'Add any additional information about this class.',
                 ),
-                maxLines: 2,
+                maxLines: 3,
               ),
-              const SizedBox(height: 8),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Active'),
-                subtitle: const Text('Inactive classes won\'t be available'),
-                value: _isActive,
+              const SizedBox(height: 16),
+              const _AcademicsFieldLabel('Status'),
+              AcademicsStatusToggle(
+                isActive: _isActive,
                 onChanged: (v) => setState(() => _isActive = v),
               ),
+              const _AcademicsFieldHint(
+                "Inactive classes won't be available for selection.",
+              ),
               if (isEdit && widget.onDelete != null) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 20),
                 TextButton.icon(
-                  onPressed: _confirmDelete,
+                  onPressed: _isSaving ? null : _confirmDelete,
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   label: const Text(
                     'Delete Class',
@@ -437,8 +850,11 @@ class _ClassFormScreenState extends State<_ClassFormScreen> {
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
+    if (_levelId == null) return;
+    setState(() => _isSaving = true);
     widget.onSave(
       SchoolClass(
         id: widget.existing?.id ?? const Uuid().v4(),
@@ -446,12 +862,12 @@ class _ClassFormScreenState extends State<_ClassFormScreen> {
         name: _nameController.text.trim(),
         code: _codeController.text.trim(),
         levelId: _levelId ?? '',
-        capacity: int.tryParse(_capacityController.text) ?? 0,
+        capacity: int.tryParse(_capacityController.text.trim()) ?? 0,
         description: _descController.text.trim(),
         isActive: _isActive,
       ),
     );
-    Navigator.of(context).pop();
+    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _confirmDelete() async {
@@ -499,7 +915,8 @@ class _StreamFormScreen extends StatefulWidget {
   final List<SchoolClass> classes;
   final ClassStream? existing;
   final void Function(ClassStream) onSave;
-  final VoidCallback? onDelete;
+  final Future<int> Function()? onDelete;
+  final void Function(String action)? onDeleteConfirmed;
 
   const _StreamFormScreen({
     required this.schoolId,
@@ -507,6 +924,7 @@ class _StreamFormScreen extends StatefulWidget {
     this.existing,
     required this.onSave,
     this.onDelete,
+    this.onDeleteConfirmed,
   });
 
   @override
@@ -528,8 +946,12 @@ class _StreamFormScreenState extends State<_StreamFormScreen> {
   );
   late String? _classId =
       widget.existing?.classId ??
-      (widget.classes.isNotEmpty ? widget.classes.first.id : null);
+      (widget.classes.where((c) => c.isActive).firstOrNull?.id);
   late bool _isActive = widget.existing?.isActive ?? true;
+  bool _isSaving = false;
+
+  List<SchoolClass> get _activeClasses =>
+      widget.classes.where((c) => c.isActive).toList();
 
   @override
   void dispose() {
@@ -546,35 +968,21 @@ class _StreamFormScreenState extends State<_StreamFormScreen> {
       title: isEdit ? 'Edit Stream' : 'Add Stream',
       subtitle: isEdit
           ? 'Update this stream.'
-          : 'Create a new stream or section under a class.',
+          : 'Create a new stream/section under a class.',
       saveLabel: isEdit ? 'Save Changes' : 'Save Stream',
       onSave: _submit,
+      isSaving: _isSaving,
       fields: [
         Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _AcademicsFieldLabel('Stream Name *'),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(hintText: 'e.g. Blue'),
-                validator: (v) => v == null || v.trim().isEmpty
-                    ? 'Stream name is required'
-                    : null,
-              ),
-              const SizedBox(height: 16),
-              const _AcademicsFieldLabel('Stream Code'),
-              TextFormField(
-                controller: _codeController,
-                decoration: const InputDecoration(hintText: 'e.g. BL'),
-              ),
-              const SizedBox(height: 16),
               const _AcademicsFieldLabel('Parent Class *'),
               DropdownButtonFormField<String>(
                 initialValue: _classId,
                 decoration: const InputDecoration(hintText: 'Select class'),
-                items: widget.classes
+                items: _activeClasses
                     .map(
                       (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
                     )
@@ -582,34 +990,60 @@ class _StreamFormScreenState extends State<_StreamFormScreen> {
                 onChanged: (v) => setState(() => _classId = v),
                 validator: (v) => v == null ? 'Select a class' : null,
               ),
+              const _AcademicsFieldHint(
+                'Choose the class this stream belongs to.',
+              ),
+              const SizedBox(height: 16),
+              const _AcademicsFieldLabel('Stream Name *'),
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  hintText: 'e.g. Blue, Green, A',
+                ),
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Stream name is required'
+                    : null,
+              ),
+              const _AcademicsFieldHint('Use a clear name for the stream.'),
+              const SizedBox(height: 16),
+              const _AcademicsFieldLabel('Stream Code *'),
+              TextFormField(
+                controller: _codeController,
+                decoration: const InputDecoration(hintText: 'e.g. BL, GR, A'),
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Stream code is required'
+                    : null,
+              ),
+              const _AcademicsFieldHint('Short code for the stream.'),
               const SizedBox(height: 16),
               const _AcademicsFieldLabel('Capacity'),
               TextFormField(
                 controller: _capacityController,
                 decoration: const InputDecoration(hintText: 'e.g. 30'),
                 keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  final n = int.tryParse(v.trim());
+                  if (n == null || n <= 0) {
+                    return 'Enter a positive number';
+                  }
+                  return null;
+                },
               ),
-              const SizedBox(height: 8),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Active'),
-                value: _isActive,
+              const _AcademicsFieldHint('Maximum number of students.'),
+              const SizedBox(height: 16),
+              const _AcademicsFieldLabel('Status'),
+              AcademicsStatusToggle(
+                isActive: _isActive,
                 onChanged: (v) => setState(() => _isActive = v),
               ),
+              const _AcademicsFieldHint(
+                "Inactive streams won't be available for selection.",
+              ),
               if (isEdit && widget.onDelete != null) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 20),
                 TextButton.icon(
-                  onPressed: () async {
-                    final confirmed = await showDeleteConfirmDialog(
-                      context,
-                      title: 'Delete Stream',
-                      message: 'Delete "${widget.existing!.name}"?',
-                    );
-                    if (confirmed == true && mounted) {
-                      widget.onDelete!();
-                      Navigator.of(context).pop();
-                    }
-                  },
+                  onPressed: _isSaving ? null : _confirmDelete,
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                   label: const Text(
                     'Delete Stream',
@@ -624,8 +1058,11 @@ class _StreamFormScreenState extends State<_StreamFormScreen> {
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
+    if (_classId == null) return;
+    setState(() => _isSaving = true);
     widget.onSave(
       ClassStream(
         id: widget.existing?.id ?? const Uuid().v4(),
@@ -633,10 +1070,50 @@ class _StreamFormScreenState extends State<_StreamFormScreen> {
         name: _nameController.text.trim(),
         code: _codeController.text.trim(),
         classId: _classId!,
-        capacity: int.tryParse(_capacityController.text) ?? 0,
+        capacity: int.tryParse(_capacityController.text.trim()) ?? 0,
         isActive: _isActive,
       ),
     );
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _confirmDelete() async {
+    final dependentCount = await widget.onDelete!();
+    if (!mounted) return;
+    final itemName = widget.existing!.name;
+    String? action;
+    if (dependentCount == 0) {
+      final confirmed = await showDeleteConfirmDialog(
+        context,
+        title: 'Delete Stream',
+        message: 'Delete "$itemName"?',
+      );
+      action = confirmed == true ? 'delete' : null;
+    } else {
+      action = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete Stream'),
+          content: Text(
+            '"$itemName" is still referenced by $dependentCount student(s) '
+            '(via its parent class). Archive it instead of deleting it to '
+            'keep that data intact.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'archive'),
+              child: const Text('Archive'),
+            ),
+          ],
+        ),
+      );
+    }
+    if (action == null || !mounted) return;
+    widget.onDeleteConfirmed!(action);
     Navigator.of(context).pop();
   }
 }
@@ -652,6 +1129,22 @@ class _AcademicsFieldLabel extends StatelessWidget {
       child: Text(
         text,
         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+      ),
+    );
+  }
+}
+
+class _AcademicsFieldHint extends StatelessWidget {
+  final String text;
+  const _AcademicsFieldHint(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 5),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 11.5, color: Colors.grey[600]),
       ),
     );
   }

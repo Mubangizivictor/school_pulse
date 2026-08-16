@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
@@ -59,30 +58,18 @@ class _PeopleStructureScreenState extends State<PeopleStructureScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: const AdminAppBar(title: 'People'),
-    body: Column(
-      children: [
-        StructureSectionPicker(
-          sections: _sections,
-          selectedIndex: _selectedIndex,
-          onSelected: (index) =>
-              context.go('/staff/admin/structure/people?tab=$index'),
-        ),
-        Expanded(
-          child: BlocBuilder<StructureBloc, StructureState>(
-            builder: (_, state) => _selectedIndex == 0
-                ? _DepartmentsList(
-                    departments: state.departments,
-                    staff: _staff,
-                    staffLoaded: _staffLoaded,
-                  )
-                : _DesignationsList(
-                    designations: state.designations,
-                    staff: _staff,
-                    staffLoaded: _staffLoaded,
-                  ),
-          ),
-        ),
-      ],
+    body: BlocBuilder<StructureBloc, StructureState>(
+      builder: (_, state) => _selectedIndex == 0
+          ? _DepartmentsList(
+              departments: state.departments,
+              staff: _staff,
+              staffLoaded: _staffLoaded,
+            )
+          : _DesignationsList(
+              designations: state.designations,
+              staff: _staff,
+              staffLoaded: _staffLoaded,
+            ),
     ),
   );
 }
