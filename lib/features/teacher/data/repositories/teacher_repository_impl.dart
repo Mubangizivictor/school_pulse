@@ -49,6 +49,7 @@ class TeacherRepositoryImpl implements TeacherRepository {
 
   @override
   Future<Either<Failure, void>> submitMarks({
+    required String schoolId,
     required String className,
     required String subject,
     required String assessment,
@@ -58,6 +59,7 @@ class TeacherRepositoryImpl implements TeacherRepository {
   }) async {
     try {
       await remoteDataSource.submitMarks(
+        schoolId: schoolId,
         className: className,
         subject: subject,
         assessment: assessment,

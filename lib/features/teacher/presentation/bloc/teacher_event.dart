@@ -53,6 +53,7 @@ class TeacherMarksEntryRequested extends TeacherEvent {
 }
 
 class TeacherMarksSubmitted extends TeacherEvent {
+  final String schoolId;
   final String className;
   final String subject;
   final String assessment;
@@ -63,6 +64,7 @@ class TeacherMarksSubmitted extends TeacherEvent {
   final Map<String, double> marks;
 
   const TeacherMarksSubmitted({
+    required this.schoolId,
     required this.className,
     required this.subject,
     required this.assessment,
@@ -73,6 +75,7 @@ class TeacherMarksSubmitted extends TeacherEvent {
 
   @override
   List<Object?> get props => [
+    schoolId,
     className,
     subject,
     assessment,

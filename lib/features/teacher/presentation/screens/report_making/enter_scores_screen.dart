@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_event.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_state.dart';
@@ -56,6 +58,8 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
   }
 
   void _onSave() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return;
     final marks = <String, double>{};
     for (var entry in _caControllers.entries) {
       final ca = double.tryParse(entry.value.text) ?? 0;
@@ -65,6 +69,7 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
 
     context.read<TeacherBloc>().add(
       TeacherMarksSubmitted(
+        schoolId: authState.user.schoolId,
         className: widget.className,
         subject: widget.subject,
         assessment: widget.assessment,

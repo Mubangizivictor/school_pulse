@@ -5,6 +5,7 @@ import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
+import 'package:school_pulse/features/academic/domain/entities/academic_record.dart';
 import 'package:school_pulse/features/academic/domain/entities/report_card.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -239,13 +240,13 @@ class _ReportCardScreenState extends State<ReportCardScreen>
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: _getGradeColor(context, record.grade),
+                              color: _gradeColor(context, record),
                             ),
                           ),
                           Text(
-                            record.grade,
+                            record.grade ?? 'Not graded',
                             style: TextStyle(
-                              color: _getGradeColor(context, record.grade),
+                              color: _gradeColor(context, record),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -328,7 +329,24 @@ class _ReportCardScreenState extends State<ReportCardScreen>
     );
   }
 
-  Color _getGradeColor(BuildContext context, String grade) {
+  /// Prefers the grading system's own configured band color
+  /// (`record.gradeColorHex`, resolved by GradeResolver at mark-submission
+  /// time). Falls back to the old D/C/P/F prefix pattern-match only for
+  /// legacy records written before that field existed, so their visual
+  /// appearance doesn't change - and to a neutral color when neither is
+  /// available (e.g. record.grade is null because the school has no
+  /// grading system configured).
+  Color _gradeColor(BuildContext context, AcademicRecord record) {
+    final hex = record.gradeColorHex;
+    if (hex != null && hex.isNotEmpty) {
+      try {
+        return Color(int.parse(hex.replaceFirst('#', '0xff')));
+      } catch (_) {
+        // fall through to the legacy/neutral paths below
+      }
+    }
+    final grade = record.grade;
+    if (grade == null) return Theme.of(context).colorScheme.outline;
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     if (grade.startsWith('D')) return semanticColors.success;
     if (grade.startsWith('C')) return semanticColors.warning;

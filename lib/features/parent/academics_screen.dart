@@ -261,7 +261,7 @@ class _AcademicsScreenState extends State<AcademicsScreen>
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  record.grade,
+                  record.grade ?? 'Not graded',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],

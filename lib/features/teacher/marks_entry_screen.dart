@@ -99,12 +99,15 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
       return;
     }
 
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return;
     final config = context.read<ThemeProvider>().config;
     final term = config?.currentTerm ?? 'Term 1';
     final year = config?.academicYear ?? DateTime.now().year.toString();
 
     context.read<TeacherBloc>().add(
       TeacherMarksSubmitted(
+        schoolId: authState.user.schoolId,
         className: _selectedClass!,
         subject: _selectedSubject!,
         assessment: _selectedAssessment,

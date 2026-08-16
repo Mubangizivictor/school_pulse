@@ -203,6 +203,7 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
 
     final result = await submitMarks(
       MarksParams(
+        schoolId: event.schoolId,
         className: event.className,
         subject: event.subject,
         assessment: event.assessment,

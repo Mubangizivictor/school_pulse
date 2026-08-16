@@ -60,7 +60,7 @@ class StudentAcademicsScreen extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              record.grade,
+                              record.grade ?? 'Not graded',
                               style: Theme.of(context).textTheme.labelSmall,
                             ),
                           ],

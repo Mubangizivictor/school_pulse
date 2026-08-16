@@ -22,6 +22,7 @@ abstract class TeacherRepository {
   });
 
   Future<Either<Failure, void>> submitMarks({
+    required String schoolId,
     required String className,
     required String subject,
     required String assessment,

@@ -5,6 +5,8 @@ import '../../domain/entities/teacher_dashboard_stats.dart';
 import '../../domain/entities/homework.dart';
 import '../../domain/entities/report_comment.dart';
 import '../../domain/entities/competency_rating.dart';
+import 'package:school_pulse/features/structure/domain/entities/assessment_grading_entities.dart';
+import 'package:school_pulse/features/structure/domain/services/grade_resolver.dart';
 
 abstract class TeacherRemoteDataSource {
   Future<List<TeacherStudent>> getStudentsByClass(String className);
@@ -15,6 +17,7 @@ abstract class TeacherRemoteDataSource {
     required Map<String, String> attendance,
   });
   Future<void> submitMarks({
+    required String schoolId,
     required String className,
     required String subject,
     required String assessment,
@@ -55,19 +58,6 @@ abstract class TeacherRemoteDataSource {
     required List<String> studentIds,
     required List<String> enabledSections,
   });
-}
-
-/// UCE-style aggregate grade for a percentage score.
-String gradeForScore(double score) {
-  if (score >= 85) return 'D1';
-  if (score >= 75) return 'D2';
-  if (score >= 65) return 'C3';
-  if (score >= 60) return 'C4';
-  if (score >= 55) return 'C5';
-  if (score >= 50) return 'C6';
-  if (score >= 45) return 'P7';
-  if (score >= 40) return 'P8';
-  return 'F9';
 }
 
 class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
@@ -143,6 +133,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
 
   @override
   Future<void> submitMarks({
+    required String schoolId,
     required String className,
     required String subject,
     required String assessment,
@@ -153,6 +144,12 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
     // One doc per student/subject/term/year/assessment so a teacher can
     // correct marks by re-submitting. Written to 'academic_records', the
     // collection the parent academics and report card screens read.
+    final system = await _resolveDefaultGradingSystem(schoolId);
+    final bands = system == null
+        ? const <GradeBand>[]
+        : await _gradeBands(schoolId, system.id);
+    const resolver = GradeResolver();
+
     final batch = firestore.batch();
     final slug = [
       subject,
@@ -162,6 +159,15 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
     ].join('_').replaceAll(RegExp(r'\s+'), '-');
 
     marks.forEach((studentId, score) {
+      // Resolution is intentionally left null (never a fabricated grade)
+      // when the school has no grading system configured - that state
+      // should be visibly "not graded", not silently mis-rendered under a
+      // fallback scale the school never chose. See
+      // Structure > Academics > Grading Systems.
+      final resolution = system == null
+          ? null
+          : resolver.resolveScore(score: score, system: system, ranges: bands);
+
       final docRef = firestore
           .collection('academic_records')
           .doc('${studentId}_$slug');
@@ -170,7 +176,17 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
         'className': className,
         'subject': subject,
         'score': score,
-        'grade': gradeForScore(score),
+        'grade': resolution?.gradeCode,
+        'gradeLabel': resolution?.gradeLabel,
+        'gradeColorHex': resolution == null
+            ? null
+            : bands
+                  .where((b) => b.grade == resolution.gradeCode)
+                  .map((b) => b.colorHex)
+                  .firstOrNull,
+        'isPassing': resolution?.isPassing,
+        'gradingSystemId': system?.id,
+        'gradingSystemVersion': system?.version,
         'term': term,
         'year': year,
         'assessment': assessment,
@@ -181,6 +197,73 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
     });
 
     await batch.commit();
+  }
+
+  /// The school's single active default grading system, if one is
+  /// configured. Whole-school scoped for now - the wizard does not yet
+  /// carry an educational-level/class context down to this call, so a
+  /// level-scoped default cannot be resolved here.
+  Future<GradingSystemDef?> _resolveDefaultGradingSystem(
+    String schoolId,
+  ) async {
+    final snapshot = await firestore
+        .collection('structure_grading_systems')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('isActive', isEqualTo: true)
+        .where('isDefault', isEqualTo: true)
+        .limit(1)
+        .get();
+    if (snapshot.docs.isEmpty) return null;
+    final data = snapshot.docs.first.data();
+    return GradingSystemDef(
+      id: snapshot.docs.first.id,
+      schoolId: data['schoolId'] ?? '',
+      name: data['name'] ?? '',
+      type: data['type'] ?? '',
+      isDefault: data['isDefault'] ?? false,
+      isActive: data['isActive'] ?? true,
+      description: data['description'] ?? '',
+      scaleType: data['scaleType'] ?? 'Range Based',
+      gradeFormat: data['gradeFormat'] ?? 'Letter',
+      decimalPlaces: data['decimalPlaces'] ?? 2,
+      passingScore: (data['passingScore'] as num?)?.toDouble(),
+      passingGradeCode: data['passingGradeCode'],
+      allowIncomplete: data['allowIncomplete'] ?? false,
+      appliesTo: data['appliesTo'] ?? 'school',
+      levelIds: List<String>.from(data['levelIds'] ?? const []),
+      classIds: List<String>.from(data['classIds'] ?? const []),
+      academicYearIds: List<String>.from(data['academicYearIds'] ?? const []),
+      version: data['version'] ?? 1,
+    );
+  }
+
+  Future<List<GradeBand>> _gradeBands(
+    String schoolId,
+    String gradingSystemId,
+  ) async {
+    final snapshot = await firestore
+        .collection('grade_bands')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('gradingSystemId', isEqualTo: gradingSystemId)
+        .get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      return GradeBand(
+        id: doc.id,
+        schoolId: data['schoolId'] ?? '',
+        gradingSystemId: data['gradingSystemId'] ?? '',
+        grade: data['grade'] ?? '',
+        minScore: (data['minScore'] as num?)?.toDouble() ?? 0,
+        maxScore: (data['maxScore'] as num?)?.toDouble() ?? 0,
+        remarks: data['remarks'] ?? '',
+        order: data['order'] ?? 0,
+        label: data['label'] ?? '',
+        gradePoint: (data['gradePoint'] as num?)?.toDouble(),
+        isPassing: data['isPassing'] ?? true,
+        colorHex: data['colorHex'] ?? '',
+        hasNumericBoundary: data['hasNumericBoundary'] ?? true,
+      );
+    }).toList();
   }
 
   @override
