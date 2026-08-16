@@ -7,11 +7,16 @@ const { onCall } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
+const { resolveRecipients } = require("./notifications").__internal;
 
 const db = () => admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
-const leadership = new Set(["schoolAdmin", "director", "headTeacher", "deputyHead"]);
-const emergencyRoles = new Set([...leadership, "securityHead"]);
+// Default role grants, mirroring lib/core/permissions/role_permission_defaults.dart
+// (_communicationsAdminPermissions / _communicationsEmergencyOnlyPermissions).
+// Institutions can grant additional roles via role_permission_overrides, the
+// same collection Firestore rules already read for announcement.manage.
+const communicationsAdminRoles = new Set(["schoolAdmin", "director", "headTeacher", "deputyHead"]);
+const communicationsEmergencyRoles = new Set([...communicationsAdminRoles, "securityHead"]);
 const statuses = new Set([
   "draft", "pendingApproval", "approved", "scheduled", "publishing",
   "published", "partiallyDelivered", "delivered", "failed", "cancelled",
@@ -25,10 +30,28 @@ const allowedAudiences = new Set([
 function callerRole(user) {
   return user.role || (user.roles || [])[0] || "";
 }
-function canPublish(user, campaign) {
+async function callerHasPermission(schoolId, user, permission) {
   const role = callerRole(user);
-  if (campaign.communicationType === "emergencyAlert") return emergencyRoles.has(role);
-  return leadership.has(role);
+  if (permission === "communications.send_emergency") {
+    if (communicationsEmergencyRoles.has(role)) return true;
+  } else if (communicationsAdminRoles.has(role)) {
+    return true;
+  }
+  const overrideDoc = await db().collection("schools").doc(schoolId)
+    .collection("role_permission_overrides").doc(role).get();
+  if (!overrideDoc.exists) return false;
+  const granted = overrideDoc.data().permissions || [];
+  return granted.includes(permission);
+}
+async function assertPermission(schoolId, user, permission, message) {
+  if (!(await callerHasPermission(schoolId, user, permission))) {
+    throw new HttpsError("permission-denied", message);
+  }
+}
+function requiredPublishPermission(campaign) {
+  return campaign.communicationType === "emergencyAlert"
+    ? "communications.send_emergency"
+    : "communications.publish";
 }
 function assertSafeCampaign(input) {
   if (!input || typeof input !== "object") throw new HttpsError("invalid-argument", "campaign is required.");
@@ -107,22 +130,49 @@ function requestPayload(campaign, campaignId) {
   };
 }
 
+async function assertAudienceSendPermission(schoolId, caller, audienceDefinition) {
+  const kinds = audienceDefinition.kind === "anyOf"
+    ? audienceDefinition.definitions.map((d) => d.kind)
+    : [audienceDefinition.kind];
+  const needsStaff = kinds.some((k) => k === "all_staff" || k === "roles");
+  const needsParents = kinds.some((k) => k === "all_parents" || k === "class_parents" || k === "student_parents");
+  const needsStudents = kinds.some((k) => k === "students");
+  const needsSchoolWide = kinds.some((k) => k === "school");
+  if (needsStaff || needsSchoolWide) {
+    await assertPermission(schoolId, caller, "communications.send_staff", "You cannot target staff.");
+  }
+  if (needsParents || needsSchoolWide) {
+    await assertPermission(schoolId, caller, "communications.send_parents", "You cannot target parents.");
+  }
+  if (needsStudents || needsSchoolWide) {
+    await assertPermission(schoolId, caller, "communications.send_students", "You cannot target students.");
+  }
+}
+
 exports.saveCommunicationDraft = onCall(async (request) => {
   const { schoolId, campaignId, campaign } = request.data || {};
   if (!schoolId) throw new HttpsError("invalid-argument", "schoolId is required.");
   assertSafeCampaign(campaign);
   const caller = await authenticatedCaller(request, schoolId);
-  if (!canPublish(caller, campaign)) throw new HttpsError("permission-denied", "You cannot create this communication.");
   const ref = campaignRef(schoolId, campaignId || db().collection("_").doc().id);
+  const existing = await ref.get();
+  await assertPermission(
+    schoolId, caller,
+    existing.exists ? "communications.edit_draft" : "communications.create",
+    "You cannot create or edit this communication.",
+  );
+  await assertAudienceSendPermission(schoolId, caller, campaign.audienceDefinition);
   const scheduledAt = optionalTimestamp(campaign.scheduledAt, "scheduledAt");
   const expiresAt = optionalTimestamp(campaign.expiresAt, "expiresAt");
-  if (scheduledAt && scheduledAt.toMillis() <= Date.now()) {
-    throw new HttpsError("invalid-argument", "Scheduled time must be in the future.");
+  if (scheduledAt) {
+    await assertPermission(schoolId, caller, "communications.schedule", "You cannot schedule communications.");
+    if (scheduledAt.toMillis() <= Date.now()) {
+      throw new HttpsError("invalid-argument", "Scheduled time must be in the future.");
+    }
   }
   if (expiresAt && scheduledAt && expiresAt.toMillis() <= scheduledAt.toMillis()) {
     throw new HttpsError("invalid-argument", "Expiry must be after the scheduled time.");
   }
-  const existing = await ref.get();
   if (existing.exists && !["draft", "pendingApproval", "approved"].includes(existing.data().status)) {
     throw new HttpsError("failed-precondition", "Published communications cannot be edited; duplicate it to create a correction.");
   }
@@ -149,6 +199,47 @@ exports.saveCommunicationDraft = onCall(async (request) => {
   return { campaignId: id };
 });
 
+// Creates a new draft that supersedes an already-published campaign, so a
+// correction never silently rewrites content recipients already received.
+exports.supersedeCommunicationCampaign = onCall(async (request) => {
+  const { schoolId, campaignId } = request.data || {};
+  if (!schoolId || !campaignId) throw new HttpsError("invalid-argument", "schoolId and campaignId are required.");
+  const caller = await authenticatedCaller(request, schoolId);
+  await assertPermission(schoolId, caller, "communications.edit_draft", "You cannot correct this communication.");
+  const ref = campaignRef(schoolId, campaignId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Campaign not found.");
+  const original = snap.data();
+  if (!["published", "delivered", "partiallyDelivered", "failed"].includes(original.status)) {
+    throw new HttpsError("failed-precondition", "Only published communications can be superseded; edit the draft directly instead.");
+  }
+  const newRef = campaignRef(schoolId, db().collection("_").doc().id);
+  const now = FieldValue.serverTimestamp();
+  await db().runTransaction(async (tx) => {
+    tx.set(newRef, {
+      ...original,
+      campaignId: newRef.id,
+      status: "draft",
+      version: (original.version || 1) + 1,
+      supersedesCampaignId: campaignId,
+      audienceSnapshot: FieldValue.delete(),
+      deliverySummary: FieldValue.delete(),
+      readSummary: FieldValue.delete(),
+      failureSummary: FieldValue.delete(),
+      publishedAt: FieldValue.delete(),
+      notificationRequestId: FieldValue.delete(),
+      createdAt: now,
+      updatedAt: now,
+    });
+    tx.update(ref, { status: "archived", supersededByCampaignId: newRef.id, updatedAt: now });
+  });
+  await db().collection("schools").doc(schoolId).collection("communication_audit").add({
+    action: "campaign_superseded", campaignId: newRef.id, originalCampaignId: campaignId,
+    actorId: caller.id, createdAt: now,
+  });
+  return { campaignId: newRef.id };
+});
+
 exports.publishCommunicationCampaign = onCall(async (request) => {
   const { schoolId, campaignId } = request.data || {};
   if (!schoolId || !campaignId) throw new HttpsError("invalid-argument", "schoolId and campaignId are required.");
@@ -157,7 +248,8 @@ exports.publishCommunicationCampaign = onCall(async (request) => {
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError("not-found", "Campaign not found.");
   const campaign = snap.data();
-  if (!canPublish(caller, campaign)) throw new HttpsError("permission-denied", "You cannot publish this communication.");
+  await assertPermission(schoolId, caller, requiredPublishPermission(campaign), "You cannot publish this communication.");
+  await assertAudienceSendPermission(schoolId, caller, campaign.audienceDefinition);
   if (!["draft", "approved", "scheduled"].includes(campaign.status)) {
     throw new HttpsError("failed-precondition", "Campaign is not ready to publish.");
   }
@@ -165,26 +257,50 @@ exports.publishCommunicationCampaign = onCall(async (request) => {
     await ref.update({ status: "scheduled", updatedAt: FieldValue.serverTimestamp() });
     return { status: "scheduled" };
   }
+  // Freeze who is being addressed at the moment of publication - later
+  // membership changes (a student transferring class, a parent unlinked)
+  // must never retroactively change who this already-sent campaign reached.
+  const recipientIds = await resolveRecipients(schoolId, campaign.audienceDefinition);
+  const audienceSnapshot = {
+    resolvedAt: FieldValue.serverTimestamp(),
+    recipientCount: recipientIds.length,
+    recipientIds: recipientIds.length <= 500 ? recipientIds : recipientIds.slice(0, 500),
+    truncated: recipientIds.length > 500,
+  };
   const notificationRef = db().collection("notification_requests").doc("campaign_" + campaignId + "_v" + (campaign.version || 1));
   await db().runTransaction(async (tx) => {
     const current = await tx.get(ref);
     if (current.data().status === "published") return;
     tx.set(notificationRef, requestPayload(current.data(), campaignId), { merge: false });
-    tx.update(ref, { status: "publishing", notificationRequestId: notificationRef.id, publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    tx.update(ref, {
+      status: "publishing", notificationRequestId: notificationRef.id, audienceSnapshot,
+      publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+    });
   });
-  return { status: "publishing", notificationRequestId: notificationRef.id };
+  await db().collection("schools").doc(schoolId).collection("communication_audit").add({
+    action: "campaign_published", campaignId, actorId: caller.id,
+    audience: campaign.audienceDefinition, recipientCount: recipientIds.length,
+    channels: campaign.deliveryChannels || ["inApp", "push"], createdAt: FieldValue.serverTimestamp(),
+  });
+  return { status: "publishing", notificationRequestId: notificationRef.id, recipientCount: recipientIds.length };
 });
 
 exports.cancelCommunicationCampaign = onCall(async (request) => {
   const { schoolId, campaignId } = request.data || {};
+  if (!schoolId || !campaignId) throw new HttpsError("invalid-argument", "schoolId and campaignId are required.");
   const caller = await authenticatedCaller(request, schoolId);
   const ref = campaignRef(schoolId, campaignId);
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError("not-found", "Campaign not found.");
-  if (!canPublish(caller, snap.data()) || snap.data().status !== "scheduled") {
+  const campaign = snap.data();
+  await assertPermission(schoolId, caller, "communications.cancel", "You cannot cancel this communication.");
+  if (campaign.status !== "scheduled") {
     throw new HttpsError("failed-precondition", "Only scheduled communications can be cancelled.");
   }
   await ref.update({ status: "cancelled", cancelledAt: FieldValue.serverTimestamp(), cancelledBy: caller.id, updatedAt: FieldValue.serverTimestamp() });
+  await db().collection("schools").doc(schoolId).collection("communication_audit").add({
+    action: "campaign_cancelled", campaignId, actorId: caller.id, createdAt: FieldValue.serverTimestamp(),
+  });
   return { status: "cancelled" };
 });
 
@@ -193,11 +309,18 @@ exports.reconcileCommunicationCampaigns = onSchedule("every 5 minutes", async ()
   for (const doc of due.docs) {
     const campaign = doc.data();
     const requestRef = db().collection("notification_requests").doc("campaign_" + doc.id + "_v" + (campaign.version || 1));
+    const recipientIds = await resolveRecipients(campaign.schoolId, campaign.audienceDefinition);
+    const audienceSnapshot = {
+      resolvedAt: FieldValue.serverTimestamp(),
+      recipientCount: recipientIds.length,
+      recipientIds: recipientIds.length <= 500 ? recipientIds : recipientIds.slice(0, 500),
+      truncated: recipientIds.length > 500,
+    };
     await db().runTransaction(async (tx) => {
       const fresh = await tx.get(doc.ref);
       if (fresh.data().status !== "scheduled") return;
       tx.set(requestRef, requestPayload(fresh.data(), doc.id));
-      tx.update(doc.ref, { status: "publishing", notificationRequestId: requestRef.id, publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      tx.update(doc.ref, { status: "publishing", notificationRequestId: requestRef.id, audienceSnapshot, publishedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
     });
   }
   const publishing = await db().collectionGroup("communication_campaigns").where("status", "==", "publishing").limit(100).get();
@@ -212,4 +335,91 @@ exports.reconcileCommunicationCampaigns = onSchedule("every 5 minutes", async ()
   }
 });
 
-module.exports.__internal = { assertSafeCampaign, requestPayload, optionalTimestamp, allowedAudiences };
+// --- Templates -------------------------------------------------------------
+// Reusable message bodies (fee reminder, school closure, etc). Institution
+// wording only; never hardcoded here.
+
+function templateRef(schoolId, templateId) {
+  return db().collection("schools").doc(schoolId).collection("communication_templates").doc(templateId);
+}
+function assertSafeTemplate(input) {
+  if (!input || typeof input !== "object") throw new HttpsError("invalid-argument", "template is required.");
+  if (typeof input.name !== "string" || !input.name.trim() || input.name.length > 120) {
+    throw new HttpsError("invalid-argument", "A template name of up to 120 characters is required.");
+  }
+  if (typeof input.body !== "string" || !input.body.trim() || input.body.length > 12000) {
+    throw new HttpsError("invalid-argument", "Template body is required.");
+  }
+}
+
+exports.saveCommunicationTemplate = onCall(async (request) => {
+  const { schoolId, templateId, template } = request.data || {};
+  if (!schoolId) throw new HttpsError("invalid-argument", "schoolId is required.");
+  assertSafeTemplate(template);
+  const caller = await authenticatedCaller(request, schoolId);
+  await assertPermission(schoolId, caller, "communications.manage_templates", "You cannot manage communication templates.");
+  const ref = templateRef(schoolId, templateId || db().collection("_").doc().id);
+  const existing = await ref.get();
+  const now = FieldValue.serverTimestamp();
+  await ref.set({
+    templateId: ref.id, schoolId, name: template.name.trim(),
+    communicationType: template.communicationType || "custom",
+    shortSummary: template.shortSummary || "", body: template.body.trim(),
+    placeholders: Array.isArray(template.placeholders) ? template.placeholders : [],
+    createdBy: existing.exists ? existing.data().createdBy : caller.id,
+    createdAt: existing.exists ? existing.data().createdAt : now, updatedAt: now,
+  }, { merge: true });
+  await db().collection("schools").doc(schoolId).collection("communication_audit").add({
+    action: existing.exists ? "template_changed" : "template_created", templateId: ref.id, actorId: caller.id, createdAt: now,
+  });
+  return { templateId: ref.id };
+});
+
+exports.deleteCommunicationTemplate = onCall(async (request) => {
+  const { schoolId, templateId } = request.data || {};
+  if (!schoolId || !templateId) throw new HttpsError("invalid-argument", "schoolId and templateId are required.");
+  const caller = await authenticatedCaller(request, schoolId);
+  await assertPermission(schoolId, caller, "communications.manage_templates", "You cannot manage communication templates.");
+  await templateRef(schoolId, templateId).delete();
+  await db().collection("schools").doc(schoolId).collection("communication_audit").add({
+    action: "template_deleted", templateId, actorId: caller.id, createdAt: FieldValue.serverTimestamp(),
+  });
+  return { deleted: true };
+});
+
+// --- Acknowledgements --------------------------------------------------
+// A recipient confirms they have seen a notice that requires acknowledgement.
+// Written by the recipient themselves only - never on behalf of another
+// account - so this reads the caller's own uid from auth, not request.data.
+
+exports.acknowledgeCommunicationCampaign = onCall(async (request) => {
+  const { schoolId, campaignId, deviceId } = request.data || {};
+  if (!schoolId || !campaignId) throw new HttpsError("invalid-argument", "schoolId and campaignId are required.");
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in to acknowledge this notice.");
+  const userDoc = await db().collection("users").doc(request.auth.uid).get();
+  if (!userDoc.exists || userDoc.data().schoolId !== schoolId) {
+    throw new HttpsError("permission-denied", "The active institution does not match this campaign.");
+  }
+  const campaignSnap = await campaignRef(schoolId, campaignId).get();
+  if (!campaignSnap.exists) throw new HttpsError("not-found", "Campaign not found.");
+  const campaign = campaignSnap.data();
+  if (!["published", "delivered", "partiallyDelivered"].includes(campaign.status)) {
+    throw new HttpsError("failed-precondition", "This communication has not been published.");
+  }
+  const snapshotIds = campaign.audienceSnapshot && campaign.audienceSnapshot.recipientIds;
+  if (Array.isArray(snapshotIds) && !campaign.audienceSnapshot.truncated && !snapshotIds.includes(request.auth.uid)) {
+    throw new HttpsError("permission-denied", "This communication was not addressed to you.");
+  }
+  const ackRef = db().collection("schools").doc(schoolId).collection("communication_campaigns")
+    .doc(campaignId).collection("communication_acknowledgements").doc(request.auth.uid);
+  await ackRef.set({
+    userId: request.auth.uid, campaignId, campaignVersion: campaign.version || 1,
+    deviceId: deviceId || null, acknowledgedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return { acknowledged: true };
+});
+
+module.exports.__internal = {
+  assertSafeCampaign, requestPayload, optionalTimestamp, allowedAudiences,
+  callerHasPermission, requiredPublishPermission, communicationsAdminRoles, communicationsEmergencyRoles,
+};

@@ -2268,6 +2268,10 @@ const communicationCampaignFunctions = require("./communication_campaigns");
 exports.saveCommunicationDraft = communicationCampaignFunctions.saveCommunicationDraft;
 exports.publishCommunicationCampaign = communicationCampaignFunctions.publishCommunicationCampaign;
 exports.cancelCommunicationCampaign = communicationCampaignFunctions.cancelCommunicationCampaign;
+exports.supersedeCommunicationCampaign = communicationCampaignFunctions.supersedeCommunicationCampaign;
+exports.saveCommunicationTemplate = communicationCampaignFunctions.saveCommunicationTemplate;
+exports.deleteCommunicationTemplate = communicationCampaignFunctions.deleteCommunicationTemplate;
+exports.acknowledgeCommunicationCampaign = communicationCampaignFunctions.acknowledgeCommunicationCampaign;
 exports.reconcileCommunicationCampaigns = communicationCampaignFunctions.reconcileCommunicationCampaigns;
 
 const appointmentFunctions = require('./appointments');

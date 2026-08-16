@@ -1690,4 +1690,64 @@ describe('Module Control Center + Institution Policy Engine', () => {
       action: 'forged',
     }));
   });
+
+  test('communication_campaigns: readable by admin roles same-school, never client-writable', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/communication_campaigns/camp1'), {
+        title: 'Term closure', status: 'published', schoolId: 'schoolA',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'schools/schoolA/communication_campaigns/camp1')));
+    await assertFails(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/communication_campaigns/camp1')));
+    await assertFails(getDoc(doc(dbFor('parentA'), 'schools/schoolA/communication_campaigns/camp1')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools/schoolA/communication_campaigns/camp1')));
+    // Everything, including publishing a draft, goes through the callable
+    // Cloud Functions - the client can never write a campaign document.
+    await assertFails(setDoc(doc(dbFor('adminA'), 'schools/schoolA/communication_campaigns/camp2'), {
+      title: 'Forged', status: 'published', schoolId: 'schoolA',
+    }));
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'schools/schoolA/communication_campaigns/camp1'), {
+      status: 'cancelled',
+    }));
+  });
+
+  test('communication_acknowledgements: a user may only read/write their own, never another recipient\'s', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/communication_campaigns/camp1'), {
+        title: 'Ack required', status: 'published', schoolId: 'schoolA',
+      });
+      await setDoc(
+        doc(context.firestore(), 'schools/schoolA/communication_campaigns/camp1/communication_acknowledgements/parentA'),
+        { userId: 'parentA', campaignId: 'camp1', acknowledgedAt: new Date() },
+      );
+    });
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'schools/schoolA/communication_campaigns/camp1/communication_acknowledgements/parentA')));
+    await assertFails(getDoc(doc(dbFor('parentOtherA'), 'schools/schoolA/communication_campaigns/camp1/communication_acknowledgements/parentA')));
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'schools/schoolA/communication_campaigns/camp1/communication_acknowledgements/parentA')));
+    // Acknowledgement writes go through acknowledgeCommunicationCampaign so
+    // the campaign's published status and audience membership are validated
+    // server-side; a client write - even of one's own doc - must fail.
+    await assertFails(setDoc(
+      doc(dbFor('parentA'), 'schools/schoolA/communication_campaigns/camp1/communication_acknowledgements/parentA'),
+      { userId: 'parentA', campaignId: 'camp1', acknowledgedAt: new Date() },
+    ));
+    await assertFails(setDoc(
+      doc(dbFor('parentA'), 'schools/schoolA/communication_campaigns/camp1/communication_acknowledgements/parentOtherA'),
+      { userId: 'parentOtherA', campaignId: 'camp1', acknowledgedAt: new Date() },
+    ));
+  });
+
+  test('communication_templates: manageable only by admin/leadership roles, never client-writable', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/communication_templates/tmpl1'), {
+        name: 'Fee reminder', schoolId: 'schoolA', body: 'Your fees are due.',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'schools/schoolA/communication_templates/tmpl1')));
+    await assertFails(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/communication_templates/tmpl1')));
+    await assertFails(getDoc(doc(dbFor('parentA'), 'schools/schoolA/communication_templates/tmpl1')));
+    await assertFails(setDoc(doc(dbFor('adminA'), 'schools/schoolA/communication_templates/tmpl2'), {
+      name: 'Forged', schoolId: 'schoolA', body: 'x',
+    }));
+  });
 });

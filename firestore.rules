@@ -2084,13 +2084,44 @@ service cloud.firestore {
     // authenticated Cloud Functions. The client may inspect its institution's
     // campaign history only when it has the same leadership authority as the
     // publisher; recipients read their own notification records instead.
+    // Communication Center permission families. Mirrors
+    // lib/core/permissions/role_permission_defaults.dart
+    // (_communicationsAdminPermissions / _communicationsEmergencyOnlyPermissions)
+    // and the same server-side check in functions/communication_campaigns.js.
+    function hasCommunicationsPermission(schoolId, permission) {
+      return hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead']) || (
+        permission == 'communications.send_emergency' && hasAnyRole(['securityHead'])
+      ) || (
+        isStaff() && exists(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())) &&
+        permission in get(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())).data.permissions
+      );
+    }
+
     match /schools/{schoolId}/communication_campaigns/{campaignId} {
-      allow read: if isSameSchool(schoolId) && hasAnnouncementManagePermission(schoolId);
+      allow read: if isSameSchool(schoolId) && hasCommunicationsPermission(schoolId, 'communications.view');
+      // All writes happen through the callable Cloud Functions, which apply
+      // permission checks, audience snapshotting and idempotency the client
+      // cannot be trusted to enforce on its own.
+      allow write: if false;
+
+      match /communication_acknowledgements/{userId} {
+        // A recipient may only write their own acknowledgement record - never
+        // acknowledge on behalf of another account.
+        allow read: if isSameSchool(schoolId) &&
+          (request.auth.uid == userId || hasCommunicationsPermission(schoolId, 'communications.view_delivery'));
+        // Writes go through acknowledgeCommunicationCampaign so the campaign
+        // status/audience membership can be validated server-side.
+        allow write: if false;
+      }
+    }
+
+    match /schools/{schoolId}/communication_templates/{templateId} {
+      allow read: if isSameSchool(schoolId) && hasCommunicationsPermission(schoolId, 'communications.manage_templates');
       allow write: if false;
     }
 
     match /schools/{schoolId}/communication_audit/{auditId} {
-      allow read: if isSameSchool(schoolId) && hasAnnouncementManagePermission(schoolId);
+      allow read: if isSameSchool(schoolId) && hasCommunicationsPermission(schoolId, 'communications.view_audit');
       allow write: if false;
     }
 

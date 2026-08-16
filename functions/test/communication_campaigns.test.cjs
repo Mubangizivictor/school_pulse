@@ -26,3 +26,20 @@ test("scheduled timestamps accept ISO input and reject invalid dates", () => {
   assert.equal(__internal.optionalTimestamp("2026-12-01T10:00:00Z", "scheduledAt").toDate().toISOString(), "2026-12-01T10:00:00.000Z");
   assert.throws(() => __internal.optionalTimestamp("not-a-date", "scheduledAt"));
 });
+
+test("emergency alerts require send_emergency; other types require publish", () => {
+  assert.equal(__internal.requiredPublishPermission({ communicationType: "emergencyAlert" }), "communications.send_emergency");
+  assert.equal(__internal.requiredPublishPermission({ communicationType: "announcement" }), "communications.publish");
+});
+
+test("default role grants short-circuit the Firestore override lookup", async () => {
+  // schoolAdmin/director/headTeacher/deputyHead get every communications.*
+  // permission without a role_permission_overrides read; securityHead only
+  // gets communications.send_emergency this way. This mirrors
+  // lib/core/permissions/role_permission_defaults.dart so the two never
+  // silently drift apart.
+  for (const role of __internal.communicationsAdminRoles) {
+    assert.equal(await __internal.callerHasPermission("school-a", { role }, "communications.publish"), true);
+  }
+  assert.equal(await __internal.callerHasPermission("school-a", { role: "securityHead" }, "communications.send_emergency"), true);
+});
