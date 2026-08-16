@@ -63,7 +63,10 @@ class ActiveResponsibilityServiceImpl implements ActiveResponsibilityService {
 
       // Falling back is the normal path after an admin ends an assignment,
       // so it is a switch with an explanation rather than an error.
-      final chosen = restored ?? available.first;
+      final chosen =
+          restored ??
+          available.where((assignment) => assignment.isPrimary).firstOrNull ??
+          available.first;
       final switchReason = (persistedId != null && restored == null)
           ? 'Your previous responsibility is no longer available. '
                 'Switched to ${chosen.displayLabel}.'

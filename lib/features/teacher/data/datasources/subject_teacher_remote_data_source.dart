@@ -33,6 +33,25 @@ abstract class SubjectTeacherRemoteDataSource {
     required String assignmentId,
   });
 
+  /// Every assignment currently pointing at [roleDefinitionId], across all
+  /// staff. Backs the Role Details "Assignments" tab and the role-deletion
+  /// usage guard. Only assignments created after `roleDefinitionId` started
+  /// being populated are found this way — see the field's doc comment.
+  Future<List<StaffRoleAssignment>> getAssignmentsForRole({
+    required String schoolId,
+    required String roleDefinitionId,
+  });
+
+  /// Admin-only. Writes a new responsibility row. `assignment.id` may be
+  /// empty, in which case a Firestore doc id is generated and returned on
+  /// the result so the caller can navigate to it immediately.
+  Future<StaffRoleAssignment> createAssignment(StaffRoleAssignment assignment);
+
+  /// Admin-only. Full-record update - status changes, scope edits, and
+  /// end-date edits all go through this rather than bespoke partial-update
+  /// methods, keeping the write surface small and matching the read model.
+  Future<StaffRoleAssignment> updateAssignment(StaffRoleAssignment assignment);
+
   Future<List<SubjectEnrollment>> getEnrollments({
     required String schoolId,
     required String subjectId,
@@ -192,6 +211,43 @@ class SubjectTeacherRemoteDataSourceImpl
     final data = doc.data();
     if (!doc.exists || data == null) return null;
     return _assignmentFromDoc(doc.id, schoolId, data);
+  }
+
+  @override
+  Future<List<StaffRoleAssignment>> getAssignmentsForRole({
+    required String schoolId,
+    required String roleDefinitionId,
+  }) async {
+    final snapshot = await _assignments(
+      schoolId,
+    ).where('roleDefinitionId', isEqualTo: roleDefinitionId).get();
+    return snapshot.docs
+        .map((d) => _assignmentFromDoc(d.id, schoolId, d.data()))
+        .toList();
+  }
+
+  @override
+  Future<StaffRoleAssignment> createAssignment(
+    StaffRoleAssignment assignment,
+  ) async {
+    final ref = assignment.id.isEmpty
+        ? _assignments(assignment.schoolId).doc()
+        : _assignments(assignment.schoolId).doc(assignment.id);
+    final withId = assignment.id.isEmpty
+        ? assignment.copyWith(id: ref.id)
+        : assignment;
+    await ref.set(_assignmentToMap(withId));
+    return withId;
+  }
+
+  @override
+  Future<StaffRoleAssignment> updateAssignment(
+    StaffRoleAssignment assignment,
+  ) async {
+    await _assignments(assignment.schoolId)
+        .doc(assignment.id)
+        .set(_assignmentToMap(assignment), SetOptions(merge: true));
+    return assignment;
   }
 
   @override
@@ -659,6 +715,8 @@ class SubjectTeacherRemoteDataSourceImpl
       campusId: data['campusId'] as String? ?? '',
       staffId: data['staffId'] as String? ?? '',
       userId: data['userId'] as String? ?? '',
+      roleDefinitionId: data['roleDefinitionId'] as String? ?? '',
+      isPrimary: data['isPrimary'] as bool? ?? false,
       roleType: StaffResponsibilityType.fromId(data['roleType'] as String?),
       academicYearId: data['academicYearId'] as String? ?? '',
       termId: data['termId'] as String?,
@@ -683,11 +741,52 @@ class SubjectTeacherRemoteDataSourceImpl
         termIds: _toStringSet(scope['termIds']),
       ),
       substituteForStaffId: data['substituteForStaffId'] as String?,
+      extraScope:
+          (data['extraScope'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, v.toString()),
+          ) ??
+          const {},
       assignedBy: data['assignedBy'] as String? ?? '',
       assignedAt: _toDate(data['assignedAt']) ?? DateTime(1970),
       updatedBy: data['updatedBy'] as String?,
       updatedAt: _toDate(data['updatedAt']),
     );
+  }
+
+  Map<String, dynamic> _assignmentToMap(StaffRoleAssignment a) {
+    return {
+      'schoolId': a.schoolId,
+      'campusId': a.campusId,
+      'staffId': a.staffId,
+      'userId': a.userId,
+      'roleDefinitionId': a.roleDefinitionId,
+      'isPrimary': a.isPrimary,
+      'roleType': a.roleType.name,
+      'academicYearId': a.academicYearId,
+      'termId': a.termId,
+      'subjectId': a.subjectId,
+      'subjectName': a.subjectName,
+      'classId': a.classId,
+      'className': a.className,
+      'streamId': a.streamId,
+      'streamName': a.streamName,
+      'departmentId': a.departmentId,
+      'houseId': a.houseId,
+      'startDate': Timestamp.fromDate(a.startDate),
+      if (a.endDate != null) 'endDate': Timestamp.fromDate(a.endDate!),
+      'status': a.status.name,
+      'permissionScope': {
+        'permissions': a.permissionScope.permissions.toList(),
+        'termIds': a.permissionScope.termIds.toList(),
+      },
+      if (a.substituteForStaffId != null)
+        'substituteForStaffId': a.substituteForStaffId,
+      'extraScope': a.extraScope,
+      'assignedBy': a.assignedBy,
+      'assignedAt': Timestamp.fromDate(a.assignedAt),
+      if (a.updatedBy != null) 'updatedBy': a.updatedBy,
+      'updatedAt': Timestamp.now(),
+    };
   }
 
   SubjectEnrollment _enrollmentFromDoc(

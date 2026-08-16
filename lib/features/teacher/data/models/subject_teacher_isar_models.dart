@@ -35,6 +35,8 @@ class StaffRoleAssignmentIsar {
   @Index()
   late String userId;
 
+  late String roleDefinitionId;
+  late bool isPrimary;
   late String roleType;
 
   @Index()
@@ -73,6 +75,8 @@ class StaffRoleAssignmentIsar {
       ..campusId = e.campusId
       ..staffId = e.staffId
       ..userId = e.userId
+      ..roleDefinitionId = e.roleDefinitionId
+      ..isPrimary = e.isPrimary
       ..roleType = e.roleType.name
       ..academicYearId = e.academicYearId
       ..termId = e.termId
@@ -104,6 +108,8 @@ class StaffRoleAssignmentIsar {
       campusId: campusId,
       staffId: staffId,
       userId: userId,
+      roleDefinitionId: roleDefinitionId,
+      isPrimary: isPrimary,
       roleType: StaffResponsibilityType.fromId(roleType),
       academicYearId: academicYearId,
       termId: termId,

@@ -187,6 +187,13 @@ class StaffRoleAssignment extends Equatable {
   final String campusId;
   final String staffId;
   final String userId;
+
+  /// Optional link to the tenant-owned role definition. Legacy assignments
+  /// remain valid until migrated.
+  final String roleDefinitionId;
+
+  /// Launch preference only; it never grants or removes access.
+  final bool isPrimary;
   final StaffResponsibilityType roleType;
   final String academicYearId;
   final String? termId;
@@ -207,6 +214,15 @@ class StaffRoleAssignment extends Equatable {
   /// somebody else. Substitute rows expire on [endDate] like any other.
   final String? substituteForStaffId;
 
+  /// Scope dimensions that have no dedicated structure entity/permission
+  /// enforcement yet (route, vehicle, hostel, club, gate, library branch,
+  /// store, sport, ...) — e.g. `{'routeId': 'r1'}` or `{'storeLabel': 'Main
+  /// Store'}`. Display/record-keeping only; never checked by
+  /// `PermissionScope.covers()` or Firestore rules. A dimension graduates
+  /// out of here into a named, enforced field once a module actually needs
+  /// to scope access by it, the same way [houseId] did.
+  final Map<String, String> extraScope;
+
   final String assignedBy;
   final DateTime assignedAt;
   final String? updatedBy;
@@ -218,6 +234,8 @@ class StaffRoleAssignment extends Equatable {
     this.campusId = '',
     required this.staffId,
     required this.userId,
+    this.roleDefinitionId = '',
+    this.isPrimary = false,
     required this.roleType,
     required this.academicYearId,
     this.termId,
@@ -234,6 +252,7 @@ class StaffRoleAssignment extends Equatable {
     this.status = AssignmentStatus.active,
     this.permissionScope = const PermissionScope(),
     this.substituteForStaffId,
+    this.extraScope = const {},
     this.assignedBy = '',
     required this.assignedAt,
     this.updatedBy,
@@ -281,12 +300,34 @@ class StaffRoleAssignment extends Equatable {
     };
   }
 
+  /// Short scope description for switcher/list rows, e.g. "Grade 10A Blue"
+  /// or "Mathematics" or "" for a wholeSchool-scoped role with no narrower
+  /// scope. Deliberately simple: department/house *names* would require a
+  /// lookup this entity can't do on its own — callers that have
+  /// `StructureBloc.state.departments`/`houses` loaded should resolve the
+  /// real name themselves and use this only as an id-space fallback.
+  String get scopeSummaryLabel {
+    if (className != null && className!.isNotEmpty) {
+      return [
+        className,
+        streamName,
+      ].where((e) => e != null && e.isNotEmpty).join(' ');
+    }
+    if (subjectName != null && subjectName!.isNotEmpty) return subjectName!;
+    if (departmentId != null && departmentId!.isNotEmpty) return 'Department';
+    if (houseId != null && houseId!.isNotEmpty) return 'House';
+    if (extraScope.isNotEmpty) return extraScope.values.first;
+    return '';
+  }
+
   StaffRoleAssignment copyWith({
     String? id,
     String? schoolId,
     String? campusId,
     String? staffId,
     String? userId,
+    String? roleDefinitionId,
+    bool? isPrimary,
     StaffResponsibilityType? roleType,
     String? academicYearId,
     String? termId,
@@ -303,6 +344,7 @@ class StaffRoleAssignment extends Equatable {
     AssignmentStatus? status,
     PermissionScope? permissionScope,
     String? substituteForStaffId,
+    Map<String, String>? extraScope,
     String? assignedBy,
     DateTime? assignedAt,
     String? updatedBy,
@@ -314,6 +356,8 @@ class StaffRoleAssignment extends Equatable {
       campusId: campusId ?? this.campusId,
       staffId: staffId ?? this.staffId,
       userId: userId ?? this.userId,
+      roleDefinitionId: roleDefinitionId ?? this.roleDefinitionId,
+      isPrimary: isPrimary ?? this.isPrimary,
       roleType: roleType ?? this.roleType,
       academicYearId: academicYearId ?? this.academicYearId,
       termId: termId ?? this.termId,
@@ -330,6 +374,7 @@ class StaffRoleAssignment extends Equatable {
       status: status ?? this.status,
       permissionScope: permissionScope ?? this.permissionScope,
       substituteForStaffId: substituteForStaffId ?? this.substituteForStaffId,
+      extraScope: extraScope ?? this.extraScope,
       assignedBy: assignedBy ?? this.assignedBy,
       assignedAt: assignedAt ?? this.assignedAt,
       updatedBy: updatedBy ?? this.updatedBy,
@@ -344,6 +389,8 @@ class StaffRoleAssignment extends Equatable {
     campusId,
     staffId,
     userId,
+    roleDefinitionId,
+    isPrimary,
     roleType,
     academicYearId,
     termId,
@@ -360,6 +407,7 @@ class StaffRoleAssignment extends Equatable {
     status,
     permissionScope,
     substituteForStaffId,
+    extraScope,
     assignedBy,
     assignedAt,
     updatedBy,

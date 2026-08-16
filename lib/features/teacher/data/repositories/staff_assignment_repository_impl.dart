@@ -195,6 +195,117 @@ class StaffAssignmentRepositoryImpl implements StaffAssignmentRepository {
   }
 
   @override
+  Future<Either<Failure, List<StaffRoleAssignment>>> getAssignmentsForRole({
+    required String schoolId,
+    required String roleDefinitionId,
+  }) async {
+    try {
+      final assignments = await remoteDataSource.getAssignmentsForRole(
+        schoolId: schoolId,
+        roleDefinitionId: roleDefinitionId,
+      );
+      return Right(assignments);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, StaffRoleAssignment>> createAssignment(
+    StaffRoleAssignment assignment,
+  ) async {
+    if (!await networkInfo.isConnected) {
+      return const Left(NetworkFailure('No internet connection.'));
+    }
+    try {
+      final created = await remoteDataSource.createAssignment(assignment);
+      return Right(created);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, StaffRoleAssignment>> updateAssignment(
+    StaffRoleAssignment assignment,
+  ) async {
+    if (!await networkInfo.isConnected) {
+      return const Left(NetworkFailure('No internet connection.'));
+    }
+    try {
+      final updated = await remoteDataSource.updateAssignment(assignment);
+      return Right(updated);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> endAssignment({
+    required String schoolId,
+    required String assignmentId,
+    required String endedBy,
+  }) async {
+    if (!await networkInfo.isConnected) {
+      return const Left(NetworkFailure('No internet connection.'));
+    }
+    try {
+      final existing = await remoteDataSource.getAssignment(
+        schoolId: schoolId,
+        assignmentId: assignmentId,
+      );
+      if (existing == null) {
+        return const Left(
+          AssignmentInvalidFailure('This assignment no longer exists.'),
+        );
+      }
+      await remoteDataSource.updateAssignment(
+        existing.copyWith(
+          status: AssignmentStatus.removed,
+          endDate: DateTime.now(),
+          updatedBy: endedBy,
+          updatedAt: DateTime.now(),
+        ),
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> reactivateAssignment({
+    required String schoolId,
+    required String assignmentId,
+    required String reactivatedBy,
+  }) async {
+    if (!await networkInfo.isConnected) {
+      return const Left(NetworkFailure('No internet connection.'));
+    }
+    try {
+      final existing = await remoteDataSource.getAssignment(
+        schoolId: schoolId,
+        assignmentId: assignmentId,
+      );
+      if (existing == null) {
+        return const Left(
+          AssignmentInvalidFailure('This assignment no longer exists.'),
+        );
+      }
+      await remoteDataSource.updateAssignment(
+        existing.copyWith(
+          status: AssignmentStatus.active,
+          updatedBy: reactivatedBy,
+          updatedAt: DateTime.now(),
+        ),
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, void>> persistSelectedAssignment(
     String assignmentId,
   ) async {

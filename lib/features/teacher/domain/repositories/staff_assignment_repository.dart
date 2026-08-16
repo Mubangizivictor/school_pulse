@@ -44,6 +44,44 @@ abstract class StaffAssignmentRepository {
     required String userId,
   });
 
+  /// Every assignment currently pointing at [roleDefinitionId], across all
+  /// staff. Backs the Role Details "Assignments" tab and the role-deletion
+  /// usage guard.
+  Future<Either<Failure, List<StaffRoleAssignment>>> getAssignmentsForRole({
+    required String schoolId,
+    required String roleDefinitionId,
+  });
+
+  /// Admin-only. Creates a new responsibility row for a staff member.
+  /// Requires connectivity - this is an admin-driven write with real
+  /// permission implications, not teacher-side lesson data, so it never
+  /// queues offline.
+  Future<Either<Failure, StaffRoleAssignment>> createAssignment(
+    StaffRoleAssignment assignment,
+  );
+
+  /// Admin-only. Full-record update (status changes, scope edits, end-date
+  /// edits) go through this rather than bespoke partial-update methods.
+  Future<Either<Failure, StaffRoleAssignment>> updateAssignment(
+    StaffRoleAssignment assignment,
+  );
+
+  /// Admin-only convenience wrapper over [updateAssignment]: sets status to
+  /// [AssignmentStatus.removed] and endDate to now. Assignments are ended,
+  /// never deleted, so the historical record survives.
+  Future<Either<Failure, void>> endAssignment({
+    required String schoolId,
+    required String assignmentId,
+    required String endedBy,
+  });
+
+  /// Admin-only. Sets a suspended assignment's status back to active.
+  Future<Either<Failure, void>> reactivateAssignment({
+    required String schoolId,
+    required String assignmentId,
+    required String reactivatedBy,
+  });
+
   /// Remembers which responsibility the teacher last chose, so the panel
   /// comes back up on the same one after a restart.
   Future<Either<Failure, void>> persistSelectedAssignment(String assignmentId);
