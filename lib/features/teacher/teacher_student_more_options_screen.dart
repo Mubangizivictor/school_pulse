@@ -37,26 +37,52 @@ class TeacherStudentMoreOptionsScreen extends StatelessWidget {
           _OptionTile(
             icon: Icons.contact_phone_outlined,
             label: 'Contact Information',
+            // The Personal Information section on the profile already shows
+            // what a Class Teacher is entitled to see - full guardian contact
+            // records live in the Admissions office record.
+            onTap: () => context.pop(),
           ),
-          _OptionTile(icon: Icons.description_outlined, label: 'Documents'),
-          _OptionTile(icon: Icons.people_outline, label: 'Sibling Information'),
+          _OptionTile(
+            icon: Icons.description_outlined,
+            label: 'Documents',
+            onTap: () => _showComingSoon(context, 'Student documents'),
+          ),
+          _OptionTile(
+            icon: Icons.people_outline,
+            label: 'Sibling Information',
+            onTap: () => _showComingSoon(context, 'Sibling information'),
+          ),
           _OptionTile(
             icon: Icons.exit_to_app_outlined,
             label: 'Leave Applications',
             onTap: () =>
                 context.push('/staff/students/$studentId/leave-applications'),
           ),
-          _OptionTile(icon: Icons.note_alt_outlined, label: 'Notes'),
+          _OptionTile(
+            icon: Icons.note_alt_outlined,
+            label: 'Notes',
+            onTap: () => _showComingSoon(context, 'Private student notes'),
+          ),
           _OptionTile(
             icon: Icons.chat_bubble_outline,
             label: 'Communications',
             onTap: () =>
                 context.push('/staff/students/$studentId/communications'),
           ),
-          _OptionTile(icon: Icons.history_outlined, label: 'Timeline'),
+          _OptionTile(
+            icon: Icons.history_outlined,
+            label: 'Timeline',
+            onTap: () => context.push('/staff/students/$studentId/behaviour'),
+          ),
         ],
       ),
     );
+  }
+
+  void _showComingSoon(BuildContext context, String feature) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text('$feature is not available yet.')));
   }
 }
 

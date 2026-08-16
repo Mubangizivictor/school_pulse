@@ -1,35 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
-import 'package:school_pulse/features/student/domain/entities/student.dart';
-import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_student_summary.dart';
+import 'package:school_pulse/features/teacher/domain/entities/lesson_attendance.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_students/class_students_bloc.dart';
 
-class TeacherStudentProfileScreen extends StatefulWidget {
+class TeacherStudentProfileScreen extends StatelessWidget {
   final String studentId;
   const TeacherStudentProfileScreen({super.key, required this.studentId});
-
-  @override
-  State<TeacherStudentProfileScreen> createState() =>
-      _TeacherStudentProfileScreenState();
-}
-
-class _TeacherStudentProfileScreenState
-    extends State<TeacherStudentProfileScreen> {
-  final Student student = Student(
-    id: 'student_1',
-    schoolId: 'school_1',
-    name: 'Abalo Peter',
-    admissionNumber: '2021/PE/015',
-    studentCode: 'STU001',
-    dateOfBirth: DateTime(2014, 5, 12),
-    gender: Gender.male,
-    classId: 'P.4 Blue',
-    academicYearId: '2024',
-    status: StudentStatus.active,
-    level: EducationLevel.primary,
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -51,114 +32,151 @@ class _TeacherStudentProfileScreenState
         actions: [
           IconButton(
             icon: Icon(Icons.more_horiz, color: AppColors.textPrimary(context)),
-            onPressed: () {},
+            onPressed: () => context.push('/staff/students/$studentId/more-options'),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          children: [
-            Center(
-              child: Column(
-                children: [
-                  const CircleAvatar(
-                    radius: 50,
-                    backgroundImage: NetworkImage(
-                      'https://i.pravatar.cc/150?u=1',
-                    ),
+      body: BlocBuilder<ClassStudentsBloc, ClassStudentsState>(
+        builder: (context, state) {
+          final student = state.students
+              .where((s) => s.studentId == studentId)
+              .firstOrNull;
+
+          if (state.isLoading && student == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (student == null) {
+            return Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Center(
+                child: Text(
+                  'This student is not on your class roster.',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textMuted(context),
                   ),
-                  const SizedBox(height: AppSpacing.l),
-                  Text(
-                    student.name,
-                    style: AppTypography.headlineMedium.copyWith(
-                      color: AppColors.textPrimary(context),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'Admission No: ${student.admissionNumber}',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textMuted(context),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.m),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                ),
+              ),
+            );
+          }
+
+          final status = state.statusOf(student.studentId);
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              children: [
+                Center(
+                  child: Column(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.m,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.success(
-                            context,
-                          ).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(AppSpacing.s),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.circle,
-                              size: 8,
-                              color: AppColors.success(context),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Present',
-                              style: AppTypography.labelMedium.copyWith(
-                                color: AppColors.success(context),
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: AppColors.primary(
+                          context,
+                        ).withValues(alpha: 0.1),
+                        backgroundImage: (student.photoUrl?.isNotEmpty ?? false)
+                            ? NetworkImage(student.photoUrl!)
+                            : null,
+                        child: (student.photoUrl?.isNotEmpty ?? false)
+                            ? null
+                            : Text(
+                                student.initials,
+                                style: AppTypography.headlineLarge.copyWith(
+                                  color: AppColors.primary(context),
+                                ),
                               ),
-                            ),
-                          ],
+                      ),
+                      const SizedBox(height: AppSpacing.l),
+                      Text(
+                        student.name,
+                        style: AppTypography.headlineMedium.copyWith(
+                          color: AppColors.textPrimary(context),
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.m),
                       Text(
-                        'Age: 10 yrs',
-                        style: AppTypography.labelMedium.copyWith(
+                        'Admission No: ${student.admissionNumber}',
+                        style: AppTypography.bodyMedium.copyWith(
                           color: AppColors.textMuted(context),
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.m),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.m,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _statusColor(
+                                context,
+                                status,
+                              ).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(AppSpacing.s),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.circle,
+                                  size: 8,
+                                  color: _statusColor(context, status),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  status.label,
+                                  style: AppTypography.labelMedium.copyWith(
+                                    color: _statusColor(context, status),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.x3l),
-            _buildProfileTabs(),
-            const SizedBox(height: AppSpacing.xl),
-            _buildPersonalInfo(),
-            const SizedBox(height: AppSpacing.x3l),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(
-                  Icons.chat_bubble_outline,
-                  color: Colors.white,
                 ),
-                label: const Text(
-                  'Message Parent',
-                  style: TextStyle(color: Colors.white),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary(context),
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.m),
+                const SizedBox(height: AppSpacing.x3l),
+                _buildProfileTabs(context),
+                const SizedBox(height: AppSpacing.xl),
+                _buildPersonalInfo(context, student),
+                const SizedBox(height: AppSpacing.x3l),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () =>
+                        context.push('/staff/students/$studentId/communications'),
+                    icon: const Icon(
+                      Icons.chat_bubble_outline,
+                      color: Colors.white,
+                    ),
+                    label: const Text(
+                      'Message Parent',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary(context),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.l,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSpacing.m),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildProfileTabs() {
+  Widget _buildProfileTabs(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -166,32 +184,28 @@ class _TeacherStudentProfileScreenState
         _ProfileTabItem(
           icon: Icons.calendar_today,
           label: 'Attendance',
-          onTap: () =>
-              context.push('/staff/students/${widget.studentId}/attendance'),
+          onTap: () => context.push('/staff/students/$studentId/attendance'),
         ),
         _ProfileTabItem(
           icon: Icons.analytics_outlined,
           label: 'Performance',
-          onTap: () =>
-              context.push('/staff/students/${widget.studentId}/performance'),
+          onTap: () => context.push('/staff/students/$studentId/performance'),
         ),
         _ProfileTabItem(
           icon: Icons.gavel,
           label: 'Behaviour',
-          onTap: () =>
-              context.push('/staff/students/${widget.studentId}/behaviour'),
+          onTap: () => context.push('/staff/students/$studentId/behaviour'),
         ),
         _ProfileTabItem(
           icon: Icons.grid_view,
           label: 'More',
-          onTap: () =>
-              context.push('/staff/students/${widget.studentId}/more-options'),
+          onTap: () => context.push('/staff/students/$studentId/more-options'),
         ),
       ],
     );
   }
 
-  Widget _buildPersonalInfo() {
+  Widget _buildPersonalInfo(BuildContext context, ClassStudentSummary student) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -203,14 +217,37 @@ class _TeacherStudentProfileScreenState
           ),
         ),
         const SizedBox(height: AppSpacing.l),
-        _InfoRow(label: 'Date of Birth', value: '12 May 2014'),
-        _InfoRow(label: 'Gender', value: 'Male'),
-        _InfoRow(label: 'Phone (Parent)', value: '+256 700 123456'),
-        _InfoRow(label: 'Address', value: 'Gulu, Uganda'),
-        _InfoRow(label: 'House', value: 'Blue House'),
-        _InfoRow(label: 'Blood Group', value: 'O+'),
+        _InfoRow(label: 'Class', value: student.className),
+        if (student.streamName != null)
+          _InfoRow(label: 'Stream', value: student.streamName!),
+        if (student.gender != null)
+          _InfoRow(label: 'Gender', value: student.gender!),
+        _InfoRow(
+          label: 'Residency',
+          value: student.residency == ResidencyType.boarding
+              ? 'Boarding'
+              : student.residency == ResidencyType.day
+              ? 'Day'
+              : 'Not recorded',
+        ),
+        if (student.houseName != null)
+          _InfoRow(label: 'House', value: student.houseName!),
+        if (student.hasHealthAlert)
+          _InfoRow(label: 'Health', value: 'Has an active alert'),
       ],
     );
+  }
+
+  static Color _statusColor(
+    BuildContext context,
+    LessonAttendanceStatus status,
+  ) {
+    if (status == LessonAttendanceStatus.notMarked) {
+      return AppColors.textMuted(context);
+    }
+    if (status.countsAsPresent) return AppColors.success(context);
+    if (status.isAuthorisedAbsence) return AppColors.warning(context);
+    return AppColors.danger(context);
   }
 }
 

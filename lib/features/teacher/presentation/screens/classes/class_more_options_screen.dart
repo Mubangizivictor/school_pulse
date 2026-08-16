@@ -71,7 +71,7 @@ class ClassMoreOptionsScreen extends StatelessWidget {
             Icons.menu_book,
             AppColors.electricBlue,
             isDark,
-            () {},
+            () => context.push('/staff/lesson-plans'),
           ),
           _buildOptionItem(
             context,
@@ -79,7 +79,9 @@ class ClassMoreOptionsScreen extends StatelessWidget {
             Icons.photo_library,
             AppColors.brightOrange,
             isDark,
-            () {},
+            // Photos and media live in the class resource area as images,
+            // not a separate store - Resources already filters by kind.
+            () => context.push('/staff/classes/$classId/resources'),
           ),
           _buildOptionItem(
             context,
@@ -87,7 +89,7 @@ class ClassMoreOptionsScreen extends StatelessWidget {
             Icons.folder_shared,
             AppColors.brightCyan,
             isDark,
-            () {},
+            () => context.push('/staff/classes/$classId/resources'),
           ),
           _buildOptionItem(
             context,
@@ -95,7 +97,7 @@ class ClassMoreOptionsScreen extends StatelessWidget {
             Icons.settings,
             AppColors.textMutedDark,
             isDark,
-            () {},
+            () => _showAdminOnlyNotice(context, 'Class Settings'),
           ),
           _buildOptionItem(
             context,
@@ -103,7 +105,26 @@ class ClassMoreOptionsScreen extends StatelessWidget {
             Icons.archive,
             AppColors.danger(context),
             isDark,
-            () {},
+            () => _showAdminOnlyNotice(context, 'Archiving a class'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAdminOnlyNotice(BuildContext context, String action) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Admin action required'),
+        content: Text(
+          '$action is managed by your school administrator, not from the '
+          'Class Teacher panel. Contact your admin if you need this changed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('OK'),
           ),
         ],
       ),

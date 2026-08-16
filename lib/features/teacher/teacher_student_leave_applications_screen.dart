@@ -4,6 +4,10 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 
+/// Student leave requests (a parent asking to take a day-scholar out early,
+/// for example) have no backing entity or repository yet - only boarding
+/// leave (Matron/Patron) and staff leave (HR) are built. This is an honest
+/// "not yet available" state, not fabricated request data.
 class TeacherStudentLeaveApplicationsScreen extends StatelessWidget {
   final String studentId;
   const TeacherStudentLeaveApplicationsScreen({
@@ -36,162 +40,23 @@ class TeacherStudentLeaveApplicationsScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: Column(
-        children: [
-          _buildFilterTabs(isDark),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              children: [
-                _LeaveApplicationTile(
-                  reason: 'Sick Leave',
-                  dateRange: '12 - 14 May 2024',
-                  status: 'Pending',
-                  statusColor: AppColors.goldenYellow,
-                  isDark: isDark,
-                ),
-                _LeaveApplicationTile(
-                  reason: 'Family Function',
-                  dateRange: '2 May 2024',
-                  status: 'Approved',
-                  statusColor: AppColors.successGreen,
-                  isDark: isDark,
-                ),
-                _LeaveApplicationTile(
-                  reason: 'Visiting Doctor',
-                  dateRange: '20 Apr 2024',
-                  status: 'Approved',
-                  statusColor: AppColors.successGreen,
-                  isDark: isDark,
-                ),
-                _LeaveApplicationTile(
-                  reason: 'Not Feeling Well',
-                  dateRange: '5 Apr 2024',
-                  status: 'Declined',
-                  statusColor: AppColors.errorRed,
-                  isDark: isDark,
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, color: Colors.white),
-                label: const Text(
-                  'New Leave Request',
-                  style: TextStyle(color: Colors.white),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.royalBlue,
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.m),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterTabs(bool isDark) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-      child: Row(
-        children: [
-          _FilterTabItem(label: 'All', isSelected: true, isDark: isDark),
-          _FilterTabItem(label: 'Pending', isSelected: false, isDark: isDark),
-          _FilterTabItem(label: 'Approved', isSelected: false, isDark: isDark),
-          _FilterTabItem(label: 'Declined', isSelected: false, isDark: isDark),
-        ],
-      ),
-    );
-  }
-}
-
-class _FilterTabItem extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final bool isDark;
-
-  const _FilterTabItem({
-    required this.label,
-    required this.isSelected,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: AppSpacing.xl),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: AppTypography.labelLarge.copyWith(
-              color: isSelected
-                  ? AppColors.royalBlue
-                  : (isDark
-                        ? AppColors.textMutedDark
-                        : AppColors.textMutedLight),
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-          if (isSelected)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              height: 2,
-              width: 20,
-              color: AppColors.royalBlue,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LeaveApplicationTile extends StatelessWidget {
-  final String reason;
-  final String dateRange;
-  final String status;
-  final Color statusColor;
-  final bool isDark;
-
-  const _LeaveApplicationTile({
-    required this.reason,
-    required this.dateRange,
-    required this.status,
-    required this.statusColor,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.l),
-      padding: const EdgeInsets.all(AppSpacing.l),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(AppSpacing.l),
-        border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
+              Icon(
+                Icons.exit_to_app_outlined,
+                size: 40,
+                color: isDark
+                    ? AppColors.textMutedDark
+                    : AppColors.textMutedLight,
+              ),
+              const SizedBox(height: AppSpacing.l),
               Text(
-                reason,
+                'Leave applications are not available yet',
+                textAlign: TextAlign.center,
                 style: AppTypography.titleMedium.copyWith(
                   color: isDark
                       ? AppColors.textPrimaryDark
@@ -199,10 +64,12 @@ class _LeaveApplicationTile extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.s),
               Text(
-                dateRange,
-                style: AppTypography.bodySmall.copyWith(
+                'This feature is coming soon. For now, leave arrangements '
+                'go through the school office directly.',
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(
                   color: isDark
                       ? AppColors.textMutedDark
                       : AppColors.textMutedLight,
@@ -210,24 +77,7 @@ class _LeaveApplicationTile extends StatelessWidget {
               ),
             ],
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.m,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppSpacing.s),
-            ),
-            child: Text(
-              status,
-              style: AppTypography.labelSmall.copyWith(
-                color: statusColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
