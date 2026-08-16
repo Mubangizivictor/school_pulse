@@ -27,6 +27,19 @@ class Permission {
   static const auditExport = 'audit.export';
   static const auditViewSupportAccess = 'audit.view_support_access';
 
+  // Module Control Center + Institution Policy Engine.
+  static const modulesView = 'modules.view';
+  static const modulesEnable = 'modules.enable';
+  static const modulesDisable = 'modules.disable';
+  static const modulesConfigure = 'modules.configure';
+  static const policiesView = 'policies.view';
+  static const policiesCreate = 'policies.create';
+  static const policiesEdit = 'policies.edit';
+  static const policiesActivate = 'policies.activate';
+  static const policiesArchive = 'policies.archive';
+  static const policiesRollback = 'policies.rollback';
+  static const policiesSchedule = 'policies.schedule';
+
   // Institution Health Center. These intentionally govern the read model and
   // human resolution workflow only; source-module records remain protected by
   // their own permissions.
@@ -365,6 +378,27 @@ class Permission {
   static const structureGradingView = 'structure.grading.view';
   static const structureGradingManage = 'structure.grading.manage';
 
+  // Integrations Center. Governs School Admin-only visibility and control of
+  // third-party connections (Sheets/Calendar/Email/SMS/Push/Payments/
+  // Devices/Printers/Domains/Webhooks). Credentials themselves never cross
+  // these permissions - only safe metadata and connection lifecycle actions.
+  static const integrationsView = 'integrations.view';
+  static const integrationsConfigure = 'integrations.configure';
+  static const integrationsConnect = 'integrations.connect';
+  static const integrationsDisconnect = 'integrations.disconnect';
+  static const integrationsTest = 'integrations.test';
+  static const integrationsSync = 'integrations.sync';
+  static const integrationsViewLogs = 'integrations.view_logs';
+  static const integrationsManagePayments = 'integrations.manage_payments';
+  static const integrationsManageCommunication =
+      'integrations.manage_communication';
+  static const integrationsManageDevices = 'integrations.manage_devices';
+  static const integrationsManageDomains = 'integrations.manage_domains';
+  static const integrationsManageWebhooks = 'integrations.manage_webhooks';
+  static const integrationsManagePrinters = 'integrations.manage_printers';
+  static const integrationsViewSensitiveMetadata =
+      'integrations.view_sensitive_metadata';
+
   // Central Approval Center. Mirrors the module-agnostic workflow engine at
   // schools/{id}/approval_requests - source modules keep their own
   // permissions for the underlying record; these only gate the workflow.
@@ -543,6 +577,21 @@ class Permission {
 
     ('Structure', structureGradingView),
     ('Structure', structureGradingManage),
+
+    ('Integrations Center', integrationsView),
+    ('Integrations Center', integrationsConfigure),
+    ('Integrations Center', integrationsConnect),
+    ('Integrations Center', integrationsDisconnect),
+    ('Integrations Center', integrationsTest),
+    ('Integrations Center', integrationsSync),
+    ('Integrations Center', integrationsViewLogs),
+    ('Integrations Center', integrationsManagePayments),
+    ('Integrations Center', integrationsManageCommunication),
+    ('Integrations Center', integrationsManageDevices),
+    ('Integrations Center', integrationsManageDomains),
+    ('Integrations Center', integrationsManageWebhooks),
+    ('Integrations Center', integrationsManagePrinters),
+    ('Integrations Center', integrationsViewSensitiveMetadata),
 
     ('Central Approval Center', approvalsView),
     ('Central Approval Center', approvalsSubmit),

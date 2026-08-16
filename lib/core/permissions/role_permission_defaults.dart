@@ -99,6 +99,20 @@ class RolePermissionDefaults {
     Permission.institutionHealthExport,
   };
 
+  static const Set<String> _moduleControlAdminPermissions = {
+    Permission.modulesView,
+    Permission.modulesEnable,
+    Permission.modulesDisable,
+    Permission.modulesConfigure,
+    Permission.policiesView,
+    Permission.policiesCreate,
+    Permission.policiesEdit,
+    Permission.policiesActivate,
+    Permission.policiesArchive,
+    Permission.policiesRollback,
+    Permission.policiesSchedule,
+  };
+
   static const Set<String> _supportAuditAdminPermissions = {
     Permission.supportView,
     Permission.supportCreate,
@@ -251,6 +265,23 @@ class RolePermissionDefaults {
     Permission.academicPeriodReopen,
   };
 
+  static const Set<String> _integrationsAdminPermissions = {
+    Permission.integrationsView,
+    Permission.integrationsConfigure,
+    Permission.integrationsConnect,
+    Permission.integrationsDisconnect,
+    Permission.integrationsTest,
+    Permission.integrationsSync,
+    Permission.integrationsViewLogs,
+    Permission.integrationsManagePayments,
+    Permission.integrationsManageCommunication,
+    Permission.integrationsManageDevices,
+    Permission.integrationsManageDomains,
+    Permission.integrationsManageWebhooks,
+    Permission.integrationsManagePrinters,
+    Permission.integrationsViewSensitiveMetadata,
+  };
+
   static const Set<String> _approvalAdminPermissions = {
     Permission.approvalsView,
     Permission.approvalsSubmit,
@@ -286,6 +317,7 @@ class RolePermissionDefaults {
     },
     UserRole.schoolAdmin: {
       ..._supportAuditAdminPermissions,
+      ..._moduleControlAdminPermissions,
       ..._institutionHealthAdminPermissions,
       ..._subscriptionAdminPermissions,
       ..._dataManagementAdminPermissions,
@@ -297,6 +329,7 @@ class RolePermissionDefaults {
       ..._attendanceAdminPermissions,
       ..._calendarAdminPermissions,
       ..._approvalAdminPermissions,
+      ..._integrationsAdminPermissions,
       Permission.announcementManage,
       Permission.structureGradingView,
       Permission.structureGradingManage,
@@ -304,6 +337,7 @@ class RolePermissionDefaults {
     },
     UserRole.director: {
       ..._supportAuditAdminPermissions,
+      ..._moduleControlAdminPermissions,
       ..._institutionHealthAdminPermissions,
       ..._subscriptionAdminPermissions,
       ..._dataManagementAdminPermissions,
@@ -314,6 +348,7 @@ class RolePermissionDefaults {
       ..._notificationAdminPermissions,
       ..._attendanceAdminPermissions,
       ..._approvalAdminPermissions,
+      ..._integrationsAdminPermissions,
       Permission.announcementManage,
       Permission.structureGradingView,
       Permission.structureGradingManage,
@@ -321,6 +356,7 @@ class RolePermissionDefaults {
     },
     UserRole.headTeacher: {
       ..._supportAuditAdminPermissions,
+      ..._moduleControlAdminPermissions,
       ..._institutionHealthAdminPermissions,
       ..._subscriptionAdminPermissions,
       ..._dataManagementAdminPermissions,
@@ -331,6 +367,7 @@ class RolePermissionDefaults {
       ..._notificationAdminPermissions,
       ..._attendanceAdminPermissions,
       ..._approvalAdminPermissions,
+      ..._integrationsAdminPermissions,
       Permission.announcementManage,
       Permission.structureGradingView,
       Permission.structureGradingManage,
@@ -338,6 +375,7 @@ class RolePermissionDefaults {
     },
     UserRole.deputyHead: {
       Permission.reportsView,
+      ..._moduleControlAdminPermissions,
       ..._securityLeadPermissions,
       ..._admissionsPermissions,
       ..._notificationAdminPermissions,

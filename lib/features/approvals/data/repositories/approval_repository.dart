@@ -107,4 +107,68 @@ class ApprovalRepository {
     'requestId': requestId,
     'reason': reason,
   });
+
+  /// Source-module entry point: creates an [ApprovalRequest] snapshot at
+  /// the policy's first stage. Returns the assigned `requestId`.
+  Future<String> submit({
+    required String schoolId,
+    required String moduleKey,
+    required String requestType,
+    required String sourceRecordType,
+    required String sourceRecordId,
+    required String title,
+    required String approvalPolicyId,
+    required String sourceRecordVersion,
+    String sourceRoute = '',
+    String summary = '',
+    String? reason,
+    ApprovalPriority priority = ApprovalPriority.normal,
+    ApprovalSensitivity sensitivity = ApprovalSensitivity.normal,
+    double? amount,
+    Map<String, dynamic>? oldValue,
+    Map<String, dynamic>? proposedValue,
+    List<String> attachments = const [],
+    DateTime? dueAt,
+    String? idempotencyKey,
+    String? correlationId,
+  }) async {
+    final result = await _functions.httpsCallable('submitApprovalRequest')
+        .call({
+          'institutionId': schoolId,
+          'moduleKey': moduleKey,
+          'requestType': requestType,
+          'sourceRecordType': sourceRecordType,
+          'sourceRecordId': sourceRecordId,
+          'sourceRoute': sourceRoute,
+          'title': title,
+          'summary': summary,
+          'reason': reason,
+          'approvalPolicyId': approvalPolicyId,
+          'sourceRecordVersion': sourceRecordVersion,
+          'priority': priority.name,
+          'sensitivity': sensitivity.name,
+          'amount': amount,
+          'oldValue': oldValue,
+          'proposedValue': proposedValue,
+          'attachments': attachments,
+          'dueAt': dueAt?.toIso8601String(),
+          'idempotencyKey': idempotencyKey,
+          'correlationId': correlationId,
+        });
+    return (result.data as Map)['requestId'] as String;
+  }
+
+  /// Source-module entry point: reports whether the operation an approved
+  /// request authorized actually succeeded once executed.
+  Future<void> reportExecutionResult({
+    required String schoolId,
+    required String requestId,
+    required bool succeeded,
+    String errorReference = '',
+  }) async => _functions.httpsCallable('reportApprovalExecutionResult').call({
+    'institutionId': schoolId,
+    'requestId': requestId,
+    'result': succeeded ? 'executed' : 'executionFailed',
+    'errorReference': errorReference,
+  });
 }

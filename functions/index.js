@@ -137,17 +137,20 @@ async function approvalCaller(request, schoolId) {
   return user;
 }
 function isApprovalAdmin(user) { return APPROVAL_ADMIN_ROLES.includes(user.role) || (user.roles || []).some((r) => APPROVAL_ADMIN_ROLES.includes(r)) || (user.permissions || []).includes("approvals.approve"); }
+// Pure so it can be unit-tested without the emulator; `nowMs` defaults to
+// Date.now() but is injectable for expiry tests.
+function isDelegationValid(delegation, moduleKey, requestType, nowMs = Date.now()) {
+  const startMs = delegation.start?.toMillis ? delegation.start.toMillis() : delegation.start;
+  const endMs = delegation.end?.toMillis ? delegation.end.toMillis() : delegation.end;
+  if (!(startMs <= nowMs && nowMs <= endMs)) return false;
+  if ((delegation.modules || []).length && !delegation.modules.includes(moduleKey)) return false;
+  if ((delegation.requestTypes || []).length && !delegation.requestTypes.includes(requestType)) return false;
+  return true;
+}
 async function hasValidApprovalDelegation(schoolId, uid, moduleKey, requestType) {
-  const now = admin.firestore.Timestamp.now();
   const snap = await admin.firestore().collection(`schools/${schoolId}/approval_delegations`)
     .where("delegateId", "==", uid).where("status", "==", "active").get();
-  return snap.docs.some((doc) => {
-    const v = doc.data();
-    if (!(v.start <= now && now <= v.end)) return false;
-    if ((v.modules || []).length && !v.modules.includes(moduleKey)) return false;
-    if ((v.requestTypes || []).length && !v.requestTypes.includes(requestType)) return false;
-    return true;
-  });
+  return snap.docs.some((doc) => isDelegationValid(doc.data(), moduleKey, requestType));
 }
 
 exports.submitApprovalRequest = onCall(async (request) => {
@@ -164,11 +167,59 @@ exports.submitApprovalRequest = onCall(async (request) => {
 
 exports.decideApprovalRequest = onCall(async (request) => {
   const d = request.data || {}; const schoolId = String(d.institutionId || ""); const user = await approvalCaller(request, schoolId); const uid = request.auth.uid;
-  if (!isApprovalAdmin(user)) throw new HttpsError("permission-denied", "Your current assignment does not allow approval.");
   if (!["approved", "rejected", "returned", "informationRequested", "cancelled"].includes(d.decision)) throw new HttpsError("invalid-argument", "Unsupported approval decision.");
   if (["rejected", "returned"].includes(d.decision) && !String(d.comment || "").trim()) throw new HttpsError("invalid-argument", "A reason is required.");
   const ref = approvalRef(schoolId, String(d.requestId)); const db = admin.firestore();
-  await db.runTransaction(async (tx) => { const snap = await tx.get(ref); if (!snap.exists) throw new HttpsError("not-found", "Approval request not found."); const row = snap.data(); if (row.currentStatus !== "pending" && row.currentStatus !== "partiallyApproved") throw new HttpsError("failed-precondition", "This request is no longer awaiting a decision."); if (row.requestedBy === uid) throw new HttpsError("permission-denied", "Self approval is not allowed."); if (d.expectedVersion != null && row.version !== d.expectedVersion) throw new HttpsError("aborted", "The request changed; reload it before deciding."); const policySnap = await tx.get(db.doc(`schools/${schoolId}/approval_policies/${row.approvalPolicyId}`)); if (!policySnap.exists || policySnap.data().status !== "active") throw new HttpsError("failed-precondition", "The workflow policy is no longer active."); const policy = policySnap.data(); const stages = policy.stages || []; const index = stages.findIndex((s) => s.stageId === row.currentStage); const stage = stages[index] || {}; const next = d.decision === "approved" && index >= 0 && index < stages.length - 1 ? stages[index + 1] : null; const status = d.decision === "approved" ? (next ? "pending" : "approved") : d.decision === "informationRequested" ? "awaitingInformation" : d.decision; tx.update(ref, { currentStatus: status, currentStage: next ? next.stageId : row.currentStage, version: admin.firestore.FieldValue.increment(1), resolvedAt: next || d.decision === "informationRequested" ? null : admin.firestore.FieldValue.serverTimestamp() }); tx.set(ref.collection("actions").doc(), { actorId: uid, action: d.decision, stage: row.currentStage, comment: String(d.comment || ""), timestamp: admin.firestore.FieldValue.serverTimestamp(), correlationId: row.correlationId || "" }); });
+  const preSnap = await ref.get();
+  if (!preSnap.exists) throw new HttpsError("not-found", "Approval request not found.");
+  const preRow = preSnap.data();
+  const hasDelegation = isApprovalAdmin(user) ? false : await hasValidApprovalDelegation(schoolId, uid, preRow.moduleKey, preRow.requestType);
+  if (!isApprovalAdmin(user) && !hasDelegation) throw new HttpsError("permission-denied", "Your current assignment does not allow approval.");
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref); if (!snap.exists) throw new HttpsError("not-found", "Approval request not found."); const row = snap.data();
+    if (row.currentStatus !== "pending" && row.currentStatus !== "partiallyApproved") throw new HttpsError("failed-precondition", "This request is no longer awaiting a decision.");
+    if (row.requestedBy === uid) throw new HttpsError("permission-denied", "Self approval is not allowed.");
+    if (d.expectedVersion != null && row.version !== d.expectedVersion) throw new HttpsError("aborted", "The request changed; reload it before deciding.");
+    const policySnap = await tx.get(db.doc(`schools/${schoolId}/approval_policies/${row.approvalPolicyId}`));
+    if (!policySnap.exists || policySnap.data().status !== "active") throw new HttpsError("failed-precondition", "The workflow policy is no longer active.");
+    const policy = policySnap.data(); const stages = policy.stages || []; const index = stages.findIndex((s) => s.stageId === row.currentStage); const stage = stages[index] || {};
+    let status, nextStage = row.currentStage, stageApprovals = (row.stageApprovals || 0);
+    if (d.decision === "approved") {
+      stageApprovals += 1;
+      const minimum = stage.minimumApprovals || 1;
+      if (stageApprovals < minimum) {
+        status = "partiallyApproved";
+      } else {
+        const next = index >= 0 && index < stages.length - 1 ? stages[index + 1] : null;
+        status = next ? "pending" : "approved";
+        nextStage = next ? next.stageId : row.currentStage;
+        stageApprovals = 0;
+      }
+    } else if (d.decision === "informationRequested") {
+      status = "awaitingInformation";
+    } else {
+      status = d.decision;
+    }
+    const resolved = ["approved", "rejected", "returned", "cancelled"].includes(status) && !(d.decision === "approved" && status === "pending");
+    tx.update(ref, { currentStatus: status, currentStage: nextStage, stageApprovals: status === "pending" || status === "partiallyApproved" ? stageApprovals : 0, version: admin.firestore.FieldValue.increment(1), resolvedAt: resolved ? admin.firestore.FieldValue.serverTimestamp() : null });
+    tx.set(ref.collection("actions").doc(), { actorId: uid, action: d.decision, stage: row.currentStage, comment: String(d.comment || ""), viaDelegation: hasDelegation, timestamp: admin.firestore.FieldValue.serverTimestamp(), correlationId: row.correlationId || "" });
+  });
+  return { ok: true };
+});
+
+// Called by the source module once it has performed (or failed to perform)
+// the operation an approved request authorized. Approval Center never
+// mutates source records itself - it only records the outcome.
+exports.reportApprovalExecutionResult = onCall(async (request) => {
+  const d = request.data || {}; const schoolId = String(d.institutionId || ""); const user = await approvalCaller(request, schoolId); const uid = request.auth.uid;
+  if (!["executed", "executionFailed"].includes(d.result)) throw new HttpsError("invalid-argument", "Unsupported execution result.");
+  const ref = approvalRef(schoolId, String(d.requestId)); const db = admin.firestore();
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref); if (!snap.exists) throw new HttpsError("not-found", "Approval request not found."); const row = snap.data();
+    if (row.currentStatus !== "approved") throw new HttpsError("failed-precondition", "Only an approved request can report an execution result.");
+    tx.update(ref, { currentStatus: d.result, version: admin.firestore.FieldValue.increment(1) });
+    tx.set(ref.collection("actions").doc(), { actorId: uid, action: d.result, stage: row.currentStage, comment: String(d.errorReference || ""), timestamp: admin.firestore.FieldValue.serverTimestamp(), correlationId: row.correlationId || "" });
+  });
   return { ok: true };
 });
 
@@ -178,6 +229,39 @@ exports.createApprovalDelegation = onCall(async (request) => {
 
 exports.escalateApprovalRequest = onCall(async (request) => {
   const d = request.data || {}; const schoolId = String(d.institutionId || ""); const user = await approvalCaller(request, schoolId); if (!isApprovalAdmin(user)) throw new HttpsError("permission-denied", "You cannot escalate this request."); const ref = approvalRef(schoolId, String(d.requestId)); await ref.update({ currentStatus: "escalated", version: admin.firestore.FieldValue.increment(1) }); await ref.collection("actions").add({ actorId: request.auth.uid, action: "escalated", stage: "", comment: String(d.reason || ""), timestamp: admin.firestore.FieldValue.serverTimestamp() }); return { ok: true };
+});
+
+// Policy-driven auto-escalation: a stage's own escalationTimeoutMinutes (or,
+// failing that, the policy dueTimeMinutes) determines how long a request may
+// sit unresolved before this scheduled sweep escalates it and logs why.
+exports.autoEscalateApprovalRequests = onSchedule("every 15 minutes", async () => {
+  const db = admin.firestore();
+  const schools = await db.collection("schools").get();
+  for (const school of schools.docs) {
+    const schoolId = school.id;
+    const pending = await db.collection(`schools/${schoolId}/approval_requests`)
+      .where("currentStatus", "in", ["pending", "partiallyApproved"]).get();
+    if (pending.empty) continue;
+    const policyCache = new Map();
+    for (const doc of pending.docs) {
+      const row = doc.data();
+      if (!policyCache.has(row.approvalPolicyId)) {
+        const p = await db.doc(`schools/${schoolId}/approval_policies/${row.approvalPolicyId}`).get();
+        policyCache.set(row.approvalPolicyId, p.exists ? p.data() : null);
+      }
+      const policy = policyCache.get(row.approvalPolicyId);
+      if (!policy || !policy.escalationAllowed) continue;
+      const stage = (policy.stages || []).find((s) => s.stageId === row.currentStage);
+      const timeoutMinutes = stage?.escalationTimeoutMinutes || policy.dueTimeMinutes;
+      if (!timeoutMinutes) continue;
+      const baseline = (row.submittedAt || row.createdAt);
+      if (!baseline) continue;
+      const dueAtMs = baseline.toMillis() + timeoutMinutes * 60000;
+      if (Date.now() < dueAtMs) continue;
+      await doc.ref.update({ currentStatus: "escalated", version: admin.firestore.FieldValue.increment(1) });
+      await doc.ref.collection("actions").add({ actorId: "system", action: "escalated", stage: row.currentStage, comment: `Auto-escalated after ${timeoutMinutes} minutes without a decision.`, timestamp: admin.firestore.FieldValue.serverTimestamp() });
+    }
+  }
 });
 
 function generateTemporaryPassword() {
@@ -2700,7 +2784,7 @@ exports.requestDataOperation = onCall(async (request) => {
   return { jobId: job.id, correlationId, status: base.status };
 });
 
-exports.__test__ = { reportAvailableEventId, chunkIds, notifyParentsOfPublishedReports };
+exports.__test__ = { reportAvailableEventId, chunkIds, notifyParentsOfPublishedReports, isDelegationValid };
 
 // Support and audit are isolated in their own module so source business
 // modules only need to emit their existing events, never duplicate tickets.
