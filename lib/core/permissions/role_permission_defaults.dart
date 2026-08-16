@@ -32,6 +32,62 @@ class RolePermissionDefaults {
     Permission.verificationDeviceManage,
   };
 
+  static const Set<String> _securityCenterAdminPermissions = {
+    Permission.securityView,
+    Permission.securityViewSessions,
+    Permission.securityRevokeSession,
+    Permission.securityRevokeAllSessions,
+    Permission.securityViewDevices,
+    Permission.securityManageDeviceTrust,
+    Permission.securityViewFailedLogins,
+    Permission.securityLockAccount,
+    Permission.securityUnlockAccount,
+    Permission.securityForcePasswordReset,
+    Permission.securityViewEvents,
+    Permission.securityResolveAlerts,
+    Permission.securityExport,
+    Permission.securityManagePolicy,
+  };
+
+  static const Set<String> _centralReportsAdminPermissions = {
+    Permission.reportsView,
+    Permission.reportsExport,
+    Permission.reportsPrint,
+    Permission.reportsSchedule,
+    Permission.reportsShare,
+    Permission.reportsViewSensitive,
+  };
+
+  static const Set<String> _dataManagementAdminPermissions = {
+    Permission.dataImport,
+    Permission.dataImportStudents,
+    Permission.dataImportStaff,
+    Permission.dataImportParents,
+    Permission.dataImportStructure,
+    Permission.dataBulkUpdate,
+    Permission.dataArchive,
+    Permission.dataRestoreArchive,
+    Permission.dataViewQuality,
+    Permission.dataRunQuality,
+    Permission.dataRunMigration,
+    Permission.dataExport,
+    Permission.dataExportSensitive,
+    Permission.dataRequestRestore,
+    Permission.dataViewBackupStatus,
+  };
+
+  static const Set<String> _subscriptionAdminPermissions = {
+    Permission.subscriptionView,
+    Permission.subscriptionViewUsage,
+    Permission.subscriptionViewInvoices,
+    Permission.subscriptionDownloadInvoice,
+    Permission.subscriptionDownloadReceipt,
+    Permission.subscriptionRequestUpgrade,
+    Permission.subscriptionRequestAddon,
+    Permission.subscriptionInitiateRenewal,
+    Permission.subscriptionViewHistory,
+  };
+
   // Enrollment Permission (spec term) - never granted by job title alone,
   // only through this role-default seed (or a future custom-role grant).
   // Mirrors the doc's "Enrollment may only be performed by users with
@@ -187,7 +243,11 @@ class RolePermissionDefaults {
       Permission.notificationSendEmergency,
     },
     UserRole.schoolAdmin: {
+      ..._subscriptionAdminPermissions,
+      ..._dataManagementAdminPermissions,
+      ..._centralReportsAdminPermissions,
       ..._securityLeadPermissions,
+      ..._securityCenterAdminPermissions,
       ..._admissionsPermissions,
       ..._notificationAdminPermissions,
       ..._attendanceAdminPermissions,
@@ -198,7 +258,11 @@ class RolePermissionDefaults {
       ..._appointmentOfficePermissions,
     },
     UserRole.director: {
+      ..._subscriptionAdminPermissions,
+      ..._dataManagementAdminPermissions,
+      ..._centralReportsAdminPermissions,
       ..._securityLeadPermissions,
+      ..._securityCenterAdminPermissions,
       ..._admissionsPermissions,
       ..._notificationAdminPermissions,
       ..._attendanceAdminPermissions,
@@ -208,6 +272,10 @@ class RolePermissionDefaults {
       ..._appointmentOfficePermissions,
     },
     UserRole.headTeacher: {
+      ..._subscriptionAdminPermissions,
+      ..._dataManagementAdminPermissions,
+      ..._centralReportsAdminPermissions,
+      ..._securityCenterAdminPermissions,
       ..._securityLeadPermissions,
       ..._admissionsPermissions,
       ..._notificationAdminPermissions,
@@ -218,6 +286,7 @@ class RolePermissionDefaults {
       ..._appointmentOfficePermissions,
     },
     UserRole.deputyHead: {
+      Permission.reportsView,
       ..._securityLeadPermissions,
       ..._admissionsPermissions,
       ..._notificationAdminPermissions,
@@ -227,6 +296,7 @@ class RolePermissionDefaults {
       ..._appointmentOfficePermissions,
     },
     UserRole.deanOfStudies: {
+      Permission.reportsView,
       ..._admissionsPermissions,
       ..._notificationOfficePermissions,
       Permission.attendanceClassScan,
@@ -238,7 +308,12 @@ class RolePermissionDefaults {
       Permission.attendanceStaffScan,
     },
     UserRole.nurse: {..._nursePermissions, ..._notificationSenderPermissions},
-    UserRole.bursar: {..._bursarPermissions, ..._notificationOfficePermissions},
+    UserRole.bursar: {
+      ..._bursarPermissions,
+      ..._notificationOfficePermissions,
+      Permission.reportsView,
+      Permission.reportsViewSensitive,
+    },
     UserRole.librarian: {
       ..._librarianPermissions,
       ..._notificationSenderPermissions,

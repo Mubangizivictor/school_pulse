@@ -43,6 +43,8 @@ import 'package:school_pulse/features/admin/presentation/pages/user_management_p
 import 'package:school_pulse/features/admin/presentation/add_staff_wizard/add_staff_wizard_page.dart';
 import 'package:school_pulse/features/admin/broadcast_sms_screen.dart';
 import 'package:school_pulse/features/admin/system_config_screen.dart';
+import 'package:school_pulse/features/integrations/presentation/integrations_center_screen.dart';
+import 'package:school_pulse/features/integrations/presentation/integration_detail_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/levels_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/years_terms_screen.dart';
@@ -73,6 +75,7 @@ import 'package:school_pulse/features/admin/audit_log_screen.dart';
 import 'package:school_pulse/features/admin/security_center_screen.dart';
 import 'package:school_pulse/features/admin/broadcast_history_screen.dart';
 import 'package:school_pulse/features/admin/subscription_screen.dart';
+import 'package:school_pulse/features/data_management/presentation/data_management_center_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
 import 'package:school_pulse/features/parent/home_screen.dart';
 import 'package:school_pulse/features/parent/academics_screen.dart';
@@ -1455,6 +1458,22 @@ final router = GoRouter(
           builder: (context, state) => const AdminDashboardScreen(),
           routes: [
             GoRoute(
+              path: 'data-management',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                const permitted = {
+                  UserRole.schoolAdmin,
+                  UserRole.headTeacher,
+                  UserRole.director,
+                };
+                return auth.user.roles.any(permitted.contains)
+                    ? null
+                    : UserRoleRouting.dashboardPath(auth.user.role);
+              },
+              builder: (context, state) => const DataManagementCenterScreen(),
+            ),
+            GoRoute(
               path: 'approvals',
               builder: (context, state) => const ApprovalCenterScreen(),
             ),
@@ -1493,6 +1512,18 @@ final router = GoRouter(
             GoRoute(
               path: 'config',
               builder: (context, state) => const SystemConfigScreen(),
+            ),
+            GoRoute(
+              path: 'integrations',
+              builder: (context, state) => const IntegrationsCenterScreen(),
+              routes: [
+                GoRoute(
+                  path: ':integrationKey',
+                  builder: (context, state) => IntegrationDetailScreen(
+                    integrationKey: state.pathParameters['integrationKey']!,
+                  ),
+                ),
+              ],
             ),
             GoRoute(
               path: 'structure',

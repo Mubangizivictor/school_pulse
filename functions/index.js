@@ -2600,4 +2600,83 @@ exports.overrideClassTeacherAssignment = onCall(async (request) => {
   };
 });
 
+// Phase 8 Data Management entrypoint. It creates only tenant-scoped job
+// metadata; parsing, validation and all source-record writes are delegated to
+// a module-owned worker. Keeping this boundary here prevents a spreadsheet
+// client from becoming a privileged Firestore writer.
+exports.requestDataOperation = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in to manage data.");
+  const data = request.data || {};
+  const institutionId = String(data.institutionId || "");
+  const operation = String(data.operation || "");
+  const moduleKey = String(data.moduleKey || "data");
+  const supported = new Set(["import", "export", "quality", "migrationDryRun", "archiveReview", "restoreRequest"]);
+  if (!institutionId || !supported.has(operation)) {
+    throw new HttpsError("invalid-argument", "Unsupported data operation.");
+  }
+  const db = admin.firestore();
+  const user = await db.collection("users").doc(request.auth.uid).get();
+  if (!user.exists) throw new HttpsError("permission-denied", "No active institution profile.");
+  const profile = user.data();
+  const membership = await db.collection("institution_memberships")
+    .doc(`${request.auth.uid}_${institutionId}`).get();
+  const isHomeInstitution = profile.schoolId === institutionId;
+  if (!isHomeInstitution && (!membership.exists || membership.data().status !== "active")) {
+    throw new HttpsError("permission-denied", "You are not an active member of this institution.");
+  }
+  const roles = Array.isArray(profile.roles) ? profile.roles : [profile.role];
+  const adminRole = roles.some((role) => ["schoolAdmin", "headTeacher", "director"].includes(role));
+  const permissions = Array.isArray(profile.permissions) ? profile.permissions : [];
+  const required = {
+    import: "data.import", export: "data.export", quality: "data.run_quality",
+    migrationDryRun: "data.run_migration", archiveReview: "data.archive", restoreRequest: "data.request_restore",
+  }[operation];
+  if (!adminRole && !permissions.includes(required)) {
+    throw new HttpsError("permission-denied", "Your effective permissions do not allow this data operation.");
+  }
+  if (operation === "import") {
+    const ext = String(data.fileName || "").split(".").pop().toLowerCase();
+    if (!["csv", "xlsx"].includes(ext) || !data.fileReference || !data.templateVersion) {
+      throw new HttpsError("invalid-argument", "Imports require a CSV/XLSX file and a current template version.");
+    }
+    const prefix = `institutions/${institutionId}/data_operations/imports/`;
+    if (!String(data.fileReference).startsWith(prefix)) {
+      throw new HttpsError("permission-denied", "Import files must use the institution data-operations path.");
+    }
+  }
+  const correlationId = randomUUID();
+  const collection = operation === "import" ? "import_jobs" : operation === "export" ? "export_jobs" :
+    operation === "quality" ? "data_quality_runs" : operation === "migrationDryRun" ? "migration_jobs" : "restore_requests";
+  const job = db.collection("institutions").doc(institutionId).collection(collection).doc();
+  const base = {
+    institutionId, moduleKey, correlationId, requestedBy: request.auth.uid,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+  if (operation === "import") Object.assign(base, {
+    importJobId: job.id, uploadedBy: request.auth.uid, fileReference: data.fileReference,
+    fileName: String(data.fileName), templateVersion: String(data.templateVersion), status: "uploaded",
+    totalRows: 0, validRows: 0, invalidRows: 0, duplicateRows: 0, processedRows: 0, failedRows: 0,
+  });
+  if (operation === "export") Object.assign(base, {
+    exportJobId: job.id, requestedBy: request.auth.uid, exportType: moduleKey, filters: data.filters || {},
+    format: data.format || "xlsx", status: "queued", totalRecords: 0, processedRecords: 0, expiresAt: null,
+  });
+  if (operation === "migrationDryRun") Object.assign(base, {
+    migrationJobId: job.id, migrationKey: moduleKey, sourceVersion: data.sourceVersion || "unknown",
+    targetVersion: data.targetVersion || "current", status: "queued", dryRun: true,
+    recordsScanned: 0, migrated: 0, skipped: 0, ambiguous: 0, failed: 0,
+  });
+  if (operation === "quality") Object.assign(base, { status: "queued", runId: job.id });
+  if (operation === "restoreRequest") Object.assign(base, {
+    restoreRequestId: job.id, reason: String(data.reason || "Institution restore request"),
+    requestedScope: data.requestedScope || "full institution", status: "requested", urgency: data.urgency || "normal",
+  });
+  await job.create(base);
+  await writeAudit(institutionId, {
+    userId: request.auth.uid, action: `data.${operation}`, entityType: "data_operation", entityId: job.id,
+    newValue: { moduleKey, correlationId }, reason: operation === "restoreRequest" ? base.reason : null,
+  });
+  return { jobId: job.id, correlationId, status: base.status };
+});
+
 exports.__test__ = { reportAvailableEventId, chunkIds, notifyParentsOfPublishedReports };

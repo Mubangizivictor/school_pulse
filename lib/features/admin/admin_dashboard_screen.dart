@@ -14,6 +14,7 @@ import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.d
 import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
 import 'package:school_pulse/features/branding/presentation/widgets/school_badge.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
@@ -143,6 +144,9 @@ class _DashboardHeader extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+                const NotificationBellButton(
+                  key: Key('admin-dashboard-notifications-button'),
                 ),
               ],
             ),
@@ -558,7 +562,7 @@ final Map<String, _QuickAccessItem> _quickAccessCatalog = {
     label: 'Reports',
     icon: Icons.bar_chart_rounded,
     color: Colors.teal,
-    route: '/staff/reports',
+    route: '/staff/admin/reports',
   ),
   'calendar': const _QuickAccessItem(
     id: 'calendar',
@@ -573,6 +577,13 @@ final Map<String, _QuickAccessItem> _quickAccessCatalog = {
     icon: Icons.shield_rounded,
     color: Colors.deepOrange,
     route: '/staff/admin/security',
+  ),
+  'data_management': const _QuickAccessItem(
+    id: 'data_management',
+    label: 'Data Management',
+    icon: Icons.storage_rounded,
+    color: Colors.blueGrey,
+    route: '/staff/admin/data-management',
   ),
 };
 

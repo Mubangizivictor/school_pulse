@@ -11,6 +11,38 @@
 class Permission {
   const Permission._();
 
+  // Subscription Centre. These grant visibility and request authority only;
+  // SaaS Owner plan, entitlement and payment-state authority remains server
+  // side and is never represented as an institution permission.
+  static const subscriptionView = 'subscription.view';
+  static const subscriptionViewUsage = 'subscription.view_usage';
+  static const subscriptionViewInvoices = 'subscription.view_invoices';
+  static const subscriptionDownloadInvoice = 'subscription.download_invoice';
+  static const subscriptionDownloadReceipt = 'subscription.download_receipt';
+  static const subscriptionRequestUpgrade = 'subscription.request_upgrade';
+  static const subscriptionRequestAddon = 'subscription.request_addon';
+  static const subscriptionInitiateRenewal = 'subscription.initiate_renewal';
+  static const subscriptionViewHistory = 'subscription.view_history';
+
+  // Data Management Center.  These are intentionally independent from the
+  // source-module permissions: being able to view students never implies the
+  // authority to move a student spreadsheet in or out of the institution.
+  static const dataImport = 'data.import';
+  static const dataImportStudents = 'data.import_students';
+  static const dataImportStaff = 'data.import_staff';
+  static const dataImportParents = 'data.import_parents';
+  static const dataImportStructure = 'data.import_structure';
+  static const dataBulkUpdate = 'data.bulk_update';
+  static const dataArchive = 'data.archive';
+  static const dataRestoreArchive = 'data.restore_archive';
+  static const dataViewQuality = 'data.view_quality';
+  static const dataRunQuality = 'data.run_quality';
+  static const dataRunMigration = 'data.run_migration';
+  static const dataExport = 'data.export';
+  static const dataExportSensitive = 'data.export_sensitive';
+  static const dataRequestRestore = 'data.request_restore';
+  static const dataViewBackupStatus = 'data.view_backup_status';
+
   // Central reporting. Kept separate from source-module permissions: viewing
   // a finance screen, for example, must never implicitly permit exporting it.
   static const reportsView = 'reports.view';

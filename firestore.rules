@@ -805,6 +805,31 @@ service cloud.firestore {
       }
     }
 
+    // Institution Security Center. Registry and event history are written
+    // only by privileged Cloud Functions. A school security administrator
+    // may read its own tenant's records; ordinary staff, parents and
+    // students cannot enumerate another person's sessions or devices.
+    match /schools/{schoolId}/security_sessions/{sessionId} {
+      allow read: if isSameSchool(schoolId) && hasAnyRole(['director', 'headTeacher', 'schoolAdmin']);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/trusted_devices/{deviceId} {
+      allow read: if isSameSchool(schoolId) && hasAnyRole(['director', 'headTeacher', 'schoolAdmin']);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/security_events/{eventId} {
+      allow read: if isSameSchool(schoolId) && hasAnyRole(['director', 'headTeacher', 'schoolAdmin']);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/security_alerts/{alertId} {
+      allow read: if isSameSchool(schoolId) && hasAnyRole(['director', 'headTeacher', 'schoolAdmin']);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/security_policy/{policyId} {
+      allow read: if isSameSchool(schoolId) && hasAnyRole(['director', 'headTeacher', 'schoolAdmin']);
+      allow write: if false;
+    }
+
     // Assessment, Marks Entry & Report Card Engine - nested under
     // schools/{schoolId} like biometrics/branding/appointments, with real
     // tenant isolation via isSameSchool() rather than client-side filtering.
@@ -1579,6 +1604,29 @@ service cloud.firestore {
         && myUser().schoolId == schoolId;
     }
 
+    // Integration configuration is callable-function only.  It can contain
+    // safe metadata but must never become a client-writable secret channel;
+    // Cloud Functions enforce tenant membership, granular permission, audit
+    // logging and immutable institution ownership before writing these docs.
+    match /schools/{schoolId}/integrations/{integrationId} {
+      allow read, write: if false;
+    }
+    match /schools/{schoolId}/integration_health/{healthId} {
+      allow read, write: if false;
+    }
+    match /schools/{schoolId}/integration_sync_jobs/{jobId} {
+      allow read, write: if false;
+    }
+    match /schools/{schoolId}/integration_devices/{deviceId} {
+      allow read, write: if false;
+    }
+    match /schools/{schoolId}/webhooks/{webhookId} {
+      allow read, write: if false;
+    }
+    match /schools/{schoolId}/integration_logs/{logId} {
+      allow read, write: if false;
+    }
+
     // ---- SaaS Owner / Platform layer -----------------------------------
     // These collections back the super_admin feature (school registry,
     // billing, audit trail). Only the seeded platform-owner account may
@@ -1653,8 +1701,23 @@ service cloud.firestore {
       allow delete: if false;
     }
     match /subscription_plans/{id} {
-      allow read, write: if isSuperAdmin();
+      allow read: if isSuperAdmin() || (isStaff() && resource.data.isPublic == true && resource.data.isActive == true);
+      allow write: if isSuperAdmin();
     }
+    // Add-on availability is published by the SaaS Owner; institution users
+    // may read the public catalogue but never create or activate an add-on.
+    match /subscription_addons/{id} {
+      allow read: if isSuperAdmin() || (isStaff() && resource.data.isPublic == true && resource.data.isActive == true);
+      allow write: if isSuperAdmin();
+    }
+    // Subscription Center data is server-authoritative. The School Admin
+    // can inspect only their tenant and cannot forge payment or entitlement.
+    match /institutions/{institutionId}/subscription/{id} { allow read: if isSameSchool(institutionId); allow write: if false; }
+    match /institutions/{institutionId}/usage_metrics/{id} { allow read: if isSameSchool(institutionId); allow write: if false; }
+    match /institutions/{institutionId}/saas_invoices/{id} { allow read: if isSameSchool(institutionId); allow write: if false; }
+    match /institutions/{institutionId}/saas_receipts/{id} { allow read: if isSameSchool(institutionId); allow write: if false; }
+    match /institutions/{institutionId}/subscription_history/{id} { allow read: if isSameSchool(institutionId); allow write: if false; }
+    match /institutions/{institutionId}/subscription_requests/{id} { allow read: if isSameSchool(institutionId); allow write: if false; }
     match /school_admin_invitations/{id} {
       // Holds a plaintext temporary password until a Cloud Function
       // provisions the school admin's real account. The owner may create
@@ -2464,30 +2527,100 @@ service cloud.firestore {
                               'class.resource.delete')
         ));
     }
+
+    // Data Management job metadata. Jobs are created and advanced only by
+    // trusted backend callables/workers: clients may observe their own
+    // institution's jobs but can never re-parent, alter progress, or inject
+    // a raw row into an operational module through these documents.
+    function dataOperator() {
+      return isStaff() && (
+        hasAnyRole(['schoolAdmin', 'headTeacher', 'director']) ||
+        (('permissions' in myUser()) && myUser().permissions.hasAny([
+          'data.import', 'data.export', 'data.run_quality', 'data.run_migration',
+          'data.archive', 'data.restore_archive', 'data.request_restore'
+        ]))
+      );
+    }
+    function canAccessDataInstitution(institutionId) {
+      return isSameSchool(institutionId) || isActiveMembership(institutionId);
+    }
+
+    match /institutions/{institutionId}/import_jobs/{jobId} {
+      allow read: if canAccessDataInstitution(institutionId) && dataOperator();
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/export_jobs/{jobId} {
+      allow read: if canAccessDataInstitution(institutionId) && dataOperator();
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/migration_jobs/{jobId} {
+      allow read: if canAccessDataInstitution(institutionId) && dataOperator();
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/data_quality_runs/{runId} {
+      allow read: if canAccessDataInstitution(institutionId) && dataOperator();
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/restore_requests/{requestId} {
+      allow read: if canAccessDataInstitution(institutionId) && dataOperator();
+      allow write: if false;
+    }
+
+    // Central Reports metadata. Report rows and generated files are never
+    // client-owned; these records only describe a user's saved configuration
+    // or a backend-processed export job. Tenant and ownership checks prevent
+    // cross-school presets/jobs and document re-parenting.
+    match /institutions/{institutionId}/saved_reports/{reportId} {
+      allow read: if isSameSchool(institutionId) && isStaff() &&
+        resource.data.ownerUserId == request.auth.uid;
+      allow create: if isSameSchool(institutionId) && isStaff() &&
+        request.resource.data.institutionId == institutionId &&
+        request.resource.data.ownerUserId == request.auth.uid;
+      allow update: if isSameSchool(institutionId) && isStaff() &&
+        resource.data.ownerUserId == request.auth.uid &&
+        request.resource.data.ownerUserId == resource.data.ownerUserId &&
+        request.resource.data.institutionId == resource.data.institutionId;
+      allow delete: if isSameSchool(institutionId) && isStaff() &&
+        resource.data.ownerUserId == request.auth.uid;
+    }
+
+    match /institutions/{institutionId}/report_export_jobs/{jobId} {
+      allow read: if isSameSchool(institutionId) && isStaff() &&
+        resource.data.ownerUserId == request.auth.uid;
+      allow create: if isSameSchool(institutionId) && isStaff() &&
+        request.resource.data.institutionId == institutionId &&
+        request.resource.data.ownerUserId == request.auth.uid &&
+        request.resource.data.status == 'queued';
+      allow update, delete: if false; // backend worker owns lifecycle
+    }
+
+    match /institutions/{institutionId}/report_export_history/{historyId} {
+      allow read: if isSameSchool(institutionId) && isStaff() &&
+        (resource.data.ownerUserId == request.auth.uid ||
+         hasAnyRole(['director', 'headTeacher', 'schoolAdmin']));
+      allow write: if false; // backend writes immutable history
+    }
+
+    match /institutions/{institutionId}/scheduled_reports/{scheduleId} {
+      allow read: if isSameSchool(institutionId) && isStaff() &&
+        resource.data.ownerUserId == request.auth.uid;
+      allow create: if isSameSchool(institutionId) &&
+        hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+        request.resource.data.institutionId == institutionId &&
+        request.resource.data.ownerUserId == request.auth.uid;
+      allow update, delete: if isSameSchool(institutionId) &&
+        hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+        resource.data.ownerUserId == request.auth.uid &&
+        request.resource.data.ownerUserId == resource.data.ownerUserId &&
+        request.resource.data.institutionId == resource.data.institutionId;
+    }
+
+    match /institutions/{institutionId}/report_audit/{auditId} {
+      allow create: if isSameSchool(institutionId) && isStaff() &&
+        request.resource.data.actorId == request.auth.uid;
+      allow read: if isSameSchool(institutionId) &&
+        hasAnyRole(['director', 'headTeacher', 'schoolAdmin']);
+      allow update, delete: if false;
+    }
   }
 }
-
-    // Institution Security Center. Registry and event history are written
-    // only by privileged Cloud Functions. A school security administrator
-    // may read its own tenant\x27s records; ordinary staff, parents and
-    // students cannot enumerate another person\x27s sessions or devices.
-    match /schools/{schoolId}/security_sessions/{sessionId} {
-      allow read: if isSameSchool(schoolId) && hasAnyRole([\x27director\x27, \x27headTeacher\x27, \x27schoolAdmin\x27]);
-      allow write: if false;
-    }
-    match /schools/{schoolId}/trusted_devices/{deviceId} {
-      allow read: if isSameSchool(schoolId) && hasAnyRole([\x27director\x27, \x27headTeacher\x27, \x27schoolAdmin\x27]);
-      allow write: if false;
-    }
-    match /schools/{schoolId}/security_events/{eventId} {
-      allow read: if isSameSchool(schoolId) && hasAnyRole([\x27director\x27, \x27headTeacher\x27, \x27schoolAdmin\x27]);
-      allow write: if false;
-    }
-    match /schools/{schoolId}/security_alerts/{alertId} {
-      allow read: if isSameSchool(schoolId) && hasAnyRole([\x27director\x27, \x27headTeacher\x27, \x27schoolAdmin\x27]);
-      allow write: if false;
-    }
-    match /schools/{schoolId}/security_policy/{policyId} {
-      allow read: if isSameSchool(schoolId) && hasAnyRole([\x27director\x27, \x27headTeacher\x27, \x27schoolAdmin\x27]);
-      allow write: if false;
-    }

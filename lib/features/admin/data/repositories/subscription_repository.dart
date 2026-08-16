@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../models/payment_transaction.dart';
 import '../models/subscription.dart';
@@ -19,9 +20,8 @@ class SubscriptionRepository {
     amountUgx: 0,
   );
 
-  /// Reads subscription authority from the tenant's `schools/{schoolId}`
-  /// record. The former global `subscription/current` document was not safe
-  /// for a multi-tenant SaaS and is intentionally no longer used.
+  /// Canonical subscription is tenant-scoped. Legacy school fields are only a
+  /// read-only fallback while older tenants are migrated by the platform.
   Stream<Subscription> watchSubscription() async* {
     final schoolId = await _currentSchoolId();
     if (schoolId == null) {
@@ -29,8 +29,21 @@ class SubscriptionRepository {
       return;
     }
 
-    await for (final schoolDoc
-        in _firestore.collection('schools').doc(schoolId).snapshots()) {
+    await for (final current
+        in _firestore
+            .collection('institutions')
+            .doc(schoolId)
+            .collection('subscription')
+            .doc('current')
+            .snapshots()) {
+      if (current.exists && current.data() != null) {
+        yield Subscription.fromFirestore(current.data());
+        continue;
+      }
+      final schoolDoc = await _firestore
+          .collection('schools')
+          .doc(schoolId)
+          .get();
       final school = schoolDoc.data();
       if (school == null) {
         yield _empty;
@@ -66,6 +79,7 @@ class SubscriptionRepository {
           : SubscriptionStatus.active;
 
       yield Subscription(
+        planId: planId,
         plan:
             plan?['name']?.toString() ??
             school['subscriptionPlanId']?.toString() ??
@@ -73,8 +87,82 @@ class SubscriptionRepository {
         status: status,
         renewalDate: expiry,
         amountUgx: (plan?['price'] as num?)?.round() ?? 0,
+        currency: plan?['currency']?.toString() ?? 'UGX',
+        billingCycle: plan?['billingCycle']?.toString() ?? '',
+        modules: (plan?['includedFeatures'] as List? ?? const [])
+            .map((e) => e.toString())
+            .toList(),
       );
     }
+  }
+
+  Stream<List<UsageMetric>> watchUsage() async* {
+    final schoolId = await _currentSchoolId();
+    if (schoolId == null) {
+      yield const [];
+      return;
+    }
+    yield* _firestore
+        .collection('institutions')
+        .doc(schoolId)
+        .collection('usage_metrics')
+        .snapshots()
+        .map(
+          (s) => s.docs
+              .map((d) => UsageMetric.fromFirestore(d.id, d.data()))
+              .toList(),
+        );
+  }
+
+  Stream<List<Map<String, dynamic>>> watchDocuments(String collection) async* {
+    final schoolId = await _currentSchoolId();
+    if (schoolId == null) {
+      yield const [];
+      return;
+    }
+    yield* _firestore
+        .collection('institutions')
+        .doc(schoolId)
+        .collection(collection)
+        .snapshots()
+        .map((s) => s.docs.map((d) => {...d.data(), 'id': d.id}).toList());
+  }
+
+  Stream<List<Map<String, dynamic>>> watchAvailablePlans() => _firestore
+      .collection('subscription_plans')
+      .where('isPublic', isEqualTo: true)
+      .where('isActive', isEqualTo: true)
+      .snapshots()
+      .map((s) => s.docs.map((d) => {...d.data(), 'id': d.id}).toList());
+
+  Stream<List<Map<String, dynamic>>> watchAvailableAddOns() => _firestore
+      .collection('subscription_addons')
+      .where('isActive', isEqualTo: true)
+      .snapshots()
+      .map((s) => s.docs.map((d) => {...d.data(), 'id': d.id}).toList());
+
+  Future<void> requestChange({
+    required String type,
+    String? planId,
+    String? addOnId,
+    String note = '',
+  }) async {
+    final callable = FirebaseFunctions.instanceFor(
+      region: 'europe-west1',
+    ).httpsCallable('requestSubscriptionChange');
+    await callable.call({
+      'type': type,
+      ...?(planId == null ? null : {'planId': planId}),
+      ...?(addOnId == null ? null : {'addOnId': addOnId}),
+      'note': note,
+    });
+  }
+
+  Future<void> requestUsageRefresh() async {
+    final callable = FirebaseFunctions.instanceFor(
+      region: 'europe-west1',
+    ).httpsCallable('requestSubscriptionUsageRefresh');
+    await callable.call();
   }
 
   /// Payment history is explicitly tenant-scoped. The earlier repository

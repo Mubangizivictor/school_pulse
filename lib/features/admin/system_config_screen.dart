@@ -676,23 +676,13 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
           ),
           const SizedBox(height: 20),
           ListTile(
-            leading: const Icon(Icons.sms_outlined),
-            title: const Text('SMS Gateway (Twilio)'),
-            subtitle: Text(
-              'Status: ${config.smsGatewayStatus} • ${config.smsCredits} Credits remaining',
+            leading: const Icon(Icons.extension_outlined),
+            title: const Text('Integrations Center'),
+            subtitle: const Text(
+              'Manage connected services, health, safe configuration and audit history',
             ),
-            trailing: Switch(
-              value: config.smsGatewayStatus == 'Connected',
-              onChanged: (connect) {
-                context.read<SystemConfigBloc>().add(
-                  UpdateSystemConfig(
-                    config.copyWith(
-                      smsGatewayStatus: connect ? 'Connected' : 'Disconnected',
-                    ),
-                  ),
-                );
-              },
-            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/staff/admin/integrations'),
           ),
           const Divider(),
           ListTile(

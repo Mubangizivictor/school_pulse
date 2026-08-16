@@ -25,6 +25,7 @@ class QuickAccessPrefs {
     'reports',
     'calendar',
     'security',
+    'data_management',
   ];
 
   static const List<String> coreIds = ['students', 'staff', 'attendance'];
