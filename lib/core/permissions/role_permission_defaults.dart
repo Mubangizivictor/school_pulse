@@ -282,6 +282,32 @@ class RolePermissionDefaults {
     Permission.integrationsViewSensitiveMetadata,
   };
 
+  static const Set<String> _communicationsAdminPermissions = {
+    Permission.communicationsView,
+    Permission.communicationsCreate,
+    Permission.communicationsEditDraft,
+    Permission.communicationsSchedule,
+    Permission.communicationsPublish,
+    Permission.communicationsCancel,
+    Permission.communicationsArchive,
+    Permission.communicationsSendStaff,
+    Permission.communicationsSendParents,
+    Permission.communicationsSendStudents,
+    Permission.communicationsSendEmergency,
+    Permission.communicationsViewDelivery,
+    Permission.communicationsViewAudit,
+    Permission.communicationsManageTemplates,
+  };
+
+  // Narrower authority for roles that raise emergency alerts but do not run
+  // the full Communication Center (drafts, templates, non-emergency sends).
+  static const Set<String> _communicationsEmergencyOnlyPermissions = {
+    Permission.communicationsView,
+    Permission.communicationsCreate,
+    Permission.communicationsSendEmergency,
+    Permission.communicationsViewDelivery,
+  };
+
   static const Set<String> _approvalAdminPermissions = {
     Permission.approvalsView,
     Permission.approvalsSubmit,
@@ -311,6 +337,7 @@ class RolePermissionDefaults {
     UserRole.securityHead: {
       ..._securityLeadPermissions,
       ..._notificationOfficePermissions,
+      ..._communicationsEmergencyOnlyPermissions,
       // Security leads raise emergency alerts (lockdown, intruder, missing
       // student) without needing a head teacher to be reachable first.
       Permission.notificationSendEmergency,
@@ -330,6 +357,7 @@ class RolePermissionDefaults {
       ..._calendarAdminPermissions,
       ..._approvalAdminPermissions,
       ..._integrationsAdminPermissions,
+      ..._communicationsAdminPermissions,
       Permission.announcementManage,
       Permission.structureGradingView,
       Permission.structureGradingManage,
@@ -349,6 +377,7 @@ class RolePermissionDefaults {
       ..._attendanceAdminPermissions,
       ..._approvalAdminPermissions,
       ..._integrationsAdminPermissions,
+      ..._communicationsAdminPermissions,
       Permission.announcementManage,
       Permission.structureGradingView,
       Permission.structureGradingManage,
@@ -368,6 +397,7 @@ class RolePermissionDefaults {
       ..._attendanceAdminPermissions,
       ..._approvalAdminPermissions,
       ..._integrationsAdminPermissions,
+      ..._communicationsAdminPermissions,
       Permission.announcementManage,
       Permission.structureGradingView,
       Permission.structureGradingManage,
@@ -381,6 +411,7 @@ class RolePermissionDefaults {
       ..._notificationAdminPermissions,
       ..._attendanceAdminPermissions,
       ..._approvalAdminPermissions,
+      ..._communicationsAdminPermissions,
       Permission.structureGradingView,
       Permission.structureGradingManage,
       ..._appointmentOfficePermissions,

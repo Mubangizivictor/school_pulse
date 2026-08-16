@@ -2290,6 +2290,24 @@ exports.getIntegrationCenter = integrationCenterFunctions.getIntegrationCenter;
 exports.saveIntegrationMetadata = integrationCenterFunctions.saveIntegrationMetadata;
 exports.testIntegrationConnection = integrationCenterFunctions.testIntegrationConnection;
 exports.disconnectIntegration = integrationCenterFunctions.disconnectIntegration;
+
+const integrationHealthFunctions = require("./integration_health");
+exports.getIntegrationHealthSummary = integrationHealthFunctions.getIntegrationHealthSummary;
+
+const integrationDeviceFunctions = require("./integration_devices");
+exports.registerIntegrationDevice = integrationDeviceFunctions.registerIntegrationDevice;
+exports.updateIntegrationDeviceStatus = integrationDeviceFunctions.updateIntegrationDeviceStatus;
+exports.revokeIntegrationDevice = integrationDeviceFunctions.revokeIntegrationDevice;
+exports.listIntegrationDevices = integrationDeviceFunctions.listIntegrationDevices;
+
+const integrationWebhookFunctions = require("./integration_webhooks");
+exports.createIntegrationWebhook = integrationWebhookFunctions.createIntegrationWebhook;
+exports.listIntegrationWebhooks = integrationWebhookFunctions.listIntegrationWebhooks;
+exports.disableIntegrationWebhook = integrationWebhookFunctions.disableIntegrationWebhook;
+
+const integrationSyncJobFunctions = require("./integration_sync_jobs");
+exports.startIntegrationSync = integrationSyncJobFunctions.startIntegrationSync;
+exports.getIntegrationSyncJobs = integrationSyncJobFunctions.getIntegrationSyncJobs;
 const institutionHealthFunctions = require("./institution_health");
 exports.requestInstitutionHealthRecheck = institutionHealthFunctions.requestInstitutionHealthRecheck;
 exports.resolveInstitutionHealthIssue = institutionHealthFunctions.resolveInstitutionHealthIssue;

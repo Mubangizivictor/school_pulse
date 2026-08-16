@@ -87,6 +87,25 @@ class Permission {
   static const dataRequestRestore = 'data.request_restore';
   static const dataViewBackupStatus = 'data.view_backup_status';
 
+  // Communication Center. Orchestrates announcements/broadcasts over the
+  // existing notification delivery engine; it never grants messaging or
+  // push-sending authority on its own — see communication_campaigns.js.
+  static const communicationsView = 'communications.view';
+  static const communicationsCreate = 'communications.create';
+  static const communicationsEditDraft = 'communications.edit_draft';
+  static const communicationsSchedule = 'communications.schedule';
+  static const communicationsPublish = 'communications.publish';
+  static const communicationsCancel = 'communications.cancel';
+  static const communicationsArchive = 'communications.archive';
+  static const communicationsSendStaff = 'communications.send_staff';
+  static const communicationsSendParents = 'communications.send_parents';
+  static const communicationsSendStudents = 'communications.send_students';
+  static const communicationsSendEmergency = 'communications.send_emergency';
+  static const communicationsViewDelivery = 'communications.view_delivery';
+  static const communicationsViewAudit = 'communications.view_audit';
+  static const communicationsManageTemplates =
+      'communications.manage_templates';
+
   // Central reporting. Kept separate from source-module permissions: viewing
   // a finance screen, for example, must never implicitly permit exporting it.
   static const reportsView = 'reports.view';

@@ -18,8 +18,29 @@ class _IntegrationDetailScreenState extends State<IntegrationDetailScreen> {
   final _reference = TextEditingController();
   bool _enabled = false;
   bool _busy = false;
+  List<Map<String, dynamic>> _syncJobs = const [];
+  bool _syncLoading = false;
   IntegrationDefinition? get _definition =>
       IntegrationRegistry.byKey(widget.integrationKey);
+  bool get _showsSyncStatus =>
+      widget.integrationKey == 'google_sheets' ||
+      widget.integrationKey == 'google_calendar';
+
+  @override
+  void initState() {
+    super.initState();
+    if (_showsSyncStatus) _loadSyncJobs();
+  }
+
+  Future<void> _loadSyncJobs() async {
+    setState(() => _syncLoading = true);
+    try {
+      _syncJobs = await _service.syncJobs(widget.integrationKey);
+    } catch (_) {
+      _syncJobs = const [];
+    }
+    if (mounted) setState(() => _syncLoading = false);
+  }
 
   @override
   void dispose() {
@@ -161,6 +182,32 @@ class _IntegrationDetailScreenState extends State<IntegrationDetailScreen> {
             ),
             const SizedBox(height: 8),
           ],
+          if (widget.integrationKey == 'biometric_device') ...[
+            OutlinedButton.icon(
+              onPressed: () =>
+                  context.push('/staff/admin/integrations/devices'),
+              icon: const Icon(Icons.fingerprint_outlined),
+              label: const Text('Manage devices'),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (widget.integrationKey == 'outbound_webhook') ...[
+            OutlinedButton.icon(
+              onPressed: () =>
+                  context.push('/staff/admin/integrations/webhooks'),
+              icon: const Icon(Icons.webhook_outlined),
+              label: const Text('Manage webhooks'),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (_showsSyncStatus) ...[
+            _SyncStatusCard(
+              loading: _syncLoading,
+              jobs: _syncJobs,
+              onRefresh: _loadSyncJobs,
+            ),
+            const SizedBox(height: 16),
+          ],
           if (definition.supportsTestConnection)
             OutlinedButton.icon(
               onPressed: _busy ? null : _test,
@@ -179,6 +226,93 @@ class _IntegrationDetailScreenState extends State<IntegrationDetailScreen> {
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SyncStatusCard extends StatelessWidget {
+  const _SyncStatusCard({
+    required this.loading,
+    required this.jobs,
+    required this.onRefresh,
+  });
+  final bool loading;
+  final List<Map<String, dynamic>> jobs;
+  final Future<void> Function() onRefresh;
+
+  String _formatTimestamp(dynamic value) {
+    if (value == null) return 'Never';
+    if (value is Map && value['_seconds'] != null) {
+      final date = DateTime.fromMillisecondsSinceEpoch(
+        (value['_seconds'] as num).toInt() * 1000,
+      );
+      return date.toLocal().toString();
+    }
+    return value.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final latest = jobs.isNotEmpty ? jobs.first : null;
+    return AppCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Sync status',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                IconButton(
+                  onPressed: onRefresh,
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'Refresh sync status',
+                ),
+              ],
+            ),
+            if (loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (latest == null)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text('No sync jobs recorded yet.'),
+              )
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Last sync: ${_formatTimestamp(latest['startedAt'])}'),
+                  const SizedBox(height: 4),
+                  Text('Status: ${latest['status'] ?? 'unknown'}'),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 12,
+                    children: [
+                      Text('Processed: ${latest['recordsProcessed'] ?? 0}'),
+                      Text('Succeeded: ${latest['recordsSucceeded'] ?? 0}'),
+                      Text('Failed: ${latest['recordsFailed'] ?? 0}'),
+                    ],
+                  ),
+                  if ((latest['lastError'] as String?)?.isNotEmpty ?? false)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        latest['lastError'] as String,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
