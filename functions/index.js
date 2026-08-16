@@ -1938,6 +1938,14 @@ exports.escalateUnacknowledgedAlerts = notificationFunctions.escalateUnacknowled
 exports.purgeExpiredNotifications = notificationFunctions.purgeExpiredNotifications;
 exports.sendTestNotification = notificationFunctions.sendTestNotification;
 
+// Communication Center orchestrates the notification service; it does not
+// introduce another delivery engine.
+const communicationCampaignFunctions = require("./communication_campaigns");
+exports.saveCommunicationDraft = communicationCampaignFunctions.saveCommunicationDraft;
+exports.publishCommunicationCampaign = communicationCampaignFunctions.publishCommunicationCampaign;
+exports.cancelCommunicationCampaign = communicationCampaignFunctions.cancelCommunicationCampaign;
+exports.reconcileCommunicationCampaigns = communicationCampaignFunctions.reconcileCommunicationCampaigns;
+
 const appointmentFunctions = require('./appointments');
 exports.queueAppointmentNotifications = appointmentFunctions.queueAppointmentNotifications;
 exports.notifyAppointmentStatusChange = appointmentFunctions.notifyAppointmentStatusChange;

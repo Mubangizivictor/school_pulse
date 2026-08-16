@@ -1995,6 +1995,20 @@ service cloud.firestore {
         schoolCanWrite(schoolId);
     }
 
+    // Communication campaigns are created and transitioned only through
+    // authenticated Cloud Functions. The client may inspect its institution's
+    // campaign history only when it has the same leadership authority as the
+    // publisher; recipients read their own notification records instead.
+    match /schools/{schoolId}/communication_campaigns/{campaignId} {
+      allow read: if isSameSchool(schoolId) && hasAnnouncementManagePermission(schoolId);
+      allow write: if false;
+    }
+
+    match /schools/{schoolId}/communication_audit/{auditId} {
+      allow read: if isSameSchool(schoolId) && hasAnnouncementManagePermission(schoolId);
+      allow write: if false;
+    }
+
     // Unified Attendance (attendance_hub). Marking is gated per-category by
     // the matching attendance.*.scan permission (or attendance.override),
     // resolved the same role-default-or-override way as calendar - see

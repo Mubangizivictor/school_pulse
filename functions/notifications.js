@@ -92,6 +92,17 @@ async function resolveRecipients(schoolId, audience) {
   const firestore = db();
   const resolved = new Set();
 
+  // A campaign can deliberately combine scopes (for example parents in one
+  // class plus all transport staff). Resolve each branch through the same
+  // hardened resolver and deduplicate before fan-out.
+  if (kind === "anyOf") {
+    for (const definition of audience.definitions || []) {
+      const recipients = await resolveRecipients(schoolId, definition);
+      recipients.forEach((id) => resolved.add(id));
+    }
+    return Array.from(resolved);
+  }
+
   switch (kind) {
     case "users":
       (userIds || []).forEach((id) => resolved.add(id));

@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:school_pulse/core/notification/notification_service.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
@@ -370,7 +370,6 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
       ..._selectedRecipients.where((r) => r != 'Specific Class Parents'),
       ..._selectedClasses.map((c) => 'Class:$c'),
     ];
-    final isSms = _selectedChannels.contains('SMS');
     final isPush = _selectedChannels.contains('Push');
     final scheduleDate = _isScheduled ? _scheduledDateTime : null;
 
@@ -395,32 +394,32 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
     }
 
     try {
-      // A hung Firestore write (or any other unresolved await) must never be
-      // able to leave this barrier-blocking spinner on screen forever - cap
-      // it so the UI always recovers even if the write itself never settles.
-      if (isPush) {
-        await NotificationService()
-            .sendBroadcast(
-              schoolId: schoolId,
-              title: title,
-              body: body,
-              targetGroups: targets,
-              isSms: false,
-              scheduledAt: scheduleDate,
-            )
-            .timeout(const Duration(seconds: 15));
-      }
-
-      if (isSms) {
-        await NotificationService()
-            .sendBroadcast(
-              schoolId: schoolId,
-              title: title,
-              body: body,
-              targetGroups: targets,
-              isSms: true,
-              scheduledAt: scheduleDate,
-            )
+      // Campaigns delegate to notification_requests server-side. This avoids
+      // the old topic broadcast path, which had no recipient snapshot or
+      // per-recipient read/delivery state.
+      final audience = _campaignAudience();
+      final draft = await FirebaseFunctions.instance
+          .httpsCallable('saveCommunicationDraft')
+          .call({
+            'schoolId': schoolId,
+            'campaign': {
+              'title': title,
+              'body': body,
+              'shortSummary': body.length > 180 ? body.substring(0, 180) : body,
+              'communicationType': 'announcement',
+              'priority': 'medium',
+              'audienceDefinition': audience,
+              'deliveryChannels': [if (isPush) 'inApp', if (isPush) 'push'],
+              if (scheduleDate != null)
+                'scheduledAt': scheduleDate.toUtc().toIso8601String(),
+            },
+          })
+          .timeout(const Duration(seconds: 15));
+      final campaignId = (draft.data as Map)['campaignId'] as String;
+      if (!_isScheduled) {
+        await FirebaseFunctions.instance
+            .httpsCallable('publishCommunicationCampaign')
+            .call({'schoolId': schoolId, 'campaignId': campaignId})
             .timeout(const Duration(seconds: 15));
       }
 
@@ -462,6 +461,46 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
         );
       }
     }
+  }
+
+  Map<String, dynamic> _campaignAudience() {
+    final definitions = <Map<String, dynamic>>[];
+    for (final recipient in _selectedRecipients) {
+      switch (recipient) {
+        case 'Parents':
+          definitions.add({'kind': 'all_parents'});
+        case 'All Staff':
+          definitions.add({'kind': 'all_staff'});
+        case 'Teachers Only':
+          definitions.add({
+            'kind': 'roles',
+            'roles': ['teacher'],
+          });
+        case 'Bursars & Admin':
+          definitions.add({
+            'kind': 'roles',
+            'roles': ['bursar', 'schoolAdmin'],
+          });
+        case 'Matrons (Girls)':
+          definitions.add({
+            'kind': 'roles',
+            'roles': ['boardingMatron'],
+          });
+        case 'Patrons (Boys)':
+          definitions.add({
+            'kind': 'roles',
+            'roles': ['boardingPatron'],
+          });
+        case 'Specific Class Parents':
+          definitions.add({
+            'kind': 'class_parents',
+            'classNames': _selectedClasses.toList(),
+          });
+      }
+    }
+    return definitions.length == 1
+        ? definitions.single
+        : {'kind': 'anyOf', 'definitions': definitions};
   }
 
   Widget _buildRecipientSelector() {
