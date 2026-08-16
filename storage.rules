@@ -5,6 +5,13 @@ service firebase.storage {
       return request.auth != null &&
         firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.schoolId == schoolId;
     }
+    function isActiveInstitutionMember(institutionId) {
+      return request.auth != null && (
+        isSameSchool(institutionId) ||
+        (firestore.exists(/databases/(default)/documents/institution_memberships/$(request.auth.uid + '_' + institutionId)) &&
+         firestore.get(/databases/(default)/documents/institution_memberships/$(request.auth.uid + '_' + institutionId)).data.status == 'active')
+      );
+    }
     function canManageInstitutionBranding(schoolId) {
       return request.auth != null && isSameSchool(schoolId) &&
         (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role
@@ -126,6 +133,40 @@ service firebase.storage {
           request.resource.contentType.matches('image/.*')
           || request.resource.contentType == 'application/pdf'
         );
+      allow update, delete: if false;
+    }
+
+    // Provider certificates and integration configuration imports are only
+    // exchanged through authenticated backend workflows. No client SDK path
+    // can upload or read a credential-bearing integration file.
+    match /institutions/{institutionId}/integrations/{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Data Management temporary files. The browser may upload a CSV/XLSX to
+    // this tenant path, but it cannot download a private export or overwrite
+    // a backend-generated report. Backend workers enforce template/version,
+    // expiry, and module permissions before consuming an upload.
+    match /institutions/{institutionId}/data_operations/imports/{fileName} {
+      allow create: if isActiveInstitutionMember(institutionId)
+        && request.resource.size < 25 * 1024 * 1024
+        && (request.resource.contentType == 'text/csv'
+          || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      allow read, update, delete: if false;
+    }
+    match /institutions/{institutionId}/data_operations/{kind}/{fileName} {
+      allow read, write: if false;
+    }
+
+    // Support uploads are tenant-scoped and intentionally narrow. The
+    // callable persists only a validated path after the ticket exists.
+    match /institutions/{institutionId}/support/{requestId}/{fileName} {
+      allow read: if false;
+      allow create: if isActiveInstitutionMember(institutionId)
+        && request.resource.size < 10 * 1024 * 1024
+        && (request.resource.contentType.matches('image/(png|jpeg|webp)')
+          || request.resource.contentType == 'application/pdf'
+          || request.resource.contentType == 'text/csv');
       allow update, delete: if false;
     }
 

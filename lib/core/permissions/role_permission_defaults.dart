@@ -88,6 +88,34 @@ class RolePermissionDefaults {
     Permission.subscriptionViewHistory,
   };
 
+  static const Set<String> _institutionHealthAdminPermissions = {
+    Permission.institutionHealthView,
+    Permission.institutionHealthViewSecurity,
+    Permission.institutionHealthViewDataQuality,
+    Permission.institutionHealthViewSubscription,
+    Permission.institutionHealthAcknowledge,
+    Permission.institutionHealthIgnore,
+    Permission.institutionHealthRecheck,
+    Permission.institutionHealthExport,
+  };
+
+  static const Set<String> _supportAuditAdminPermissions = {
+    Permission.supportView,
+    Permission.supportCreate,
+    Permission.supportReply,
+    Permission.supportClose,
+    Permission.supportReopen,
+    Permission.supportEscalate,
+    Permission.supportApproveAccess,
+    Permission.supportRevokeAccess,
+    Permission.auditView,
+    Permission.auditViewSecurity,
+    Permission.auditViewSensitive,
+    Permission.auditSearch,
+    Permission.auditExport,
+    Permission.auditViewSupportAccess,
+  };
+
   // Enrollment Permission (spec term) - never granted by job title alone,
   // only through this role-default seed (or a future custom-role grant).
   // Mirrors the doc's "Enrollment may only be performed by users with
@@ -243,6 +271,8 @@ class RolePermissionDefaults {
       Permission.notificationSendEmergency,
     },
     UserRole.schoolAdmin: {
+      ..._supportAuditAdminPermissions,
+      ..._institutionHealthAdminPermissions,
       ..._subscriptionAdminPermissions,
       ..._dataManagementAdminPermissions,
       ..._centralReportsAdminPermissions,
@@ -258,6 +288,8 @@ class RolePermissionDefaults {
       ..._appointmentOfficePermissions,
     },
     UserRole.director: {
+      ..._supportAuditAdminPermissions,
+      ..._institutionHealthAdminPermissions,
       ..._subscriptionAdminPermissions,
       ..._dataManagementAdminPermissions,
       ..._centralReportsAdminPermissions,
@@ -272,6 +304,8 @@ class RolePermissionDefaults {
       ..._appointmentOfficePermissions,
     },
     UserRole.headTeacher: {
+      ..._supportAuditAdminPermissions,
+      ..._institutionHealthAdminPermissions,
       ..._subscriptionAdminPermissions,
       ..._dataManagementAdminPermissions,
       ..._centralReportsAdminPermissions,

@@ -578,6 +578,13 @@ final Map<String, _QuickAccessItem> _quickAccessCatalog = {
     color: Colors.deepOrange,
     route: '/staff/admin/security',
   ),
+  'institution_health': const _QuickAccessItem(
+    id: 'institution_health',
+    label: 'Institution Health',
+    icon: Icons.health_and_safety_rounded,
+    color: Colors.purple,
+    route: '/staff/admin/institution-health',
+  ),
   'data_management': const _QuickAccessItem(
     id: 'data_management',
     label: 'Data Management',

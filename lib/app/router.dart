@@ -72,10 +72,12 @@ import 'package:school_pulse/features/structure/presentation/screens/custom_fiel
 import 'package:school_pulse/features/admin/admin_staff_attendance_screen.dart';
 import 'package:school_pulse/features/appointments/presentation/screens/appointments_workspace_screen.dart';
 import 'package:school_pulse/features/admin/audit_log_screen.dart';
+import 'package:school_pulse/features/admin/support_center_screen.dart';
 import 'package:school_pulse/features/admin/security_center_screen.dart';
 import 'package:school_pulse/features/admin/broadcast_history_screen.dart';
 import 'package:school_pulse/features/admin/subscription_screen.dart';
 import 'package:school_pulse/features/data_management/presentation/data_management_center_screen.dart';
+import 'package:school_pulse/features/institution_health/presentation/institution_health_center_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
 import 'package:school_pulse/features/parent/home_screen.dart';
 import 'package:school_pulse/features/parent/academics_screen.dart';
@@ -1474,6 +1476,23 @@ final router = GoRouter(
               builder: (context, state) => const DataManagementCenterScreen(),
             ),
             GoRoute(
+              path: 'institution-health',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                const permitted = {
+                  UserRole.schoolAdmin,
+                  UserRole.headTeacher,
+                  UserRole.director,
+                };
+                return auth.user.roles.any(permitted.contains)
+                    ? null
+                    : UserRoleRouting.dashboardPath(auth.user.role);
+              },
+              builder: (context, state) =>
+                  const InstitutionHealthCenterScreen(),
+            ),
+            GoRoute(
               path: 'approvals',
               builder: (context, state) => const ApprovalCenterScreen(),
             ),
@@ -1782,7 +1801,35 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'audit-log',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                const permitted = {
+                  UserRole.director,
+                  UserRole.headTeacher,
+                  UserRole.schoolAdmin,
+                };
+                return auth.user.roles.any(permitted.contains)
+                    ? null
+                    : UserRoleRouting.dashboardPath(auth.user.role);
+              },
               builder: (context, state) => const AuditLogScreen(),
+            ),
+            GoRoute(
+              path: 'support',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                const permitted = {
+                  UserRole.director,
+                  UserRole.headTeacher,
+                  UserRole.schoolAdmin,
+                };
+                return auth.user.roles.any(permitted.contains)
+                    ? null
+                    : UserRoleRouting.dashboardPath(auth.user.role);
+              },
+              builder: (context, state) => const SupportCenterScreen(),
             ),
             GoRoute(
               path: 'security',

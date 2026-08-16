@@ -1531,3 +1531,78 @@ describe('Phase 14 IDOR fixes: payroll, discipline/counseling, homework', () => 
     }));
   });
 });
+
+describe('Support + Audit Center: tenant isolation and append-only', () => {
+  test('support_requests: same-school admin can read, cross-school admin cannot, clients cannot write', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'institutions/schoolA/support_requests/req1'), {
+        institutionId: 'schoolA', subject: 'Attendance bug', status: 'submitted',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'institutions/schoolA/support_requests/req1')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'institutions/schoolA/support_requests/req1')));
+    await assertFails(getDoc(doc(dbFor('teacherA'), 'institutions/schoolA/support_requests/req1')));
+    await assertFails(setDoc(doc(dbFor('adminA'), 'institutions/schoolA/support_requests/req2'), {
+      institutionId: 'schoolA', subject: 'Forged direct write', status: 'submitted',
+    }));
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'institutions/schoolA/support_requests/req1'), {
+      status: 'resolved',
+    }));
+    await assertFails(deleteDoc(doc(dbFor('adminA'), 'institutions/schoolA/support_requests/req1')));
+  });
+
+  test('support responses: institution-visible responses readable by same-school admin, platform-internal notes hidden, cross-school denied', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'institutions/schoolA/support_requests/req1'), {
+        institutionId: 'schoolA', subject: 'Attendance bug', status: 'submitted',
+      });
+      await setDoc(doc(db, 'institutions/schoolA/support_requests/req1/responses/resp1'), {
+        supportRequestId: 'req1', institutionId: 'schoolA', body: 'We are looking into it.',
+        visibility: 'institution_visible',
+      });
+      await setDoc(doc(db, 'institutions/schoolA/support_requests/req1/responses/resp2'), {
+        supportRequestId: 'req1', institutionId: 'schoolA', body: 'internal triage note',
+        visibility: 'platform_internal',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'institutions/schoolA/support_requests/req1/responses/resp1')));
+    await assertFails(getDoc(doc(dbFor('adminA'), 'institutions/schoolA/support_requests/req1/responses/resp2')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'institutions/schoolA/support_requests/req1/responses/resp1')));
+    await assertFails(setDoc(doc(dbFor('adminA'), 'institutions/schoolA/support_requests/req1/responses/resp3'), {
+      supportRequestId: 'req1', institutionId: 'schoolA', body: 'forged reply', visibility: 'institution_visible',
+    }));
+  });
+
+  test('support_access_requests: same-school admin can read/approve context, cross-school denied, no client writes', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'institutions/schoolA/support_access_requests/access1'), {
+        institutionId: 'schoolA', status: 'requested', reason: 'diagnose sync issue',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'institutions/schoolA/support_access_requests/access1')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'institutions/schoolA/support_access_requests/access1')));
+    await assertFails(getDoc(doc(dbFor('teacherA'), 'institutions/schoolA/support_access_requests/access1')));
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'institutions/schoolA/support_access_requests/access1'), {
+      status: 'active',
+    }));
+  });
+
+  test('audit_events: same-school admin can read, cross-school and non-admin denied, append-only for clients', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'institutions/schoolA/audit_events/event1'), {
+        institutionId: 'schoolA', moduleKey: 'support', action: 'support_request_created',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'institutions/schoolA/audit_events/event1')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'institutions/schoolA/audit_events/event1')));
+    await assertFails(getDoc(doc(dbFor('teacherA'), 'institutions/schoolA/audit_events/event1')));
+    await assertFails(setDoc(doc(dbFor('adminA'), 'institutions/schoolA/audit_events/event2'), {
+      institutionId: 'schoolA', moduleKey: 'support', action: 'forged_event',
+    }));
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'institutions/schoolA/audit_events/event1'), {
+      action: 'tampered',
+    }));
+    await assertFails(deleteDoc(doc(dbFor('adminA'), 'institutions/schoolA/audit_events/event1')));
+  });
+});

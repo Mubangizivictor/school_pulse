@@ -25,6 +25,7 @@ class QuickAccessPrefs {
     'reports',
     'calendar',
     'security',
+    'institution_health',
     'data_management',
   ];
 

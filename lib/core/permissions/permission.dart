@@ -11,6 +11,37 @@
 class Permission {
   const Permission._();
 
+  // School Admin Support + central operational history.
+  static const supportView = 'support.view';
+  static const supportCreate = 'support.create';
+  static const supportReply = 'support.reply';
+  static const supportClose = 'support.close';
+  static const supportReopen = 'support.reopen';
+  static const supportEscalate = 'support.escalate';
+  static const supportApproveAccess = 'support.approve_access';
+  static const supportRevokeAccess = 'support.revoke_access';
+  static const auditView = 'audit.view';
+  static const auditViewSecurity = 'audit.view_security';
+  static const auditViewSensitive = 'audit.view_sensitive';
+  static const auditSearch = 'audit.search';
+  static const auditExport = 'audit.export';
+  static const auditViewSupportAccess = 'audit.view_support_access';
+
+  // Institution Health Center. These intentionally govern the read model and
+  // human resolution workflow only; source-module records remain protected by
+  // their own permissions.
+  static const institutionHealthView = 'institution_health.view';
+  static const institutionHealthViewSecurity =
+      'institution_health.view_security';
+  static const institutionHealthViewDataQuality =
+      'institution_health.view_data_quality';
+  static const institutionHealthViewSubscription =
+      'institution_health.view_subscription';
+  static const institutionHealthAcknowledge = 'institution_health.acknowledge';
+  static const institutionHealthIgnore = 'institution_health.ignore';
+  static const institutionHealthRecheck = 'institution_health.recheck';
+  static const institutionHealthExport = 'institution_health.export';
+
   // Subscription Centre. These grant visibility and request authority only;
   // SaaS Owner plan, entitlement and payment-state authority remains server
   // side and is never represented as an institution permission.

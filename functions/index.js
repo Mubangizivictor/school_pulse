@@ -6,6 +6,7 @@ const admin = require("firebase-admin");
 const { requirePlatformOwner, OwnerAuthorizationError } = require("./vendor/owner-auth");
 
 admin.initializeApp();
+const supportAuditFunctions = require("./support_audit")({ admin, onCall, HttpsError });
 
 /**
  * Enqueue a templated transactional email for the `public_functions`
@@ -823,6 +824,11 @@ exports.requireInstitutionPasswordReset = onCall(async (request) => {
 const SUPPORT_MODE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 exports.enterSupportMode = onCall(async (request) => {
+  // Legacy custom-token impersonation is intentionally retired. Institution
+  // support now requires the explicit, scoped and revocable support-access
+  // contract in support_audit.js; minting an admin identity bypasses that
+  // contract and makes it impossible to distinguish support actions.
+  throw new HttpsError("failed-precondition", "Legacy support impersonation is disabled. Request institution-approved scoped support access instead.");
   const owner = await requireOwner(request);
   const auth = request.auth;
 
@@ -2188,6 +2194,9 @@ exports.getIntegrationCenter = integrationCenterFunctions.getIntegrationCenter;
 exports.saveIntegrationMetadata = integrationCenterFunctions.saveIntegrationMetadata;
 exports.testIntegrationConnection = integrationCenterFunctions.testIntegrationConnection;
 exports.disconnectIntegration = integrationCenterFunctions.disconnectIntegration;
+const institutionHealthFunctions = require("./institution_health");
+exports.requestInstitutionHealthRecheck = institutionHealthFunctions.requestInstitutionHealthRecheck;
+exports.resolveInstitutionHealthIssue = institutionHealthFunctions.resolveInstitutionHealthIssue;
 
 /**
  * Student creation with transactional maxStudents cap enforcement. Kept in
@@ -2680,3 +2689,30 @@ exports.requestDataOperation = onCall(async (request) => {
 });
 
 exports.__test__ = { reportAvailableEventId, chunkIds, notifyParentsOfPublishedReports };
+
+// Support and audit are isolated in their own module so source business
+// modules only need to emit their existing events, never duplicate tickets.
+exports.submitInstitutionSupportRequest = supportAuditFunctions.submitInstitutionSupportRequest;
+exports.addInstitutionSupportResponse = supportAuditFunctions.addInstitutionSupportResponse;
+exports.addInstitutionSupportAttachment = supportAuditFunctions.addInstitutionSupportAttachment;
+exports.changeInstitutionSupportStatus = supportAuditFunctions.changeInstitutionSupportStatus;
+exports.decideSupportAccess = supportAuditFunctions.decideSupportAccess;
+exports.expireSupportAccess = supportAuditFunctions.expireSupportAccess;
+
+// Adapter for legacy module activity. It preserves the legacy source while
+// making a normalized, tenant-scoped row available to the Audit Center.
+exports.normalizeLegacyAuditEvent = onDocumentCreated("audit_logs/{auditId}", async (event) => {
+  const data = event.data?.data();
+  if (!data?.schoolId) return;
+  const ref = admin.firestore().doc(`institutions/${data.schoolId}/audit_events/legacy_${event.params.auditId}`);
+  await ref.create({
+    auditEventId: ref.id, institutionId: data.schoolId, moduleKey: data.moduleKey || "legacy",
+    eventType: data.eventType || "Custom", action: data.action || data.title || "activity",
+    actorId: data.userId || null, actorNameSnapshot: data.actorName || null,
+    targetType: data.entityType || "record", targetId: data.relatedEntityId || null,
+    targetDisplaySnapshot: data.description || null, previousValueSummary: null,
+    newValueSummary: null, reason: null, status: "success", sensitivity: "normal",
+    source: "legacy_adapter", correlationId: data.correlationId || event.params.auditId,
+    metadataSafe: {}, createdAt: data.timestamp || admin.firestore.FieldValue.serverTimestamp(),
+  });
+});

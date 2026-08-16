@@ -1006,6 +1006,28 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Central support/audit control center. Client users receive immutable,
+    // tenant-scoped reads only; all ticket mutations and audit writes pass
+    // through authenticated Cloud Functions which enforce permissions,
+    // redaction and status transitions.
+    match /institutions/{institutionId}/support_requests/{requestId} {
+      allow read: if isSameSchool(institutionId) && hasAnyRole(['director', 'headTeacher', 'schoolAdmin']);
+      allow write: if false;
+      match /responses/{responseId} {
+        allow read: if isSameSchool(institutionId) && hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) && resource.data.visibility == 'institution_visible';
+        allow write: if false;
+      }
+      match /{document=**} { allow read, write: if false; }
+    }
+    match /institutions/{institutionId}/support_access_requests/{requestId} {
+      allow read: if isSameSchool(institutionId) && hasAnyRole(['director', 'headTeacher', 'schoolAdmin']);
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/audit_events/{eventId} {
+      allow read: if isSameSchool(institutionId) && hasAnyRole(['director', 'headTeacher', 'schoolAdmin']);
+      allow write: if false;
+    }
+
     // School-wide configuration, plus its archived-term history.
     match /config/{configId} {
       // Tenant configuration now lives at schools/{schoolId}/config. Root
@@ -2643,6 +2665,36 @@ service cloud.firestore {
       allow read: if isSameSchool(institutionId) &&
         hasAnyRole(['director', 'headTeacher', 'schoolAdmin']);
       allow update, delete: if false;
+    }
+
+    // Institution Health is a backend-owned, tenant-scoped read model. The
+    // centre can acknowledge through a callable but clients never create,
+    // overwrite, or re-parent checks/scores/resolutions themselves.
+    function healthViewer(institutionId) {
+      return canAccessDataInstitution(institutionId) && isStaff() && (
+        hasAnyRole(['schoolAdmin', 'headTeacher', 'director']) ||
+        (('permissions' in myUser()) && 'institution_health.view' in myUser().permissions)
+      );
+    }
+    match /institutions/{institutionId}/health_summary/{summaryId} {
+      allow read: if healthViewer(institutionId);
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/health_checks/{checkId} {
+      allow read: if healthViewer(institutionId);
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/health_snapshots/{snapshotId} {
+      allow read: if healthViewer(institutionId);
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/health_resolutions/{resolutionId} {
+      allow read: if healthViewer(institutionId);
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/health_audit/{auditId} {
+      allow read: if healthViewer(institutionId);
+      allow write: if false;
     }
   }
 }
