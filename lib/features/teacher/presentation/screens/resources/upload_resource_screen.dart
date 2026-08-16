@@ -1,178 +1,177 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_resource.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_resources/class_resource_bloc.dart';
 
-class UploadResourceScreen extends StatelessWidget {
+class UploadResourceScreen extends StatefulWidget {
   const UploadResourceScreen({super.key});
 
   @override
+  State<UploadResourceScreen> createState() => _UploadResourceScreenState();
+}
+
+class _UploadResourceScreenState extends State<UploadResourceScreen> {
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  PlatformFile? _picked;
+  ClassResourceAudience _audience = ClassResourceAudience.teacherOnly;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickFile() async {
+    final result = await FilePicker.pickFiles(withData: true);
+    final file = result?.files.singleOrNull;
+    if (file == null) return;
+    setState(() {
+      _picked = file;
+      if (_titleController.text.isEmpty) {
+        _titleController.text = file.name;
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(title: const Text('Upload Resource')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Upload Dropzone
-            AppCard(
-              padding: const EdgeInsets.symmetric(vertical: 40),
-              borderColor: Theme.of(
-                context,
-              ).colorScheme.primary.withValues(alpha: 0.3),
-              child: Center(
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.cloud_upload_outlined,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 32,
-                      ),
+    return BlocListener<ClassResourceBloc, ClassResourceState>(
+      listenWhen: (previous, current) =>
+          previous.successMessage != current.successMessage &&
+          current.successMessage != null,
+      listener: (context, state) => context.pop(),
+      child: Scaffold(
+        backgroundColor: AppColors.background(context),
+        appBar: AppBar(title: const Text('Upload Resource')),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              InkWell(
+                onTap: _pickFile,
+                child: AppCard(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  borderColor: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.3),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            _picked == null
+                                ? Icons.cloud_upload_outlined
+                                : Icons.insert_drive_file,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 32,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _picked == null
+                              ? 'Tap to choose a file'
+                              : '${_picked!.name}\n'
+                                    '${(_picked!.size / 1024).toStringAsFixed(0)} KB',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Drag and drop files here\nor tap to browse',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x3l),
+
+              const Text('Details', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: AppSpacing.l),
+              TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title *',
+                  hintText: 'Enter resource title',
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              TextField(
+                controller: _descriptionController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  hintText: 'Add a short description',
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              DropdownButtonFormField<ClassResourceAudience>(
+                decoration: const InputDecoration(labelText: 'Share with'),
+                initialValue: _audience,
+                items: ClassResourceAudience.values
+                    .map(
+                      (a) => DropdownMenuItem(value: a, child: Text(a.label)),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(() => _audience = v ?? _audience),
+              ),
+              const SizedBox(height: 40),
+              BlocBuilder<ClassResourceBloc, ClassResourceState>(
+                builder: (context, state) => Column(
+                  children: [
+                    if (state.errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.l),
+                        child: Text(
+                          state.errorMessage!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    PrimaryButton(
+                      label: 'Upload Resource',
+                      onPressed: state.isSaving
+                          ? null
+                          : () {
+                              final picked = _picked;
+                              if (picked?.bytes == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Choose a file to upload.'),
+                                  ),
+                                );
+                                return;
+                              }
+                              context.read<ClassResourceBloc>().add(
+                                ClassResourceUploaded(
+                                  fileName: picked!.name,
+                                  bytes: picked.bytes!,
+                                  description:
+                                      _descriptionController.text.trim().isEmpty
+                                      ? null
+                                      : _descriptionController.text.trim(),
+                                  audience: _audience,
+                                ),
+                              );
+                            },
                     ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.x3l),
-
-            const Text(
-              'Resource Type',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: AppSpacing.l),
-            Row(
-              children: [
-                Expanded(
-                  child: _TypeSelector(
-                    icon: Icons.description,
-                    label: 'Document',
-                    isSelected: true,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _TypeSelector(icon: Icons.play_circle, label: 'Video'),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _TypeSelector(icon: Icons.image, label: 'Image'),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _TypeSelector(icon: Icons.link, label: 'Link'),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.x3l),
-
-            const Text(
-              'Details',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: AppSpacing.l),
-            const TextField(
-              decoration: InputDecoration(
-                labelText: 'Title *',
-                hintText: 'Enter resource title',
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            const TextField(
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: 'Description',
-                hintText: 'Add a short description',
-                alignLabelWithHint: true,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Class *'),
-              initialValue: 'Primary 4 - Emerald',
-              items: [
-                'Primary 4 - Emerald',
-                'Primary 4 - Ruby',
-              ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-              onChanged: (v) {},
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Folder'),
-              hint: const Text('Select folder (Optional)'),
-              items: [
-                'Mathematics',
-                'Science',
-                'English',
-              ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-              onChanged: (v) {},
-            ),
-            const SizedBox(height: 40),
-            PrimaryButton(
-              label: 'Upload Resource',
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
-  }
-}
-
-class _TypeSelector extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-
-  const _TypeSelector({
-    required this.icon,
-    required this.label,
-    this.isSelected = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      color: isSelected
-          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
-          : null,
-      borderColor: isSelected ? Theme.of(context).colorScheme.primary : null,
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: isSelected
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).hintColor,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).hintColor,
-            ),
-          ),
-        ],
       ),
     );
   }

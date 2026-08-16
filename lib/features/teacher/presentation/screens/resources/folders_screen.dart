@@ -1,10 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_resource.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_resources/class_resource_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 
-class FoldersScreen extends StatelessWidget {
+class FoldersScreen extends StatefulWidget {
   const FoldersScreen({super.key});
+
+  @override
+  State<FoldersScreen> createState() => _FoldersScreenState();
+}
+
+class _FoldersScreenState extends State<FoldersScreen> {
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    final active = context.read<ClassTeacherContextBloc>().state.active;
+    if (active != null) {
+      context.read<ClassResourceBloc>().add(ClassResourcesRequested(active));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,45 +36,53 @@ class FoldersScreen extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(AppSpacing.xl),
-            child: AppSearchField(hintText: 'Search folders...'),
+            child: AppSearchField(
+              hintText: 'Search folders...',
+              onChanged: (value) => setState(() => _query = value),
+            ),
           ),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              children: const [
-                _FolderItem(
-                  title: 'Mathematics',
-                  count: 12,
-                  color: Colors.orange,
-                ),
-                _FolderItem(title: 'Science', count: 8, color: Colors.red),
-                _FolderItem(
-                  title: 'English Language',
-                  count: 15,
-                  color: Colors.blue,
-                ),
-                _FolderItem(
-                  title: 'Social Studies',
-                  count: 6,
-                  color: Colors.green,
-                ),
-                _FolderItem(
-                  title: 'Worksheets',
-                  count: 24,
-                  color: Colors.purple,
-                ),
-                _FolderItem(
-                  title: 'Exams & Past Papers',
-                  count: 10,
-                  color: Colors.teal,
-                ),
-              ],
+            child: BlocBuilder<ClassResourceBloc, ClassResourceState>(
+              builder: (context, state) {
+                if (state.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final folders = state.folders.where((f) {
+                  if (_query.isEmpty) return true;
+                  return f.name.toLowerCase().contains(_query.toLowerCase());
+                }).toList();
+
+                if (folders.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'No folders yet. Tap + to create one.',
+                      style: TextStyle(color: Theme.of(context).hintColor),
+                    ),
+                  );
+                }
+
+                return ListView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                  ),
+                  children: [
+                    for (final folder in folders)
+                      _FolderItem(
+                        folder: folder,
+                        resourceCount: state.resources
+                            .where((r) => r.folderId == folder.id)
+                            .length,
+                      ),
+                  ],
+                );
+              },
             ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () => context.push('/staff/resources/create-folder'),
         child: const Icon(Icons.add),
       ),
     );
@@ -61,15 +90,10 @@ class FoldersScreen extends StatelessWidget {
 }
 
 class _FolderItem extends StatelessWidget {
-  final String title;
-  final int count;
-  final Color color;
+  final ClassResource folder;
+  final int resourceCount;
 
-  const _FolderItem({
-    required this.title,
-    required this.count,
-    required this.color,
-  });
+  const _FolderItem({required this.folder, required this.resourceCount});
 
   @override
   Widget build(BuildContext context) {
@@ -77,18 +101,18 @@ class _FolderItem extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Icon(Icons.folder, color: color, size: 32),
+          const Icon(Icons.folder, color: Colors.amber, size: 32),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  folder.name,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  '$count resources',
+                  '$resourceCount resources',
                   style: TextStyle(
                     fontSize: 12,
                     color: Theme.of(context).hintColor,

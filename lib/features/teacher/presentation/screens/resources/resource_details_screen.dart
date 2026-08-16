@@ -1,20 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_resource.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_resources/class_resource_bloc.dart';
 
 class ResourceDetailsScreen extends StatelessWidget {
-  const ResourceDetailsScreen({super.key});
+  final ClassResource? resource;
+  const ResourceDetailsScreen({super.key, this.resource});
 
   @override
   Widget build(BuildContext context) {
+    final resource = this.resource;
+    if (resource == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background(context),
+        appBar: AppBar(title: const Text('Resource Details')),
+        body: const Center(child: Text('This resource is no longer available.')),
+      );
+    }
+
+    final iconData = _iconFor(resource.kind);
+
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
         title: const Text('Resource Details'),
         actions: [
-          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.more_vert),
+            onPressed: () => _showMoreMenu(context, resource),
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -22,36 +41,33 @@ class ResourceDetailsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Card
             AppCard(
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
+                      color: iconData.$2.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
-                      Icons.picture_as_pdf,
-                      color: Colors.red,
-                      size: 32,
-                    ),
+                    child: Icon(iconData.$1, color: iconData.$2, size: 32),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'P4_Math_Workbook.pdf',
-                          style: TextStyle(
+                        Text(
+                          resource.name,
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
-                          'PDF Document • 2.4 MB',
+                          resource.isLink
+                              ? 'Link'
+                              : '${resource.kind.name} • ${resource.sizeLabel}',
                           style: TextStyle(color: Theme.of(context).hintColor),
                         ),
                       ],
@@ -69,34 +85,26 @@ class ResourceDetailsScreen extends StatelessWidget {
               child: Column(
                 children: [
                   _InfoTile(
-                    icon: Icons.person_outline,
-                    label: 'Uploaded By',
-                    value: 'Mrs. Grace W. Gikama',
-                  ),
-                  _InfoTile(
                     icon: Icons.calendar_today_outlined,
                     label: 'Uploaded On',
-                    value: '15 May 2025 • 08:30 AM',
+                    value: _formatDate(resource.uploadedAt),
                   ),
                   _InfoTile(
-                    icon: Icons.class_outlined,
-                    label: 'Class',
-                    value: 'Primary 4 - Emerald',
-                  ),
-                  _InfoTile(
-                    icon: Icons.folder_open_outlined,
-                    label: 'Folder',
-                    value: 'Mathematics',
+                    icon: Icons.people_outline,
+                    label: 'Shared With',
+                    value: resource.audience.label,
                   ),
                   _InfoTile(
                     icon: Icons.file_download_outlined,
                     label: 'Downloads',
-                    value: '32',
+                    value: '${resource.downloadCount}',
                   ),
                   _InfoTile(
                     icon: Icons.description_outlined,
                     label: 'Description',
-                    value: 'Workbook with exercises and activities for term 2.',
+                    value: resource.description?.isNotEmpty == true
+                        ? resource.description!
+                        : 'No description added.',
                     isLast: true,
                   ),
                 ],
@@ -115,35 +123,35 @@ class ResourceDetailsScreen extends StatelessWidget {
               childAspectRatio: 1.2,
               children: [
                 _ActionButton(
-                  icon: Icons.remove_red_eye_outlined,
-                  label: 'Preview',
+                  icon: resource.isLink
+                      ? Icons.open_in_new
+                      : Icons.remove_red_eye_outlined,
+                  label: resource.isLink ? 'Open' : 'Preview',
                   color: Colors.blue,
+                  onTap: () => _open(context, resource),
                 ),
                 _ActionButton(
                   icon: Icons.file_download_outlined,
                   label: 'Download',
                   color: Colors.green,
+                  onTap: resource.isFolder
+                      ? null
+                      : () => _open(context, resource),
                 ),
                 _ActionButton(
                   icon: Icons.share_outlined,
                   label: 'Share',
                   color: Colors.orange,
-                  onTap: () => context.push('/staff/resources/share'),
-                ),
-                _ActionButton(
-                  icon: Icons.drive_file_move_outlined,
-                  label: 'Move',
-                  color: Colors.purple,
-                ),
-                _ActionButton(
-                  icon: Icons.edit_outlined,
-                  label: 'Rename',
-                  color: Colors.teal,
+                  onTap: () => context.push(
+                    '/staff/resources/share',
+                    extra: resource,
+                  ),
                 ),
                 _ActionButton(
                   icon: Icons.delete_outline,
-                  label: 'Delete',
+                  label: 'Remove',
                   color: Colors.red,
+                  onTap: () => _confirmRemove(context, resource),
                 ),
               ],
             ),
@@ -152,6 +160,105 @@ class ResourceDetailsScreen extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _open(BuildContext context, ClassResource resource) async {
+    final url = resource.downloadUrl ?? resource.externalUrl;
+    if (url == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nothing to open for this resource.')),
+      );
+      return;
+    }
+    final uri = Uri.tryParse(url);
+    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Could not open this resource.')));
+      }
+    }
+  }
+
+  void _showMoreMenu(BuildContext context, ClassResource resource) {
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.share_outlined),
+              title: const Text('Share'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.push('/staff/resources/share', extra: resource);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text('Remove', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _confirmRemove(context, resource);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmRemove(
+    BuildContext context,
+    ClassResource resource,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remove resource?'),
+        content: Text(
+          resource.deleteRemovesFile
+              ? 'This will permanently delete "${resource.name}".'
+              : 'This detaches "${resource.name}" from your class. The '
+                    'original file is not deleted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    context.read<ClassResourceBloc>().add(ClassResourceRemoved(resource));
+    context.pop();
+  }
+
+  static String _formatDate(DateTime date) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  static (IconData, Color) _iconFor(ClassResourceKind kind) => switch (kind) {
+    ClassResourceKind.document => (Icons.picture_as_pdf, Colors.red),
+    ClassResourceKind.spreadsheet => (Icons.grid_on, Colors.green),
+    ClassResourceKind.presentation => (Icons.slideshow, Colors.orange),
+    ClassResourceKind.image => (Icons.image, Colors.green),
+    ClassResourceKind.audio => (Icons.audiotrack, Colors.teal),
+    ClassResourceKind.video => (Icons.videocam, Colors.purple),
+    ClassResourceKind.link => (Icons.link, Colors.blue),
+    ClassResourceKind.folder => (Icons.folder, Colors.amber),
+    ClassResourceKind.other => (Icons.insert_drive_file, Colors.grey),
+  };
 }
 
 class _InfoTile extends StatelessWidget {
@@ -227,13 +334,14 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final disabled = onTap == null;
     return AppCard(
       onTap: onTap,
       padding: EdgeInsets.zero,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color),
+          Icon(icon, color: disabled ? Theme.of(context).hintColor : color),
           const SizedBox(height: 8),
           Text(
             label,

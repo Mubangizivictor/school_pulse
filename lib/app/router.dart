@@ -202,6 +202,9 @@ import 'package:school_pulse/features/religion/presentation/religious_leader_das
 import 'package:school_pulse/features/exams/presentation/exams_dashboard_screen.dart';
 import 'package:school_pulse/features/hr/presentation/screens/hr_dashboard_screen.dart';
 import 'package:school_pulse/features/approvals/presentation/screens/approval_center_screen.dart';
+import 'package:school_pulse/features/approvals/presentation/screens/approval_policy_manager_screen.dart';
+import 'package:school_pulse/features/approvals/presentation/screens/approval_delegation_screen.dart';
+import 'package:school_pulse/features/approvals/presentation/screens/approval_request_submission_screen.dart';
 import 'package:school_pulse/features/director/presentation/screens/director_dashboard_screen.dart';
 import 'package:school_pulse/features/director/presentation/screens/director_reports_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/student_id_card_screen.dart';
@@ -1455,6 +1458,22 @@ final router = GoRouter(
             GoRoute(
               path: 'approvals',
               builder: (context, state) => const ApprovalCenterScreen(),
+              routes: [
+                GoRoute(
+                  path: 'policies',
+                  builder: (context, state) =>
+                      const ApprovalPolicyManagerScreen(),
+                ),
+                GoRoute(
+                  path: 'delegations',
+                  builder: (context, state) => const ApprovalDelegationScreen(),
+                ),
+                GoRoute(
+                  path: 'submit',
+                  builder: (context, state) =>
+                      const ApprovalRequestSubmissionScreen(),
+                ),
+              ],
             ),
             GoRoute(
               path: 'reports',
@@ -1502,6 +1521,22 @@ final router = GoRouter(
             GoRoute(
               path: 'approvals',
               builder: (context, state) => const ApprovalCenterScreen(),
+              routes: [
+                GoRoute(
+                  path: 'policies',
+                  builder: (context, state) =>
+                      const ApprovalPolicyManagerScreen(),
+                ),
+                GoRoute(
+                  path: 'delegations',
+                  builder: (context, state) => const ApprovalDelegationScreen(),
+                ),
+                GoRoute(
+                  path: 'submit',
+                  builder: (context, state) =>
+                      const ApprovalRequestSubmissionScreen(),
+                ),
+              ],
             ),
             GoRoute(
               path: 'users',

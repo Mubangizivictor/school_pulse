@@ -1,31 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_resource.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_resources/class_resource_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 
-class StorageUsageScreen extends StatelessWidget {
+String _formatBytes(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(0)} KB';
+  if (bytes < 1024 * 1024 * 1024) {
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(2)} MB';
+  }
+  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+}
+
+class StorageUsageScreen extends StatefulWidget {
   const StorageUsageScreen({super.key});
+
+  @override
+  State<StorageUsageScreen> createState() => _StorageUsageScreenState();
+}
+
+class _StorageUsageScreenState extends State<StorageUsageScreen> {
+  @override
+  void initState() {
+    super.initState();
+    final active = context.read<ClassTeacherContextBloc>().state.active;
+    if (active != null) {
+      context.read<ClassResourceBloc>().add(ClassResourcesRequested(active));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(title: const Text('Storage Usage')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          children: [
-            AppCard(
-              child: Column(
-                children: [
-                  Stack(
+      body: BlocBuilder<ClassResourceBloc, ClassResourceState>(
+        builder: (context, state) {
+          final usage = state.storageUsage;
+          final fraction = usage.fraction;
+          final byKind = <ClassResourceKind, int>{};
+          for (final r in state.files) {
+            byKind[r.kind] = (byKind[r.kind] ?? 0) + (r.sizeBytes ?? 0);
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              children: [
+                AppCard(
+                  child: Stack(
                     alignment: Alignment.center,
                     children: [
                       SizedBox(
                         width: 150,
                         height: 150,
                         child: CircularProgressIndicator(
-                          value: 1.28 / 5,
+                          value: fraction,
                           strokeWidth: 12,
                           backgroundColor: Theme.of(
                             context,
@@ -43,15 +78,17 @@ class StorageUsageScreen extends StatelessWidget {
                               color: Theme.of(context).hintColor,
                             ),
                           ),
-                          const Text(
-                            '1.28 GB',
-                            style: TextStyle(
+                          Text(
+                            _formatBytes(usage.usedBytes),
+                            style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
                           Text(
-                            'of 5 GB',
+                            fraction == null
+                                ? '${usage.fileCount} files'
+                                : 'of ${_formatBytes(usage.quotaBytes)}',
                             style: TextStyle(
                               fontSize: 12,
                               color: Theme.of(context).hintColor,
@@ -61,56 +98,61 @@ class StorageUsageScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: AppSpacing.x3l),
+                AppCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      _StorageItem(
+                        label: 'Documents',
+                        bytes: byKind[ClassResourceKind.document] ?? 0,
+                        color: Colors.blue,
+                      ),
+                      _StorageItem(
+                        label: 'Videos',
+                        bytes: byKind[ClassResourceKind.video] ?? 0,
+                        color: Colors.purple,
+                      ),
+                      _StorageItem(
+                        label: 'Images',
+                        bytes: byKind[ClassResourceKind.image] ?? 0,
+                        color: Colors.green,
+                      ),
+                      _StorageItem(
+                        label: 'Others',
+                        bytes: byKind[ClassResourceKind.other] ?? 0,
+                        color: Colors.orange,
+                        isLast: true,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+                PrimaryButton(
+                  label: 'Manage Storage',
+                  onPressed: () =>
+                      context.push('/staff/resources/my-resources'),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.x3l),
-            AppCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  _StorageItem(
-                    label: 'Documents',
-                    size: '620 MB',
-                    color: Colors.blue,
-                  ),
-                  _StorageItem(
-                    label: 'Videos',
-                    size: '480 MB',
-                    color: Colors.purple,
-                  ),
-                  _StorageItem(
-                    label: 'Images',
-                    size: '130 MB',
-                    color: Colors.green,
-                  ),
-                  _StorageItem(
-                    label: 'Others',
-                    size: '60 MB',
-                    color: Colors.orange,
-                    isLast: true,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 40),
-            PrimaryButton(label: 'Manage Storage', onPressed: () {}),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
+
 }
 
 class _StorageItem extends StatelessWidget {
   final String label;
-  final String size;
+  final int bytes;
   final Color color;
   final bool isLast;
 
   const _StorageItem({
     required this.label,
-    required this.size,
+    required this.bytes,
     required this.color,
     this.isLast = false,
   });
@@ -136,7 +178,7 @@ class _StorageItem extends StatelessWidget {
                 ),
               ),
               Text(
-                size,
+                _formatBytes(bytes),
                 style: TextStyle(
                   color: Theme.of(context).hintColor,
                   fontWeight: FontWeight.bold,

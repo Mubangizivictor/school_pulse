@@ -1,133 +1,147 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_resource.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_resources/class_resource_bloc.dart';
 
-class ShareResourceScreen extends StatelessWidget {
-  const ShareResourceScreen({super.key});
+class ShareResourceScreen extends StatefulWidget {
+  final ClassResource? resource;
+  const ShareResourceScreen({super.key, this.resource});
+
+  @override
+  State<ShareResourceScreen> createState() => _ShareResourceScreenState();
+}
+
+class _ShareResourceScreenState extends State<ShareResourceScreen> {
+  late ClassResourceAudience _audience;
+
+  @override
+  void initState() {
+    super.initState();
+    _audience = widget.resource?.audience ?? ClassResourceAudience.teacherOnly;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(title: const Text('Share Resource')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Card
-            AppCard(
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.picture_as_pdf, color: Colors.red),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'P4_Math_Workbook.pdf',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'PDF • 2.4 MB',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).hintColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.x3l),
+    final resource = widget.resource;
+    if (resource == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background(context),
+        appBar: AppBar(title: const Text('Share Resource')),
+        body: const Center(child: Text('This resource is no longer available.')),
+      );
+    }
 
-            const Text(
-              'Share With',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: AppSpacing.l),
-            AppCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  _ShareOption(
-                    icon: Icons.people_outline,
-                    label: 'Primary 4 - Emerald',
-                    subtitle: 'All Students',
-                  ),
-                  _ShareOption(
-                    icon: Icons.school_outlined,
-                    label: 'Teachers',
-                    subtitle: 'All Teachers',
-                  ),
-                  _ShareOption(
-                    icon: Icons.person_outline,
-                    label: 'Specific Students',
-                    subtitle: 'Select from list',
-                  ),
-                  _ShareOption(
-                    icon: Icons.family_restroom_outlined,
-                    label: 'Parents',
-                    subtitle: 'All Parents',
-                  ),
-                  _ShareOption(
-                    icon: Icons.other_houses_outlined,
-                    label: 'Other Classes',
-                    subtitle: 'Select classes',
-                    isLast: true,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.x3l),
-
-            const Text(
-              'Additional Options',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: AppSpacing.l),
-            AppCard(
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Allow Download',
-                        style: TextStyle(fontWeight: FontWeight.w500),
+    return BlocListener<ClassResourceBloc, ClassResourceState>(
+      listenWhen: (previous, current) =>
+          previous.successMessage != current.successMessage &&
+          current.successMessage != null,
+      listener: (context, state) => context.pop(),
+      child: Scaffold(
+        backgroundColor: AppColors.background(context),
+        appBar: AppBar(title: const Text('Share Resource')),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppCard(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      Switch.adaptive(value: true, onChanged: (v) {}),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.l),
-                  const TextField(
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: 'Add Message (Optional)',
-                      hintText: 'Write a message...',
-                      alignLabelWithHint: true,
+                      child: Icon(
+                        resource.isLink
+                            ? Icons.link
+                            : Icons.insert_drive_file,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            resource.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            resource.isLink ? 'Link' : resource.sizeLabel,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).hintColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 40),
-            PrimaryButton(
-              label: 'Share Resource',
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.x3l),
+
+              const Text('Share With', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: AppSpacing.l),
+              AppCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    _ShareOption(
+                      icon: Icons.lock_outline,
+                      label: 'Only me',
+                      subtitle: 'Not visible to the class',
+                      selected: _audience == ClassResourceAudience.teacherOnly,
+                      onTap: () => setState(
+                        () => _audience = ClassResourceAudience.teacherOnly,
+                      ),
+                    ),
+                    _ShareOption(
+                      icon: Icons.people_outline,
+                      label: 'My class',
+                      subtitle: 'Visible to students',
+                      selected: _audience == ClassResourceAudience.students,
+                      onTap: () => setState(
+                        () => _audience = ClassResourceAudience.students,
+                      ),
+                    ),
+                    _ShareOption(
+                      icon: Icons.family_restroom_outlined,
+                      label: 'Class and guardians',
+                      subtitle: 'Visible to students and parents',
+                      selected:
+                          _audience == ClassResourceAudience.studentsAndGuardians,
+                      isLast: true,
+                      onTap: () => setState(
+                        () => _audience =
+                            ClassResourceAudience.studentsAndGuardians,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 40),
+              BlocBuilder<ClassResourceBloc, ClassResourceState>(
+                builder: (context, state) => PrimaryButton(
+                  label: 'Share Resource',
+                  onPressed: state.isSaving
+                      ? null
+                      : () => context.read<ClassResourceBloc>().add(
+                          ClassResourceShared(resource, _audience),
+                        ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -138,12 +152,16 @@ class _ShareOption extends StatelessWidget {
   final IconData icon;
   final String label;
   final String subtitle;
+  final bool selected;
   final bool isLast;
+  final VoidCallback onTap;
 
   const _ShareOption({
     required this.icon,
     required this.label,
     required this.subtitle,
+    required this.onTap,
+    this.selected = false,
     this.isLast = false,
   });
 
@@ -174,8 +192,10 @@ class _ShareOption extends StatelessWidget {
             subtitle,
             style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
           ),
-          trailing: const Icon(Icons.chevron_right_rounded, size: 20),
-          onTap: () {},
+          trailing: selected
+              ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary)
+              : const Icon(Icons.radio_button_unchecked),
+          onTap: onTap,
         ),
         if (!isLast)
           Divider(

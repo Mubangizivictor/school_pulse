@@ -39,6 +39,7 @@ import 'package:school_pulse/features/teacher/presentation/bloc/class_performanc
 import 'package:school_pulse/features/teacher/presentation/bloc/class_reports/class_reports_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_tasks/class_tasks_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_work/class_work_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_resources/class_resource_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_dashboard/class_teacher_dashboard_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
@@ -188,6 +189,7 @@ class SchoolPulseApp extends StatelessWidget {
         BlocProvider(create: (_) => di.sl<ClassAttendanceBloc>()),
         BlocProvider(create: (_) => di.sl<ClassAttendanceHistoryBloc>()),
         BlocProvider(create: (_) => di.sl<ClassWorkBloc>()),
+        BlocProvider(create: (_) => di.sl<ClassResourceBloc>()),
         BlocProvider(create: (_) => di.sl<ClassAnnouncementsBloc>()),
         BlocProvider(create: (_) => di.sl<ClassPerformanceBloc>()),
         BlocProvider(create: (_) => di.sl<ClassReportsBloc>()),
