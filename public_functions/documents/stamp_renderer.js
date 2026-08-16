@@ -9,7 +9,7 @@ const STAMP_ASPECT_RATIO = 1774 / 887;
 // image coordinate transform puts text at a slightly lower visual baseline,
 // hence the y ratio is intentionally above the visible rule rather than its
 // raw-pixel center.
-const DATE_POSITION = Object.freeze({ x: 0.18, y: 0.64, fontSize: 7.3 });
+const DATE_POSITION = Object.freeze({ x: 0.18, y: 0.59, fontSize: 7.3 });
 
 function assertStampAsset() {
   if (!fs.existsSync(STAMP_PATH)) throw new Error('Official stamp asset is missing.');
