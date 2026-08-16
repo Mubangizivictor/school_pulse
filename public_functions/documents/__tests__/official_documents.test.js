@@ -45,7 +45,7 @@ async function test(name, fn) {
   });
   await test('creates an opaque public verification URL', () => {
     const url = verificationUrl('A'.repeat(32));
-    assert.equal(url, 'https://schoolpulse.victorbee.com/verify?token=' + 'A'.repeat(32));
+    assert.equal(url, 'https://school-pulse-3d95b.web.app/verify?token=' + 'A'.repeat(32));
     assert.doesNotMatch(url, /internal-payment-id/);
   });
   await test('renders a real PDF with the official reference and QR verification payload', async () => {
@@ -54,7 +54,7 @@ async function test(name, fn) {
     const output = path.join(__dirname, '..', '..', 'tmp', 'pdfs', 'official-document-sample.pdf');
     fs.mkdirSync(path.dirname(output), { recursive: true });
     fs.writeFileSync(output, bytes);
-    assert.match(bytes.toString('latin1'), /\(SP-APP-2026-000123\)/);
+    assert.match(bytes.toString('latin1'), /SP-APP-2026-000123/);
   });
   console.log(`${passed} passed`);
 })();

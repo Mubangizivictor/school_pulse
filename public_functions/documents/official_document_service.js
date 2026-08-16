@@ -5,7 +5,10 @@ const { renderOfficialPdf } = require('./pdf_renderer');
 
 const db = admin.firestore();
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-const VERIFICATION_ORIGIN = 'https://schoolpulse.victorbee.com/verify';
+// This is the live Firebase Hosting origin that serves the verifier rewrite.
+// Do not use the custom domain until it is attached to this Hosting site; a
+// QR must always resolve to the actual read-only verification endpoint.
+const VERIFICATION_ORIGIN = 'https://school-pulse-3d95b.web.app/verify';
 function asDate(value) { if (!value) return null; if (typeof value.toDate === 'function') return value.toDate(); if (value instanceof Date) return value; if (typeof value === 'number') return new Date(value); const parsed = new Date(value); return Number.isNaN(parsed.valueOf()) ? null : parsed; }
 function kampalaParts(value) { const date = asDate(value); if (!date) throw new Error('Missing authoritative timestamp for official document.'); const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Kampala', day: '2-digit', month: '2-digit', year: 'numeric' }).formatToParts(date); const get = (type) => parts.find((part) => part.type === type)?.value; return { day: get('day'), month: Number(get('month')), year: get('year') }; }
 function officialDate(value) { const p = kampalaParts(value); return `${p.day} ${MONTHS[p.month - 1]} ${p.year}`; }
