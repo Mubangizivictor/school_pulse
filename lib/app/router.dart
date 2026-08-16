@@ -44,8 +44,6 @@ import 'package:school_pulse/features/admin/presentation/add_staff_wizard/add_st
 import 'package:school_pulse/features/admin/broadcast_sms_screen.dart';
 import 'package:school_pulse/features/admin/system_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_screen.dart';
-import 'package:school_pulse/features/structure/presentation/screens/academic_structure_screen.dart';
-import 'package:school_pulse/features/structure/presentation/screens/academics_landing_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/levels_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/years_terms_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/classes_streams_screen.dart';
@@ -61,8 +59,6 @@ import 'package:school_pulse/features/structure/presentation/screens/institution
 import 'package:school_pulse/features/structure/presentation/screens/operations_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/feature_toggles_screen.dart';
 import 'package:school_pulse/features/module_control/presentation/module_control_center_screen.dart';
-import 'package:school_pulse/features/structure/presentation/screens/structure_setup_wizard_screen.dart';
-import 'package:school_pulse/features/structure/presentation/screens/setup_progress_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_validation_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/timetable_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/timetables/timetables_list_screen.dart';
@@ -274,6 +270,7 @@ import 'package:school_pulse/features/teacher/presentation/screens/classes/class
 import 'package:school_pulse/features/teacher/presentation/screens/classes/class_resources_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/classes/class_behaviour_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/reports_dashboard_screen.dart';
+import 'package:school_pulse/features/reports/presentation/screens/central_reports_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/select_class_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/select_term_profile_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/report_sections_screen.dart';
@@ -963,6 +960,10 @@ final router = GoRouter(
           ],
         ),
         GoRoute(
+          path: '/staff/admin/reports',
+          builder: (context, state) => const CentralReportsScreen(),
+        ),
+        GoRoute(
           path: '/staff/reports',
           builder: (context, state) => BlocProvider(
             create: (_) => di.sl<ReportWizardBloc>(),
@@ -1506,16 +1507,13 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'academic',
-                  builder: (context, state) {
-                    final tab =
-                        int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
-                        0;
-                    return AcademicStructureScreen(initialTab: tab);
-                  },
+                  redirect: (context, state) =>
+                      '/staff/admin/structure?section=academics',
                 ),
                 GoRoute(
                   path: 'academics',
-                  builder: (context, state) => const AcademicsLandingScreen(),
+                  redirect: (context, state) =>
+                      '/staff/admin/structure?section=academics',
                   routes: [
                     GoRoute(
                       path: 'levels',
@@ -1615,12 +1613,11 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'wizard',
-                  builder: (context, state) =>
-                      const StructureSetupWizardScreen(),
+                  redirect: (context, state) => '/staff/admin/structure',
                 ),
                 GoRoute(
                   path: 'progress',
-                  builder: (context, state) => const SetupProgressScreen(),
+                  redirect: (context, state) => '/staff/admin/structure',
                 ),
                 GoRoute(
                   path: 'validation',
