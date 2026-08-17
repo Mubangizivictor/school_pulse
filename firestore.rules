@@ -535,26 +535,37 @@ service cloud.firestore {
     // Sequential Structure runtime data. Every document carries schoolId;
     // unlike the legacy master-data collections above, these new records are
     // tenant-isolated in rules as well as in repository queries.
-    match /structure_setup_preferences/{id} {
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-    }
-    match /structure_curriculum_assignments/{id} {
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-    }
-    match /structure_teaching_assignments/{id} {
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-    }
-    match /structure_class_timetables/{id} {
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-    }
-    match /structure_timetable_lessons/{id} {
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-    }
+    match /structure_setup_preferences/{schoolId} {
+  allow read, delete: if isStaff() && isSameSchool(schoolId);
+  allow create: if isStaff() &&
+    request.resource.data.schoolId == schoolId && isSameSchool(schoolId);
+  allow update: if isStaff() && isSameSchool(schoolId) &&
+    request.resource.data.schoolId == schoolId;
+}
+match /structure_curriculum_assignments/{id} {
+  allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+  allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+  allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+    request.resource.data.schoolId == resource.data.schoolId;
+}
+match /structure_teaching_assignments/{id} {
+  allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+  allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+  allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+    request.resource.data.schoolId == resource.data.schoolId;
+}
+match /structure_class_timetables/{id} {
+  allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+  allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+  allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+    request.resource.data.schoolId == resource.data.schoolId;
+}
+match /structure_timetable_lessons/{id} {
+  allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+  allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+  allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+    request.resource.data.schoolId == resource.data.schoolId;
+}
 
     match /houses/{id} {
       allow read: if isSignedIn();
