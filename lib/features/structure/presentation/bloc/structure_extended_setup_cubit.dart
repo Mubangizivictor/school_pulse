@@ -4,14 +4,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import '../../domain/entities/class_timetable_entities.dart';
 import '../../domain/entities/curriculum_assignment.dart';
+import '../../domain/entities/teaching_assignment.dart';
 import '../../domain/repositories/class_timetable_repository.dart';
 import '../../domain/repositories/curriculum_assignment_repository.dart';
 import '../../domain/repositories/structure_people_readiness_repository.dart';
+import '../../domain/repositories/teaching_assignment_repository.dart';
 import '../../domain/services/structure_tenant_resolver.dart';
 
 class StructureExtendedSetupState extends Equatable {
   final List<CurriculumAssignment> curriculum;
   final List<UserEntity> staff;
+  final List<TeachingAssignment> teachingAssignments;
   final List<ClassTimetable> timetables;
   final List<ClassTimetableLesson> lessons;
   final bool isLoading;
@@ -20,6 +23,7 @@ class StructureExtendedSetupState extends Equatable {
   const StructureExtendedSetupState({
     this.curriculum = const [],
     this.staff = const [],
+    this.teachingAssignments = const [],
     this.timetables = const [],
     this.lessons = const [],
     this.isLoading = true,
@@ -29,6 +33,7 @@ class StructureExtendedSetupState extends Equatable {
   StructureExtendedSetupState copyWith({
     List<CurriculumAssignment>? curriculum,
     List<UserEntity>? staff,
+    List<TeachingAssignment>? teachingAssignments,
     List<ClassTimetable>? timetables,
     List<ClassTimetableLesson>? lessons,
     bool? isLoading,
@@ -37,6 +42,7 @@ class StructureExtendedSetupState extends Equatable {
     return StructureExtendedSetupState(
       curriculum: curriculum ?? this.curriculum,
       staff: staff ?? this.staff,
+      teachingAssignments: teachingAssignments ?? this.teachingAssignments,
       timetables: timetables ?? this.timetables,
       lessons: lessons ?? this.lessons,
       isLoading: isLoading ?? this.isLoading,
@@ -48,6 +54,7 @@ class StructureExtendedSetupState extends Equatable {
   List<Object?> get props => [
         curriculum,
         staff,
+        teachingAssignments,
         timetables,
         lessons,
         isLoading,
@@ -58,6 +65,7 @@ class StructureExtendedSetupState extends Equatable {
 class StructureExtendedSetupCubit extends Cubit<StructureExtendedSetupState> {
   final StructureTenantResolver tenantResolver;
   final CurriculumAssignmentRepository curriculumRepository;
+  final TeachingAssignmentRepository teachingAssignmentRepository;
   final ClassTimetableRepository timetableRepository;
   final StructurePeopleReadinessRepository peopleRepository;
 
@@ -67,6 +75,7 @@ class StructureExtendedSetupCubit extends Cubit<StructureExtendedSetupState> {
   StructureExtendedSetupCubit({
     required this.tenantResolver,
     required this.curriculumRepository,
+    required this.teachingAssignmentRepository,
     required this.timetableRepository,
     required this.peopleRepository,
   }) : super(const StructureExtendedSetupState()) {
@@ -86,6 +95,15 @@ class StructureExtendedSetupCubit extends Cubit<StructureExtendedSetupState> {
         ),
       );
       _subscriptions.add(
+        teachingAssignmentRepository.watchAssignments().listen(
+          (value) => _emitLoaded(
+            'teachingAssignments',
+            state.copyWith(teachingAssignments: value),
+          ),
+          onError: _onError,
+        ),
+      );
+      _subscriptions.add(
         timetableRepository.watchTimetables().listen(
           (value) => _emitLoaded(
             'timetables',
@@ -96,7 +114,10 @@ class StructureExtendedSetupCubit extends Cubit<StructureExtendedSetupState> {
       );
       _subscriptions.add(
         timetableRepository.watchLessons().listen(
-          (value) => _emitLoaded('lessons', state.copyWith(lessons: value)),
+          (value) => _emitLoaded(
+            'lessons',
+            state.copyWith(lessons: value),
+          ),
           onError: _onError,
         ),
       );
@@ -115,7 +136,7 @@ class StructureExtendedSetupCubit extends Cubit<StructureExtendedSetupState> {
     _loaded.add(key);
     emit(
       next.copyWith(
-        isLoading: _loaded.length < 4,
+        isLoading: _loaded.length < 5,
         errorMessage: null,
       ),
     );
