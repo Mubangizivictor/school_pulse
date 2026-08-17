@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/error/failures.dart';
+import '../../domain/entities/student_identity.dart';
 import '../../domain/repositories/student_identity_repository.dart';
 import '../../domain/services/nfc_credential_service.dart';
 import 'student_identity_event.dart';
@@ -30,7 +31,10 @@ class StudentIdentityBloc
               identity.uniqueSystemId,
               event.schoolId,
             );
-            emit(StudentIdentityLoaded(identity, assignedCardUid: cardUid));
+            final effective = cardUid != null && identity.nfcStatus != 'revoked'
+                ? _withNfcStatus(identity, 'active')
+                : identity;
+            emit(StudentIdentityLoaded(effective, assignedCardUid: cardUid));
           },
         );
       } on TimeoutException {
@@ -118,6 +122,7 @@ class StudentIdentityBloc
           result,
           emit,
           successMessage: 'Card assigned',
+          successStatus: 'active',
           studentId: event.studentId,
           uniqueSystemId: event.uniqueSystemId,
           schoolId: event.schoolId,
@@ -145,6 +150,7 @@ class StudentIdentityBloc
           result,
           emit,
           successMessage: 'Card replaced',
+          successStatus: 'active',
           studentId: event.studentId,
           uniqueSystemId: event.uniqueSystemId,
           schoolId: event.schoolId,
@@ -170,6 +176,7 @@ class StudentIdentityBloc
           result,
           emit,
           successMessage: 'Card revoked',
+          successStatus: 'revoked',
           studentId: event.studentId,
           schoolId: event.schoolId,
         );
@@ -193,6 +200,7 @@ class StudentIdentityBloc
           result,
           emit,
           successMessage: 'Card reactivated',
+          successStatus: 'active',
           studentId: event.studentId,
           schoolId: event.schoolId,
         );
@@ -221,10 +229,23 @@ class StudentIdentityBloc
     }
   }
 
+  StudentIdentity _withNfcStatus(StudentIdentity identity, String status) {
+    if (identity.nfcStatus == status) return identity;
+    return StudentIdentity(
+      studentId: identity.studentId,
+      schoolId: identity.schoolId,
+      uniqueSystemId: identity.uniqueSystemId,
+      schoolStudentId: identity.schoolStudentId,
+      qrCodeData: identity.qrCodeData,
+      nfcStatus: status,
+    );
+  }
+
   Future<void> _emitNfcActionResult(
     Either<Failure, void> result,
     Emitter<StudentIdentityState> emit, {
     required String successMessage,
+    required String successStatus,
     required String studentId,
     required String schoolId,
     String? uniqueSystemId,
@@ -243,10 +264,14 @@ class StudentIdentityBloc
                 identity.uniqueSystemId,
                 schoolId,
               );
+              final effectiveIdentity = _withNfcStatus(
+                identity,
+                successStatus,
+              );
               emit(
                 StudentIdentityActionSuccess(
                   successMessage,
-                  identity,
+                  effectiveIdentity,
                   assignedCardUid: cardUid,
                 ),
               );
