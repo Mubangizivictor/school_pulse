@@ -5,6 +5,7 @@ on:
     paths:
       - 'lib/features/structure/**'
       - 'test/features/structure/**'
+      - 'firestore.rules'
       - '.github/workflows/structure-ci.yml'
   workflow_dispatch:
 
@@ -26,5 +27,19 @@ jobs:
         run: dart format lib/features/structure test/features/structure
       - name: Analyze Structure rebuild
         run: flutter analyze --no-fatal-infos --no-fatal-warnings lib/features/structure test/features/structure
+      - name: Verify Structure Firestore rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          for collection in \
+            structure_setup_preferences \
+            structure_curriculum_assignments \
+            structure_teaching_assignments \
+            structure_class_timetables \
+            structure_timetable_lessons; do
+            grep -q "match /${collection}/{id}" firestore.rules
+          done
+          grep -q "isSameSchool(request.resource.data.schoolId)" firestore.rules
+          grep -q "isSameSchool(resource.data.schoolId)" firestore.rules
       - name: Run Structure tests
         run: flutter test test/features/structure
