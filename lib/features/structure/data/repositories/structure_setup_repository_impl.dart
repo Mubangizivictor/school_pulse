@@ -4,11 +4,15 @@ import '../../domain/repositories/structure_setup_repository.dart';
 
 class StructureSetupRepositoryImpl implements StructureSetupRepository {
   final FirebaseFirestore firestore;
+  final String schoolId;
 
-  StructureSetupRepositoryImpl({required this.firestore});
+  StructureSetupRepositoryImpl({
+    required this.firestore,
+    required this.schoolId,
+  }) : assert(schoolId != '');
 
   DocumentReference<Map<String, dynamic>> get _doc =>
-      firestore.collection('structure_config').doc('setup_preferences');
+      firestore.collection('structure_setup_preferences').doc(schoolId);
 
   @override
   Stream<StructureSetupPreferences> watchPreferences() {
@@ -35,6 +39,7 @@ class StructureSetupRepositoryImpl implements StructureSetupRepository {
   Future<void> savePreferences(StructureSetupPreferences preferences) {
     return _doc.set(
       {
+        'schoolId': schoolId,
         'departments': preferences.departments.wireName,
         'streams': preferences.streams.wireName,
         'rooms': preferences.rooms.wireName,
