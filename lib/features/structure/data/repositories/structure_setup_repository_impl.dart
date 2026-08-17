@@ -21,6 +21,8 @@ class StructureSetupRepositoryImpl implements StructureSetupRepository {
         rooms: StructureUseChoiceX.fromWire(data['rooms']),
         houses: StructureUseChoiceX.fromWire(data['houses']),
         clubs: StructureUseChoiceX.fromWire(data['clubs']),
+        boarding: StructureUseChoiceX.fromWire(data['boarding']),
+        transport: StructureUseChoiceX.fromWire(data['transport']),
         onboardingCompleted: data['onboardingCompleted'] == true,
         setupVersion: (data['setupVersion'] as num?)?.toInt() ??
             StructureSetupPreferences.currentSetupVersion,
@@ -38,6 +40,8 @@ class StructureSetupRepositoryImpl implements StructureSetupRepository {
         'rooms': preferences.rooms.wireName,
         'houses': preferences.houses.wireName,
         'clubs': preferences.clubs.wireName,
+        'boarding': preferences.boarding.wireName,
+        'transport': preferences.transport.wireName,
         'onboardingCompleted': preferences.onboardingCompleted,
         'setupVersion': preferences.setupVersion,
         'lastStepId': preferences.lastStepId,
