@@ -1,6 +1,8 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:school_pulse/features/structure/domain/entities/assessment_grading_entities.dart';
+import 'package:school_pulse/features/structure/domain/entities/institution_profile.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
@@ -187,6 +189,37 @@ void main() {
         isA<StructureState>().having((s) => s.isLoading, 'isLoading', isTrue),
         isA<StructureState>().having((s) => s.levels, 'levels', [_level()]),
       ],
+    );
+
+    blocTest<StructureBloc, StructureState>(
+      'Structure entry finishes loading without waiting for optional modules',
+      build: () {
+        when(
+          () => repository.watchLevels(any()),
+        ).thenAnswer((_) => Stream.value(<EducationalLevel>[]));
+        when(
+          () => repository.watchAcademicYears(any()),
+        ).thenAnswer((_) => Stream.value(<AcademicYear>[]));
+        when(
+          () => repository.watchAcademicTerms(any()),
+        ).thenAnswer((_) => Stream.value(<AcademicTerm>[]));
+        when(
+          () => repository.watchClasses(any()),
+        ).thenAnswer((_) => Stream.value(<SchoolClass>[]));
+        when(
+          () => repository.watchSubjects(any()),
+        ).thenAnswer((_) => Stream.value(<Subject>[]));
+        when(
+          () => repository.watchInstitutionProfile(any()),
+        ).thenAnswer((_) => Stream.value(const InstitutionProfile()));
+        when(
+          () => repository.watchGradingSystems(any()),
+        ).thenAnswer((_) => Stream.value(<GradingSystemDef>[]));
+        return StructureBloc(repository: repository);
+      },
+      act: (bloc) => bloc.add(const LoadStructureData('school-1')),
+      wait: const Duration(milliseconds: 50),
+      verify: (bloc) => expect(bloc.state.isLoading, isFalse),
     );
   });
 }

@@ -15,37 +15,19 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
   final StructureIntegrityValidator _validator;
 
   final Set<String> _loadedParts = <String>{};
+  // Structure's entry wizard can only decide where to send an admin from
+  // these core records. Do not make its loading gate depend on every
+  // optional Structure module (transport, boarding, communications, etc.).
+  // A delayed or unavailable optional collection previously kept
+  // `/staff/admin/structure` on its spinner indefinitely.
   static const Set<String> _requiredLoads = {
     'levels',
     'years',
     'terms',
     'classes',
-    'streams',
     'subjects',
-    'departments',
-    'designations',
-    'toggles',
     'institution',
-    'houses',
-    'clubs',
-    'facilities',
-    'hostels',
-    'hostelRooms',
-    'routes',
-    'stops',
-    'vehicles',
-    'feeCategories',
-    'assessmentTypes',
     'gradingSystems',
-    'gradeBands',
-    'timetable',
-    'attendanceTypes',
-    'attendanceSessions',
-    'announcementCategories',
-    'notificationCategories',
-    'messageTemplates',
-    'documentTemplates',
-    'customFields',
   };
 
   StreamSubscription? _levelsSub;
