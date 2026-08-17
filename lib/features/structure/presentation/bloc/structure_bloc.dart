@@ -1,14 +1,53 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../domain/entities/assessment_grading_entities.dart';
+import '../../domain/entities/campus_entities.dart';
+import '../../domain/entities/hostel_entities.dart';
+import '../../domain/entities/timetable_config.dart';
+import '../../domain/entities/transport_structure_entities.dart';
 import '../../domain/repositories/structure_repository.dart';
-import '../../domain/services/capacity_validation_service.dart';
+import '../../domain/services/structure_integrity_validator.dart';
 import 'structure_event.dart';
 import 'structure_state.dart';
 
 class StructureBloc extends Bloc<StructureEvent, StructureState> {
   final StructureRepository repository;
-  final CapacityValidationService _capacityValidation =
-      const CapacityValidationService();
+  final StructureIntegrityValidator _validator;
+
+  final Set<String> _loadedParts = <String>{};
+  static const Set<String> _requiredLoads = {
+    'levels',
+    'years',
+    'terms',
+    'classes',
+    'streams',
+    'subjects',
+    'departments',
+    'designations',
+    'roles',
+    'toggles',
+    'institution',
+    'houses',
+    'clubs',
+    'facilities',
+    'hostels',
+    'hostelRooms',
+    'routes',
+    'stops',
+    'vehicles',
+    'feeCategories',
+    'assessmentTypes',
+    'gradingSystems',
+    'gradeBands',
+    'timetable',
+    'attendanceTypes',
+    'attendanceSessions',
+    'announcementCategories',
+    'notificationCategories',
+    'messageTemplates',
+    'documentTemplates',
+    'customFields',
+  };
 
   StreamSubscription? _levelsSub;
   StreamSubscription? _yearsSub;
@@ -18,9 +57,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
   StreamSubscription? _subjectsSub;
   StreamSubscription? _departmentsSub;
   StreamSubscription? _designationsSub;
+  StreamSubscription? _staffRolesSub;
   StreamSubscription? _togglesSub;
   StreamSubscription? _institutionProfileSub;
-  StreamSubscription? _campusesSub;
   StreamSubscription? _housesSub;
   StreamSubscription? _clubsSub;
   StreamSubscription? _facilitiesSub;
@@ -34,8 +73,6 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
   StreamSubscription? _gradingSystemsSub;
   StreamSubscription? _gradeBandsSub;
   StreamSubscription? _timetableConfigSub;
-  StreamSubscription? _attendanceDefaultsConfigSub;
-  StreamSubscription? _communicationDefaultsConfigSub;
   StreamSubscription? _attendanceTypesSub;
   StreamSubscription? _attendanceSessionsSub;
   StreamSubscription? _announcementCategoriesSub;
@@ -44,766 +81,549 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
   StreamSubscription? _documentTemplatesSub;
   StreamSubscription? _customFieldsSub;
 
-  StructureBloc({required this.repository}) : super(const StructureState()) {
+  StructureBloc({
+    required this.repository,
+    StructureIntegrityValidator validator = const StructureIntegrityValidator(),
+  })  : _validator = validator,
+        super(const StructureState()) {
     on<LoadStructureData>(_onLoad);
-    on<ClearStructureData>(_onClear);
-    on<LevelsUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, levels: event.levels)),
-    );
-    on<AcademicYearsUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, academicYears: event.years)),
-    );
-    on<AcademicTermsUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, academicTerms: event.terms)),
-    );
-    on<ClassesUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, classes: event.classes)),
-    );
-    on<StreamsUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, streams: event.streams)),
-    );
-    on<SubjectsUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, subjects: event.subjects)),
-    );
-    on<DepartmentsUpdated>(
-      (event, emit) => emit(
-        state.copyWith(isLoading: false, departments: event.departments),
-      ),
-    );
-    on<DesignationsUpdated>(
-      (event, emit) => emit(
-        state.copyWith(isLoading: false, designations: event.designations),
-      ),
-    );
-    on<FeatureTogglesUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, featureToggles: event.toggles)),
-    );
-    on<InstitutionProfileUpdated>(
-      (event, emit) => emit(
-        state.copyWith(isLoading: false, institutionProfile: event.profile),
-      ),
-    );
-    on<CampusesUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, campuses: event.campuses)),
-    );
-    on<HousesUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, houses: event.houses)),
-    );
-    on<ClubsUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, clubs: event.clubs)),
-    );
-    on<FacilitiesUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, facilities: event.facilities)),
-    );
-    on<HostelsUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, hostels: event.hostels)),
-    );
-    on<HostelRoomsUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, hostelRooms: event.rooms)),
-    );
-    on<TransportRoutesUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, transportRoutes: event.routes)),
-    );
-    on<TransportStopsUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, transportStops: event.stops)),
-    );
-    on<TransportVehiclesUpdated>(
-      (event, emit) => emit(
-        state.copyWith(isLoading: false, transportVehicles: event.vehicles),
-      ),
-    );
-    on<FeeCategoriesUpdated>(
-      (event, emit) => emit(
-        state.copyWith(isLoading: false, feeCategories: event.categories),
-      ),
-    );
-    on<AssessmentTypesUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, assessmentTypes: event.types)),
-    );
-    on<GradingSystemsUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, gradingSystems: event.systems)),
-    );
-    on<GradeBandsUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, gradeBands: event.bands)),
-    );
-    on<TimetableConfigUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, timetableConfig: event.config)),
-    );
-    on<AttendanceDefaultsConfigUpdated>(
-      (event, emit) => emit(
-        state.copyWith(
-          isLoading: false,
-          attendanceDefaultsConfig: event.config,
-        ),
-      ),
-    );
-    on<CommunicationDefaultsConfigUpdated>(
-      (event, emit) => emit(
-        state.copyWith(
-          isLoading: false,
-          communicationDefaultsConfig: event.config,
-        ),
-      ),
-    );
-    on<AttendanceTypesUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, attendanceTypes: event.types)),
-    );
-    on<AttendanceSessionsUpdated>(
-      (event, emit) => emit(
-        state.copyWith(isLoading: false, attendanceSessions: event.sessions),
-      ),
-    );
-    on<AnnouncementCategoriesUpdated>(
-      (event, emit) => emit(
-        state.copyWith(
-          isLoading: false,
-          announcementCategories: event.categories,
-        ),
-      ),
-    );
-    on<NotificationCategoriesUpdated>(
-      (event, emit) => emit(
-        state.copyWith(
-          isLoading: false,
-          notificationCategories: event.categories,
-        ),
-      ),
-    );
-    on<MessageTemplatesUpdated>(
-      (event, emit) => emit(
-        state.copyWith(isLoading: false, messageTemplates: event.templates),
-      ),
-    );
-    on<DocumentTemplatesUpdated>(
-      (event, emit) => emit(
-        state.copyWith(isLoading: false, documentTemplates: event.templates),
-      ),
-    );
-    on<CustomFieldsUpdated>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, customFields: event.fields)),
-    );
-    on<StructureLoadFailed>(
-      (event, emit) =>
-          emit(state.copyWith(isLoading: false, errorMessage: event.message)),
-    );
 
-    on<SaveLevelRequested>((event, emit) => repository.addLevel(event.level));
-    on<DeleteLevelRequested>(
-      (event, emit) => repository.deleteLevel(event.levelId),
-    );
-    on<ArchiveLevelRequested>(
-      (event, emit) => repository.archiveLevel(event.levelId),
-    );
+    on<LevelsUpdated>((event, emit) => _loaded(emit, 'levels', state.copyWith(levels: event.levels)));
+    on<AcademicYearsUpdated>((event, emit) => _loaded(emit, 'years', state.copyWith(academicYears: event.years)));
+    on<AcademicTermsUpdated>((event, emit) => _loaded(emit, 'terms', state.copyWith(academicTerms: event.terms)));
+    on<ClassesUpdated>((event, emit) => _loaded(emit, 'classes', state.copyWith(classes: event.classes)));
+    on<StreamsUpdated>((event, emit) => _loaded(emit, 'streams', state.copyWith(streams: event.streams)));
+    on<SubjectsUpdated>((event, emit) => _loaded(emit, 'subjects', state.copyWith(subjects: event.subjects)));
+    on<DepartmentsUpdated>((event, emit) => _loaded(emit, 'departments', state.copyWith(departments: event.departments)));
+    on<DesignationsUpdated>((event, emit) => _loaded(emit, 'designations', state.copyWith(designations: event.designations)));
+    on<StaffRolesUpdated>((event, emit) => _loaded(emit, 'roles', state.copyWith(staffRoles: event.roles)));
+    on<FeatureTogglesUpdated>((event, emit) => _loaded(emit, 'toggles', state.copyWith(featureToggles: event.toggles)));
+    on<InstitutionProfileUpdated>((event, emit) => _loaded(emit, 'institution', state.copyWith(institutionProfile: event.profile)));
+    on<HousesUpdated>((event, emit) => _loaded(emit, 'houses', state.copyWith(houses: event.houses)));
+    on<ClubsUpdated>((event, emit) => _loaded(emit, 'clubs', state.copyWith(clubs: event.clubs)));
+    on<FacilitiesUpdated>((event, emit) => _loaded(emit, 'facilities', state.copyWith(facilities: event.facilities)));
+    on<HostelsUpdated>((event, emit) => _loaded(emit, 'hostels', state.copyWith(hostels: event.hostels)));
+    on<HostelRoomsUpdated>((event, emit) => _loaded(emit, 'hostelRooms', state.copyWith(hostelRooms: event.rooms)));
+    on<TransportRoutesUpdated>((event, emit) => _loaded(emit, 'routes', state.copyWith(transportRoutes: event.routes)));
+    on<TransportStopsUpdated>((event, emit) => _loaded(emit, 'stops', state.copyWith(transportStops: event.stops)));
+    on<TransportVehiclesUpdated>((event, emit) => _loaded(emit, 'vehicles', state.copyWith(transportVehicles: event.vehicles)));
+    on<FeeCategoriesUpdated>((event, emit) => _loaded(emit, 'feeCategories', state.copyWith(feeCategories: event.categories)));
+    on<AssessmentTypesUpdated>((event, emit) => _loaded(emit, 'assessmentTypes', state.copyWith(assessmentTypes: event.types)));
+    on<GradingSystemsUpdated>((event, emit) => _loaded(emit, 'gradingSystems', state.copyWith(gradingSystems: event.systems)));
+    on<GradeBandsUpdated>((event, emit) => _loaded(emit, 'gradeBands', state.copyWith(gradeBands: event.bands)));
+    on<TimetableConfigUpdated>((event, emit) => _loaded(emit, 'timetable', state.copyWith(timetableConfig: event.config)));
+    on<AttendanceTypesUpdated>((event, emit) => _loaded(emit, 'attendanceTypes', state.copyWith(attendanceTypes: event.types)));
+    on<AttendanceSessionsUpdated>((event, emit) => _loaded(emit, 'attendanceSessions', state.copyWith(attendanceSessions: event.sessions)));
+    on<AnnouncementCategoriesUpdated>((event, emit) => _loaded(emit, 'announcementCategories', state.copyWith(announcementCategories: event.categories)));
+    on<NotificationCategoriesUpdated>((event, emit) => _loaded(emit, 'notificationCategories', state.copyWith(notificationCategories: event.categories)));
+    on<MessageTemplatesUpdated>((event, emit) => _loaded(emit, 'messageTemplates', state.copyWith(messageTemplates: event.templates)));
+    on<DocumentTemplatesUpdated>((event, emit) => _loaded(emit, 'documentTemplates', state.copyWith(documentTemplates: event.templates)));
+    on<CustomFieldsUpdated>((event, emit) => _loaded(emit, 'customFields', state.copyWith(customFields: event.fields)));
+    on<StructureLoadFailed>((event, emit) => emit(state.copyWith(isLoading: false, errorMessage: event.message)));
 
-    on<SaveAcademicYearRequested>(
-      (event, emit) => repository.addAcademicYear(event.year),
-    );
-    on<DeleteAcademicYearRequested>(
-      (event, emit) => repository.deleteAcademicYear(event.yearId),
-    );
-    on<SetCurrentAcademicYearRequested>(
-      (event, emit) =>
-          repository.setCurrentAcademicYear(event.yearId, event.schoolId),
-    );
+    on<SaveLevelRequested>((event, emit) async {
+      final error = _validator.validateLevel(event.level, state.levels);
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addLevel(event.level));
+    });
+    on<DeleteLevelRequested>((event, emit) async {
+      if (state.classes.any((item) => item.levelId == event.levelId)) {
+        return _validationFailed(emit, 'This level is used by classes. Deactivate it instead of deleting it.');
+      }
+      await _write(emit, () => repository.deleteLevel(event.levelId));
+    });
 
-    on<SaveAcademicTermRequested>(
-      (event, emit) => repository.addAcademicTerm(event.term),
-    );
-    on<DeleteAcademicTermRequested>(
-      (event, emit) => repository.deleteAcademicTerm(event.termId),
-    );
-    on<SetCurrentAcademicTermRequested>(
-      (event, emit) =>
-          repository.setCurrentAcademicTerm(event.termId, event.schoolId),
-    );
+    on<SaveAcademicYearRequested>((event, emit) async {
+      final error = _validator.validateAcademicYear(event.year, state.academicYears);
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addAcademicYear(event.year));
+    });
+    on<DeleteAcademicYearRequested>((event, emit) async {
+      if (state.academicTerms.any((item) => item.academicYearId == event.yearId)) {
+        return _validationFailed(emit, 'This academic year contains terms/semesters. Archive it instead of deleting it.');
+      }
+      await _write(emit, () => repository.deleteAcademicYear(event.yearId));
+    });
+    on<SetCurrentAcademicYearRequested>((event, emit) async {
+      final matches = state.academicYears.where((item) => item.id == event.yearId && !item.isArchived);
+      if (matches.isEmpty) return _validationFailed(emit, 'Select a valid non-archived academic year.');
+      await _write(emit, () => repository.setCurrentAcademicYear(event.yearId));
+    });
+
+    on<SaveAcademicTermRequested>((event, emit) async {
+      final error = _validator.validateAcademicTerm(event.term, state.academicYears, state.academicTerms);
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addAcademicTerm(event.term));
+    });
+    on<DeleteAcademicTermRequested>((event, emit) async {
+      await _write(emit, () => repository.deleteAcademicTerm(event.termId));
+    });
+    on<SetCurrentAcademicTermRequested>((event, emit) async {
+      final matches = state.academicTerms.where((item) => item.id == event.termId);
+      if (matches.isEmpty) return _validationFailed(emit, 'Select a valid term/semester.');
+      final currentYearIds = state.academicYears.where((item) => item.isCurrent && !item.isArchived).map((item) => item.id).toSet();
+      if (!currentYearIds.contains(matches.first.academicYearId)) {
+        return _validationFailed(emit, 'Set the term’s academic year as current before making this term current.');
+      }
+      await _write(emit, () => repository.setCurrentAcademicTerm(event.termId));
+    });
 
     on<SaveClassRequested>((event, emit) async {
-      final existing = state.classes
-          .where((c) => c.id == event.schoolClass.id)
-          .firstOrNull;
-      if (existing != null &&
-          existing.capacity != event.schoolClass.capacity) {
-        final result = _capacityValidation.validateClassCapacityChange(
-          candidate: event.schoolClass,
-          newCapacity: event.schoolClass.capacity,
-          streams: state.streams,
-        );
-        if (!result.isValid) {
-          emit(state.copyWith(errorMessage: result.errorMessage));
-          return;
-        }
-      }
-      await repository.addClass(event.schoolClass);
+      final error = _validator.validateClass(
+        event.schoolClass,
+        levels: state.levels,
+        classes: state.classes,
+        streams: state.streams,
+      );
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addClass(event.schoolClass));
     });
-    on<DeleteClassRequested>(
-      (event, emit) => repository.deleteClass(event.classId),
-    );
-    on<ArchiveClassRequested>(
-      (event, emit) => repository.archiveClass(event.classId),
-    );
+    on<DeleteClassRequested>((event, emit) async {
+      if (state.streams.any((item) => item.classId == event.classId)) {
+        return _validationFailed(emit, 'This class has streams/sections. Deactivate it instead of deleting it.');
+      }
+      await _write(emit, () => repository.deleteClass(event.classId));
+    });
 
     on<SaveStreamRequested>((event, emit) async {
-      final result = _capacityValidation.validateStreamSave(
-        candidate: event.stream,
-        existingStreams: state.streams,
+      final error = _validator.validateStream(
+        event.stream,
         classes: state.classes,
+        streams: state.streams,
       );
-      if (!result.isValid) {
-        emit(state.copyWith(errorMessage: result.errorMessage));
-        return;
-      }
-      await repository.addStream(event.stream);
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addStream(event.stream));
     });
-    on<DeleteStreamRequested>(
-      (event, emit) => repository.deleteStream(event.streamId),
-    );
-    on<ArchiveStreamRequested>(
-      (event, emit) => repository.archiveStream(event.streamId),
-    );
+    on<DeleteStreamRequested>((event, emit) async {
+      await _write(emit, () => repository.deleteStream(event.streamId));
+    });
 
-    on<SaveSubjectRequested>(
-      (event, emit) => repository.addSubject(event.subject),
-    );
-    on<DeleteSubjectRequested>(
-      (event, emit) => repository.deleteSubject(event.subjectId),
-    );
-    on<ArchiveSubjectRequested>(
-      (event, emit) => repository.archiveSubject(event.subjectId),
-    );
+    on<SaveSubjectRequested>((event, emit) async {
+      final error = _validator.validateSubject(
+        event.subject,
+        subjects: state.subjects,
+        departments: state.departments,
+      );
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addSubject(event.subject));
+    });
+    on<DeleteSubjectRequested>((event, emit) async {
+      return _validationFailed(emit, 'Hard-delete of subjects is disabled to protect academic history. Deactivate the subject instead.');
+    });
 
-    on<SaveDepartmentRequested>(
-      (event, emit) => repository.addDepartment(event.department),
-    );
-    on<DeleteDepartmentRequested>(
-      (event, emit) => repository.deleteDepartment(event.departmentId),
-    );
-    on<ArchiveDepartmentRequested>(
-      (event, emit) => repository.archiveDepartment(event.departmentId),
-    );
+    on<SaveDepartmentRequested>((event, emit) async {
+      final error = _validator.validateDepartment(event.department, state.departments);
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addDepartment(event.department));
+    });
+    on<DeleteDepartmentRequested>((event, emit) async {
+      if (state.subjects.any((item) => item.departmentId == event.departmentId)) {
+        return _validationFailed(emit, 'This department is referenced by subjects. Deactivate it instead of deleting it.');
+      }
+      await _write(emit, () => repository.deleteDepartment(event.departmentId));
+    });
 
-    on<SaveDesignationRequested>(
-      (event, emit) => repository.addDesignation(event.designation),
-    );
-    on<DeleteDesignationRequested>(
-      (event, emit) => repository.deleteDesignation(event.designationId),
-    );
-    on<ArchiveDesignationRequested>(
-      (event, emit) => repository.archiveDesignation(event.designationId),
-    );
-    on<RestoreDesignationRequested>(
-      (event, emit) => repository.restoreDesignation(event.designationId),
-    );
+    on<SaveDesignationRequested>((event, emit) async {
+      final error = _validator.validateDesignation(event.designation, state.designations);
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addDesignation(event.designation));
+    });
+    on<DeleteDesignationRequested>((event, emit) async {
+      if (state.staffRoles.any((item) => item.designationId == event.designationId)) {
+        return _validationFailed(emit, 'This designation is referenced by staff roles. Deactivate it instead of deleting it.');
+      }
+      await _write(emit, () => repository.deleteDesignation(event.designationId));
+    });
 
-    on<UpdateFeatureTogglesRequested>(
-      (event, emit) =>
-          repository.updateFeatureToggles(event.toggles, event.schoolId),
-    );
+    on<SaveStaffRoleRequested>((event, emit) async {
+      final error = _validator.validateRole(
+        event.role,
+        roles: state.staffRoles,
+        designations: state.designations,
+      );
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addStaffRole(event.role));
+    });
+    on<DeleteStaffRoleRequested>((event, emit) async {
+      return _validationFailed(emit, 'Hard-delete of staff roles is disabled to protect responsibility history. Deactivate the role instead.');
+    });
 
-    on<UpdateInstitutionProfileRequested>(
-      (event, emit) =>
-          repository.updateInstitutionProfile(event.profile, event.schoolId),
-    );
+    on<UpdateFeatureTogglesRequested>((event, emit) async => _write(emit, () => repository.updateFeatureToggles(event.toggles)));
+    on<UpdateInstitutionProfileRequested>((event, emit) async => _write(emit, () => repository.updateInstitutionProfile(event.profile)));
 
-    on<SaveCampusRequested>(
-      (event, emit) => repository.addCampus(event.campus),
-    );
-    on<DeleteCampusRequested>(
-      (event, emit) => repository.deleteCampus(event.campusId),
-    );
-    on<ArchiveCampusRequested>(
-      (event, emit) => repository.archiveCampus(event.campusId),
-    );
+    on<SaveHouseRequested>((event, emit) async {
+      if (event.house.name.trim().isEmpty) return _validationFailed(emit, 'Enter a house name.');
+      if (_duplicateActiveName(event.house.id, event.house.name, state.houses.map((item) => (item.id, item.name, item.isActive)))) {
+        return _validationFailed(emit, 'An active house with this name already exists.');
+      }
+      await _write(emit, () => repository.addHouse(event.house));
+    });
+    on<DeleteHouseRequested>((event, emit) async => _write(emit, () => repository.deleteHouse(event.houseId)));
 
-    on<SaveHouseRequested>((event, emit) => repository.addHouse(event.house));
-    on<DeleteHouseRequested>(
-      (event, emit) => repository.deleteHouse(event.houseId),
-    );
+    on<SaveClubRequested>((event, emit) async {
+      if (event.club.name.trim().isEmpty) return _validationFailed(emit, 'Enter a club or society name.');
+      if (_duplicateActiveName(event.club.id, event.club.name, state.clubs.map((item) => (item.id, item.name, item.isActive)))) {
+        return _validationFailed(emit, 'An active club with this name already exists.');
+      }
+      await _write(emit, () => repository.addClub(event.club));
+    });
+    on<DeleteClubRequested>((event, emit) async => _write(emit, () => repository.deleteClub(event.clubId)));
 
-    on<SaveClubRequested>((event, emit) => repository.addClub(event.club));
-    on<DeleteClubRequested>(
-      (event, emit) => repository.deleteClub(event.clubId),
-    );
+    on<SaveFacilityRequested>((event, emit) async {
+      final error = _validateFacility(event.facility, state.facilities);
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addFacility(event.facility));
+    });
+    on<DeleteFacilityRequested>((event, emit) async => _write(emit, () => repository.deleteFacility(event.facilityId)));
 
-    on<SaveFacilityRequested>(
-      (event, emit) => repository.addFacility(event.facility),
-    );
-    on<DeleteFacilityRequested>(
-      (event, emit) => repository.deleteFacility(event.facilityId),
-    );
+    on<SaveHostelRequested>((event, emit) async {
+      final error = _validateHostel(event.hostel, state.hostels, state.hostelRooms);
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addHostel(event.hostel));
+    });
+    on<DeleteHostelRequested>((event, emit) async {
+      if (state.hostelRooms.any((item) => item.hostelId == event.hostelId)) {
+        return _validationFailed(emit, 'This hostel contains rooms. Deactivate it instead of deleting it.');
+      }
+      await _write(emit, () => repository.deleteHostel(event.hostelId));
+    });
 
-    on<SaveHostelRequested>(
-      (event, emit) => repository.addHostel(event.hostel),
-    );
-    on<DeleteHostelRequested>(
-      (event, emit) => repository.deleteHostel(event.hostelId),
-    );
+    on<SaveHostelRoomRequested>((event, emit) async {
+      final error = _validateHostelRoom(event.room, state.hostels, state.hostelRooms);
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addHostelRoom(event.room));
+    });
+    on<DeleteHostelRoomRequested>((event, emit) async => _write(emit, () => repository.deleteHostelRoom(event.roomId)));
 
-    on<SaveHostelRoomRequested>(
-      (event, emit) => repository.addHostelRoom(event.room),
-    );
-    on<DeleteHostelRoomRequested>(
-      (event, emit) => repository.deleteHostelRoom(event.roomId),
-    );
+    on<SaveTransportRouteRequested>((event, emit) async {
+      if (event.route.name.trim().isEmpty) return _validationFailed(emit, 'Enter a transport route name.');
+      await _write(emit, () => repository.addTransportRoute(event.route));
+    });
+    on<DeleteTransportRouteRequested>((event, emit) async {
+      if (state.transportStops.any((item) => item.routeId == event.routeId) ||
+          state.transportVehicles.any((item) => item.routeId == event.routeId)) {
+        return _validationFailed(emit, 'This route has stops or vehicles. Deactivate it instead of deleting it.');
+      }
+      await _write(emit, () => repository.deleteTransportRoute(event.routeId));
+    });
 
-    on<SaveTransportRouteRequested>(
-      (event, emit) => repository.addTransportRoute(event.route),
-    );
-    on<DeleteTransportRouteRequested>(
-      (event, emit) => repository.deleteTransportRoute(event.routeId),
-    );
+    on<SaveTransportStopRequested>((event, emit) async {
+      final error = _validateTransportStop(event.stop, state.transportRoutes);
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addTransportStop(event.stop));
+    });
+    on<DeleteTransportStopRequested>((event, emit) async => _write(emit, () => repository.deleteTransportStop(event.stopId)));
 
-    on<SaveTransportStopRequested>(
-      (event, emit) => repository.addTransportStop(event.stop),
-    );
-    on<DeleteTransportStopRequested>(
-      (event, emit) => repository.deleteTransportStop(event.stopId),
-    );
+    on<SaveTransportVehicleRequested>((event, emit) async {
+      final error = _validateTransportVehicle(event.vehicle, state.transportRoutes);
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addTransportVehicle(event.vehicle));
+    });
+    on<DeleteTransportVehicleRequested>((event, emit) async => _write(emit, () => repository.deleteTransportVehicle(event.vehicleId)));
 
-    on<SaveTransportVehicleRequested>(
-      (event, emit) => repository.addTransportVehicle(event.vehicle),
-    );
-    on<DeleteTransportVehicleRequested>(
-      (event, emit) => repository.deleteTransportVehicle(event.vehicleId),
-    );
+    on<SaveFeeCategoryRequested>((event, emit) async => _write(emit, () => repository.addFeeCategory(event.category)));
+    on<DeleteFeeCategoryRequested>((event, emit) async => _write(emit, () => repository.deleteFeeCategory(event.categoryId)));
 
-    on<SaveFeeCategoryRequested>(
-      (event, emit) => repository.addFeeCategory(event.category),
-    );
-    on<DeleteFeeCategoryRequested>(
-      (event, emit) => repository.deleteFeeCategory(event.categoryId),
-    );
+    on<SaveAssessmentTypeRequested>((event, emit) async {
+      if (event.type.name.trim().isEmpty) return _validationFailed(emit, 'Enter an assessment type name.');
+      if (event.type.weightPercentage < 0 || event.type.weightPercentage > 100) {
+        return _validationFailed(emit, 'Assessment weight must be between 0 and 100.');
+      }
+      await _write(emit, () => repository.addAssessmentType(event.type));
+    });
+    on<DeleteAssessmentTypeRequested>((event, emit) async => _write(emit, () => repository.deleteAssessmentType(event.typeId)));
 
-    on<SaveAssessmentTypeRequested>(
-      (event, emit) => repository.addAssessmentType(event.type),
-    );
-    on<DeleteAssessmentTypeRequested>(
-      (event, emit) => repository.deleteAssessmentType(event.typeId),
-    );
+    on<SaveGradingSystemRequested>((event, emit) async {
+      if (event.system.name.trim().isEmpty) return _validationFailed(emit, 'Enter a grading system name.');
+      await _write(emit, () async {
+        if (event.system.isDefault) {
+          for (final current in state.gradingSystems.where((item) => item.id != event.system.id && item.isDefault)) {
+            await repository.updateGradingSystem(current.copyWith(isDefault: false));
+          }
+        }
+        await repository.addGradingSystem(event.system);
+      });
+    });
+    on<DeleteGradingSystemRequested>((event, emit) async {
+      if (state.gradeBands.any((item) => item.gradingSystemId == event.systemId)) {
+        return _validationFailed(emit, 'This grading system has grade bands. Deactivate it instead of deleting it.');
+      }
+      await _write(emit, () => repository.deleteGradingSystem(event.systemId));
+    });
 
-    on<SaveGradingSystemRequested>(
-      (event, emit) => repository.addGradingSystem(event.system),
-    );
-    on<DeleteGradingSystemRequested>(
-      (event, emit) => repository.deleteGradingSystem(event.systemId),
-    );
+    on<SaveGradeBandRequested>((event, emit) async {
+      final error = _validateGradeBand(event.band, state.gradingSystems, state.gradeBands);
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.addGradeBand(event.band));
+    });
+    on<DeleteGradeBandRequested>((event, emit) async => _write(emit, () => repository.deleteGradeBand(event.bandId)));
 
-    on<SaveGradeBandRequested>(
-      (event, emit) => repository.addGradeBand(event.band),
-    );
-    on<DeleteGradeBandRequested>(
-      (event, emit) => repository.deleteGradeBand(event.bandId),
-    );
+    on<UpdateTimetableConfigRequested>((event, emit) async {
+      final error = _validateTimetableConfig(event.config);
+      if (error != null) return _validationFailed(emit, error);
+      await _write(emit, () => repository.updateTimetableConfig(event.config));
+    });
 
-    on<UpdateTimetableConfigRequested>(
-      (event, emit) =>
-          repository.updateTimetableConfig(event.config, event.schoolId),
-    );
-    on<UpdateAttendanceDefaultsConfigRequested>(
-      (event, emit) => repository.updateAttendanceDefaultsConfig(
-        event.config,
-        event.schoolId,
-      ),
-    );
-    on<UpdateCommunicationDefaultsConfigRequested>(
-      (event, emit) => repository.updateCommunicationDefaultsConfig(
-        event.config,
-        event.schoolId,
-      ),
-    );
+    on<SaveAttendanceTypeRequested>((event, emit) async => _write(emit, () => repository.addAttendanceType(event.type)));
+    on<DeleteAttendanceTypeRequested>((event, emit) async => _write(emit, () => repository.deleteAttendanceType(event.typeId)));
+    on<SaveAttendanceSessionRequested>((event, emit) async => _write(emit, () => repository.addAttendanceSession(event.session)));
+    on<DeleteAttendanceSessionRequested>((event, emit) async => _write(emit, () => repository.deleteAttendanceSession(event.sessionId)));
 
-    on<SaveAttendanceTypeRequested>(
-      (event, emit) => repository.addAttendanceType(event.type),
-    );
-    on<DeleteAttendanceTypeRequested>(
-      (event, emit) => repository.deleteAttendanceType(event.typeId),
-    );
+    on<SaveAnnouncementCategoryRequested>((event, emit) async => _write(emit, () => repository.addAnnouncementCategory(event.category)));
+    on<DeleteAnnouncementCategoryRequested>((event, emit) async => _write(emit, () => repository.deleteAnnouncementCategory(event.categoryId)));
+    on<SaveNotificationCategoryRequested>((event, emit) async => _write(emit, () => repository.addNotificationCategory(event.category)));
+    on<DeleteNotificationCategoryRequested>((event, emit) async => _write(emit, () => repository.deleteNotificationCategory(event.categoryId)));
+    on<SaveMessageTemplateRequested>((event, emit) async => _write(emit, () => repository.addMessageTemplate(event.template)));
+    on<DeleteMessageTemplateRequested>((event, emit) async => _write(emit, () => repository.deleteMessageTemplate(event.templateId)));
+    on<SaveDocumentTemplateRequested>((event, emit) async => _write(emit, () => repository.addDocumentTemplate(event.template)));
+    on<DeleteDocumentTemplateRequested>((event, emit) async => _write(emit, () => repository.deleteDocumentTemplate(event.templateId)));
+    on<SaveCustomFieldRequested>((event, emit) async => _write(emit, () => repository.addCustomField(event.field)));
+    on<DeleteCustomFieldRequested>((event, emit) async => _write(emit, () => repository.deleteCustomField(event.fieldId)));
+  }
 
-    on<SaveAttendanceSessionRequested>(
-      (event, emit) => repository.addAttendanceSession(event.session),
-    );
-    on<DeleteAttendanceSessionRequested>(
-      (event, emit) => repository.deleteAttendanceSession(event.sessionId),
-    );
+  void _loaded(Emitter<StructureState> emit, String part, StructureState next) {
+    _loadedParts.add(part);
+    emit(next.copyWith(isLoading: !_loadedParts.containsAll(_requiredLoads)));
+  }
 
-    on<SaveAnnouncementCategoryRequested>(
-      (event, emit) => repository.addAnnouncementCategory(event.category),
-    );
-    on<DeleteAnnouncementCategoryRequested>(
-      (event, emit) => repository.deleteAnnouncementCategory(event.categoryId),
-    );
+  void _validationFailed(Emitter<StructureState> emit, String message) {
+    emit(state.copyWith(isLoading: false, errorMessage: message));
+  }
 
-    on<SaveNotificationCategoryRequested>(
-      (event, emit) => repository.addNotificationCategory(event.category),
-    );
-    on<DeleteNotificationCategoryRequested>(
-      (event, emit) => repository.deleteNotificationCategory(event.categoryId),
-    );
+  Future<void> _write(
+    Emitter<StructureState> emit,
+    Future<void> Function() operation,
+  ) async {
+    try {
+      await operation();
+    } catch (error) {
+      emit(state.copyWith(isLoading: false, errorMessage: error.toString()));
+    }
+  }
 
-    on<SaveMessageTemplateRequested>(
-      (event, emit) => repository.addMessageTemplate(event.template),
-    );
-    on<DeleteMessageTemplateRequested>(
-      (event, emit) => repository.deleteMessageTemplate(event.templateId),
-    );
+  bool _duplicateActiveName(
+    String id,
+    String name,
+    Iterable<(String, String, bool)> records,
+  ) {
+    final normalized = name.trim().toLowerCase();
+    return records.any((record) => record.$1 != id && record.$3 && record.$2.trim().toLowerCase() == normalized);
+  }
 
-    on<SaveDocumentTemplateRequested>(
-      (event, emit) => repository.addDocumentTemplate(event.template),
-    );
-    on<DeleteDocumentTemplateRequested>(
-      (event, emit) => repository.deleteDocumentTemplate(event.templateId),
-    );
+  String? _validateFacility(Facility candidate, List<Facility> facilities) {
+    if (candidate.name.trim().isEmpty) return 'Enter a room or learning-space name.';
+    if (candidate.capacity < 0) return 'Room capacity cannot be negative.';
+    if (_duplicateActiveName(candidate.id, candidate.name, facilities.map((item) => (item.id, item.name, item.isActive)))) {
+      return 'An active room/learning space with this name already exists.';
+    }
+    return null;
+  }
 
-    on<SaveCustomFieldRequested>(
-      (event, emit) => repository.addCustomField(event.field),
-    );
-    on<DeleteCustomFieldRequested>(
-      (event, emit) => repository.deleteCustomField(event.fieldId),
-    );
+  String? _validateHostel(
+    Hostel candidate,
+    List<Hostel> hostels,
+    List<HostelRoom> rooms,
+  ) {
+    if (candidate.name.trim().isEmpty) return 'Enter a hostel/dormitory name.';
+    if (candidate.capacity < 0) return 'Hostel capacity cannot be negative.';
+    if (_duplicateActiveName(candidate.id, candidate.name, hostels.map((item) => (item.id, item.name, item.isActive)))) {
+      return 'An active hostel/dormitory with this name already exists.';
+    }
+    final allocated = rooms.where((item) => item.hostelId == candidate.id && item.isActive).fold<int>(0, (sum, item) => sum + item.bedCapacity);
+    if (candidate.capacity > 0 && allocated > candidate.capacity) {
+      return 'Hostel capacity cannot be reduced to ${candidate.capacity}; active rooms already allocate $allocated beds.';
+    }
+    return null;
+  }
+
+  String? _validateHostelRoom(
+    HostelRoom candidate,
+    List<Hostel> hostels,
+    List<HostelRoom> rooms,
+  ) {
+    final parents = hostels.where((item) => item.id == candidate.hostelId && item.isActive);
+    if (parents.isEmpty) return 'Select an active hostel/dormitory.';
+    final parent = parents.first;
+    if (candidate.roomNumber.trim().isEmpty) return 'Enter a room number/name.';
+    if (candidate.bedCapacity < 0) return 'Bed capacity cannot be negative.';
+    final duplicate = rooms.any((item) => item.id != candidate.id && item.hostelId == candidate.hostelId && item.isActive && candidate.isActive && item.roomNumber.trim().toLowerCase() == candidate.roomNumber.trim().toLowerCase());
+    if (duplicate) return 'This hostel already contains a room with this number/name.';
+    final allocated = rooms.where((item) => item.id != candidate.id && item.hostelId == candidate.hostelId && item.isActive).fold<int>(0, (sum, item) => sum + item.bedCapacity);
+    if (candidate.isActive && parent.capacity > 0 && allocated + candidate.bedCapacity > parent.capacity) {
+      return 'Room capacity exceeds ${parent.name} capacity. Available beds: ${(parent.capacity - allocated).clamp(0, parent.capacity)}.';
+    }
+    return null;
+  }
+
+  String? _validateTransportStop(
+    TransportStop candidate,
+    List<TransportRoute> routes,
+  ) {
+    if (candidate.name.trim().isEmpty) return 'Enter a transport stop name.';
+    if (!routes.any((item) => item.id == candidate.routeId && item.isActive)) {
+      return 'Select an active transport route.';
+    }
+    return null;
+  }
+
+  String? _validateTransportVehicle(
+    TransportVehicle candidate,
+    List<TransportRoute> routes,
+  ) {
+    if (candidate.busNumber.trim().isEmpty) return 'Enter a vehicle/bus number.';
+    if (candidate.capacity < 0) return 'Vehicle capacity cannot be negative.';
+    if (candidate.routeId.isNotEmpty && !routes.any((item) => item.id == candidate.routeId && item.isActive)) {
+      return 'The selected route is missing or inactive.';
+    }
+    return null;
+  }
+
+  String? _validateGradeBand(
+    GradeBand candidate,
+    List<GradingSystemDef> systems,
+    List<GradeBand> bands,
+  ) {
+    if (!systems.any((item) => item.id == candidate.gradingSystemId && item.isActive)) {
+      return 'Select an active grading system.';
+    }
+    if (candidate.grade.trim().isEmpty) return 'Enter a grade/achievement label.';
+    if (candidate.minScore > candidate.maxScore) return 'Minimum score cannot exceed maximum score.';
+    final duplicate = bands.any((item) => item.id != candidate.id && item.gradingSystemId == candidate.gradingSystemId && item.grade.trim().toLowerCase() == candidate.grade.trim().toLowerCase());
+    if (duplicate) return 'This grade label already exists in the grading system.';
+    final overlap = bands.any((item) => item.id != candidate.id && item.gradingSystemId == candidate.gradingSystemId && candidate.minScore <= item.maxScore && candidate.maxScore >= item.minScore);
+    if (overlap) return 'This grade range overlaps another grade band.';
+    return null;
+  }
+
+  String? _validateTimetableConfig(TimetableConfig config) {
+    if (config.teachingDays.isEmpty) return 'Select at least one teaching day.';
+    final schoolStart = _minutes(config.schoolStartTime);
+    final schoolEnd = _minutes(config.schoolEndTime);
+    if (schoolStart == null || schoolEnd == null || schoolStart >= schoolEnd) {
+      return 'Set valid school start and end times.';
+    }
+    if (config.slots.isEmpty) return 'Add at least one timetable slot.';
+    final slots = <({String name, int start, int end})>[];
+    for (final slot in config.slots) {
+      final start = _minutes(slot.startTime);
+      final end = _minutes(slot.endTime);
+      if (start == null || end == null || start >= end) {
+        return '${slot.name} has invalid start/end times.';
+      }
+      if (start < schoolStart || end > schoolEnd) {
+        return '${slot.name} falls outside the configured school day.';
+      }
+      slots.add((name: slot.name, start: start, end: end));
+    }
+    slots.sort((a, b) => a.start.compareTo(b.start));
+    for (var i = 1; i < slots.length; i++) {
+      if (slots[i].start < slots[i - 1].end) {
+        return '${slots[i].name} overlaps ${slots[i - 1].name}.';
+      }
+    }
+    return null;
+  }
+
+  int? _minutes(String raw) {
+    final parts = raw.trim().split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+    return hour * 60 + minute;
   }
 
   Future<void> _onLoad(
     LoadStructureData event,
     Emitter<StructureState> emit,
   ) async {
-    // Never retain the previous school's configuration while new tenant
-    // streams are being attached.
-    emit(const StructureState());
-    await _levelsSub?.cancel();
-    await _yearsSub?.cancel();
-    await _termsSub?.cancel();
-    await _classesSub?.cancel();
-    await _streamsSub?.cancel();
-    await _subjectsSub?.cancel();
-    await _departmentsSub?.cancel();
-    await _designationsSub?.cancel();
-    await _togglesSub?.cancel();
-    await _institutionProfileSub?.cancel();
-    await _campusesSub?.cancel();
-    await _housesSub?.cancel();
-    await _clubsSub?.cancel();
-    await _facilitiesSub?.cancel();
-    await _hostelsSub?.cancel();
-    await _hostelRoomsSub?.cancel();
-    await _transportRoutesSub?.cancel();
-    await _transportStopsSub?.cancel();
-    await _transportVehiclesSub?.cancel();
-    await _feeCategoriesSub?.cancel();
-    await _assessmentTypesSub?.cancel();
-    await _gradingSystemsSub?.cancel();
-    await _gradeBandsSub?.cancel();
-    await _timetableConfigSub?.cancel();
-    await _attendanceDefaultsConfigSub?.cancel();
-    await _communicationDefaultsConfigSub?.cancel();
-    await _attendanceTypesSub?.cancel();
-    await _attendanceSessionsSub?.cancel();
-    await _announcementCategoriesSub?.cancel();
-    await _notificationCategoriesSub?.cancel();
-    await _messageTemplatesSub?.cancel();
-    await _documentTemplatesSub?.cancel();
-    await _customFieldsSub?.cancel();
+    _loadedParts.clear();
+    emit(state.copyWith(isLoading: true));
+    await _cancelSubscriptions();
 
-    _levelsSub = repository
-        .watchLevels(event.schoolId)
-        .listen(
-          (levels) => add(LevelsUpdated(levels)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _yearsSub = repository
-        .watchAcademicYears(event.schoolId)
-        .listen(
-          (years) => add(AcademicYearsUpdated(years)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _termsSub = repository
-        .watchAcademicTerms(event.schoolId)
-        .listen(
-          (terms) => add(AcademicTermsUpdated(terms)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _classesSub = repository
-        .watchClasses(event.schoolId)
-        .listen(
-          (classes) => add(ClassesUpdated(classes)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _streamsSub = repository
-        .watchStreams(event.schoolId)
-        .listen(
-          (streams) => add(StreamsUpdated(streams)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _subjectsSub = repository
-        .watchSubjects(event.schoolId)
-        .listen(
-          (subjects) => add(SubjectsUpdated(subjects)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _departmentsSub = repository
-        .watchDepartments(event.schoolId)
-        .listen(
-          (departments) => add(DepartmentsUpdated(departments)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _designationsSub = repository
-        .watchDesignations(event.schoolId)
-        .listen(
-          (designations) => add(DesignationsUpdated(designations)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _togglesSub = repository
-        .watchFeatureToggles(event.schoolId)
-        .listen(
-          (toggles) => add(FeatureTogglesUpdated(toggles)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _institutionProfileSub = repository
-        .watchInstitutionProfile(event.schoolId)
-        .listen(
-          (profile) => add(InstitutionProfileUpdated(profile)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _campusesSub = repository
-        .watchCampuses(event.schoolId)
-        .listen(
-          (campuses) => add(CampusesUpdated(campuses)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _housesSub = repository
-        .watchHouses(event.schoolId)
-        .listen(
-          (houses) => add(HousesUpdated(houses)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _clubsSub = repository
-        .watchClubs(event.schoolId)
-        .listen(
-          (clubs) => add(ClubsUpdated(clubs)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _facilitiesSub = repository
-        .watchFacilities(event.schoolId)
-        .listen(
-          (facilities) => add(FacilitiesUpdated(facilities)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _hostelsSub = repository
-        .watchHostels(event.schoolId)
-        .listen(
-          (hostels) => add(HostelsUpdated(hostels)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _hostelRoomsSub = repository
-        .watchHostelRooms(event.schoolId)
-        .listen(
-          (rooms) => add(HostelRoomsUpdated(rooms)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _transportRoutesSub = repository
-        .watchTransportRoutes(event.schoolId)
-        .listen(
-          (routes) => add(TransportRoutesUpdated(routes)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _transportStopsSub = repository
-        .watchTransportStops(event.schoolId)
-        .listen(
-          (stops) => add(TransportStopsUpdated(stops)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _transportVehiclesSub = repository
-        .watchTransportVehicles(event.schoolId)
-        .listen(
-          (vehicles) => add(TransportVehiclesUpdated(vehicles)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _feeCategoriesSub = repository
-        .watchFeeCategories(event.schoolId)
-        .listen(
-          (categories) => add(FeeCategoriesUpdated(categories)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _assessmentTypesSub = repository
-        .watchAssessmentTypes(event.schoolId)
-        .listen(
-          (types) => add(AssessmentTypesUpdated(types)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _gradingSystemsSub = repository
-        .watchGradingSystems(event.schoolId)
-        .listen(
-          (systems) => add(GradingSystemsUpdated(systems)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _gradeBandsSub = repository
-        .watchGradeBands(event.schoolId)
-        .listen(
-          (bands) => add(GradeBandsUpdated(bands)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _timetableConfigSub = repository
-        .watchTimetableConfig(event.schoolId)
-        .listen(
-          (config) => add(TimetableConfigUpdated(config)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _attendanceDefaultsConfigSub = repository
-        .watchAttendanceDefaultsConfig(event.schoolId)
-        .listen(
-          (config) => add(AttendanceDefaultsConfigUpdated(config)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _communicationDefaultsConfigSub = repository
-        .watchCommunicationDefaultsConfig(event.schoolId)
-        .listen(
-          (config) => add(CommunicationDefaultsConfigUpdated(config)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _attendanceTypesSub = repository
-        .watchAttendanceTypes(event.schoolId)
-        .listen(
-          (types) => add(AttendanceTypesUpdated(types)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _attendanceSessionsSub = repository
-        .watchAttendanceSessions(event.schoolId)
-        .listen(
-          (sessions) => add(AttendanceSessionsUpdated(sessions)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _announcementCategoriesSub = repository
-        .watchAnnouncementCategories(event.schoolId)
-        .listen(
-          (categories) => add(AnnouncementCategoriesUpdated(categories)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _notificationCategoriesSub = repository
-        .watchNotificationCategories(event.schoolId)
-        .listen(
-          (categories) => add(NotificationCategoriesUpdated(categories)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _messageTemplatesSub = repository
-        .watchMessageTemplates(event.schoolId)
-        .listen(
-          (templates) => add(MessageTemplatesUpdated(templates)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _documentTemplatesSub = repository
-        .watchDocumentTemplates(event.schoolId)
-        .listen(
-          (templates) => add(DocumentTemplatesUpdated(templates)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
-    _customFieldsSub = repository
-        .watchCustomFields(event.schoolId)
-        .listen(
-          (fields) => add(CustomFieldsUpdated(fields)),
-          onError: (e) => add(StructureLoadFailed(e.toString())),
-        );
+    _levelsSub = _watch(repository.watchLevels(), (value) => LevelsUpdated(value));
+    _yearsSub = _watch(repository.watchAcademicYears(), (value) => AcademicYearsUpdated(value));
+    _termsSub = _watch(repository.watchAcademicTerms(), (value) => AcademicTermsUpdated(value));
+    _classesSub = _watch(repository.watchClasses(), (value) => ClassesUpdated(value));
+    _streamsSub = _watch(repository.watchStreams(), (value) => StreamsUpdated(value));
+    _subjectsSub = _watch(repository.watchSubjects(), (value) => SubjectsUpdated(value));
+    _departmentsSub = _watch(repository.watchDepartments(), (value) => DepartmentsUpdated(value));
+    _designationsSub = _watch(repository.watchDesignations(), (value) => DesignationsUpdated(value));
+    _staffRolesSub = _watch(repository.watchStaffRoles(), (value) => StaffRolesUpdated(value));
+    _togglesSub = _watch(repository.watchFeatureToggles(), (value) => FeatureTogglesUpdated(value));
+    _institutionProfileSub = _watch(repository.watchInstitutionProfile(), (value) => InstitutionProfileUpdated(value));
+    _housesSub = _watch(repository.watchHouses(), (value) => HousesUpdated(value));
+    _clubsSub = _watch(repository.watchClubs(), (value) => ClubsUpdated(value));
+    _facilitiesSub = _watch(repository.watchFacilities(), (value) => FacilitiesUpdated(value));
+    _hostelsSub = _watch(repository.watchHostels(), (value) => HostelsUpdated(value));
+    _hostelRoomsSub = _watch(repository.watchHostelRooms(), (value) => HostelRoomsUpdated(value));
+    _transportRoutesSub = _watch(repository.watchTransportRoutes(), (value) => TransportRoutesUpdated(value));
+    _transportStopsSub = _watch(repository.watchTransportStops(), (value) => TransportStopsUpdated(value));
+    _transportVehiclesSub = _watch(repository.watchTransportVehicles(), (value) => TransportVehiclesUpdated(value));
+    _feeCategoriesSub = _watch(repository.watchFeeCategories(), (value) => FeeCategoriesUpdated(value));
+    _assessmentTypesSub = _watch(repository.watchAssessmentTypes(), (value) => AssessmentTypesUpdated(value));
+    _gradingSystemsSub = _watch(repository.watchGradingSystems(), (value) => GradingSystemsUpdated(value));
+    _gradeBandsSub = _watch(repository.watchGradeBands(), (value) => GradeBandsUpdated(value));
+    _timetableConfigSub = _watch(repository.watchTimetableConfig(), (value) => TimetableConfigUpdated(value));
+    _attendanceTypesSub = _watch(repository.watchAttendanceTypes(), (value) => AttendanceTypesUpdated(value));
+    _attendanceSessionsSub = _watch(repository.watchAttendanceSessions(), (value) => AttendanceSessionsUpdated(value));
+    _announcementCategoriesSub = _watch(repository.watchAnnouncementCategories(), (value) => AnnouncementCategoriesUpdated(value));
+    _notificationCategoriesSub = _watch(repository.watchNotificationCategories(), (value) => NotificationCategoriesUpdated(value));
+    _messageTemplatesSub = _watch(repository.watchMessageTemplates(), (value) => MessageTemplatesUpdated(value));
+    _documentTemplatesSub = _watch(repository.watchDocumentTemplates(), (value) => DocumentTemplatesUpdated(value));
+    _customFieldsSub = _watch(repository.watchCustomFields(), (value) => CustomFieldsUpdated(value));
   }
 
-  Future<void> _onClear(
-    ClearStructureData event,
-    Emitter<StructureState> emit,
-  ) async {
-    await Future.wait<void>([
-      if (_levelsSub != null) _levelsSub!.cancel(),
-      if (_yearsSub != null) _yearsSub!.cancel(),
-      if (_termsSub != null) _termsSub!.cancel(),
-      if (_classesSub != null) _classesSub!.cancel(),
-      if (_streamsSub != null) _streamsSub!.cancel(),
-      if (_subjectsSub != null) _subjectsSub!.cancel(),
-      if (_departmentsSub != null) _departmentsSub!.cancel(),
-      if (_designationsSub != null) _designationsSub!.cancel(),
-      if (_togglesSub != null) _togglesSub!.cancel(),
-      if (_institutionProfileSub != null) _institutionProfileSub!.cancel(),
-      if (_campusesSub != null) _campusesSub!.cancel(),
-      if (_housesSub != null) _housesSub!.cancel(),
-      if (_clubsSub != null) _clubsSub!.cancel(),
-      if (_facilitiesSub != null) _facilitiesSub!.cancel(),
-      if (_hostelsSub != null) _hostelsSub!.cancel(),
-      if (_hostelRoomsSub != null) _hostelRoomsSub!.cancel(),
-      if (_transportRoutesSub != null) _transportRoutesSub!.cancel(),
-      if (_transportStopsSub != null) _transportStopsSub!.cancel(),
-      if (_transportVehiclesSub != null) _transportVehiclesSub!.cancel(),
-      if (_feeCategoriesSub != null) _feeCategoriesSub!.cancel(),
-      if (_assessmentTypesSub != null) _assessmentTypesSub!.cancel(),
-      if (_gradingSystemsSub != null) _gradingSystemsSub!.cancel(),
-      if (_gradeBandsSub != null) _gradeBandsSub!.cancel(),
-      if (_timetableConfigSub != null) _timetableConfigSub!.cancel(),
-      if (_attendanceDefaultsConfigSub != null)
-        _attendanceDefaultsConfigSub!.cancel(),
-      if (_communicationDefaultsConfigSub != null)
-        _communicationDefaultsConfigSub!.cancel(),
-      if (_attendanceTypesSub != null) _attendanceTypesSub!.cancel(),
-      if (_attendanceSessionsSub != null) _attendanceSessionsSub!.cancel(),
-      if (_announcementCategoriesSub != null)
-        _announcementCategoriesSub!.cancel(),
-      if (_notificationCategoriesSub != null)
-        _notificationCategoriesSub!.cancel(),
-      if (_messageTemplatesSub != null) _messageTemplatesSub!.cancel(),
-      if (_documentTemplatesSub != null) _documentTemplatesSub!.cancel(),
-      if (_customFieldsSub != null) _customFieldsSub!.cancel(),
-    ]);
-    emit(const StructureState());
+  StreamSubscription<T> _watch<T>(
+    Stream<T> stream,
+    StructureEvent Function(T) eventBuilder,
+  ) {
+    return stream.listen(
+      (value) => add(eventBuilder(value)),
+      onError: (Object error) => add(StructureLoadFailed(error.toString())),
+    );
+  }
+
+  Future<void> _cancelSubscriptions() async {
+    final subscriptions = <StreamSubscription?>[
+      _levelsSub,
+      _yearsSub,
+      _termsSub,
+      _classesSub,
+      _streamsSub,
+      _subjectsSub,
+      _departmentsSub,
+      _designationsSub,
+      _staffRolesSub,
+      _togglesSub,
+      _institutionProfileSub,
+      _housesSub,
+      _clubsSub,
+      _facilitiesSub,
+      _hostelsSub,
+      _hostelRoomsSub,
+      _transportRoutesSub,
+      _transportStopsSub,
+      _transportVehiclesSub,
+      _feeCategoriesSub,
+      _assessmentTypesSub,
+      _gradingSystemsSub,
+      _gradeBandsSub,
+      _timetableConfigSub,
+      _attendanceTypesSub,
+      _attendanceSessionsSub,
+      _announcementCategoriesSub,
+      _notificationCategoriesSub,
+      _messageTemplatesSub,
+      _documentTemplatesSub,
+      _customFieldsSub,
+    ];
+    await Future.wait(subscriptions.whereType<StreamSubscription>().map((sub) => sub.cancel()));
   }
 
   @override
-  Future<void> close() {
-    _levelsSub?.cancel();
-    _yearsSub?.cancel();
-    _termsSub?.cancel();
-    _classesSub?.cancel();
-    _streamsSub?.cancel();
-    _subjectsSub?.cancel();
-    _departmentsSub?.cancel();
-    _designationsSub?.cancel();
-    _togglesSub?.cancel();
-    _institutionProfileSub?.cancel();
-    _campusesSub?.cancel();
-    _housesSub?.cancel();
-    _clubsSub?.cancel();
-    _facilitiesSub?.cancel();
-    _hostelsSub?.cancel();
-    _hostelRoomsSub?.cancel();
-    _transportRoutesSub?.cancel();
-    _transportStopsSub?.cancel();
-    _transportVehiclesSub?.cancel();
-    _feeCategoriesSub?.cancel();
-    _assessmentTypesSub?.cancel();
-    _gradingSystemsSub?.cancel();
-    _gradeBandsSub?.cancel();
-    _timetableConfigSub?.cancel();
-    _attendanceDefaultsConfigSub?.cancel();
-    _communicationDefaultsConfigSub?.cancel();
-    _attendanceTypesSub?.cancel();
-    _attendanceSessionsSub?.cancel();
-    _announcementCategoriesSub?.cancel();
-    _notificationCategoriesSub?.cancel();
-    _messageTemplatesSub?.cancel();
-    _documentTemplatesSub?.cancel();
-    _customFieldsSub?.cancel();
+  Future<void> close() async {
+    await _cancelSubscriptions();
     return super.close();
   }
 }

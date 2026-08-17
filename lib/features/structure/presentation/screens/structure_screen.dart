@@ -1,843 +1,253 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
-import 'package:school_pulse/features/structure/domain/services/structure_health_resolver.dart';
+
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_state.dart';
+import 'institution_profile_screen.dart';
+import 'academic_structure_screen.dart';
+import 'people_structure_screen.dart';
+import 'assessment_grading_screen.dart';
+import 'campus_facilities_screen.dart';
+import 'operations_config_screen.dart';
+import 'feature_toggles_screen.dart';
+import 'curriculum_assignment_screen.dart';
+import 'academic_staff_assignment_screen.dart';
+import 'class_timetable_screen.dart';
 
-/// A live roadmap. Editors stay in their existing feature screens; all status
-/// here is derived from the current school’s StructureBloc data.
-class StructureScreen extends StatelessWidget {
-  const StructureScreen({super.key, this.initialSection = 'overview'});
-  final String initialSection;
+/// Structure V2: one dependency-ordered setup flow.
+///
+/// This intentionally does not navigate from a wizard card into a second
+/// management hierarchy. The real editors are mounted directly inside the
+/// current step so the administrator always knows where they are and what
+/// comes next.
+class StructureScreen extends StatefulWidget {
+  const StructureScreen({super.key});
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-    appBar: AdminAppBar(
-      title: 'Structure Setup',
-      actions: [
-        IconButton(
-          tooltip: 'Progress details',
-          onPressed: () =>
-              context.push('/staff/admin/structure?section=progress'),
-          icon: const Icon(Icons.task_alt_outlined),
-        ),
-      ],
-    ),
-    body: BlocBuilder<StructureBloc, StructureState>(
+  State<StructureScreen> createState() => _StructureScreenState();
+}
+
+class _StructureScreenState extends State<StructureScreen> {
+  int _index = 0;
+
+  static const _steps = <_StructureStep>[
+    _StructureStep('Institution', 'Confirm the school identity and institutional profile before academic setup.'),
+    _StructureStep('Academic year', 'Create the school year and set exactly one year as current.'),
+    _StructureStep('Terms / semesters', 'Create periods inside the current academic year.'),
+    _StructureStep('Educational levels', 'Define only the education levels this institution actually offers.'),
+    _StructureStep('Classes', 'Create classes under their correct educational levels.'),
+    _StructureStep('Streams / sections', 'Optionally divide classes into streams or sections.'),
+    _StructureStep('Subjects', 'Build the subject catalogue before curriculum and teacher assignment.'),
+    _StructureStep('Curriculum', 'Assign the correct subjects to the classes that study them.'),
+    _StructureStep('People & roles', 'Configure staff roles, designations and school people structure.'),
+    _StructureStep('Academic assignments', 'Assign teachers only after classes, subjects and staff exist.'),
+    _StructureStep('Assessment & grading', 'Configure assessment types, grading systems and grade bands.'),
+    _StructureStep('Campus & facilities', 'Configure learning spaces and physical facilities used by operations.'),
+    _StructureStep('Operations', 'Configure school-day and operational structure after the academic foundation exists.'),
+    _StructureStep('Feature choices', 'Enable only optional modules the institution actually uses.'),
+    _StructureStep('Class timetables', 'Build timetables last, after curriculum, rooms and teacher assignments are ready.'),
+    _StructureStep('Review', 'Review the configured structure before leaving setup.'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<StructureBloc, StructureState>(
       builder: (context, state) {
-        final health = StructureHealthResolver().resolve(state);
-        if (initialSection == 'progress') return _Progress(health);
-        final section = health.sections
-            .where((s) => s.id == initialSection)
-            .firstOrNull;
-        return section == null ? _Overview(health) : _Details(health, section);
-      },
-    ),
-  );
-}
-
-class _Overview extends StatelessWidget {
-  const _Overview(this.health);
-  final StructureHealth health;
-  @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-    children: [
-      Text(
-        'Structure Setup',
-        style: Theme.of(
-          context,
-        ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-      ),
-      const SizedBox(height: 4),
-      Text(
-        'Complete your school structure step by step.',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-      const SizedBox(height: 18),
-      _ProgressCard(health),
-      const SizedBox(height: 20),
-      ...health.sections.map(
-        (section) => Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: _SectionCard(health, section),
-        ),
-      ),
-    ],
-  );
-}
-
-class _ProgressCard extends StatelessWidget {
-  const _ProgressCard(this.health);
-  final StructureHealth health;
-  @override
-  Widget build(BuildContext context) => Material(
-    color: _setupSurface(context, emphasis: true),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
-      side: BorderSide(color: _setupBorder(context)),
-    ),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: () =>
-          context.push('/staff/admin/structure?section=progress'),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 62,
-              height: 62,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    value: health.ratio,
-                    strokeWidth: 6,
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: .18),
+        final step = _steps[_index];
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Structure Setup'),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Center(
+                  child: Text(
+                    '${_index + 1}/${_steps.length}',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
                   ),
-                  Text(
-                    '${health.percentage}%',
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Overall Progress',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+            ],
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                LinearProgressIndicator(value: (_index + 1) / _steps.length, minHeight: 4),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${health.completedRequired} completed • ${health.remaining} remaining',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-class _SectionCard extends StatelessWidget {
-  const _SectionCard(this.health, this.section);
-  final StructureHealth health;
-  final StructureSetupSection section;
-  @override
-  Widget build(BuildContext context) {
-    final steps = section.steps.map((s) => health.steps[s.id]!).toList();
-    final required = steps
-        .where(
-          (s) =>
-              s.definition.required &&
-              s.status != SetupStepStatus.notApplicable,
-        )
-        .toList();
-    final done = required
-        .where((s) => s.status == SetupStepStatus.completed)
-        .length;
-    final next = steps
-        .where(
-          (s) =>
-              s.definition.required &&
-              (s.status == SetupStepStatus.available ||
-                  s.status == SetupStepStatus.inProgress ||
-                  s.status == SetupStepStatus.needsAttention),
-        )
-        .firstOrNull;
-    final completed = required.isNotEmpty && done == required.length;
-    return Material(
-      color: _setupSurface(context),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: _setupBorder(context)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () =>
-            context.push('/staff/admin/structure?section=${section.id}'),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: .14),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      section.icon,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          section.title,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          section.description,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Text(
-                    '$done/${required.length}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: LinearProgressIndicator(
-                        value: required.isEmpty ? 1 : done / required.length,
-                        minHeight: 5,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 920),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'STEP ${_index + 1}',
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.1,
+                                ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(step.title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 5),
+                          Text(step.description, style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.35)),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                ),
+                Expanded(child: _editor(state)),
+              ],
+            ),
+          ),
+          bottomNavigationBar: SafeArea(
+            top: false,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
+              ),
+              child: Row(
+                children: [
                   SizedBox(
-                    width: 82,
-                    height: 36,
-                    child: OutlinedButton(
-                      onPressed: completed
-                          ? null
-                          : () => next == null
-                                ? context.push(
-                                    '/staff/admin/structure?section=${section.id}',
-                                  )
-                                : _open(context, next),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: Size.zero,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        textStyle: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      child: Text(
-                        completed
-                            ? 'Completed'
-                            : next == null
-                            ? 'View'
-                            : done == 0
-                            ? 'Start'
-                            : 'Continue',
-                      ),
+                    width: 110,
+                    child: OutlinedButton.icon(
+                      onPressed: _index == 0 ? null : () => setState(() => _index--),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      label: const Text('Back'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _index == _steps.length - 1
+                          ? () => Navigator.of(context).maybePop()
+                          : () => setState(() => _index++),
+                      icon: Icon(_index == _steps.length - 1 ? Icons.check_rounded : Icons.arrow_forward_rounded),
+                      label: Text(_index == _steps.length - 1 ? 'Finish' : 'Save & Continue'),
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Progress extends StatelessWidget {
-  const _Progress(this.health);
-  final StructureHealth health;
-  @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-    children: [
-      Text(
-        'Configuration health',
-        style: Theme.of(
-          context,
-        ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-      ),
-      const SizedBox(height: 5),
-      Text(
-        'Review progress and continue with the next school setup task.',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-      const SizedBox(height: 18),
-      _HealthSummary(health),
-      const SizedBox(height: 24),
-      Text(
-        'Setup areas',
-        style: Theme.of(
-          context,
-        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-      ),
-      const SizedBox(height: 10),
-      ...health.sections.map(
-        (section) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: _ProgressSectionCard(health, section),
-        ),
-      ),
-    ],
-  );
-}
-
-class _HealthSummary extends StatelessWidget {
-  const _HealthSummary(this.health);
-  final StructureHealth health;
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: _setupSurface(context, emphasis: true),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _setupBorder(context)),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 72,
-            height: 72,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 68,
-                  height: 68,
-                  child: CircularProgressIndicator(
-                    value: health.ratio,
-                    strokeWidth: 7,
-                    backgroundColor: colors.primary.withValues(alpha: .18),
-                    valueColor: AlwaysStoppedAnimation(colors.primary),
-                  ),
-                ),
-                Text(
-                  '${health.percentage}%',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-                ),
-              ],
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Overall progress',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${health.completedRequired} completed • ${health.remaining} remaining',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${health.optional} optional • ${health.notApplicable} not applicable • ${health.locked} locked',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                if (health.needsAttention > 0) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    '${health.needsAttention} step${health.needsAttention == 1 ? '' : 's'} need attention',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colors.error,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-                if (health.next != null) ...[
-                  const SizedBox(height: 10),
-                  FilledButton.icon(
-                    onPressed: () => _open(context, health.next!),
-                    icon: const Icon(Icons.arrow_forward),
-                    label: Text('Next: ${health.next!.definition.title}'),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
+  }
+
+  Widget _editor(StructureState state) {
+    switch (_index) {
+      case 0:
+        return const InstitutionProfileScreen();
+      case 1:
+        return const AcademicStructureScreen(section: 'years');
+      case 2:
+        return const AcademicStructureScreen(section: 'terms');
+      case 3:
+        return const AcademicStructureScreen(section: 'levels');
+      case 4:
+        return const AcademicStructureScreen(section: 'classes');
+      case 5:
+        return const AcademicStructureScreen(section: 'streams');
+      case 6:
+        return const AcademicStructureScreen(section: 'subjects');
+      case 7:
+        return const CurriculumAssignmentScreen();
+      case 8:
+        return const PeopleStructureScreen();
+      case 9:
+        return const AcademicStaffAssignmentScreen();
+      case 10:
+        return const AssessmentGradingScreen();
+      case 11:
+        return const CampusFacilitiesScreen();
+      case 12:
+        return const OperationsConfigScreen();
+      case 13:
+        return const FeatureTogglesScreen();
+      case 14:
+        return const ClassTimetableScreen();
+      default:
+        return _Review(state: state, onJump: (index) => setState(() => _index = index));
+    }
   }
 }
 
-class _ProgressSectionCard extends StatelessWidget {
-  const _ProgressSectionCard(this.health, this.section);
-  final StructureHealth health;
-  final StructureSetupSection section;
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final steps = section.steps.map((s) => health.steps[s.id]!).toList();
-    final required = steps
-        .where(
-          (s) =>
-              s.definition.required &&
-              s.status != SetupStepStatus.notApplicable,
-        )
-        .toList();
-    final done = required
-        .where((s) => s.status == SetupStepStatus.completed)
-        .length;
-    final progress = required.isEmpty ? 1.0 : done / required.length;
-    return Material(
-      color: _setupSurface(context),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: _setupBorder(context)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () =>
-            context.push('/staff/admin/structure?section=${section.id}'),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: colors.primary.withValues(alpha: .14),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(section.icon, color: colors.primary),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      section.title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$done of ${required.length} required steps completed',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        minHeight: 4,
-                        color: colors.primary,
-                        backgroundColor: colors.primary.withValues(alpha: .15),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+class _Review extends StatelessWidget {
+  final StructureState state;
+  final ValueChanged<int> onJump;
 
-class _Details extends StatelessWidget {
-  const _Details(this.health, this.section);
-  final StructureHealth health;
-  final StructureSetupSection section;
+  const _Review({required this.state, required this.onJump});
+
   @override
   Widget build(BuildContext context) {
-    final required = section.steps
-        .map((step) => health.steps[step.id]!)
-        .where(
-          (step) =>
-              step.definition.required &&
-              step.status != SetupStepStatus.notApplicable,
-        )
-        .toList();
-    final isComplete =
-        required.isNotEmpty &&
-        required.every((step) => step.status == SetupStepStatus.completed);
-    final sectionIndex = health.sections.indexOf(section);
-    final nextSection = health.sections.skip(sectionIndex + 1).firstOrNull;
+    final rows = <(String, String, int)>[
+      ('Academic years', '${state.academicYears.length}', 1),
+      ('Terms / semesters', '${state.academicTerms.length}', 2),
+      ('Educational levels', '${state.levels.length}', 3),
+      ('Classes', '${state.classes.length}', 4),
+      ('Streams / sections', '${state.streams.length}', 5),
+      ('Subjects', '${state.subjects.length}', 6),
+      ('Staff roles', '${state.staffRoles.length}', 8),
+      ('Assessment types', '${state.assessmentTypes.length}', 10),
+      ('Grading systems', '${state.gradingSystems.length}', 10),
+      ('Facilities', '${state.facilities.length}', 11),
+    ];
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       children: [
-        Text(
-          section.title,
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          section.description,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 18),
-        ...section.steps.indexed.map(
-          (entry) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _StepTile(entry.$1 + 1, health.steps[entry.$2.id]!, health),
-          ),
-        ),
-        if (section.steps.length == 1 && !isComplete) ...[
-          const SizedBox(height: 6),
-          _SectionGuideCard(step: required.firstOrNull, health: health),
-        ],
-        if (isComplete && nextSection != null) ...[
-          const SizedBox(height: 10),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'This part is complete',
-                    style: TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 4),
-                  Text('Continue with ${nextSection.title}.'),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () => context.push(
-                      '/staff/admin/structure?section=${nextSection.id}',
-                    ),
-                    icon: const Icon(Icons.arrow_forward),
-                    label: Text('Continue to ${nextSection.title}'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-/// Single-action areas such as Finance and Communication used to leave a
-/// nearly empty screen under their lone setup tile. Give administrators a
-/// clear explanation and an immediate way forward instead.
-class _SectionGuideCard extends StatelessWidget {
-  const _SectionGuideCard({required this.step, required this.health});
-  final ResolvedSetupStep? step;
-  final StructureHealth health;
-
-  @override
-  Widget build(BuildContext context) {
-    if (step == null) return const SizedBox.shrink();
-    final locked = step!.status == SetupStepStatus.locked;
-    final prerequisite = locked && step!.blockedBy.isNotEmpty
-        ? health.steps[step!.blockedBy.first]
-        : null;
-    final title = locked ? 'Before you begin' : 'Ready when you are';
-    final message = locked
-        ? '${step!.definition.title} becomes available after ${prerequisite?.definition.title ?? 'the required setup'} is complete.'
-        : 'This area has one setup action. Open it to configure ${step!.definition.title.toLowerCase()}.';
-    return Material(
-      color: _setupSurface(context, emphasis: true),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: _setupBorder(context)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  locked ? Icons.lock_outline : Icons.task_alt_outlined,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  title,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 14),
-            if (prerequisite != null)
-              FilledButton.icon(
-                onPressed: () => _open(context, prerequisite),
-                icon: const Icon(Icons.arrow_forward),
-                label: Text('Go to ${prerequisite.definition.title}'),
-              )
-            else
-              OutlinedButton.icon(
-                onPressed: () => _open(context, step!),
-                icon: const Icon(Icons.open_in_new),
-                label: Text('Open ${step!.definition.title}'),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StepTile extends StatelessWidget {
-  const _StepTile(this.number, this.step, this.health);
-  final int number;
-  final ResolvedSetupStep step;
-  final StructureHealth health;
-  @override
-  Widget build(BuildContext context) {
-    final locked = step.status == SetupStepStatus.locked;
-    final color = switch (step.status) {
-      SetupStepStatus.completed => Colors.green,
-      SetupStepStatus.needsAttention => Colors.orange,
-      SetupStepStatus.available ||
-      SetupStepStatus.inProgress => Theme.of(context).colorScheme.primary,
-      _ => Theme.of(context).colorScheme.onSurfaceVariant,
-    };
-    final label = switch (step.status) {
-      SetupStepStatus.completed => 'Completed',
-      SetupStepStatus.needsAttention => 'Needs attention',
-      SetupStepStatus.locked => 'Complete earlier steps first',
-      SetupStepStatus.optional => 'Optional',
-      SetupStepStatus.notApplicable => 'Not applicable',
-      SetupStepStatus.inProgress => 'In progress',
-      _ => 'Ready to set up',
-    };
-    final icon = switch (step.status) {
-      SetupStepStatus.completed => Icons.check,
-      SetupStepStatus.locked => Icons.lock_outline,
-      SetupStepStatus.needsAttention => Icons.priority_high,
-      SetupStepStatus.notApplicable => Icons.remove,
-      _ => Icons.circle_outlined,
-    };
-    return Material(
-      color: step.status == SetupStepStatus.inProgress
-          ? _setupSurface(context, emphasis: true)
-          : _setupSurface(context),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: _setupBorder(context)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () =>
-            locked ? _blocked(context, step, health) : _open(context, step),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: color.withValues(alpha: .16),
-                child: Icon(icon, color: color, size: 19),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$number. ${step.definition.title}',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      label,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: color),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                locked ? Icons.lock_outline : Icons.chevron_right,
-                color: color,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-void _open(BuildContext context, ResolvedSetupStep step) =>
-    context.push(step.definition.route);
-void _blocked(
-  BuildContext context,
-  ResolvedSetupStep step,
-  StructureHealth health,
-) {
-  final names = step.blockedBy
-      .map((id) => health.steps[id]?.definition.title ?? id)
-      .toList();
-  showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (sheet) => SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-        child: Material(
-          color: _setupSurface(sheet, emphasis: true),
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 920),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: Container(
-                    width: 34,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Theme.of(sheet).colorScheme.outline,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'Complete this first',
-                  style: Theme.of(sheet).textTheme.titleLarge?.copyWith(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ...names.map(
-                  (name) => Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        sheet,
-                      ).colorScheme.primary.withValues(alpha: .10),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.checklist_outlined,
-                          size: 18,
-                          color: Theme.of(sheet).colorScheme.primary,
+                        Icon(Icons.fact_check_outlined, color: Theme.of(context).colorScheme.primary, size: 30),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Text('Check every count below. Tap any row to return directly to that setup step and correct it.'),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text(name)),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      Navigator.pop(sheet);
-                      _open(context, health.steps[step.blockedBy.first]!);
-                    },
-                    icon: const Icon(Icons.arrow_forward),
-                    label: const Text('Go to required step'),
+                const SizedBox(height: 14),
+                ...rows.map(
+                  (row) => Card(
+                    child: ListTile(
+                      title: Text(row.$1, style: const TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: Text('${row.$2} configured'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => onJump(row.$3),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         ),
-      ),
-    ),
-  );
-}
-
-extension<T> on Iterable<T> {
-  T? get firstOrNull => isEmpty ? null : first;
-}
-
-/// Uses the application’s actual surface tokens. `ColorScheme` generates
-/// intermediate seed colours, which can become overly saturated on a branded
-/// navy palette; these tokens are the surfaces used by the rest of the app.
-Color _setupSurface(BuildContext context, {bool emphasis = false}) {
-  if (Theme.of(context).brightness == Brightness.dark) {
-    return emphasis ? AppColors.elevatedSurfaceDark : AppColors.surfaceDark;
+      ],
+    );
   }
-  return AppColors.surfaceLight;
 }
 
-Color _setupBorder(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? AppColors.borderDark
-    : AppColors.borderLight;
+class _StructureStep {
+  final String title;
+  final String description;
+  const _StructureStep(this.title, this.description);
+}

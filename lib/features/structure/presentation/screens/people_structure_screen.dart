@@ -1,370 +1,274 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:school_pulse/core/usecases/usecase.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
-import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
-import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
-import 'package:school_pulse/injection_container.dart' as di;
+import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/app_components.dart';
+import '../../domain/services/structure_integrity_validator.dart';
 import '../bloc/structure_bloc.dart';
+import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
+import '../widgets/structure_dialogs.dart';
 import '../widgets/structure_empty_hint.dart';
-import '../widgets/structure_ui_kit.dart';
-import 'people_forms_screen.dart';
 
-/// Tenant-owned organisation metadata.  This deliberately manages
-/// designations only: app access roles remain in the authorization module.
-class PeopleStructureScreen extends StatefulWidget {
-  const PeopleStructureScreen({super.key, this.initialTab = 0});
-  final int initialTab;
+const _validator = StructureIntegrityValidator();
 
-  @override
-  State<PeopleStructureScreen> createState() => _PeopleStructureScreenState();
-}
+/// Definition-first People Structure: define departments and responsibilities
+/// without forcing a person assignment during institutional setup.
+class PeopleStructureScreen extends StatelessWidget {
+  final String section;
 
-class _PeopleStructureScreenState extends State<PeopleStructureScreen> {
-  static const _sections = ['Departments', 'Staff Roles & Designations'];
-  late int _selectedIndex;
-  List<UserEntity> _staff = const [];
-  bool _staffLoaded = false;
+  const PeopleStructureScreen({super.key, this.section = 'departments'});
 
-  @override
-  void initState() {
-    super.initState();
-    _selectedIndex = widget.initialTab.clamp(0, _sections.length - 1);
-    _loadStaff();
-  }
-
-  @override
-  void didUpdateWidget(covariant PeopleStructureScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialTab != widget.initialTab) {
-      _selectedIndex = widget.initialTab.clamp(0, _sections.length - 1);
-    }
-  }
-
-  Future<void> _loadStaff() async {
-    final result = await di.sl<GetStaffMembers>()(NoParams());
-    if (!mounted) return;
-    setState(() {
-      _staff = result.getOrElse(() => const []);
-      _staffLoaded = true;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: const AdminAppBar(title: 'People'),
-    body: BlocBuilder<StructureBloc, StructureState>(
-      builder: (_, state) => _selectedIndex == 0
-          ? _DepartmentsList(
-              departments: state.departments,
-              staff: _staff,
-              staffLoaded: _staffLoaded,
-            )
-          : _DesignationsList(
-              designations: state.designations,
-              staff: _staff,
-              staffLoaded: _staffLoaded,
-            ),
-    ),
-  );
-}
-
-class _DepartmentsList extends StatefulWidget {
-  const _DepartmentsList({
-    required this.departments,
-    required this.staff,
-    required this.staffLoaded,
-  });
-  final List<Department> departments;
-  final List<UserEntity> staff;
-  final bool staffLoaded;
-  @override
-  State<_DepartmentsList> createState() => _DepartmentsListState();
-}
-
-class _DepartmentsListState extends State<_DepartmentsList> {
-  String _query = '';
   @override
   Widget build(BuildContext context) {
-    final schoolId =
-        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
-    final items =
-        widget.departments
-            .where(
-              (d) =>
-                  d.name.toLowerCase().contains(_query.toLowerCase()) ||
-                  d.code.toLowerCase().contains(_query.toLowerCase()),
-            )
-            .toList()
-          ..sort(
-            (a, b) => a.displayOrder != b.displayOrder
-                ? a.displayOrder.compareTo(b.displayOrder)
-                : a.name.compareTo(b.name),
-          );
+    final requested = GoRouterState.of(context).uri.queryParameters['section'] ?? section;
+    final normalized = requested == 'roles' ? 'roles' : 'departments';
     return Scaffold(
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: StructureSearchBar(
-              hint: 'Search departments...',
-              onChanged: (v) => setState(() => _query = v),
-            ),
-          ),
-          Expanded(
-            child: items.isEmpty
-                ? const StructureEmptyHint('No departments defined yet.')
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-                    itemCount: items.length,
-                    itemBuilder: (_, i) {
-                      final department = items[i];
-                      final staffCount = widget.staff
-                          .where((s) => s.departmentId == department.id)
-                          .length;
-                      return StructureRecordCard(
-                        icon: Icons.account_balance_outlined,
-                        color: Colors.blue,
-                        title: department.name,
-                        subtitle: [
-                          if (department.code.isNotEmpty) department.code,
-                          if (widget.staffLoaded)
-                            '$staffCount ${staffCount == 1 ? 'Staff' : 'Staff'}',
-                        ].join(' - '),
-                        isActive: department.isActive,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => BlocProvider.value(
-                              value: context.read<StructureBloc>(),
-                              child: DepartmentDetailsScreen(
-                                schoolId: schoolId,
-                                department: department,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
+      appBar: AppBar(
+        title: Text(normalized == 'roles' ? 'Staff Roles & Responsibilities' : 'Departments'),
       ),
-      floatingActionButton: _AddButton(
-        label: 'Add Department',
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => BlocProvider.value(
-              value: context.read<StructureBloc>(),
-              child: DepartmentFormScreen(schoolId: schoolId),
-            ),
-          ),
-        ),
+      body: BlocBuilder<StructureBloc, StructureState>(
+        builder: (context, state) => normalized == 'roles'
+            ? _roles(context, state)
+            : _departments(context, state),
       ),
     );
   }
-}
 
-class _DesignationsList extends StatefulWidget {
-  const _DesignationsList({
-    required this.designations,
-    required this.staff,
-    required this.staffLoaded,
-  });
-  final List<StaffDesignation> designations;
-  final List<UserEntity> staff;
-  final bool staffLoaded;
-  @override
-  State<_DesignationsList> createState() => _DesignationsListState();
-}
-
-class _DesignationsListState extends State<_DesignationsList> {
-  String _query = '';
-  String _filter = 'All';
-  @override
-  Widget build(BuildContext context) {
-    final schoolId =
-        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
-    final items =
-        widget.designations
-            .where((r) => r.name.toLowerCase().contains(_query.toLowerCase()))
-            .where(
-              (role) => switch (_filter) {
-                'Active' => role.isActive && !role.isArchived,
-                'Inactive' => !role.isActive && !role.isArchived,
-                'System' => role.isSystemPreset,
-                'Custom' => !role.isSystemPreset,
-                _ => true,
-              },
-            )
-            .toList()
-          ..sort(
-            (a, b) => a.displayOrder != b.displayOrder
-                ? a.displayOrder.compareTo(b.displayOrder)
-                : a.name.compareTo(b.name),
-          );
-    return Scaffold(
-      body: Column(
-        children: [
-          _RoleSummary(designations: widget.designations, staff: widget.staff),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: StructureSearchBar(
-              hint: 'Search roles...',
-              onChanged: (v) => setState(() => _query = v),
-            ),
-          ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Row(
-              children: ['All', 'Active', 'Inactive', 'System', 'Custom']
-                  .map(
-                    (filter) => Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(filter),
-                        selected: _filter == filter,
-                        onSelected: (_) => setState(() => _filter = filter),
+  Widget _departments(BuildContext context, StructureState state) {
+    final bloc = context.read<StructureBloc>();
+    return _SectionPage(
+      intro: 'Define departments now. A Head of Department is assigned later, so Department creation never depends on a teacher or staff record.',
+      primaryLabel: 'Add Department',
+      onPrimary: () => showDepartmentFormDialog(
+        context,
+        onSave: (value) => _dispatchIfValid(
+          context,
+          _validator.validateDepartment(value, state.departments),
+          () => bloc.add(SaveDepartmentRequested(value)),
+        ),
+      ),
+      child: state.departments.isEmpty
+          ? const StructureEmptyHint('No departments configured yet.')
+          : ListView.separated(
+              padding: EdgeInsets.zero,
+              itemCount: state.departments.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, index) {
+                final department = state.departments[index];
+                final subjectCount = state.subjects
+                    .where((subject) => subject.departmentId == department.id && subject.isActive)
+                    .length;
+                return AppCard(
+                  child: ListTile(
+                    title: Text(
+                      department.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        decoration: department.isActive ? null : TextDecoration.lineThrough,
                       ),
                     ),
-                  )
-                  .toList(),
-            ),
-          ),
-          Expanded(
-            child: items.isEmpty
-                ? const StructureEmptyHint(
-                    'No staff roles or designations defined yet.',
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-                    itemCount: items.length,
-                    itemBuilder: (_, i) {
-                      final designation = items[i];
-                      final staffCount = widget.staff
-                          .where((s) => s.designationId == designation.id)
-                          .length;
-                      return StructureRecordCard(
-                        icon: staffDesignationIcon(designation.iconName),
-                        color: staffDesignationColor(designation.colorHex),
-                        title: designation.name,
-                        subtitle: [
-                          if (designation.code.isNotEmpty) designation.code,
-                          if (designation.category.isNotEmpty)
-                            designation.category,
-                          _scopeName(designation.scopeType),
-                          if (widget.staffLoaded) '$staffCount Staff',
-                        ].join(' - '),
-                        isActive: designation.isActive,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => BlocProvider.value(
-                              value: context.read<StructureBloc>(),
-                              child: DesignationDetailsScreen(
-                                schoolId: schoolId,
-                                designation: designation,
-                              ),
-                            ),
-                          ),
+                    subtitle: Text([
+                      if (department.code.trim().isNotEmpty) department.code.trim(),
+                      '$subjectCount active subject${subjectCount == 1 ? '' : 's'}',
+                      if (department.headOfDepartmentStaffId.isEmpty) 'HOD assigned later',
+                    ].join(' • ')),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: () => showDepartmentFormDialog(
+                        context,
+                        existing: department,
+                        onSave: (value) => _dispatchIfValid(
+                          context,
+                          _validator.validateDepartment(value, state.departments),
+                          () => bloc.add(SaveDepartmentRequested(value)),
                         ),
-                      );
-                    },
+                      ),
+                    ),
                   ),
-          ),
-        ],
-      ),
-      floatingActionButton: _AddButton(
-        label: 'Add Role',
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => BlocProvider.value(
-              value: context.read<StructureBloc>(),
-              child: DesignationFormScreen(schoolId: schoolId),
+                );
+              },
             ),
-          ),
-        ),
-      ),
     );
   }
-}
 
-class _RoleSummary extends StatelessWidget {
-  const _RoleSummary({required this.designations, required this.staff});
-  final List<StaffDesignation> designations;
-  final List<UserEntity> staff;
-
-  @override
-  Widget build(BuildContext context) {
-    final active = designations.where((role) => role.isActive).length;
-    final custom = designations.where((role) => !role.isSystemPreset).length;
-    final metrics = [
-      ('Total roles', designations.length),
-      ('Active', active),
-      (
-        'Assigned staff',
-        staff.where((s) => s.designationId?.isNotEmpty ?? false).length,
+  Widget _roles(BuildContext context, StructureState state) {
+    final bloc = context.read<StructureBloc>();
+    final activeDesignations = state.designations.where((item) => item.isActive).toList();
+    return _SectionPage(
+      intro: 'Define reusable responsibilities. One staff account may later hold several roles at the same time; creating a role never creates a separate login.',
+      primaryLabel: 'Add Staff Role',
+      onPrimary: () => showStaffRoleFormDialog(
+        context,
+        designations: activeDesignations,
+        onSave: (value) => _dispatchIfValid(
+          context,
+          _validator.validateRole(
+            value,
+            roles: state.staffRoles,
+            designations: state.designations,
+          ),
+          () => bloc.add(SaveStaffRoleRequested(value)),
+        ),
       ),
-      ('Custom', custom),
-    ];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Row(
-        children: metrics
-            .map(
-              (metric) => Expanded(
-                child: Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 10,
-                      horizontal: 8,
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          '${metric.$2}',
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          metric.$1,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
-                      ],
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Designations',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => showDesignationFormDialog(
+                  context,
+                  onSave: (value) => _dispatchIfValid(
+                    context,
+                    _validator.validateDesignation(value, state.designations),
+                    () => bloc.add(SaveDesignationRequested(value)),
+                  ),
+                ),
+                icon: const Icon(Icons.add),
+                label: const Text('Add'),
+              ),
+            ],
+          ),
+          if (state.designations.isEmpty)
+            const StructureEmptyHint('Designations are optional labels such as Teacher, Principal or Bursar.')
+          else
+            ...state.designations.map(
+              (designation) => AppCard(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  title: Text(
+                    designation.name,
+                    style: TextStyle(decoration: designation.isActive ? null : TextDecoration.lineThrough),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => showDesignationFormDialog(
+                      context,
+                      existing: designation,
+                      onSave: (value) => _dispatchIfValid(
+                        context,
+                        _validator.validateDesignation(value, state.designations),
+                        () => bloc.add(SaveDesignationRequested(value)),
+                      ),
                     ),
                   ),
                 ),
               ),
-            )
-            .toList(),
+            ),
+          const SizedBox(height: 20),
+          Text(
+            'Responsibilities / Roles',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          if (state.staffRoles.isEmpty)
+            const StructureEmptyHint('No staff roles yet. Add only responsibilities the school actually uses.')
+          else
+            ...state.staffRoles.map((role) {
+              final designation = state.designations.where((item) => item.id == role.designationId).firstOrNull;
+              return AppCard(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  title: Text(
+                    role.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      decoration: role.isActive ? null : TextDecoration.lineThrough,
+                    ),
+                  ),
+                  subtitle: Text(designation?.name ?? 'No required designation'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => showStaffRoleFormDialog(
+                      context,
+                      existing: role,
+                      designations: activeDesignations,
+                      onSave: (value) => _dispatchIfValid(
+                        context,
+                        _validator.validateRole(
+                          value,
+                          roles: state.staffRoles,
+                          designations: state.designations,
+                        ),
+                        () => bloc.add(SaveStaffRoleRequested(value)),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+        ],
       ),
     );
   }
 }
 
-String _scopeName(String value) => value
-    .replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(1)}')
-    .replaceFirstMapped(
-      RegExp(r'^.'),
-      (match) => match.group(0)!.toUpperCase(),
-    );
+class _SectionPage extends StatelessWidget {
+  final String intro;
+  final String primaryLabel;
+  final VoidCallback onPrimary;
+  final Widget child;
 
-class _AddButton extends StatelessWidget {
-  const _AddButton({required this.label, required this.onPressed});
-  final String label;
-  final VoidCallback onPressed;
+  const _SectionPage({
+    required this.intro,
+    required this.primaryLabel,
+    required this.onPrimary,
+    required this.child,
+  });
+
   @override
-  Widget build(BuildContext context) => FloatingActionButton.extended(
-    onPressed: onPressed,
-    icon: const Icon(Icons.add),
-    label: Text(label),
-    backgroundColor: AppColors.primary(context),
-    foregroundColor: Colors.white,
-  );
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              intro,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onPrimary,
+                icon: const Icon(Icons.add),
+                label: Text(primaryLabel),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(child: child),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+void _dispatchIfValid(
+  BuildContext context,
+  String? validationError,
+  VoidCallback dispatch,
+) {
+  if (validationError == null) {
+    dispatch();
+    return;
+  }
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(validationError)));
+}
+
+extension _FirstOrNullExtension<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }
