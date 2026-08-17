@@ -50,16 +50,18 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     String? uniqueSystemId,
     String? schoolStudentId,
   }) {
-    // Always use the server-authorized, tenant-checked issuance path. The
-    // older client path first queried and then wrote `student_identities`
-    // directly, which is exactly what caused the permission-denied failure
-    // seen by School Admin on the Student ID Card screen.
     return _issueOrLoadStudentIdentity(
       studentId: student.id,
       schoolPrefix: _schoolPrefix(student, schoolStudentId),
     );
   }
 
+  /// Loads/creates the server identity and ALWAYS seeds the local
+  /// Student+Identity pair used by IdentityResolverImpl at NFC/QR scan time.
+  /// Without this pair an NFC credential can be assigned successfully yet
+  /// attendance cannot turn its uniqueSystemId back into the Student; the
+  /// old fallback then queried the protected top-level student_identities
+  /// collection and failed under Firestore rules.
   Future<Either<Failure, StudentIdentity>> _issueOrLoadStudentIdentity({
     required String studentId,
     String schoolPrefix = 'SP',
@@ -74,6 +76,25 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
         result.data['identity'] as Map,
       );
       final model = StudentIdentityModel.fromFirestore(identityData);
+
+      // Fetch by document id, not via student_identities. School staff are
+      // already authorized to read their own tenant's Student record, and
+      // this gives the verification engine a direct offline mapping from the
+      // identity uniqueSystemId back to the actual Student.
+      final studentDoc = await firestore.collection('students').doc(studentId).get();
+      if (!studentDoc.exists) {
+        return Left(ServerFailure('Student record not found while preparing identity cache.'));
+      }
+      final student = StudentModel.fromMap(studentDoc.data()!, studentDoc.id);
+      if (student.schoolId.isEmpty || student.schoolId != model.schoolId) {
+        return Left(
+          ServerFailure(
+            'Student identity school mismatch. Refresh the student record and try again.',
+          ),
+        );
+      }
+
+      await localCache.save(student: student, identity: model);
       await _cacheQrCredential(model);
       return Right(model);
     } on FirebaseFunctionsException catch (e) {
@@ -166,8 +187,6 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     String schoolId,
   ) async {
     try {
-      // Keep this query tenant-scoped. This path is used for administrative
-      // bulk operations; it must never return another school's identities.
       final snapshot = await firestore
           .collection('student_identities')
           .where('schoolId', isEqualTo: schoolId)
@@ -224,9 +243,9 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
       final cached = await localCache.findByUniqueSystemId(uniqueSystemId);
       if (cached != null) return Right(cached);
 
-      // This fallback remains for legacy callers. The returned student is
-      // still protected by the students collection rules; credential
-      // assignment itself is server-authorized by assignNfcCredential.
+      // Legacy fallback only. Normal Student ID / NFC / QR flows now seed
+      // localCache when the identity is opened/issued, avoiding the protected
+      // student_identities query below during attendance scans.
       final identityDoc = await firestore
           .collection('student_identities')
           .where('uniqueSystemId', isEqualTo: uniqueSystemId)
