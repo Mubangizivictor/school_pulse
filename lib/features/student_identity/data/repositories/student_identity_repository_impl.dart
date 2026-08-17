@@ -93,7 +93,10 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     }
     if (student.className.isNotEmpty) {
       return student.className
-          .substring(0, student.className.length > 2 ? 2 : student.className.length)
+          .substring(
+            0,
+            student.className.length > 2 ? 2 : student.className.length,
+          )
           .toUpperCase();
     }
     return 'SP';
@@ -192,8 +195,18 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
         await identityResult.fold(
           (_) async {},
           (identity) async {
-            await localCache.save(student: student, identity: identity);
-            await _cacheQrCredential(identity);
+            final model = identity is StudentIdentityModel
+                ? identity
+                : StudentIdentityModel(
+                    studentId: identity.studentId,
+                    schoolId: identity.schoolId,
+                    uniqueSystemId: identity.uniqueSystemId,
+                    schoolStudentId: identity.schoolStudentId,
+                    qrCodeData: identity.qrCodeData,
+                    nfcStatus: identity.nfcStatus,
+                  );
+            await localCache.save(student: student, identity: model);
+            await _cacheQrCredential(model);
           },
         );
       }
