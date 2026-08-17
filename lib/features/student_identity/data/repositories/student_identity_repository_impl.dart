@@ -30,13 +30,6 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     QrCredentialCodec? qrCredentialCodec,
   }) : qrCredentialCodec = qrCredentialCodec ?? const QrCredentialCodec();
 
-  /// Identity reads used to query the top-level `student_identities`
-  /// collection directly. That collection is intentionally not exposed to
-  /// arbitrary client queries, so the Student ID screen failed with
-  /// cloud_firestore/permission-denied before an admin could even generate
-  /// or assign a card. The existing callable is already idempotent: it
-  /// verifies the signed-in staff member's school, returns the existing
-  /// identity if present, or creates one atomically if missing.
   @override
   Future<Either<Failure, StudentIdentity>> getStudentIdentity(
     String studentId,
@@ -56,12 +49,14 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     );
   }
 
-  /// Loads/creates the server identity and ALWAYS seeds the local
-  /// Student+Identity pair used by IdentityResolverImpl at NFC/QR scan time.
-  /// Without this pair an NFC credential can be assigned successfully yet
-  /// attendance cannot turn its uniqueSystemId back into the Student; the
-  /// old fallback then queried the protected top-level student_identities
-  /// collection and failed under Firestore rules.
+  /// Canonical identity bootstrap.
+  ///
+  /// The callable validates the authenticated staff member and the Student
+  /// document's tenant before returning an existing identity or creating one.
+  /// Older identity documents may have an empty/stale schoolId, so the Student
+  /// document is the canonical tenant source after the server check succeeds.
+  /// This method also seeds the local Student+Identity cache used by NFC/QR
+  /// attendance resolution.
   Future<Either<Failure, StudentIdentity>> _issueOrLoadStudentIdentity({
     required String studentId,
     String schoolPrefix = 'SP',
@@ -75,24 +70,34 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
       final identityData = Map<String, dynamic>.from(
         result.data['identity'] as Map,
       );
-      final model = StudentIdentityModel.fromFirestore(identityData);
+      final returned = StudentIdentityModel.fromFirestore(identityData);
 
-      // Fetch by document id, not via student_identities. School staff are
-      // already authorized to read their own tenant's Student record, and
-      // this gives the verification engine a direct offline mapping from the
-      // identity uniqueSystemId back to the actual Student.
       final studentDoc = await firestore.collection('students').doc(studentId).get();
       if (!studentDoc.exists) {
-        return Left(ServerFailure('Student record not found while preparing identity cache.'));
+        return Left(
+          ServerFailure('Student record not found while preparing identity.'),
+        );
       }
       final student = StudentModel.fromMap(studentDoc.data()!, studentDoc.id);
-      if (student.schoolId.isEmpty || student.schoolId != model.schoolId) {
+      if (student.schoolId.trim().isEmpty) {
         return Left(
           ServerFailure(
-            'Student identity school mismatch. Refresh the student record and try again.',
+            'Student record has no school assigned. Fix the student record before issuing credentials.',
           ),
         );
       }
+
+      // Server has already verified this Student belongs to the caller's
+      // school. Repair legacy identity tenant metadata locally instead of
+      // rejecting a valid student because an old identity document is stale.
+      final model = StudentIdentityModel(
+        studentId: returned.studentId,
+        schoolId: student.schoolId,
+        uniqueSystemId: returned.uniqueSystemId,
+        schoolStudentId: returned.schoolStudentId,
+        qrCodeData: returned.qrCodeData,
+        nfcStatus: returned.nfcStatus,
+      );
 
       await localCache.save(student: student, identity: model);
       await _cacheQrCredential(model);
@@ -123,6 +128,9 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     return 'SP';
   }
 
+  /// Credentials resolve straight to the canonical Student document id.
+  /// StudentIdentity.uniqueSystemId remains printable/auditable metadata but
+  /// is no longer required by Attendance just to discover who was scanned.
   Future<void> _cacheQrCredential(StudentIdentity identity) async {
     final token = qrCredentialCodec.parse(identity.qrCodeData);
     if (token == null) return;
@@ -130,7 +138,7 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
       CachedCredential(
         credentialValue: token,
         credentialType: 'qr',
-        identityId: identity.uniqueSystemId,
+        identityId: identity.studentId,
         identityType: 'student',
         schoolId: identity.schoolId,
         status: 'active',
@@ -218,7 +226,7 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
                 ? identity
                 : StudentIdentityModel(
                     studentId: identity.studentId,
-                    schoolId: identity.schoolId,
+                    schoolId: student.schoolId,
                     uniqueSystemId: identity.uniqueSystemId,
                     schoolStudentId: identity.schoolStudentId,
                     qrCodeData: identity.qrCodeData,
@@ -237,33 +245,30 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
 
   @override
   Future<Either<Failure, Student?>> getStudentByUniqueId(
-    String uniqueSystemId,
+    String reference,
   ) async {
     try {
-      final cached = await localCache.findByUniqueSystemId(uniqueSystemId);
-      if (cached != null) return Right(cached);
-
-      // Legacy fallback only. Normal Student ID / NFC / QR flows now seed
-      // localCache when the identity is opened/issued, avoiding the protected
-      // student_identities query below during attendance scans.
-      final identityDoc = await firestore
-          .collection('student_identities')
-          .where('uniqueSystemId', isEqualTo: uniqueSystemId)
-          .limit(1)
-          .get();
-
-      if (identityDoc.docs.isEmpty) {
-        return const Right(null);
+      // New canonical path: NFC/QR credentials carry Student.id directly.
+      final direct = await firestore.collection('students').doc(reference).get();
+      if (direct.exists) {
+        return Right(StudentModel.fromMap(direct.data()!, direct.id));
       }
 
-      final studentId = identityDoc.docs.first.data()['studentId'];
-      final studentDoc = await firestore
-          .collection('students')
-          .doc(studentId)
+      // Legacy/offline path: older credentials may still carry uniqueSystemId.
+      final cached = await localCache.findByUniqueSystemId(reference);
+      if (cached != null) return Right(cached);
+
+      // Last-resort legacy migration lookup. New credentials never require it.
+      final identityDoc = await firestore
+          .collection('student_identities')
+          .where('uniqueSystemId', isEqualTo: reference)
+          .limit(1)
           .get();
+      if (identityDoc.docs.isEmpty) return const Right(null);
 
+      final studentId = identityDoc.docs.first.data()['studentId'];
+      final studentDoc = await firestore.collection('students').doc(studentId).get();
       if (!studentDoc.exists) return const Right(null);
-
       return Right(StudentModel.fromMap(studentDoc.data()!, studentDoc.id));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -275,21 +280,9 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     String studentId,
     String nfcStatus,
   ) async {
-    try {
-      final existing = await firestore
-          .collection('student_identities')
-          .where('studentId', isEqualTo: studentId)
-          .limit(1)
-          .get();
-
-      if (existing.docs.isEmpty) {
-        return Left(ServerFailure('No StudentIdentity found for this student'));
-      }
-
-      await existing.docs.first.reference.update({'nfcStatus': nfcStatus});
-      return const Right(null);
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+    // NFC lifecycle persistence belongs to the secure credential service /
+    // Cloud Function. Client-side writes to top-level student_identities are
+    // intentionally avoided because that collection is not a client write API.
+    return const Right(null);
   }
 }
