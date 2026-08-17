@@ -1,0 +1,90 @@
+name: Structure Rules Hardening Once
+
+on:
+  push:
+    branches:
+      - feat/structure-sequential-rebuild-2026-08-17
+    paths:
+      - '.github/workflows/structure-rules-hardening-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/structure-sequential-rebuild-2026-08-17
+      - name: Harden Structure tenant rules
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('firestore.rules')
+          text = path.read_text()
+          old = '''    match /structure_setup_preferences/{id} {
+            allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+            allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+          }
+          match /structure_curriculum_assignments/{id} {
+            allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+            allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+          }
+          match /structure_teaching_assignments/{id} {
+            allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+            allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+          }
+          match /structure_class_timetables/{id} {
+            allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+            allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+          }
+          match /structure_timetable_lessons/{id} {
+            allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+            allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+          }'''.replace('          ', '')
+          new = '''    match /structure_setup_preferences/{schoolId} {
+            allow read, delete: if isStaff() && isSameSchool(schoolId);
+            allow create: if isStaff() &&
+              request.resource.data.schoolId == schoolId && isSameSchool(schoolId);
+            allow update: if isStaff() && isSameSchool(schoolId) &&
+              request.resource.data.schoolId == schoolId;
+          }
+          match /structure_curriculum_assignments/{id} {
+            allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+            allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+            allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+              request.resource.data.schoolId == resource.data.schoolId;
+          }
+          match /structure_teaching_assignments/{id} {
+            allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+            allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+            allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+              request.resource.data.schoolId == resource.data.schoolId;
+          }
+          match /structure_class_timetables/{id} {
+            allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+            allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+            allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+              request.resource.data.schoolId == resource.data.schoolId;
+          }
+          match /structure_timetable_lessons/{id} {
+            allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+            allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+            allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+              request.resource.data.schoolId == resource.data.schoolId;
+          }'''.replace('          ', '')
+          if text.count(old) != 1:
+              raise SystemExit('Expected Structure rules block exactly once')
+          path.write_text(text.replace(old, new))
+      - name: Commit hardened rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add firestore.rules
+          git diff --cached --check
+          git commit -m 'security(structure): keep tenant ownership immutable'
+          git push origin HEAD:feat/structure-sequential-rebuild-2026-08-17
