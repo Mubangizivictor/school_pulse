@@ -3,14 +3,8 @@ import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/features/verification/domain/repositories/nfc_credential_repository.dart';
 import '../repositories/student_identity_repository.dart';
 
-/// Orchestrates a student's NFC card lifecycle across the two stores it
-/// touches: the verification engine's local `CachedCredentialIsar` /
-/// `RevokedCredentialIsar` tables (what `IdentityResolver` actually reads
-/// at scan time) and `StudentIdentity.nfcStatus` (the informational status
-/// shown on the student's own identity record). Each method here is not
-/// atomic across the two - if the Firestore status update fails after the
-/// card mapping already succeeded, the card is scan-usable but the
-/// student's displayed nfcStatus lags until retried.
+/// Orchestrates a student's NFC card lifecycle across the verification
+/// credential store and the student identity record.
 class NfcCredentialService {
   final NfcCredentialRepository nfcCredentialRepository;
   final StudentIdentityRepository studentIdentityRepository;
@@ -33,7 +27,7 @@ class NfcCredentialService {
       schoolId: schoolId,
       studentId: studentId,
     );
-    return _enrichDuplicateAndActivate(result, studentId);
+    return _enrichDuplicate(result);
   }
 
   Future<Either<Failure, void>> replaceForStudent({
@@ -53,44 +47,40 @@ class NfcCredentialService {
       reason: reason,
       studentId: studentId,
     );
-    // replace() assigns the new card internally, so the same
-    // already-registered-elsewhere conflict assignToStudent handles can
-    // surface here too (revoke of the old card still succeeds either way).
-    return _enrichDuplicateAndActivate(result, studentId);
+    return _enrichDuplicate(result);
   }
 
-  /// Shared tail for assign/replace: on a card-already-registered
-  /// conflict, resolves the other student's name so an authorised admin
-  /// can act on it instead of getting a dead-end "already assigned"
-  /// message; on success, flips this student's own nfcStatus to active.
-  Future<Either<Failure, void>> _enrichDuplicateAndActivate(
+  /// The online assignment path already updates StudentIdentity.nfcStatus
+  /// inside the secure assignNfcCredential Cloud Function transaction. The
+  /// previous client-side update here was redundant and failed under
+  /// Firestore rules, turning a successful card assignment into a visible
+  /// permission-denied error. Keep duplicate enrichment only.
+  Future<Either<Failure, void>> _enrichDuplicate(
     Either<Failure, void> result,
-    String studentId,
   ) async {
-    if (result.isLeft()) {
-      final failure = result.fold((f) => f, (_) => null)!;
-      if (failure is! DuplicateCredentialFailure ||
-          failure.conflictingIdentityType != 'student') {
-        return Left(failure);
-      }
-      final conflictingStudent = await studentIdentityRepository
-          .getStudentByUniqueId(failure.conflictingIdentityId);
-      final name = conflictingStudent.fold(
-        (_) => null,
-        (student) => student?.name,
-      );
-      return Left(
-        DuplicateCredentialFailure(
-          conflictingIdentityId: failure.conflictingIdentityId,
-          conflictingIdentityType: failure.conflictingIdentityType,
-          message: name != null
-              ? 'This card is already registered to $name.'
-              : failure.message,
-        ),
-      );
+    if (result.isRight()) return const Right(null);
+
+    final failure = result.fold((f) => f, (_) => null)!;
+    if (failure is! DuplicateCredentialFailure ||
+        failure.conflictingIdentityType != 'student') {
+      return Left(failure);
     }
 
-    return studentIdentityRepository.updateNfcStatus(studentId, 'active');
+    final conflictingStudent = await studentIdentityRepository
+        .getStudentByUniqueId(failure.conflictingIdentityId);
+    final name = conflictingStudent.fold(
+      (_) => null,
+      (student) => student?.name,
+    );
+    return Left(
+      DuplicateCredentialFailure(
+        conflictingIdentityId: failure.conflictingIdentityId,
+        conflictingIdentityType: failure.conflictingIdentityType,
+        message: name != null
+            ? 'This card is already registered to $name.'
+            : failure.message,
+      ),
+    );
   }
 
   Future<Either<Failure, void>> revokeForStudent({
