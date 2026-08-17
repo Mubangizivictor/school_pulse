@@ -22,6 +22,7 @@ import 'package:school_pulse/features/catering/data/models/meal_record_isar.dart
 import 'package:school_pulse/features/verification/data/models/verification_isar_models.dart';
 import 'package:school_pulse/features/notifications/data/models/notification_isar.dart';
 import 'package:school_pulse/features/notifications/data/models/notification_token_isar.dart';
+import 'package:school_pulse/features/messages/data/models/pending_message_isar.dart';
 import 'package:school_pulse/features/teacher/data/models/class_teacher_isar_models.dart';
 import 'package:school_pulse/features/teacher/data/models/subject_teacher_isar_models.dart';
 
@@ -88,6 +89,7 @@ Future<Isar> open() async {
     TransportStopIsarSchema,
     TransportVehicleIsarSchema,
     StructureFeeCategoryIsarSchema,
+    PendingMessageIsarSchema,
     AssessmentTypeDefIsarSchema,
     GradingSystemDefIsarSchema,
     GradeBandIsarSchema,

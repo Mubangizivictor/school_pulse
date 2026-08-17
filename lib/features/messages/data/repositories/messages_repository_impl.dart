@@ -328,6 +328,7 @@ class MessagesRepositoryImpl implements MessagesRepository {
     String? sharedContactRole,
     DateTime? eventStart,
     String? eventLocation,
+    String? clientMessageId,
   }) async {
     final conversationRef = _conversations.doc(conversationId);
     final conversation = await conversationRef.get();
@@ -336,7 +337,20 @@ class MessagesRepositoryImpl implements MessagesRepository {
     final participantIds = List<String>.from(
       conversation.data()!['participantIds'] ?? const [],
     );
-    final messageRef = _messagesOf(conversationId).doc();
+    final messageRef = clientMessageId != null
+        ? _messagesOf(conversationId).doc(clientMessageId)
+        : _messagesOf(conversationId).doc();
+
+    if (clientMessageId != null) {
+      // Retrying a queued offline send must not double-increment
+      // unreadCounts or overwrite lastMessage with a stale duplicate - if
+      // the message doc already exists, this attempt already landed on a
+      // previous try (e.g. the write succeeded but the client never saw
+      // the confirmation before losing connection), so there is nothing
+      // left to do.
+      final existing = await messageRef.get();
+      if (existing.exists) return;
+    }
 
     final batch = firestore.batch();
     batch.set(

@@ -33,6 +33,14 @@ class _MessagesUpdated extends ConversationEvent {
   List<Object?> get props => [messages];
 }
 
+class _PendingMessagesUpdated extends ConversationEvent {
+  final List<ChatMessage> messages;
+  const _PendingMessagesUpdated(this.messages);
+
+  @override
+  List<Object?> get props => [messages];
+}
+
 /// Widens the pagination window - the screen calls this when the user
 /// scrolls back to the oldest message currently held in memory.
 class MoreHistoryRequested extends ConversationEvent {

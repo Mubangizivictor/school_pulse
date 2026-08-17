@@ -6,9 +6,12 @@ import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
 import 'package:school_pulse/features/messages/domain/repositories/messages_repository.dart';
+import 'package:school_pulse/features/messages/domain/services/message_outbox_service.dart';
 import 'package:school_pulse/features/messages/presentation/bloc/conversation_bloc.dart';
 
 class MockMessagesRepository extends Mock implements MessagesRepository {}
+
+class MockMessageOutboxService extends Mock implements MessageOutboxService {}
 
 class FakeUserEntity extends Fake implements UserEntity {}
 
@@ -358,6 +361,234 @@ void main() {
             eventLocation: any(named: 'eventLocation'),
           ),
         ).called(1);
+      },
+    );
+  });
+
+  group('offline outbox routing', () {
+    late MockMessageOutboxService outbox;
+
+    ChatConversation openConversation() {
+      return ChatConversation(
+        id: 'c1',
+        title: 'Chat',
+        type: ChatType.direct,
+        lastMessage: ChatMessage(
+          id: 'm0',
+          senderId: 'u1',
+          senderName: 'User',
+          content: 'hi',
+          timestamp: DateTime(2026, 1, 1),
+        ),
+        participants: const [],
+        schoolId: 's1',
+        adminIds: const [],
+        createdBy: 'u1',
+      );
+    }
+
+    setUp(() {
+      outbox = MockMessageOutboxService();
+      registerFallbackValue(MessageType.text);
+      when(
+        () => repository.watchConversation('c1', 'u1'),
+      ).thenAnswer((_) => Stream.value(openConversation()));
+      when(
+        () => repository.watchMessages('c1', 'u1', limit: 60),
+      ).thenAnswer((_) => Stream.value(const []));
+      when(
+        () => repository.markConversationRead(any(), any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => outbox.watchPending('c1'),
+      ).thenAnswer((_) => Stream.value(const []));
+    });
+
+    blocTest<ConversationBloc, ConversationState>(
+      'routes a plain text send through the outbox instead of the repository',
+      setUp: () {
+        when(
+          () => outbox.enqueueText(
+            conversationId: any(named: 'conversationId'),
+            sender: any(named: 'sender'),
+            content: any(named: 'content'),
+            replyTo: any(named: 'replyTo'),
+          ),
+        ).thenAnswer((_) async => 'client-id-1');
+      },
+      build: () => ConversationBloc(repository: repository, outbox: outbox),
+      act: (bloc) async {
+        bloc.add(ConversationOpened('c1', user));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(const ConversationMessageSendRequested(content: 'hello'));
+        await Future<void>.delayed(Duration.zero);
+      },
+      verify: (bloc) {
+        verify(
+          () => outbox.enqueueText(
+            conversationId: 'c1',
+            sender: user,
+            content: 'hello',
+            replyTo: null,
+          ),
+        ).called(1);
+        verifyNever(
+          () => repository.sendMessage(
+            conversationId: any(named: 'conversationId'),
+            sender: any(named: 'sender'),
+            content: any(named: 'content'),
+          ),
+        );
+      },
+    );
+
+    blocTest<ConversationBloc, ConversationState>(
+      'sends a poll directly through the repository, bypassing the outbox',
+      setUp: () {
+        when(
+          () => repository.sendMessage(
+            conversationId: any(named: 'conversationId'),
+            sender: any(named: 'sender'),
+            content: any(named: 'content'),
+            type: any(named: 'type'),
+            fileName: any(named: 'fileName'),
+            fileSize: any(named: 'fileSize'),
+            mediaUrl: any(named: 'mediaUrl'),
+            replyTo: any(named: 'replyTo'),
+            pollOptions: any(named: 'pollOptions'),
+            audioDuration: any(named: 'audioDuration'),
+            latitude: any(named: 'latitude'),
+            longitude: any(named: 'longitude'),
+            sharedContactId: any(named: 'sharedContactId'),
+            sharedContactRole: any(named: 'sharedContactRole'),
+            eventStart: any(named: 'eventStart'),
+            eventLocation: any(named: 'eventLocation'),
+          ),
+        ).thenAnswer((_) async {});
+      },
+      build: () => ConversationBloc(repository: repository, outbox: outbox),
+      act: (bloc) async {
+        bloc.add(ConversationOpened('c1', user));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(
+          const ConversationMessageSendRequested(
+            content: 'Pick one',
+            type: MessageType.poll,
+            pollOptions: ['A', 'B'],
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+      },
+      verify: (bloc) {
+        verifyNever(
+          () => outbox.enqueueText(
+            conversationId: any(named: 'conversationId'),
+            sender: any(named: 'sender'),
+            content: any(named: 'content'),
+            replyTo: any(named: 'replyTo'),
+          ),
+        );
+        verify(
+          () => repository.sendMessage(
+            conversationId: 'c1',
+            sender: user,
+            content: 'Pick one',
+            type: MessageType.poll,
+            fileName: any(named: 'fileName'),
+            fileSize: any(named: 'fileSize'),
+            mediaUrl: any(named: 'mediaUrl'),
+            replyTo: any(named: 'replyTo'),
+            pollOptions: ['A', 'B'],
+            audioDuration: any(named: 'audioDuration'),
+            latitude: any(named: 'latitude'),
+            longitude: any(named: 'longitude'),
+            sharedContactId: any(named: 'sharedContactId'),
+            sharedContactRole: any(named: 'sharedContactRole'),
+            eventStart: any(named: 'eventStart'),
+            eventLocation: any(named: 'eventLocation'),
+          ),
+        ).called(1);
+      },
+    );
+
+    blocTest<ConversationBloc, ConversationState>(
+      'merges a still-queued pending message ahead of confirmed history',
+      setUp: () {
+        when(() => repository.watchMessages('c1', 'u1', limit: 60)).thenAnswer(
+          (_) => Stream.value([
+            ChatMessage(
+              id: 'confirmed-1',
+              senderId: 'u1',
+              senderName: 'User One',
+              content: 'Older confirmed message',
+              timestamp: DateTime(2026, 1, 1, 12),
+            ),
+          ]),
+        );
+        when(() => outbox.watchPending('c1')).thenAnswer(
+          (_) => Stream.value([
+            ChatMessage(
+              id: 'pending-1',
+              senderId: 'u1',
+              senderName: 'User One',
+              content: 'Still sending',
+              timestamp: DateTime(2026, 1, 1, 12, 5),
+              isMe: true,
+              isSending: true,
+            ),
+          ]),
+        );
+      },
+      build: () => ConversationBloc(repository: repository, outbox: outbox),
+      act: (bloc) async {
+        bloc.add(ConversationOpened('c1', user));
+        await Future<void>.delayed(Duration.zero);
+      },
+      verify: (bloc) {
+        final messages = bloc.state.messages!;
+        expect(messages.map((m) => m.id), ['pending-1', 'confirmed-1']);
+        expect(messages.first.isSending, isTrue);
+      },
+    );
+
+    blocTest<ConversationBloc, ConversationState>(
+      'drops the pending row once Firestore confirms the same id',
+      setUp: () {
+        when(() => repository.watchMessages('c1', 'u1', limit: 60)).thenAnswer(
+          (_) => Stream.value([
+            ChatMessage(
+              id: 'now-confirmed',
+              senderId: 'u1',
+              senderName: 'User One',
+              content: 'Hello',
+              timestamp: DateTime(2026, 1, 1, 12),
+            ),
+          ]),
+        );
+        when(() => outbox.watchPending('c1')).thenAnswer(
+          (_) => Stream.value([
+            ChatMessage(
+              id: 'now-confirmed',
+              senderId: 'u1',
+              senderName: 'User One',
+              content: 'Hello',
+              timestamp: DateTime(2026, 1, 1, 12),
+              isMe: true,
+              isSending: true,
+            ),
+          ]),
+        );
+      },
+      build: () => ConversationBloc(repository: repository, outbox: outbox),
+      act: (bloc) async {
+        bloc.add(ConversationOpened('c1', user));
+        await Future<void>.delayed(Duration.zero);
+      },
+      verify: (bloc) {
+        final messages = bloc.state.messages!;
+        expect(messages, hasLength(1));
+        expect(messages.single.id, 'now-confirmed');
+        expect(messages.single.isSending, isFalse);
       },
     );
   });

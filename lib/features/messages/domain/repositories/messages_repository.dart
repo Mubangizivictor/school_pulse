@@ -86,6 +86,12 @@ abstract class MessagesRepository {
     int limit,
   });
 
+  /// [clientMessageId], when supplied, becomes the Firestore document id
+  /// (via `.doc(clientMessageId)` instead of an auto-generated one), so
+  /// retrying the same queued send - e.g. after a dropped connection -
+  /// writes to the same document instead of creating a duplicate message.
+  /// Omit it for call sites that don't need retry-safety (the id is
+  /// otherwise auto-generated exactly as before).
   Future<void> sendMessage({
     required String conversationId,
     required UserEntity sender,
@@ -103,6 +109,7 @@ abstract class MessagesRepository {
     String? sharedContactRole,
     DateTime? eventStart,
     String? eventLocation,
+    String? clientMessageId,
   });
 
   /// Casts (or moves) this user's vote. Passing the option they already

@@ -249,6 +249,92 @@ void main() {
     });
   });
 
+  group('sendMessage idempotency', () {
+    test('retrying the same clientMessageId does not duplicate the message '
+        'or double-increment unread counts', () async {
+      final conversationId = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
+
+      const clientId = 'client-generated-id-1';
+      await repository.sendMessage(
+        conversationId: conversationId,
+        sender: teacher,
+        content: 'Hello',
+        clientMessageId: clientId,
+      );
+      // Simulates the client losing the confirmation and retrying the same
+      // queued send - the exact scenario an offline outbox hits on
+      // reconnect.
+      await repository.sendMessage(
+        conversationId: conversationId,
+        sender: teacher,
+        content: 'Hello',
+        clientMessageId: clientId,
+      );
+
+      final messages = await repository
+          .watchMessages(conversationId, teacher.id)
+          .first;
+      expect(messages, hasLength(1));
+
+      final conversation = await repository
+          .watchConversation(conversationId, parent.id)
+          .first;
+      expect(conversation!.unreadCount, 1);
+    });
+
+    test('two different clientMessageIds create two messages', () async {
+      final conversationId = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
+
+      await repository.sendMessage(
+        conversationId: conversationId,
+        sender: teacher,
+        content: 'First',
+        clientMessageId: 'client-id-a',
+      );
+      await repository.sendMessage(
+        conversationId: conversationId,
+        sender: teacher,
+        content: 'Second',
+        clientMessageId: 'client-id-b',
+      );
+
+      final messages = await repository
+          .watchMessages(conversationId, teacher.id)
+          .first;
+      expect(messages, hasLength(2));
+    });
+
+    test('omitting clientMessageId keeps the original auto-id behaviour',
+        () async {
+      final conversationId = await repository.startDirectConversation(
+        me: teacher,
+        contact: parentContact,
+      );
+
+      await repository.sendMessage(
+        conversationId: conversationId,
+        sender: teacher,
+        content: 'No client id',
+      );
+      await repository.sendMessage(
+        conversationId: conversationId,
+        sender: teacher,
+        content: 'No client id',
+      );
+
+      final messages = await repository
+          .watchMessages(conversationId, teacher.id)
+          .first;
+      expect(messages, hasLength(2));
+    });
+  });
+
   group('message actions', () {
     late String conversationId;
     late ChatMessage message;

@@ -34,7 +34,7 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
     )..forward();
     // The bootstrap and this recognition moment overlap: this is a maximum,
     // not a stacked delay after branding has already been loaded.
-    Timer(const Duration(milliseconds: 1800), _routeToWorkspace);
+    Timer(const Duration(seconds: 2), _routeToWorkspace);
   }
 
   void _routeToWorkspace() {

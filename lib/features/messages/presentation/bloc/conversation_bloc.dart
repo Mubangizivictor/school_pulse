@@ -8,6 +8,7 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
 import 'package:school_pulse/features/messages/domain/policies/messaging_permission_policy.dart';
 import 'package:school_pulse/features/messages/domain/repositories/messages_repository.dart';
+import 'package:school_pulse/features/messages/domain/services/message_outbox_service.dart';
 
 part 'conversation_event.dart';
 part 'conversation_state.dart';
@@ -25,17 +26,30 @@ part 'conversation_state.dart';
 class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
   final MessagesRepository _repository;
 
+  /// Null on web (no Isar there) - sends fall back to calling the
+  /// repository directly, exactly as this bloc behaved before the offline
+  /// outbox existed.
+  final MessageOutboxService? _outbox;
+
   StreamSubscription<ChatConversation?>? _conversationSub;
   StreamSubscription<List<ChatMessage>>? _messagesSub;
+  StreamSubscription<List<ChatMessage>>? _pendingSub;
   UserEntity? _user;
   bool _markingRead = false;
 
-  ConversationBloc({required MessagesRepository repository})
-    : _repository = repository,
-      super(const ConversationState()) {
+  List<ChatMessage> _confirmedMessages = const [];
+  List<ChatMessage> _pendingMessages = const [];
+
+  ConversationBloc({
+    required MessagesRepository repository,
+    MessageOutboxService? outbox,
+  }) : _repository = repository,
+       _outbox = outbox,
+       super(const ConversationState()) {
     on<ConversationOpened>(_onOpened);
     on<_ConversationUpdated>(_onConversationUpdated);
     on<_MessagesUpdated>(_onMessagesUpdated);
+    on<_PendingMessagesUpdated>(_onPendingMessagesUpdated);
     on<MoreHistoryRequested>(_onMoreHistoryRequested);
     on<ConversationMessageReadMarked>(_onReadMarked);
     on<ConversationMessageSendRequested>(_onSendRequested);
@@ -63,7 +77,34 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
         .watchConversation(event.conversationId, event.user.id)
         .listen((conversation) => add(_ConversationUpdated(conversation)));
 
+    _pendingSub?.cancel();
+    final outbox = _outbox;
+    if (outbox != null) {
+      _pendingSub = outbox
+          .watchPending(event.conversationId)
+          .listen((pending) => add(_PendingMessagesUpdated(pending)));
+    }
+
     _resubscribeMessages();
+  }
+
+  /// Confirmed history is newest-first (see
+  /// [MessagesRepository.watchMessages]); still-queued outbox rows (oldest
+  /// first, per [MessageOutboxService.watchPending]) go in front of it,
+  /// most-recently-queued nearest the top, so a message the sender just
+  /// wrote appears immediately at the bottom of the chat and only drops out
+  /// of this merged list once Firestore's own copy of it - same id, because
+  /// `clientMessageId` becomes the real message id - shows up in
+  /// [_confirmedMessages].
+  void _emitMergedMessages(Emitter<ConversationState> emit) {
+    final confirmedIds = _confirmedMessages.map((m) => m.id).toSet();
+    final stillPending = _pendingMessages
+        .where((m) => !confirmedIds.contains(m.id))
+        .toList()
+        .reversed;
+    emit(
+      state.copyWith(messages: [...stillPending, ..._confirmedMessages]),
+    );
   }
 
   void _resubscribeMessages() {
@@ -94,7 +135,16 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     _MessagesUpdated event,
     Emitter<ConversationState> emit,
   ) {
-    emit(state.copyWith(messages: event.messages));
+    _confirmedMessages = event.messages;
+    _emitMergedMessages(emit);
+  }
+
+  void _onPendingMessagesUpdated(
+    _PendingMessagesUpdated event,
+    Emitter<ConversationState> emit,
+  ) {
+    _pendingMessages = event.messages;
+    _emitMergedMessages(emit);
   }
 
   void _onMoreHistoryRequested(
@@ -144,6 +194,38 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
             MessagingRefusal.groupNotAdmin,
             'Only admins can send messages here.',
           ),
+        ),
+      );
+      return;
+    }
+
+    final outbox = _outbox;
+    // Text-only, no-reply sends are the common case the outbox is built
+    // for: queue locally and return immediately, so a poor connection
+    // never blocks the bubble from appearing. Anything richer than that
+    // (polls, locations, shared contacts, events) still goes straight to
+    // the repository - see the class doc on why the outbox model doesn't
+    // carry every field sendMessage supports.
+    final isSimpleText =
+        event.type == MessageType.text &&
+        event.fileName == null &&
+        event.mediaUrl == null &&
+        event.pollOptions == null &&
+        event.latitude == null &&
+        event.sharedContactId == null &&
+        event.eventStart == null;
+
+    if (outbox != null && isSimpleText) {
+      await outbox.enqueueText(
+        conversationId: conversation.id,
+        sender: user,
+        content: event.content,
+        replyTo: event.replyTo,
+      );
+      emit(
+        state.copyWith(
+          sendStatus: ConversationSendStatus.idle,
+          clearSendError: true,
         ),
       );
       return;
@@ -278,6 +360,23 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     final conversation = state.conversation;
     if (user == null || conversation == null) return;
 
+    final outbox = _outbox;
+    if (outbox != null) {
+      // The upload itself happens inside the outbox's drain pass, not
+      // here - queueing returns immediately so a large photo on a weak
+      // connection still shows an optimistic bubble right away instead of
+      // blocking the composer on the upload.
+      await outbox.enqueueAttachment(
+        conversationId: conversation.id,
+        sender: user,
+        type: event.type,
+        file: event.file,
+        fileName: event.fileName,
+        audioDuration: event.audioDuration,
+      );
+      return;
+    }
+
     emit(state.copyWith(uploading: true));
     try {
       final url = await _repository.uploadAttachment(
@@ -388,6 +487,7 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
   Future<void> close() {
     _conversationSub?.cancel();
     _messagesSub?.cancel();
+    _pendingSub?.cancel();
     return super.close();
   }
 }

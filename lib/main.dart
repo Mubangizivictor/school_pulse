@@ -16,6 +16,8 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/attendance_hub/domain/repositories/attendance_repository.dart';
 import 'package:school_pulse/features/attendance_hub/presentation/widgets/attendance_sync_lifecycle_gate.dart';
+import 'package:school_pulse/features/messages/presentation/widgets/message_sync_lifecycle_gate.dart';
+import 'package:school_pulse/features/messages/domain/services/message_outbox_service.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/app_role_session_cubit.dart';
 import 'package:school_pulse/features/institution/presentation/bloc/institution_context_cubit.dart';
 import 'package:school_pulse/features/institution/presentation/widgets/subscription_access_gate.dart';
@@ -215,7 +217,6 @@ class SchoolPulseApp extends StatelessWidget {
           create: (_) => di.sl<InventoryBloc>()..add(LoadInventory()),
         ),
         BlocProvider(create: (_) => di.sl<StoresAssetsBloc>()),
-        BlocProvider(create: (_) => di.sl<StructureBloc>()),
         BlocProvider(create: (_) => di.sl<TimetableBloc>()),
         BlocProvider(create: (_) => di.sl<DeanBloc>()),
         BlocProvider(create: (_) => di.sl<ReligionBloc>()),
@@ -282,6 +283,16 @@ class SchoolPulseAppView extends StatelessWidget {
                 ),
               );
 
+              // Same reasoning as the attendance drain above, for messages
+              // queued offline: fires on both cold-start restore and
+              // interactive login, no-op if empty or still offline. Not
+              // registered on web (see injection_container.dart), so this
+              // is skipped there via the same guard MessageOutboxService
+              // itself is registered behind.
+              if (!kIsWeb) {
+                unawaited(di.sl<MessageOutboxService>().drain());
+              }
+
               // Load structure data once authenticated.
               context.read<StructureBloc>().add(
                 LoadStructureData(state.user.schoolId),
@@ -333,9 +344,11 @@ class SchoolPulseAppView extends StatelessWidget {
             themeMode: themeProvider.themeMode,
             routerConfig: router,
             builder: (context, child) => AttendanceSyncLifecycleGate(
-              child: OwnerAppLockGate(
-                child: SubscriptionAccessGate(
-                  child: child ?? const SizedBox.shrink(),
+              child: MessageSyncLifecycleGate(
+                child: OwnerAppLockGate(
+                  child: SubscriptionAccessGate(
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 ),
               ),
             ),

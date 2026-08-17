@@ -17,6 +17,7 @@ class AdminDashboardBloc
     on<LoadAdminDashboardStats>((event, emit) async {
       emit(AdminDashboardLoading());
       final result = await getAdminDashboardStats(NoParams());
+      if (isClosed) return;
       result.fold((failure) => emit(AdminDashboardError(failure.message)), (
         stats,
       ) {
@@ -25,7 +26,7 @@ class AdminDashboardBloc
         } else {
           emit(AdminDashboardLoaded(stats: stats));
         }
-        add(WatchAuditLogs(schoolId: stats.schoolId));
+        if (!isClosed) add(WatchAuditLogs(schoolId: stats.schoolId));
       });
     });
 

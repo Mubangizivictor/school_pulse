@@ -77,6 +77,8 @@ import 'package:school_pulse/features/messages/domain/repositories/messages_repo
 import 'package:school_pulse/features/messages/data/repositories/messages_repository_impl.dart';
 import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
 import 'package:school_pulse/features/messages/presentation/bloc/conversation_bloc.dart';
+import 'package:school_pulse/features/messages/domain/services/message_outbox_service.dart';
+import 'package:school_pulse/features/messages/data/services/message_outbox_service_impl.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/generate_reports.dart';
 import 'package:school_pulse/features/finance/domain/services/finance_service.dart';
@@ -1193,8 +1195,20 @@ Future<void> init() async {
   sl.registerLazySingleton<MessagingBloc>(
     () => MessagingBloc(repository: sl(), roleSession: sl()),
   );
+  // No offline outbox on web - same as every other Isar-backed service in
+  // this project (see the `if (!kIsWeb)` guard around `sl<Isar>()` above).
+  // ConversationBloc treats a null outbox as "send directly, no local
+  // queue", which is what web already did before this feature existed.
+  if (!kIsWeb) {
+    sl.registerLazySingleton<MessageOutboxService>(
+      () => MessageOutboxServiceImpl(isar: sl(), repository: sl()),
+    );
+  }
   sl.registerFactory<ConversationBloc>(
-    () => ConversationBloc(repository: sl()),
+    () => ConversationBloc(
+      repository: sl(),
+      outbox: kIsWeb ? null : sl<MessageOutboxService>(),
+    ),
   );
 
   // Features - Notifications
