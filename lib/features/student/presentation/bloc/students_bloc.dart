@@ -11,6 +11,7 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
   StudentsBloc({required this.getStudentsByIds, required this.getAllStudents})
     : super(StudentsInitial()) {
     on<FetchStudents>(_onFetchStudents);
+    on<LoadSchoolStudents>(_onLoadSchoolStudents);
     on<SearchStudents>(_onSearchStudents);
   }
 
@@ -21,7 +22,24 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
     emit(StudentsLoading());
     final result = await getStudentsByIds(event.studentIds);
     result.fold(
-      (failure) => emit(const StudentsError('Server Failure')),
+      (failure) => emit(StudentsError(failure.message)),
+      (students) => emit(StudentsLoaded(students)),
+    );
+  }
+
+  Future<void> _onLoadSchoolStudents(
+    LoadSchoolStudents event,
+    Emitter<StudentsState> emit,
+  ) async {
+    emit(StudentsLoading());
+    final schoolId = event.schoolId.trim();
+    if (schoolId.isEmpty) {
+      emit(const StudentsError('School context is required to load students.'));
+      return;
+    }
+    final result = await getAllStudents(schoolId: schoolId);
+    result.fold(
+      (failure) => emit(StudentsError(failure.message)),
       (students) => emit(StudentsLoaded(students)),
     );
   }
@@ -30,9 +48,13 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
     SearchStudents event,
     Emitter<StudentsState> emit,
   ) async {
+    // Legacy/global search is retained for existing call sites. New tenant
+    // administration screens load with LoadSchoolStudents and filter their
+    // already school-scoped result locally so an empty query can never cause
+    // a cross-tenant collection scan.
     emit(StudentsLoading());
     final result = await getAllStudents();
-    result.fold((failure) => emit(const StudentsError('Server Failure')), (
+    result.fold((failure) => emit(StudentsError(failure.message)), (
       students,
     ) {
       final filtered = students.where((s) {
