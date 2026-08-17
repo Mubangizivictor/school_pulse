@@ -13,6 +13,7 @@ import 'package:school_pulse/features/institution/presentation/screens/instituti
 import 'package:school_pulse/features/admin/presentation/widgets/admin_quick_add_sheet.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/app_role_session_cubit.dart';
 import 'package:school_pulse/features/auth/presentation/widgets/role_switcher_sheet.dart';
+import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
 
 class StaffShell extends StatelessWidget {
   final Widget child;
@@ -324,8 +325,8 @@ class StaffShell extends StatelessWidget {
         label: 'Add',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
-        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24),
+        icon: MessagesNavIcon(icon: Icons.chat_bubble_outline_rounded),
+        selectedIcon: MessagesNavIcon(icon: Icons.chat_bubble_rounded),
         label: 'Messages',
       ),
       const NavigationDestination(
@@ -352,8 +353,8 @@ class StaffShell extends StatelessWidget {
         label: 'Tasks',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
-        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24),
+        icon: MessagesNavIcon(icon: Icons.chat_bubble_outline_rounded),
+        selectedIcon: MessagesNavIcon(icon: Icons.chat_bubble_rounded),
         label: 'Messages',
       ),
       const NavigationDestination(
@@ -375,8 +376,8 @@ class StaffShell extends StatelessWidget {
         label: 'Tasks',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
-        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24),
+        icon: MessagesNavIcon(icon: Icons.chat_bubble_outline_rounded),
+        selectedIcon: MessagesNavIcon(icon: Icons.chat_bubble_rounded),
         label: 'Messages',
       ),
       const NavigationDestination(
@@ -398,8 +399,8 @@ class StaffShell extends StatelessWidget {
         label: 'Records',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.chat_bubble_outline_rounded, size: 24),
-        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24),
+        icon: MessagesNavIcon(icon: Icons.chat_bubble_outline_rounded),
+        selectedIcon: MessagesNavIcon(icon: Icons.chat_bubble_rounded),
         label: 'Messages',
       ),
       const NavigationDestination(
@@ -579,16 +580,23 @@ class StaffShell extends StatelessWidget {
                         label: '',
                       );
                     }
+                    final rawIcon = isSelected ? d.selectedIcon : d.icon;
+                    final tintColor = isSelected
+                        ? AppColors.primary(context)
+                        : AppColors.textMuted(context);
+                    final themedIcon = rawIcon is MessagesNavIcon
+                        ? MessagesNavIcon(
+                            icon: rawIcon.icon,
+                            color: tintColor,
+                            size: 24,
+                          )
+                        : Icon(
+                            (rawIcon as Icon).icon,
+                            color: tintColor,
+                            size: 24,
+                          );
                     return NavigationDestination(
-                      icon: Icon(
-                        isSelected
-                            ? (d.selectedIcon as Icon).icon
-                            : (d.icon as Icon).icon,
-                        color: isSelected
-                            ? AppColors.primary(context)
-                            : AppColors.textMuted(context),
-                        size: 24,
-                      ),
+                      icon: themedIcon,
                       label: d.label,
                     );
                   }).toList(),

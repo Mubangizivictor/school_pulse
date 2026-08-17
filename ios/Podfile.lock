@@ -2,7 +2,7 @@ PODS:
   - blue_thermal_printer (0.0.1):
     - Flutter
   - Flutter (1.0.0)
-  - GoogleDataTransport (10.1.0):
+  - GoogleDataTransport (10.1.1):
     - nanopb (~> 3.30910.0)
     - PromisesObjC (~> 2.4)
   - GoogleMLKit/BarcodeScanning (7.0.0):
@@ -115,7 +115,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   blue_thermal_printer: d859595ae87fd0d2317a7f023d32551db13775df
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
+  GoogleDataTransport: a24e58982ab3ba2f64d79613e027fe7f57e88539
   GoogleMLKit: eff9e23ec1d90ea4157a1ee2e32a4f610c5b3318
   GoogleToolboxForMac: d1a2cbf009c453f4d6ded37c105e2f67a32206d8
   GoogleUtilities: 766ace00c6b10d8148408f329d10c4f051931850

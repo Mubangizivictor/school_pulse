@@ -8,6 +8,7 @@ import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 import 'package:school_pulse/features/messages/presentation/screens/select_contacts_screen.dart';
 
@@ -350,9 +351,8 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
 
   Future<void> _create(UserEntity user) async {
     setState(() => _creating = true);
-    try {
-      final conversationId = await context.messages.createConversation(
-        me: user,
+    final result = await context.dispatchMessagingAction(
+      ConversationCreateRequested(
         type: _type,
         title: _nameController.text.trim(),
         description: _descController.text.trim().isEmpty
@@ -360,11 +360,26 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
             : _descController.text.trim(),
         members: _members,
         messagePolicy: _policy,
-      );
+      ),
+    );
+    if (!mounted) return;
 
-      // The avatar is uploaded after creation so it can be filed under the
-      // conversation's own storage path.
-      if (_photo != null && mounted) {
+    if (result.actionStatus != MessagingActionStatus.success ||
+        result.createdConversationId == null) {
+      setState(() => _creating = false);
+      context.showMessagingSnack(
+        result.lastDecision?.message ??
+            'Could not create: ${result.lastActionError}',
+      );
+      return;
+    }
+
+    final conversationId = result.createdConversationId!;
+    // The avatar is uploaded after creation so it can be filed under the
+    // conversation's own storage path. Not itself permission-gated - group
+    // creation was already the gate; this is just the follow-up write.
+    if (_photo != null) {
+      try {
         final url = await context.messages.uploadAttachment(
           schoolId: user.schoolId,
           conversationId: conversationId,
@@ -373,15 +388,16 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
         );
         if (!mounted) return;
         await context.messages.updateGroupInfo(conversationId, avatarUrl: url);
+      } catch (e) {
+        if (!mounted) return;
+        context.showMessagingSnack(
+          'Group created, but the photo could not be saved: $e',
+        );
       }
-
-      if (!mounted) return;
-      context.go('/messages/chat/$conversationId');
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _creating = false);
-      context.showMessagingSnack('Could not create: $e');
     }
+
+    if (!mounted) return;
+    context.go('/messages/chat/$conversationId');
   }
 
   Widget _buildInputField({

@@ -115,6 +115,7 @@ import 'package:school_pulse/features/messages/presentation/screens/message_requ
 import 'package:school_pulse/features/messages/presentation/screens/broadcast_details_screen.dart';
 import 'package:school_pulse/features/messages/presentation/screens/chat_settings_screen.dart';
 import 'package:school_pulse/features/messages/presentation/screens/archived_chats_screen.dart';
+import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
 import 'package:school_pulse/features/parent/profile_screen.dart';
 import 'package:school_pulse/features/parent/more_menu_screen.dart';
 import 'package:school_pulse/features/parent/boarding_screen.dart';
@@ -2921,8 +2922,11 @@ class ParentShell extends StatelessWidget {
         label: 'Fees',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.message_outlined),
-        selectedIcon: Icon(Icons.message, color: AppColors.royalBlue),
+        icon: MessagesNavIcon(icon: Icons.message_outlined),
+        selectedIcon: MessagesNavIcon(
+          icon: Icons.message,
+          color: AppColors.royalBlue,
+        ),
         label: 'Messages',
       ),
       const NavigationDestination(

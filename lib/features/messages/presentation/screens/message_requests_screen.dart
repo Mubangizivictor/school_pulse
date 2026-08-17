@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +7,7 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 
 /// Chats started by another parent or student that the signed-in user hasn't
@@ -42,24 +44,26 @@ class MessageRequestsScreen extends StatelessWidget {
           ),
         ),
         body: MessagingUserBuilder(
-          builder: (context, user) => StreamBuilder<List<ChatConversation>>(
-            stream: context.messages.watchConversations(user.id),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: SchoolPulseLoader());
-              }
-              final pending = snapshot.data!
-                  .where((c) => c.type == ChatType.direct && !c.isAccepted)
-                  .toList();
+          builder: (context, user) =>
+              BlocBuilder<MessagingBloc, MessagingState>(
+                bloc: context.messagingBloc,
+                builder: (context, state) {
+                  final conversations = state.conversations;
+                  if (conversations == null) {
+                    return const Center(child: SchoolPulseLoader());
+                  }
+                  final pending = conversations
+                      .where((c) => c.type == ChatType.direct && !c.isAccepted)
+                      .toList();
 
-              return TabBarView(
-                children: [
-                  _buildRequestsList(context, user.id, pending, spam: false),
-                  _buildRequestsList(context, user.id, pending, spam: true),
-                ],
-              );
-            },
-          ),
+                  return TabBarView(
+                    children: [
+                      _buildRequestsList(context, pending, spam: false),
+                      _buildRequestsList(context, pending, spam: true),
+                    ],
+                  );
+                },
+              ),
         ),
       ),
     );
@@ -67,7 +71,6 @@ class MessageRequestsScreen extends StatelessWidget {
 
   Widget _buildRequestsList(
     BuildContext context,
-    String userId,
     List<ChatConversation> requests, {
     required bool spam,
   }) {
@@ -181,9 +184,8 @@ class MessageRequestsScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => context.messages.leaveConversation(
-                          request.id,
-                          userId,
+                        onPressed: () => context.messagingBloc.add(
+                          ConversationLeaveRequested(request.id),
                         ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red,
@@ -199,8 +201,9 @@ class MessageRequestsScreen extends StatelessWidget {
                     if (!spam) ...[
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () =>
-                              context.messages.markSpam(request.id, userId),
+                          onPressed: () => context.messagingBloc.add(
+                            ConversationMarkedSpam(request.id),
+                          ),
                           style: OutlinedButton.styleFrom(
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -214,11 +217,9 @@ class MessageRequestsScreen extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          await context.messages.acceptRequest(
-                            request.id,
-                            userId,
+                          context.messagingBloc.add(
+                            ConversationRequestAccepted(request.id),
                           );
-                          if (!context.mounted) return;
                           context.push('/messages/chat/${request.id}');
                         },
                         style: ElevatedButton.styleFrom(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -8,20 +9,35 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/conversation_bloc.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 /// Info screen for a broadcast list or announcement channel - who receives
 /// it, when it was created, and (for its admins) how to take it down.
-class BroadcastDetailsScreen extends StatefulWidget {
+class BroadcastDetailsScreen extends StatelessWidget {
   final String broadcastId;
 
   const BroadcastDetailsScreen({super.key, required this.broadcastId});
 
   @override
-  State<BroadcastDetailsScreen> createState() => _BroadcastDetailsScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider<ConversationBloc>(
+      create: (_) => di.sl<ConversationBloc>(),
+      child: _BroadcastDetailsView(broadcastId: broadcastId),
+    );
+  }
 }
 
-class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
+class _BroadcastDetailsView extends StatefulWidget {
+  final String broadcastId;
+  const _BroadcastDetailsView({required this.broadcastId});
+
+  @override
+  State<_BroadcastDetailsView> createState() => _BroadcastDetailsViewState();
+}
+
+class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
   static const int _previewCount = 5;
   bool _showAllRecipients = false;
 
@@ -45,28 +61,29 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
         ),
       ),
       body: MessagingUserBuilder(
-        builder: (context, user) => StreamBuilder<ChatConversation?>(
-          stream: context.messages.watchConversation(
-            widget.broadcastId,
-            user.id,
-          ),
-          builder: (context, snapshot) {
-            final conversation = snapshot.data;
-            if (conversation == null) {
-              return Center(
-                child: snapshot.connectionState == ConnectionState.waiting
-                    ? const SchoolPulseLoader()
-                    : Text(
-                        'Broadcast not found',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: Colors.white60,
-                        ),
-                      ),
-              );
-            }
-            return _buildBody(context, user, conversation);
-          },
-        ),
+        builder: (context, user) {
+          context.read<ConversationBloc>().add(
+            ConversationOpened(widget.broadcastId, user),
+          );
+          return BlocBuilder<ConversationBloc, ConversationState>(
+            builder: (context, convoState) {
+              final conversation = convoState.conversation;
+              if (conversation == null) {
+                return Center(
+                  child: convoState.conversationMissing
+                      ? Text(
+                          'Broadcast not found',
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: Colors.white60,
+                          ),
+                        )
+                      : const SchoolPulseLoader(),
+                );
+              }
+              return _buildBody(context, user, conversation);
+            },
+          );
+        },
       ),
     );
   }
@@ -245,10 +262,13 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
                                   size: 18,
                                   color: Colors.redAccent,
                                 ),
-                                onPressed: () => context.messages.removeMember(
-                                  conversation.id,
-                                  recipient.id,
-                                ),
+                                onPressed: () =>
+                                    context.read<ConversationBloc>().add(
+                                      ConversationMemberRemoved(
+                                        conversation.adminIds,
+                                        recipient.id,
+                                      ),
+                                    ),
                               )
                             : null,
                       );
@@ -358,8 +378,7 @@ class _BroadcastDetailsScreenState extends State<BroadcastDetailsScreen> {
     );
     if (confirmed != true || !context.mounted) return;
 
-    await context.messages.leaveConversation(conversation.id, user.id);
-    if (!context.mounted) return;
+    context.read<ConversationBloc>().add(const ConversationLeft());
     context.go('/messages');
   }
 

@@ -7,6 +7,7 @@ import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 
 class NewMessageTypeScreen extends StatelessWidget {
@@ -116,16 +117,19 @@ class NewMessageTypeScreen extends StatelessWidget {
     UserEntity user,
     MessageContact contact,
   ) async {
-    try {
-      final id = await context.messages.startDirectConversation(
-        me: user,
-        contact: contact,
+    final result = await context.dispatchMessagingAction(
+      DirectConversationRequested(contact),
+    );
+    if (!context.mounted) return;
+
+    if (result.actionStatus == MessagingActionStatus.success &&
+        result.createdConversationId != null) {
+      context.push('/messages/chat/${result.createdConversationId}');
+    } else {
+      context.showMessagingSnack(
+        result.lastDecision?.message ??
+            'Could not open the chat: ${result.lastActionError}',
       );
-      if (!context.mounted) return;
-      context.push('/messages/chat/$id');
-    } catch (e) {
-      if (!context.mounted) return;
-      context.showMessagingSnack('Could not open the chat: $e');
     }
   }
 }

@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -16,29 +17,39 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/messages/domain/entities/chat_preferences.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/conversation_bloc.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/attachment_composers.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/message_bubble.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
-class ChatConversationScreen extends StatefulWidget {
+class ChatConversationScreen extends StatelessWidget {
   final String chatId;
   const ChatConversationScreen({super.key, required this.chatId});
 
   @override
-  State<ChatConversationScreen> createState() => _ChatConversationScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider<ConversationBloc>(
+      create: (_) => di.sl<ConversationBloc>(),
+      child: _ChatConversationView(chatId: chatId),
+    );
+  }
 }
 
-class _ChatConversationScreenState extends State<ChatConversationScreen> {
+class _ChatConversationView extends StatefulWidget {
+  final String chatId;
+  const _ChatConversationView({required this.chatId});
+
+  @override
+  State<_ChatConversationView> createState() => _ChatConversationViewState();
+}
+
+class _ChatConversationViewState extends State<_ChatConversationView> {
   final TextEditingController _messageController = TextEditingController();
 
   /// The message being quoted, and the message being edited - never both.
   ChatMessage? _replyTo;
   ChatMessage? _editing;
-
-  bool _uploading = false;
-
-  /// Guards against re-issuing the read receipt write on every stream tick.
-  bool _markingRead = false;
 
   /// Voice note in progress. [_recordingPath] being non-null is what swaps
   /// the composer for the recording bar.
@@ -50,14 +61,20 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   /// Enter-is-send and font size come from Chat Settings.
   ChatPreferences _preferences = const ChatPreferences();
 
-  /// Messages held in memory. Grows when the user scrolls back past the
-  /// window, so a long-running class group isn't cut off at the default.
-  int _messageLimit = 60;
-
   /// Long-press "Select" puts the chat into multi-select; an empty set means
   /// normal browsing.
   final Set<String> _selectedIds = {};
   List<ChatMessage> _visibleMessages = const [];
+
+  /// Location sharing doesn't go through the bloc's upload pipeline (no
+  /// file), so it gets its own tiny local flag rather than overloading
+  /// ConversationState.uploading.
+  bool _sendingLocation = false;
+
+  /// The text of the most recent send/edit attempt, restored into the
+  /// composer if ConversationBloc reports it failed - see the BlocListener
+  /// in build().
+  String? _lastSendAttemptText;
 
   @override
   void initState() {
@@ -90,44 +107,61 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   @override
   Widget build(BuildContext context) {
     return MessagingUserBuilder(
-      builder: (context, user) => StreamBuilder<ChatConversation?>(
-        stream: context.messages.watchConversation(widget.chatId, user.id),
-        builder: (context, snapshot) {
-          final conversation = snapshot.data;
-          if (conversation == null) {
-            return Scaffold(
-              backgroundColor: Theme.of(context).brightness == Brightness.dark
-                  ? AppColors.bgDark
-                  : AppColors.bgLight,
-              appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
-              body: Center(
-                child: snapshot.connectionState == ConnectionState.waiting
-                    ? const SchoolPulseLoader()
-                    : Text(
-                        'This conversation is no longer available',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textMuted(context),
-                        ),
-                      ),
-              ),
-            );
-          }
-          _scheduleReadReceipt(conversation, user);
-          return _buildChat(context, user, conversation);
-        },
-      ),
+      builder: (context, user) {
+        context.read<ConversationBloc>().add(
+          ConversationOpened(widget.chatId, user),
+        );
+        return BlocListener<ConversationBloc, ConversationState>(
+          listenWhen: (previous, current) =>
+              current.sendStatus == ConversationSendStatus.failed &&
+              (previous.sendStatus != ConversationSendStatus.failed ||
+                  previous.sendError != current.sendError ||
+                  previous.lastDecision != current.lastDecision),
+          listener: (context, convoState) {
+            final message =
+                convoState.lastDecision?.message ??
+                'Could not send: ${convoState.sendError}';
+            context.showMessagingSnack(message);
+            // A permission refusal (e.g. admins-only) isn't recoverable by
+            // retrying the same text, so only restore it for a genuine
+            // send/network failure.
+            if (convoState.lastDecision == null &&
+                _lastSendAttemptText != null) {
+              _messageController.text = _lastSendAttemptText!;
+              _lastSendAttemptText = null;
+            }
+          },
+          child: BlocBuilder<ConversationBloc, ConversationState>(
+            builder: (context, convoState) {
+              final conversation = convoState.conversation;
+              if (conversation == null) {
+                return Scaffold(
+                  backgroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.bgDark
+                      : AppColors.bgLight,
+                  appBar: AppBar(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                  ),
+                  body: Center(
+                    child: convoState.conversationMissing
+                        ? Text(
+                            'This conversation is no longer available',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.textMuted(context),
+                            ),
+                          )
+                        : const SchoolPulseLoader(),
+                  ),
+                );
+              }
+              return _buildChat(context, user, conversation, convoState);
+            },
+          ),
+        );
+      },
     );
-  }
-
-  /// Clearing the badge is a write, so it can't happen during build - defer
-  /// it to the end of the frame and only while something is actually unread.
-  void _scheduleReadReceipt(ChatConversation conversation, UserEntity user) {
-    if (conversation.unreadCount == 0 || _markingRead) return;
-    _markingRead = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await context.messages.markConversationRead(conversation.id, user.id);
-      if (mounted) _markingRead = false;
-    });
   }
 
   void _toggleSelected(String messageId) {
@@ -180,12 +214,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           icon: const Icon(Icons.star_border),
           tooltip: 'Star',
           onPressed: () async {
+            final bloc = context.read<ConversationBloc>();
             for (final message in selected) {
-              await context.messages.setStarred(
-                conversation.id,
-                message.id,
-                user.id,
-                !message.isStarred,
+              bloc.add(
+                ConversationMessageStarredSet(message.id, !message.isStarred),
               );
             }
             if (mounted) setState(_selectedIds.clear);
@@ -202,7 +234,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
             tooltip: 'Delete',
-            onPressed: () => _confirmDeleteMany(conversation.id, selected),
+            onPressed: () => _confirmDeleteMany(selected),
           ),
       ],
     );
@@ -212,6 +244,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     BuildContext context,
     UserEntity user,
     ChatConversation conversation,
+    ConversationState convoState,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -219,7 +252,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       return Scaffold(
         backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
         appBar: _buildSelectionAppBar(isDark, user, conversation),
-        body: _buildChatBody(context, isDark, user, conversation),
+        body: _buildChatBody(context, isDark, user, conversation, convoState),
       );
     }
 
@@ -297,7 +330,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           const SizedBox(width: 4),
         ],
       ),
-      body: _buildChatBody(context, isDark, user, conversation),
+      body: _buildChatBody(context, isDark, user, conversation, convoState),
     );
   }
 
@@ -306,23 +339,19 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     bool isDark,
     UserEntity user,
     ChatConversation conversation,
+    ConversationState convoState,
   ) {
     return Column(
       children: [
         if (conversation.pinnedMessageContent != null)
           _buildPinnedBanner(context, isDark, conversation),
         Expanded(
-          child: StreamBuilder<List<ChatMessage>>(
-            stream: context.messages.watchMessages(
-              widget.chatId,
-              user.id,
-              limit: _messageLimit,
-            ),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
+          child: Builder(
+            builder: (context) {
+              final messages = convoState.messages;
+              if (messages == null) {
                 return const Center(child: SchoolPulseLoader());
               }
-              final messages = snapshot.data!;
               _visibleMessages = messages;
               if (messages.isEmpty) {
                 return Center(
@@ -344,8 +373,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                 // next window rather than stopping dead at the limit.
                 onNotification: (notification) {
                   if (notification.metrics.extentAfter < 200 &&
-                      messages.length >= _messageLimit) {
-                    setState(() => _messageLimit += 60);
+                      messages.length >= convoState.messageLimit) {
+                    context.read<ConversationBloc>().add(
+                      const MoreHistoryRequested(),
+                    );
                   }
                   return false;
                 },
@@ -368,11 +399,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                         _editing = null;
                       }),
                       onForward: () => _forward(user, message),
-                      onStar: () => context.messages.setStarred(
-                        conversation.id,
-                        message.id,
-                        user.id,
-                        !message.isStarred,
+                      onStar: () => context.read<ConversationBloc>().add(
+                        ConversationMessageStarredSet(
+                          message.id,
+                          !message.isStarred,
+                        ),
                       ),
                       onCopy: () {
                         Clipboard.setData(ClipboardData(text: message.content));
@@ -388,24 +419,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                             }
                           : null,
                       onDelete: message.isMe
-                          ? () => _confirmDelete(conversation.id, message)
+                          ? () => _confirmDelete(message)
                           : null,
-                      onPin: () => context.messages.setMessagePinned(
-                        conversation.id,
-                        message,
-                        !message.isPinned,
+                      onPin: () => context.read<ConversationBloc>().add(
+                        ConversationMessagePinnedSet(message, !message.isPinned),
                       ),
-                      onReact: (emoji) => context.messages.react(
-                        conversation.id,
-                        message.id,
-                        user.id,
-                        emoji,
+                      onReact: (emoji) => context.read<ConversationBloc>().add(
+                        ConversationMessageReacted(message.id, emoji),
                       ),
-                      onVote: (option) => context.messages.voteInPoll(
-                        conversation.id,
-                        message.id,
-                        user.id,
-                        option,
+                      onVote: (option) => context.read<ConversationBloc>().add(
+                        ConversationPollVoted(message.id, option),
                       ),
                       onOpenContact: (contactId) =>
                           _openSharedContact(user, contactId),
@@ -416,7 +439,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
             },
           ),
         ),
-        if (_uploading) const LinearProgressIndicator(minHeight: 2),
+        if (convoState.uploading || _sendingLocation)
+          const LinearProgressIndicator(minHeight: 2),
         // The composer is out of the way while a selection is active.
         if (_selectedIds.isNotEmpty)
           const SizedBox.shrink()
@@ -465,16 +489,17 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                 size: 16,
                 color: AppColors.electricBlue,
               ),
-              onPressed: () => context.messages.setMessagePinned(
-                conversation.id,
-                ChatMessage(
-                  id: conversation.pinnedMessageId ?? '',
-                  senderId: '',
-                  senderName: conversation.pinnedMessageSender ?? '',
-                  content: conversation.pinnedMessageContent ?? '',
-                  timestamp: DateTime.now(),
+              onPressed: () => context.read<ConversationBloc>().add(
+                ConversationMessagePinnedSet(
+                  ChatMessage(
+                    id: conversation.pinnedMessageId ?? '',
+                    senderId: '',
+                    senderName: conversation.pinnedMessageSender ?? '',
+                    content: conversation.pinnedMessageContent ?? '',
+                    timestamp: DateTime.now(),
+                  ),
+                  false,
                 ),
-                false,
               ),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -709,29 +734,30 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       _editing = null;
     });
 
-    try {
-      if (editing != null) {
-        await context.messages.editMessage(conversation.id, editing.id, text);
-      } else {
-        await context.messages.sendMessage(
-          conversationId: conversation.id,
-          sender: user,
-          content: text,
-          replyTo: replyTo,
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      // Put the text back so a failed send isn't a lost message.
-      _messageController.text = text;
-      context.showMessagingSnack('Could not send: $e');
+    // Held so a failed send (surfaced asynchronously via
+    // ConversationState.sendStatus/lastDecision, watched by the
+    // BlocListener in build) can put the text back rather than losing it.
+    _lastSendAttemptText = text;
+
+    final bloc = context.read<ConversationBloc>();
+    if (editing != null) {
+      bloc.add(ConversationMessageEditRequested(editing.id, text));
+    } else {
+      bloc.add(
+        ConversationMessageSendRequested(content: text, replyTo: replyTo),
+      );
     }
   }
 
   Future<void> _forward(UserEntity user, ChatMessage message) async {
-    final conversations = await context.messages
-        .watchConversations(user.id)
-        .first;
+    // The inbox is already subscribed (MessagingUserBuilder dispatches
+    // MessagingStarted on every messaging screen), so this only waits if
+    // the very first snapshot genuinely hasn't landed yet.
+    final List<ChatConversation> conversations =
+        context.messagingBloc.state.conversations ??
+        await context.messagingBloc.stream
+            .firstWhere((s) => s.conversations != null)
+            .then((s) => s.conversations!);
     if (!mounted) return;
 
     final selected = await showModalBottomSheet<List<String>>(
@@ -742,19 +768,22 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     );
     if (selected == null || selected.isEmpty || !mounted) return;
 
-    await context.messages.forwardMessage(
-      message: message,
-      conversationIds: selected,
-      sender: user,
+    context.read<ConversationBloc>().add(
+      ConversationMessageForwardRequested(message, selected),
     );
     if (!mounted) return;
     context.showMessagingSnack('Forwarded to ${selected.length} chat(s)');
   }
 
   Future<void> _forwardMany(UserEntity user, List<ChatMessage> messages) async {
-    final conversations = await context.messages
-        .watchConversations(user.id)
-        .first;
+    // The inbox is already subscribed (MessagingUserBuilder dispatches
+    // MessagingStarted on every messaging screen), so this only waits if
+    // the very first snapshot genuinely hasn't landed yet.
+    final List<ChatConversation> conversations =
+        context.messagingBloc.state.conversations ??
+        await context.messagingBloc.stream
+            .firstWhere((s) => s.conversations != null)
+            .then((s) => s.conversations!);
     if (!mounted) return;
 
     final selected = await showModalBottomSheet<List<String>>(
@@ -765,22 +794,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     );
     if (selected == null || selected.isEmpty || !mounted) return;
 
+    final bloc = context.read<ConversationBloc>();
     for (final message in messages) {
-      await context.messages.forwardMessage(
-        message: message,
-        conversationIds: selected,
-        sender: user,
-      );
+      bloc.add(ConversationMessageForwardRequested(message, selected));
     }
     if (!mounted) return;
     setState(_selectedIds.clear);
     context.showMessagingSnack('Forwarded to ${selected.length} chat(s)');
   }
 
-  Future<void> _confirmDeleteMany(
-    String conversationId,
-    List<ChatMessage> messages,
-  ) async {
+  Future<void> _confirmDeleteMany(List<ChatMessage> messages) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -804,16 +827,14 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     );
     if (confirmed != true || !mounted) return;
 
+    final bloc = context.read<ConversationBloc>();
     for (final message in messages) {
-      await context.messages.deleteMessage(conversationId, message.id);
+      bloc.add(ConversationMessageDeleteRequested(message.id));
     }
     if (mounted) setState(_selectedIds.clear);
   }
 
-  Future<void> _confirmDelete(
-    String conversationId,
-    ChatMessage message,
-  ) async {
+  Future<void> _confirmDelete(ChatMessage message) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -834,7 +855,9 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    await context.messages.deleteMessage(conversationId, message.id);
+    context.read<ConversationBloc>().add(
+      ConversationMessageDeleteRequested(message.id),
+    );
   }
 
   void _showAttachmentMenu(
@@ -892,13 +915,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     final picked = result?.files.singleOrNull;
     if (picked?.path == null || !mounted) return;
 
-    await _uploadAndSend(
-      user: user,
-      conversation: conversation,
+    _uploadAndSend(
       file: File(picked!.path!),
       fileName: picked.name,
       type: MessageType.file,
-      failureMessage: 'Could not send document',
     );
   }
 
@@ -908,7 +928,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   ) async {
     if (!await _ensureLocationPermission()) return;
 
-    setState(() => _uploading = true);
+    setState(() => _sendingLocation = true);
     try {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
@@ -916,20 +936,20 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         ),
       );
       if (!mounted) return;
-      await context.messages.sendMessage(
-        conversationId: conversation.id,
-        sender: user,
-        content: '',
-        type: MessageType.location,
-        latitude: position.latitude,
-        longitude: position.longitude,
+      context.read<ConversationBloc>().add(
+        ConversationMessageSendRequested(
+          content: '',
+          type: MessageType.location,
+          latitude: position.latitude,
+          longitude: position.longitude,
+        ),
       );
     } catch (e) {
       if (mounted) {
         context.showMessagingSnack('Could not get your location: $e');
       }
     } finally {
-      if (mounted) setState(() => _uploading = false);
+      if (mounted) setState(() => _sendingLocation = false);
     }
   }
 
@@ -978,13 +998,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     );
     if (picked == null || !mounted) return;
 
-    await context.messages.sendMessage(
-      conversationId: conversation.id,
-      sender: user,
-      content: picked.name,
-      type: MessageType.contact,
-      sharedContactId: picked.id,
-      sharedContactRole: picked.role,
+    context.read<ConversationBloc>().add(
+      ConversationMessageSendRequested(
+        content: picked.name,
+        type: MessageType.contact,
+        sharedContactId: picked.id,
+        sharedContactRole: picked.role,
+      ),
     );
   }
 
@@ -997,12 +1017,12 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     );
     if (draft == null || !mounted) return;
 
-    await context.messages.sendMessage(
-      conversationId: conversation.id,
-      sender: user,
-      content: draft.question,
-      type: MessageType.poll,
-      pollOptions: draft.options,
+    context.read<ConversationBloc>().add(
+      ConversationMessageSendRequested(
+        content: draft.question,
+        type: MessageType.poll,
+        pollOptions: draft.options,
+      ),
     );
   }
 
@@ -1018,17 +1038,20 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     );
     if (draft == null || !mounted) return;
 
-    await context.messages.sendMessage(
-      conversationId: conversation.id,
-      sender: user,
-      content: draft.title,
-      type: MessageType.event,
-      eventStart: draft.start,
-      eventLocation: draft.location,
+    context.read<ConversationBloc>().add(
+      ConversationMessageSendRequested(
+        content: draft.title,
+        type: MessageType.event,
+        eventStart: draft.start,
+        eventLocation: draft.location,
+      ),
     );
   }
 
-  /// Opens (or reuses) a chat with the person on a shared contact card.
+  /// Opens (or reuses) a chat with the person on a shared contact card. Uses
+  /// [MessagesRepository] directly (not a bloc event) because it navigates
+  /// away from this conversation entirely rather than mutating it - there is
+  /// no ConversationBloc for the destination chat yet.
   Future<void> _openSharedContact(UserEntity user, String contactId) async {
     if (contactId == user.id) return;
     final contact = await context.messages.getContact(contactId);
@@ -1059,52 +1082,32 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     );
     if (picked == null || !mounted) return;
 
-    await _uploadAndSend(
-      user: user,
-      conversation: conversation,
+    _uploadAndSend(
       file: File(picked.path),
       fileName: picked.name,
       type: MessageType.image,
-      failureMessage: 'Could not send photo',
     );
   }
 
-  /// Upload-then-post, shared by photos, documents and voice notes: the file
-  /// goes to Storage first, and only the resulting URL is written to the
-  /// message.
-  Future<void> _uploadAndSend({
-    required UserEntity user,
-    required ChatConversation conversation,
+  /// Dispatches the upload-then-post pipeline (Storage first, then the
+  /// message carrying the resulting URL) to ConversationBloc, shared by
+  /// photos, documents and voice notes. Failure surfaces through
+  /// ConversationState.sendStatus/sendError, watched by the BlocListener at
+  /// the top of build.
+  void _uploadAndSend({
     required File file,
     required String fileName,
     required MessageType type,
-    required String failureMessage,
     Duration? audioDuration,
-  }) async {
-    setState(() => _uploading = true);
-    try {
-      final url = await context.messages.uploadAttachment(
-        schoolId: user.schoolId,
-        conversationId: conversation.id,
+  }) {
+    context.read<ConversationBloc>().add(
+      ConversationAttachmentSendRequested(
         file: file,
         fileName: fileName,
-      );
-      if (!mounted) return;
-      await context.messages.sendMessage(
-        conversationId: conversation.id,
-        sender: user,
-        content: '',
         type: type,
-        mediaUrl: url,
-        fileName: fileName,
-        fileSize: _readableSize(await file.length()),
         audioDuration: audioDuration,
-      );
-    } catch (e) {
-      if (mounted) context.showMessagingSnack('$failureMessage: $e');
-    } finally {
-      if (mounted) setState(() => _uploading = false);
-    }
+      ),
+    );
   }
 
   // --- Voice notes -------------------------------------------------------
@@ -1163,14 +1166,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     }
     if (user == null || conversation == null || !mounted) return;
 
-    await _uploadAndSend(
-      user: user,
-      conversation: conversation,
+    _uploadAndSend(
       file: file,
       fileName: 'Voice note.m4a',
       type: MessageType.audio,
       audioDuration: duration,
-      failureMessage: 'Could not send voice note',
     );
   }
 
@@ -1223,12 +1223,6 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         ),
       ],
     );
-  }
-
-  String _readableSize(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(0)} KB';
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
   String _initials(String title) {

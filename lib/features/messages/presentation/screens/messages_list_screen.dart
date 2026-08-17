@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -7,6 +8,7 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/messages/domain/entities/chat_preferences.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/chat_list_tile.dart';
 
@@ -40,7 +42,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
   /// Firestore has no way to express "unarchive on new activity", so it is
   /// reconciled here: anything archived that has gone unread again is
   /// un-archived once, after the frame that noticed it.
-  void _reconcileArchived(List<ChatConversation> conversations, String userId) {
+  void _reconcileArchived(List<ChatConversation> conversations) {
     if (_preferences.keepArchived) return;
     final resurfacing = conversations
         .where((c) => c.isArchived && c.unreadCount > 0)
@@ -49,7 +51,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       for (final chat in resurfacing) {
-        context.messages.setArchived(chat.id, userId, false);
+        context.messagingBloc.add(ConversationArchivedSet(chat.id, false));
       }
     });
   }
@@ -76,129 +78,143 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
         ],
       ),
       body: MessagingUserBuilder(
-        builder: (context, user) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: InkWell(
-                onTap: () => context.push('/messages/search'),
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceDark,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.1),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.search, color: Colors.white54, size: 22),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Search messages',
-                        style: AppTypography.bodyLarge.copyWith(
-                          color: Colors.white54,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(
-              height: 48,
-              child: StreamBuilder<List<ChatConversation>>(
-                stream: context.messages.watchConversations(user.id),
-                builder: (context, snapshot) => ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+        builder: (context, user) =>
+            BlocBuilder<MessagingBloc, MessagingState>(
+              bloc: context.messagingBloc,
+              builder: (context, state) {
+                final conversations = state.conversations;
+                return Column(
                   children: [
-                    _FilterChip(
-                      label: 'All',
-                      isSelected: _filter == _InboxFilter.all,
-                      onTap: () => setState(() => _filter = _InboxFilter.all),
-                    ),
-                    _FilterChip(
-                      label: 'Unread',
-                      isSelected: _filter == _InboxFilter.unread,
-                      onTap: () =>
-                          setState(() => _filter = _InboxFilter.unread),
-                    ),
-                    _FilterChip(
-                      label: 'Groups',
-                      isSelected: _filter == _InboxFilter.groups,
-                      onTap: () =>
-                          setState(() => _filter = _InboxFilter.groups),
-                    ),
-                    _FilterChip(
-                      label: 'Official',
-                      isSelected: _filter == _InboxFilter.official,
-                      onTap: () =>
-                          setState(() => _filter = _InboxFilter.official),
-                    ),
-                    _FilterChip(
-                      label: 'Archived',
-                      isSelected: false,
-                      onTap: () => context.push('/messages/archived'),
-                    ),
-                    // Only appears when something is actually waiting, so the
-                    // chip row stays as short as it was for most people.
-                    if (_pendingRequests(snapshot.data) > 0)
-                      _FilterChip(
-                        label: 'Requests (${_pendingRequests(snapshot.data)})',
-                        isSelected: false,
-                        onTap: () => context.push('/messages/requests'),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
                       ),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child: StreamBuilder<List<ChatConversation>>(
-                stream: context.messages.watchConversations(user.id),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return _buildError(snapshot.error!);
-                  }
-                  if (!snapshot.hasData) {
-                    return const Center(child: SchoolPulseLoader());
-                  }
-
-                  _reconcileArchived(snapshot.data!, user.id);
-                  final conversations = _applyFilter(snapshot.data!);
-                  if (conversations.isEmpty) {
-                    return _buildEmptyState();
-                  }
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    itemCount: conversations.length,
-                    itemBuilder: (context, index) {
-                      final chat = conversations[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: ChatListTile(
-                          chat: chat,
-                          onTap: () =>
-                              context.push('/messages/chat/${chat.id}'),
-                          onLongPress: () =>
-                              _showChatActions(context, user, chat),
+                      child: InkWell(
+                        onTap: () => context.push('/messages/search'),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceDark,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.1),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.search,
+                                color: Colors.white54,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Search messages',
+                                style: AppTypography.bodyLarge.copyWith(
+                                  color: Colors.white54,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      );
-                    },
-                  );
-                },
-              ),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 48,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        children: [
+                          _FilterChip(
+                            label: 'All',
+                            isSelected: _filter == _InboxFilter.all,
+                            onTap: () =>
+                                setState(() => _filter = _InboxFilter.all),
+                          ),
+                          _FilterChip(
+                            label: 'Unread',
+                            isSelected: _filter == _InboxFilter.unread,
+                            onTap: () =>
+                                setState(() => _filter = _InboxFilter.unread),
+                          ),
+                          _FilterChip(
+                            label: 'Groups',
+                            isSelected: _filter == _InboxFilter.groups,
+                            onTap: () =>
+                                setState(() => _filter = _InboxFilter.groups),
+                          ),
+                          _FilterChip(
+                            label: 'Official',
+                            isSelected: _filter == _InboxFilter.official,
+                            onTap: () => setState(
+                              () => _filter = _InboxFilter.official,
+                            ),
+                          ),
+                          _FilterChip(
+                            label: 'Archived',
+                            isSelected: false,
+                            onTap: () => context.push('/messages/archived'),
+                          ),
+                          // Only appears when something is actually waiting,
+                          // so the chip row stays as short as it was for
+                          // most people.
+                          if (_pendingRequests(conversations) > 0)
+                            _FilterChip(
+                              label:
+                                  'Requests (${_pendingRequests(conversations)})',
+                              isSelected: false,
+                              onTap: () => context.push('/messages/requests'),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Builder(
+                        builder: (context) {
+                          if (state.conversationsError != null) {
+                            return _buildError(state.conversationsError!);
+                          }
+                          if (conversations == null) {
+                            return const Center(child: SchoolPulseLoader());
+                          }
+
+                          _reconcileArchived(conversations);
+                          final visible = _applyFilter(conversations);
+                          if (visible.isEmpty) {
+                            return _buildEmptyState();
+                          }
+                          return ListView.builder(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            itemCount: visible.length,
+                            itemBuilder: (context, index) {
+                              final chat = visible[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: ChatListTile(
+                                  chat: chat,
+                                  onTap: () =>
+                                      context.push('/messages/chat/${chat.id}'),
+                                  onLongPress: () =>
+                                      _showChatActions(context, user, chat),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
-          ],
-        ),
       ),
     );
   }
@@ -270,7 +286,9 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
-                context.messages.setPinned(chat.id, user.id, !chat.isPinned);
+                context.messagingBloc.add(
+                  ConversationPinnedSet(chat.id, !chat.isPinned),
+                );
               },
             ),
             ListTile(
@@ -286,7 +304,9 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
-                context.messages.setMuted(chat.id, user.id, !chat.isMuted);
+                context.messagingBloc.add(
+                  ConversationMutedSet(chat.id, !chat.isMuted),
+                );
               },
             ),
             ListTile(
@@ -300,7 +320,9 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
-                context.messages.setArchived(chat.id, user.id, true);
+                context.messagingBloc.add(
+                  ConversationArchivedSet(chat.id, true),
+                );
               },
             ),
             ListTile(
@@ -314,7 +336,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
-                context.messages.leaveConversation(chat.id, user.id);
+                context.messagingBloc.add(ConversationLeaveRequested(chat.id));
               },
             ),
             const SizedBox(height: AppSpacing.s),

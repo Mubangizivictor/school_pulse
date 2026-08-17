@@ -75,6 +75,8 @@ import 'package:school_pulse/features/branding/domain/usecases/get_school_brandi
 
 import 'package:school_pulse/features/messages/domain/repositories/messages_repository.dart';
 import 'package:school_pulse/features/messages/data/repositories/messages_repository_impl.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/conversation_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
 import 'package:school_pulse/features/teacher/domain/usecases/generate_reports.dart';
 import 'package:school_pulse/features/finance/domain/services/finance_service.dart';
@@ -388,6 +390,9 @@ import 'package:school_pulse/features/transport/data/repositories/transport_repo
 import 'package:school_pulse/features/transport/data/datasources/transport_remote_data_source.dart';
 import 'package:school_pulse/features/transport/domain/usecases/get_transport_info.dart';
 import 'package:school_pulse/features/transport/presentation/bloc/transport_bloc.dart';
+import 'package:school_pulse/features/transport/domain/repositories/transport_coordinator_repository.dart';
+import 'package:school_pulse/features/transport/data/repositories/transport_coordinator_repository_impl.dart';
+import 'package:school_pulse/features/transport/presentation/bloc/transport_coordinator_bloc.dart';
 
 // Lesson Plans
 import 'package:school_pulse/features/lesson_plans/domain/repositories/lesson_plans_repository.dart';
@@ -1185,6 +1190,12 @@ Future<void> init() async {
   sl.registerLazySingleton<MessagesRepository>(
     () => MessagesRepositoryImpl(firestore: sl(), storage: sl()),
   );
+  sl.registerLazySingleton<MessagingBloc>(
+    () => MessagingBloc(repository: sl(), roleSession: sl()),
+  );
+  sl.registerFactory<ConversationBloc>(
+    () => ConversationBloc(repository: sl()),
+  );
 
   // Features - Notifications
   sl.registerFactory(
@@ -1686,6 +1697,14 @@ Future<void> init() async {
 
   sl.registerLazySingleton<TransportRemoteDataSource>(
     () => TransportRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  sl.registerLazySingleton<TransportCoordinatorRepository>(
+    () => TransportCoordinatorRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  sl.registerFactory(
+    () => TransportCoordinatorBloc(repository: sl()),
   );
 
   // Features - Lesson Plans

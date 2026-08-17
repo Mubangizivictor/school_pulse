@@ -28,11 +28,13 @@ import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.d
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
 import 'package:school_pulse/features/transport/presentation/bloc/transport_bloc.dart';
+import 'package:school_pulse/features/transport/presentation/bloc/transport_coordinator_bloc.dart';
 import 'package:school_pulse/features/library/presentation/bloc/library_bloc.dart';
 import 'package:school_pulse/features/discipline/presentation/bloc/discipline_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/students_bloc.dart';
 import 'package:school_pulse/features/notifications/presentation/bloc/notifications_bloc.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_history_bloc.dart';
@@ -167,6 +169,10 @@ class SchoolPulseApp extends StatelessWidget {
         ),
         BlocProvider(create: (_) => di.sl<InstitutionContextCubit>()),
         BlocProvider(create: (_) => di.sl<AppRoleSessionCubit>()),
+        // App-wide (not per-screen): the Structure tab reads this bloc
+        // immediately on navigation, and LoadStructureData is dispatched
+        // once at sign-in below - both need the same long-lived instance.
+        BlocProvider(create: (_) => di.sl<StructureBloc>()),
         BlocProvider(
           create: (_) => di.sl<BrandingBloc>()..add(InitializeBranding()),
         ),
@@ -179,6 +185,10 @@ class SchoolPulseApp extends StatelessWidget {
         BlocProvider(create: (_) => SelectedStudentBloc()),
         BlocProvider(create: (_) => di.sl<StudentsBloc>()),
         BlocProvider(create: (_) => di.sl<NotificationsBloc>()),
+        // App-wide (not per-screen): the nav-bar unread badge needs a live
+        // subscription from the moment a user signs in, not only once they
+        // open Messages - see the AuthAuthenticated listener below.
+        BlocProvider(create: (_) => di.sl<MessagingBloc>()),
         BlocProvider(create: (_) => di.sl<TeacherBloc>()),
         // Provided app-wide, not per-screen: the Subject Teacher tabs are
         // separate routes, and each has to read the same active
@@ -211,6 +221,7 @@ class SchoolPulseApp extends StatelessWidget {
         BlocProvider(create: (_) => di.sl<ReligionBloc>()),
         BlocProvider(create: (_) => di.sl<ExamsBloc>()),
         BlocProvider(create: (_) => di.sl<CateringBloc>()),
+        BlocProvider(create: (_) => di.sl<TransportCoordinatorBloc>()),
         BlocProvider(create: (_) => di.sl<GamesBloc>()),
         BlocProvider(create: (_) => di.sl<MatronBloc>()),
         BlocProvider(create: (_) => di.sl<PatronBloc>()),
@@ -247,6 +258,13 @@ class SchoolPulseAppView extends StatelessWidget {
               // in an avoidable error state on every cold launch.
               context.read<SystemConfigBloc>().add(WatchSystemConfig());
               NotificationService().syncToken(state.user.id);
+              // Starts the inbox subscription immediately at sign-in, so the
+              // nav-bar unread badge (and any other MessagingBloc consumer)
+              // reflects reality before the user ever opens Messages -
+              // idempotent per user id, so this is safe alongside
+              // MessagingUserBuilder dispatching the same event again once a
+              // messaging screen is entered.
+              context.read<MessagingBloc>().add(MessagingStarted(state.user));
               // Registers this device, starts the badge stream, drains any
               // offline read/acknowledge queue, and replays a deep link that
               // was stashed while signed out.
@@ -296,6 +314,12 @@ class SchoolPulseAppView extends StatelessWidget {
               di.sl<NotificationCoordinator>().onSignedOut();
               context.read<InstitutionContextCubit>().clear();
               context.read<StructureBloc>().add(const ClearStructureData());
+              // Drops the inbox subscription and every cached conversation/
+              // unread count, so a shared device signing out doesn't leave
+              // the previous user's messages readable by the next sign-in.
+              context.read<MessagingBloc>().add(
+                const MessagingSessionCleared(),
+              );
             }
           },
         ),

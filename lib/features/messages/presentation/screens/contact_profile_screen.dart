@@ -7,6 +7,7 @@ import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/action_button.dart';
 import 'package:share_plus/share_plus.dart';
@@ -223,14 +224,25 @@ class ContactProfileScreen extends StatelessWidget {
     UserEntity user,
     _ProfileData data,
   ) async {
-    final id =
-        data.conversationId ??
-        await context.messages.startDirectConversation(
-          me: user,
-          contact: data.contact,
-        );
+    if (data.conversationId != null) {
+      context.go('/messages/chat/${data.conversationId}');
+      return;
+    }
+
+    final result = await context.dispatchMessagingAction(
+      DirectConversationRequested(data.contact),
+    );
     if (!context.mounted) return;
-    context.go('/messages/chat/$id');
+
+    if (result.actionStatus == MessagingActionStatus.success &&
+        result.createdConversationId != null) {
+      context.go('/messages/chat/${result.createdConversationId}');
+    } else {
+      context.showMessagingSnack(
+        result.lastDecision?.message ??
+            'Could not open the chat: ${result.lastActionError}',
+      );
+    }
   }
 
   Future<void> _showGroupsInCommon(
@@ -354,11 +366,9 @@ class ContactProfileScreen extends StatelessWidget {
 
     final conversationId = data.conversationId;
     if (conversationId != null) {
-      await context.messages.markSpam(conversationId, user.id);
-      if (!context.mounted) return;
-      await context.messages.leaveConversation(conversationId, user.id);
+      context.messagingBloc.add(ConversationMarkedSpam(conversationId));
+      context.messagingBloc.add(ConversationLeaveRequested(conversationId));
     }
-    if (!context.mounted) return;
     context.go('/messages');
   }
 

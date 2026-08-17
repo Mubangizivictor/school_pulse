@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,12 +11,28 @@ import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/conversation_bloc.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/action_button.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 class ChatInfoScreen extends StatelessWidget {
   final String chatId;
   const ChatInfoScreen({super.key, required this.chatId});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider<ConversationBloc>(
+      create: (_) => di.sl<ConversationBloc>(),
+      child: _ChatInfoView(chatId: chatId),
+    );
+  }
+}
+
+class _ChatInfoView extends StatelessWidget {
+  final String chatId;
+  const _ChatInfoView({required this.chatId});
 
   @override
   Widget build(BuildContext context) {
@@ -38,20 +55,24 @@ class ChatInfoScreen extends StatelessWidget {
         ],
       ),
       body: MessagingUserBuilder(
-        builder: (context, user) => StreamBuilder<ChatConversation?>(
-          stream: context.messages.watchConversation(chatId, user.id),
-          builder: (context, snapshot) {
-            final conversation = snapshot.data;
-            if (conversation == null) {
-              return Center(
-                child: snapshot.connectionState == ConnectionState.waiting
-                    ? const SchoolPulseLoader()
-                    : const Text('Conversation not found'),
-              );
-            }
-            return _buildBody(context, isDark, user, conversation);
-          },
-        ),
+        builder: (context, user) {
+          context.read<ConversationBloc>().add(
+            ConversationOpened(chatId, user),
+          );
+          return BlocBuilder<ConversationBloc, ConversationState>(
+            builder: (context, convoState) {
+              final conversation = convoState.conversation;
+              if (conversation == null) {
+                return Center(
+                  child: convoState.conversationMissing
+                      ? const Text('Conversation not found')
+                      : const SchoolPulseLoader(),
+                );
+              }
+              return _buildBody(context, isDark, user, conversation);
+            },
+          );
+        },
       ),
     );
   }
@@ -173,10 +194,8 @@ class ChatInfoScreen extends StatelessWidget {
                     ? Icons.notifications_active_outlined
                     : Icons.notifications_off_outlined,
                 label: conversation.isMuted ? 'Unmute' : 'Mute',
-                onTap: () => context.messages.setMuted(
-                  conversation.id,
-                  user.id,
-                  !conversation.isMuted,
+                onTap: () => context.messagingBloc.add(
+                  ConversationMutedSet(conversation.id, !conversation.isMuted),
                 ),
               ),
             ],
@@ -214,10 +233,8 @@ class ChatInfoScreen extends StatelessWidget {
             Icons.notifications_none,
             'Notifications',
             conversation.isMuted ? 'Muted' : 'On',
-            onTap: () => context.messages.setMuted(
-              conversation.id,
-              user.id,
-              !conversation.isMuted,
+            onTap: () => context.messagingBloc.add(
+              ConversationMutedSet(conversation.id, !conversation.isMuted),
             ),
           ),
           _buildInfoTile(
@@ -227,10 +244,8 @@ class ChatInfoScreen extends StatelessWidget {
                 : Icons.archive_outlined,
             'Archive',
             conversation.isArchived ? 'Archived' : 'Not archived',
-            onTap: () => context.messages.setArchived(
-              conversation.id,
-              user.id,
-              !conversation.isArchived,
+            onTap: () => context.messagingBloc.add(
+              ConversationArchivedSet(conversation.id, !conversation.isArchived),
             ),
           ),
           if (isGroup)
@@ -242,12 +257,14 @@ class ChatInfoScreen extends StatelessWidget {
                   ? 'All Members'
                   : 'Admins Only',
               onTap: amAdmin
-                  ? () => context.messages.updateGroupInfo(
-                      conversation.id,
-                      messagePolicy:
-                          conversation.messagePolicy == MessagePolicy.everyone
-                          ? MessagePolicy.adminsOnly
-                          : MessagePolicy.everyone,
+                  ? () => context.read<ConversationBloc>().add(
+                      ConversationInfoUpdated(
+                        conversation.adminIds,
+                        messagePolicy:
+                            conversation.messagePolicy == MessagePolicy.everyone
+                            ? MessagePolicy.adminsOnly
+                            : MessagePolicy.everyone,
+                      ),
                     )
                   : null,
             ),
@@ -264,9 +281,11 @@ class ChatInfoScreen extends StatelessWidget {
               isMe: participant.id == user.id,
               isAdmin: conversation.isAdmin(participant.id),
               onRemove: amAdmin && participant.id != user.id
-                  ? () => context.messages.removeMember(
-                      conversation.id,
-                      participant.id,
+                  ? () => context.read<ConversationBloc>().add(
+                      ConversationMemberRemoved(
+                        conversation.adminIds,
+                        participant.id,
+                      ),
                     )
                   : null,
             ),
@@ -334,8 +353,9 @@ class ChatInfoScreen extends StatelessWidget {
     );
     if (picked == null || picked.isEmpty || !context.mounted) return;
 
-    await context.messages.addMembers(conversation.id, picked);
-    if (!context.mounted) return;
+    context.read<ConversationBloc>().add(
+      ConversationMembersAdded(conversation.adminIds, picked),
+    );
     context.showMessagingSnack('Added ${picked.length} member(s)');
   }
 
@@ -387,12 +407,14 @@ class ChatInfoScreen extends StatelessWidget {
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
-                context.messages.updateGroupInfo(
-                  conversation.id,
-                  messagePolicy:
-                      conversation.messagePolicy == MessagePolicy.everyone
-                      ? MessagePolicy.adminsOnly
-                      : MessagePolicy.everyone,
+                context.read<ConversationBloc>().add(
+                  ConversationInfoUpdated(
+                    conversation.adminIds,
+                    messagePolicy:
+                        conversation.messagePolicy == MessagePolicy.everyone
+                        ? MessagePolicy.adminsOnly
+                        : MessagePolicy.everyone,
+                  ),
                 );
               },
             ),
@@ -475,7 +497,9 @@ class ChatInfoScreen extends StatelessWidget {
         fileName: 'avatar.jpg',
       );
       if (!context.mounted) return;
-      await context.messages.updateGroupInfo(conversation.id, avatarUrl: url);
+      context.read<ConversationBloc>().add(
+        ConversationInfoUpdated(conversation.adminIds, avatarUrl: url),
+      );
     } catch (e) {
       if (context.mounted) {
         context.showMessagingSnack('Could not update the photo: $e');
@@ -525,10 +549,12 @@ class ChatInfoScreen extends StatelessWidget {
     );
     if (saved != true || !context.mounted) return;
 
-    await context.messages.updateGroupInfo(
-      conversation.id,
-      title: nameController.text.trim(),
-      description: descController.text.trim(),
+    context.read<ConversationBloc>().add(
+      ConversationInfoUpdated(
+        conversation.adminIds,
+        title: nameController.text.trim(),
+        description: descController.text.trim(),
+      ),
     );
   }
 
@@ -564,8 +590,7 @@ class ChatInfoScreen extends StatelessWidget {
     );
     if (confirmed != true || !context.mounted) return;
 
-    await context.messages.leaveConversation(conversation.id, user.id);
-    if (!context.mounted) return;
+    context.read<ConversationBloc>().add(const ConversationLeft());
     context.go('/messages');
   }
 

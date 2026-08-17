@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/chat_list_tile.dart';
 import 'package:school_pulse/features/messages/domain/entities/message_models.dart';
@@ -31,43 +33,42 @@ class ArchivedChatsScreen extends StatelessWidget {
         ),
       ),
       body: MessagingUserBuilder(
-        builder: (context, user) => StreamBuilder<List<ChatConversation>>(
-          stream: context.messages.watchConversations(user.id),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const Center(child: SchoolPulseLoader());
-            }
-            final archived = snapshot.data!.where((c) => c.isArchived).toList();
-            if (archived.isEmpty) return _buildEmptyState();
+        builder: (context, user) =>
+            BlocBuilder<MessagingBloc, MessagingState>(
+              bloc: context.messagingBloc,
+              builder: (context, state) {
+                final conversations = state.conversations;
+                if (conversations == null) {
+                  return const Center(child: SchoolPulseLoader());
+                }
+                final archived = conversations
+                    .where((c) => c.isArchived)
+                    .toList();
+                if (archived.isEmpty) return _buildEmptyState();
 
-            return ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: archived.length,
-              itemBuilder: (context, index) {
-                final chat = archived[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: ChatListTile(
-                    chat: chat,
-                    onTap: () => context.push('/messages/chat/${chat.id}'),
-                    // Long-press is the only way back out of the archive.
-                    onLongPress: () =>
-                        _confirmUnarchive(context, user.id, chat),
-                  ),
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: archived.length,
+                  itemBuilder: (context, index) {
+                    final chat = archived[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ChatListTile(
+                        chat: chat,
+                        onTap: () => context.push('/messages/chat/${chat.id}'),
+                        // Long-press is the only way back out of the archive.
+                        onLongPress: () => _confirmUnarchive(context, chat),
+                      ),
+                    );
+                  },
                 );
               },
-            );
-          },
-        ),
+            ),
       ),
     );
   }
 
-  void _confirmUnarchive(
-    BuildContext context,
-    String userId,
-    ChatConversation chat,
-  ) {
+  void _confirmUnarchive(BuildContext context, ChatConversation chat) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surfaceDark,
@@ -89,7 +90,9 @@ class ArchivedChatsScreen extends StatelessWidget {
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
-                context.messages.setArchived(chat.id, userId, false);
+                context.messagingBloc.add(
+                  ConversationArchivedSet(chat.id, false),
+                );
               },
             ),
             ListTile(
@@ -103,7 +106,7 @@ class ArchivedChatsScreen extends StatelessWidget {
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
-                context.messages.leaveConversation(chat.id, userId);
+                context.messagingBloc.add(ConversationLeaveRequested(chat.id));
               },
             ),
           ],

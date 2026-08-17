@@ -7,6 +7,7 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/components/pulse_logo.dart';
+import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
 
 class StudentShell extends StatelessWidget {
   final Widget child;
@@ -91,9 +92,9 @@ class StudentShell extends StatelessWidget {
         label: 'Homework',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.chat_bubble_outline_rounded),
-        selectedIcon: Icon(
-          Icons.chat_bubble_rounded,
+        icon: MessagesNavIcon(icon: Icons.chat_bubble_outline_rounded),
+        selectedIcon: MessagesNavIcon(
+          icon: Icons.chat_bubble_rounded,
           color: AppColors.royalBlue,
         ),
         label: 'Messages',
