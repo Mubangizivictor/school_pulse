@@ -31,23 +31,10 @@ async function requireStaffCaller(auth) {
 
 /**
  * Creates a student record inside a transaction that also enforces the
- * school's subscription.maxStudents cap (denormalized onto schools/{id} by
- * payments.js:approveManualPayment). Replaces the old direct client
- * firestore.batch() write in student_remote_data_source.dart, which had no
- * way to see - let alone atomically check - a live student count: Firestore
- * Security Rules cannot run aggregation queries, so the cap can only be
- * enforced where a real read-then-write transaction is possible.
- *
- * A cap of 0 (or a school with no subscription.maxStudents set at all) is
- * treated as uncapped - matches the existing UI convention where
- * plan.maxStudents > 0 gates whether the limit chip even renders
- * (subscription_plans_screen.dart).
- *
- * Shared by both createStudent (direct creation) and finalizeAdmission (the
- * admissions workflow) via the optional `application` payload, since both
- * paths create exactly one student doc and both can equally push a school
- * over its cap - splitting them into two separate cap-checking functions
- * would just duplicate the same transaction.
+ * school's subscription.maxStudents cap. Admission creates a student in the
+ * `admitted` state first; that student must NOT be counted as active until
+ * the enrollment step moves them to `active`. Direct student creation may
+ * already be active and is counted immediately.
  */
 exports.createStudentWithCapacityCheck = onCall(async (request) => {
   const { db, schoolId: callerSchoolId } = await requireStaffCaller(request.auth);
@@ -72,6 +59,7 @@ exports.createStudentWithCapacityCheck = onCall(async (request) => {
   const applicationRef = application?.id
     ? db.collection("admission_applications").doc(application.id)
     : null;
+  const studentWillBeActive = ACTIVE_ENROLMENT_STATUSES.has(String(student.status || ""));
 
   const result = await db.runTransaction(async (tx) => {
     const schoolSnap = await tx.get(schoolRef);
@@ -82,17 +70,13 @@ exports.createStudentWithCapacityCheck = onCall(async (request) => {
     const subscription = school.subscription && typeof school.subscription === "object" ? school.subscription : {};
     const maxStudents = Number(subscription.maxStudents || 0);
     const activeStudentCount = Number(subscription.activeStudentCount || 0);
-    if (maxStudents > 0 && activeStudentCount >= maxStudents) {
+    if (studentWillBeActive && maxStudents > 0 && activeStudentCount >= maxStudents) {
       throw new HttpsError(
         "resource-exhausted",
         `This school has reached its ${subscription.planName || "current"} plan's ${maxStudents}-student limit. Upgrade the plan to continue enrolling students.`,
       );
     }
 
-    // The Flutter client sends dateOfBirth as an ISO string (callables
-    // can't carry a Firestore Timestamp over the wire) - convert back so
-    // the stored shape matches every other writer of this collection.
-    // StudentModel.fromMap() on the client already accepts either shape.
     const dateOfBirth = typeof student.dateOfBirth === "string"
       ? admin.firestore.Timestamp.fromDate(new Date(student.dateOfBirth))
       : student.dateOfBirth;
@@ -104,7 +88,7 @@ exports.createStudentWithCapacityCheck = onCall(async (request) => {
       classId: student.classId ?? null,
       streamId: student.streamId ?? null,
       academicYearId: student.academicYearId ?? null,
-      status: "active",
+      status: studentWillBeActive ? "active" : String(student.status || "admitted"),
       startDate: admin.firestore.Timestamp.now(),
       reason: application ? "initial admission" : "direct creation",
       recordedBy,
@@ -118,9 +102,11 @@ exports.createStudentWithCapacityCheck = onCall(async (request) => {
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
     }
-    tx.set(schoolRef, {
-      subscription: { ...subscription, activeStudentCount: activeStudentCount + 1 },
-    }, { merge: true });
+    if (studentWillBeActive) {
+      tx.set(schoolRef, {
+        subscription: { ...subscription, activeStudentCount: activeStudentCount + 1 },
+      }, { merge: true });
+    }
 
     return { studentId: studentRef.id };
   });
@@ -129,11 +115,10 @@ exports.createStudentWithCapacityCheck = onCall(async (request) => {
 });
 
 /**
- * Changes a student's enrolment status and keeps schools/{id}.subscription.
- * activeStudentCount in sync in the same transaction - capacity means
- * ACTIVE enrolled students only (excludes graduated/withdrawn/transferred/
- * alumni per the billing spec), so a status change crossing that boundary
- * must adjust the counter, not just the student doc.
+ * Changes a student's lifecycle status and keeps the active subscription
+ * count in sync. Activating an admitted student re-checks the subscription
+ * cap inside the SAME transaction, preventing concurrent admissions from
+ * over-subscribing a school.
  */
 exports.updateStudentStatusWithCapacityAdjustment = onCall(async (request) => {
   const { db, schoolId: callerSchoolId } = await requireStaffCaller(request.auth);
@@ -162,23 +147,37 @@ exports.updateStudentStatusWithCapacityAdjustment = onCall(async (request) => {
     const wasActive = ACTIVE_ENROLMENT_STATUSES.has(previousStatus);
     const willBeActive = ACTIVE_ENROLMENT_STATUSES.has(status);
 
+    let nextActiveCount = null;
+    let schoolRef = null;
+    let subscription = null;
+    if (wasActive !== willBeActive) {
+      schoolRef = db.collection("schools").doc(schoolId);
+      const schoolSnap = await tx.get(schoolRef);
+      if (!schoolSnap.exists) {
+        throw new HttpsError("failed-precondition", "School not found.");
+      }
+      const school = schoolSnap.data() || {};
+      subscription = school.subscription && typeof school.subscription === "object" ? school.subscription : {};
+      const current = Number(subscription.activeStudentCount || 0);
+      const maxStudents = Number(subscription.maxStudents || 0);
+      if (willBeActive && maxStudents > 0 && current >= maxStudents) {
+        throw new HttpsError(
+          "resource-exhausted",
+          `This school has reached its ${subscription.planName || "current"} plan's ${maxStudents}-student limit. Upgrade the plan to continue enrolling students.`,
+        );
+      }
+      nextActiveCount = Math.max(0, current + (willBeActive ? 1 : -1));
+    }
+
     tx.update(studentRef, {
       status,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    if (wasActive !== willBeActive) {
-      const schoolRef = db.collection("schools").doc(schoolId);
-      const schoolSnap = await tx.get(schoolRef);
-      if (schoolSnap.exists) {
-        const school = schoolSnap.data() || {};
-        const subscription = school.subscription && typeof school.subscription === "object" ? school.subscription : {};
-        const current = Number(subscription.activeStudentCount || 0);
-        const next = Math.max(0, current + (willBeActive ? 1 : -1));
-        tx.set(schoolRef, {
-          subscription: { ...subscription, activeStudentCount: next },
-        }, { merge: true });
-      }
+    if (schoolRef && subscription && nextActiveCount != null) {
+      tx.set(schoolRef, {
+        subscription: { ...subscription, activeStudentCount: nextActiveCount },
+      }, { merge: true });
     }
   });
 
@@ -187,12 +186,7 @@ exports.updateStudentStatusWithCapacityAdjustment = onCall(async (request) => {
 
 /**
  * One-time backfill: writes the true current active-student count onto
- * every school's subscription.activeStudentCount. Required before
- * createStudentWithCapacityCheck takes real traffic - a fresh counter
- * starting at 0 would let every existing school silently over-provision up
- * to maxStudents *additional* students beyond what they actually have,
- * since the counter only increments from here, it never re-syncs to
- * reality on its own. Owner-only; run once manually, not on a schedule.
+ * every school's subscription.activeStudentCount.
  */
 exports.backfillActiveStudentCounts = onCall(async (request) => {
   const db = admin.firestore();
