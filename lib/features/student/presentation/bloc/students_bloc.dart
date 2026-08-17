@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/usecases/get_students_by_ids.dart';
 import '../../domain/usecases/get_all_students.dart';
@@ -20,11 +22,23 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
     Emitter<StudentsState> emit,
   ) async {
     emit(StudentsLoading());
-    final result = await getStudentsByIds(event.studentIds);
-    result.fold(
-      (failure) => emit(StudentsError(failure.message)),
-      (students) => emit(StudentsLoaded(students)),
-    );
+    try {
+      final result = await getStudentsByIds(event.studentIds).timeout(
+        const Duration(seconds: 15),
+      );
+      result.fold(
+        (failure) => emit(StudentsError(failure.message)),
+        (students) => emit(StudentsLoaded(students)),
+      );
+    } on TimeoutException {
+      emit(
+        const StudentsError(
+          'Loading students took too long. Check your connection and tap Retry.',
+        ),
+      );
+    } catch (error) {
+      emit(StudentsError(error.toString()));
+    }
   }
 
   Future<void> _onLoadSchoolStudents(
@@ -37,11 +51,24 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
       emit(const StudentsError('School context is required to load students.'));
       return;
     }
-    final result = await getAllStudents(schoolId: schoolId);
-    result.fold(
-      (failure) => emit(StudentsError(failure.message)),
-      (students) => emit(StudentsLoaded(students)),
-    );
+
+    try {
+      final result = await getAllStudents(schoolId: schoolId).timeout(
+        const Duration(seconds: 15),
+      );
+      result.fold(
+        (failure) => emit(StudentsError(failure.message)),
+        (students) => emit(StudentsLoaded(students)),
+      );
+    } on TimeoutException {
+      emit(
+        const StudentsError(
+          'The school roster did not respond in time. Check Firebase/network access and tap Retry.',
+        ),
+      );
+    } catch (error) {
+      emit(StudentsError(error.toString()));
+    }
   }
 
   Future<void> _onSearchStudents(
@@ -53,16 +80,26 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
     // already school-scoped result locally so an empty query can never cause
     // a cross-tenant collection scan.
     emit(StudentsLoading());
-    final result = await getAllStudents();
-    result.fold((failure) => emit(StudentsError(failure.message)), (
-      students,
-    ) {
-      final filtered = students.where((s) {
-        final query = event.query.toLowerCase();
-        return s.name.toLowerCase().contains(query) ||
-            s.studentId.toLowerCase().contains(query);
-      }).toList();
-      emit(StudentsLoaded(filtered));
-    });
+    try {
+      final result = await getAllStudents().timeout(const Duration(seconds: 15));
+      result.fold((failure) => emit(StudentsError(failure.message)), (
+        students,
+      ) {
+        final filtered = students.where((s) {
+          final query = event.query.toLowerCase();
+          return s.name.toLowerCase().contains(query) ||
+              s.studentId.toLowerCase().contains(query);
+        }).toList();
+        emit(StudentsLoaded(filtered));
+      });
+    } on TimeoutException {
+      emit(
+        const StudentsError(
+          'Student search took too long. Check your connection and try again.',
+        ),
+      );
+    } catch (error) {
+      emit(StudentsError(error.toString()));
+    }
   }
 }
