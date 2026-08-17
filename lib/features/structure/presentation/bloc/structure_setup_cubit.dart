@@ -74,6 +74,12 @@ class StructureSetupCubit extends Cubit<StructureSetupCubitState> {
   Future<void> setClubs(StructureUseChoice choice) =>
       _save(state.preferences.copyWith(clubs: choice));
 
+  Future<void> setBoarding(StructureUseChoice choice) =>
+      _save(state.preferences.copyWith(boarding: choice));
+
+  Future<void> setTransport(StructureUseChoice choice) =>
+      _save(state.preferences.copyWith(transport: choice));
+
   Future<void> rememberStep(String stepId) =>
       _save(state.preferences.copyWith(lastStepId: stepId));
 
