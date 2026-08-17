@@ -42,12 +42,10 @@ class StructureSetupRepositoryImpl implements StructureSetupRepository {
     // Create the tenant-owned singleton before subscribing. Firestore cannot
     // authorize a resource.data-based read for a document that does not yet
     // exist, while create is safely authorized from request.resource.data.
-    // Merge keeps every existing answer untouched on subsequent openings.
+    // Only schoolId is merged so an older setupVersion is never upgraded just
+    // by opening Structure; version changes happen only on explicit saves.
     await doc.set(
-      {
-        'schoolId': schoolId,
-        'setupVersion': StructureSetupPreferences.currentSetupVersion,
-      },
+      {'schoolId': schoolId},
       SetOptions(merge: true),
     );
 
