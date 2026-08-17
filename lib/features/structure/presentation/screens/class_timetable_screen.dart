@@ -1,19 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:uuid/uuid.dart';
 import '../../data/repositories/class_timetable_repository_impl.dart';
 import '../../data/repositories/curriculum_assignment_repository_impl.dart';
 import '../../data/repositories/structure_people_readiness_repository_impl.dart';
+import '../../data/repositories/teaching_assignment_repository_impl.dart';
 import '../../domain/entities/class_timetable_entities.dart';
 import '../../domain/entities/curriculum_assignment.dart';
 import '../../domain/entities/structure_entities.dart';
+import '../../domain/entities/teaching_assignment.dart';
 import '../../domain/entities/timetable_config.dart';
 import '../../domain/repositories/class_timetable_repository.dart';
 import '../../domain/repositories/curriculum_assignment_repository.dart';
 import '../../domain/repositories/structure_people_readiness_repository.dart';
+import '../../domain/repositories/teaching_assignment_repository.dart';
 import '../../domain/services/structure_tenant_resolver.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_state.dart';
@@ -26,28 +28,32 @@ class ClassTimetableScreen extends StatefulWidget {
 }
 
 class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
-  late final FirebaseFirestore _firestore;
   late final StructureTenantResolver _tenantResolver;
   late final ClassTimetableRepository _timetableRepository;
   late final CurriculumAssignmentRepository _curriculumRepository;
+  late final TeachingAssignmentRepository _teachingAssignmentRepository;
   late final StructurePeopleReadinessRepository _peopleRepository;
   late final Future<String> _schoolId;
 
   @override
   void initState() {
     super.initState();
-    _firestore = FirebaseFirestore.instance;
-    _tenantResolver = StructureTenantResolver(firestore: _firestore);
+    final firestore = FirebaseFirestore.instance;
+    _tenantResolver = StructureTenantResolver(firestore: firestore);
     _timetableRepository = ClassTimetableRepositoryImpl(
-      firestore: _firestore,
+      firestore: firestore,
       tenantResolver: _tenantResolver,
     );
     _curriculumRepository = CurriculumAssignmentRepositoryImpl(
-      firestore: _firestore,
+      firestore: firestore,
+      tenantResolver: _tenantResolver,
+    );
+    _teachingAssignmentRepository = TeachingAssignmentRepositoryImpl(
+      firestore: firestore,
       tenantResolver: _tenantResolver,
     );
     _peopleRepository = StructurePeopleReadinessRepositoryImpl(
-      firestore: _firestore,
+      firestore: firestore,
     );
     _schoolId = _tenantResolver.resolve();
   }
@@ -69,6 +75,7 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
                     item.academicYearId == currentYear.id,
               )
               .firstOrNull;
+
           if (currentYear == null || currentTerm == null) {
             return const _EmptyMessage(
               title: 'Current year and term required',
@@ -76,9 +83,11 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
                   'Set the current academic year and term before building class timetables.',
             );
           }
-          if (structure.timetableConfig.slots
+
+          final teachingSlots = structure.timetableConfig.slots
               .where((slot) => slot.type == 'period')
-              .isEmpty) {
+              .toList(growable: false);
+          if (teachingSlots.isEmpty) {
             return const _EmptyMessage(
               title: 'School day required',
               body:
@@ -88,17 +97,18 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
 
           return StreamBuilder<List<ClassTimetable>>(
             stream: _timetableRepository.watchTimetables(),
-            builder: (context, timetableSnapshot) {
-              if (timetableSnapshot.hasError) {
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
                 return _EmptyMessage(
                   title: 'Could not load timetables',
-                  body: timetableSnapshot.error.toString(),
+                  body: snapshot.error.toString(),
                 );
               }
-              if (!timetableSnapshot.hasData) {
+              if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
-              final items = timetableSnapshot.data!
+
+              final timetables = snapshot.data!
                   .where(
                     (item) =>
                         item.academicYearId == currentYear.id &&
@@ -112,7 +122,8 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     child: Text(
-                      '${currentYear.name} • ${currentTerm.name}\nCreate one timetable for each class or stream. Teacher, class and room conflicts are checked before a lesson saves and again before publishing.',
+                      '${currentYear.name} • ${currentTerm.name}\n'
+                      'Create one timetable per class or stream. Class, teacher and room collisions are rejected before save and rechecked before publishing.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color:
                                 Theme.of(context).colorScheme.onSurfaceVariant,
@@ -121,37 +132,42 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
                     ),
                   ),
                   Expanded(
-                    child: items.isEmpty
+                    child: timetables.isEmpty
                         ? const _EmptyMessage(
                             title: 'No class timetables yet',
                             body:
-                                'Create the first class/stream timetable. It starts as a draft until conflict validation passes.',
+                                'Create a draft timetable, assign lessons, then publish after all collision checks pass.',
                           )
                         : ListView.separated(
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                            itemCount: items.length,
-                            separatorBuilder: (_, __) =>
+                            itemCount: timetables.length,
+                            separatorBuilder: (_, _) =>
                                 const SizedBox(height: 8),
                             itemBuilder: (context, index) {
-                              final item = items[index];
+                              final timetable = timetables[index];
                               final schoolClass = structure.classes
-                                  .where((value) => value.id == item.classId)
+                                  .where(
+                                    (item) => item.id == timetable.classId,
+                                  )
                                   .firstOrNull;
                               final stream = structure.streams
-                                  .where((value) => value.id == item.streamId)
+                                  .where(
+                                    (item) => item.id == timetable.streamId,
+                                  )
                                   .firstOrNull;
                               return Card(
                                 child: ListTile(
                                   leading: Icon(
-                                    item.status == ClassTimetableStatus.active
+                                    timetable.status ==
+                                            ClassTimetableStatus.active
                                         ? Icons.check_circle_outline
-                                        : item.status ==
+                                        : timetable.status ==
                                                 ClassTimetableStatus.archived
                                             ? Icons.archive_outlined
                                             : Icons.edit_calendar_outlined,
                                   ),
                                   title: Text(
-                                    item.name,
+                                    timetable.name,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -159,18 +175,20 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
                                   subtitle: Text([
                                     schoolClass?.name ?? 'Missing class',
                                     if (stream != null) stream.name,
-                                    item.status.name,
+                                    timetable.status.name.toUpperCase(),
                                   ].join(' • ')),
                                   trailing: const Icon(Icons.chevron_right),
                                   onTap: () => Navigator.of(context).push(
                                     MaterialPageRoute<void>(
                                       builder: (_) => _TimetableBuilderScreen(
-                                        timetable: item,
+                                        timetable: timetable,
                                         structure: structure,
                                         timetableRepository:
                                             _timetableRepository,
                                         curriculumRepository:
                                             _curriculumRepository,
+                                        teachingAssignmentRepository:
+                                            _teachingAssignmentRepository,
                                         peopleRepository: _peopleRepository,
                                         schoolId: _schoolId,
                                       ),
@@ -189,28 +207,23 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
       ),
       floatingActionButton: BlocBuilder<StructureBloc, StructureState>(
         builder: (context, structure) {
-          final currentYear = structure.academicYears
+          final year = structure.academicYears
               .where((item) => item.isCurrent && !item.isArchived)
               .firstOrNull;
-          final currentTerm = structure.academicTerms
+          final term = structure.academicTerms
               .where(
                 (item) =>
                     item.isCurrent &&
-                    currentYear != null &&
-                    item.academicYearId == currentYear.id,
+                    year != null &&
+                    item.academicYearId == year.id,
               )
               .firstOrNull;
-          final canCreate = currentYear != null &&
-              currentTerm != null &&
+          final canCreate = year != null &&
+              term != null &&
               structure.classes.any((item) => item.isActive);
           return FloatingActionButton.extended(
             onPressed: canCreate
-                ? () => _createTimetable(
-                      context,
-                      structure,
-                      currentYear,
-                      currentTerm!,
-                    )
+                ? () => _createTimetable(context, structure, year, term)
                 : null,
             icon: const Icon(Icons.add),
             label: const Text('Create Timetable'),
@@ -226,24 +239,26 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
     AcademicYear year,
     AcademicTerm term,
   ) async {
-    final activeClasses =
-        structure.classes.where((item) => item.isActive).toList();
-    var classId = activeClasses.first.id;
+    final classes = structure.classes.where((item) => item.isActive).toList();
+    if (classes.isEmpty) return;
+
+    var classId = classes.first.id;
     var streamId = '';
-    final name = TextEditingController();
+    final nameController = TextEditingController();
 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setSheetState) {
-          final classStreams = structure.streams
-              .where((item) => item.classId == classId && item.isActive)
+          final streams = structure.streams
+              .where((item) => item.isActive && item.classId == classId)
               .toList();
           if (streamId.isNotEmpty &&
-              !classStreams.any((item) => item.id == streamId)) {
+              !streams.any((item) => item.id == streamId)) {
             streamId = '';
           }
+
           return Padding(
             padding: EdgeInsets.fromLTRB(
               20,
@@ -264,9 +279,10 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: classId,
+                    key: ValueKey('class-$classId'),
+                    initialValue: classId,
                     decoration: const InputDecoration(labelText: 'Class *'),
-                    items: activeClasses
+                    items: classes
                         .map(
                           (item) => DropdownMenuItem(
                             value: item.id,
@@ -275,18 +291,18 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
                         )
                         .toList(),
                     onChanged: (value) {
-                      if (value != null) {
-                        setSheetState(() {
-                          classId = value;
-                          streamId = '';
-                        });
-                      }
+                      if (value == null) return;
+                      setSheetState(() {
+                        classId = value;
+                        streamId = '';
+                      });
                     },
                   ),
-                  if (classStreams.isNotEmpty) ...[
+                  if (streams.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: streamId,
+                      key: ValueKey('stream-$classId-$streamId'),
+                      initialValue: streamId,
                       decoration: const InputDecoration(
                         labelText: 'Stream / Section',
                       ),
@@ -295,7 +311,7 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
                           value: '',
                           child: Text('Whole class'),
                         ),
-                        ...classStreams.map(
+                        ...streams.map(
                           (item) => DropdownMenuItem(
                             value: item.id,
                             child: Text(item.name),
@@ -308,9 +324,9 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
                   ],
                   const SizedBox(height: 12),
                   TextField(
-                    controller: name,
+                    controller: nameController,
                     decoration: const InputDecoration(
-                      labelText: 'Timetable Name *',
+                      labelText: 'Timetable name *',
                       hintText: 'e.g. S1 Blue — Term 1',
                     ),
                   ),
@@ -319,8 +335,8 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
                     width: double.infinity,
                     child: FilledButton(
                       onPressed: () async {
-                        final title = name.text.trim();
-                        if (title.isEmpty) return;
+                        final name = nameController.text.trim();
+                        if (name.isEmpty) return;
                         try {
                           final schoolId = await _schoolId;
                           await _timetableRepository.saveTimetable(
@@ -331,7 +347,7 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
                               termId: term.id,
                               classId: classId,
                               streamId: streamId,
-                              name: title,
+                              name: name,
                             ),
                           );
                           if (sheetContext.mounted) {
@@ -357,7 +373,8 @@ class _ClassTimetableScreenState extends State<ClassTimetableScreen> {
         },
       ),
     );
-    name.dispose();
+
+    nameController.dispose();
   }
 }
 
@@ -366,6 +383,7 @@ class _TimetableBuilderScreen extends StatelessWidget {
   final StructureState structure;
   final ClassTimetableRepository timetableRepository;
   final CurriculumAssignmentRepository curriculumRepository;
+  final TeachingAssignmentRepository teachingAssignmentRepository;
   final StructurePeopleReadinessRepository peopleRepository;
   final Future<String> schoolId;
 
@@ -374,6 +392,7 @@ class _TimetableBuilderScreen extends StatelessWidget {
     required this.structure,
     required this.timetableRepository,
     required this.curriculumRepository,
+    required this.teachingAssignmentRepository,
     required this.peopleRepository,
     required this.schoolId,
   });
@@ -383,21 +402,22 @@ class _TimetableBuilderScreen extends StatelessWidget {
     return FutureBuilder<String>(
       future: schoolId,
       builder: (context, schoolSnapshot) {
+        if (schoolSnapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(title: Text(timetable.name)),
+            body: _EmptyMessage(
+              title: 'School context unavailable',
+              body: schoolSnapshot.error.toString(),
+            ),
+          );
+        }
         if (!schoolSnapshot.hasData) {
-          if (schoolSnapshot.hasError) {
-            return Scaffold(
-              appBar: AppBar(title: Text(timetable.name)),
-              body: _EmptyMessage(
-                title: 'School context unavailable',
-                body: schoolSnapshot.error.toString(),
-              ),
-            );
-          }
           return Scaffold(
             appBar: AppBar(title: Text(timetable.name)),
             body: const Center(child: CircularProgressIndicator()),
           );
         }
+
         return StreamBuilder<List<CurriculumAssignment>>(
           stream: curriculumRepository.watchAssignments(),
           builder: (context, curriculumSnapshot) {
@@ -410,76 +430,116 @@ class _TimetableBuilderScreen extends StatelessWidget {
             final curriculum = curriculumSnapshot.data!
                 .where(
                   (item) =>
+                      item.isActive &&
                       item.academicYearId == timetable.academicYearId &&
                       item.classId == timetable.classId &&
                       (item.streamId.isEmpty ||
                           item.streamId == timetable.streamId),
                 )
                 .toList();
-            return StreamBuilder<List<UserEntity>>(
-              stream: peopleRepository.watchSchoolStaff(schoolSnapshot.data!),
-              builder: (context, peopleSnapshot) {
-                if (!peopleSnapshot.hasData) {
+
+            return StreamBuilder<List<TeachingAssignment>>(
+              stream: teachingAssignmentRepository.watchAssignments(),
+              builder: (context, assignmentSnapshot) {
+                if (!assignmentSnapshot.hasData) {
                   return Scaffold(
                     appBar: AppBar(title: Text(timetable.name)),
                     body: const Center(child: CircularProgressIndicator()),
                   );
                 }
-                final staff = peopleSnapshot.data!;
-                return StreamBuilder<List<ClassTimetableLesson>>(
-                  stream: timetableRepository.watchLessons(),
-                  builder: (context, lessonSnapshot) {
-                    if (!lessonSnapshot.hasData) {
+                final assignments = assignmentSnapshot.data!
+                    .where(
+                      (item) =>
+                          item.isActive &&
+                          item.academicYearId == timetable.academicYearId &&
+                          item.responsibilityType ==
+                              TeachingResponsibilityType.subjectTeacher &&
+                          item.classId == timetable.classId &&
+                          (item.streamId.isEmpty ||
+                              item.streamId == timetable.streamId),
+                    )
+                    .toList();
+
+                return StreamBuilder<List<UserEntity>>(
+                  stream: peopleRepository.watchSchoolStaff(
+                    schoolSnapshot.data!,
+                  ),
+                  builder: (context, peopleSnapshot) {
+                    if (!peopleSnapshot.hasData) {
                       return Scaffold(
                         appBar: AppBar(title: Text(timetable.name)),
                         body: const Center(child: CircularProgressIndicator()),
                       );
                     }
-                    final lessons = lessonSnapshot.data!
-                        .where((item) => item.timetableId == timetable.id)
-                        .toList();
-                    return Scaffold(
-                      appBar: AppBar(
-                        title: Text(timetable.name),
-                        actions: [
-                          if (timetable.status != ClassTimetableStatus.archived)
-                            TextButton(
-                              onPressed: () => _publish(context),
-                              child: const Text('Publish'),
+                    final staff = peopleSnapshot.data!;
+
+                    return StreamBuilder<List<ClassTimetableLesson>>(
+                      stream: timetableRepository.watchLessons(),
+                      builder: (context, lessonSnapshot) {
+                        if (!lessonSnapshot.hasData) {
+                          return Scaffold(
+                            appBar: AppBar(title: Text(timetable.name)),
+                            body: const Center(
+                              child: CircularProgressIndicator(),
                             ),
-                        ],
-                      ),
-                      body: ListView(
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          Text(
-                            '${timetable.status.name.toUpperCase()} • ${lessons.length} lesson(s)',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelLarge
-                                ?.copyWith(fontWeight: FontWeight.w700),
+                          );
+                        }
+                        final lessons = lessonSnapshot.data!
+                            .where(
+                              (item) =>
+                                  item.isActive &&
+                                  item.timetableId == timetable.id,
+                            )
+                            .toList();
+
+                        return Scaffold(
+                          appBar: AppBar(
+                            title: Text(timetable.name),
+                            actions: [
+                              if (timetable.status !=
+                                  ClassTimetableStatus.archived)
+                                TextButton(
+                                  onPressed: () => _publish(context),
+                                  child: const Text('Publish'),
+                                ),
+                            ],
                           ),
-                          const SizedBox(height: 16),
-                          for (final day in structure.timetableConfig.teachingDays)
-                            _DaySchedule(
-                              day: day,
-                              config: structure.timetableConfig,
-                              lessons: lessons,
-                              structure: structure,
-                              curriculum: curriculum,
-                              staff: staff,
-                              onAddLesson: (slot) => _addLesson(
-                                context,
-                                day,
-                                slot,
-                                curriculum,
-                                staff,
+                          body: ListView(
+                            padding: const EdgeInsets.all(16),
+                            children: [
+                              Text(
+                                '${timetable.status.name.toUpperCase()} • ${lessons.length} lesson(s)',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelLarge
+                                    ?.copyWith(fontWeight: FontWeight.w700),
                               ),
-                              onDeleteLesson: (lesson) =>
-                                  timetableRepository.deleteLesson(lesson.id),
-                            ),
-                        ],
-                      ),
+                              const SizedBox(height: 16),
+                              for (final day
+                                  in structure.timetableConfig.teachingDays)
+                                _DaySchedule(
+                                  day: day,
+                                  config: structure.timetableConfig,
+                                  lessons: lessons,
+                                  structure: structure,
+                                  staff: staff,
+                                  onAddLesson: (slot) => _addLesson(
+                                    context,
+                                    day,
+                                    slot,
+                                    curriculum,
+                                    assignments,
+                                    staff,
+                                  ),
+                                  onDeleteLesson: (lesson) =>
+                                      timetableRepository.deleteLesson(
+                                    lesson.id,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
                     );
                   },
                 );
@@ -513,6 +573,7 @@ class _TimetableBuilderScreen extends StatelessWidget {
     String day,
     TimetableSlot slot,
     List<CurriculumAssignment> curriculum,
+    List<TeachingAssignment> assignments,
     List<UserEntity> staff,
   ) async {
     if (curriculum.isEmpty) {
@@ -525,44 +586,39 @@ class _TimetableBuilderScreen extends StatelessWidget {
       );
       return;
     }
-    final subjectById = {
-      for (final item in structure.subjects) item.id: item,
-    };
-    final className = structure.classes
-            .where((item) => item.id == timetable.classId)
-            .firstOrNull
-            ?.name ??
-        '';
+
+    final subjectsById = {for (final item in structure.subjects) item.id: item};
+    final staffById = {for (final item in staff) item.id: item};
     var curriculumId = curriculum.first.id;
     var roomId = '';
+    String? teacherId;
 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setSheetState) {
-          final selectedAllocation = curriculum
+          final selectedCurriculum = curriculum
               .where((item) => item.id == curriculumId)
               .first;
-          final subject = subjectById[selectedAllocation.subjectId];
-          final explicitlyAssigned = staff.where((user) {
-            if (!user.roles.contains(UserRole.teacher)) return false;
-            return user.subjects.any(
-              (assignment) =>
-                  assignment.subjectName.trim().toLowerCase() ==
-                      (subject?.name ?? '').trim().toLowerCase() &&
-                  assignment.className.trim().toLowerCase() ==
-                      className.trim().toLowerCase(),
-            );
-          }).toList();
-          final fallbackTeachers = staff
-              .where((user) => user.roles.contains(UserRole.teacher))
+          final eligibleAssignments = assignments
+              .where(
+                (item) => item.subjectId == selectedCurriculum.subjectId,
+              )
               .toList();
-          final eligibleTeachers = explicitlyAssigned.isNotEmpty
-              ? explicitlyAssigned
-              : fallbackTeachers;
-          String? teacherId =
-              eligibleTeachers.isEmpty ? null : eligibleTeachers.first.id;
+          final eligibleStaff = eligibleAssignments
+              .map((item) => staffById[item.staffId])
+              .whereType<UserEntity>()
+              .where((item) => item.isActive)
+              .toSet()
+              .toList()
+            ..sort((a, b) => a.name.compareTo(b.name));
+
+          if (teacherId != null &&
+              !eligibleStaff.any((item) => item.id == teacherId)) {
+            teacherId = null;
+          }
+          teacherId ??= eligibleStaff.firstOrNull?.id;
 
           return Padding(
             padding: EdgeInsets.fromLTRB(
@@ -584,37 +640,39 @@ class _TimetableBuilderScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: curriculumId,
+                    key: ValueKey('subject-$curriculumId'),
+                    initialValue: curriculumId,
                     decoration: const InputDecoration(labelText: 'Subject *'),
-                    items: curriculum.map((item) {
-                      final itemSubject = subjectById[item.subjectId];
-                      return DropdownMenuItem(
-                        value: item.id,
-                        child: Text(itemSubject?.name ?? 'Missing subject'),
-                      );
-                    }).toList(),
+                    items: curriculum
+                        .map(
+                          (item) => DropdownMenuItem(
+                            value: item.id,
+                            child: Text(
+                              subjectsById[item.subjectId]?.name ??
+                                  'Missing subject',
+                            ),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) {
-                      if (value != null) {
-                        setSheetState(() => curriculumId = value);
-                      }
+                      if (value == null) return;
+                      setSheetState(() {
+                        curriculumId = value;
+                        teacherId = null;
+                      });
                     },
                   ),
                   const SizedBox(height: 12),
-                  if (eligibleTeachers.isEmpty)
+                  if (eligibleStaff.isEmpty)
                     const Text(
-                      'No staff account with the Teacher role exists. Add staff before scheduling this lesson.',
+                      'No Subject Teacher is assigned to this subject and class/stream. Complete Academic Staff Assignments first.',
                     )
                   else
                     DropdownButtonFormField<String>(
-                      key: ValueKey('$curriculumId-${eligibleTeachers.length}'),
-                      value: teacherId,
-                      decoration: InputDecoration(
-                        labelText: 'Teacher *',
-                        helperText: explicitlyAssigned.isEmpty
-                            ? 'No explicit subject assignment was found, so active teacher accounts are shown.'
-                            : 'Filtered from the teacher’s subject/class assignments.',
-                      ),
-                      items: eligibleTeachers
+                      key: ValueKey('teacher-$curriculumId-$teacherId'),
+                      initialValue: teacherId,
+                      decoration: const InputDecoration(labelText: 'Teacher *'),
+                      items: eligibleStaff
                           .map(
                             (user) => DropdownMenuItem(
                               value: user.id,
@@ -626,7 +684,8 @@ class _TimetableBuilderScreen extends StatelessWidget {
                     ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: roomId,
+                    key: ValueKey('room-$roomId'),
+                    initialValue: roomId,
                     decoration: const InputDecoration(
                       labelText: 'Room / Learning Space',
                     ),
@@ -650,15 +709,15 @@ class _TimetableBuilderScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: eligibleTeachers.isEmpty
+                      onPressed: eligibleStaff.isEmpty
                           ? null
                           : () async {
-                              final chosenTeacher = teacherId;
-                              if (chosenTeacher == null ||
-                                  chosenTeacher.isEmpty) {
+                              final selectedTeacherId = teacherId;
+                              if (selectedTeacherId == null ||
+                                  selectedTeacherId.isEmpty) {
                                 return;
                               }
-                              final allocation = curriculum
+                              final selected = curriculum
                                   .where((item) => item.id == curriculumId)
                                   .first;
                               try {
@@ -677,8 +736,8 @@ class _TimetableBuilderScreen extends StatelessWidget {
                                         '${slot.name}|${slot.startTime}|${slot.endTime}',
                                     startTime: slot.startTime,
                                     endTime: slot.endTime,
-                                    subjectId: allocation.subjectId,
-                                    teacherId: chosenTeacher,
+                                    subjectId: selected.subjectId,
+                                    teacherId: selectedTeacherId,
                                     roomId: roomId,
                                   ),
                                 );
@@ -713,7 +772,6 @@ class _DaySchedule extends StatelessWidget {
   final TimetableConfig config;
   final List<ClassTimetableLesson> lessons;
   final StructureState structure;
-  final List<CurriculumAssignment> curriculum;
   final List<UserEntity> staff;
   final ValueChanged<TimetableSlot> onAddLesson;
   final ValueChanged<ClassTimetableLesson> onDeleteLesson;
@@ -723,7 +781,6 @@ class _DaySchedule extends StatelessWidget {
     required this.config,
     required this.lessons,
     required this.structure,
-    required this.curriculum,
     required this.staff,
     required this.onAddLesson,
     required this.onDeleteLesson,
@@ -731,8 +788,10 @@ class _DaySchedule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subjectById = {for (final item in structure.subjects) item.id: item};
+    final subjectsById = {for (final item in structure.subjects) item.id: item};
     final staffById = {for (final item in staff) item.id: item};
+    final roomsById = {for (final item in structure.facilities) item.id: item};
+
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
       child: Padding(
@@ -747,9 +806,10 @@ class _DaySchedule extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 10),
-            for (final slot in config.slots) ...[
+            for (var i = 0; i < config.slots.length; i++) ...[
               Builder(
                 builder: (context) {
+                  final slot = config.slots[i];
                   final lesson = lessons
                       .where(
                         (item) =>
@@ -759,6 +819,7 @@ class _DaySchedule extends StatelessWidget {
                       )
                       .firstOrNull;
                   final teachingSlot = slot.type == 'period';
+
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: SizedBox(
@@ -768,25 +829,17 @@ class _DaySchedule extends StatelessWidget {
                     title: lesson == null
                         ? Text(teachingSlot ? 'Unassigned lesson' : slot.name)
                         : Text(
-                            subjectById[lesson.subjectId]?.name ??
+                            subjectsById[lesson.subjectId]?.name ??
                                 'Missing subject',
                           ),
                     subtitle: lesson == null
-                        ? (teachingSlot ? Text(slot.name) : Text(slot.type))
-                        : Text(
-                            [
-                              staffById[lesson.teacherId]?.name ??
-                                  'Missing teacher',
-                              if (lesson.roomId.isNotEmpty)
-                                structure.facilities
-                                        .where(
-                                          (item) => item.id == lesson.roomId,
-                                        )
-                                        .firstOrNull
-                                        ?.name ??
-                                    'Missing room',
-                            ].join(' • '),
-                          ),
+                        ? Text(teachingSlot ? slot.name : _pretty(slot.type))
+                        : Text([
+                            staffById[lesson.teacherId]?.name ??
+                                'Missing teacher',
+                            if (lesson.roomId.isNotEmpty)
+                              roomsById[lesson.roomId]?.name ?? 'Missing room',
+                          ].join(' • ')),
                     trailing: !teachingSlot
                         ? null
                         : lesson == null
@@ -803,7 +856,7 @@ class _DaySchedule extends StatelessWidget {
                   );
                 },
               ),
-              if (slot != config.slots.last) const Divider(height: 1),
+              if (i < config.slots.length - 1) const Divider(height: 1),
             ],
           ],
         ),
@@ -845,6 +898,11 @@ class _EmptyMessage extends StatelessWidget {
       ),
     );
   }
+}
+
+String _pretty(String raw) {
+  if (raw.isEmpty) return raw;
+  return '${raw[0].toUpperCase()}${raw.substring(1).replaceAll('_', ' ')}';
 }
 
 extension _FirstOrNull<T> on Iterable<T> {
