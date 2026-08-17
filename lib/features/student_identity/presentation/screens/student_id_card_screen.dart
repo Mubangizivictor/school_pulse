@@ -1,24 +1,26 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:school_pulse/core/services/nfc/nfc_credential_reader_adapter.dart';
+import 'package:school_pulse/core/theme_provider.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/biometrics/presentation/screens/biometric_enrollment_screen.dart';
 import 'package:school_pulse/features/gate_ops/domain/entities/gate.dart';
 import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
 import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
 import 'package:school_pulse/injection_container.dart';
-import 'package:school_pulse/features/biometrics/presentation/screens/biometric_enrollment_screen.dart';
+
 import '../../../student/domain/entities/student.dart';
 import '../../domain/entities/student_identity.dart';
+import '../../domain/services/id_card_service.dart';
 import '../bloc/student_identity_bloc.dart';
 import '../bloc/student_identity_event.dart';
 import '../bloc/student_identity_state.dart';
-import '../../domain/services/id_card_service.dart';
-import 'package:get_it/get_it.dart';
-import 'package:school_pulse/core/theme_provider.dart';
 
 class StudentIdCardScreen extends StatefulWidget {
   final Student student;
@@ -44,120 +46,99 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Student ID Card'),
-        actions: [
-          BlocBuilder<StudentIdentityBloc, StudentIdentityState>(
-            builder: (context, state) {
-              if (state is StudentIdentityLoaded) {
-                return IconButton(
-                  icon: const Icon(Icons.print),
-                  onPressed: () => _printIdCard(context, state.identity),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Student ID Card')),
       body: BlocConsumer<StudentIdentityBloc, StudentIdentityState>(
         listener: (context, state) {
           if (state is StudentIdentityActionSuccess) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
           } else if (state is StudentIdentityError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
           }
         },
         builder: (context, state) {
           if (state is StudentIdentityLoading) {
             return const Center(child: SchoolPulseLoader());
-          } else if (state is StudentIdentityLoaded) {
+          }
+
+          if (state is StudentIdentityLoaded) {
             return SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Center(
-                child: Column(
-                  children: [
-                    _IdCardPreview(
-                      student: widget.student,
-                      identity: state.identity,
-                    ),
-                    const SizedBox(height: 32),
-                    ElevatedButton.icon(
-                      onPressed: () => _printIdCard(context, state.identity),
-                      icon: const Icon(Icons.print),
-                      label: const Text('Print ID Card'),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(200, 50),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  _IdCardPreview(
+                    student: widget.student,
+                    identity: state.identity,
+                  ),
+                  const SizedBox(height: 24),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: () => _printIdCard(context, state.identity),
+                        icon: const Icon(Icons.print_outlined),
+                        label: const Text('Print ID Card'),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () => context.read<StudentIdentityBloc>().add(
-                        RegenerateQrCredentialEvent(state.identity),
+                      OutlinedButton.icon(
+                        onPressed: () => context.read<StudentIdentityBloc>().add(
+                          RegenerateQrCredentialEvent(state.identity),
+                        ),
+                        icon: const Icon(Icons.qr_code_2),
+                        label: const Text('Replace QR'),
                       ),
-                      icon: const Icon(Icons.qr_code_2),
-                      label: const Text('Replace QR Credential'),
-                    ),
-                    const SizedBox(height: 24),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    _NfcCardSection(
-                      student: widget.student,
-                      identity: state.identity,
-                      assignedCardUid: state.assignedCardUid,
-                    ),
-                    const SizedBox(height: 24),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    OutlinedButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => BiometricEnrollmentScreen(
-                            personId: widget.student.id,
-                            personName: widget.student.name,
-                            schoolId: widget.student.schoolId,
-                          ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  _NfcCardSection(
+                    student: widget.student,
+                    identity: state.identity,
+                    assignedCardUid: state.assignedCardUid,
+                  ),
+                  const SizedBox(height: 28),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BiometricEnrollmentScreen(
+                          personId: widget.student.id,
+                          personName: widget.student.name,
+                          schoolId: widget.student.schoolId,
                         ),
                       ),
-                      icon: const Icon(Icons.fingerprint),
-                      label: const Text('Enroll Fingerprint'),
                     ),
-                  ],
-                ),
-              ),
-            );
-          } else if (state is StudentIdentityError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(state.message),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<StudentIdentityBloc>().add(
-                        GenerateStudentIdentityEvent(widget.student),
-                      );
-                    },
-                    child: const Text('Generate Identity'),
+                    icon: const Icon(Icons.fingerprint),
+                    label: const Text('Enroll Fingerprint'),
                   ),
                 ],
               ),
             );
           }
+
+          if (state is StudentIdentityError) {
+            return _IdentityErrorState(
+              message: state.message,
+              onRetry: () => context.read<StudentIdentityBloc>().add(
+                GenerateStudentIdentityEvent(widget.student),
+              ),
+            );
+          }
+
           return Center(
-            child: ElevatedButton(
-              onPressed: () {
-                context.read<StudentIdentityBloc>().add(
-                  GenerateStudentIdentityEvent(widget.student),
-                );
-              },
-              child: const Text('Generate Student ID'),
+            child: FilledButton.icon(
+              onPressed: () => context.read<StudentIdentityBloc>().add(
+                GenerateStudentIdentityEvent(widget.student),
+              ),
+              icon: const Icon(Icons.badge_outlined),
+              label: const Text('Generate Student ID'),
             ),
           );
         },
@@ -171,8 +152,7 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
   ) async {
     final idCardService = GetIt.I<IdCardService>();
     final schoolName =
-        context.read<ThemeProvider>().config?.schoolName ??
-        'School Pulse Academy';
+        context.read<ThemeProvider>().config?.schoolName ?? 'School Pulse Academy';
     try {
       final pdfData = await idCardService.generateIdCardPdf(
         schoolName: schoolName,
@@ -180,133 +160,122 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
         admissionNumber: widget.student.studentId,
         studentId: identity.uniqueSystemId,
         className: widget.student.className,
-        stream: '', // Assuming stream is part of className or not available yet
+        stream: '',
         uniqueSystemId: identity.uniqueSystemId,
         qrCodeData: identity.qrCodeData.isNotEmpty
             ? identity.qrCodeData
             : identity.uniqueSystemId,
       );
       await idCardService.printIdCard(pdfData);
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to print ID card: $e')));
-      }
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to print ID card: $error')),
+      );
     }
   }
 }
 
+class _IdentityErrorState extends StatelessWidget {
+  const _IdentityErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline_rounded, size: 48),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: onRetry, child: const Text('Try Again')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _IdCardPreview extends StatelessWidget {
+  const _IdCardPreview({required this.student, required this.identity});
+
   final Student student;
   final StudentIdentity identity;
-
-  const _IdCardPreview({required this.student, required this.identity});
 
   @override
   Widget build(BuildContext context) {
     final schoolName =
-        context.watch<ThemeProvider>().config?.schoolName ??
-        'SCHOOL PULSE ACADEMY';
-    final primaryColor = Theme.of(context).primaryColor;
+        context.watch<ThemeProvider>().config?.schoolName ?? 'SCHOOL PULSE ACADEMY';
+    final scheme = Theme.of(context).colorScheme;
 
     return Card(
-      elevation: 8,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 4,
       child: Container(
-        width: 300,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [primaryColor.withValues(alpha: 0.05), Colors.white],
-          ),
-        ),
+        width: 320,
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               schoolName.toUpperCase(),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: primaryColor,
-              ),
               textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: scheme.primary,
+                  ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.grey[200],
-              backgroundImage: student.photoUrl != null
+              radius: 46,
+              backgroundImage: student.photoUrl?.isNotEmpty == true
                   ? NetworkImage(student.photoUrl!)
                   : null,
-              child: student.photoUrl == null
-                  ? const Icon(Icons.person, size: 50, color: Colors.grey)
-                  : null,
+              child: student.photoUrl?.isNotEmpty == true
+                  ? null
+                  : const Icon(Icons.person, size: 44),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Text(
               student.name.toUpperCase(),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
-            const Divider(height: 32),
-            _buildInfoRow('Admission No', student.studentId),
-            _buildInfoRow('Class', student.className),
-            if (student.dormLeadershipRole != null)
-              _buildInfoRow(
-                'Dorm Role',
-                student.dormLeadershipDormName != null
-                    ? '${student.dormLeadershipRole!} - ${student.dormLeadershipDormName!}'
-                    : student.dormLeadershipRole!,
-              ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 14),
+            Text('Admission: ${student.studentId}'),
+            Text('Class: ${student.className}'),
+            const SizedBox(height: 18),
             QrImageView(
-              // This is an opaque, versioned credential envelope. It never
-              // contains the student ID or any other cardholder information.
               data: identity.qrCodeData.isNotEmpty
                   ? identity.qrCodeData
                   : identity.uniqueSystemId,
               version: QrVersions.auto,
-              size: 120.0,
+              size: 132,
             ),
           ],
         ),
       ),
     );
   }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-// NFC card lifecycle - assign/replace/revoke/reactivate - surfaced right
-// on the identity screen since that's where nfcStatus already lives.
 class _NfcCardSection extends StatefulWidget {
-  final Student student;
-  final StudentIdentity identity;
-  final String? assignedCardUid;
-
   const _NfcCardSection({
     required this.student,
     required this.identity,
     required this.assignedCardUid,
   });
+
+  final Student student;
+  final StudentIdentity identity;
+  final String? assignedCardUid;
 
   @override
   State<_NfcCardSection> createState() => _NfcCardSectionState();
@@ -316,79 +285,107 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
   bool _scanning = false;
 
   Future<String?> _scanCard(String promptMessage) async {
+    if (_scanning) return null;
+
     final adapter = sl<NfcCredentialReaderAdapter>();
-    if (!await adapter.isAvailable()) {
+    StreamSubscription<ScanCredential>? subscription;
+    final completer = Completer<String?>();
+
+    try {
+      final available = await adapter.isAvailable();
+      if (!available) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'NFC is unavailable. NFC card scanning must be tested on a physical NFC-capable iPhone, not the iOS Simulator.',
+              ),
+            ),
+          );
+        }
+        return null;
+      }
+
+      final auth = context.read<AuthBloc>().state;
+      if (auth is! AuthAuthenticated) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Your session is not ready. Sign in again and retry.')),
+          );
+        }
+        return null;
+      }
+
+      if (mounted) {
+        setState(() => _scanning = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(promptMessage),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+
+      subscription = adapter.credentials.listen(
+        (credential) {
+          if (credential is NfcScanCredential && !completer.isCompleted) {
+            completer.complete(credential.cardUid);
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (!completer.isCompleted) completer.completeError(error, stackTrace);
+        },
+      );
+
+      final verificationContext = VerificationContext(
+        gate: Gate(
+          id: 'nfc-assign',
+          name: 'NFC Card Assignment',
+          type: 'internal',
+          location: '',
+          assignedOfficerIds: const [],
+          operatingHours: const {},
+          allowedUserRoles: const [],
+          requiredVerificationMethods: const [],
+          schoolId: widget.student.schoolId,
+        ),
+        operatorUser: auth.user,
+        purpose: 'student_identity.nfc_assign',
+        deviceId: 'app',
+        requestedAt: DateTime.now(),
+      );
+
+      // On a physical iPhone this starts Apple's native Core NFC sheet.
+      // We deliberately do not put a Flutter AlertDialog on top of it.
+      await adapter.start(verificationContext);
+
+      final uid = await completer.future.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => null,
+      );
+
+      if (uid == null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No NFC card was detected. Try again and hold the card near the top edge of the physical iPhone.'),
+          ),
+        );
+      }
+      return uid;
+    } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('NFC is not available on this device')),
+          SnackBar(content: Text('Could not start NFC scan: $error')),
         );
       }
       return null;
+    } finally {
+      try {
+        await adapter.stop();
+      } catch (_) {}
+      await subscription?.cancel();
+      if (mounted) setState(() => _scanning = false);
     }
-
-    setState(() => _scanning = true);
-    final completer = Completer<String?>();
-    StreamSubscription<ScanCredential>? subscription;
-
-    subscription = adapter.credentials.listen((credential) {
-      if (credential is NfcScanCredential && !completer.isCompleted) {
-        completer.complete(credential.cardUid);
-      }
-    });
-
-    // The NFC adapter never reads VerificationContext internally (it's
-    // only required to satisfy the shared CredentialReaderAdapter
-    // interface) - this placeholder exists purely to satisfy the type.
-    final placeholderContext = VerificationContext(
-      gate: Gate(
-        id: 'nfc-assign',
-        name: 'NFC Card Assignment',
-        type: 'internal',
-        location: '',
-        assignedOfficerIds: const [],
-        operatingHours: const {},
-        allowedUserRoles: const [],
-        requiredVerificationMethods: const [],
-        schoolId: widget.student.schoolId,
-      ),
-      operatorUser: (context.read<AuthBloc>().state as AuthAuthenticated).user,
-      purpose: 'student_identity.nfc_assign',
-      deviceId: 'app',
-      requestedAt: DateTime.now(),
-    );
-
-    if (mounted) {
-      unawaited(
-        showDialog<void>(
-          context: context,
-          barrierDismissible: false,
-          builder: (dialogContext) => AlertDialog(
-            title: const Text('Scan NFC Card'),
-            content: Text(promptMessage),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  if (!completer.isCompleted) completer.complete(null);
-                  Navigator.pop(dialogContext);
-                },
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    await adapter.start(placeholderContext);
-    final uid = await completer.future.timeout(
-      const Duration(seconds: 30),
-      onTimeout: () => null,
-    );
-    await adapter.stop();
-    await subscription.cancel();
-    if (mounted && Navigator.of(context).canPop()) Navigator.of(context).pop();
-    setState(() => _scanning = false);
-    return uid;
   }
 
   Future<String?> _pickReason() {
@@ -399,8 +396,7 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
         children: [
           for (final reason in const ['Lost', 'Stolen', 'Damaged', 'Other'])
             SimpleDialogOption(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, reason.toLowerCase()),
+              onPressed: () => Navigator.pop(dialogContext, reason.toLowerCase()),
               child: Text(reason),
             ),
         ],
@@ -408,9 +404,9 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
     );
   }
 
-  void _assign() async {
+  Future<void> _assign() async {
     final uid = await _scanCard(
-      'Hold the new card near the device to assign it.',
+      'Hold the card near the top edge of your physical iPhone until Apple confirms the scan.',
     );
     if (uid == null || !mounted) return;
     context.read<StudentIdentityBloc>().add(
@@ -423,13 +419,13 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
     );
   }
 
-  void _replace() async {
+  Future<void> _replace() async {
     final oldUid = widget.assignedCardUid;
     if (oldUid == null) return;
     final reason = await _pickReason();
     if (reason == null || !mounted) return;
     final newUid = await _scanCard(
-      'Hold the replacement card near the device.',
+      'Hold the replacement card near the top edge of your physical iPhone.',
     );
     if (newUid == null || !mounted) return;
     context.read<StudentIdentityBloc>().add(
@@ -444,7 +440,7 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
     );
   }
 
-  void _revoke() async {
+  Future<void> _revoke() async {
     final uid = widget.assignedCardUid;
     if (uid == null) return;
     final reason = await _pickReason();
@@ -474,48 +470,42 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
   @override
   Widget build(BuildContext context) {
     final status = widget.identity.nfcStatus;
-    final Color statusColor = switch (status) {
-      'active' => Colors.green,
-      'revoked' => Colors.red,
-      _ => Colors.grey,
-    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            const Text(
+            Text(
               'NFC Card',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
-            const SizedBox(width: 12),
-            Chip(
-              label: Text(status.toUpperCase()),
-              backgroundColor: statusColor.withValues(alpha: 0.12),
-              labelStyle: TextStyle(
-                color: statusColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            const SizedBox(width: 10),
+            Chip(label: Text(status.toUpperCase())),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
+        Text(
+          _scanning
+              ? 'Waiting for a physical NFC card…'
+              : 'Assign a physical NFC card to this student. iOS will show its native NFC scan sheet.',
+        ),
+        const SizedBox(height: 14),
         if (_scanning)
           const Center(child: SchoolPulseLoader())
         else
           Wrap(
-            spacing: 12,
-            runSpacing: 8,
+            spacing: 10,
+            runSpacing: 10,
             children: [
               if (status != 'active')
                 FilledButton.icon(
                   onPressed: _assign,
                   icon: const Icon(Icons.nfc),
                   label: Text(
-                    status == 'revoked'
-                        ? 'Assign Replacement Card'
-                        : 'Assign Card',
+                    status == 'revoked' ? 'Assign Replacement Card' : 'Assign Card',
                   ),
                 ),
               if (status == 'active' && widget.assignedCardUid != null) ...[
@@ -527,8 +517,7 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
                 OutlinedButton.icon(
                   onPressed: _revoke,
                   icon: const Icon(Icons.block),
-                  label: const Text('Revoke (lost/stolen)'),
-                  style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                  label: const Text('Revoke'),
                 ),
               ],
               if (status == 'revoked' && widget.assignedCardUid != null)
