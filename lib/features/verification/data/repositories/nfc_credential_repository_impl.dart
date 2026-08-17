@@ -7,14 +7,6 @@ import '../datasources/verification_local_data_source.dart';
 import '../../domain/entities/verification_cache_records.dart';
 import '../../domain/repositories/nfc_credential_repository.dart';
 
-/// Local Isar writes are always the source of truth for "did this
-/// operation succeed" - the Firestore push below is best-effort, mirroring
-/// VerificationEventRecorderImpl: if the device is offline (or the push
-/// otherwise fails), the local mapping still takes effect immediately and
-/// resolves correctly on *this* device, it just won't be visible to other
-/// devices until they resolve a scan miss against Firestore (see
-/// IdentityResolverImpl._resolveNfc's cache-miss fallback) or this device
-/// is next online for another assign/revoke/reactivate call.
 class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
   final VerificationLocalDataSource localDataSource;
   final FirebaseFirestore firestore;
@@ -28,27 +20,20 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     this.functions,
   });
 
-  /// Server-side duplicate-tag guard: when online and given [studentId] and
-  /// [schoolId], calls the `assignNfcCredential` Cloud Function, which reads
-  /// and writes schools/{schoolId}/credentials/{cardUid} inside a single
-  /// transaction - the actual source of truth for "is this card already
-  /// bound to someone else", since the local Isar check below only sees
-  /// this device's own cache (see the class doc on why that alone is not
-  /// enough across multiple devices). Returns null (falls through to the
-  /// existing local-only path) when functions is not wired, the caller
-  /// didn't supply the identifiers, or the call fails for a reason other
-  /// than a genuine duplicate - so a network hiccup never blocks the
-  /// existing offline-first behavior.
   Future<Either<Failure, void>?> _assignServerSide({
     required String cardUid,
     required String? studentId,
     required String schoolId,
   }) async {
     if (functions == null || studentId == null) return null;
+    if (!await networkInfo.isConnected) return null;
+
     try {
-      await functions!.httpsCallable('assignNfcCredential').call<
-          Map<String, dynamic>>({'cardUid': cardUid, 'studentId': studentId});
-      return null;
+      await functions!.httpsCallable('assignNfcCredential').call<Map<String, dynamic>>({
+        'cardUid': cardUid,
+        'studentId': studentId,
+      });
+      return const Right(null);
     } on FirebaseFunctionsException catch (e) {
       if (e.code == 'already-exists') {
         final details = e.details is Map ? e.details as Map : const {};
@@ -61,11 +46,15 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
           ),
         );
       }
-      // Any other failure (offline, permission, not-found) falls through to
-      // the existing local-first path rather than blocking card assignment.
-      return null;
-    } catch (_) {
-      return null;
+      // Online assignment must not lie. If the authoritative function fails,
+      // surface it instead of saying "Card assigned" from a local-only write.
+      return Left(
+        ServerFailure(
+          e.message ?? 'NFC assignment failed on the server (${e.code}).',
+        ),
+      );
+    } catch (e) {
+      return Left(ServerFailure('NFC assignment failed: $e'));
     }
   }
 
@@ -104,10 +93,6 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
         );
       }
 
-      // Reassigning a previously-revoked card ("reuse after secure
-      // deactivation") must clear the denylist entry too, or the resolver
-      // would keep rejecting it - findRevocation is checked before
-      // findCredential at scan time.
       await localDataSource.deleteRevocation(credentialValue, schoolId);
 
       final credential = CachedCredential(
@@ -121,6 +106,9 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
       );
       await localDataSource.cacheCredential(credential);
 
+      // Firestore mirror is still best-effort because the callable above is
+      // the authoritative online transaction. Offline assignment remains
+      // usable on this device and can sync later.
       await _pushCredential(credential);
       await _pushRevocationDeleted(schoolId, credentialValue);
       return const Right(null);
@@ -182,7 +170,6 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
       );
       await localDataSource.saveRevocation(revocation);
       await _pushRevocation(revocation);
-
       return const Right(null);
     } catch (e) {
       return Left(CacheFailure(e.toString()));
@@ -208,11 +195,9 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
       }
 
       await localDataSource.deleteRevocation(credentialValue, schoolId);
-
       existing.status = 'active';
       existing.updatedAt = DateTime.now();
       await localDataSource.cacheCredential(existing);
-
       await _pushCredential(existing);
       await _pushRevocationDeleted(schoolId, credentialValue);
       return const Right(null);
@@ -254,12 +239,8 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
             'status': credential.status,
             'updatedAt': credential.updatedAt.toIso8601String(),
             'credentialVersion': credential.credentialVersion,
-          });
-    } catch (_) {
-      // Local write already succeeded - a later assign/revoke/reactivate
-      // on this device, or another device's scan-time fallback read,
-      // will pick this mapping up eventually.
-    }
+          }, SetOptions(merge: true));
+    } catch (_) {}
   }
 
   Future<void> _pushRevocation(RevokedCredential revocation) async {
@@ -276,10 +257,7 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
             'revokedAt': revocation.revokedAt.toIso8601String(),
             'reason': revocation.reason,
           });
-    } catch (_) {
-      // Same as _pushCredential - local denylist already applies on this
-      // device regardless.
-    }
+    } catch (_) {}
   }
 
   Future<void> _pushRevocationDeleted(
