@@ -30,24 +30,18 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     QrCredentialCodec? qrCredentialCodec,
   }) : qrCredentialCodec = qrCredentialCodec ?? const QrCredentialCodec();
 
+  /// Identity reads used to query the top-level `student_identities`
+  /// collection directly. That collection is intentionally not exposed to
+  /// arbitrary client queries, so the Student ID screen failed with
+  /// cloud_firestore/permission-denied before an admin could even generate
+  /// or assign a card. The existing callable is already idempotent: it
+  /// verifies the signed-in staff member's school, returns the existing
+  /// identity if present, or creates one atomically if missing.
   @override
   Future<Either<Failure, StudentIdentity>> getStudentIdentity(
     String studentId,
-  ) async {
-    try {
-      final doc = await firestore
-          .collection('student_identities')
-          .where('studentId', isEqualTo: studentId)
-          .get();
-
-      if (doc.docs.isEmpty) {
-        return Left(ServerFailure('Identity not found'));
-      }
-
-      return Right(StudentIdentityModel.fromFirestore(doc.docs.first.data()));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
+  ) {
+    return _issueOrLoadStudentIdentity(studentId: studentId);
   }
 
   @override
@@ -55,76 +49,70 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     Student student, {
     String? uniqueSystemId,
     String? schoolStudentId,
+  }) {
+    // Always use the server-authorized, tenant-checked issuance path. The
+    // older client path first queried and then wrote `student_identities`
+    // directly, which is exactly what caused the permission-denied failure
+    // seen by School Admin on the Student ID Card screen.
+    return _issueOrLoadStudentIdentity(
+      studentId: student.id,
+      schoolPrefix: _schoolPrefix(student, schoolStudentId),
+    );
+  }
+
+  Future<Either<Failure, StudentIdentity>> _issueOrLoadStudentIdentity({
+    required String studentId,
+    String schoolPrefix = 'SP',
   }) async {
     try {
-      // Check if identity already exists
-      final existing = await firestore
-          .collection('student_identities')
-          .where('studentId', isEqualTo: student.id)
-          .get();
-
-      if (existing.docs.isNotEmpty) {
-        return Right(
-          StudentIdentityModel.fromFirestore(existing.docs.first.data()),
-        );
-      }
-
-      // AdmissionService must mint a studentCode/uniqueSystemId *before* the
-      // Student document exists (finalizeAdmission needs it as an input), so
-      // it still supplies both codes here and this path keeps writing
-      // directly - the Cloud Function's own sequence reservation would be
-      // redundant with AdmissionService's own admission-number sequence.
-      // Every other caller (e.g. the "Generate Identity" bloc action, which
-      // passes neither) goes through issueStudentIdentity so token minting
-      // and sequence reservation happen atomically server-side instead of
-      // via two unguarded client writes.
-      if (uniqueSystemId != null && schoolStudentId != null) {
-        final model = StudentIdentityModel(
-          studentId: student.id,
-          schoolId: student.schoolId,
-          uniqueSystemId: uniqueSystemId,
-          schoolStudentId: schoolStudentId,
-          qrCodeData: qrCredentialCodec.issuePayload(),
-        );
-
-        final identityDoc = await firestore
-            .collection('student_identities')
-            .add(model.toFirestore());
-        await _storeQrCredential(model, identityDoc.id);
-        return Right(model);
-      }
-
       final callable = functions.httpsCallable('issueStudentIdentity');
       final result = await callable.call<Map<String, dynamic>>({
-        'studentId': student.id,
-        'schoolPrefix': student.className.isNotEmpty
-            ? student.className.substring(0, min(2, student.className.length))
-            : 'SP',
+        'studentId': studentId,
+        'schoolPrefix': schoolPrefix,
       });
       final identityData = Map<String, dynamic>.from(
         result.data['identity'] as Map,
       );
       final model = StudentIdentityModel.fromFirestore(identityData);
-      final token = qrCredentialCodec.parse(model.qrCodeData);
-      if (token != null) {
-        await verificationLocalDataSource.cacheCredential(
-          CachedCredential(
-            credentialValue: token,
-            credentialType: 'qr',
-            identityId: model.uniqueSystemId,
-            identityType: 'student',
-            schoolId: model.schoolId,
-            status: 'active',
-            updatedAt: DateTime.now(),
-          ),
-        );
-      }
+      await _cacheQrCredential(model);
       return Right(model);
     } on FirebaseFunctionsException catch (e) {
       return Left(ServerFailure(e.message ?? e.code));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
+  }
+
+  String _schoolPrefix(Student student, String? suppliedStudentCode) {
+    final code = suppliedStudentCode?.trim();
+    if (code != null && code.isNotEmpty) {
+      final letters = code.replaceAll(RegExp(r'[^A-Za-z]'), '').toUpperCase();
+      if (letters.isNotEmpty) {
+        return letters.substring(0, letters.length > 8 ? 8 : letters.length);
+      }
+    }
+    if (student.className.isNotEmpty) {
+      return student.className
+          .substring(0, student.className.length > 2 ? 2 : student.className.length)
+          .toUpperCase();
+    }
+    return 'SP';
+  }
+
+  Future<void> _cacheQrCredential(StudentIdentity identity) async {
+    final token = qrCredentialCodec.parse(identity.qrCodeData);
+    if (token == null) return;
+    await verificationLocalDataSource.cacheCredential(
+      CachedCredential(
+        credentialValue: token,
+        credentialType: 'qr',
+        identityId: identity.uniqueSystemId,
+        identityType: 'student',
+        schoolId: identity.schoolId,
+        status: 'active',
+        updatedAt: DateTime.now(),
+      ),
+    );
   }
 
   @override
@@ -161,20 +149,7 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
         qrCodeData: newQrCodeData,
         nfcStatus: identity.nfcStatus,
       );
-      final newToken = qrCredentialCodec.parse(newQrCodeData);
-      if (newToken != null) {
-        await verificationLocalDataSource.cacheCredential(
-          CachedCredential(
-            credentialValue: newToken,
-            credentialType: 'qr',
-            identityId: identity.uniqueSystemId,
-            identityType: 'student',
-            schoolId: identity.schoolId,
-            status: 'active',
-            updatedAt: DateTime.now(),
-          ),
-        );
-      }
+      await _cacheQrCredential(updated);
       return Right(updated);
     } on FirebaseFunctionsException catch (e) {
       return Left(ServerFailure(e.message ?? e.code));
@@ -183,52 +158,17 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     }
   }
 
-  Future<void> _storeQrCredential(
-    StudentIdentity identity,
-    String identityDocumentId,
-  ) async {
-    final token = qrCredentialCodec.parse(identity.qrCodeData);
-    if (token == null) throw StateError('QR credential generation failed');
-    final credential = CachedCredential(
-      credentialValue: token,
-      credentialType: 'qr',
-      identityId: identity.uniqueSystemId,
-      identityType: 'student',
-      schoolId: identity.schoolId,
-      status: 'active',
-      updatedAt: DateTime.now(),
-    );
-    await verificationLocalDataSource.cacheCredential(credential);
-    await firestore
-        .collection('schools')
-        .doc(identity.schoolId)
-        .collection('credentials')
-        .doc(token)
-        .set({
-          'credentialValue': token,
-          'credentialType': 'qr',
-          'identityId': identity.uniqueSystemId,
-          'identityType': 'student',
-          'schoolId': identity.schoolId,
-          'status': 'active',
-          'updatedAt': credential.updatedAt.toIso8601String(),
-          'credentialVersion': 1,
-          'identityDocumentId': identityDocumentId,
-        });
-  }
-
-  int min(int a, int b) => a < b ? a : b;
-
   @override
   Future<Either<Failure, List<StudentIdentity>>> getSchoolIdentities(
     String schoolId,
   ) async {
     try {
-      // This assumes students have schoolId, or we join with students.
-      // Based on Student model, it doesn't have schoolId, but UserEntity does.
-      // Usually students are in a subcollection or have schoolId.
-      // Assuming a 'student_identities' collection for now.
-      final snapshot = await firestore.collection('student_identities').get();
+      // Keep this query tenant-scoped. This path is used for administrative
+      // bulk operations; it must never return another school's identities.
+      final snapshot = await firestore
+          .collection('student_identities')
+          .where('schoolId', isEqualTo: schoolId)
+          .get();
       return Right(
         snapshot.docs
             .map((doc) => StudentIdentityModel.fromFirestore(doc.data()))
@@ -245,35 +185,21 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   ) async {
     try {
       for (final student in students) {
-        final identityDoc = await firestore
-            .collection('student_identities')
-            .where('studentId', isEqualTo: student.id)
-            .get();
-
-        if (identityDoc.docs.isNotEmpty) {
-          final identity = StudentIdentityModel.fromFirestore(
-            identityDoc.docs.first.data(),
-          );
-          await localCache.save(student: student, identity: identity);
-          final token = qrCredentialCodec.parse(identity.qrCodeData);
-          if (token != null) {
-            await verificationLocalDataSource.cacheCredential(
-              CachedCredential(
-                credentialValue: token,
-                credentialType: 'qr',
-                identityId: identity.uniqueSystemId,
-                identityType: 'student',
-                schoolId: identity.schoolId,
-                status: 'active',
-                updatedAt: DateTime.now(),
-              ),
-            );
-          }
-        }
+        final identityResult = await _issueOrLoadStudentIdentity(
+          studentId: student.id,
+          schoolPrefix: _schoolPrefix(student, student.studentCode),
+        );
+        await identityResult.fold(
+          (_) async {},
+          (identity) async {
+            await localCache.save(student: student, identity: identity);
+            await _cacheQrCredential(identity);
+          },
+        );
       }
       return const Right(null);
     } catch (e) {
-      return Left(CacheFailure());
+      return Left(CacheFailure(e.toString()));
     }
   }
 
@@ -282,15 +208,16 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     String uniqueSystemId,
   ) async {
     try {
-      // First try local cache (no-op/always-miss on web - falls through to
-      // the Firestore lookup below)
       final cached = await localCache.findByUniqueSystemId(uniqueSystemId);
       if (cached != null) return Right(cached);
 
-      // Fallback to Firestore
+      // This fallback remains for legacy callers. The returned student is
+      // still protected by the students collection rules; credential
+      // assignment itself is server-authorized by assignNfcCredential.
       final identityDoc = await firestore
           .collection('student_identities')
           .where('uniqueSystemId', isEqualTo: uniqueSystemId)
+          .limit(1)
           .get();
 
       if (identityDoc.docs.isEmpty) {
@@ -320,6 +247,7 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
       final existing = await firestore
           .collection('student_identities')
           .where('studentId', isEqualTo: studentId)
+          .limit(1)
           .get();
 
       if (existing.docs.isEmpty) {
