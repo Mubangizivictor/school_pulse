@@ -32,14 +32,25 @@ class StructureSetupRepositoryImpl implements StructureSetupRepository {
     return schoolId;
   }
 
-  Future<DocumentReference<Map<String, dynamic>>> _doc() async {
-    final schoolId = await _resolveSchoolId();
-    return firestore.collection('structure_setup_preferences').doc(schoolId);
-  }
-
   @override
   Stream<StructureSetupPreferences> watchPreferences() async* {
-    final doc = await _doc();
+    final schoolId = await _resolveSchoolId();
+    final doc = firestore
+        .collection('structure_setup_preferences')
+        .doc(schoolId);
+
+    // Create the tenant-owned singleton before subscribing. Firestore cannot
+    // authorize a resource.data-based read for a document that does not yet
+    // exist, while create is safely authorized from request.resource.data.
+    // Merge keeps every existing answer untouched on subsequent openings.
+    await doc.set(
+      {
+        'schoolId': schoolId,
+        'setupVersion': StructureSetupPreferences.currentSetupVersion,
+      },
+      SetOptions(merge: true),
+    );
+
     yield* doc.snapshots().map((snapshot) {
       final data = snapshot.data();
       if (data == null) return const StructureSetupPreferences();
