@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 
 abstract class NetworkInfo {
@@ -10,7 +12,22 @@ class NetworkInfoImpl implements NetworkInfo {
   NetworkInfoImpl(this.connectionChecker);
 
   @override
-  Future<bool> get isConnected => connectionChecker.hasConnection;
+  Future<bool> get isConnected async {
+    try {
+      // Connectivity is only a hint. Never let a socket probe strand an
+      // entire Firebase-backed screen in a loading state. If the probe does
+      // not answer quickly, let Firestore/Functions make the real network
+      // decision and surface their own error/offline cache behavior.
+      return await connectionChecker.hasConnection.timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => true,
+      );
+    } on TimeoutException {
+      return true;
+    } catch (_) {
+      return true;
+    }
+  }
 }
 
 /// Web has no raw-socket API, so `internet_connection_checker` (which
