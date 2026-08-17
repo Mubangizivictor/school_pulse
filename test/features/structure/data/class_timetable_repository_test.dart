@@ -45,29 +45,87 @@ void main() {
     );
   }
 
+  Future<void> saveTable({
+    required String id,
+    required String classId,
+    required String streamId,
+    ClassTimetableStatus status = ClassTimetableStatus.draft,
+  }) {
+    return repository.saveTimetable(
+      ClassTimetable(
+        id: id,
+        schoolId: 'school-a',
+        academicYearId: '2026',
+        termId: 'term-1',
+        classId: classId,
+        streamId: streamId,
+        name: id,
+        status: status,
+      ),
+    );
+  }
+
+  Future<void> seedTeaching({
+    required String classId,
+    required String teacherId,
+    String streamId = '',
+  }) async {
+    await firestore.collection('structure_curriculum_assignments').add({
+      'schoolId': 'school-a',
+      'academicYearId': '2026',
+      'levelId': 'secondary',
+      'classId': classId,
+      'streamId': streamId,
+      'subjectId': 'math',
+      'isActive': true,
+    });
+    await firestore.collection('structure_teaching_assignments').add({
+      'schoolId': 'school-a',
+      'academicYearId': '2026',
+      'staffId': teacherId,
+      'classId': classId,
+      'streamId': streamId,
+      'subjectId': 'math',
+      'responsibilityType': 'subjectTeacher',
+      'isActive': true,
+    });
+  }
+
+  test('lesson is rejected when teacher lacks the academic assignment', () async {
+    await saveTable(id: 's1-blue', classId: 's1', streamId: 'blue');
+    await firestore.collection('structure_curriculum_assignments').add({
+      'schoolId': 'school-a',
+      'academicYearId': '2026',
+      'levelId': 'secondary',
+      'classId': 's1',
+      'streamId': 'blue',
+      'subjectId': 'math',
+      'isActive': true,
+    });
+
+    expect(
+      () => repository.saveLesson(
+        lesson(
+          id: 'bad-teacher',
+          timetableId: 's1-blue',
+          classId: 's1',
+          streamId: 'blue',
+        ),
+      ),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message.toString(),
+          'message',
+          contains('not assigned to teach'),
+        ),
+      ),
+    );
+  });
+
   test('teacher collision is rejected by repository before persistence', () async {
-    await repository.saveTimetable(
-      const ClassTimetable(
-        id: 's1-blue',
-        schoolId: 'school-a',
-        academicYearId: '2026',
-        termId: 'term-1',
-        classId: 's1',
-        streamId: 'blue',
-        name: 'S1 Blue',
-      ),
-    );
-    await repository.saveTimetable(
-      const ClassTimetable(
-        id: 's1-red',
-        schoolId: 'school-a',
-        academicYearId: '2026',
-        termId: 'term-1',
-        classId: 's1',
-        streamId: 'red',
-        name: 'S1 Red',
-      ),
-    );
+    await saveTable(id: 's1-blue', classId: 's1', streamId: 'blue');
+    await saveTable(id: 's1-red', classId: 's1', streamId: 'red');
+    await seedTeaching(classId: 's1', teacherId: 'teacher-john');
 
     await repository.saveLesson(
       lesson(
@@ -99,6 +157,11 @@ void main() {
   });
 
   test('room collision is rejected across different classes', () async {
+    await saveTable(id: 'table-s1', classId: 's1', streamId: 'blue');
+    await saveTable(id: 'table-s2', classId: 's2', streamId: 'red');
+    await seedTeaching(classId: 's1', teacherId: 'teacher-a');
+    await seedTeaching(classId: 's2', teacherId: 'teacher-b');
+
     await repository.saveLesson(
       lesson(
         id: 's1',
@@ -129,28 +192,21 @@ void main() {
     );
   });
 
-  test('publishing archives previous active timetable for same target', () async {
-    await repository.saveTimetable(
-      const ClassTimetable(
-        id: 'old',
-        schoolId: 'school-a',
-        academicYearId: '2026',
-        termId: 'term-1',
-        classId: 's1',
-        streamId: 'blue',
-        name: 'Old S1 Blue',
-        status: ClassTimetableStatus.active,
-      ),
+  test('publishing requires lessons and archives previous active timetable', () async {
+    await saveTable(
+      id: 'old',
+      classId: 's1',
+      streamId: 'blue',
+      status: ClassTimetableStatus.active,
     );
-    await repository.saveTimetable(
-      const ClassTimetable(
-        id: 'new',
-        schoolId: 'school-a',
-        academicYearId: '2026',
-        termId: 'term-1',
+    await saveTable(id: 'new', classId: 's1', streamId: 'blue');
+    await seedTeaching(classId: 's1', teacherId: 'teacher-john');
+    await repository.saveLesson(
+      lesson(
+        id: 'new-p1',
+        timetableId: 'new',
         classId: 's1',
         streamId: 'blue',
-        name: 'New S1 Blue',
       ),
     );
 
