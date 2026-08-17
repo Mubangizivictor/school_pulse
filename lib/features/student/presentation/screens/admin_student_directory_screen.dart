@@ -175,6 +175,10 @@ class _AdminStudentDirectoryScreenState
                               onTap: () => context.push(
                                 '/staff/students/${student.id}',
                               ),
+                              onIdentityCards: () => context.push(
+                                '/staff/admin/student-id-card',
+                                extra: student,
+                              ),
                             ),
                           )
                           .toList(),
@@ -223,12 +227,14 @@ class _StudentCard extends StatelessWidget {
     required this.className,
     required this.streamName,
     required this.onTap,
+    required this.onIdentityCards,
   });
 
   final Student student;
   final String className;
   final String? streamName;
   final VoidCallback onTap;
+  final VoidCallback onIdentityCards;
 
   @override
   Widget build(BuildContext context) {
@@ -241,36 +247,59 @@ class _StudentCard extends StatelessWidget {
     ].where((value) => value.isNotEmpty).join(' • ');
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        onTap: onTap,
-        leading: CircleAvatar(
-          backgroundImage: student.photoUrl?.isNotEmpty == true
-              ? NetworkImage(student.photoUrl!)
-              : null,
-          child: student.photoUrl?.isNotEmpty == true
-              ? null
-              : Text(_initials(student.name)),
-        ),
-        title: Text(
-          student.name,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        subtitle: Text(subtitle),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
           children: [
-            Text(
-              _statusLabel(student.status),
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: student.status == StudentStatus.active
-                    ? Colors.green
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
+            ListTile(
+              onTap: onTap,
+              leading: CircleAvatar(
+                backgroundImage: student.photoUrl?.isNotEmpty == true
+                    ? NetworkImage(student.photoUrl!)
+                    : null,
+                child: student.photoUrl?.isNotEmpty == true
+                    ? null
+                    : Text(_initials(student.name)),
+              ),
+              title: Text(
+                student.name,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(subtitle),
+              trailing: Text(
+                _statusLabel(student.status),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: student.status == StudentStatus.active
+                      ? Colors.green
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, size: 20),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(72, 0, 12, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      student.studentCode.isEmpty
+                          ? 'Identity not issued yet'
+                          : 'Student ID: ${student.studentCode}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.tonalIcon(
+                    onPressed: onIdentityCards,
+                    icon: const Icon(Icons.contactless_rounded, size: 18),
+                    label: const Text('Identity & Cards'),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
