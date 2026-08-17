@@ -8,18 +8,21 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/student/presentation/bloc/students_bloc.dart';
 import 'package:school_pulse/features/student/presentation/screens/admin_student_directory_screen.dart';
 import 'package:school_pulse/features/teacher/domain/entities/class_student_summary.dart';
 import 'package:school_pulse/features/teacher/domain/entities/lesson_attendance.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_students/class_students_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_state.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 /// Role-aware student entry point.
 ///
 /// School leadership sees the complete tenant roster. A class teacher keeps
-/// the scoped class roster. This prevents school administrators from being
-/// forced through ClassTeacherContextBloc just to manage enrolled students.
+/// the scoped class roster. The administrator gets a fresh StudentsBloc for
+/// this route so loading/search state from parent, teacher, or another student
+/// workflow can never leave the school-wide directory stuck on a spinner.
 class TeacherStudentListScreen extends StatelessWidget {
   const TeacherStudentListScreen({super.key});
 
@@ -28,7 +31,10 @@ class TeacherStudentListScreen extends StatelessWidget {
     final auth = context.watch<AuthBloc>().state;
     if (auth is AuthAuthenticated &&
         auth.user.roles.any(UserRoleDisplay.adminConsoleRoles.contains)) {
-      return const AdminStudentDirectoryScreen();
+      return BlocProvider<StudentsBloc>(
+        create: (_) => di.sl<StudentsBloc>(),
+        child: const AdminStudentDirectoryScreen(),
+      );
     }
     return const _ClassTeacherStudentListScreen();
   }
