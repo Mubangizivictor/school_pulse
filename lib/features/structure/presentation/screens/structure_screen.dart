@@ -15,6 +15,9 @@ import '../bloc/structure_event.dart';
 import '../bloc/structure_extended_setup_cubit.dart';
 import '../bloc/structure_setup_cubit.dart';
 import '../bloc/structure_state.dart';
+import 'academic_staff_assignment_screen.dart';
+import 'class_timetable_screen.dart';
+import 'curriculum_assignment_screen.dart';
 
 class StructureScreen extends StatelessWidget {
   const StructureScreen({super.key});
@@ -23,7 +26,6 @@ class StructureScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final firestore = FirebaseFirestore.instance;
     final tenantResolver = StructureTenantResolver(firestore: firestore);
-
     return MultiBlocProvider(
       providers: [
         BlocProvider(
@@ -77,21 +79,17 @@ class _StructureWizardState extends State<_StructureWizard> {
             return BlocBuilder<StructureExtendedSetupCubit,
                 StructureExtendedSetupState>(
               builder: (context, extended) {
-                if (structure.isLoading ||
-                    setup.isLoading ||
-                    extended.isLoading) {
+                if (structure.isLoading || setup.isLoading || extended.isLoading) {
                   return const Scaffold(
                     body: Center(child: CircularProgressIndicator()),
                   );
                 }
-
-                final error = setup.errorMessage ??
-                    extended.errorMessage ??
-                    structure.errorMessage;
+                final error =
+                    setup.errorMessage ?? extended.errorMessage ?? structure.errorMessage;
                 if (error != null && error.trim().isNotEmpty) {
                   return Scaffold(
                     appBar: AppBar(title: const Text('Structure Setup')),
-                    body: _CenteredMessage(
+                    body: _Message(
                       icon: Icons.error_outline,
                       title: 'Structure setup could not load',
                       body: error,
@@ -102,7 +100,6 @@ class _StructureWizardState extends State<_StructureWizard> {
                 final resolution = _engine.resolve(
                   _context(structure, setup.preferences, extended),
                 );
-
                 if (setup.preferences.onboardingCompleted &&
                     resolution.isReady &&
                     _selectedStep == null) {
@@ -112,19 +109,18 @@ class _StructureWizardState extends State<_StructureWizard> {
                 final step = _resolveStep(resolution);
                 if (step == null) {
                   return const Scaffold(
-                    body: _CenteredMessage(
+                    body: _Message(
                       icon: Icons.account_tree_outlined,
-                      title: 'No Structure setup step is available',
-                      body:
-                          'The setup engine could not determine the next school Structure step.',
+                      title: 'No setup step is available',
+                      body: 'Structure could not determine the next valid step.',
                     ),
                   );
                 }
-
                 final visible = resolution.steps
                     .where((item) => item.applicable || item.id == step.id)
                     .toList(growable: false);
                 final index = visible.indexWhere((item) => item.id == step.id);
+                final choice = _choiceFor(step.id, setup.preferences);
 
                 return Scaffold(
                   appBar: AppBar(
@@ -133,8 +129,7 @@ class _StructureWizardState extends State<_StructureWizard> {
                       IconButton(
                         tooltip: 'Validate Structure',
                         icon: const Icon(Icons.fact_check_outlined),
-                        onPressed: () =>
-                            _showValidation(context, resolution),
+                        onPressed: () => _showValidation(context, resolution),
                       ),
                     ],
                   ),
@@ -147,29 +142,124 @@ class _StructureWizardState extends State<_StructureWizard> {
                         ),
                         Expanded(
                           child: SingleChildScrollView(
-                            padding:
-                                const EdgeInsets.fromLTRB(20, 24, 20, 42),
+                            padding: const EdgeInsets.fromLTRB(20, 24, 20, 36),
                             child: Center(
                               child: ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 720),
-                                child: _StepContent(
-                                  step: step,
-                                  number: index < 0 ? 1 : index + 1,
-                                  total: visible.length,
-                                  structure: structure,
-                                  preferences: setup.preferences,
-                                  extended: extended,
-                                  resolution: resolution,
-                                  onConfigure: step.route.isEmpty
-                                      ? null
-                                      : () => _openStep(context, step),
-                                  onChoice: (choice) => _saveChoice(
-                                    context,
-                                    structure,
-                                    step.id,
-                                    choice,
-                                  ),
+                                constraints: const BoxConstraints(maxWidth: 720),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Step ${index < 0 ? 1 : index + 1} of ${visible.length}',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelLarge
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      step.section.toUpperCase(),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelMedium
+                                          ?.copyWith(
+                                            letterSpacing: 1.1,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      step.title,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall
+                                          ?.copyWith(fontWeight: FontWeight.w800),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      step.description,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.copyWith(height: 1.45),
+                                    ),
+                                    const SizedBox(height: 24),
+                                    if (!step.prerequisitesComplete)
+                                      const _InfoCard(
+                                        icon: Icons.lock_outline,
+                                        title: 'Previous setup is required',
+                                        body:
+                                            'Complete the previous Structure step before this one.',
+                                      )
+                                    else ...[
+                                      if (choice != null) ...[
+                                        _ChoiceCard(
+                                          value: choice,
+                                          onChanged: (value) => _saveChoice(
+                                            context,
+                                            structure,
+                                            step.id,
+                                            value,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                      ],
+                                      _InfoCard(
+                                        icon: step.isSatisfied
+                                            ? Icons.check_circle_outline
+                                            : Icons.pending_actions_outlined,
+                                        title: step.isSatisfied
+                                            ? 'Ready to continue'
+                                            : 'Current setup',
+                                        body: _summary(
+                                          step.id,
+                                          structure,
+                                          extended,
+                                          choice,
+                                        ),
+                                      ),
+                                      if (step.issues.isNotEmpty) ...[
+                                        const SizedBox(height: 16),
+                                        _IssueCard(issues: step.issues),
+                                      ],
+                                      if (_canConfigure(step, choice)) ...[
+                                        const SizedBox(height: 20),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: FilledButton.icon(
+                                            onPressed: () => _openStep(context, step),
+                                            icon: const Icon(Icons.tune_outlined),
+                                            label: Text(
+                                              step.complete
+                                                  ? 'Review / Edit ${step.title}'
+                                                  : 'Configure ${step.title}',
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      if (step.id == StructureSetupStepId.review)
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 18),
+                                          child: _InfoCard(
+                                            icon: resolution.isReady
+                                                ? Icons.verified_outlined
+                                                : Icons.rule_folder_outlined,
+                                            title: resolution.isReady
+                                                ? 'Structure is ready'
+                                                : 'Structure needs attention',
+                                            body:
+                                                '${resolution.requiredSteps.where((item) => item.isSatisfied).length} of ${resolution.requiredSteps.length} required steps are valid. ${resolution.issues.length} issue(s) reported.',
+                                          ),
+                                        ),
+                                    ],
+                                  ],
                                 ),
                               ),
                             ),
@@ -178,21 +268,11 @@ class _StructureWizardState extends State<_StructureWizard> {
                       ],
                     ),
                   ),
-                  bottomNavigationBar: _WizardActions(
-                    canBack: _previousStep(resolution, step) != null,
-                    canContinue: step.isSatisfied ||
-                        (step.id == StructureSetupStepId.review &&
-                            resolution.isReady),
-                    isSaving: setup.isSaving,
-                    isReview: step.id == StructureSetupStepId.review,
-                    onBack: () {
-                      final previous = _previousStep(resolution, step);
-                      if (previous != null) {
-                        setState(() => _selectedStep = previous.id);
-                      }
-                    },
-                    onContinue: () =>
-                        _continue(context, resolution, step),
+                  bottomNavigationBar: _actions(
+                    context,
+                    resolution,
+                    step,
+                    setup.isSaving,
                   ),
                 );
               },
@@ -248,11 +328,63 @@ class _StructureWizardState extends State<_StructureWizard> {
   }
 
   StructureSetupStepResult? _resolveStep(StructureSetupResolution resolution) {
-    if (_selectedStep != null) {
-      final matches = resolution.steps.where((item) => item.id == _selectedStep);
+    final selected = _selectedStep;
+    if (selected != null) {
+      final matches = resolution.steps.where((item) => item.id == selected);
       if (matches.isNotEmpty) return matches.first;
     }
     return resolution.nextStep;
+  }
+
+  Widget _actions(
+    BuildContext context,
+    StructureSetupResolution resolution,
+    StructureSetupStepResult current,
+    bool saving,
+  ) {
+    final previous = _previousStep(resolution, current);
+    final isReview = current.id == StructureSetupStepId.review;
+    final canContinue = current.isSatisfied || (isReview && resolution.isReady);
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(
+            top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+          ),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 104,
+              child: OutlinedButton(
+                onPressed: previous == null || saving
+                    ? null
+                    : () => setState(() => _selectedStep = previous.id),
+                child: const Text('Back'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton(
+                onPressed: !canContinue || saving
+                    ? null
+                    : () => _continue(context, resolution, current),
+                child: saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(isReview ? 'Finish Setup' : 'Continue'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   StructureSetupStepResult? _previousStep(
@@ -261,8 +393,8 @@ class _StructureWizardState extends State<_StructureWizard> {
   ) {
     final index = resolution.steps.indexWhere((item) => item.id == current.id);
     for (var i = index - 1; i >= 0; i--) {
-      final candidate = resolution.steps[i];
-      if (candidate.applicable || candidate.isSatisfied) return candidate;
+      final item = resolution.steps[i];
+      if (item.applicable || item.isSatisfied) return item;
     }
     return null;
   }
@@ -273,9 +405,43 @@ class _StructureWizardState extends State<_StructureWizard> {
   ) async {
     await context.read<StructureSetupCubit>().rememberStep(step.id.name);
     if (!context.mounted) return;
-    await context.push(step.route);
-    if (!mounted) return;
-    setState(() => _selectedStep = step.id);
+
+    switch (step.id) {
+      case StructureSetupStepId.curriculum:
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => BlocProvider.value(
+              value: context.read<StructureBloc>(),
+              child: const CurriculumAssignmentScreen(),
+            ),
+          ),
+        );
+        break;
+      case StructureSetupStepId.academicAssignments:
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => BlocProvider.value(
+              value: context.read<StructureBloc>(),
+              child: const AcademicStaffAssignmentScreen(),
+            ),
+          ),
+        );
+        break;
+      case StructureSetupStepId.classTimetables:
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => BlocProvider.value(
+              value: context.read<StructureBloc>(),
+              child: const ClassTimetableScreen(),
+            ),
+          ),
+        );
+        break;
+      default:
+        if (step.route.isNotEmpty) await context.push(step.route);
+    }
+
+    if (mounted) setState(() => _selectedStep = step.id);
   }
 
   Future<void> _continue(
@@ -297,48 +463,47 @@ class _StructureWizardState extends State<_StructureWizard> {
 
   Future<void> _saveChoice(
     BuildContext context,
-    StructureState structure,
-    StructureSetupStepId step,
-    StructureUseChoice choice,
+    StructureState state,
+    StructureSetupStepId id,
+    StructureUseChoice value,
   ) async {
-    setState(() => _selectedStep = step);
+    setState(() => _selectedStep = id);
     final cubit = context.read<StructureSetupCubit>();
-
-    switch (step) {
+    switch (id) {
       case StructureSetupStepId.departments:
-        await cubit.setDepartments(choice);
+        await cubit.setDepartments(value);
         return;
       case StructureSetupStepId.streams:
-        await cubit.setStreams(choice);
+        await cubit.setStreams(value);
         return;
       case StructureSetupStepId.learningSpaces:
-        await cubit.setRooms(choice);
+        await cubit.setRooms(value);
         return;
       case StructureSetupStepId.houses:
-        await cubit.setHouses(choice);
+        await cubit.setHouses(value);
         return;
       case StructureSetupStepId.clubs:
-        await cubit.setClubs(choice);
+        await cubit.setClubs(value);
         return;
       case StructureSetupStepId.boarding:
-        await cubit.setBoarding(choice);
+        await cubit.setBoarding(value);
         if (!context.mounted) return;
         context.read<StructureBloc>().add(
               UpdateFeatureTogglesRequested(
-                structure.featureToggles.copyWith(
-                  boarding: choice == StructureUseChoice.enabled,
-                  hostel: choice == StructureUseChoice.enabled,
+                state.featureToggles.copyWith(
+                  boarding: value == StructureUseChoice.enabled,
+                  hostel: value == StructureUseChoice.enabled,
                 ),
               ),
             );
         return;
       case StructureSetupStepId.transport:
-        await cubit.setTransport(choice);
+        await cubit.setTransport(value);
         if (!context.mounted) return;
         context.read<StructureBloc>().add(
               UpdateFeatureTogglesRequested(
-                structure.featureToggles.copyWith(
-                  transport: choice == StructureUseChoice.enabled,
+                state.featureToggles.copyWith(
+                  transport: value == StructureUseChoice.enabled,
                 ),
               ),
             );
@@ -353,13 +518,9 @@ class _StructureWizardState extends State<_StructureWizard> {
     StructureSetupResolution resolution,
     StructureExtendedSetupState extended,
   ) {
-    final items = resolution.steps
-        .where(
-          (item) =>
-              item.applicable && item.id != StructureSetupStepId.review,
-        )
+    final steps = resolution.steps
+        .where((item) => item.applicable && item.id != StructureSetupStepId.review)
         .toList(growable: false);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('School Structure'),
@@ -374,35 +535,22 @@ class _StructureWizardState extends State<_StructureWizard> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _InfoCard(
-            icon: resolution.isReady
-                ? Icons.verified_outlined
-                : Icons.warning_amber_outlined,
-            title: resolution.isReady
-                ? 'Structure ready'
-                : 'Structure needs attention',
-            body: resolution.isReady
-                ? 'Required school Structure is valid. Completed sections remain editable.'
-                : '${resolution.issues.length} integrity issue(s) need attention.',
+          const _InfoCard(
+            icon: Icons.verified_outlined,
+            title: 'Structure ready',
+            body:
+                'Required Structure is valid. Every completed section remains editable.',
           ),
           const SizedBox(height: 16),
           OutlinedButton.icon(
-            onPressed: items.isEmpty
+            onPressed: steps.isEmpty
                 ? null
-                : () => setState(() => _selectedStep = items.first.id),
+                : () => setState(() => _selectedStep = steps.first.id),
             icon: const Icon(Icons.account_tree_outlined),
-            label: const Text('Review setup step by step'),
+            label: const Text('Review step by step'),
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Manage Structure',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          ...items.map(
+          const SizedBox(height: 20),
+          ...steps.map(
             (step) => ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(
@@ -412,12 +560,12 @@ class _StructureWizardState extends State<_StructureWizard> {
               ),
               title: Text(step.title),
               subtitle: Text(_managementSubtitle(step, extended)),
-              trailing: step.route.isEmpty
-                  ? null
-                  : const Icon(Icons.chevron_right),
-              onTap: step.route.isEmpty
-                  ? null
-                  : () => _openStep(context, step),
+              trailing: _canConfigure(step, null)
+                  ? const Icon(Icons.chevron_right)
+                  : null,
+              onTap: _canConfigure(step, null)
+                  ? () => _openStep(context, step)
+                  : null,
             ),
           ),
         ],
@@ -442,6 +590,89 @@ class _StructureWizardState extends State<_StructureWizard> {
     };
   }
 
+  bool _canConfigure(
+    StructureSetupStepResult step,
+    StructureUseChoice? choice,
+  ) {
+    if (!step.prerequisitesComplete || step.id == StructureSetupStepId.review) {
+      return false;
+    }
+    if (choice == StructureUseChoice.disabled) return false;
+    return step.route.isNotEmpty ||
+        step.id == StructureSetupStepId.curriculum ||
+        step.id == StructureSetupStepId.academicAssignments ||
+        step.id == StructureSetupStepId.classTimetables;
+  }
+
+  StructureUseChoice? _choiceFor(
+    StructureSetupStepId id,
+    StructureSetupPreferences value,
+  ) {
+    return switch (id) {
+      StructureSetupStepId.departments => value.departments,
+      StructureSetupStepId.streams => value.streams,
+      StructureSetupStepId.learningSpaces => value.rooms,
+      StructureSetupStepId.houses => value.houses,
+      StructureSetupStepId.clubs => value.clubs,
+      StructureSetupStepId.boarding => value.boarding,
+      StructureSetupStepId.transport => value.transport,
+      _ => null,
+    };
+  }
+
+  String _summary(
+    StructureSetupStepId id,
+    StructureState state,
+    StructureExtendedSetupState extended,
+    StructureUseChoice? choice,
+  ) {
+    if (choice == StructureUseChoice.disabled) {
+      return 'This school marked this optional Structure feature as not used.';
+    }
+    return switch (id) {
+      StructureSetupStepId.institution =>
+        state.institutionProfile.name.isEmpty
+            ? 'Institution profile has not been completed.'
+            : state.institutionProfile.name,
+      StructureSetupStepId.academicYear =>
+        '${state.academicYears.where((item) => item.isCurrent && !item.isArchived).length} current academic year(s)',
+      StructureSetupStepId.academicTerms =>
+        '${state.academicTerms.length} term / semester record(s)',
+      StructureSetupStepId.levels => '${state.levels.length} educational level(s)',
+      StructureSetupStepId.departments => '${state.departments.length} department(s)',
+      StructureSetupStepId.classes => '${state.classes.length} class(es)',
+      StructureSetupStepId.streams => '${state.streams.length} stream / section(s)',
+      StructureSetupStepId.subjects => '${state.subjects.length} subject definition(s)',
+      StructureSetupStepId.curriculum =>
+        '${extended.curriculum.length} current curriculum allocation(s)',
+      StructureSetupStepId.assessmentAndGrading =>
+        '${state.assessmentTypes.length} assessment type(s), ${state.gradingSystems.length} grading system(s)',
+      StructureSetupStepId.learningSpaces => '${state.facilities.length} learning space(s)',
+      StructureSetupStepId.schoolDay =>
+        '${state.timetableConfig.teachingDays.length} teaching day(s), ${state.timetableConfig.slots.length} slot(s)',
+      StructureSetupStepId.staffRoles => '${state.staffRoles.length} role definition(s)',
+      StructureSetupStepId.staffAccounts =>
+        '${extended.staff.where((item) => item.isActive).length} active staff account(s)',
+      StructureSetupStepId.academicAssignments =>
+        '${extended.teachingAssignments.where((item) => item.isActive).length} active academic assignment(s)',
+      StructureSetupStepId.classTimetables =>
+        '${extended.timetables.where((item) => item.status.name == 'active').length} published timetable(s)',
+      StructureSetupStepId.houses => '${state.houses.length} house(s)',
+      StructureSetupStepId.clubs => '${state.clubs.length} club / society record(s)',
+      StructureSetupStepId.boarding =>
+        '${state.hostels.length} hostel(s), ${state.hostelRooms.length} room(s)',
+      StructureSetupStepId.transport =>
+        '${state.transportRoutes.length} route(s), ${state.transportVehicles.length} vehicle(s)',
+      StructureSetupStepId.attendance =>
+        '${state.attendanceTypes.length} attendance status definition(s)',
+      StructureSetupStepId.financeFoundation =>
+        '${state.feeCategories.length} fee category definition(s)',
+      StructureSetupStepId.communication =>
+        '${state.announcementCategories.length} announcement category(s), ${state.notificationCategories.length} notification category(s)',
+      StructureSetupStepId.review => 'Review all required Structure dependencies before finishing.',
+    };
+  }
+
   void _showValidation(
     BuildContext context,
     StructureSetupResolution resolution,
@@ -449,7 +680,7 @@ class _StructureWizardState extends State<_StructureWizard> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (sheetContext) => SafeArea(
+      builder: (sheet) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: ConstrainedBox(
@@ -462,30 +693,20 @@ class _StructureWizardState extends State<_StructureWizard> {
                   resolution.isReady
                       ? 'Structure is ready'
                       : 'Structure needs attention',
-                  style: Theme.of(sheetContext)
+                  style: Theme.of(sheet)
                       .textTheme
                       .titleLarge
                       ?.copyWith(fontWeight: FontWeight.w800),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  resolution.isReady
-                      ? 'All required dependency and integrity checks passed.'
-                      : '${resolution.issues.where((issue) => issue.severity == StructureIssueSeverity.critical).length} critical issue(s) found.',
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 if (resolution.issues.isEmpty)
-                  const ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.check_circle_outline),
-                    title: Text('No structural integrity issues found.'),
-                  )
+                  const Text('All required structural checks passed.')
                 else
                   Flexible(
                     child: ListView.separated(
                       shrinkWrap: true,
                       itemCount: resolution.issues.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (_, index) {
                         final issue = resolution.issues[index];
                         return ListTile(
@@ -496,7 +717,7 @@ class _StructureWizardState extends State<_StructureWizard> {
                                 : Icons.warning_amber_outlined,
                           ),
                           title: Text(issue.message),
-                          subtitle: Text(_pretty(issue.stepId.name)),
+                          subtitle: Text(issue.stepId.name),
                         );
                       },
                     ),
@@ -505,7 +726,7 @@ class _StructureWizardState extends State<_StructureWizard> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: () => Navigator.pop(sheetContext),
+                    onPressed: () => Navigator.pop(sheet),
                     child: const Text('Done'),
                   ),
                 ),
@@ -518,199 +739,49 @@ class _StructureWizardState extends State<_StructureWizard> {
   }
 }
 
-class _StepContent extends StatelessWidget {
-  final StructureSetupStepResult step;
-  final int number;
-  final int total;
-  final StructureState structure;
-  final StructureSetupPreferences preferences;
-  final StructureExtendedSetupState extended;
-  final StructureSetupResolution resolution;
-  final VoidCallback? onConfigure;
-  final ValueChanged<StructureUseChoice> onChoice;
-
-  const _StepContent({
-    required this.step,
-    required this.number,
-    required this.total,
-    required this.structure,
-    required this.preferences,
-    required this.extended,
-    required this.resolution,
-    required this.onConfigure,
-    required this.onChoice,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final choice = _choice(step.id, preferences);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Step $number of $total',
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          step.section.toUpperCase(),
-          style: theme.textTheme.labelMedium?.copyWith(
-            letterSpacing: 1.1,
-            color: theme.colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          step.title,
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          step.description,
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            height: 1.45,
-          ),
-        ),
-        const SizedBox(height: 28),
-        if (!step.prerequisitesComplete)
-          const _InfoCard(
-            icon: Icons.lock_outline,
-            title: 'Previous setup is required',
-            body:
-                'Complete the previous Structure step before configuring this one.',
-          )
-        else ...[
-          if (choice != null) ...[
-            _DecisionQuestion(
-              stepId: step.id,
-              value: choice,
-              onChanged: onChoice,
-            ),
-            const SizedBox(height: 20),
-          ],
-          _InfoCard(
-            icon: step.isSatisfied
-                ? Icons.check_circle_outline
-                : Icons.pending_actions_outlined,
-            title: step.isSatisfied ? 'Ready to continue' : 'Current setup',
-            body: _summary(step.id, structure, extended, choice),
-          ),
-          if (step.issues.isNotEmpty) ...[
-            const SizedBox(height: 18),
-            _IssueCard(issues: step.issues),
-          ],
-          if (onConfigure != null &&
-              (choice == null || choice == StructureUseChoice.enabled)) ...[
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onConfigure,
-                icon: const Icon(Icons.tune_outlined),
-                label: Text(
-                  step.complete
-                      ? 'Review / Edit ${step.title}'
-                      : 'Configure ${step.title}',
-                ),
-              ),
-            ),
-          ],
-          if (step.id == StructureSetupStepId.review) ...[
-            const SizedBox(height: 20),
-            _InfoCard(
-              icon: resolution.isReady
-                  ? Icons.verified_outlined
-                  : Icons.rule_folder_outlined,
-              title: resolution.isReady
-                  ? 'Structure is ready'
-                  : 'Final checks are not clean yet',
-              body:
-                  '${resolution.requiredSteps.where((item) => item.isSatisfied).length} of ${resolution.requiredSteps.length} required steps are valid. ${resolution.issues.length} issue(s) are reported.',
-            ),
-          ],
-        ],
-      ],
-    );
-  }
-}
-
-class _DecisionQuestion extends StatelessWidget {
-  final StructureSetupStepId stepId;
+class _ChoiceCard extends StatelessWidget {
   final StructureUseChoice value;
   final ValueChanged<StructureUseChoice> onChanged;
 
-  const _DecisionQuestion({
-    required this.stepId,
-    required this.value,
-    required this.onChanged,
-  });
+  const _ChoiceCard({required this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    final question = switch (stepId) {
-      StructureSetupStepId.departments =>
-        'Does this school organise academics using departments?',
-      StructureSetupStepId.streams =>
-        'Does this school use streams or sections?',
-      StructureSetupStepId.learningSpaces =>
-        'Do you want School Pulse to manage rooms and learning spaces?',
-      StructureSetupStepId.houses => 'Does this school use houses?',
-      StructureSetupStepId.clubs =>
-        'Do you want to configure clubs and societies?',
-      StructureSetupStepId.boarding => 'Does this school provide boarding?',
-      StructureSetupStepId.transport =>
-        'Does this school operate school transport?',
-      _ => 'Is this used by your school?',
-    };
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          question,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 12),
-        Row(
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: value == StructureUseChoice.enabled
-                  ? FilledButton(
-                      onPressed: () => onChanged(StructureUseChoice.enabled),
-                      child: const Text('Yes'),
-                    )
-                  : OutlinedButton(
-                      onPressed: () => onChanged(StructureUseChoice.enabled),
-                      child: const Text('Yes'),
-                    ),
+            const Text(
+              'Does this school use this?',
+              style: TextStyle(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: value == StructureUseChoice.disabled
-                  ? FilledButton(
-                      onPressed: () => onChanged(StructureUseChoice.disabled),
-                      child: const Text('No'),
-                    )
-                  : OutlinedButton(
-                      onPressed: () => onChanged(StructureUseChoice.disabled),
-                      child: const Text('No'),
-                    ),
+            const SizedBox(height: 10),
+            SegmentedButton<StructureUseChoice>(
+              segments: const [
+                ButtonSegment(
+                  value: StructureUseChoice.enabled,
+                  label: Text('Yes'),
+                  icon: Icon(Icons.check),
+                ),
+                ButtonSegment(
+                  value: StructureUseChoice.disabled,
+                  label: Text('No'),
+                  icon: Icon(Icons.close),
+                ),
+              ],
+              selected: value == StructureUseChoice.undecided
+                  ? const <StructureUseChoice>{}
+                  : <StructureUseChoice>{value},
+              emptySelectionAllowed: true,
+              onSelectionChanged: (selection) {
+                if (selection.isNotEmpty) onChanged(selection.first);
+              },
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -728,34 +799,26 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 5),
-                Text(body),
-              ],
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(body),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -768,101 +831,36 @@ class _IssueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color:
-            Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Before you continue',
-            style: TextStyle(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          ...issues.map(
-            (issue) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text('• ${issue.message}'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WizardActions extends StatelessWidget {
-  final bool canBack;
-  final bool canContinue;
-  final bool isSaving;
-  final bool isReview;
-  final VoidCallback onBack;
-  final VoidCallback onContinue;
-
-  const _WizardActions({
-    required this.canBack,
-    required this.canContinue,
-    required this.isSaving,
-    required this.isReview,
-    required this.onBack,
-    required this.onContinue,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          border: Border(
-            top: BorderSide(
-              color: Theme.of(context).colorScheme.outlineVariant,
-            ),
-          ),
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 104,
-              child: OutlinedButton(
-                onPressed: canBack && !isSaving ? onBack : null,
-                child: const Text('Back'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FilledButton(
-                onPressed:
-                    canContinue && !isSaving ? onContinue : null,
-                child: isSaving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(isReview ? 'Finish Setup' : 'Continue'),
-              ),
-            ),
-          ],
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: issues
+              .map(
+                (issue) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  leading: Icon(
+                    issue.severity == StructureIssueSeverity.critical
+                        ? Icons.error_outline
+                        : Icons.warning_amber_outlined,
+                  ),
+                  title: Text(issue.message),
+                ),
+              )
+              .toList(growable: false),
         ),
       ),
     );
   }
 }
 
-class _CenteredMessage extends StatelessWidget {
+class _Message extends StatelessWidget {
   final IconData icon;
   final String title;
   final String body;
 
-  const _CenteredMessage({
+  const _Message({
     required this.icon,
     required this.title,
     required this.body,
@@ -896,89 +894,4 @@ class _CenteredMessage extends StatelessWidget {
       ),
     );
   }
-}
-
-StructureUseChoice? _choice(
-  StructureSetupStepId step,
-  StructureSetupPreferences preferences,
-) {
-  return switch (step) {
-    StructureSetupStepId.departments => preferences.departments,
-    StructureSetupStepId.streams => preferences.streams,
-    StructureSetupStepId.learningSpaces => preferences.rooms,
-    StructureSetupStepId.houses => preferences.houses,
-    StructureSetupStepId.clubs => preferences.clubs,
-    StructureSetupStepId.boarding => preferences.boarding,
-    StructureSetupStepId.transport => preferences.transport,
-    _ => null,
-  };
-}
-
-String _summary(
-  StructureSetupStepId step,
-  StructureState state,
-  StructureExtendedSetupState extended,
-  StructureUseChoice? choice,
-) {
-  if (choice == StructureUseChoice.disabled) return 'Not used by this school.';
-  return switch (step) {
-    StructureSetupStepId.institution => state.institutionProfile.name.isEmpty
-        ? 'School identity is incomplete.'
-        : state.institutionProfile.name,
-    StructureSetupStepId.academicYear =>
-      '${state.academicYears.length} year(s) • ${state.academicYears.where((item) => item.isCurrent).length} current',
-    StructureSetupStepId.academicTerms =>
-      '${state.academicTerms.length} term/semester record(s)',
-    StructureSetupStepId.levels =>
-      '${state.levels.where((item) => item.isActive).length} active level(s)',
-    StructureSetupStepId.departments =>
-      '${state.departments.where((item) => item.isActive).length} active department(s)',
-    StructureSetupStepId.classes =>
-      '${state.classes.where((item) => item.isActive).length} active class(es)',
-    StructureSetupStepId.streams =>
-      '${state.streams.where((item) => item.isActive).length} active stream(s)',
-    StructureSetupStepId.subjects =>
-      '${state.subjects.where((item) => item.isActive).length} active subject(s)',
-    StructureSetupStepId.curriculum =>
-      '${extended.curriculum.where((item) => item.isActive).length} active curriculum allocation(s)',
-    StructureSetupStepId.assessmentAndGrading =>
-      '${state.assessmentTypes.where((item) => item.isActive).length} assessment type(s) • ${state.gradingSystems.where((item) => item.isActive).length} grading system(s)',
-    StructureSetupStepId.learningSpaces =>
-      '${state.facilities.where((item) => item.isActive).length} active learning space(s)',
-    StructureSetupStepId.schoolDay =>
-      '${state.timetableConfig.teachingDays.length} teaching day(s) • ${state.timetableConfig.slots.length} slot(s)',
-    StructureSetupStepId.staffRoles =>
-      '${state.staffRoles.where((item) => item.isActive).length} active role/responsibility definition(s)',
-    StructureSetupStepId.staffAccounts =>
-      '${extended.staff.where((item) => item.isActive).length} active staff account(s)',
-    StructureSetupStepId.academicAssignments =>
-      '${extended.teachingAssignments.length} academic staff assignment(s)',
-    StructureSetupStepId.classTimetables =>
-      '${extended.timetables.where((item) => item.status.name == 'active').length} published timetable(s) • ${extended.lessons.where((item) => item.isActive).length} active lesson(s)',
-    StructureSetupStepId.houses =>
-      '${state.houses.where((item) => item.isActive).length} active house(s)',
-    StructureSetupStepId.clubs =>
-      '${state.clubs.where((item) => item.isActive).length} active club(s)',
-    StructureSetupStepId.boarding =>
-      '${state.hostels.where((item) => item.isActive).length} active hostel/dormitory record(s)',
-    StructureSetupStepId.transport =>
-      '${state.transportRoutes.where((item) => item.isActive).length} route(s) • ${state.transportVehicles.where((item) => item.isActive).length} vehicle(s)',
-    StructureSetupStepId.attendance =>
-      '${state.attendanceTypes.where((item) => item.isActive).length} active attendance type(s)',
-    StructureSetupStepId.financeFoundation =>
-      '${state.feeCategories.where((item) => item.isActive).length} active fee category(s)',
-    StructureSetupStepId.communication =>
-      '${state.announcementCategories.where((item) => item.isActive).length + state.notificationCategories.where((item) => item.isActive).length} communication category(s) • ${state.messageTemplates.where((item) => item.isActive).length} template(s)',
-    StructureSetupStepId.review => 'Run the final integrity review.',
-  };
-}
-
-String _pretty(String raw) {
-  final spaced = raw.replaceAllMapped(
-    RegExp(r'([A-Z])'),
-    (match) => ' ${match.group(1)}',
-  );
-  return spaced.isEmpty
-      ? raw
-      : '${spaced[0].toUpperCase()}${spaced.substring(1)}';
 }
