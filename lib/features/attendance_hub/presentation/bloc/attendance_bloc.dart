@@ -18,6 +18,13 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
   final PermissionEvaluator permissionEvaluator;
   final AttendanceParticipantResolver participantResolver;
 
+  static const _institutionWideRoles = {
+    UserRole.schoolAdmin,
+    UserRole.director,
+    UserRole.headTeacher,
+    UserRole.deputyHead,
+  };
+
   AttendanceBloc({
     required this.repository,
     required this.permissionEvaluator,
@@ -38,10 +45,6 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     await repository.syncPendingAttendance(event.schoolId);
   }
 
-  /// Single resolution point every handler below goes through - nothing in
-  /// this bloc (or the repository it calls) derives a participant list from
-  /// event.category/scopeId alone without first passing it through the
-  /// operator's real [AttendanceAccessContext].
   Future<Either<Failure, AttendanceAccessContext>> _resolveAccess(
     UserEntity operatorUser,
   ) {
@@ -110,15 +113,18 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     );
   }
 
-  /// Matches the Firestore rules' hasAttendancePermission(): allowed if the
-  /// operator holds either the category-specific scan permission or the
-  /// blanket attendance.override - checking only the former would let a
-  /// user who was granted just the override pass the server rule but get
-  /// turned away client-side.
+  /// School leadership is already authorised institution-wide by the same
+  /// role bypass used by the attendance Firestore rules. Do not require a
+  /// School Admin to also hold a teacher assignment or granular scan
+  /// permission just to test/operate student attendance.
   Future<bool> _canMark(
     AttendanceCategory category,
     UserEntity operatorUser,
   ) async {
+    if (operatorUser.roles.any(_institutionWideRoles.contains)) {
+      return true;
+    }
+
     final categoryResult = await permissionEvaluator.can(
       permissionForCategory(category),
       operatorUser,
@@ -132,15 +138,6 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     return overrideResult.fold((failure) => false, (v) => v);
   }
 
-  /// A valid QR/NFC credential only proves who the *scanned person* is - it
-  /// says nothing about whether the *operator* scanning it is authorised to
-  /// record attendance for that person. This is the separate check the spec
-  /// requires: category permission (_canMark) plus scope, applied to every
-  /// write regardless of which of NFC/QR/manual produced the record. On
-  /// success, returns the resolved access so the caller can stamp
-  /// [AttendanceRecord.roleAssignmentId] - the Firestore rule verifies that
-  /// exact assignment, so an unstamped or wrongly-stamped record is rejected
-  /// server-side even if this client-side check were somehow bypassed.
   Future<Either<AttendanceState, AttendanceAccessContext>> _authorize(
     AttendanceRecord record,
     UserEntity operatorUser,
