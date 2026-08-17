@@ -13,27 +13,10 @@ import 'attendance_participant_resolver.dart';
 
 /// Central attendance authorization resolver.
 ///
-/// Answers "what active attendance responsibilities and scopes does this
-/// authenticated person currently have" instead of "what role is this
-/// person" - it is built entirely from real data (role-level permissions +
-/// every currently-valid [StaffRoleAssignment] the operator holds, unioned
-/// across responsibility types), never from a role-name switch statement.
-///
-/// One user may hold several assignments at once (Class Teacher of P5 Blue
-/// AND Subject Teacher of Math in P6/P7, for example) - every valid one is
-/// folded into the same [AttendanceAccessContext], so nothing here narrows
-/// to a single "currently selected" responsibility the way the teacher
-/// module's `ActiveResponsibilityService` does for its own dashboard.
-///
-/// Roles resolved with real scope data this pass: Class Teacher (classId),
-/// Subject Teacher (subjectId -> classIds), Matron/Patron (houseId as
-/// dormitory scope), Security/Gate (category-level only - Gate-resource
-/// scoping already lives in PermissionEvaluatorImpl), and any role granted
-/// `attendance.override` or the schoolAdmin/director/headTeacher/deputyHead
-/// Firestore-rules bypass, which resolve to institution-wide access.
-/// Transport, Lecturer/course-unit, Dean/faculty drill-down and event/club
-/// staff have no enrollment/assignment data model to resolve against yet -
-/// deliberately not wired here rather than guessed at.
+/// School leadership is institution-wide by role and must never depend on a
+/// teacher/class assignment merely to open or test Attendance. Scoped staff
+/// (class teachers, subject teachers, patrons/matrons, etc.) continue to be
+/// resolved from their real active StaffRoleAssignments.
 class AttendanceParticipantResolverImpl
     implements AttendanceParticipantResolver {
   final StaffAssignmentRepository assignmentRepository;
@@ -57,6 +40,35 @@ class AttendanceParticipantResolverImpl
   Future<Either<Failure, AttendanceAccessContext>> resolve(
     UserEntity operatorUser,
   ) async {
+    final isInstitutionWide = operatorUser.roles.any(
+      _institutionWideRoles.contains,
+    );
+
+    // Leadership/admin accounts are the tenant authority. They can inspect
+    // and operate attendance school-wide without first creating a fake class
+    // teacher assignment. Firestore rules already have the same leadership
+    // bypass, so this keeps client authorization aligned with the server.
+    if (isInstitutionWide) {
+      final allDomains = AttendanceCategory.values.toSet();
+      return Right(
+        AttendanceAccessContext(
+          userId: operatorUser.id,
+          schoolId: operatorUser.schoolId,
+          allowedDomains: allDomains,
+          institutionWideDomains: allDomains,
+          allowedClassIds: const {},
+          allowedSubjectClassIds: const {},
+          allowedDormitoryIds: const {},
+          assignmentIdByClassId: const {},
+          assignmentIdByDormitoryId: const {},
+          canCreateSession: true,
+          canCorrectAttendance: true,
+          canExportToGoogleSheets: true,
+          reasonForRestriction: AttendanceRestrictionReason.none,
+        ),
+      );
+    }
+
     final period = await calendarService.getCurrentPeriod(
       operatorUser.schoolId,
     );
@@ -70,9 +82,6 @@ class AttendanceParticipantResolverImpl
     return assignmentsResult.fold((failure) async => Left(failure), (
       assignments,
     ) async {
-      final isInstitutionWide = operatorUser.roles.any(
-        _institutionWideRoles.contains,
-      );
       final hasOverrideResult = await permissionEvaluator.can(
         Permission.attendanceOverride,
         operatorUser,
@@ -87,9 +96,6 @@ class AttendanceParticipantResolverImpl
       final assignmentIdByClassId = <String, String>{};
       final assignmentIdByDormitoryId = <String, String>{};
 
-      // Category-level permission is the first gate for every category -
-      // scope data (below) only narrows it further, never widens it beyond
-      // what the operator's role/override permissions already allow.
       for (final category in AttendanceCategory.values) {
         final permissionId = permissionForCategory(category);
         final grantedResult = await permissionEvaluator.can(
@@ -100,7 +106,7 @@ class AttendanceParticipantResolverImpl
         if (!granted && !hasOverride) continue;
 
         allowedDomains.add(category);
-        if (isInstitutionWide || hasOverride) {
+        if (hasOverride) {
           institutionWideDomains.add(category);
         }
       }
@@ -119,9 +125,6 @@ class AttendanceParticipantResolverImpl
               allowedSubjectClassIds
                   .putIfAbsent(assignment.subjectId!, () => {})
                   .add(assignment.classId!);
-              // A class already granted via a Class Teacher assignment keeps
-              // that assignment id - either one legitimately authorises the
-              // write, and the map only needs to name one that does.
               assignmentIdByClassId.putIfAbsent(
                 assignment.classId!,
                 () => assignment.id,
@@ -138,33 +141,29 @@ class AttendanceParticipantResolverImpl
             }
             break;
           default:
-            // securityOfficer, transportCoordinator, and every other
-            // responsibility type contribute only the category-level
-            // permission already resolved above - no scoped assignment
-            // data exists for them yet.
             break;
         }
       }
 
-      final context = AttendanceAccessContext(
-        userId: operatorUser.id,
-        schoolId: operatorUser.schoolId,
-        allowedDomains: allowedDomains,
-        institutionWideDomains: institutionWideDomains,
-        allowedClassIds: allowedClassIds,
-        allowedSubjectClassIds: allowedSubjectClassIds,
-        allowedDormitoryIds: allowedDormitoryIds,
-        assignmentIdByClassId: assignmentIdByClassId,
-        assignmentIdByDormitoryId: assignmentIdByDormitoryId,
-        canCreateSession: allowedDomains.isNotEmpty,
-        canCorrectAttendance: institutionWideDomains.isNotEmpty,
-        canExportToGoogleSheets: allowedDomains.isNotEmpty,
-        reasonForRestriction: allowedDomains.isEmpty
-            ? AttendanceRestrictionReason.noResponsibility
-            : AttendanceRestrictionReason.none,
+      return Right(
+        AttendanceAccessContext(
+          userId: operatorUser.id,
+          schoolId: operatorUser.schoolId,
+          allowedDomains: allowedDomains,
+          institutionWideDomains: institutionWideDomains,
+          allowedClassIds: allowedClassIds,
+          allowedSubjectClassIds: allowedSubjectClassIds,
+          allowedDormitoryIds: allowedDormitoryIds,
+          assignmentIdByClassId: assignmentIdByClassId,
+          assignmentIdByDormitoryId: assignmentIdByDormitoryId,
+          canCreateSession: allowedDomains.isNotEmpty,
+          canCorrectAttendance: institutionWideDomains.isNotEmpty,
+          canExportToGoogleSheets: allowedDomains.isNotEmpty,
+          reasonForRestriction: allowedDomains.isEmpty
+              ? AttendanceRestrictionReason.noResponsibility
+              : AttendanceRestrictionReason.none,
+        ),
       );
-
-      return Right(context);
     });
   }
 }
