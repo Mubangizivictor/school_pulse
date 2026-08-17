@@ -1,0 +1,121 @@
+name: Deploy Test Build
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/deploy-test.yml'
+      - 'lib/features/structure/**'
+      - 'test/features/structure/**'
+      - 'firestore.rules'
+      - 'firebase.json'
+      - '.firebaserc'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-build:
+    name: Verify Structure and Build Android Test APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Analyze Structure integration
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib/features/structure test/features/structure
+
+      - name: Run complete Structure test suite
+        run: flutter test test/features/structure
+
+      - name: Build Android debug APK
+        run: flutter build apk --debug
+
+      - name: Upload test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: school-pulse-structure-test-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy-firestore:
+    name: Deploy Structure Firestore Rules
+    needs: verify-and-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      FIREBASE_SERVICE_ACCOUNT_PROJECT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SCHOOL_PULSE_3D95B }}
+      GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools
+
+      - name: Deploy Firestore rules to school-pulse-3d95b
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROJECT_ID='school-pulse-3d95b'
+
+          if [ -n "${FIREBASE_TOKEN:-}" ]; then
+            firebase deploy \
+              --only firestore:rules \
+              --project "$PROJECT_ID" \
+              --non-interactive \
+              --token "$FIREBASE_TOKEN"
+            exit 0
+          fi
+
+          SERVICE_ACCOUNT_JSON=''
+          for candidate in \
+            "${FIREBASE_SERVICE_ACCOUNT_PROJECT:-}" \
+            "${FIREBASE_SERVICE_ACCOUNT:-}" \
+            "${GOOGLE_APPLICATION_CREDENTIALS_JSON:-}" \
+            "${GCP_SA_KEY:-}"; do
+            if [ -n "$candidate" ]; then
+              SERVICE_ACCOUNT_JSON="$candidate"
+              break
+            fi
+          done
+
+          if [ -z "$SERVICE_ACCOUNT_JSON" ]; then
+            echo '::error::Firebase deployment credentials are not configured in GitHub Secrets. Add FIREBASE_TOKEN or a Firebase/GCP service-account JSON secret.'
+            exit 1
+          fi
+
+          CREDENTIAL_FILE="$RUNNER_TEMP/firebase-service-account.json"
+          printf '%s' "$SERVICE_ACCOUNT_JSON" > "$CREDENTIAL_FILE"
+          chmod 600 "$CREDENTIAL_FILE"
+          export GOOGLE_APPLICATION_CREDENTIALS="$CREDENTIAL_FILE"
+
+          firebase deploy \
+            --only firestore:rules \
+            --project "$PROJECT_ID" \
+            --non-interactive
