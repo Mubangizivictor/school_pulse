@@ -46,8 +46,6 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
           ),
         );
       }
-      // Online assignment must not lie. If the authoritative function fails,
-      // surface it instead of saying "Card assigned" from a local-only write.
       return Left(
         ServerFailure(
           e.message ?? 'NFC assignment failed on the server (${e.code}).',
@@ -67,14 +65,16 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     String? studentId,
   }) async {
     try {
+      var serverConfirmed = false;
       if (identityType == 'student') {
         final serverResult = await _assignServerSide(
           cardUid: credentialValue,
           studentId: studentId,
           schoolId: schoolId,
         );
-        if (serverResult != null && serverResult.isLeft()) {
-          return serverResult;
+        if (serverResult != null) {
+          if (serverResult.isLeft()) return serverResult;
+          serverConfirmed = true;
         }
       }
 
@@ -82,7 +82,8 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
         credentialValue,
         schoolId,
       );
-      if (existing != null &&
+      if (!serverConfirmed &&
+          existing != null &&
           existing.status == 'active' &&
           existing.identityId != identityId) {
         return Left(
@@ -93,8 +94,10 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
         );
       }
 
+      // A server-confirmed assignment is authoritative. This intentionally
+      // overwrites old local entries that used StudentIdentity.uniqueSystemId
+      // so existing test cards migrate cleanly to canonical Student.id.
       await localDataSource.deleteRevocation(credentialValue, schoolId);
-
       final credential = CachedCredential(
         credentialValue: credentialValue,
         credentialType: 'nfc',
@@ -105,10 +108,6 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
         updatedAt: DateTime.now(),
       );
       await localDataSource.cacheCredential(credential);
-
-      // Firestore mirror is still best-effort because the callable above is
-      // the authoritative online transaction. Offline assignment remains
-      // usable on this device and can sync later.
       await _pushCredential(credential);
       await _pushRevocationDeleted(schoolId, credentialValue);
       return const Right(null);
