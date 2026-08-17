@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import '../../domain/services/structure_integrity_validator.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
@@ -12,7 +14,11 @@ import '../widgets/structure_empty_hint.dart';
 const _validator = StructureIntegrityValidator();
 
 /// Definition-first People Structure: define departments and responsibilities
-/// without forcing a person assignment during institutional setup.
+/// without forcing a person assignment during institutional setup. A single
+/// staff account can hold multiple [StaffDesignation]s at once (e.g. Teacher
+/// + Class Teacher, Teacher + Head of Department) - designations are the one
+/// and only role-definition concept; there is no separate "staff role"
+/// layer to keep in sync with it.
 class PeopleStructureScreen extends StatelessWidget {
   final String section;
 
@@ -20,11 +26,16 @@ class PeopleStructureScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final requested = GoRouterState.of(context).uri.queryParameters['section'] ?? section;
+    final requested =
+        GoRouterState.of(context).uri.queryParameters['section'] ?? section;
     final normalized = requested == 'roles' ? 'roles' : 'departments';
     return Scaffold(
       appBar: AppBar(
-        title: Text(normalized == 'roles' ? 'Staff Roles & Responsibilities' : 'Departments'),
+        title: Text(
+          normalized == 'roles'
+              ? 'Staff Roles & Responsibilities'
+              : 'Departments',
+        ),
       ),
       body: BlocBuilder<StructureBloc, StructureState>(
         builder: (context, state) => normalized == 'roles'
@@ -34,13 +45,19 @@ class PeopleStructureScreen extends StatelessWidget {
     );
   }
 
+  String _schoolId(BuildContext context) =>
+      (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
+
   Widget _departments(BuildContext context, StructureState state) {
     final bloc = context.read<StructureBloc>();
+    final schoolId = _schoolId(context);
     return _SectionPage(
-      intro: 'Define departments now. A Head of Department is assigned later, so Department creation never depends on a teacher or staff record.',
+      intro:
+          'Define departments now. A Head of Department is assigned later, so Department creation never depends on a teacher or staff record.',
       primaryLabel: 'Add Department',
       onPrimary: () => showDepartmentFormDialog(
         context,
+        schoolId: schoolId,
         onSave: (value) => _dispatchIfValid(
           context,
           _validator.validateDepartment(value, state.departments),
@@ -52,11 +69,15 @@ class PeopleStructureScreen extends StatelessWidget {
           : ListView.separated(
               padding: EdgeInsets.zero,
               itemCount: state.departments.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
               itemBuilder: (_, index) {
                 final department = state.departments[index];
                 final subjectCount = state.subjects
-                    .where((subject) => subject.departmentId == department.id && subject.isActive)
+                    .where(
+                      (subject) =>
+                          subject.departmentId == department.id &&
+                          subject.isActive,
+                    )
                     .length;
                 return AppCard(
                   child: ListTile(
@@ -64,22 +85,32 @@ class PeopleStructureScreen extends StatelessWidget {
                       department.name,
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        decoration: department.isActive ? null : TextDecoration.lineThrough,
+                        decoration: department.isActive
+                            ? null
+                            : TextDecoration.lineThrough,
                       ),
                     ),
-                    subtitle: Text([
-                      if (department.code.trim().isNotEmpty) department.code.trim(),
-                      '$subjectCount active subject${subjectCount == 1 ? '' : 's'}',
-                      if (department.headOfDepartmentStaffId.isEmpty) 'HOD assigned later',
-                    ].join(' • ')),
+                    subtitle: Text(
+                      [
+                        if (department.code.trim().isNotEmpty)
+                          department.code.trim(),
+                        '$subjectCount active subject${subjectCount == 1 ? '' : 's'}',
+                        if (department.headOfDepartmentStaffId.isEmpty)
+                          'HOD assigned later',
+                      ].join(' • '),
+                    ),
                     trailing: IconButton(
                       icon: const Icon(Icons.edit_outlined),
                       onPressed: () => showDepartmentFormDialog(
                         context,
+                        schoolId: schoolId,
                         existing: department,
                         onSave: (value) => _dispatchIfValid(
                           context,
-                          _validator.validateDepartment(value, state.departments),
+                          _validator.validateDepartment(
+                            value,
+                            state.departments,
+                          ),
                           () => bloc.add(SaveDepartmentRequested(value)),
                         ),
                       ),
@@ -93,50 +124,27 @@ class PeopleStructureScreen extends StatelessWidget {
 
   Widget _roles(BuildContext context, StructureState state) {
     final bloc = context.read<StructureBloc>();
-    final activeDesignations = state.designations.where((item) => item.isActive).toList();
+    final schoolId = _schoolId(context);
     return _SectionPage(
-      intro: 'Define reusable responsibilities. One staff account may later hold several roles at the same time; creating a role never creates a separate login.',
+      intro:
+          'Define reusable responsibilities/designations here. One staff account may hold several designations at the same time (e.g. Teacher + Class Teacher, Teacher + Head of Department) - assigning a designation never creates a separate login.',
       primaryLabel: 'Add Staff Role',
-      onPrimary: () => showStaffRoleFormDialog(
+      onPrimary: () => showDesignationFormDialog(
         context,
-        designations: activeDesignations,
+        schoolId: schoolId,
         onSave: (value) => _dispatchIfValid(
           context,
-          _validator.validateRole(
-            value,
-            roles: state.staffRoles,
-            designations: state.designations,
-          ),
-          () => bloc.add(SaveStaffRoleRequested(value)),
+          _validator.validateDesignation(value, state.designations),
+          () => bloc.add(SaveDesignationRequested(value)),
         ),
       ),
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Designations',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                ),
-              ),
-              TextButton.icon(
-                onPressed: () => showDesignationFormDialog(
-                  context,
-                  onSave: (value) => _dispatchIfValid(
-                    context,
-                    _validator.validateDesignation(value, state.designations),
-                    () => bloc.add(SaveDesignationRequested(value)),
-                  ),
-                ),
-                icon: const Icon(Icons.add),
-                label: const Text('Add'),
-              ),
-            ],
-          ),
           if (state.designations.isEmpty)
-            const StructureEmptyHint('Designations are optional labels such as Teacher, Principal or Bursar.')
+            const StructureEmptyHint(
+              'No staff roles/designations yet. Add only the responsibilities this school actually uses - e.g. Teacher, Class Teacher, Head of Department, Bursar.',
+            )
           else
             ...state.designations.map(
               (designation) => AppCard(
@@ -144,16 +152,37 @@ class PeopleStructureScreen extends StatelessWidget {
                 child: ListTile(
                   title: Text(
                     designation.name,
-                    style: TextStyle(decoration: designation.isActive ? null : TextDecoration.lineThrough),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      decoration: designation.isActive
+                          ? null
+                          : TextDecoration.lineThrough,
+                    ),
+                  ),
+                  subtitle: Text(
+                    [
+                      if (designation.category.trim().isNotEmpty)
+                        designation.category.trim(),
+                      designation.allowMultipleStaff
+                          ? 'Multiple staff'
+                          : 'Single staff',
+                      designation.allowConcurrentAssignments
+                          ? 'Concurrent with other roles'
+                          : '',
+                    ].where((item) => item.isNotEmpty).join(' • '),
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.edit_outlined),
                     onPressed: () => showDesignationFormDialog(
                       context,
+                      schoolId: schoolId,
                       existing: designation,
                       onSave: (value) => _dispatchIfValid(
                         context,
-                        _validator.validateDesignation(value, state.designations),
+                        _validator.validateDesignation(
+                          value,
+                          state.designations,
+                        ),
                         () => bloc.add(SaveDesignationRequested(value)),
                       ),
                     ),
@@ -161,48 +190,6 @@ class PeopleStructureScreen extends StatelessWidget {
                 ),
               ),
             ),
-          const SizedBox(height: 20),
-          Text(
-            'Responsibilities / Roles',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          if (state.staffRoles.isEmpty)
-            const StructureEmptyHint('No staff roles yet. Add only responsibilities the school actually uses.')
-          else
-            ...state.staffRoles.map((role) {
-              final designation = state.designations.where((item) => item.id == role.designationId).firstOrNull;
-              return AppCard(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  title: Text(
-                    role.name,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      decoration: role.isActive ? null : TextDecoration.lineThrough,
-                    ),
-                  ),
-                  subtitle: Text(designation?.name ?? 'No required designation'),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => showStaffRoleFormDialog(
-                      context,
-                      existing: role,
-                      designations: activeDesignations,
-                      onSave: (value) => _dispatchIfValid(
-                        context,
-                        _validator.validateRole(
-                          value,
-                          roles: state.staffRoles,
-                          designations: state.designations,
-                        ),
-                        () => bloc.add(SaveStaffRoleRequested(value)),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
         ],
       ),
     );
@@ -233,9 +220,9 @@ class _SectionPage extends StatelessWidget {
             Text(
               intro,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    height: 1.4,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -267,8 +254,4 @@ void _dispatchIfValid(
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(content: Text(validationError)));
-}
-
-extension _FirstOrNullExtension<T> on Iterable<T> {
-  T? get firstOrNull => isEmpty ? null : first;
 }

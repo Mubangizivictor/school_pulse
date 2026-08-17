@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_state.dart';
-import 'institution_profile_screen.dart';
+import 'institution_settings_screen.dart';
 import 'academic_structure_screen.dart';
 import 'people_structure_screen.dart';
 import 'assessment_grading_screen.dart';
@@ -12,7 +12,7 @@ import 'operations_config_screen.dart';
 import 'feature_toggles_screen.dart';
 import 'curriculum_assignment_screen.dart';
 import 'academic_staff_assignment_screen.dart';
-import 'class_timetable_screen.dart';
+import 'timetables/timetables_list_screen.dart';
 
 /// Structure V2: one dependency-ordered setup flow.
 ///
@@ -31,22 +31,70 @@ class _StructureScreenState extends State<StructureScreen> {
   int _index = 0;
 
   static const _steps = <_StructureStep>[
-    _StructureStep('Institution', 'Confirm the school identity and institutional profile before academic setup.'),
-    _StructureStep('Academic year', 'Create the school year and set exactly one year as current.'),
-    _StructureStep('Terms / semesters', 'Create periods inside the current academic year.'),
-    _StructureStep('Educational levels', 'Define only the education levels this institution actually offers.'),
-    _StructureStep('Classes', 'Create classes under their correct educational levels.'),
-    _StructureStep('Streams / sections', 'Optionally divide classes into streams or sections.'),
-    _StructureStep('Subjects', 'Build the subject catalogue before curriculum and teacher assignment.'),
-    _StructureStep('Curriculum', 'Assign the correct subjects to the classes that study them.'),
-    _StructureStep('People & roles', 'Configure staff roles, designations and school people structure.'),
-    _StructureStep('Academic assignments', 'Assign teachers only after classes, subjects and staff exist.'),
-    _StructureStep('Assessment & grading', 'Configure assessment types, grading systems and grade bands.'),
-    _StructureStep('Campus & facilities', 'Configure learning spaces and physical facilities used by operations.'),
-    _StructureStep('Operations', 'Configure school-day and operational structure after the academic foundation exists.'),
-    _StructureStep('Feature choices', 'Enable only optional modules the institution actually uses.'),
-    _StructureStep('Class timetables', 'Build timetables last, after curriculum, rooms and teacher assignments are ready.'),
-    _StructureStep('Review', 'Review the configured structure before leaving setup.'),
+    _StructureStep(
+      'Institution',
+      'Confirm the school identity and institutional profile before academic setup.',
+    ),
+    _StructureStep(
+      'Academic year',
+      'Create the school year and set exactly one year as current.',
+    ),
+    _StructureStep(
+      'Terms / semesters',
+      'Create periods inside the current academic year.',
+    ),
+    _StructureStep(
+      'Educational levels',
+      'Define only the education levels this institution actually offers.',
+    ),
+    _StructureStep(
+      'Classes',
+      'Create classes under their correct educational levels.',
+    ),
+    _StructureStep(
+      'Streams / sections',
+      'Optionally divide classes into streams or sections.',
+    ),
+    _StructureStep(
+      'Subjects',
+      'Build the subject catalogue before curriculum and teacher assignment.',
+    ),
+    _StructureStep(
+      'Curriculum',
+      'Assign the correct subjects to the classes that study them.',
+    ),
+    _StructureStep(
+      'People & roles',
+      'Configure staff roles, designations and school people structure.',
+    ),
+    _StructureStep(
+      'Academic assignments',
+      'Assign teachers only after classes, subjects and staff exist.',
+    ),
+    _StructureStep(
+      'Assessment & grading',
+      'Configure assessment types, grading systems and grade bands.',
+    ),
+    _StructureStep(
+      'Campus & facilities',
+      'Configure learning spaces and physical facilities used by operations.',
+    ),
+    _StructureStep(
+      'Operations',
+      'Configure school-day and operational structure after the academic foundation exists.',
+    ),
+    _StructureStep(
+      'Feature choices',
+      'Enable only optional modules the institution actually uses.',
+    ),
+    _StructureStep(
+      'Class timetables',
+      'Build timetables last, after curriculum, rooms and teacher assignments are ready.',
+    ),
+    _StructureStep(
+      'Review',
+      'Review the configured structure before leaving setup.',
+    ),
   ];
 
   @override
@@ -63,7 +111,9 @@ class _StructureScreenState extends State<StructureScreen> {
                 child: Center(
                   child: Text(
                     '${_index + 1}/${_steps.length}',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ),
@@ -72,13 +122,20 @@ class _StructureScreenState extends State<StructureScreen> {
           body: SafeArea(
             child: Column(
               children: [
-                LinearProgressIndicator(value: (_index + 1) / _steps.length, minHeight: 4),
+                LinearProgressIndicator(
+                  value: (_index + 1) / _steps.length,
+                  minHeight: 4,
+                ),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
-                    border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    ),
                   ),
                   child: Center(
                     child: ConstrainedBox(
@@ -88,16 +145,26 @@ class _StructureScreenState extends State<StructureScreen> {
                         children: [
                           Text(
                             'STEP ${_index + 1}',
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(
                                   color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: 1.1,
                                 ),
                           ),
                           const SizedBox(height: 5),
-                          Text(step.title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
+                          Text(
+                            step.title,
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.w900),
+                          ),
                           const SizedBox(height: 5),
-                          Text(step.description, style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.35)),
+                          Text(
+                            step.description,
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(height: 1.35),
+                          ),
                         ],
                       ),
                     ),
@@ -113,14 +180,20 @@ class _StructureScreenState extends State<StructureScreen> {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
               ),
               child: Row(
                 children: [
                   SizedBox(
                     width: 110,
                     child: OutlinedButton.icon(
-                      onPressed: _index == 0 ? null : () => setState(() => _index--),
+                      onPressed: _index == 0
+                          ? null
+                          : () => setState(() => _index--),
                       icon: const Icon(Icons.arrow_back_rounded),
                       label: const Text('Back'),
                     ),
@@ -131,8 +204,16 @@ class _StructureScreenState extends State<StructureScreen> {
                       onPressed: _index == _steps.length - 1
                           ? () => Navigator.of(context).maybePop()
                           : () => setState(() => _index++),
-                      icon: Icon(_index == _steps.length - 1 ? Icons.check_rounded : Icons.arrow_forward_rounded),
-                      label: Text(_index == _steps.length - 1 ? 'Finish' : 'Save & Continue'),
+                      icon: Icon(
+                        _index == _steps.length - 1
+                            ? Icons.check_rounded
+                            : Icons.arrow_forward_rounded,
+                      ),
+                      label: Text(
+                        _index == _steps.length - 1
+                            ? 'Finish'
+                            : 'Save & Continue',
+                      ),
                     ),
                   ),
                 ],
@@ -147,7 +228,7 @@ class _StructureScreenState extends State<StructureScreen> {
   Widget _editor(StructureState state) {
     switch (_index) {
       case 0:
-        return const InstitutionProfileScreen();
+        return const InstitutionSettingsScreen();
       case 1:
         return const AcademicStructureScreen(section: 'years');
       case 2:
@@ -175,9 +256,12 @@ class _StructureScreenState extends State<StructureScreen> {
       case 13:
         return const FeatureTogglesScreen();
       case 14:
-        return const ClassTimetableScreen();
+        return const TimetablesListScreen();
       default:
-        return _Review(state: state, onJump: (index) => setState(() => _index = index));
+        return _Review(
+          state: state,
+          onJump: (index) => setState(() => _index = index),
+        );
     }
   }
 }
@@ -197,7 +281,7 @@ class _Review extends StatelessWidget {
       ('Classes', '${state.classes.length}', 4),
       ('Streams / sections', '${state.streams.length}', 5),
       ('Subjects', '${state.subjects.length}', 6),
-      ('Staff roles', '${state.staffRoles.length}', 8),
+      ('Staff roles', '${state.designations.length}', 8),
       ('Assessment types', '${state.assessmentTypes.length}', 10),
       ('Grading systems', '${state.gradingSystems.length}', 10),
       ('Facilities', '${state.facilities.length}', 11),
@@ -217,10 +301,16 @@ class _Review extends StatelessWidget {
                     padding: const EdgeInsets.all(18),
                     child: Row(
                       children: [
-                        Icon(Icons.fact_check_outlined, color: Theme.of(context).colorScheme.primary, size: 30),
+                        Icon(
+                          Icons.fact_check_outlined,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 30,
+                        ),
                         const SizedBox(width: 14),
                         const Expanded(
-                          child: Text('Check every count below. Tap any row to return directly to that setup step and correct it.'),
+                          child: Text(
+                            'Check every count below. Tap any row to return directly to that setup step and correct it.',
+                          ),
                         ),
                       ],
                     ),
@@ -230,7 +320,10 @@ class _Review extends StatelessWidget {
                 ...rows.map(
                   (row) => Card(
                     child: ListTile(
-                      title: Text(row.$1, style: const TextStyle(fontWeight: FontWeight.w700)),
+                      title: Text(
+                        row.$1,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
                       subtitle: Text('${row.$2} configured'),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => onJump(row.$3),

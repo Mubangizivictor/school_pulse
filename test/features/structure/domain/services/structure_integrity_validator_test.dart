@@ -6,9 +6,15 @@ void main() {
   const validator = StructureIntegrityValidator();
 
   group('class and stream capacity enforcement', () {
-    const level = EducationalLevel(id: 'primary', name: 'Primary', code: 'PRI');
+    const level = EducationalLevel(
+      id: 'primary',
+      schoolId: 'school-a',
+      name: 'Primary',
+      code: 'PRI',
+    );
     const schoolClass = SchoolClass(
       id: 'p5',
+      schoolId: 'school-a',
       name: 'Primary 5',
       code: 'P5',
       levelId: 'primary',
@@ -17,9 +23,21 @@ void main() {
 
     test('30 + 25 is rejected when class capacity is 50', () {
       const existing = [
-        ClassStream(id: 'blue', name: 'Blue', classId: 'p5', capacity: 30),
+        ClassStream(
+          id: 'blue',
+          name: 'Blue',
+          classId: 'p5',
+          schoolId: 'school-a',
+          capacity: 30,
+        ),
       ];
-      const red = ClassStream(id: 'red', name: 'Red', classId: 'p5', capacity: 25);
+      const red = ClassStream(
+        id: 'red',
+        name: 'Red',
+        classId: 'p5',
+        schoolId: 'school-a',
+        capacity: 25,
+      );
 
       final error = validator.validateStream(
         red,
@@ -35,9 +53,21 @@ void main() {
 
     test('30 + 20 is accepted when class capacity is 50', () {
       const existing = [
-        ClassStream(id: 'blue', name: 'Blue', classId: 'p5', capacity: 30),
+        ClassStream(
+          id: 'blue',
+          name: 'Blue',
+          classId: 'p5',
+          schoolId: 'school-a',
+          capacity: 30,
+        ),
       ];
-      const red = ClassStream(id: 'red', name: 'Red', classId: 'p5', capacity: 20);
+      const red = ClassStream(
+        id: 'red',
+        name: 'Red',
+        classId: 'p5',
+        schoolId: 'school-a',
+        capacity: 20,
+      );
 
       expect(
         validator.validateStream(
@@ -51,11 +81,24 @@ void main() {
 
     test('class capacity cannot be reduced below active stream allocation', () {
       const streams = [
-        ClassStream(id: 'blue', name: 'Blue', classId: 'p5', capacity: 30),
-        ClassStream(id: 'red', name: 'Red', classId: 'p5', capacity: 20),
+        ClassStream(
+          id: 'blue',
+          name: 'Blue',
+          classId: 'p5',
+          schoolId: 'school-a',
+          capacity: 30,
+        ),
+        ClassStream(
+          id: 'red',
+          name: 'Red',
+          classId: 'p5',
+          schoolId: 'school-a',
+          capacity: 20,
+        ),
       ];
       const reduced = SchoolClass(
         id: 'p5',
+        schoolId: 'school-a',
         name: 'Primary 5',
         code: 'P5',
         levelId: 'primary',
@@ -76,15 +119,23 @@ void main() {
       const streams = [
         ClassStream(
           id: 'blue',
+          schoolId: 'school-a',
           name: 'Blue',
           classId: 'p5',
           capacity: 30,
           isActive: false,
         ),
-        ClassStream(id: 'red', name: 'Red', classId: 'p5', capacity: 20),
+        ClassStream(
+          id: 'red',
+          name: 'Red',
+          classId: 'p5',
+          schoolId: 'school-a',
+          capacity: 20,
+        ),
       ];
       const reduced = SchoolClass(
         id: 'p5',
+        schoolId: 'school-a',
         name: 'Primary 5',
         code: 'P5',
         levelId: 'primary',
@@ -106,6 +157,7 @@ void main() {
   group('academic calendar integrity', () {
     final year = AcademicYear(
       id: '2026',
+      schoolId: 'school-a',
       name: '2026',
       startDate: DateTime(2026, 1, 20),
       endDate: DateTime(2026, 12, 10),
@@ -115,6 +167,7 @@ void main() {
     test('term outside academic year is rejected', () {
       final invalid = AcademicTerm(
         id: 'term1',
+        schoolId: 'school-a',
         academicYearId: '2026',
         name: 'Term 1',
         startDate: DateTime(2026, 1, 1),
@@ -130,6 +183,7 @@ void main() {
     test('overlapping term is rejected', () {
       final existing = AcademicTerm(
         id: 'term1',
+        schoolId: 'school-a',
         academicYearId: '2026',
         name: 'Term 1',
         startDate: DateTime(2026, 2, 1),
@@ -137,6 +191,7 @@ void main() {
       );
       final overlapping = AcademicTerm(
         id: 'term2',
+        schoolId: 'school-a',
         academicYearId: '2026',
         name: 'Term 2',
         startDate: DateTime(2026, 4, 20),

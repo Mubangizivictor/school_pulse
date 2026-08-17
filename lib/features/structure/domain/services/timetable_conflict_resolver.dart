@@ -1,116 +1,182 @@
-import '../entities/class_timetable_entities.dart';
+import '../entities/timetable.dart';
 
 enum TimetableConflictType {
   invalidTime,
   classOrStream,
   teacher,
   room,
+  teacherAvailability,
 }
 
 class TimetableConflict {
   final TimetableConflictType type;
   final String message;
-  final ClassTimetableLesson conflictingLesson;
+  final TimetableLesson conflictingLesson;
+
+  /// The slot within [conflictingLesson.occurrences] (or the candidate
+  /// lesson's occurrences, for an availability conflict) that collides -
+  /// lets the UI highlight exactly which cell of a double/triple lesson is
+  /// the problem rather than the whole lesson.
+  final String slotId;
 
   const TimetableConflict({
     required this.type,
     required this.message,
     required this.conflictingLesson,
+    required this.slotId,
   });
 }
 
-/// One source of truth for lesson collision checks.
+/// A window (or lack of one) in which a teacher is not available to teach,
+/// e.g. a part-time teacher's off days, or a fixed non-teaching commitment.
+/// Any candidate lesson occurrence whose (teacherId, day, slotId) matches one
+/// of these blocks is rejected.
+class TeacherAvailabilityBlock {
+  final String teacherId;
+  final String day;
+  final String slotId;
+
+  const TeacherAvailabilityBlock({
+    required this.teacherId,
+    required this.day,
+    required this.slotId,
+  });
+}
+
+/// One source of truth for lesson collision checks across the whole school.
+///
+/// A "lesson" schedules one subject/teacher/room/group for one or more
+/// (day, slotId) occurrences (`TimetableLessonOccurrence`) - more than one
+/// occurrence represents a double/triple/consecutive-block lesson, and every
+/// occurrence is checked independently so a conflict on just one slot of a
+/// double lesson is still caught and reported against that specific slot.
 class TimetableConflictResolver {
   const TimetableConflictResolver();
 
+  /// Checks [candidate] against every lesson in [otherLessons] (which should
+  /// exclude the candidate's own previous version when editing in place) and
+  /// optionally against [teacherAvailabilityBlocks].
   List<TimetableConflict> findConflicts({
-    required ClassTimetableLesson proposed,
-    required Iterable<ClassTimetableLesson> existing,
+    required TimetableLesson candidate,
+    required Iterable<TimetableLesson> otherLessons,
+    Iterable<TeacherAvailabilityBlock> teacherAvailabilityBlocks = const [],
   }) {
     final conflicts = <TimetableConflict>[];
-    final proposedStart = _minutes(proposed.startTime);
-    final proposedEnd = _minutes(proposed.endTime);
-    if (proposedStart == null ||
-        proposedEnd == null ||
-        proposedStart >= proposedEnd) {
-      return [
-        TimetableConflict(
-          type: TimetableConflictType.invalidTime,
-          message: 'The lesson has an invalid start or end time.',
-          conflictingLesson: proposed,
+    final others = otherLessons.where((l) => l.id != candidate.id).toList();
+
+    for (final occurrence in candidate.occurrences) {
+      conflicts.addAll(
+        _conflictsForOccurrence(
+          candidate,
+          occurrence,
+          others,
+          teacherAvailabilityBlocks,
         ),
-      ];
+      );
     }
 
-    for (final lesson in existing) {
-      if (!lesson.isActive || lesson.id == proposed.id) continue;
-      if (lesson.schoolId != proposed.schoolId ||
-          lesson.academicYearId != proposed.academicYearId ||
-          lesson.termId != proposed.termId ||
-          lesson.day != proposed.day) {
-        continue;
-      }
-      final start = _minutes(lesson.startTime);
-      final end = _minutes(lesson.endTime);
-      if (start == null || end == null || !_overlaps(proposedStart, proposedEnd, start, end)) {
-        continue;
-      }
+    return conflicts;
+  }
 
-      final sameTeachingGroup = lesson.classId == proposed.classId &&
-          lesson.streamId == proposed.streamId;
-      if (sameTeachingGroup) {
+  List<TimetableConflict> _conflictsForOccurrence(
+    TimetableLesson candidate,
+    TimetableLessonOccurrence occurrence,
+    List<TimetableLesson> others,
+    Iterable<TeacherAvailabilityBlock> teacherAvailabilityBlocks,
+  ) {
+    final conflicts = <TimetableConflict>[];
+
+    for (final block in teacherAvailabilityBlocks) {
+      if (block.teacherId == candidate.teacherId &&
+          block.day == occurrence.day &&
+          block.slotId == occurrence.slotId) {
         conflicts.add(
           TimetableConflict(
-            type: TimetableConflictType.classOrStream,
+            type: TimetableConflictType.teacherAvailability,
             message:
-                'This class/stream already has another lesson at ${proposed.startTime}-${proposed.endTime}.',
-            conflictingLesson: lesson,
+                '${candidate.teacherName.isNotEmpty ? candidate.teacherName : 'This teacher'} is not available on ${occurrence.day} at this time.',
+            conflictingLesson: candidate,
+            slotId: occurrence.slotId,
           ),
         );
       }
+    }
 
-      if (proposed.teacherId.isNotEmpty &&
-          lesson.teacherId == proposed.teacherId) {
-        conflicts.add(
-          TimetableConflict(
-            type: TimetableConflictType.teacher,
-            message:
-                'The selected teacher is already teaching another class at this time.',
-            conflictingLesson: lesson,
-          ),
-        );
-      }
+    for (final other in others) {
+      for (final otherOccurrence in other.occurrences) {
+        if (otherOccurrence.day != occurrence.day ||
+            otherOccurrence.slotId != occurrence.slotId) {
+          continue;
+        }
 
-      if (proposed.roomId.isNotEmpty && lesson.roomId == proposed.roomId) {
-        conflicts.add(
-          TimetableConflict(
-            type: TimetableConflictType.room,
-            message: 'The selected room is already in use at this time.',
-            conflictingLesson: lesson,
-          ),
-        );
+        final sameTeachingGroup =
+            other.classId == candidate.classId &&
+            other.streamId == candidate.streamId;
+        if (sameTeachingGroup) {
+          conflicts.add(
+            TimetableConflict(
+              type: TimetableConflictType.classOrStream,
+              message:
+                  '${candidate.classLabel} already has ${other.subjectName} at ${occurrence.day} this slot.',
+              conflictingLesson: other,
+              slotId: occurrence.slotId,
+            ),
+          );
+        }
+
+        if (candidate.teacherId.isNotEmpty &&
+            other.teacherId == candidate.teacherId) {
+          conflicts.add(
+            TimetableConflict(
+              type: TimetableConflictType.teacher,
+              message:
+                  '${other.teacherName.isNotEmpty ? other.teacherName : 'This teacher'} is already teaching ${other.classLabel} at this time.',
+              conflictingLesson: other,
+              slotId: occurrence.slotId,
+            ),
+          );
+        }
+
+        if (candidate.roomId != null &&
+            candidate.roomId!.isNotEmpty &&
+            other.roomId == candidate.roomId) {
+          conflicts.add(
+            TimetableConflict(
+              type: TimetableConflictType.room,
+              message:
+                  '${other.roomName ?? 'The selected room'} is already in use at this time.',
+              conflictingLesson: other,
+              slotId: occurrence.slotId,
+            ),
+          );
+        }
       }
     }
 
     return conflicts;
   }
 
-  bool _overlaps(int aStart, int aEnd, int bStart, int bEnd) =>
-      aStart < bEnd && bStart < aEnd;
-
-  int? _minutes(String raw) {
-    final parts = raw.trim().split(':');
-    if (parts.length != 2) return null;
-    final hour = int.tryParse(parts[0]);
-    final minute = int.tryParse(parts[1]);
-    if (hour == null ||
-        minute == null ||
-        hour < 0 ||
-        hour > 23 ||
-        minute < 0 ||
-        minute > 59) {
-      return null;
+  /// Full conflict scan across every lesson in [lessons] (e.g. a whole
+  /// timetable, or the whole school for a term), used before publishing.
+  /// Returns a map of lessonId -> conflicts found for that lesson. A lesson
+  /// with no conflicts is absent from the map.
+  Map<String, List<TimetableConflict>> scanAll({
+    required Iterable<TimetableLesson> lessons,
+    Iterable<TeacherAvailabilityBlock> teacherAvailabilityBlocks = const [],
+  }) {
+    final all = lessons.toList();
+    final result = <String, List<TimetableConflict>>{};
+    for (final lesson in all) {
+      final others = all.where((l) => l.id != lesson.id);
+      final conflicts = findConflicts(
+        candidate: lesson,
+        otherLessons: others,
+        teacherAvailabilityBlocks: teacherAvailabilityBlocks,
+      );
+      if (conflicts.isNotEmpty) {
+        result[lesson.id] = conflicts;
+      }
     }
-    return hour * 60 + minute;
+    return result;
   }
 }

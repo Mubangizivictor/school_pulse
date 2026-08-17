@@ -11,10 +11,16 @@ class _MockStructureRepository extends Mock implements StructureRepository {}
 
 const schoolId = 'school-1';
 
+const _levelId = 'level-1';
+
+EducationalLevel _level() =>
+    const EducationalLevel(id: _levelId, schoolId: schoolId, name: 'Primary');
+
 SchoolClass _class({int capacity = 50, String id = 'class-1'}) => SchoolClass(
   id: id,
   schoolId: schoolId,
   name: 'Primary 1',
+  levelId: _levelId,
   capacity: capacity,
 );
 
@@ -206,6 +212,7 @@ void main() {
       'rejects reducing class capacity below active stream allocation',
       build: () => StructureBloc(repository: repository),
       seed: () => StructureState(
+        levels: [_level()],
         classes: [_class(capacity: 50)],
         streams: [
           _stream(id: 'blue', capacity: 30, name: 'Blue'),
@@ -217,7 +224,7 @@ void main() {
         isA<StructureState>().having(
           (s) => s.errorMessage,
           'errorMessage',
-          contains('cannot be reduced below 50'),
+          contains('active streams already allocate 50 places'),
         ),
       ],
       verify: (_) {
@@ -229,6 +236,7 @@ void main() {
       'allows reducing class capacity once an active stream is deactivated',
       build: () => StructureBloc(repository: repository),
       seed: () => StructureState(
+        levels: [_level()],
         classes: [_class(capacity: 50)],
         streams: [
           _stream(id: 'blue', capacity: 30, name: 'Blue', isActive: false),

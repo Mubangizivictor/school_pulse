@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/entities/fee_category_entities.dart';
 import '../../domain/entities/timetable_config.dart';
@@ -25,45 +27,58 @@ class OperationsConfigScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final requested =
         GoRouterState.of(context).uri.queryParameters['section'] ?? 'timetable';
-    final section = const {
-      'timetable',
-      'attendance',
-      'communication',
-      'documents',
-      'custom',
-      'fees',
-    }.contains(requested)
+    final section =
+        const {
+          'timetable',
+          'attendance',
+          'communication',
+          'documents',
+          'custom',
+          'fees',
+        }.contains(requested)
         ? requested
         : 'timetable';
+    final schoolId =
+        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
 
     return Scaffold(
       appBar: AppBar(title: Text(_title(section))),
       body: BlocBuilder<StructureBloc, StructureState>(
         builder: (context, state) => switch (section) {
-          'attendance' => _AttendanceSection(state: state),
-          'communication' => _CommunicationSection(state: state),
-          'documents' => _DocumentTemplatesSection(state: state),
-          'custom' => _CustomFieldsSection(state: state),
-          'fees' => _FeeCategoriesSection(state: state),
-          _ => _TimetableSection(config: state.timetableConfig),
+          'attendance' => _AttendanceSection(state: state, schoolId: schoolId),
+          'communication' => _CommunicationSection(
+            state: state,
+            schoolId: schoolId,
+          ),
+          'documents' => _DocumentTemplatesSection(
+            state: state,
+            schoolId: schoolId,
+          ),
+          'custom' => _CustomFieldsSection(state: state, schoolId: schoolId),
+          'fees' => _FeeCategoriesSection(state: state, schoolId: schoolId),
+          _ => _TimetableSection(
+            config: state.timetableConfig,
+            schoolId: schoolId,
+          ),
         },
       ),
     );
   }
 
   String _title(String section) => switch (section) {
-        'attendance' => 'Attendance Configuration',
-        'communication' => 'Communication Foundation',
-        'documents' => 'Document Templates',
-        'custom' => 'Custom Fields',
-        'fees' => 'Finance Foundation',
-        _ => 'School Day & Periods',
-      };
+    'attendance' => 'Attendance Configuration',
+    'communication' => 'Communication Foundation',
+    'documents' => 'Document Templates',
+    'custom' => 'Custom Fields',
+    'fees' => 'Finance Foundation',
+    _ => 'School Day & Periods',
+  };
 }
 
 class _TimetableSection extends StatefulWidget {
   final TimetableConfig config;
-  const _TimetableSection({required this.config});
+  final String schoolId;
+  const _TimetableSection({required this.config, required this.schoolId});
 
   @override
   State<_TimetableSection> createState() => _TimetableSectionState();
@@ -104,8 +119,9 @@ class _TimetableSectionState extends State<_TimetableSection> {
 
   void _readConfig(TimetableConfig config) {
     _teachingDays = config.teachingDays.toSet();
-    _periodsPerDay =
-        TextEditingController(text: config.periodsPerDay.toString());
+    _periodsPerDay = TextEditingController(
+      text: config.periodsPerDay.toString(),
+    );
     _startTime = config.schoolStartTime;
     _endTime = config.schoolEndTime;
   }
@@ -118,7 +134,10 @@ class _TimetableSectionState extends State<_TimetableSection> {
 
   Future<String?> _pickTime(BuildContext context, String current) async {
     final parsed = _parseTime(current) ?? const TimeOfDay(hour: 8, minute: 0);
-    final selected = await showTimePicker(context: context, initialTime: parsed);
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: parsed,
+    );
     if (selected == null) return null;
     return '${selected.hour.toString().padLeft(2, '0')}:${selected.minute.toString().padLeft(2, '0')}';
   }
@@ -147,7 +166,9 @@ class _TimetableSectionState extends State<_TimetableSection> {
       schoolStartTime: _startTime,
       schoolEndTime: _endTime,
     );
-    context.read<StructureBloc>().add(UpdateTimetableConfigRequested(updated));
+    context.read<StructureBloc>().add(
+      UpdateTimetableConfigRequested(updated, widget.schoolId),
+    );
   }
 
   @override
@@ -159,9 +180,9 @@ class _TimetableSectionState extends State<_TimetableSection> {
         Text(
           'Define the school day before building class timetables. Every school controls its own days, times, lesson lengths, breaks, lunch, prep and custom slots.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                height: 1.4,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            height: 1.4,
+          ),
         ),
         const SizedBox(height: 16),
         AppCard(
@@ -226,7 +247,8 @@ class _TimetableSectionState extends State<_TimetableSection> {
                 controller: _periodsPerDay,
                 decoration: const InputDecoration(
                   labelText: 'Teaching periods per normal day',
-                  helperText: 'Each period can still use its own start/end time.',
+                  helperText:
+                      'Each period can still use its own start/end time.',
                 ),
                 keyboardType: TextInputType.number,
               ),
@@ -252,7 +274,9 @@ class _TimetableSectionState extends State<_TimetableSection> {
               final updated = widget.config.copyWith(
                 slots: [...widget.config.slots, slot],
               );
-              bloc.add(UpdateTimetableConfigRequested(updated));
+              bloc.add(
+                UpdateTimetableConfigRequested(updated, widget.schoolId),
+              );
             },
           ),
         ),
@@ -278,6 +302,7 @@ class _TimetableSectionState extends State<_TimetableSection> {
                 bloc.add(
                   UpdateTimetableConfigRequested(
                     widget.config.copyWith(slots: slots),
+                    widget.schoolId,
                   ),
                 );
               },
@@ -293,6 +318,7 @@ class _TimetableSectionState extends State<_TimetableSection> {
                 bloc.add(
                   UpdateTimetableConfigRequested(
                     widget.config.copyWith(slots: slots),
+                    widget.schoolId,
                   ),
                 );
               }
@@ -335,7 +361,8 @@ class _TimeButton extends StatelessWidget {
 
 class _AttendanceSection extends StatelessWidget {
   final StructureState state;
-  const _AttendanceSection({required this.state});
+  final String schoolId;
+  const _AttendanceSection({required this.state, required this.schoolId});
 
   @override
   Widget build(BuildContext context) {
@@ -354,6 +381,7 @@ class _AttendanceSection extends StatelessWidget {
           actionLabel: 'Add Type',
           onAction: () => showAttendanceTypeFormDialog(
             context,
+            schoolId: schoolId,
             onSave: (t) => bloc.add(SaveAttendanceTypeRequested(t)),
           ),
         ),
@@ -369,6 +397,7 @@ class _AttendanceSection extends StatelessWidget {
             isActive: type.isActive,
             onEdit: () => showAttendanceTypeFormDialog(
               context,
+              schoolId: schoolId,
               existing: type,
               onSave: (u) => bloc.add(SaveAttendanceTypeRequested(u)),
             ),
@@ -390,6 +419,7 @@ class _AttendanceSection extends StatelessWidget {
           actionLabel: 'Add Session',
           onAction: () => showAttendanceSessionFormDialog(
             context,
+            schoolId: schoolId,
             onSave: (s) => bloc.add(SaveAttendanceSessionRequested(s)),
           ),
         ),
@@ -405,6 +435,7 @@ class _AttendanceSection extends StatelessWidget {
             isActive: session.isActive,
             onEdit: () => showAttendanceSessionFormDialog(
               context,
+              schoolId: schoolId,
               existing: session,
               onSave: (u) => bloc.add(SaveAttendanceSessionRequested(u)),
             ),
@@ -427,7 +458,8 @@ class _AttendanceSection extends StatelessWidget {
 
 class _CommunicationSection extends StatelessWidget {
   final StructureState state;
-  const _CommunicationSection({required this.state});
+  final String schoolId;
+  const _CommunicationSection({required this.state, required this.schoolId});
 
   @override
   Widget build(BuildContext context) {
@@ -440,6 +472,7 @@ class _CommunicationSection extends StatelessWidget {
           actionLabel: 'Add',
           onAction: () => showAnnouncementCategoryFormDialog(
             context,
+            schoolId: schoolId,
             onSave: (c) => bloc.add(SaveAnnouncementCategoryRequested(c)),
           ),
         ),
@@ -453,6 +486,7 @@ class _CommunicationSection extends StatelessWidget {
             isActive: category.isActive,
             onEdit: () => showAnnouncementCategoryFormDialog(
               context,
+              schoolId: schoolId,
               existing: category,
               onSave: (u) => bloc.add(SaveAnnouncementCategoryRequested(u)),
             ),
@@ -474,6 +508,7 @@ class _CommunicationSection extends StatelessWidget {
           actionLabel: 'Add',
           onAction: () => showNotificationCategoryFormDialog(
             context,
+            schoolId: schoolId,
             onSave: (c) => bloc.add(SaveNotificationCategoryRequested(c)),
           ),
         ),
@@ -487,6 +522,7 @@ class _CommunicationSection extends StatelessWidget {
             isActive: category.isActive,
             onEdit: () => showNotificationCategoryFormDialog(
               context,
+              schoolId: schoolId,
               existing: category,
               onSave: (u) => bloc.add(SaveNotificationCategoryRequested(u)),
             ),
@@ -508,6 +544,7 @@ class _CommunicationSection extends StatelessWidget {
           actionLabel: 'Add',
           onAction: () => showMessageTemplateFormDialog(
             context,
+            schoolId: schoolId,
             onSave: (t) => bloc.add(SaveMessageTemplateRequested(t)),
           ),
         ),
@@ -522,6 +559,7 @@ class _CommunicationSection extends StatelessWidget {
             isActive: template.isActive,
             onEdit: () => showMessageTemplateFormDialog(
               context,
+              schoolId: schoolId,
               existing: template,
               onSave: (u) => bloc.add(SaveMessageTemplateRequested(u)),
             ),
@@ -544,7 +582,8 @@ class _CommunicationSection extends StatelessWidget {
 
 class _FeeCategoriesSection extends StatelessWidget {
   final StructureState state;
-  const _FeeCategoriesSection({required this.state});
+  final String schoolId;
+  const _FeeCategoriesSection({required this.state, required this.schoolId});
 
   @override
   Widget build(BuildContext context) {
@@ -570,6 +609,7 @@ class _FeeCategoriesSection extends StatelessWidget {
                   isActive: category.isActive,
                   onEdit: () => _showFeeCategoryForm(
                     context,
+                    schoolId: schoolId,
                     existing: category,
                     onSave: (u) => bloc.add(SaveFeeCategoryRequested(u)),
                   ),
@@ -589,6 +629,7 @@ class _FeeCategoriesSection extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showFeeCategoryForm(
           context,
+          schoolId: schoolId,
           onSave: (category) => bloc.add(SaveFeeCategoryRequested(category)),
         ),
         icon: const Icon(Icons.add),
@@ -600,7 +641,11 @@ class _FeeCategoriesSection extends StatelessWidget {
 
 class _DocumentTemplatesSection extends StatelessWidget {
   final StructureState state;
-  const _DocumentTemplatesSection({required this.state});
+  final String schoolId;
+  const _DocumentTemplatesSection({
+    required this.state,
+    required this.schoolId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -623,6 +668,7 @@ class _DocumentTemplatesSection extends StatelessWidget {
                   isActive: template.isActive,
                   onEdit: () => showDocumentTemplateFormDialog(
                     context,
+                    schoolId: schoolId,
                     existing: template,
                     onSave: (u) => bloc.add(SaveDocumentTemplateRequested(u)),
                   ),
@@ -642,6 +688,7 @@ class _DocumentTemplatesSection extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showDocumentTemplateFormDialog(
           context,
+          schoolId: schoolId,
           onSave: (t) => bloc.add(SaveDocumentTemplateRequested(t)),
         ),
         icon: const Icon(Icons.add),
@@ -653,7 +700,8 @@ class _DocumentTemplatesSection extends StatelessWidget {
 
 class _CustomFieldsSection extends StatelessWidget {
   final StructureState state;
-  const _CustomFieldsSection({required this.state});
+  final String schoolId;
+  const _CustomFieldsSection({required this.state, required this.schoolId});
 
   @override
   Widget build(BuildContext context) {
@@ -677,6 +725,7 @@ class _CustomFieldsSection extends StatelessWidget {
                   isActive: field.isActive,
                   onEdit: () => showCustomFieldFormDialog(
                     context,
+                    schoolId: schoolId,
                     existing: field,
                     onSave: (u) => bloc.add(SaveCustomFieldRequested(u)),
                   ),
@@ -696,6 +745,7 @@ class _CustomFieldsSection extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showCustomFieldFormDialog(
           context,
+          schoolId: schoolId,
           onSave: (f) => bloc.add(SaveCustomFieldRequested(f)),
         ),
         icon: const Icon(Icons.add),
@@ -707,6 +757,7 @@ class _CustomFieldsSection extends StatelessWidget {
 
 Future<void> _showFeeCategoryForm(
   BuildContext context, {
+  required String schoolId,
   FeeCategory? existing,
   required ValueChanged<FeeCategory> onSave,
 }) async {
@@ -720,7 +771,9 @@ Future<void> _showFeeCategoryForm(
     context: context,
     builder: (dialogContext) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
-        title: Text(existing == null ? 'Add Fee Category' : 'Edit Fee Category'),
+        title: Text(
+          existing == null ? 'Add Fee Category' : 'Edit Fee Category',
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -767,6 +820,7 @@ Future<void> _showFeeCategoryForm(
               onSave(
                 FeeCategory(
                   id: existing?.id ?? const Uuid().v4(),
+                  schoolId: existing?.schoolId ?? schoolId,
                   name: name.text.trim(),
                   code: code.text.trim(),
                   description: description.text.trim(),
@@ -789,16 +843,16 @@ Future<void> _showFeeCategoryForm(
 }
 
 IconData _slotIcon(String type) => switch (type) {
-      'break' => Icons.free_breakfast_outlined,
-      'lunch' => Icons.restaurant_outlined,
-      'assembly' => Icons.groups_outlined,
-      'prep' || 'study' => Icons.menu_book_outlined,
-      'games' => Icons.sports_soccer_outlined,
-      'club' => Icons.groups_2_outlined,
-      'worship' => Icons.church_outlined,
-      'free' => Icons.hourglass_empty_outlined,
-      _ => Icons.schedule_outlined,
-    };
+  'break' => Icons.free_breakfast_outlined,
+  'lunch' => Icons.restaurant_outlined,
+  'assembly' => Icons.groups_outlined,
+  'prep' || 'study' => Icons.menu_book_outlined,
+  'games' => Icons.sports_soccer_outlined,
+  'club' => Icons.groups_2_outlined,
+  'worship' => Icons.church_outlined,
+  'free' => Icons.hourglass_empty_outlined,
+  _ => Icons.schedule_outlined,
+};
 
 Color _safeHex(String raw, Color fallback) {
   if (raw.trim().isEmpty) return fallback;

@@ -7,7 +7,6 @@ import '../../data/repositories/curriculum_assignment_repository_impl.dart';
 import '../../data/repositories/structure_people_readiness_repository_impl.dart';
 import '../../data/repositories/teaching_assignment_repository_impl.dart';
 import '../../domain/entities/curriculum_assignment.dart';
-import '../../domain/entities/structure_entities.dart';
 import '../../domain/entities/teaching_assignment.dart';
 import '../../domain/repositories/curriculum_assignment_repository.dart';
 import '../../domain/repositories/structure_people_readiness_repository.dart';
@@ -198,7 +197,8 @@ class _AcademicStaffAssignmentScreenState
     String academicYearId, {
     TeachingAssignment? existing,
   }) async {
-    var responsibility = existing?.responsibilityType ??
+    var responsibility =
+        existing?.responsibilityType ??
         TeachingResponsibilityType.subjectTeacher;
     var staffId = existing?.staffId ?? staff.first.id;
     var departmentId = existing?.departmentId ?? '';
@@ -237,8 +237,7 @@ class _AcademicStaffAssignmentScreenState
               .toSet();
           final subjects = structure.subjects
               .where(
-                (item) =>
-                    item.isActive && allowedSubjectIds.contains(item.id),
+                (item) => item.isActive && allowedSubjectIds.contains(item.id),
               )
               .toList(growable: false);
           if (subjectId.isNotEmpty &&
@@ -263,8 +262,8 @@ class _AcademicStaffAssignmentScreenState
                         ? 'Assign Academic Responsibility'
                         : 'Edit Academic Responsibility',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -316,8 +315,7 @@ class _AcademicStaffAssignmentScreenState
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       key: ValueKey('department-$departmentId'),
-                      initialValue:
-                          departmentId.isEmpty ? null : departmentId,
+                      initialValue: departmentId.isEmpty ? null : departmentId,
                       decoration: const InputDecoration(
                         labelText: 'Department *',
                       ),
@@ -380,9 +378,8 @@ class _AcademicStaffAssignmentScreenState
                             ),
                           ),
                         ],
-                        onChanged: (value) => setSheetState(
-                          () => streamId = value ?? '',
-                        ),
+                        onChanged: (value) =>
+                            setSheetState(() => streamId = value ?? ''),
                       ),
                     ],
                     if (responsibility ==
@@ -391,8 +388,9 @@ class _AcademicStaffAssignmentScreenState
                       DropdownButtonFormField<String>(
                         key: ValueKey('subject-$classId-$streamId-$subjectId'),
                         initialValue: subjectId.isEmpty ? null : subjectId,
-                        decoration:
-                            const InputDecoration(labelText: 'Subject *'),
+                        decoration: const InputDecoration(
+                          labelText: 'Subject *',
+                        ),
                         items: subjects
                             .map(
                               (item) => DropdownMenuItem(
@@ -428,7 +426,8 @@ class _AcademicStaffAssignmentScreenState
                               classId: classId,
                               streamId: streamId,
                               subjectId: subjectId,
-                              isPrimary: responsibility ==
+                              isPrimary:
+                                  responsibility ==
                                   TeachingResponsibilityType.classTeacher,
                             ),
                           );
@@ -493,9 +492,9 @@ class _AssignmentList extends StatelessWidget {
             child: Text(
               'Assign real staff only after the academic structure exists. A person can be a Subject Teacher for many classes while also being a Class Teacher, HOD, Patron, Bursar or another system role.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    height: 1.4,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                height: 1.4,
+              ),
             ),
           ),
           Expanded(
@@ -516,27 +515,28 @@ class _AssignmentList extends StatelessWidget {
                           title: Text(
                             staffById[assignment.staffId]?.name ??
                                 'Missing staff account',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
-                          subtitle: Text([
-                            _responsibilityLabel(
-                              assignment.responsibilityType,
-                            ),
-                            if (assignment.departmentId.isNotEmpty)
-                              departmentsById[assignment.departmentId]?.name ??
-                                  'Missing department',
-                            if (assignment.classId.isNotEmpty)
-                              classesById[assignment.classId]?.name ??
-                                  'Missing class',
-                            if (assignment.streamId.isNotEmpty)
-                              streamsById[assignment.streamId]?.name ??
-                                  'Missing stream',
-                            if (assignment.subjectId.isNotEmpty)
-                              subjectsById[assignment.subjectId]?.name ??
-                                  'Missing subject',
-                          ].join(' • ')),
+                          subtitle: Text(
+                            [
+                              _responsibilityLabel(
+                                assignment.responsibilityType,
+                              ),
+                              if (assignment.departmentId.isNotEmpty)
+                                departmentsById[assignment.departmentId]
+                                        ?.name ??
+                                    'Missing department',
+                              if (assignment.classId.isNotEmpty)
+                                classesById[assignment.classId]?.name ??
+                                    'Missing class',
+                              if (assignment.streamId.isNotEmpty)
+                                streamsById[assignment.streamId]?.name ??
+                                    'Missing stream',
+                              if (assignment.subjectId.isNotEmpty)
+                                subjectsById[assignment.subjectId]?.name ??
+                                    'Missing subject',
+                            ].join(' • '),
+                          ),
                           trailing: PopupMenuButton<String>(
                             onSelected: (action) {
                               if (action == 'edit') {
@@ -546,10 +546,7 @@ class _AssignmentList extends StatelessWidget {
                               }
                             },
                             itemBuilder: (_) => const [
-                              PopupMenuItem(
-                                value: 'edit',
-                                child: Text('Edit'),
-                              ),
+                              PopupMenuItem(value: 'edit', child: Text('Edit')),
                               PopupMenuItem(
                                 value: 'end',
                                 child: Text('End assignment'),
@@ -593,9 +590,9 @@ class _Message extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
               Text(body, textAlign: TextAlign.center),

@@ -12,6 +12,8 @@ class _MockStructureRepository extends Mock implements StructureRepository {}
 const _config = TimetableConfig(
   teachingDays: ['Monday', 'Tuesday'],
   periodsPerDay: 8,
+  schoolStartTime: '08:00',
+  schoolEndTime: '16:00',
   slots: [
     TimetableSlot(name: 'Period 1', startTime: '08:00', endTime: '08:40'),
   ],

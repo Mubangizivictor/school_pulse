@@ -13,23 +13,26 @@ void main() {
   const engine = StructureSetupEngine();
 
   group('StructureSetupEngine realistic dummy school', () {
-    test('primary school can complete without departments, streams, rooms, houses, boarding or transport', () {
-      final resolution = engine.resolve(_healthyContext());
+    test(
+      'primary school can complete without departments, streams, rooms, houses, boarding or transport',
+      () {
+        final resolution = engine.resolve(_healthyContext());
 
-      expect(resolution.isReady, isTrue);
-      expect(
-        resolution.steps
-            .firstWhere((step) => step.id == StructureSetupStepId.departments)
-            .state,
-        StructureStepState.notApplicable,
-      );
-      expect(
-        resolution.steps
-            .firstWhere((step) => step.id == StructureSetupStepId.streams)
-            .state,
-        StructureStepState.notApplicable,
-      );
-    });
+        expect(resolution.isReady, isTrue);
+        expect(
+          resolution.steps
+              .firstWhere((step) => step.id == StructureSetupStepId.departments)
+              .state,
+          StructureStepState.notApplicable,
+        );
+        expect(
+          resolution.steps
+              .firstWhere((step) => step.id == StructureSetupStepId.streams)
+              .state,
+          StructureStepState.notApplicable,
+        );
+      },
+    );
 
     test('secondary stream capacity cannot exceed parent class capacity', () {
       final base = _healthyContext(
@@ -49,6 +52,7 @@ void main() {
           classes: const [
             SchoolClass(
               id: 's1',
+              schoolId: 'school-a',
               name: 'Senior 1',
               code: 'S1',
               levelId: 'primary',
@@ -56,9 +60,27 @@ void main() {
             ),
           ],
           streams: const [
-            ClassStream(id: 'blue', name: 'Blue', classId: 's1', capacity: 50),
-            ClassStream(id: 'red', name: 'Red', classId: 's1', capacity: 50),
-            ClassStream(id: 'green', name: 'Green', classId: 's1', capacity: 20),
+            ClassStream(
+              id: 'blue',
+              schoolId: 'school-a',
+              name: 'Blue',
+              classId: 's1',
+              capacity: 50,
+            ),
+            ClassStream(
+              id: 'red',
+              schoolId: 'school-a',
+              name: 'Red',
+              classId: 's1',
+              capacity: 50,
+            ),
+            ClassStream(
+              id: 'green',
+              schoolId: 'school-a',
+              name: 'Green',
+              classId: 's1',
+              capacity: 20,
+            ),
           ],
         ),
       );
@@ -92,6 +114,7 @@ void main() {
           classes: const [
             SchoolClass(
               id: 'p5',
+              schoolId: 'school-a',
               name: 'Primary 5',
               code: 'P5',
               levelId: 'primary',
@@ -99,14 +122,28 @@ void main() {
             ),
           ],
           streams: const [
-            ClassStream(id: 'blue', name: 'Blue', classId: 'p5', capacity: 40),
-            ClassStream(id: 'red', name: 'Red', classId: 'p5', capacity: 40),
+            ClassStream(
+              id: 'blue',
+              schoolId: 'school-a',
+              name: 'Blue',
+              classId: 'p5',
+              capacity: 40,
+            ),
+            ClassStream(
+              id: 'red',
+              schoolId: 'school-a',
+              name: 'Red',
+              classId: 'p5',
+              capacity: 40,
+            ),
           ],
         ),
       );
 
       expect(
-        resolution.issues.where((issue) => issue.stepId == StructureSetupStepId.streams),
+        resolution.issues.where(
+          (issue) => issue.stepId == StructureSetupStepId.streams,
+        ),
         isEmpty,
       );
     });
@@ -119,6 +156,7 @@ void main() {
           academicTerms: [
             AcademicTerm(
               id: 'term1',
+              schoolId: 'school-a',
               academicYearId: '2026',
               name: 'Term 1',
               order: 1,
@@ -128,6 +166,7 @@ void main() {
             ),
             AcademicTerm(
               id: 'term2',
+              schoolId: 'school-a',
               academicYearId: '2026',
               name: 'Term 2',
               order: 2,
@@ -141,7 +180,9 @@ void main() {
       expect(resolution.isReady, isFalse);
       expect(
         resolution.issues.any(
-          (issue) => issue.stepId == StructureSetupStepId.academicTerms && issue.message.contains('overlaps'),
+          (issue) =>
+              issue.stepId == StructureSetupStepId.academicTerms &&
+              issue.message.contains('overlaps'),
         ),
         isTrue,
       );
@@ -155,6 +196,7 @@ void main() {
           subjects: const [
             Subject(
               id: 'math',
+              schoolId: 'school-a',
               name: 'Mathematics',
               code: 'MATH',
               departmentId: 'missing-department',
@@ -168,18 +210,23 @@ void main() {
       expect(resolution.isReady, isFalse);
       expect(
         resolution.issues.any(
-          (issue) => issue.stepId == StructureSetupStepId.subjects && issue.message.contains('missing or inactive department'),
+          (issue) =>
+              issue.stepId == StructureSetupStepId.subjects &&
+              issue.message.contains('missing or inactive department'),
         ),
         isTrue,
       );
     });
 
-    test('dependency graph is acyclic and prerequisites only point backward', () {
-      final resolution = engine.resolve(_healthyContext());
-      const validator = StructureDependencyGraphValidator();
+    test(
+      'dependency graph is acyclic and prerequisites only point backward',
+      () {
+        final resolution = engine.resolve(_healthyContext());
+        const validator = StructureDependencyGraphValidator();
 
-      expect(validator.validate(resolution.steps), isEmpty);
-    });
+        expect(validator.validate(resolution.steps), isEmpty);
+      },
+    );
   });
 }
 
@@ -203,7 +250,8 @@ StructureSetupContext _healthyContext({
       dateFormat: 'dd/MM/yyyy',
       timeFormat: '24h',
     ),
-    preferences: preferences ??
+    preferences:
+        preferences ??
         const StructureSetupPreferences(
           departments: StructureUseChoice.disabled,
           streams: StructureUseChoice.disabled,
@@ -222,6 +270,7 @@ StructureSetupContext _healthyContext({
     academicYears: [
       AcademicYear(
         id: '2026',
+        schoolId: 'school-a',
         name: '2026',
         startDate: DateTime(2026, 1, 20),
         endDate: DateTime(2026, 12, 10),
@@ -231,6 +280,7 @@ StructureSetupContext _healthyContext({
     academicTerms: [
       AcademicTerm(
         id: 'term1',
+        schoolId: 'school-a',
         academicYearId: '2026',
         name: 'Term 1',
         order: 1,
@@ -240,6 +290,7 @@ StructureSetupContext _healthyContext({
       ),
       AcademicTerm(
         id: 'term2',
+        schoolId: 'school-a',
         academicYearId: '2026',
         name: 'Term 2',
         order: 2,
@@ -248,6 +299,7 @@ StructureSetupContext _healthyContext({
       ),
       AcademicTerm(
         id: 'term3',
+        schoolId: 'school-a',
         academicYearId: '2026',
         name: 'Term 3',
         order: 3,
@@ -256,12 +308,19 @@ StructureSetupContext _healthyContext({
       ),
     ],
     levels: const [
-      EducationalLevel(id: 'primary', name: 'Primary', code: 'PRI', order: 1),
+      EducationalLevel(
+        id: 'primary',
+        schoolId: 'school-a',
+        name: 'Primary',
+        code: 'PRI',
+        order: 1,
+      ),
     ],
     departments: const [],
     classes: const [
       SchoolClass(
         id: 'p5',
+        schoolId: 'school-a',
         name: 'Primary 5',
         code: 'P5',
         levelId: 'primary',
@@ -272,6 +331,7 @@ StructureSetupContext _healthyContext({
     subjects: const [
       Subject(
         id: 'math',
+        schoolId: 'school-a',
         name: 'Mathematics',
         code: 'MATH',
         assignedLevelIds: ['primary'],
@@ -279,11 +339,17 @@ StructureSetupContext _healthyContext({
       ),
     ],
     assessmentTypes: const [
-      AssessmentTypeDef(id: 'exam', name: 'End of Term Exam', weightPercentage: 100),
+      AssessmentTypeDef(
+        id: 'exam',
+        schoolId: 'school-a',
+        name: 'End of Term Exam',
+        weightPercentage: 100,
+      ),
     ],
     gradingSystems: const [
       GradingSystemDef(
         id: 'primary-percentage',
+        schoolId: 'school-a',
         name: 'Primary Internal Percentage Scale',
         type: 'percentage',
         isDefault: true,
@@ -292,6 +358,7 @@ StructureSetupContext _healthyContext({
     gradeBands: const [
       GradeBand(
         id: 'a',
+        schoolId: 'school-a',
         gradingSystemId: 'primary-percentage',
         grade: 'A',
         minScore: 80,
@@ -300,6 +367,7 @@ StructureSetupContext _healthyContext({
       ),
       GradeBand(
         id: 'b',
+        schoolId: 'school-a',
         gradingSystemId: 'primary-percentage',
         grade: 'B',
         minScore: 60,
@@ -308,6 +376,7 @@ StructureSetupContext _healthyContext({
       ),
       GradeBand(
         id: 'c',
+        schoolId: 'school-a',
         gradingSystemId: 'primary-percentage',
         grade: 'C',
         minScore: 0,
@@ -323,16 +392,18 @@ StructureSetupContext _healthyContext({
       schoolEndTime: '12:00',
       slots: [
         TimetableSlot(name: 'Period 1', startTime: '08:00', endTime: '08:45'),
-        TimetableSlot(name: 'Break', startTime: '08:45', endTime: '09:05', type: 'break'),
+        TimetableSlot(
+          name: 'Break',
+          startTime: '08:45',
+          endTime: '09:05',
+          type: 'break',
+        ),
         TimetableSlot(name: 'Period 2', startTime: '09:05', endTime: '09:50'),
         TimetableSlot(name: 'Period 3', startTime: '09:50', endTime: '10:35'),
       ],
     ),
     designations: const [
-      StaffDesignation(id: 'teacher', name: 'Teacher'),
-    ],
-    staffRoles: const [
-      StaffRole(id: 'subject-teacher', name: 'Subject Teacher', designationId: 'teacher'),
+      StaffDesignation(id: 'teacher', schoolId: 'school-a', name: 'Teacher'),
     ],
     houses: const [],
     clubs: const [],
@@ -342,7 +413,7 @@ StructureSetupContext _healthyContext({
     transportStops: const [],
     transportVehicles: const [],
     attendanceTypes: const [
-      AttendanceTypeDef(id: 'present', name: 'Present'),
+      AttendanceTypeDef(id: 'present', schoolId: 'school-a', name: 'Present'),
     ],
     feeCategories: const [],
     announcementCategories: const [],
@@ -375,7 +446,6 @@ StructureSetupContext _copyContext(
     facilities: source.facilities,
     timetableConfig: source.timetableConfig,
     designations: source.designations,
-    staffRoles: source.staffRoles,
     houses: source.houses,
     clubs: source.clubs,
     hostels: source.hostels,

@@ -13,6 +13,8 @@ import 'package:school_pulse/features/structure/domain/entities/structure_setup_
 import 'package:school_pulse/features/structure/domain/entities/timetable_config.dart';
 import 'package:school_pulse/features/structure/domain/entities/transport_structure_entities.dart';
 
+const _schoolId = 'sp-structure-e2e-school';
+
 void main() {
   test(
     'realistic combined-school Structure persists through production serializers',
@@ -21,7 +23,7 @@ void main() {
       final remote = StructureRemoteDataSourceImpl(firestore: firestore);
       final setup = StructureSetupRepositoryImpl(
         firestore: firestore,
-        schoolIdOverride: 'sp-structure-e2e-school',
+        schoolIdOverride: _schoolId,
       );
 
       await remote.updateInstitutionProfile(
@@ -39,6 +41,7 @@ void main() {
           dateFormat: 'dd/MM/yyyy',
           timeFormat: '24h',
         ),
+        _schoolId,
       );
       await setup.savePreferences(
         const StructureSetupPreferences(
@@ -58,11 +61,13 @@ void main() {
           transport: true,
           communication: true,
         ),
+        _schoolId,
       );
 
       await remote.saveAcademicYear(
         AcademicYear(
           id: '2026',
+          schoolId: _schoolId,
           name: '2026',
           startDate: DateTime(2026, 1, 20),
           endDate: DateTime(2026, 12, 10),
@@ -72,6 +77,7 @@ void main() {
       for (final term in [
         AcademicTerm(
           id: 't1',
+          schoolId: _schoolId,
           academicYearId: '2026',
           name: 'Term 1',
           order: 1,
@@ -81,6 +87,7 @@ void main() {
         ),
         AcademicTerm(
           id: 't2',
+          schoolId: _schoolId,
           academicYearId: '2026',
           name: 'Term 2',
           order: 2,
@@ -89,6 +96,7 @@ void main() {
         ),
         AcademicTerm(
           id: 't3',
+          schoolId: _schoolId,
           academicYearId: '2026',
           name: 'Term 3',
           order: 3,
@@ -100,21 +108,42 @@ void main() {
       }
 
       await remote.saveLevel(
-        const EducationalLevel(id: 'primary', name: 'Primary', code: 'PRI'),
+        const EducationalLevel(
+          id: 'primary',
+          schoolId: _schoolId,
+          name: 'Primary',
+          code: 'PRI',
+        ),
       );
       await remote.saveLevel(
-        const EducationalLevel(id: 'secondary', name: 'Secondary', code: 'SEC'),
+        const EducationalLevel(
+          id: 'secondary',
+          schoolId: _schoolId,
+          name: 'Secondary',
+          code: 'SEC',
+        ),
       );
       await remote.saveDepartment(
-        const Department(id: 'science', name: 'Sciences', code: 'SCI'),
+        const Department(
+          id: 'science',
+          schoolId: _schoolId,
+          name: 'Sciences',
+          code: 'SCI',
+        ),
       );
       await remote.saveDepartment(
-        const Department(id: 'languages', name: 'Languages', code: 'LAN'),
+        const Department(
+          id: 'languages',
+          schoolId: _schoolId,
+          name: 'Languages',
+          code: 'LAN',
+        ),
       );
 
       await remote.saveClass(
         const SchoolClass(
           id: 'p5',
+          schoolId: _schoolId,
           name: 'Primary 5',
           code: 'P5',
           levelId: 'primary',
@@ -124,6 +153,7 @@ void main() {
       await remote.saveClass(
         const SchoolClass(
           id: 's1',
+          schoolId: _schoolId,
           name: 'Senior 1',
           code: 'S1',
           levelId: 'secondary',
@@ -133,6 +163,7 @@ void main() {
       for (final stream in const [
         ClassStream(
           id: 'p5-blue',
+          schoolId: _schoolId,
           name: 'Blue',
           code: 'BLU',
           classId: 'p5',
@@ -140,6 +171,7 @@ void main() {
         ),
         ClassStream(
           id: 'p5-red',
+          schoolId: _schoolId,
           name: 'Red',
           code: 'RED',
           classId: 'p5',
@@ -147,6 +179,7 @@ void main() {
         ),
         ClassStream(
           id: 's1-blue',
+          schoolId: _schoolId,
           name: 'Blue',
           code: 'BLU',
           classId: 's1',
@@ -154,6 +187,7 @@ void main() {
         ),
         ClassStream(
           id: 's1-red',
+          schoolId: _schoolId,
           name: 'Red',
           code: 'RED',
           classId: 's1',
@@ -166,6 +200,7 @@ void main() {
       for (final subject in const [
         Subject(
           id: 'math',
+          schoolId: _schoolId,
           name: 'Mathematics',
           code: 'MATH',
           departmentId: 'science',
@@ -174,6 +209,7 @@ void main() {
         ),
         Subject(
           id: 'english',
+          schoolId: _schoolId,
           name: 'English Language',
           code: 'ENG',
           departmentId: 'languages',
@@ -182,6 +218,7 @@ void main() {
         ),
         Subject(
           id: 'physics',
+          schoolId: _schoolId,
           name: 'Physics',
           code: 'PHY',
           departmentId: 'science',
@@ -196,6 +233,7 @@ void main() {
       await remote.saveAssessmentType(
         const AssessmentTypeDef(
           id: 'end-term',
+          schoolId: _schoolId,
           name: 'End of Term Assessment',
           weightPercentage: 100,
         ),
@@ -203,6 +241,7 @@ void main() {
       await remote.saveGradingSystem(
         const GradingSystemDef(
           id: 'percentage',
+          schoolId: _schoolId,
           name: 'Internal Percentage Scale',
           type: 'percentage',
           isDefault: true,
@@ -211,6 +250,7 @@ void main() {
       for (final band in const [
         GradeBand(
           id: 'a',
+          schoolId: _schoolId,
           gradingSystemId: 'percentage',
           grade: 'A',
           minScore: 80,
@@ -219,6 +259,7 @@ void main() {
         ),
         GradeBand(
           id: 'b',
+          schoolId: _schoolId,
           gradingSystemId: 'percentage',
           grade: 'B',
           minScore: 60,
@@ -227,6 +268,7 @@ void main() {
         ),
         GradeBand(
           id: 'c',
+          schoolId: _schoolId,
           gradingSystemId: 'percentage',
           grade: 'C',
           minScore: 0,
@@ -240,6 +282,7 @@ void main() {
       await remote.saveFacility(
         const Facility(
           id: 'science-lab',
+          schoolId: _schoolId,
           name: 'Science Laboratory',
           facilityType: 'laboratory',
           location: 'Science Block',
@@ -248,7 +291,18 @@ void main() {
       );
       await remote.saveFacility(
         const Facility(
+          id: 'computer-lab',
+          schoolId: _schoolId,
+          name: 'Computer Laboratory',
+          facilityType: 'computer_lab',
+          location: 'ICT Block',
+          capacity: 35,
+        ),
+      );
+      await remote.saveFacility(
+        const Facility(
           id: 'library',
+          schoolId: _schoolId,
           name: 'Library',
           facilityType: 'library',
           location: 'Main Block',
@@ -297,39 +351,56 @@ void main() {
             ),
           ],
         ),
+        _schoolId,
       );
 
-      await remote.saveDesignation(
-        const StaffDesignation(id: 'teacher', name: 'Teacher'),
-      );
-      for (final role in const [
-        StaffRole(
+      // Staff designations are the single role-definition concept - one
+      // staff account can hold several at once (e.g. Teacher + Class
+      // Teacher, Teacher + Head of Department) without a separate role
+      // layer or a separate login.
+      for (final designation in const [
+        StaffDesignation(id: 'teacher', schoolId: _schoolId, name: 'Teacher'),
+        StaffDesignation(
           id: 'subject-teacher',
+          schoolId: _schoolId,
           name: 'Subject Teacher',
-          designationId: 'teacher',
+          allowConcurrentAssignments: true,
         ),
-        StaffRole(
+        StaffDesignation(
           id: 'class-teacher',
+          schoolId: _schoolId,
           name: 'Class Teacher',
-          designationId: 'teacher',
+          allowConcurrentAssignments: true,
         ),
-        StaffRole(
+        StaffDesignation(
           id: 'hod',
+          schoolId: _schoolId,
           name: 'Head of Department',
-          designationId: 'teacher',
+          allowConcurrentAssignments: true,
         ),
       ]) {
-        await remote.saveStaffRole(role);
+        await remote.saveDesignation(designation);
       }
       await remote.saveHouse(
-        const House(id: 'blue', name: 'Blue House', colorHex: '#2563EB'),
+        const House(
+          id: 'blue',
+          schoolId: _schoolId,
+          name: 'Blue House',
+          colorHex: '#2563EB',
+        ),
       );
       await remote.saveClub(
-        const Club(id: 'debate', name: 'Debate Club', category: 'Academic'),
+        const Club(
+          id: 'debate',
+          schoolId: _schoolId,
+          name: 'Debate Club',
+          category: 'Academic',
+        ),
       );
       await remote.saveHostel(
         const Hostel(
           id: 'boys',
+          schoolId: _schoolId,
           name: 'Boys Boarding',
           gender: 'male',
           capacity: 120,
@@ -338,6 +409,7 @@ void main() {
       await remote.saveHostelRoom(
         const HostelRoom(
           id: 'boys-a1',
+          schoolId: _schoolId,
           hostelId: 'boys',
           blockName: 'A',
           roomNumber: 'A1',
@@ -345,11 +417,17 @@ void main() {
         ),
       );
       await remote.saveTransportRoute(
-        const TransportRoute(id: 'route-a', name: 'Test Route A', code: 'RTA'),
+        const TransportRoute(
+          id: 'route-a',
+          schoolId: _schoolId,
+          name: 'Test Route A',
+          code: 'RTA',
+        ),
       );
       await remote.saveTransportStop(
         const TransportStop(
           id: 'stop-a',
+          schoolId: _schoolId,
           routeId: 'route-a',
           name: 'Town Stop',
           order: 1,
@@ -359,6 +437,7 @@ void main() {
       await remote.saveTransportVehicle(
         const TransportVehicle(
           id: 'bus-a',
+          schoolId: _schoolId,
           busNumber: 'BUS-01',
           plateNumber: 'TEST-001',
           capacity: 60,
@@ -366,33 +445,61 @@ void main() {
         ),
       );
       await remote.saveAttendanceType(
-        const AttendanceTypeDef(id: 'present', name: 'Present'),
+        const AttendanceTypeDef(
+          id: 'present',
+          schoolId: _schoolId,
+          name: 'Present',
+        ),
       );
 
       expect(
         (await setup.watchPreferences().first).streams,
         StructureUseChoice.enabled,
       );
-      expect((await remote.watchAcademicTerms().first), hasLength(3));
-      expect((await remote.watchLevels().first), hasLength(2));
-      expect((await remote.watchDepartments().first), hasLength(2));
-      expect((await remote.watchClasses().first), hasLength(2));
-      expect((await remote.watchStreams().first), hasLength(4));
-      expect((await remote.watchSubjects().first), hasLength(3));
-      expect((await remote.watchGradeBands().first), hasLength(3));
-      expect((await remote.watchFacilities().first), hasLength(2));
-      expect((await remote.watchStaffRoles().first), hasLength(3));
-      expect((await remote.watchHouses().first), hasLength(1));
-      expect((await remote.watchClubs().first), hasLength(1));
-      expect((await remote.watchHostels().first), hasLength(1));
-      expect((await remote.watchTransportVehicles().first), hasLength(1));
-      expect((await remote.watchAttendanceTypes().first), hasLength(1));
+      expect((await remote.watchAcademicTerms(_schoolId).first), hasLength(3));
+      expect((await remote.watchLevels(_schoolId).first), hasLength(2));
+      expect((await remote.watchDepartments(_schoolId).first), hasLength(2));
+      expect((await remote.watchClasses(_schoolId).first), hasLength(2));
+      expect((await remote.watchStreams(_schoolId).first), hasLength(4));
+      expect((await remote.watchSubjects(_schoolId).first), hasLength(3));
+      expect((await remote.watchGradeBands(_schoolId).first), hasLength(3));
+      expect((await remote.watchFacilities(_schoolId).first), hasLength(3));
+      expect((await remote.watchDesignations(_schoolId).first), hasLength(4));
+      expect((await remote.watchHouses(_schoolId).first), hasLength(1));
+      expect((await remote.watchClubs(_schoolId).first), hasLength(1));
+      expect((await remote.watchHostels(_schoolId).first), hasLength(1));
+      expect(
+        (await remote.watchTransportVehicles(_schoolId).first),
+        hasLength(1),
+      );
+      expect(
+        (await remote.watchAttendanceTypes(_schoolId).first),
+        hasLength(1),
+      );
+
+      // Class/stream capacity integrity: sum of active stream capacities
+      // must never exceed the parent class capacity.
+      final streams = await remote.watchStreams(_schoolId).first;
+      final classes = await remote.watchClasses(_schoolId).first;
+      for (final schoolClass in classes) {
+        final allocated = streams
+            .where(
+              (stream) => stream.classId == schoolClass.id && stream.isActive,
+            )
+            .fold<int>(0, (sum, stream) => sum + stream.capacity);
+        expect(
+          allocated <= schoolClass.capacity,
+          isTrue,
+          reason:
+              '${schoolClass.name}: allocated $allocated must not exceed capacity ${schoolClass.capacity}',
+        );
+      }
 
       final prefsDoc = await firestore
           .collection('structure_setup_preferences')
-          .doc('sp-structure-e2e-school')
+          .doc(_schoolId)
           .get();
-      expect(prefsDoc.data()?['schoolId'], 'sp-structure-e2e-school');
+      expect(prefsDoc.data()?['schoolId'], _schoolId);
     },
   );
 }

@@ -2,36 +2,39 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/structure/domain/entities/assessment_grading_entities.dart';
 import 'package:school_pulse/features/structure/domain/entities/attendance_config_entities.dart';
-import 'package:school_pulse/features/structure/domain/entities/class_timetable_entities.dart';
 import 'package:school_pulse/features/structure/domain/entities/curriculum_assignment.dart';
 import 'package:school_pulse/features/structure/domain/entities/feature_toggles.dart';
 import 'package:school_pulse/features/structure/domain/entities/institution_profile.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_setup_preferences.dart';
 import 'package:school_pulse/features/structure/domain/entities/teaching_assignment.dart';
+import 'package:school_pulse/features/structure/domain/entities/timetable.dart';
 import 'package:school_pulse/features/structure/domain/entities/timetable_config.dart';
 import 'package:school_pulse/features/structure/domain/services/structure_setup_engine.dart';
 
 void main() {
   const engine = StructureSetupEngine();
 
-  test('runtime-ready school passes curriculum, staff, assignment and timetable chain', () {
-    final resolution = engine.resolve(_runtimeContext());
+  test(
+    'runtime-ready school passes curriculum, staff, assignment and timetable chain',
+    () {
+      final resolution = engine.resolve(_runtimeContext());
 
-    expect(resolution.isReady, isTrue);
-    for (final id in const [
-      StructureSetupStepId.curriculum,
-      StructureSetupStepId.staffAccounts,
-      StructureSetupStepId.academicAssignments,
-      StructureSetupStepId.classTimetables,
-    ]) {
-      expect(
-        resolution.steps.firstWhere((step) => step.id == id).isSatisfied,
-        isTrue,
-        reason: '$id should be satisfied',
-      );
-    }
-  });
+      expect(resolution.isReady, isTrue);
+      for (final id in const [
+        StructureSetupStepId.curriculum,
+        StructureSetupStepId.staffAccounts,
+        StructureSetupStepId.academicAssignments,
+        StructureSetupStepId.classTimetables,
+      ]) {
+        expect(
+          resolution.steps.firstWhere((step) => step.id == id).isSatisfied,
+          isTrue,
+          reason: '$id should be satisfied',
+        );
+      }
+    },
+  );
 
   test('missing teacher assignment blocks timetable dependency chain', () {
     final resolution = engine.resolve(
@@ -74,10 +77,11 @@ void main() {
 
 StructureSetupContext _runtimeContext({
   List<TeachingAssignment>? teachingAssignments,
-  List<ClassTimetableLesson>? timetableLessons,
+  List<TimetableLesson>? timetableLessons,
 }) {
   final year = AcademicYear(
     id: '2026',
+    schoolId: 'school-a',
     name: '2026',
     startDate: DateTime(2026, 1, 1),
     endDate: DateTime(2026, 12, 31),
@@ -85,6 +89,7 @@ StructureSetupContext _runtimeContext({
   );
   final term = AcademicTerm(
     id: 'term-1',
+    schoolId: 'school-a',
     academicYearId: '2026',
     name: 'Term 1',
     order: 1,
@@ -114,12 +119,18 @@ StructureSetupContext _runtimeContext({
     academicYears: [year],
     academicTerms: [term],
     levels: const [
-      EducationalLevel(id: 'secondary', name: 'Secondary', code: 'SEC'),
+      EducationalLevel(
+        id: 'secondary',
+        schoolId: 'school-a',
+        name: 'Secondary',
+        code: 'SEC',
+      ),
     ],
     departments: const [],
     classes: const [
       SchoolClass(
         id: 's1',
+        schoolId: 'school-a',
         name: 'Senior 1',
         code: 'S1',
         levelId: 'secondary',
@@ -130,6 +141,7 @@ StructureSetupContext _runtimeContext({
     subjects: const [
       Subject(
         id: 'math',
+        schoolId: 'school-a',
         name: 'Mathematics',
         code: 'MATH',
         assignedLevelIds: ['secondary'],
@@ -139,6 +151,7 @@ StructureSetupContext _runtimeContext({
     assessmentTypes: const [
       AssessmentTypeDef(
         id: 'exam',
+        schoolId: 'school-a',
         name: 'Exam',
         weightPercentage: 100,
       ),
@@ -146,6 +159,7 @@ StructureSetupContext _runtimeContext({
     gradingSystems: const [
       GradingSystemDef(
         id: 'default',
+        schoolId: 'school-a',
         name: 'Default',
         type: 'percentage',
         isDefault: true,
@@ -154,6 +168,7 @@ StructureSetupContext _runtimeContext({
     gradeBands: const [
       GradeBand(
         id: 'all',
+        schoolId: 'school-a',
         gradingSystemId: 'default',
         grade: 'P',
         minScore: 0,
@@ -167,22 +182,11 @@ StructureSetupContext _runtimeContext({
       schoolStartTime: '08:00',
       schoolEndTime: '09:00',
       slots: [
-        TimetableSlot(
-          name: 'Period 1',
-          startTime: '08:00',
-          endTime: '09:00',
-        ),
+        TimetableSlot(name: 'Period 1', startTime: '08:00', endTime: '09:00'),
       ],
     ),
     designations: const [
-      StaffDesignation(id: 'teacher', name: 'Teacher'),
-    ],
-    staffRoles: const [
-      StaffRole(
-        id: 'subject-teacher',
-        name: 'Subject Teacher',
-        designationId: 'teacher',
-      ),
+      StaffDesignation(id: 'teacher', schoolId: 'school-a', name: 'Teacher'),
     ],
     houses: const [],
     clubs: const [],
@@ -192,7 +196,7 @@ StructureSetupContext _runtimeContext({
     transportStops: const [],
     transportVehicles: const [],
     attendanceTypes: const [
-      AttendanceTypeDef(id: 'present', name: 'Present'),
+      AttendanceTypeDef(id: 'present', schoolId: 'school-a', name: 'Present'),
     ],
     feeCategories: const [],
     announcementCategories: const [],
@@ -218,7 +222,8 @@ StructureSetupContext _runtimeContext({
         roles: [UserRole.subjectTeacher],
       ),
     ],
-    teachingAssignments: teachingAssignments ??
+    teachingAssignments:
+        teachingAssignments ??
         const [
           TeachingAssignment(
             id: 'teach-math',
@@ -230,32 +235,34 @@ StructureSetupContext _runtimeContext({
             subjectId: 'math',
           ),
         ],
-    classTimetables: const [
-      ClassTimetable(
+    classTimetables: [
+      Timetable(
         id: 'table-s1',
         schoolId: 'school-a',
         academicYearId: '2026',
         termId: 'term-1',
         classId: 's1',
         name: 'S1 Term 1',
-        status: ClassTimetableStatus.active,
+        status: TimetableStatus.active,
+        createdAt: DateTime(2026, 1, 1),
       ),
     ],
-    timetableLessons: timetableLessons ??
-        const [
-          ClassTimetableLesson(
+    timetableLessons:
+        timetableLessons ??
+        [
+          TimetableLesson(
             id: 'lesson-1',
             schoolId: 'school-a',
             timetableId: 'table-s1',
             academicYearId: '2026',
             termId: 'term-1',
             classId: 's1',
-            day: 'Monday',
-            slotKey: 'p1',
-            startTime: '08:00',
-            endTime: '09:00',
             subjectId: 'math',
             teacherId: 'teacher-a',
+            occurrences: const [
+              TimetableLessonOccurrence(day: 'Monday', slotId: 'p1'),
+            ],
+            createdAt: DateTime(2026, 1, 1),
           ),
         ],
   );

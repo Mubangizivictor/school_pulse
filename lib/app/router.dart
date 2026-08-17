@@ -48,7 +48,6 @@ import 'package:school_pulse/features/integrations/presentation/integration_deta
 import 'package:school_pulse/features/integrations/presentation/integration_health_screen.dart';
 import 'package:school_pulse/features/integrations/presentation/integration_devices_screen.dart';
 import 'package:school_pulse/features/integrations/presentation/integration_webhooks_screen.dart';
-import 'package:school_pulse/features/structure/presentation/screens/structure_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_wizard_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/levels_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/years_terms_screen.dart';
@@ -1661,20 +1660,13 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'structure',
-              builder: (context, state) {
-                // A section query param means the admin navigated here from
-                // inside the post-setup Structure Management view (e.g. the
-                // progress screen's own links) - honor it and skip the
-                // wizard gate. With no section, `StructureWizardScreen`
-                // decides: first incomplete required step, or the
-                // management view once setup is done.
-                if (state.uri.queryParameters.containsKey('section')) {
-                  return StructureScreen(
-                    initialSection: state.uri.queryParameters['section']!,
-                  );
-                }
-                return const StructureWizardScreen();
-              },
+              // Structure has exactly one canonical entry point: the
+              // sequential setup wizard gate. It renders the current
+              // incomplete step directly, or the roadmap/management
+              // `StructureScreen` once every step is complete. Old deep
+              // links that used to carry `?section=...` now land on the
+              // same gate rather than jumping into an obsolete tabbed view.
+              builder: (context, state) => const StructureWizardScreen(),
               routes: [
                 GoRoute(
                   path: 'institution',
@@ -1791,12 +1783,7 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'people',
-                  builder: (context, state) {
-                    final tab =
-                        int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
-                        0;
-                    return PeopleStructureScreen(initialTab: tab);
-                  },
+                  builder: (context, state) => const PeopleStructureScreen(),
                 ),
                 GoRoute(
                   path: 'assessment',
@@ -1809,29 +1796,11 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'campus',
-                  builder: (context, state) {
-                    final tab =
-                        int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
-                        0;
-                    return CampusFacilitiesScreen(
-                      initialTab: tab,
-                      wizardStep: int.tryParse(
-                        state.uri.queryParameters['wizardStep'] ?? '',
-                      ),
-                      wizardTotal: int.tryParse(
-                        state.uri.queryParameters['wizardTotal'] ?? '',
-                      ),
-                    );
-                  },
+                  builder: (context, state) => const CampusFacilitiesScreen(),
                 ),
                 GoRoute(
                   path: 'operations',
-                  builder: (context, state) {
-                    final tab =
-                        int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
-                        0;
-                    return OperationsConfigScreen(initialTab: tab);
-                  },
+                  builder: (context, state) => const OperationsConfigScreen(),
                 ),
                 GoRoute(
                   path: 'feature-toggles',

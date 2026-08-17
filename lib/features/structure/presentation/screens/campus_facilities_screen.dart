@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
@@ -21,38 +23,45 @@ class CampusFacilitiesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final requested =
-        GoRouterState.of(context).uri.queryParameters['section'] ?? 'facilities';
-    final section = const {
-      'houses',
-      'clubs',
-      'facilities',
-      'hostel',
-      'transport',
-    }.contains(requested)
+        GoRouterState.of(context).uri.queryParameters['section'] ??
+        'facilities';
+    final section =
+        const {
+          'houses',
+          'clubs',
+          'facilities',
+          'hostel',
+          'transport',
+        }.contains(requested)
         ? requested
         : 'facilities';
+    final schoolId =
+        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
 
     return Scaffold(
       appBar: AppBar(title: Text(_sectionTitle(section))),
       body: BlocBuilder<StructureBloc, StructureState>(
         builder: (context, state) => switch (section) {
-          'houses' => _HousesTab(state: state),
-          'clubs' => _ClubsTab(state: state),
-          'hostel' => _HostelStructureTab(state: state),
-          'transport' => _TransportStructureTab(state: state),
-          _ => _FacilitiesTab(state: state),
+          'houses' => _HousesTab(state: state, schoolId: schoolId),
+          'clubs' => _ClubsTab(state: state, schoolId: schoolId),
+          'hostel' => _HostelStructureTab(state: state, schoolId: schoolId),
+          'transport' => _TransportStructureTab(
+            state: state,
+            schoolId: schoolId,
+          ),
+          _ => _FacilitiesTab(state: state, schoolId: schoolId),
         },
       ),
     );
   }
 
   String _sectionTitle(String section) => switch (section) {
-        'houses' => 'Houses',
-        'clubs' => 'Clubs & Societies',
-        'hostel' => 'Boarding Structure',
-        'transport' => 'Transport Structure',
-        _ => 'Rooms & Learning Spaces',
-      };
+    'houses' => 'Houses',
+    'clubs' => 'Clubs & Societies',
+    'hostel' => 'Boarding Structure',
+    'transport' => 'Transport Structure',
+    _ => 'Rooms & Learning Spaces',
+  };
 }
 
 Color _fromHex(String hex, Color fallback) =>
@@ -60,7 +69,8 @@ Color _fromHex(String hex, Color fallback) =>
 
 class _HousesTab extends StatelessWidget {
   final StructureState state;
-  const _HousesTab({required this.state});
+  final String schoolId;
+  const _HousesTab({required this.state, required this.schoolId});
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +93,7 @@ class _HousesTab extends StatelessWidget {
                   isActive: house.isActive,
                   onEdit: () => showHouseFormDialog(
                     context,
+                    schoolId: schoolId,
                     existing: house,
                     onSave: (u) => bloc.add(SaveHouseRequested(u)),
                   ),
@@ -102,6 +113,7 @@ class _HousesTab extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showHouseFormDialog(
           context,
+          schoolId: schoolId,
           onSave: (h) => bloc.add(SaveHouseRequested(h)),
         ),
         icon: const Icon(Icons.add),
@@ -113,7 +125,8 @@ class _HousesTab extends StatelessWidget {
 
 class _ClubsTab extends StatelessWidget {
   final StructureState state;
-  const _ClubsTab({required this.state});
+  final String schoolId;
+  const _ClubsTab({required this.state, required this.schoolId});
 
   @override
   Widget build(BuildContext context) {
@@ -132,11 +145,13 @@ class _ClubsTab extends StatelessWidget {
                   title: club.name,
                   subtitle: [
                     if (club.category.isNotEmpty) club.category,
-                    if (club.patronName.isNotEmpty) 'Current patron: ${club.patronName}',
+                    if (club.patronName.isNotEmpty)
+                      'Current patron: ${club.patronName}',
                   ].join(' - '),
                   isActive: club.isActive,
                   onEdit: () => showClubFormDialog(
                     context,
+                    schoolId: schoolId,
                     existing: club,
                     onSave: (u) => bloc.add(SaveClubRequested(u)),
                   ),
@@ -156,6 +171,7 @@ class _ClubsTab extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showClubFormDialog(
           context,
+          schoolId: schoolId,
           onSave: (c) => bloc.add(SaveClubRequested(c)),
         ),
         icon: const Icon(Icons.add),
@@ -167,7 +183,8 @@ class _ClubsTab extends StatelessWidget {
 
 class _FacilitiesTab extends StatelessWidget {
   final StructureState state;
-  const _FacilitiesTab({required this.state});
+  final String schoolId;
+  const _FacilitiesTab({required this.state, required this.schoolId});
 
   @override
   Widget build(BuildContext context) {
@@ -194,6 +211,7 @@ class _FacilitiesTab extends StatelessWidget {
                   isActive: facility.isActive,
                   onEdit: () => showFacilityFormDialog(
                     context,
+                    schoolId: schoolId,
                     existing: facility,
                     onSave: (u) => bloc.add(SaveFacilityRequested(u)),
                   ),
@@ -213,6 +231,7 @@ class _FacilitiesTab extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showFacilityFormDialog(
           context,
+          schoolId: schoolId,
           onSave: (f) => bloc.add(SaveFacilityRequested(f)),
         ),
         icon: const Icon(Icons.add),
@@ -224,7 +243,8 @@ class _FacilitiesTab extends StatelessWidget {
 
 class _HostelStructureTab extends StatelessWidget {
   final StructureState state;
-  const _HostelStructureTab({required this.state});
+  final String schoolId;
+  const _HostelStructureTab({required this.state, required this.schoolId});
 
   @override
   Widget build(BuildContext context) {
@@ -243,6 +263,7 @@ class _HostelStructureTab extends StatelessWidget {
           actionLabel: 'Add Hostel',
           onAction: () => showHostelFormDialog(
             context,
+            schoolId: schoolId,
             onSave: (h) => bloc.add(SaveHostelRequested(h)),
           ),
         ),
@@ -256,11 +277,13 @@ class _HostelStructureTab extends StatelessWidget {
             subtitle: [
               hostel.gender,
               'Capacity ${hostel.capacity}',
-              if (hostel.wardenName.isNotEmpty) 'Current warden: ${hostel.wardenName}',
+              if (hostel.wardenName.isNotEmpty)
+                'Current warden: ${hostel.wardenName}',
             ].join(' - '),
             isActive: hostel.isActive,
             onEdit: () => showHostelFormDialog(
               context,
+              schoolId: schoolId,
               existing: hostel,
               onSave: (u) => bloc.add(SaveHostelRequested(u)),
             ),
@@ -283,18 +306,20 @@ class _HostelStructureTab extends StatelessWidget {
           onAction: state.hostels.isEmpty
               ? null
               : () => showHostelRoomFormDialog(
-                    context,
-                    hostels: state.hostels,
-                    onSave: (r) => bloc.add(SaveHostelRoomRequested(r)),
-                  ),
+                  context,
+                  schoolId: schoolId,
+                  hostels: state.hostels,
+                  onSave: (r) => bloc.add(SaveHostelRoomRequested(r)),
+                ),
         ),
         if (state.hostels.isEmpty)
           const StructureEmptyHint('Add a hostel first.')
         else if (state.hostelRooms.isEmpty)
           const StructureEmptyHint('No rooms defined yet.'),
         ...state.hostelRooms.map((room) {
-          final hostel =
-              state.hostels.where((h) => h.id == room.hostelId).firstOrNull;
+          final hostel = state.hostels
+              .where((h) => h.id == room.hostelId)
+              .firstOrNull;
           return StructureListRow(
             icon: Icons.meeting_room_outlined,
             color: Colors.brown,
@@ -307,6 +332,7 @@ class _HostelStructureTab extends StatelessWidget {
             isActive: room.isActive,
             onEdit: () => showHostelRoomFormDialog(
               context,
+              schoolId: schoolId,
               existing: room,
               hostels: state.hostels,
               onSave: (u) => bloc.add(SaveHostelRoomRequested(u)),
@@ -330,7 +356,8 @@ class _HostelStructureTab extends StatelessWidget {
 
 class _TransportStructureTab extends StatelessWidget {
   final StructureState state;
-  const _TransportStructureTab({required this.state});
+  final String schoolId;
+  const _TransportStructureTab({required this.state, required this.schoolId});
 
   @override
   Widget build(BuildContext context) {
@@ -349,6 +376,7 @@ class _TransportStructureTab extends StatelessWidget {
           actionLabel: 'Add Route',
           onAction: () => showTransportRouteFormDialog(
             context,
+            schoolId: schoolId,
             onSave: (r) => bloc.add(SaveTransportRouteRequested(r)),
           ),
         ),
@@ -363,6 +391,7 @@ class _TransportStructureTab extends StatelessWidget {
             isActive: route.isActive,
             onEdit: () => showTransportRouteFormDialog(
               context,
+              schoolId: schoolId,
               existing: route,
               onSave: (u) => bloc.add(SaveTransportRouteRequested(u)),
             ),
@@ -385,10 +414,11 @@ class _TransportStructureTab extends StatelessWidget {
           onAction: state.transportRoutes.isEmpty
               ? null
               : () => showTransportStopFormDialog(
-                    context,
-                    routes: state.transportRoutes,
-                    onSave: (s) => bloc.add(SaveTransportStopRequested(s)),
-                  ),
+                  context,
+                  schoolId: schoolId,
+                  routes: state.transportRoutes,
+                  onSave: (s) => bloc.add(SaveTransportStopRequested(s)),
+                ),
         ),
         if (state.transportRoutes.isEmpty)
           const StructureEmptyHint('Add a route first.')
@@ -410,6 +440,7 @@ class _TransportStructureTab extends StatelessWidget {
             isActive: stop.isActive,
             onEdit: () => showTransportStopFormDialog(
               context,
+              schoolId: schoolId,
               existing: stop,
               routes: state.transportRoutes,
               onSave: (u) => bloc.add(SaveTransportStopRequested(u)),
@@ -432,6 +463,7 @@ class _TransportStructureTab extends StatelessWidget {
           actionLabel: 'Add Vehicle',
           onAction: () => showTransportVehicleFormDialog(
             context,
+            schoolId: schoolId,
             routes: state.transportRoutes,
             onSave: (v) => bloc.add(SaveTransportVehicleRequested(v)),
           ),
@@ -454,6 +486,7 @@ class _TransportStructureTab extends StatelessWidget {
             isActive: vehicle.isActive,
             onEdit: () => showTransportVehicleFormDialog(
               context,
+              schoolId: schoolId,
               existing: vehicle,
               routes: state.transportRoutes,
               onSave: (u) => bloc.add(SaveTransportVehicleRequested(u)),

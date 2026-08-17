@@ -13,17 +13,20 @@ class StructureIntegrityValidator {
   ) {
     if (candidate.name.trim().isEmpty) return 'Enter a level name.';
     if (levels.any(
-      (level) => level.id != candidate.id &&
+      (level) =>
+          level.id != candidate.id &&
           level.isActive &&
           candidate.isActive &&
-          level.name.trim().toLowerCase() == candidate.name.trim().toLowerCase(),
+          level.name.trim().toLowerCase() ==
+              candidate.name.trim().toLowerCase(),
     )) {
       return 'An active level with this name already exists.';
     }
     final code = candidate.code.trim().toLowerCase();
     if (code.isNotEmpty &&
         levels.any(
-          (level) => level.id != candidate.id &&
+          (level) =>
+              level.id != candidate.id &&
               level.isActive &&
               candidate.isActive &&
               level.code.trim().toLowerCase() == code,
@@ -42,7 +45,8 @@ class StructureIntegrityValidator {
       return 'Academic year end date must be after the start date.';
     }
     if (years.any(
-      (year) => year.id != candidate.id &&
+      (year) =>
+          year.id != candidate.id &&
           year.name.trim().toLowerCase() == candidate.name.trim().toLowerCase(),
     )) {
       return 'An academic year with this name already exists.';
@@ -55,7 +59,9 @@ class StructureIntegrityValidator {
     List<AcademicYear> years,
     List<AcademicTerm> terms,
   ) {
-    final matchingYears = years.where((year) => year.id == candidate.academicYearId);
+    final matchingYears = years.where(
+      (year) => year.id == candidate.academicYearId,
+    );
     if (matchingYears.isEmpty) return 'Select a valid academic year.';
     final year = matchingYears.first;
     if (!candidate.startDate.isBefore(candidate.endDate)) {
@@ -76,9 +82,11 @@ class StructureIntegrityValidator {
       return 'This academic period overlaps another period in ${year.name}.';
     }
     if (terms.any(
-      (other) => other.id != candidate.id &&
+      (other) =>
+          other.id != candidate.id &&
           other.academicYearId == candidate.academicYearId &&
-          other.name.trim().toLowerCase() == candidate.name.trim().toLowerCase(),
+          other.name.trim().toLowerCase() ==
+              candidate.name.trim().toLowerCase(),
     )) {
       return 'A period with this name already exists in ${year.name}.';
     }
@@ -92,12 +100,15 @@ class StructureIntegrityValidator {
     required List<ClassStream> streams,
   }) {
     if (candidate.name.trim().isEmpty) return 'Enter a class name.';
-    if (!levels.any((level) => level.id == candidate.levelId && level.isActive)) {
+    if (!levels.any(
+      (level) => level.id == candidate.levelId && level.isActive,
+    )) {
       return 'Select an active educational level.';
     }
     if (candidate.capacity < 0) return 'Class capacity cannot be negative.';
     if (classes.any(
-      (item) => item.id != candidate.id &&
+      (item) =>
+          item.id != candidate.id &&
           item.isActive &&
           candidate.isActive &&
           item.levelId == candidate.levelId &&
@@ -108,7 +119,8 @@ class StructureIntegrityValidator {
     final code = candidate.code.trim().toLowerCase();
     if (code.isNotEmpty &&
         classes.any(
-          (item) => item.id != candidate.id &&
+          (item) =>
+              item.id != candidate.id &&
               item.isActive &&
               candidate.isActive &&
               item.code.trim().toLowerCase() == code,
@@ -146,18 +158,21 @@ class StructureIntegrityValidator {
       return 'Set ${parent.name} capacity before adding active streams.';
     }
     if (streams.any(
-      (stream) => stream.id != candidate.id &&
+      (stream) =>
+          stream.id != candidate.id &&
           stream.classId == candidate.classId &&
           stream.isActive &&
           candidate.isActive &&
-          stream.name.trim().toLowerCase() == candidate.name.trim().toLowerCase(),
+          stream.name.trim().toLowerCase() ==
+              candidate.name.trim().toLowerCase(),
     )) {
       return 'This stream name is already used in ${parent.name}.';
     }
     final code = candidate.code.trim().toLowerCase();
     if (code.isNotEmpty &&
         streams.any(
-          (stream) => stream.id != candidate.id &&
+          (stream) =>
+              stream.id != candidate.id &&
               stream.classId == candidate.classId &&
               stream.isActive &&
               candidate.isActive &&
@@ -167,12 +182,15 @@ class StructureIntegrityValidator {
     }
 
     final allocated = streams
-        .where((stream) =>
-            stream.id != candidate.id &&
-            stream.classId == candidate.classId &&
-            stream.isActive)
+        .where(
+          (stream) =>
+              stream.id != candidate.id &&
+              stream.classId == candidate.classId &&
+              stream.isActive,
+        )
         .fold<int>(0, (sum, stream) => sum + stream.capacity);
-    final proposedTotal = allocated + (candidate.isActive ? candidate.capacity : 0);
+    final proposedTotal =
+        allocated + (candidate.isActive ? candidate.capacity : 0);
     if (proposedTotal > parent.capacity) {
       final available = (parent.capacity - allocated).clamp(0, parent.capacity);
       return 'Stream capacity exceeds ${parent.name} capacity. '
@@ -190,7 +208,8 @@ class StructureIntegrityValidator {
     final code = candidate.code.trim().toLowerCase();
     if (code.isNotEmpty &&
         subjects.any(
-          (subject) => subject.id != candidate.id &&
+          (subject) =>
+              subject.id != candidate.id &&
               subject.isActive &&
               candidate.isActive &&
               subject.code.trim().toLowerCase() == code,
@@ -213,17 +232,20 @@ class StructureIntegrityValidator {
   ) {
     if (candidate.name.trim().isEmpty) return 'Enter a department name.';
     if (departments.any(
-      (department) => department.id != candidate.id &&
+      (department) =>
+          department.id != candidate.id &&
           department.isActive &&
           candidate.isActive &&
-          department.name.trim().toLowerCase() == candidate.name.trim().toLowerCase(),
+          department.name.trim().toLowerCase() ==
+              candidate.name.trim().toLowerCase(),
     )) {
       return 'An active department with this name already exists.';
     }
     final code = candidate.code.trim().toLowerCase();
     if (code.isNotEmpty &&
         departments.any(
-          (department) => department.id != candidate.id &&
+          (department) =>
+              department.id != candidate.id &&
               department.isActive &&
               candidate.isActive &&
               department.code.trim().toLowerCase() == code,
@@ -239,36 +261,14 @@ class StructureIntegrityValidator {
   ) {
     if (candidate.name.trim().isEmpty) return 'Enter a designation name.';
     if (designations.any(
-      (designation) => designation.id != candidate.id &&
+      (designation) =>
+          designation.id != candidate.id &&
           designation.isActive &&
           candidate.isActive &&
-          designation.name.trim().toLowerCase() == candidate.name.trim().toLowerCase(),
+          designation.name.trim().toLowerCase() ==
+              candidate.name.trim().toLowerCase(),
     )) {
       return 'An active designation with this name already exists.';
-    }
-    return null;
-  }
-
-  String? validateRole(
-    StaffRole candidate, {
-    required List<StaffRole> roles,
-    required List<StaffDesignation> designations,
-  }) {
-    if (candidate.name.trim().isEmpty) return 'Enter a role name.';
-    if (roles.any(
-      (role) => role.id != candidate.id &&
-          role.isActive &&
-          candidate.isActive &&
-          role.name.trim().toLowerCase() == candidate.name.trim().toLowerCase(),
-    )) {
-      return 'An active role with this name already exists.';
-    }
-    if (candidate.designationId.isNotEmpty &&
-        !designations.any(
-          (designation) =>
-              designation.id == candidate.designationId && designation.isActive,
-        )) {
-      return 'Select an active designation or leave the designation unassigned.';
     }
     return null;
   }

@@ -2,7 +2,6 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import '../entities/assessment_grading_entities.dart';
 import '../entities/attendance_config_entities.dart';
 import '../entities/campus_entities.dart';
-import '../entities/class_timetable_entities.dart';
 import '../entities/communication_config_entities.dart';
 import '../entities/curriculum_assignment.dart';
 import '../entities/feature_toggles.dart';
@@ -12,6 +11,7 @@ import '../entities/institution_profile.dart';
 import '../entities/structure_entities.dart';
 import '../entities/structure_setup_preferences.dart';
 import '../entities/teaching_assignment.dart';
+import '../entities/timetable.dart';
 import '../entities/timetable_config.dart';
 import '../entities/transport_structure_entities.dart';
 import 'timetable_conflict_resolver.dart';
@@ -82,7 +82,6 @@ class StructureSetupContext {
   final List<Facility> facilities;
   final TimetableConfig timetableConfig;
   final List<StaffDesignation> designations;
-  final List<StaffRole> staffRoles;
   final List<House> houses;
   final List<Club> clubs;
   final List<Hostel> hostels;
@@ -102,8 +101,8 @@ class StructureSetupContext {
   final List<CurriculumAssignment> curriculumAssignments;
   final List<UserEntity> staff;
   final List<TeachingAssignment> teachingAssignments;
-  final List<ClassTimetable> classTimetables;
-  final List<ClassTimetableLesson> timetableLessons;
+  final List<Timetable> classTimetables;
+  final List<TimetableLesson> timetableLessons;
 
   const StructureSetupContext({
     required this.institutionProfile,
@@ -122,7 +121,6 @@ class StructureSetupContext {
     required this.facilities,
     required this.timetableConfig,
     required this.designations,
-    required this.staffRoles,
     required this.houses,
     required this.clubs,
     required this.hostels,
@@ -200,15 +198,15 @@ class StructureSetupResolution {
       if (!step.applicable || step.id == StructureSetupStepId.review) continue;
       if (step.prerequisitesComplete && !step.isSatisfied) return step;
     }
-    final review = steps.where((step) => step.id == StructureSetupStepId.review);
+    final review = steps.where(
+      (step) => step.id == StructureSetupStepId.review,
+    );
     return review.isEmpty ? null : review.first;
   }
 
   bool get isReady =>
       requiredSteps.every((step) => step.isSatisfied) &&
-      !issues.any(
-        (issue) => issue.severity == StructureIssueSeverity.critical,
-      );
+      !issues.any((issue) => issue.severity == StructureIssueSeverity.critical);
 
   double get progress {
     final required = requiredSteps
@@ -234,7 +232,9 @@ class StructureSetupEngine {
       String message, {
       StructureIssueSeverity severity = StructureIssueSeverity.critical,
     }) {
-      issuesByStep.putIfAbsent(stepId, () => <StructureSetupIssue>[]).add(
+      issuesByStep
+          .putIfAbsent(stepId, () => <StructureSetupIssue>[])
+          .add(
             StructureSetupIssue(
               stepId: stepId,
               message: message,
@@ -243,7 +243,9 @@ class StructureSetupEngine {
           );
     }
 
-    final institutionComplete = _institutionComplete(context.institutionProfile);
+    final institutionComplete = _institutionComplete(
+      context.institutionProfile,
+    );
     if (!institutionComplete) {
       issue(
         StructureSetupStepId.institution,
@@ -257,7 +259,10 @@ class StructureSetupEngine {
     final currentYear = currentYears.length == 1 ? currentYears.first : null;
     var academicYearComplete = currentYear != null;
     if (currentYears.isEmpty) {
-      issue(StructureSetupStepId.academicYear, 'Set one academic year as current.');
+      issue(
+        StructureSetupStepId.academicYear,
+        'Set one academic year as current.',
+      );
     } else if (currentYears.length > 1) {
       academicYearComplete = false;
       issue(
@@ -275,9 +280,10 @@ class StructureSetupEngine {
     final termsForCurrentYear = currentYear == null
         ? <AcademicTerm>[]
         : context.academicTerms
-            .where((term) => term.academicYearId == currentYear.id)
-            .toList(growable: false);
-    final termsComplete = currentYear != null &&
+              .where((term) => term.academicYearId == currentYear.id)
+              .toList(growable: false);
+    final termsComplete =
+        currentYear != null &&
         termsForCurrentYear.isNotEmpty &&
         _termsAreValid(termsForCurrentYear, currentYear, issue);
     if (currentYear != null && termsForCurrentYear.isEmpty) {
@@ -291,7 +297,9 @@ class StructureSetupEngine {
         .where((term) => term.isCurrent)
         .firstOrNull;
 
-    final activeLevels = context.levels.where((level) => level.isActive).toList();
+    final activeLevels = context.levels
+        .where((level) => level.isActive)
+        .toList();
     var levelsComplete = activeLevels.isNotEmpty;
     if (activeLevels.isEmpty) {
       issue(
@@ -299,7 +307,8 @@ class StructureSetupEngine {
         'Add at least one active educational level.',
       );
     }
-    levelsComplete = levelsComplete &&
+    levelsComplete =
+        levelsComplete &&
         _uniqueCodes(
           activeLevels.map((level) => level.code),
           StructureSetupStepId.levels,
@@ -450,10 +459,7 @@ class StructureSetupEngine {
         .toList();
     var subjectsComplete = activeSubjects.isNotEmpty;
     if (!subjectsComplete) {
-      issue(
-        StructureSetupStepId.subjects,
-        'Add at least one active subject.',
-      );
+      issue(StructureSetupStepId.subjects, 'Add at least one active subject.');
     }
     final departmentIds = activeDepartments.map((item) => item.id).toSet();
     final classIds = activeClasses.map((item) => item.id).toSet();
@@ -514,10 +520,11 @@ class StructureSetupEngine {
       );
     }
     for (final system in activeGradingSystems) {
-      final bands = context.gradeBands
-          .where((band) => band.gradingSystemId == system.id)
-          .toList()
-        ..sort((a, b) => a.minScore.compareTo(b.minScore));
+      final bands =
+          context.gradeBands
+              .where((band) => band.gradingSystemId == system.id)
+              .toList()
+            ..sort((a, b) => a.minScore.compareTo(b.minScore));
       if (bands.isEmpty) {
         gradingComplete = false;
         issue(
@@ -572,7 +579,9 @@ class StructureSetupEngine {
 
     final schoolDayComplete = _schoolDayIsValid(context.timetableConfig, issue);
 
-    final activeRoles = context.staffRoles.where((role) => role.isActive).toList();
+    final activeRoles = context.designations
+        .where((role) => role.isActive)
+        .toList();
     final staffRolesComplete = activeRoles.isNotEmpty;
     if (!staffRolesComplete) {
       issue(
@@ -621,10 +630,7 @@ class StructureSetupEngine {
     } else if (housesApplicable) {
       housesComplete = context.houses.any((house) => house.isActive);
       if (!housesComplete) {
-        issue(
-          StructureSetupStepId.houses,
-          'Add a house or choose No.',
-        );
+        issue(StructureSetupStepId.houses, 'Add a house or choose No.');
       }
     }
 
@@ -642,10 +648,7 @@ class StructureSetupEngine {
     } else if (clubsApplicable) {
       clubsComplete = context.clubs.any((club) => club.isActive);
       if (!clubsComplete) {
-        issue(
-          StructureSetupStepId.clubs,
-          'Add a club or choose No.',
-        );
+        issue(StructureSetupStepId.clubs, 'Add a club or choose No.');
       }
     }
 
@@ -684,7 +687,7 @@ class StructureSetupEngine {
     } else if (transportApplicable) {
       transportComplete =
           context.transportRoutes.any((route) => route.isActive) &&
-              context.transportVehicles.any((vehicle) => vehicle.isActive);
+          context.transportVehicles.any((vehicle) => vehicle.isActive);
       if (!transportComplete) {
         issue(
           StructureSetupStepId.transport,
@@ -693,8 +696,9 @@ class StructureSetupEngine {
       }
     }
 
-    final attendanceComplete =
-        context.attendanceTypes.any((type) => type.isActive);
+    final attendanceComplete = context.attendanceTypes.any(
+      (type) => type.isActive,
+    );
     if (!attendanceComplete) {
       issue(
         StructureSetupStepId.attendance,
@@ -702,8 +706,9 @@ class StructureSetupEngine {
       );
     }
 
-    final financeComplete =
-        context.feeCategories.any((category) => category.isActive);
+    final financeComplete = context.feeCategories.any(
+      (category) => category.isActive,
+    );
     if (!financeComplete) {
       issue(
         StructureSetupStepId.financeFoundation,
@@ -713,7 +718,8 @@ class StructureSetupEngine {
     }
 
     final communicationApplicable = context.featureToggles.communication;
-    final communicationComplete = !communicationApplicable ||
+    final communicationComplete =
+        !communicationApplicable ||
         context.announcementCategories.any((category) => category.isActive) ||
         context.notificationCategories.any((category) => category.isActive) ||
         context.messageTemplates.any((template) => template.isActive);
@@ -933,8 +939,7 @@ class StructureSetupEngine {
         id: StructureSetupStepId.clubs,
         section: 'Student life',
         title: 'Clubs & societies',
-        description:
-            'Configure clubs now or choose No for initial setup.',
+        description: 'Configure clubs now or choose No for initial setup.',
         route: '/staff/admin/structure/campus?section=clubs',
         complete: clubsComplete,
         applicable: clubsApplicable || !clubsDecided,
@@ -1023,15 +1028,19 @@ class StructureSetupEngine {
     }
 
     for (final definition in definitions) {
-      final prerequisitesComplete =
-          definition.prerequisites.every(prerequisiteSatisfied);
+      final prerequisitesComplete = definition.prerequisites.every(
+        prerequisiteSatisfied,
+      );
       final stepIssues =
           issuesByStep[definition.id] ?? const <StructureSetupIssue>[];
       final reviewComplete = definition.id == StructureSetupStepId.review
           ? !issuesByStep.values
-              .expand((items) => items)
-              .any((item) => item.severity == StructureIssueSeverity.critical) &&
-              definition.prerequisites.every(prerequisiteSatisfied)
+                    .expand((items) => items)
+                    .any(
+                      (item) =>
+                          item.severity == StructureIssueSeverity.critical,
+                    ) &&
+                definition.prerequisites.every(prerequisiteSatisfied)
           : definition.complete;
 
       resolved.add(
@@ -1076,13 +1085,12 @@ class StructureSetupEngine {
       StructureSetupStepId,
       String, {
       StructureIssueSeverity severity,
-    }) issue,
+    })
+    issue,
   ) {
     if (currentYear == null) return false;
     final assignments = context.curriculumAssignments
-        .where(
-          (item) => item.isActive && item.academicYearId == currentYear.id,
-        )
+        .where((item) => item.isActive && item.academicYearId == currentYear.id)
         .toList(growable: false);
     if (assignments.isEmpty) {
       issue(
@@ -1151,13 +1159,12 @@ class StructureSetupEngine {
       StructureSetupStepId,
       String, {
       StructureIssueSeverity severity,
-    }) issue,
+    })
+    issue,
   ) {
     if (currentYear == null) return false;
     final curriculum = context.curriculumAssignments
-        .where(
-          (item) => item.isActive && item.academicYearId == currentYear.id,
-        )
+        .where((item) => item.isActive && item.academicYearId == currentYear.id)
         .toList(growable: false);
     final assignments = context.teachingAssignments
         .where(
@@ -1220,7 +1227,8 @@ class StructureSetupEngine {
       StructureSetupStepId,
       String, {
       StructureIssueSeverity severity,
-    }) issue,
+    })
+    issue,
   ) {
     if (currentYear == null || currentTerm == null) return false;
     final published = context.classTimetables
@@ -1228,7 +1236,7 @@ class StructureSetupEngine {
           (item) =>
               item.academicYearId == currentYear.id &&
               item.termId == currentTerm.id &&
-              item.status == ClassTimetableStatus.active,
+              item.status == TimetableStatus.active,
         )
         .toList(growable: false);
     var valid = true;
@@ -1254,7 +1262,7 @@ class StructureSetupEngine {
               '${schoolClass.name} ${stream.name} has no published timetable for ${currentTerm.name}.',
             );
           } else if (!context.timetableLessons.any(
-            (lesson) => lesson.isActive && lesson.timetableId == table.id,
+            (lesson) => lesson.timetableId == table.id,
           )) {
             valid = false;
             issue(
@@ -1266,8 +1274,7 @@ class StructureSetupEngine {
       } else {
         final table = published
             .where(
-              (item) =>
-                  item.classId == schoolClass.id && item.streamId.isEmpty,
+              (item) => item.classId == schoolClass.id && item.streamId.isEmpty,
             )
             .firstOrNull;
         if (table == null) {
@@ -1277,7 +1284,7 @@ class StructureSetupEngine {
             '${schoolClass.name} has no published timetable for ${currentTerm.name}.',
           );
         } else if (!context.timetableLessons.any(
-          (lesson) => lesson.isActive && lesson.timetableId == table.id,
+          (lesson) => lesson.timetableId == table.id,
         )) {
           valid = false;
           issue(
@@ -1291,7 +1298,6 @@ class StructureSetupEngine {
     final activeLessons = context.timetableLessons
         .where(
           (lesson) =>
-              lesson.isActive &&
               lesson.academicYearId == currentYear.id &&
               lesson.termId == currentTerm.id,
         )
@@ -1299,8 +1305,8 @@ class StructureSetupEngine {
     final seenMessages = <String>{};
     for (final lesson in activeLessons) {
       final conflicts = timetableConflictResolver.findConflicts(
-        proposed: lesson,
-        existing: activeLessons.where((item) => item.id != lesson.id),
+        candidate: lesson,
+        otherLessons: activeLessons.where((item) => item.id != lesson.id),
       );
       for (final conflict in conflicts) {
         if (seenMessages.add(conflict.message)) {
@@ -1319,7 +1325,8 @@ class StructureSetupEngine {
       StructureSetupStepId,
       String, {
       StructureIssueSeverity severity,
-    }) issue,
+    })
+    issue,
   ) {
     var valid = true;
     final sorted = [...terms]
@@ -1367,7 +1374,8 @@ class StructureSetupEngine {
       StructureSetupStepId,
       String, {
       StructureIssueSeverity severity,
-    }) issue, {
+    })
+    issue, {
     required String label,
     bool allowEmpty = false,
   }) {
@@ -1393,7 +1401,8 @@ class StructureSetupEngine {
       StructureSetupStepId,
       String, {
       StructureIssueSeverity severity,
-    }) issue,
+    })
+    issue,
   ) {
     var valid = true;
     if (config.teachingDays.isEmpty) {
