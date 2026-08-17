@@ -8,7 +8,7 @@ import 'package:school_pulse/features/verification/domain/entities/verification_
 import 'package:school_pulse/features/verification/domain/repositories/credential_reader_adapter.dart';
 
 /// Wraps `nfc_manager` behind the shared `CredentialReaderAdapter`
-/// contract. Card technology (MIFARE Classic/DESFire, NTAG, iOS MiFare,
+/// contract. Card technology (MIFARE Classic/DESFire, NTAG, ISO7816,
 /// ISO15693, etc) is abstracted away here - callers only ever see a
 /// hex-encoded UID via [ScanCredential.nfc], never a tag-tech-specific
 /// type, so business logic never depends on which card technology was
@@ -40,13 +40,6 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
     _sessionActive = true;
     try {
       await NfcManager.instance.startSession(
-        // nfc_manager 3.x includes ISO18092/FeliCa in its default iOS
-        // polling set. Core NFC requires extra FeliCa system-code entries
-        // when that mode is requested, and without them the native reader
-        // can fail to start even though the device supports NFC. School
-        // Pulse student cards use normal ISO14443 cards; ISO15693 is kept
-        // for compatible tags. Restricting the session avoids the hidden
-        // FeliCa requirement and gives iOS a deterministic polling set.
         pollingOptions: const {
           NfcPollingOption.iso14443,
           NfcPollingOption.iso15693,
@@ -58,16 +51,26 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
             if (!_controller.isClosed) {
               _controller.addError(
                 StateError(
-                  'The NFC tag was detected but its card UID could not be read.',
+                  'NFC tag detected, but School Pulse could not read its UID. Supported iOS tag types now include MiFare, ISO7816 and ISO15693.',
                 ),
               );
             }
             return;
           }
+
           if (!_controller.isClosed) {
             _controller.add(
               NfcScanCredential(cardUid: uid, scannedAt: DateTime.now()),
             );
+          }
+
+          if (_sessionActive) {
+            _sessionActive = false;
+            try {
+              await NfcManager.instance.stopSession(
+                alertMessage: 'Card detected successfully.',
+              );
+            } catch (_) {}
           }
         },
         onError: (error) async {
@@ -91,10 +94,7 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
     _sessionActive = false;
     try {
       await NfcManager.instance.stopSession();
-    } catch (_) {
-      // The native session may already have been closed by iOS after a
-      // successful read or native error. Cleanup must remain idempotent.
-    }
+    } catch (_) {}
   }
 
   void dispose() {
@@ -103,15 +103,16 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
 
   String? _extractUid(NfcTag tag) {
     final identifier =
+        MiFare.from(tag)?.identifier ??
+        Iso7816.from(tag)?.identifier ??
+        Iso15693.from(tag)?.identifier ??
         NfcA.from(tag)?.identifier ??
         MifareClassic.from(tag)?.identifier ??
         MifareUltralight.from(tag)?.identifier ??
         IsoDep.from(tag)?.identifier ??
-        Iso15693.from(tag)?.identifier ??
         NfcB.from(tag)?.identifier ??
         NfcF.from(tag)?.identifier ??
-        NfcV.from(tag)?.identifier ??
-        MiFare.from(tag)?.identifier;
+        NfcV.from(tag)?.identifier;
     if (identifier == null || identifier.isEmpty) return null;
     return _hex(identifier);
   }
