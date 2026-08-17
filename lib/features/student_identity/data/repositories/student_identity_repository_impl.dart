@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../../../student/domain/entities/student.dart';
@@ -9,19 +8,24 @@ import '../../domain/repositories/student_identity_repository.dart';
 import '../models/student_identity_model.dart';
 import '../../domain/services/id_generator_service.dart';
 import 'student_identity_local_cache.dart';
+import '../../../verification/data/datasources/verification_local_data_source.dart';
+import '../../../verification/domain/entities/verification_cache_records.dart';
+import '../../../verification/domain/services/qr_credential_codec.dart';
 
 class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   final FirebaseFirestore firestore;
   final StudentIdentityLocalCache localCache;
   final IdGeneratorService idGenerator;
-  final FirebaseFunctions functions;
+  final VerificationLocalDataSource verificationLocalDataSource;
+  final QrCredentialCodec qrCredentialCodec;
 
   StudentIdentityRepositoryImpl({
     required this.firestore,
     required this.localCache,
     required this.idGenerator,
-    required this.functions,
-  });
+    required this.verificationLocalDataSource,
+    QrCredentialCodec? qrCredentialCodec,
+  }) : qrCredentialCodec = qrCredentialCodec ?? const QrCredentialCodec();
 
   @override
   Future<Either<Failure, StudentIdentity>> getStudentIdentity(
@@ -84,39 +88,104 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
         schoolId: student.schoolId,
         uniqueSystemId: resolvedUniqueSystemId,
         schoolStudentId: resolvedSchoolStudentId,
-        qrCodeData: resolvedUniqueSystemId,
+        qrCodeData: qrCredentialCodec.issuePayload(),
       );
 
-      await firestore.collection('student_identities').add(model.toFirestore());
-
-      // Best-effort: sign the credential server-side so the QR carries a
-      // verifiable envelope, not just the bare id. If this fails (offline,
-      // secret not configured yet, etc.) the identity record still exists
-      // with qrCodeData == uniqueSystemId, and can be re-signed later.
-      final signed = await _trySignCredential(student.id);
-      return Right(signed ?? model);
+      final identityDoc = await firestore
+          .collection('student_identities')
+          .add(model.toFirestore());
+      await _storeQrCredential(model, identityDoc.id);
+      return Right(model);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
-  Future<StudentIdentityModel?> _trySignCredential(String studentId) async {
+  @override
+  Future<Either<Failure, StudentIdentity>> regenerateQrCredential(
+    StudentIdentity identity,
+  ) async {
     try {
-      final callable = functions.httpsCallable('signStudentCredential');
-      final result = await callable.call({'studentId': studentId});
-      final qrCodeData = result.data['qrCodeData'] as String?;
-      if (qrCodeData == null) return null;
-
-      final refreshed = await firestore
+      final snapshot = await firestore
           .collection('student_identities')
-          .where('studentId', isEqualTo: studentId)
+          .where('studentId', isEqualTo: identity.studentId)
           .limit(1)
           .get();
-      if (refreshed.docs.isEmpty) return null;
-      return StudentIdentityModel.fromFirestore(refreshed.docs.first.data());
-    } catch (_) {
-      return null;
+      if (snapshot.docs.isEmpty) {
+        return Left(ServerFailure('Identity not found'));
+      }
+
+      final oldToken = qrCredentialCodec.parse(identity.qrCodeData);
+      if (oldToken != null) {
+        await firestore
+            .collection('schools')
+            .doc(identity.schoolId)
+            .collection('credentials')
+            .doc(oldToken)
+            .update({
+              'status': 'replaced',
+              'updatedAt': DateTime.now().toIso8601String(),
+            });
+        final old = await verificationLocalDataSource.findCredential(
+          oldToken,
+          identity.schoolId,
+        );
+        if (old != null) {
+          old.status = 'replaced';
+          old.updatedAt = DateTime.now();
+          await verificationLocalDataSource.cacheCredential(old);
+        }
+      }
+      final updated = StudentIdentityModel(
+        studentId: identity.studentId,
+        schoolId: identity.schoolId,
+        uniqueSystemId: identity.uniqueSystemId,
+        schoolStudentId: identity.schoolStudentId,
+        qrCodeData: qrCredentialCodec.issuePayload(),
+        nfcStatus: identity.nfcStatus,
+      );
+      await snapshot.docs.single.reference.update({
+        'qrCodeData': updated.qrCodeData,
+      });
+      await _storeQrCredential(updated, snapshot.docs.single.id);
+      return Right(updated);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
     }
+  }
+
+  Future<void> _storeQrCredential(
+    StudentIdentity identity,
+    String identityDocumentId,
+  ) async {
+    final token = qrCredentialCodec.parse(identity.qrCodeData);
+    if (token == null) throw StateError('QR credential generation failed');
+    final credential = CachedCredential(
+      credentialValue: token,
+      credentialType: 'qr',
+      identityId: identity.uniqueSystemId,
+      identityType: 'student',
+      schoolId: identity.schoolId,
+      status: 'active',
+      updatedAt: DateTime.now(),
+    );
+    await verificationLocalDataSource.cacheCredential(credential);
+    await firestore
+        .collection('schools')
+        .doc(identity.schoolId)
+        .collection('credentials')
+        .doc(token)
+        .set({
+          'credentialValue': token,
+          'credentialType': 'qr',
+          'identityId': identity.uniqueSystemId,
+          'identityType': 'student',
+          'schoolId': identity.schoolId,
+          'status': 'active',
+          'updatedAt': credential.updatedAt.toIso8601String(),
+          'credentialVersion': 1,
+          'identityDocumentId': identityDocumentId,
+        });
   }
 
   int min(int a, int b) => a < b ? a : b;
@@ -157,6 +226,20 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
             identityDoc.docs.first.data(),
           );
           await localCache.save(student: student, identity: identity);
+          final token = qrCredentialCodec.parse(identity.qrCodeData);
+          if (token != null) {
+            await verificationLocalDataSource.cacheCredential(
+              CachedCredential(
+                credentialValue: token,
+                credentialType: 'qr',
+                identityId: identity.uniqueSystemId,
+                identityType: 'student',
+                schoolId: identity.schoolId,
+                status: 'active',
+                updatedAt: DateTime.now(),
+              ),
+            );
+          }
         }
       }
       return const Right(null);

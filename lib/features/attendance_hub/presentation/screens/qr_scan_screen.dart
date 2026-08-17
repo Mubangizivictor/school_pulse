@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -6,11 +7,16 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
+import 'package:school_pulse/features/gate_ops/domain/entities/gate.dart';
+import 'package:school_pulse/features/verification/domain/entities/resolved_identity.dart';
+import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
+import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
+import 'package:school_pulse/features/verification/domain/repositories/identity_resolver.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import '../../data/datasources/device_id_provider.dart';
 import '../../domain/entities/attendance_category.dart';
 import '../../domain/entities/attendance_record.dart';
+import '../../domain/entities/attendance_scope.dart';
 import '../bloc/attendance_bloc.dart';
 import '../bloc/attendance_event.dart';
 import '../bloc/attendance_state.dart';
@@ -24,6 +30,8 @@ class QrScanScreen extends StatefulWidget {
 }
 
 enum _ScanState {
+  resolvingScope,
+  pickingScope,
   scanning,
   resolving,
   success,
@@ -35,12 +43,15 @@ enum _ScanState {
 
 class _QrScanScreenState extends State<QrScanScreen> {
   late final MobileScannerController _controller;
-  _ScanState _state = _ScanState.scanning;
+  _ScanState _state = _ScanState.resolvingScope;
   String _name = '';
   String _subtitle = '';
   String? _photoUrl;
   DateTime? _scannedAt;
   String _deniedMessage = '';
+  AttendanceScope? _scope;
+  List<AttendanceScope> _availableScopes = const [];
+  final Set<String> _presentPersonIds = {};
 
   @override
   void initState() {
@@ -54,6 +65,19 @@ class _QrScanScreenState extends State<QrScanScreen> {
       detectionSpeed: DetectionSpeed.normal,
       detectionTimeoutMs: 1000,
     );
+    final auth = context.read<AuthBloc>().state;
+    if (auth is AuthAuthenticated) {
+      context.read<AttendanceBloc>().add(
+        LoadScopesRequested(
+          schoolId: auth.user.schoolId,
+          category: AttendanceCategory.students,
+          operatorUser: auth.user,
+        ),
+      );
+      context.read<AttendanceBloc>().add(
+        SyncPendingAttendanceRequested(schoolId: auth.user.schoolId),
+      );
+    }
   }
 
   @override
@@ -63,7 +87,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
   }
 
   Future<void> _onDetect(BarcodeCapture capture) async {
-    if (_state != _ScanState.scanning) return;
+    if (_state != _ScanState.scanning || _scope == null) return;
     final code = capture.barcodes.firstOrNull?.rawValue;
     if (code == null || code.isEmpty) return;
 
@@ -73,20 +97,52 @@ class _QrScanScreenState extends State<QrScanScreen> {
     if (authState is! AuthAuthenticated) return;
     final user = authState.user;
 
-    final identityRepo = di.sl<StudentIdentityRepository>();
-    final result = await identityRepo.getStudentByUniqueId(code);
+    final verificationContext = VerificationContext(
+      gate: Gate(
+        id: '',
+        name: '',
+        type: '',
+        location: '',
+        assignedOfficerIds: const [],
+        operatingHours: const {},
+        allowedUserRoles: const [],
+        requiredVerificationMethods: const [],
+        schoolId: user.schoolId,
+      ),
+      operatorUser: user,
+      purpose: 'attendance.qr.scan',
+      deviceId: await DeviceIdProvider().getDeviceId(),
+      requestedAt: DateTime.now(),
+    );
+    final result = await di.sl<IdentityResolver>().resolve(
+      QrScanCredential(rawPayload: code, scannedAt: DateTime.now()),
+      verificationContext,
+    );
     if (!mounted) return;
 
-    final student = result.fold((failure) => null, (s) => s);
-    if (student == null) {
+    final identity = result.fold((_) => null, (value) => value);
+    if (identity is! StudentResolvedIdentity) {
       setState(() => _state = _ScanState.invalid);
+      _scheduleAutoContinue();
+      return;
+    }
+
+    if (identity.classId != _scope!.id) {
+      setState(() {
+        _name = identity.name;
+        _subtitle = identity.studentCode;
+        _photoUrl = identity.photoUrl;
+        _state = _ScanState.denied;
+        _deniedMessage = 'Not in this class';
+      });
+      _scheduleAutoContinue();
       return;
     }
 
     setState(() {
-      _name = student.name;
-      _subtitle = student.studentCode;
-      _photoUrl = student.photoUrl;
+      _name = identity.name;
+      _subtitle = identity.studentCode;
+      _photoUrl = identity.photoUrl;
       _scannedAt = DateTime.now();
     });
 
@@ -96,11 +152,12 @@ class _QrScanScreenState extends State<QrScanScreen> {
       id: '',
       schoolId: user.schoolId,
       category: AttendanceCategory.students,
-      scopeId: student.classId,
-      scopeName: student.classId,
+      scopeId: _scope!.id,
+      scopeName: _scope!.name,
+      sessionType: 'daily',
       date: _scannedAt!,
-      personId: student.id,
-      personName: student.name,
+      personId: identity.id,
+      personName: identity.name,
       status: AttendanceStatus.present,
       method: AttendanceMethod.qr,
       markedBy: user.name,
@@ -119,14 +176,45 @@ class _QrScanScreenState extends State<QrScanScreen> {
     setState(() => _state = _ScanState.scanning);
   }
 
+  void _scheduleAutoContinue() {
+    Future<void>.delayed(const Duration(milliseconds: 1400), () {
+      if (mounted) _reset();
+    });
+  }
+
+  void _selectScope(AttendanceScope scope) {
+    setState(() {
+      _scope = scope;
+      _state = _ScanState.scanning;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AttendanceBloc, AttendanceState>(
       listener: (context, state) {
-        if (state is AttendanceMarkSuccess) {
+        if (state is ScopesLoaded) {
+          if (state.scopes.length == 1) {
+            _selectScope(state.scopes.single);
+          } else if (state.scopes.isEmpty) {
+            setState(() {
+              _deniedMessage = 'No class has been assigned to your account.';
+              _state = _ScanState.denied;
+            });
+          } else {
+            setState(() {
+              _availableScopes = state.scopes;
+              _state = _ScanState.pickingScope;
+            });
+          }
+        } else if (state is AttendanceMarkSuccess) {
+          HapticFeedback.lightImpact();
+          _presentPersonIds.add(state.record.personId);
           setState(() => _state = _ScanState.success);
+          _scheduleAutoContinue();
         } else if (state is AttendanceDuplicate) {
           setState(() => _state = _ScanState.duplicate);
+          _scheduleAutoContinue();
         } else if (state is AttendanceActionDenied) {
           setState(() {
             _deniedMessage = state.message;
@@ -139,7 +227,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background(context),
         appBar: AppBar(
-          title: const Text('QR Code Scanner'),
+          title: Text(_scope?.name ?? 'Attendance'),
           backgroundColor: Colors.transparent,
           elevation: 0,
         ),
@@ -150,6 +238,17 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
   Widget _buildBody(BuildContext context) {
     switch (_state) {
+      case _ScanState.resolvingScope:
+        return const Center(child: SchoolPulseLoader());
+      case _ScanState.pickingScope:
+        return ListView.builder(
+          itemCount: _availableScopes.length,
+          itemBuilder: (_, index) => ListTile(
+            title: Text(_availableScopes[index].name),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _selectScope(_availableScopes[index]),
+          ),
+        );
       case _ScanState.scanning:
       case _ScanState.resolving:
         return Stack(
@@ -230,7 +329,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
           name: _name,
           subtitle: _subtitle,
           timeLabel: '',
-          statusLabel: 'Already marked today',
+          statusLabel: 'Already marked present',
           photoUrl: _photoUrl,
           onScanAnother: _reset,
           onDone: () => Navigator.of(context).pop(),
@@ -241,7 +340,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
           name: '',
           subtitle: '',
           timeLabel: '',
-          statusLabel: '',
+          statusLabel: 'Not a School Pulse student card',
           onScanAnother: _reset,
           onDone: () => Navigator.of(context).pop(),
         );

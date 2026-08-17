@@ -724,7 +724,7 @@ Future<void> init() async {
         isar: kIsWeb ? null : sl<Isar>(),
       ),
       idGenerator: sl(),
-      functions: sl(),
+      verificationLocalDataSource: sl(),
     ),
   );
 

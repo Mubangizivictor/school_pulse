@@ -137,15 +137,34 @@ void main() {
   });
 
   group('QR credential', () {
+    const qrToken = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO_0123456789';
+    const qrPayload = 'SPQR1.$qrToken';
+
     test(
-      'resolves to a StudentResolvedIdentity when the code matches a student',
+      'resolves an active opaque QR credential to a StudentResolvedIdentity',
       () async {
         when(
           () => studentIdentityRepository.getStudentByUniqueId('SP-0001'),
         ).thenAnswer((_) async => Right(student));
+        when(
+          () => localDataSource.findRevocation(qrToken, 'school-1'),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localDataSource.findCredential(qrToken, 'school-1'),
+        ).thenAnswer(
+          (_) async => CachedCredential(
+            credentialValue: qrToken,
+            credentialType: 'qr',
+            identityId: 'SP-0001',
+            identityType: 'student',
+            schoolId: 'school-1',
+            status: 'active',
+            updatedAt: DateTime.now(),
+          ),
+        );
 
         final result = await resolver.resolve(
-          QrScanCredential(rawPayload: 'SP-0001', scannedAt: DateTime.now()),
+          QrScanCredential(rawPayload: qrPayload, scannedAt: DateTime.now()),
           context,
         );
 
@@ -156,23 +175,19 @@ void main() {
     );
 
     test(
-      'resolves to unresolved(unknown_credential) when nothing matches',
+      'rejects arbitrary QR content before attempting an identity lookup',
       () async {
-        when(
-          () => studentIdentityRepository.getStudentByUniqueId('BAD-CODE'),
-        ).thenAnswer((_) async => const Right(null));
-
         final result = await resolver.resolve(
-          QrScanCredential(rawPayload: 'BAD-CODE', scannedAt: DateTime.now()),
+          QrScanCredential(
+            rawPayload: 'https://example.com',
+            scannedAt: DateTime.now(),
+          ),
           context,
         );
 
         final identity = result.getOrElse(() => throw Exception());
         expect(identity, isA<UnresolvedResolvedIdentity>());
-        expect(
-          (identity as UnresolvedResolvedIdentity).reason,
-          'unknown_credential',
-        );
+        expect((identity as UnresolvedResolvedIdentity).reason, 'invalid_qr');
       },
     );
   });

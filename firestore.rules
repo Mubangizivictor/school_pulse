@@ -1002,7 +1002,7 @@ service cloud.firestore {
     }
 
     function isValidCredentialStatus() {
-      return request.resource.data.status in ['active', 'revoked'];
+      return request.resource.data.status in ['active', 'revoked', 'disabled', 'replaced', 'lost'];
     }
 
     match /schools/{schoolId}/credentials/{id} {

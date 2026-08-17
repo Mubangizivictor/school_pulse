@@ -12,6 +12,7 @@ import 'package:school_pulse/features/verification/domain/entities/resolved_iden
 import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
 import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
 import 'package:school_pulse/features/verification/domain/repositories/identity_resolver.dart';
+import 'package:school_pulse/features/verification/domain/services/qr_credential_codec.dart';
 
 /// Resolves every credential kind through the same lookups the app already
 /// uses elsewhere (`StudentIdentityRepository`, `GetStaffMembers`,
@@ -25,6 +26,7 @@ class IdentityResolverImpl implements IdentityResolver {
   final VerifyFingerprint verifyFingerprint;
   final VerificationLocalDataSource localDataSource;
   final FirebaseFirestore firestore;
+  final QrCredentialCodec qrCredentialCodec;
 
   IdentityResolverImpl({
     required this.studentIdentityRepository,
@@ -33,7 +35,8 @@ class IdentityResolverImpl implements IdentityResolver {
     required this.verifyFingerprint,
     required this.localDataSource,
     required this.firestore,
-  });
+    QrCredentialCodec? qrCredentialCodec,
+  }) : qrCredentialCodec = qrCredentialCodec ?? const QrCredentialCodec();
 
   @override
   Future<Either<Failure, ResolvedIdentity>> resolve(
@@ -41,7 +44,7 @@ class IdentityResolverImpl implements IdentityResolver {
     VerificationContext context,
   ) {
     return switch (credential) {
-      QrScanCredential(:final rawPayload) => _resolveStudentCode(rawPayload),
+      QrScanCredential(:final rawPayload) => _resolveQr(rawPayload, context),
       ManualCodeScanCredential(:final code) => _resolveManualCode(code),
       StaffLookupScanCredential(:final staffId) => _resolveStaffId(
         staffId,
@@ -59,13 +62,14 @@ class IdentityResolverImpl implements IdentityResolver {
   }
 
   Future<Either<Failure, ResolvedIdentity>> _resolveStudentCode(
-    String code,
-  ) async {
+    String code, {
+    String? schoolId,
+  }) async {
     final result = await studentIdentityRepository.getStudentByUniqueId(code);
     return result.fold(
       Left.new,
       (student) => Right(
-        student == null
+        student == null || (schoolId != null && student.schoolId != schoolId)
             ? const UnresolvedResolvedIdentity(reason: 'unknown_credential')
             : StudentResolvedIdentity(
                 id: student.id,
@@ -76,6 +80,42 @@ class IdentityResolverImpl implements IdentityResolver {
               ),
       ),
     );
+  }
+
+  Future<Either<Failure, ResolvedIdentity>> _resolveQr(
+    String rawPayload,
+    VerificationContext context,
+  ) async {
+    final credentialValue = qrCredentialCodec.parse(rawPayload);
+    if (credentialValue == null) {
+      return const Right(UnresolvedResolvedIdentity(reason: 'invalid_qr'));
+    }
+    final resolved = await _resolveCredential(
+      credentialValue,
+      context.gate.schoolId,
+      expectedType: 'qr',
+    );
+    return resolved.fold(Left.new, (credential) {
+      if (credential == null) {
+        return const Right(
+          UnresolvedResolvedIdentity(reason: 'unknown_credential'),
+        );
+      }
+      if (credential.status != 'active') {
+        return const Right(
+          UnresolvedResolvedIdentity(reason: 'revoked_credential'),
+        );
+      }
+      if (credential.identityType != 'student') {
+        return const Right(
+          UnresolvedResolvedIdentity(reason: 'unknown_credential'),
+        );
+      }
+      return _resolveStudentCode(
+        credential.identityId,
+        schoolId: context.gate.schoolId,
+      );
+    });
   }
 
   Future<Either<Failure, ResolvedIdentity>> _resolveManualCode(
@@ -149,7 +189,44 @@ class IdentityResolverImpl implements IdentityResolver {
       );
     }
 
-    var cached = await localDataSource.findCredential(cardUid, schoolId);
+    final resolved = await _resolveCredential(
+      cardUid,
+      schoolId,
+      expectedType: 'nfc',
+    );
+    return resolved.fold(Left.new, (cached) {
+      if (cached == null) {
+        return const Right(
+          UnresolvedResolvedIdentity(reason: 'unknown_credential'),
+        );
+      }
+      if (cached.status != 'active') {
+        return const Right(
+          UnresolvedResolvedIdentity(reason: 'revoked_credential'),
+        );
+      }
+      if (cached.identityType == 'student') {
+        return _resolveStudentCode(cached.identityId, schoolId: schoolId);
+      }
+      return _resolveStaffId(cached.identityId, context);
+    });
+  }
+
+  Future<Either<Failure, CachedCredential?>> _resolveCredential(
+    String credentialValue,
+    String schoolId, {
+    required String expectedType,
+  }) async {
+    final revoked = await localDataSource.findRevocation(
+      credentialValue,
+      schoolId,
+    );
+    if (revoked != null) return const Right(null);
+
+    var cached = await localDataSource.findCredential(
+      credentialValue,
+      schoolId,
+    );
 
     // Never seen on this device - it may have been assigned/revoked on a
     // different one (NfcCredentialRepositoryImpl pushes every change to
@@ -158,25 +235,29 @@ class IdentityResolverImpl implements IdentityResolver {
     // remote pattern, and cache whatever's found so the next scan on this
     // device resolves offline.
     if (cached == null) {
-      final remote = await _fetchRemoteCredentialState(cardUid, schoolId);
+      final remote = await _fetchRemoteCredentialState(
+        credentialValue,
+        schoolId,
+      );
       if (remote.isRevoked) {
-        return const Right(
-          UnresolvedResolvedIdentity(reason: 'revoked_credential'),
+        return Right(
+          CachedCredential(
+            credentialValue: credentialValue,
+            credentialType: expectedType,
+            identityId: '',
+            identityType: '',
+            schoolId: schoolId,
+            status: 'revoked',
+            updatedAt: DateTime.now(),
+          ),
         );
       }
       cached = remote.credential;
     }
-
-    if (cached == null || cached.status != 'active') {
-      return const Right(
-        UnresolvedResolvedIdentity(reason: 'unknown_credential'),
-      );
+    if (cached != null && cached.credentialType != expectedType) {
+      return const Right(null);
     }
-
-    if (cached.identityType == 'student') {
-      return _resolveStudentCode(cached.identityId);
-    }
-    return _resolveStaffId(cached.identityId, context);
+    return Right(cached);
   }
 
   Future<({CachedCredential? credential, bool isRevoked})>

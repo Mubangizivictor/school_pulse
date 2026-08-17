@@ -94,6 +94,14 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
                         minimumSize: const Size(200, 50),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () => context.read<StudentIdentityBloc>().add(
+                        RegenerateQrCredentialEvent(state.identity),
+                      ),
+                      icon: const Icon(Icons.qr_code_2),
+                      label: const Text('Replace QR Credential'),
+                    ),
                     const SizedBox(height: 24),
                     const Divider(),
                     const SizedBox(height: 8),
@@ -247,7 +255,6 @@ class _IdCardPreview extends StatelessWidget {
             const Divider(height: 32),
             _buildInfoRow('Admission No', student.studentId),
             _buildInfoRow('Class', student.className),
-            _buildInfoRow('System ID', identity.uniqueSystemId),
             if (student.dormLeadershipRole != null)
               _buildInfoRow(
                 'Dorm Role',
@@ -257,19 +264,13 @@ class _IdCardPreview extends StatelessWidget {
               ),
             const SizedBox(height: 24),
             QrImageView(
-              // qrCodeData holds the server-signed envelope once
-              // signStudentCredential has run; falls back to the bare
-              // uniqueSystemId for identities issued before signing existed.
+              // This is an opaque, versioned credential envelope. It never
+              // contains the student ID or any other cardholder information.
               data: identity.qrCodeData.isNotEmpty
                   ? identity.qrCodeData
                   : identity.uniqueSystemId,
               version: QrVersions.auto,
               size: 120.0,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              identity.uniqueSystemId,
-              style: const TextStyle(fontSize: 10, color: Colors.grey),
             ),
           ],
         ),

@@ -48,6 +48,20 @@ class StudentIdentityBloc
       );
     });
 
+    on<RegenerateQrCredentialEvent>((event, emit) async {
+      emit(StudentIdentityLoading());
+      final result = await repository.regenerateQrCredential(event.identity);
+      result.fold(
+        (failure) => emit(StudentIdentityError(failure.message)),
+        (identity) => emit(
+          StudentIdentityActionSuccess(
+            'New QR credential generated. Previous card is inactive.',
+            identity,
+          ),
+        ),
+      );
+    });
+
     on<AssignNfcCardEvent>((event, emit) async {
       final result = await nfcCredentialService.assignToStudent(
         cardUid: event.cardUid,

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../../student/domain/entities/student.dart';
+import '../../domain/entities/student_identity.dart';
 
 abstract class StudentIdentityEvent extends Equatable {
   const StudentIdentityEvent();
@@ -31,6 +32,14 @@ class CacheStudentsOfflineEvent extends StudentIdentityEvent {
 
   @override
   List<Object?> get props => [students];
+}
+
+class RegenerateQrCredentialEvent extends StudentIdentityEvent {
+  final StudentIdentity identity;
+  const RegenerateQrCredentialEvent(this.identity);
+
+  @override
+  List<Object?> get props => [identity];
 }
 
 class AssignNfcCardEvent extends StudentIdentityEvent {

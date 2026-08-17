@@ -18,6 +18,12 @@ abstract class StudentIdentityRepository {
   Future<Either<Failure, void>> cacheStudentsForOffline(List<Student> students);
   Future<Either<Failure, Student?>> getStudentByUniqueId(String uniqueSystemId);
 
+  /// Issues a new opaque printable QR credential and retires the previous
+  /// credential without deleting its audit history.
+  Future<Either<Failure, StudentIdentity>> regenerateQrCredential(
+    StudentIdentity identity,
+  );
+
   // NFC lifecycle
   Future<Either<Failure, void>> updateNfcStatus(
     String studentId,
