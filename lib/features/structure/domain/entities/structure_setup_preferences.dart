@@ -27,6 +27,8 @@ class StructureSetupPreferences extends Equatable {
   final StructureUseChoice rooms;
   final StructureUseChoice houses;
   final StructureUseChoice clubs;
+  final StructureUseChoice boarding;
+  final StructureUseChoice transport;
   final bool onboardingCompleted;
   final int setupVersion;
   final String lastStepId;
@@ -37,6 +39,8 @@ class StructureSetupPreferences extends Equatable {
     this.rooms = StructureUseChoice.undecided,
     this.houses = StructureUseChoice.undecided,
     this.clubs = StructureUseChoice.undecided,
+    this.boarding = StructureUseChoice.undecided,
+    this.transport = StructureUseChoice.undecided,
     this.onboardingCompleted = false,
     this.setupVersion = currentSetupVersion,
     this.lastStepId = '',
@@ -48,6 +52,8 @@ class StructureSetupPreferences extends Equatable {
     StructureUseChoice? rooms,
     StructureUseChoice? houses,
     StructureUseChoice? clubs,
+    StructureUseChoice? boarding,
+    StructureUseChoice? transport,
     bool? onboardingCompleted,
     int? setupVersion,
     String? lastStepId,
@@ -58,6 +64,8 @@ class StructureSetupPreferences extends Equatable {
       rooms: rooms ?? this.rooms,
       houses: houses ?? this.houses,
       clubs: clubs ?? this.clubs,
+      boarding: boarding ?? this.boarding,
+      transport: transport ?? this.transport,
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       setupVersion: setupVersion ?? this.setupVersion,
       lastStepId: lastStepId ?? this.lastStepId,
@@ -71,6 +79,8 @@ class StructureSetupPreferences extends Equatable {
         rooms,
         houses,
         clubs,
+        boarding,
+        transport,
         onboardingCompleted,
         setupVersion,
         lastStepId,
