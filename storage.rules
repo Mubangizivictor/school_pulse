@@ -25,9 +25,6 @@ service firebase.storage {
       allow read: if true;
       allow write: if request.auth != null;
     }
-    // Canonical school branding/configuration assets. The legacy
-    // /school_assets root is retained only for existing URLs; all current
-    // admin uploads use this scoped path.
     match /schools/{schoolId}/school_assets/{fileName} {
       allow read: if isSameSchool(schoolId);
       allow write: if isSameSchool(schoolId)
@@ -35,15 +32,12 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
       allow delete: if isSameSchool(schoolId);
     }
-    // Institution Settings uploads use a deliberately narrow, tenant-scoped
-    // namespace.  This prevents one tenant's branding from being addressed
-    // through another tenant's conventional school-assets folder.
     match /institutions/{institutionId}/branding/{assetType}/{fileName} {
       allow read: if isSameSchool(institutionId);
       allow write: if canManageInstitutionBranding(institutionId)
         && assetType in ['logo', 'badge', 'splash', 'banners']
         && request.resource.size < 10 * 1024 * 1024
-        && request.resource.contentType.matches('image/(png|jpeg|webp)');
+        && request.resource.contentType.matches('image/(png|jpe?g|webp)');
       allow delete: if canManageInstitutionBranding(institutionId);
     }
     match /profile_photos/{uid}/{fileName} {
@@ -54,12 +48,6 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
-    // Photos and group avatars shared through the /messages module. Scoped to
-    // school + actual conversation membership (mirrors the participantIds
-    // check enforced on the conversation doc in firestore.rules), so an
-    // authenticated user outside the conversation - even one in the same
-    // school - cannot read or overwrite another chat's attachments merely by
-    // guessing/obtaining the storage path.
     function isConversationParticipant(conversationId) {
       return request.auth != null &&
         request.auth.uid in firestore.get(
@@ -71,14 +59,6 @@ service firebase.storage {
       allow write: if isSameSchool(schoolId) && isConversationParticipant(conversationId)
         && request.resource.size < 15 * 1024 * 1024;
     }
-    // Class Teacher resource area. Storage rules cannot read Firestore, so
-    // "is this your class" is enforced in firestore.rules on the
-    // class_resources document that carries the path - a blob with no
-    // document pointing at it is unreachable from the app.
-    //
-    // What this layer can enforce is size and type, and it does: the content
-    // type must be one of the kinds a class folder accepts, so an executable
-    // is refused here as well as at the client guard.
     match /class_resources/{schoolId}/{classId}/{fileName} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
@@ -99,13 +79,6 @@ service firebase.storage {
       allow delete: if request.auth != null;
     }
 
-    // Student admission/profile documents (birth certificates, prior
-    // reports, IDs). Cross-references the student's own schoolId via
-    // isSameSchool (same firestore.get() pattern used by
-    // /schools/{schoolId}/school_assets above) so a staff member from
-    // another tenant who obtains or guesses a studentId/fileName can't
-    // read, overwrite, or delete another school's student documents -
-    // previously any authenticated user passed this rule outright.
     match /schools/students/{studentId}/documents/{fileName} {
       allow read: if isSameSchool(
         firestore.get(/databases/(default)/documents/students/$(studentId)).data.schoolId
@@ -126,11 +99,6 @@ service firebase.storage {
       );
     }
 
-    // Subscription payment proof is private to the submitting administrator.
-    // The SaaS Owner gets temporary access only through an owner-authorized
-    // Cloud Function; there is no public proof URL stored in Firestore.
-    // Proof is create-only: after submission the client cannot replace or
-    // delete the evidence before owner verification.
     match /payment_proofs/{uid}/{fileName} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow create: if request.auth != null
@@ -143,17 +111,10 @@ service firebase.storage {
       allow update, delete: if false;
     }
 
-    // Provider certificates and integration configuration imports are only
-    // exchanged through authenticated backend workflows. No client SDK path
-    // can upload or read a credential-bearing integration file.
     match /institutions/{institutionId}/integrations/{allPaths=**} {
       allow read, write: if false;
     }
 
-    // Data Management temporary files. The browser may upload a CSV/XLSX to
-    // this tenant path, but it cannot download a private export or overwrite
-    // a backend-generated report. Backend workers enforce template/version,
-    // expiry, and module permissions before consuming an upload.
     match /institutions/{institutionId}/data_operations/imports/{fileName} {
       allow create: if isActiveInstitutionMember(institutionId)
         && request.resource.size < 25 * 1024 * 1024
@@ -165,8 +126,6 @@ service firebase.storage {
       allow read, write: if false;
     }
 
-    // Support uploads are tenant-scoped and intentionally narrow. The
-    // callable persists only a validated path after the ticket exists.
     match /institutions/{institutionId}/support/{requestId}/{fileName} {
       allow read: if false;
       allow create: if isActiveInstitutionMember(institutionId)
@@ -177,11 +136,6 @@ service firebase.storage {
       allow update, delete: if false;
     }
 
-    // School Calendar event attachments. Tenant-scoped like school_assets;
-    // size/type enforced here since Storage rules can't check
-    // calendar.manage against Firestore role_permission_overrides - the
-    // write path from the app already gates on that permission before
-    // upload, this is a defense-in-depth backstop.
     match /schools/{schoolId}/calendar_events/{eventId}/attachments/{fileName} {
       allow read: if isSameSchool(schoolId);
       allow write: if isSameSchool(schoolId)
@@ -189,10 +143,6 @@ service firebase.storage {
       allow delete: if isSameSchool(schoolId);
     }
 
-    // Communication Center image/attachments. Same defense-in-depth
-    // backstop as calendar attachments above: the app gates upload on
-    // communications.create/edit_draft before this is ever reached, this
-    // rule only enforces tenant scope, size and content type.
     match /schools/{schoolId}/communication_campaigns/{campaignId}/{fileName} {
       allow read: if isSameSchool(schoolId);
       allow write: if isSameSchool(schoolId)
