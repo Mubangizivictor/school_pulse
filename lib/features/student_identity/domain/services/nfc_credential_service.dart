@@ -3,8 +3,12 @@ import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/features/verification/domain/repositories/nfc_credential_repository.dart';
 import '../repositories/student_identity_repository.dart';
 
-/// Orchestrates a student's NFC card lifecycle across the verification
-/// credential store and the student identity record.
+/// Canonical NFC lifecycle for students.
+///
+/// The physical card is bound directly to Student.id. StudentIdentity's
+/// uniqueSystemId remains printable/auditable metadata but Attendance no
+/// longer needs a second student_identities lookup to discover who was
+/// scanned.
 class NfcCredentialService {
   final NfcCredentialRepository nfcCredentialRepository;
   final StudentIdentityRepository studentIdentityRepository;
@@ -22,7 +26,7 @@ class NfcCredentialService {
   }) async {
     final result = await nfcCredentialRepository.assign(
       credentialValue: cardUid,
-      identityId: uniqueSystemId,
+      identityId: studentId,
       identityType: 'student',
       schoolId: schoolId,
       studentId: studentId,
@@ -41,7 +45,7 @@ class NfcCredentialService {
     final result = await nfcCredentialRepository.replace(
       oldCredentialValue: oldCardUid,
       newCredentialValue: newCardUid,
-      identityId: uniqueSystemId,
+      identityId: studentId,
       identityType: 'student',
       schoolId: schoolId,
       reason: reason,
@@ -50,11 +54,6 @@ class NfcCredentialService {
     return _enrichDuplicate(result);
   }
 
-  /// The online assignment path already updates StudentIdentity.nfcStatus
-  /// inside the secure assignNfcCredential Cloud Function transaction. The
-  /// previous client-side update here was redundant and failed under
-  /// Firestore rules, turning a successful card assignment into a visible
-  /// permission-denied error. Keep duplicate enrichment only.
   Future<Either<Failure, void>> _enrichDuplicate(
     Either<Failure, void> result,
   ) async {
@@ -88,15 +87,11 @@ class NfcCredentialService {
     required String studentId,
     required String schoolId,
     required String reason,
-  }) async {
-    final result = await nfcCredentialRepository.revoke(
+  }) {
+    return nfcCredentialRepository.revoke(
       credentialValue: cardUid,
       schoolId: schoolId,
       reason: reason,
-    );
-    return result.fold(
-      Left.new,
-      (_) => studentIdentityRepository.updateNfcStatus(studentId, 'revoked'),
     );
   }
 
@@ -104,6 +99,8 @@ class NfcCredentialService {
     required String uniqueSystemId,
     required String schoolId,
   }) {
+    // Parameter name retained for API compatibility; callers now pass the
+    // canonical Student.id rather than StudentIdentity.uniqueSystemId.
     return nfcCredentialRepository.findAssignedCredential(
       identityId: uniqueSystemId,
       schoolId: schoolId,
@@ -114,14 +111,10 @@ class NfcCredentialService {
     required String cardUid,
     required String studentId,
     required String schoolId,
-  }) async {
-    final result = await nfcCredentialRepository.reactivate(
+  }) {
+    return nfcCredentialRepository.reactivate(
       credentialValue: cardUid,
       schoolId: schoolId,
-    );
-    return result.fold(
-      Left.new,
-      (_) => studentIdentityRepository.updateNfcStatus(studentId, 'active'),
     );
   }
 }
