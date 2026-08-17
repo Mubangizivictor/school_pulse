@@ -1,6 +1,8 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:school_pulse/core/network/network_info.dart';
+import 'package:school_pulse/features/attendance_hub/data/datasources/attendance_local_data_source.dart';
 import 'package:school_pulse/features/attendance_hub/data/datasources/attendance_remote_data_source.dart';
 import 'package:school_pulse/features/attendance_hub/data/repositories/attendance_repository_impl.dart';
 import 'package:school_pulse/features/attendance_hub/domain/entities/attendance_access_context.dart';
@@ -13,6 +15,11 @@ import 'package:school_pulse/features/structure/domain/repositories/structure_re
 
 class _MockAttendanceRemoteDataSource extends Mock
     implements AttendanceRemoteDataSource {}
+
+class _MockAttendanceLocalDataSource extends Mock
+    implements AttendanceLocalDataSource {}
+
+class _MockNetworkInfo extends Mock implements NetworkInfo {}
 
 class _MockStructureRepository extends Mock implements StructureRepository {}
 
@@ -28,6 +35,8 @@ void main() {
     students = _MockStudentRepository();
     repository = AttendanceRepositoryImpl(
       remoteDataSource: _MockAttendanceRemoteDataSource(),
+      localDataSource: _MockAttendanceLocalDataSource(),
+      networkInfo: _MockNetworkInfo(),
       structureRepository: _MockStructureRepository(),
       studentRepository: students,
       getStaffMembers: _MockGetStaffMembers(),
@@ -37,7 +46,7 @@ void main() {
   test(
     'loads a manual student roster through the scoped canonical query',
     () async {
-    final active = Student(
+      final active = Student(
         id: 'student-a',
         schoolId: 'school-a',
         name: 'Active Student',
@@ -50,7 +59,7 @@ void main() {
         status: StudentStatus.active,
         level: EducationLevel.primary,
       );
-    final withdrawn = Student(
+      final withdrawn = Student(
         id: 'student-b',
         schoolId: 'school-a',
         name: 'Withdrawn Student',

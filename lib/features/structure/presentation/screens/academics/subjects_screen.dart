@@ -15,9 +15,12 @@ import '../../widgets/academics_ui_kit.dart';
 import '../../widgets/structure_dialogs.dart'
     show kSubjectColorSwatches, showDeleteConfirmDialog;
 import '../../widgets/structure_empty_hint.dart';
+import '../../widgets/structure_wizard_banner.dart';
 
 class SubjectsScreen extends StatefulWidget {
-  const SubjectsScreen({super.key});
+  const SubjectsScreen({super.key, this.wizardStep, this.wizardTotal});
+  final int? wizardStep;
+  final int? wizardTotal;
   @override
   State<SubjectsScreen> createState() => _SubjectsScreenState();
 }
@@ -75,6 +78,13 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
           onSearchChanged: (v) => setState(() => _query = v),
           fabLabel: 'Add Subject',
           onFabPressed: () => _open(context, schoolId, user.id, bloc, state),
+          appBarBottom: widget.wizardStep == null || widget.wizardTotal == null
+              ? null
+              : StructureWizardBanner(
+                  stepId: 'subjects',
+                  stepNumber: widget.wizardStep!,
+                  totalSteps: widget.wizardTotal!,
+                ),
           headerExtra: [
             _Summary(
               total: state.subjects.length,

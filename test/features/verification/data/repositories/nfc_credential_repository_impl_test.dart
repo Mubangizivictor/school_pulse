@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
 import 'package:school_pulse/features/verification/data/repositories/nfc_credential_repository_impl.dart';
@@ -150,6 +151,11 @@ void main() {
         expect(result.isLeft(), true);
         verifyNever(() => localDataSource.cacheCredential(any()));
         verifyNever(() => localDataSource.deleteRevocation(any(), any()));
+        final failure = result.fold((f) => f, (_) => null)!;
+        expect(failure, isA<DuplicateCredentialFailure>());
+        final duplicateFailure = failure as DuplicateCredentialFailure;
+        expect(duplicateFailure.conflictingIdentityId, 'SP-STUDENT-OTHER');
+        expect(duplicateFailure.conflictingIdentityType, 'student');
       },
     );
 

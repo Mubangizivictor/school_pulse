@@ -28,6 +28,14 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     on<MarkAttendanceRequested>(_onMarkAttendance);
     on<MarkBatchAttendanceRequested>(_onMarkBatch);
     on<LoadRecordsRequested>(_onLoadRecords);
+    on<SyncPendingAttendanceRequested>(_onSyncPending);
+  }
+
+  Future<void> _onSyncPending(
+    SyncPendingAttendanceRequested event,
+    Emitter<AttendanceState> emit,
+  ) async {
+    await repository.syncPendingAttendance(event.schoolId);
   }
 
   /// Single resolution point every handler below goes through - nothing in

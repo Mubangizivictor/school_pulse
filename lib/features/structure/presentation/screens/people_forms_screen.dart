@@ -1340,14 +1340,12 @@ class _FormField extends StatelessWidget {
     required this.hint,
     this.required = false,
     this.maxLines = 1,
-    this.enabled = true,
     this.helper,
     this.keyboardType,
   });
   final TextEditingController? controller;
   final String label, hint;
   final bool required;
-  final bool enabled;
   final int maxLines;
   final String? helper;
   final TextInputType? keyboardType;
@@ -1373,7 +1371,6 @@ class _FormField extends StatelessWidget {
         const SizedBox(height: 7),
         TextFormField(
           controller: controller,
-          enabled: enabled,
           maxLines: maxLines,
           keyboardType: keyboardType,
           validator: required

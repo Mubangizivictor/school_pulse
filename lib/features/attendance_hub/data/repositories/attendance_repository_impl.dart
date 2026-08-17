@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:school_pulse/core/error/failures.dart';
+import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
@@ -9,18 +10,35 @@ import '../../domain/entities/attendance_category.dart';
 import '../../domain/entities/attendance_record.dart';
 import '../../domain/entities/attendance_scope.dart';
 import '../../domain/repositories/attendance_repository.dart';
+import '../datasources/attendance_local_data_source.dart'
+    show AttendanceLocalDataSource, LocalDuplicateAttendanceException;
 import '../datasources/attendance_remote_data_source.dart'
-    show AttendanceRemoteDataSource, DuplicateAttendanceException;
+    show
+        AttendanceRemoteDataSource,
+        DuplicateAttendanceException,
+        buildAttendanceRecordId;
 import '../models/attendance_record_model.dart';
 
+/// Local-first per record.md/plan section 6/12: [markAttendance] always
+/// writes to [localDataSource] before any network call - that write is the
+/// operation's success point, so an NFC/QR/manual scan is saved and
+/// duplicate-checked even fully offline. A push is then attempted
+/// best-effort; on failure the record just stays `pending` in Isar for
+/// [syncPendingAttendance] to retry later (a reconnect listener or periodic
+/// timer wired at the bloc/presentation layer), mirroring
+/// GateOpsRepositoryImpl.recordMovementEvent.
 class AttendanceRepositoryImpl implements AttendanceRepository {
   final AttendanceRemoteDataSource remoteDataSource;
+  final AttendanceLocalDataSource localDataSource;
+  final NetworkInfo networkInfo;
   final StructureRepository structureRepository;
   final StudentRepository studentRepository;
   final GetStaffMembers getStaffMembers;
 
   AttendanceRepositoryImpl({
     required this.remoteDataSource,
+    required this.localDataSource,
+    required this.networkInfo,
     required this.structureRepository,
     required this.studentRepository,
     required this.getStaffMembers,
@@ -163,15 +181,79 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
   Future<Either<Failure, AttendanceRecord>> markAttendance(
     AttendanceRecord record,
   ) async {
+    final pendingRecord = record.copyWith(
+      syncStatus: AttendanceSyncStatus.pending,
+    );
+
+    final AttendanceRecord cached;
     try {
-      final saved = await remoteDataSource.markAttendance(
-        AttendanceRecordModel.fromEntity(record),
+      cached = await localDataSource.cacheIfAbsent(pendingRecord);
+    } on LocalDuplicateAttendanceException {
+      return const Left(
+        ValidationFailure(
+          'Attendance already recorded for this session',
+          field: 'duplicate',
+        ),
       );
-      return Right(saved);
-    } on DuplicateAttendanceException catch (e) {
-      return Left(ValidationFailure(e.message, field: 'duplicate'));
+    }
+
+    if (!await networkInfo.isConnected) {
+      return Right(cached);
+    }
+
+    final recordId = buildAttendanceRecordId(
+      category: cached.category,
+      scopeId: cached.scopeId,
+      sessionType: cached.sessionType,
+      date: cached.date,
+      personId: cached.personId,
+    );
+    try {
+      // markAttendance (not pushRecord) re-checks doc existence server-side -
+      // required on web, where AttendanceLocalDataSourceWeb never actually
+      // caches, so this is the only duplicate check that runs there.
+      await remoteDataSource.markAttendance(
+        AttendanceRecordModel.fromEntity(cached),
+      );
+      await localDataSource.markSynced(recordId);
+      return Right(cached.copyWith(syncStatus: AttendanceSyncStatus.synced));
+    } on DuplicateAttendanceException {
+      return const Left(
+        ValidationFailure(
+          'Attendance already recorded for this session',
+          field: 'duplicate',
+        ),
+      );
     } catch (_) {
-      return Left(ServerFailure());
+      // Push failed (timeout, transient Firestore error) but the record is
+      // already safely queued locally - this is the normal "will sync
+      // later" path, not a failure to surface to the scanning teacher.
+      return Right(cached);
+    }
+  }
+
+  @override
+  Future<void> syncPendingAttendance(String schoolId) async {
+    if (!await networkInfo.isConnected) return;
+    final pending = await localDataSource.getPending(schoolId);
+    for (final record in pending) {
+      final recordId = buildAttendanceRecordId(
+        category: record.category,
+        scopeId: record.scopeId,
+        sessionType: record.sessionType,
+        date: record.date,
+        personId: record.personId,
+      );
+      try {
+        await remoteDataSource.pushRecord(
+          schoolId,
+          recordId,
+          AttendanceRecordModel.fromEntity(record).toFirestore(),
+        );
+        await localDataSource.markSynced(recordId);
+      } catch (_) {
+        // Leave pending for the next sweep.
+      }
     }
   }
 

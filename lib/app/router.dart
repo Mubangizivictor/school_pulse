@@ -49,6 +49,7 @@ import 'package:school_pulse/features/integrations/presentation/integration_heal
 import 'package:school_pulse/features/integrations/presentation/integration_devices_screen.dart';
 import 'package:school_pulse/features/integrations/presentation/integration_webhooks_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/structure_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/structure_wizard_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/levels_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/years_terms_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/classes_streams_screen.dart';
@@ -1623,15 +1624,34 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'structure',
-              builder: (context, state) => StructureScreen(
-                initialSection:
-                    state.uri.queryParameters['section'] ?? 'overview',
-              ),
+              builder: (context, state) {
+                // A section query param means the admin navigated here from
+                // inside the post-setup Structure Management view (e.g. the
+                // progress screen's own links) - honor it and skip the
+                // wizard gate. With no section, `StructureWizardScreen`
+                // decides: first incomplete required step, or the
+                // management view once setup is done.
+                if (state.uri.queryParameters.containsKey('section')) {
+                  return StructureScreen(
+                    initialSection: state.uri.queryParameters['section']!,
+                  );
+                }
+                return const StructureWizardScreen();
+              },
               routes: [
                 GoRoute(
                   path: 'institution',
-                  builder: (context, state) =>
-                      const InstitutionSettingsScreen(),
+                  builder: (context, state) => InstitutionSettingsScreen(
+                    wizardStep: int.tryParse(
+                      state.uri.queryParameters['wizardStep'] ?? '',
+                    ),
+                    wizardTotal: int.tryParse(
+                      state.uri.queryParameters['wizardTotal'] ?? '',
+                    ),
+                    wizardStepId:
+                        state.uri.queryParameters['wizardStepId'] ??
+                        'institution-info',
+                  ),
                 ),
                 GoRoute(
                   path: 'academic',
@@ -1645,34 +1665,85 @@ final router = GoRouter(
                   routes: [
                     GoRoute(
                       path: 'levels',
-                      builder: (context, state) => const LevelsScreen(),
+                      builder: (context, state) => LevelsScreen(
+                        wizardStep: int.tryParse(
+                          state.uri.queryParameters['wizardStep'] ?? '',
+                        ),
+                        wizardTotal: int.tryParse(
+                          state.uri.queryParameters['wizardTotal'] ?? '',
+                        ),
+                      ),
                     ),
                     GoRoute(
                       path: 'years-terms',
                       builder: (context, state) => YearsTermsScreen(
                         showTerms: state.uri.queryParameters['mode'] == 'terms',
+                        wizardStep: int.tryParse(
+                          state.uri.queryParameters['wizardStep'] ?? '',
+                        ),
+                        wizardTotal: int.tryParse(
+                          state.uri.queryParameters['wizardTotal'] ?? '',
+                        ),
                       ),
                     ),
                     GoRoute(
                       path: 'classes-streams',
-                      builder: (context, state) => const ClassesStreamsScreen(),
+                      builder: (context, state) => ClassesStreamsScreen(
+                        wizardStep: int.tryParse(
+                          state.uri.queryParameters['wizardStep'] ?? '',
+                        ),
+                        wizardTotal: int.tryParse(
+                          state.uri.queryParameters['wizardTotal'] ?? '',
+                        ),
+                        wizardStepId:
+                            state.uri.queryParameters['wizardStepId'] ??
+                            'classes',
+                      ),
                     ),
                     GoRoute(
                       path: 'subjects',
-                      builder: (context, state) => const SubjectsScreen(),
+                      builder: (context, state) => SubjectsScreen(
+                        wizardStep: int.tryParse(
+                          state.uri.queryParameters['wizardStep'] ?? '',
+                        ),
+                        wizardTotal: int.tryParse(
+                          state.uri.queryParameters['wizardTotal'] ?? '',
+                        ),
+                      ),
                     ),
                     GoRoute(
                       path: 'subject-class-assignments',
                       builder: (context, state) =>
-                          const SubjectClassAssignmentsScreen(),
+                          SubjectClassAssignmentsScreen(
+                            wizardStep: int.tryParse(
+                              state.uri.queryParameters['wizardStep'] ?? '',
+                            ),
+                            wizardTotal: int.tryParse(
+                              state.uri.queryParameters['wizardTotal'] ?? '',
+                            ),
+                          ),
                     ),
                     GoRoute(
                       path: 'departments',
-                      builder: (context, state) => const DepartmentsScreen(),
+                      builder: (context, state) => DepartmentsScreen(
+                        wizardStep: int.tryParse(
+                          state.uri.queryParameters['wizardStep'] ?? '',
+                        ),
+                        wizardTotal: int.tryParse(
+                          state.uri.queryParameters['wizardTotal'] ?? '',
+                        ),
+                      ),
                     ),
                     GoRoute(
                       path: 'grading-systems',
-                      builder: (context, state) => const GradingSystemsScreen(),
+                      builder: (context, state) => GradingSystemsScreen(
+                        wizardStep: int.tryParse(
+                          state.uri.queryParameters['wizardStep'] ?? '',
+                        ),
+                        wizardTotal: int.tryParse(
+                          state.uri.queryParameters['wizardTotal'] ?? '',
+                        ),
+                      ),
                     ),
                     GoRoute(
                       path: 'assessment-types',
@@ -1705,7 +1776,15 @@ final router = GoRouter(
                     final tab =
                         int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
                         0;
-                    return CampusFacilitiesScreen(initialTab: tab);
+                    return CampusFacilitiesScreen(
+                      initialTab: tab,
+                      wizardStep: int.tryParse(
+                        state.uri.queryParameters['wizardStep'] ?? '',
+                      ),
+                      wizardTotal: int.tryParse(
+                        state.uri.queryParameters['wizardTotal'] ?? '',
+                      ),
+                    );
                   },
                 ),
                 GoRoute(

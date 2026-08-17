@@ -54,6 +54,7 @@ class VerificationLocalDataSourceWeb implements VerificationLocalDataSource {
       'schoolId': credential.schoolId,
       'status': credential.status,
       'updatedAt': credential.updatedAt.toIso8601String(),
+      'credentialVersion': credential.credentialVersion,
     });
   }
 
@@ -80,6 +81,7 @@ class VerificationLocalDataSourceWeb implements VerificationLocalDataSource {
         schoolId: data['schoolId'] as String,
         status: data['status'] as String,
         updatedAt: DateTime.parse(data['updatedAt'] as String),
+        credentialVersion: data['credentialVersion'] as int? ?? 1,
       );
 
   @override

@@ -14,6 +14,8 @@ import 'package:school_pulse/injection_container.dart' as di;
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/attendance_hub/domain/repositories/attendance_repository.dart';
+import 'package:school_pulse/features/attendance_hub/presentation/widgets/attendance_sync_lifecycle_gate.dart';
 import 'package:school_pulse/features/institution/presentation/bloc/institution_context_cubit.dart';
 import 'package:school_pulse/features/institution/presentation/widgets/subscription_access_gate.dart';
 import 'package:school_pulse/features/super_admin/presentation/widgets/owner_app_lock_gate.dart';
@@ -248,6 +250,18 @@ class SchoolPulseAppView extends StatelessWidget {
               // was stashed while signed out.
               di.sl<NotificationCoordinator>().onSignedIn(state.user);
 
+              // Drains any NFC/QR/manual attendance marked while offline -
+              // fires on cold-start session restore and on interactive
+              // login alike (both emit AuthAuthenticated), so a teacher who
+              // closes the app before reconnecting still gets synced the
+              // next time School Pulse launches, without reopening the NFC
+              // screen. A no-op when already synced or still offline.
+              unawaited(
+                di.sl<AttendanceRepository>().syncPendingAttendance(
+                  state.user.schoolId,
+                ),
+              );
+
               // Load structure data once authenticated.
               context.read<StructureBloc>().add(
                 LoadStructureData(state.user.schoolId),
@@ -286,9 +300,11 @@ class SchoolPulseAppView extends StatelessWidget {
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,
             routerConfig: router,
-            builder: (context, child) => OwnerAppLockGate(
-              child: SubscriptionAccessGate(
-                child: child ?? const SizedBox.shrink(),
+            builder: (context, child) => AttendanceSyncLifecycleGate(
+              child: OwnerAppLockGate(
+                child: SubscriptionAccessGate(
+                  child: child ?? const SizedBox.shrink(),
+                ),
               ),
             ),
             debugShowCheckedModeBanner: false,

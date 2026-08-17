@@ -2,6 +2,8 @@ import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/error/failures.dart';
+import 'package:school_pulse/features/student/domain/entities/student.dart';
+import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
 import 'package:school_pulse/features/student_identity/domain/services/nfc_credential_service.dart';
 import 'package:school_pulse/features/verification/domain/repositories/nfc_credential_repository.dart';
@@ -84,6 +86,103 @@ void main() {
         );
       },
     );
+
+    test(
+      'resolves and names the conflicting student when the card is already '
+      'registered to someone else, instead of a dead-end generic message',
+      () async {
+        when(
+          () => nfcCredentialRepository.assign(
+            credentialValue: any(named: 'credentialValue'),
+            identityId: any(named: 'identityId'),
+            identityType: any(named: 'identityType'),
+            schoolId: any(named: 'schoolId'),
+          ),
+        ).thenAnswer(
+          (_) async => const Left(
+            DuplicateCredentialFailure(
+              conflictingIdentityId: 'SP-STUDENT-OTHER',
+              conflictingIdentityType: 'student',
+            ),
+          ),
+        );
+        when(
+          () => studentIdentityRepository.getStudentByUniqueId(
+            'SP-STUDENT-OTHER',
+          ),
+        ).thenAnswer(
+          (_) async => Right(
+            Student(
+              id: 'student-other',
+              schoolId: schoolId,
+              name: 'Jane Achieng',
+              studentCode: 'SP002',
+              admissionNumber: 'SP002',
+              dateOfBirth: DateTime(2012),
+              gender: Gender.female,
+              classId: 'class-b',
+              academicYearId: 'year-a',
+              status: StudentStatus.active,
+              level: EducationLevel.primary,
+            ),
+          ),
+        );
+
+        final result = await service.assignToStudent(
+          cardUid: cardUid,
+          studentId: studentId,
+          uniqueSystemId: uniqueSystemId,
+          schoolId: schoolId,
+        );
+
+        expect(result.isLeft(), true);
+        final failure = result.fold((f) => f, (_) => null)!;
+        expect(
+          failure.message,
+          'This card is already registered to Jane Achieng.',
+        );
+        verifyNever(
+          () => studentIdentityRepository.updateNfcStatus(any(), any()),
+        );
+      },
+    );
+
+    test('falls back to the generic message when the conflicting student '
+        'cannot be resolved (e.g. offline)', () async {
+      when(
+        () => nfcCredentialRepository.assign(
+          credentialValue: any(named: 'credentialValue'),
+          identityId: any(named: 'identityId'),
+          identityType: any(named: 'identityType'),
+          schoolId: any(named: 'schoolId'),
+        ),
+      ).thenAnswer(
+        (_) async => const Left(
+          DuplicateCredentialFailure(
+            conflictingIdentityId: 'SP-STUDENT-OTHER',
+            conflictingIdentityType: 'student',
+          ),
+        ),
+      );
+      when(
+        () =>
+            studentIdentityRepository.getStudentByUniqueId('SP-STUDENT-OTHER'),
+      ).thenAnswer((_) async => Left(ServerFailure('offline')));
+
+      final result = await service.assignToStudent(
+        cardUid: cardUid,
+        studentId: studentId,
+        uniqueSystemId: uniqueSystemId,
+        schoolId: schoolId,
+      );
+
+      expect(result.isLeft(), true);
+      final failure = result.fold((f) => f, (_) => null)!;
+      expect(
+        failure.message,
+        'This card is already assigned to another identity. Revoke or replace it first.',
+      );
+    });
   });
 
   group('revokeForStudent', () {

@@ -100,7 +100,7 @@ class StructureHealth {
 
 class StructureHealthResolver {
   StructureHealth resolve(StructureState state) {
-    final sections = registry;
+    final sections = StructureStepRegistry.sections;
     final all = sections.expand((s) => s.steps).toList();
     final map = <String, ResolvedSetupStep>{};
     for (final step in all) {
@@ -178,9 +178,20 @@ class StructureHealthResolver {
   );
   static bool _institution(StructureState s) =>
       s.institutionProfile.name.trim().isNotEmpty &&
-      s.institutionProfile.schoolType.trim().isNotEmpty;
+      s.institutionProfile.schoolType.trim().isNotEmpty &&
+      s.institutionProfile.country.trim().isNotEmpty &&
+      s.institutionProfile.timeZone.trim().isNotEmpty &&
+      s.institutionProfile.currency.trim().isNotEmpty;
 
-  static final registry = <StructureSetupSection>[
+  /// Compatibility alias while callers migrate to [StructureStepRegistry].
+  static List<StructureSetupSection> get registry =>
+      StructureStepRegistry.sections;
+}
+
+/// Authoritative, ordered Structure definition.  It owns step metadata only;
+/// widgets may render it but must never invent their own dependencies.
+class StructureStepRegistry {
+  static final List<StructureSetupSection> sections = <StructureSetupSection>[
     StructureSetupSection(
       id: 'institution',
       title: 'Institution Setup',
@@ -192,23 +203,26 @@ class StructureHealthResolver {
           title: 'School Information',
           description: 'Name and school type',
           route: '/staff/admin/structure/institution',
-          complete: _institution,
-        ),
-        StructureSetupStep(
-          id: 'campuses',
-          title: 'Campuses',
-          route: '/staff/admin/structure/campus',
-          complete: (s) => s.campuses.isNotEmpty,
-          hardPrerequisiteIds: const ['institution-info'],
+          complete: StructureHealthResolver._institution,
         ),
         StructureSetupStep(
           id: 'institution-settings',
-          title: 'School Policies & Preferences',
+          title: 'Branding & Preferences',
+          description: 'Set optional branding and your school defaults.',
           route: '/staff/admin/structure/institution',
           complete: (s) =>
               s.institutionProfile.timeZone.isNotEmpty &&
               s.institutionProfile.currency.isNotEmpty,
           hardPrerequisiteIds: const ['institution-info'],
+        ),
+        StructureSetupStep(
+          id: 'campuses',
+          title: 'Campus Model',
+          description: 'Confirm your primary campus or add additional sites.',
+          route: '/staff/admin/structure/campus',
+          complete: (s) => s.campuses.isNotEmpty,
+          hardPrerequisiteIds: const ['institution-info'],
+          required: false,
         ),
       ],
     ),
@@ -223,15 +237,7 @@ class StructureHealthResolver {
           title: 'Academic Years',
           description: 'Create and select the current school year.',
           route: '/staff/admin/structure/academics/years-terms?mode=years',
-          complete: _activeYear,
-          hardPrerequisiteIds: const ['institution-info'],
-        ),
-        StructureSetupStep(
-          id: 'levels',
-          title: 'Academic Levels / Programs',
-          description: 'Define the levels or programs your school offers.',
-          route: '/staff/admin/structure/academics/levels',
-          complete: _activeLevels,
+          complete: StructureHealthResolver._activeYear,
           hardPrerequisiteIds: const ['institution-info'],
         ),
         StructureSetupStep(
@@ -250,6 +256,14 @@ class StructureHealthResolver {
           hardPrerequisiteIds: const ['academic-years'],
         ),
         StructureSetupStep(
+          id: 'levels',
+          title: 'Academic Levels / Programs',
+          description: 'Define the levels or programs your school offers.',
+          route: '/staff/admin/structure/academics/levels',
+          complete: StructureHealthResolver._activeLevels,
+          hardPrerequisiteIds: const ['terms'],
+        ),
+        StructureSetupStep(
           id: 'academic-units',
           title: 'Academic Units',
           description: 'Organise faculties, sections or teaching units.',
@@ -263,7 +277,7 @@ class StructureHealthResolver {
           title: 'Classes / Cohorts',
           description: 'Create the active classes or cohorts for each level.',
           route: '/staff/admin/structure/academics/classes-streams',
-          complete: _activeClasses,
+          complete: StructureHealthResolver._activeClasses,
           hardPrerequisiteIds: const ['levels'],
         ),
         StructureSetupStep(
@@ -289,7 +303,7 @@ class StructureHealthResolver {
           title: 'Subjects / Courses',
           description: 'Create each teachable subject or course.',
           route: '/staff/admin/structure/academics/subjects',
-          complete: _activeSubjects,
+          complete: StructureHealthResolver._activeSubjects,
           hardPrerequisiteIds: const ['levels', 'classes'],
           recommendedPrerequisiteIds: const ['departments'],
         ),
@@ -299,7 +313,7 @@ class StructureHealthResolver {
           description:
               'Assign subjects or courses to their applicable classes.',
           route: '/staff/admin/structure/academics/subject-class-assignments',
-          complete: _activeSubjects,
+          complete: StructureHealthResolver._activeSubjects,
           hardPrerequisiteIds: const ['subjects', 'classes'],
         ),
         StructureSetupStep(
@@ -360,7 +374,7 @@ class StructureHealthResolver {
           id: 'student-structure',
           title: 'Student Enrollment Configuration',
           route: '/staff/admin/students',
-          complete: _activeClasses,
+          complete: StructureHealthResolver._activeClasses,
           hardPrerequisiteIds: const ['academic-years', 'classes'],
         ),
       ],

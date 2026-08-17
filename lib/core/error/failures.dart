@@ -70,3 +70,27 @@ class SyncConflictFailure extends Failure {
     super.message = 'This record changed on the server while you were offline.',
   ]);
 }
+
+/// A physical credential (NFC card, QR token) is already actively assigned
+/// to a different identity. Carries that identity's id/type so an
+/// authorised admin UI can resolve and display who holds it, rather than
+/// leaving the operator with only a generic "already assigned" message and
+/// no way to act on it.
+class DuplicateCredentialFailure extends Failure {
+  final String conflictingIdentityId;
+  final String conflictingIdentityType;
+
+  const DuplicateCredentialFailure({
+    required this.conflictingIdentityId,
+    required this.conflictingIdentityType,
+    String message =
+        'This card is already assigned to another identity. Revoke or replace it first.',
+  }) : super(message);
+
+  @override
+  List<Object> get props => [
+    message,
+    conflictingIdentityId,
+    conflictingIdentityType,
+  ];
+}

@@ -16,12 +16,15 @@ import '../../bloc/structure_bloc.dart';
 import '../../bloc/structure_event.dart';
 import '../../bloc/structure_state.dart';
 import '../../widgets/structure_dialogs.dart' show showDeleteConfirmDialog;
+import '../../widgets/structure_wizard_banner.dart';
 
 /// Manages a school's broad academic tiers. It uses the existing Structure
 /// repository and `educational_levels` collection; classes remain linked by
 /// their existing `levelId` field.
 class LevelsScreen extends StatefulWidget {
-  const LevelsScreen({super.key});
+  const LevelsScreen({super.key, this.wizardStep, this.wizardTotal});
+  final int? wizardStep;
+  final int? wizardTotal;
   @override
   State<LevelsScreen> createState() => _LevelsScreenState();
 }
@@ -100,6 +103,13 @@ class _LevelsScreenState extends State<LevelsScreen> {
                 onPressed: () => _info(context),
               ),
             ],
+            bottom: widget.wizardStep == null || widget.wizardTotal == null
+                ? null
+                : StructureWizardBanner(
+                    stepId: 'levels',
+                    stepNumber: widget.wizardStep!,
+                    totalSteps: widget.wizardTotal!,
+                  ),
           ),
           body: ListView(
             // The previous Levels layout had a different scroll extent. A

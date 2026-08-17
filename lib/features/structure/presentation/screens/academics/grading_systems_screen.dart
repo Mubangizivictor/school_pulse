@@ -13,6 +13,7 @@ import '../../bloc/structure_state.dart';
 import '../../widgets/academics_ui_kit.dart';
 import '../../widgets/structure_dialogs.dart' show kSubjectColorSwatches;
 import '../../widgets/structure_empty_hint.dart';
+import '../../widgets/structure_wizard_banner.dart';
 
 const _types = [
   'Percentage',
@@ -23,7 +24,9 @@ const _types = [
 ];
 
 class GradingSystemsScreen extends StatefulWidget {
-  const GradingSystemsScreen({super.key});
+  const GradingSystemsScreen({super.key, this.wizardStep, this.wizardTotal});
+  final int? wizardStep;
+  final int? wizardTotal;
   @override
   State<GradingSystemsScreen> createState() => _GradingSystemsScreenState();
 }
@@ -62,6 +65,13 @@ class _GradingSystemsScreenState extends State<GradingSystemsScreen> {
           onSearchChanged: (v) => setState(() => _query = v),
           fabLabel: 'Add Grading System',
           onFabPressed: () => _open(context, schoolId, userId, const [], null),
+          appBarBottom: widget.wizardStep == null || widget.wizardTotal == null
+              ? null
+              : StructureWizardBanner(
+                  stepId: 'grading',
+                  stepNumber: widget.wizardStep!,
+                  totalSteps: widget.wizardTotal!,
+                ),
           body: Column(
             children: [
               Padding(

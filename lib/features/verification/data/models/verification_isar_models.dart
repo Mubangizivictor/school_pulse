@@ -20,6 +20,12 @@ class CachedCredentialIsar {
   late String schoolId;
   late String status; // 'active' | 'revoked'
   late DateTime updatedAt;
+
+  /// Defaults to 1 for rows written before this field existed - Isar
+  /// leaves newly-added non-nullable int fields at their Dart default (0)
+  /// on old rows, so this is set explicitly wherever a CachedCredentialIsar
+  /// is constructed rather than relying on that default.
+  int credentialVersion = 1;
 }
 
 /// Denylist checked before `CachedCredentialIsar`, so a credential revoked

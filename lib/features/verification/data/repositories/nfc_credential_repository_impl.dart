@@ -41,8 +41,9 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
           existing.status == 'active' &&
           existing.identityId != identityId) {
         return Left(
-          ServerFailure(
-            'This card is already assigned to another identity. Revoke or replace it first.',
+          DuplicateCredentialFailure(
+            conflictingIdentityId: existing.identityId,
+            conflictingIdentityType: existing.identityType,
           ),
         );
       }
@@ -194,6 +195,7 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
             'schoolId': credential.schoolId,
             'status': credential.status,
             'updatedAt': credential.updatedAt.toIso8601String(),
+            'credentialVersion': credential.credentialVersion,
           });
     } catch (_) {
       // Local write already succeeded - a later assign/revoke/reactivate

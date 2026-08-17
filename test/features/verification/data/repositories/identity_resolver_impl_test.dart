@@ -306,6 +306,33 @@ void main() {
     );
 
     test(
+      'a malformed/garbage card payload (not a real hex UID) resolves as '
+      'unknown_credential rather than throwing or matching anything - '
+      'School Pulse never trusts raw NFC content as an implicit credential',
+      () async {
+        const garbage = 'not-a-real-ntag-uid;DROP TABLE students;--';
+        when(
+          () => localDataSource.findRevocation(garbage, 'school-1'),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localDataSource.findCredential(garbage, 'school-1'),
+        ).thenAnswer((_) async => null);
+
+        final result = await resolver.resolve(
+          NfcScanCredential(cardUid: garbage, scannedAt: DateTime.now()),
+          context,
+        );
+
+        final identity = result.getOrElse(() => throw Exception());
+        expect(identity, isA<UnresolvedResolvedIdentity>());
+        expect(
+          (identity as UnresolvedResolvedIdentity).reason,
+          'unknown_credential',
+        );
+      },
+    );
+
+    test(
       'falls back to Firestore and resolves when the card was assigned on a different device',
       () async {
         when(

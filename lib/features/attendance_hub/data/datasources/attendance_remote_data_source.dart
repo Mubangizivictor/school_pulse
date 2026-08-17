@@ -29,6 +29,17 @@ abstract class AttendanceRemoteDataSource {
     DateTime? to,
     String? scopeId,
   });
+
+  /// Idempotent set used by the offline sync sweep - the duplicate check
+  /// already happened locally (AttendanceLocalDataSource.cacheIfAbsent), so
+  /// unlike [markAttendance] this does not re-check doc existence first;
+  /// retrying a partially-failed push is safe because it writes the same
+  /// deterministic [docId].
+  Future<void> pushRecord(
+    String schoolId,
+    String docId,
+    Map<String, dynamic> data,
+  );
 }
 
 class DuplicateAttendanceException implements Exception {
@@ -172,5 +183,14 @@ class AttendanceRemoteDataSourceImpl implements AttendanceRemoteDataSource {
     return snapshot.docs
         .map((doc) => AttendanceRecordModel.fromFirestore(doc))
         .toList();
+  }
+
+  @override
+  Future<void> pushRecord(
+    String schoolId,
+    String docId,
+    Map<String, dynamic> data,
+  ) async {
+    await _records(schoolId).doc(docId).set(data);
   }
 }

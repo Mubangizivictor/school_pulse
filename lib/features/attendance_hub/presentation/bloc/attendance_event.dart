@@ -68,6 +68,19 @@ class MarkBatchAttendanceRequested extends AttendanceEvent {
   List<Object?> get props => [records, operatorUser];
 }
 
+/// Background sweep of locally-queued pending marks - fired on NFC screen
+/// init and periodically while it's open, and safe to fire even when
+/// offline (AttendanceRepository.syncPendingAttendance no-ops without a
+/// connection). Deliberately emits nothing: a silent sync must never
+/// interrupt whatever state the scanning UI is currently showing.
+class SyncPendingAttendanceRequested extends AttendanceEvent {
+  final String schoolId;
+  const SyncPendingAttendanceRequested({required this.schoolId});
+
+  @override
+  List<Object?> get props => [schoolId];
+}
+
 class LoadRecordsRequested extends AttendanceEvent {
   final String schoolId;
   final UserEntity operatorUser;

@@ -13,12 +13,20 @@ import '../widgets/campus_dialogs.dart';
 import '../widgets/hostel_transport_dialogs.dart';
 import '../widgets/structure_empty_hint.dart';
 import '../widgets/structure_ui_kit.dart';
+import '../widgets/structure_wizard_banner.dart';
 
 /// Houses, Clubs & Societies, Facilities, Hostel Structure, and Transport
 /// Structure - the physical/organizational campus metadata.
 class CampusFacilitiesScreen extends StatefulWidget {
   final int initialTab;
-  const CampusFacilitiesScreen({super.key, this.initialTab = 0});
+  final int? wizardStep;
+  final int? wizardTotal;
+  const CampusFacilitiesScreen({
+    super.key,
+    this.initialTab = 0,
+    this.wizardStep,
+    this.wizardTotal,
+  });
 
   @override
   State<CampusFacilitiesScreen> createState() => _CampusFacilitiesScreenState();
@@ -53,7 +61,16 @@ class _CampusFacilitiesScreenState extends State<CampusFacilitiesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: const AdminAppBar(title: 'Houses & Campus Life'),
+      appBar: AdminAppBar(
+        title: 'Houses & Campus Life',
+        bottom: widget.wizardStep == null || widget.wizardTotal == null
+            ? null
+            : StructureWizardBanner(
+                stepId: 'campuses',
+                stepNumber: widget.wizardStep!,
+                totalSteps: widget.wizardTotal!,
+              ),
+      ),
       body: BlocBuilder<StructureBloc, StructureState>(
         builder: (context, state) {
           final pages = [

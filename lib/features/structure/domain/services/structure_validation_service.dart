@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../presentation/bloc/structure_state.dart';
+import 'capacity_validation_service.dart';
 
 enum ValidationSeverity { warning, error }
 
@@ -32,6 +33,8 @@ class StructureValidationService {
     issues.addAll(_findClassesWithoutLevel(state));
     issues.addAll(_findOverlappingGradeBands(state));
     issues.addAll(_findTermsOutsideYearRange(state));
+    issues.addAll(_findOverlappingTerms(state));
+    issues.addAll(_findStreamCapacityViolations(state));
     return issues;
   }
 
@@ -135,5 +138,57 @@ class StructureValidationService {
       }
     }
     return issues;
+  }
+
+  List<StructureValidationIssue> _findOverlappingTerms(StructureState state) {
+    final issues = <StructureValidationIssue>[];
+    final activeTerms = state.academicTerms.where((term) => !term.isArchived);
+    final byYear = <String, List<dynamic>>{};
+    for (final term in activeTerms) {
+      (byYear[term.academicYearId] ??= []).add(term);
+    }
+    for (final entry in byYear.entries) {
+      final terms = entry.value
+        ..sort((a, b) => a.startDate.compareTo(b.startDate));
+      for (var index = 1; index < terms.length; index++) {
+        final previous = terms[index - 1];
+        final current = terms[index];
+        if (!current.startDate.isAfter(previous.endDate)) {
+          issues.add(
+            StructureValidationIssue(
+              category: 'Terms',
+              message: '"${current.name}" overlaps "${previous.name}".',
+              severity: ValidationSeverity.error,
+              fixRoute:
+                  '/staff/admin/structure/academics/years-terms?mode=terms',
+            ),
+          );
+        }
+      }
+    }
+    return issues;
+  }
+
+  List<StructureValidationIssue> _findStreamCapacityViolations(
+    StructureState state,
+  ) {
+    const capacity = CapacityValidationService();
+    return [
+      for (final schoolClass in state.classes.where((item) => item.isActive))
+        if (!capacity
+            .validateClassCapacityChange(
+              candidate: schoolClass,
+              newCapacity: schoolClass.capacity,
+              streams: state.streams,
+            )
+            .isValid)
+          StructureValidationIssue(
+            category: 'Streams / Sections',
+            message:
+                '"${schoolClass.name}" has active stream capacity above its class capacity.',
+            severity: ValidationSeverity.error,
+            fixRoute: '/staff/admin/structure/academics/classes-streams',
+          ),
+    ];
   }
 }

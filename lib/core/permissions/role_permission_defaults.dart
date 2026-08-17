@@ -30,6 +30,7 @@ class RolePermissionDefaults {
     Permission.verificationOverride,
     Permission.verificationAuditRead,
     Permission.verificationDeviceManage,
+    Permission.identityCredentialManage,
   };
 
   static const Set<String> _securityCenterAdminPermissions = {

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -17,6 +18,7 @@ import 'package:school_pulse/injection_container.dart' as di;
 import '../../data/datasources/device_id_provider.dart';
 import '../../domain/entities/attendance_category.dart';
 import '../../domain/entities/attendance_record.dart';
+import '../../domain/entities/attendance_scope.dart';
 import '../bloc/attendance_bloc.dart';
 import '../bloc/attendance_event.dart';
 import '../bloc/attendance_state.dart';
@@ -30,12 +32,15 @@ class NfcScanScreen extends StatefulWidget {
 }
 
 enum _ScanState {
+  resolvingScope,
+  pickingScope,
   ready,
   scanning,
   resolving,
   success,
   duplicate,
   invalid,
+  wrongClass,
   denied,
   failed,
 }
@@ -44,7 +49,9 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
   final _adapter = NfcCredentialReaderAdapter();
   StreamSubscription<ScanCredential>? _subscription;
   Timer? _scanTimeout;
-  _ScanState _state = _ScanState.ready;
+  Timer? _autoContinueTimer;
+  Timer? _syncTimer;
+  _ScanState _state = _ScanState.resolvingScope;
   String _name = '';
   String _subtitle = '';
   String? _photoUrl;
@@ -52,13 +59,68 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
   String _deniedMessage = '';
   VerificationContext? _verificationContext;
 
+  AttendanceScope? _scope;
+  List<AttendanceScope> _availableScopes = const [];
+  final Set<String> _presentPersonIds = {};
+  int _rosterSize = 0;
+
+  static const _sessionType = 'daily';
+
+  @override
+  void initState() {
+    super.initState();
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<AttendanceBloc>().add(
+        LoadScopesRequested(
+          schoolId: authState.user.schoolId,
+          category: AttendanceCategory.students,
+          operatorUser: authState.user,
+        ),
+      );
+      context.read<AttendanceBloc>().add(
+        SyncPendingAttendanceRequested(schoolId: authState.user.schoolId),
+      );
+    }
+    // A 30s sweep is frequent enough that a mid-session reconnect clears the
+    // queue before DONE, without hammering Firestore while mostly offline.
+    _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      final auth = context.read<AuthBloc>().state;
+      if (auth is AuthAuthenticated) {
+        context.read<AttendanceBloc>().add(
+          SyncPendingAttendanceRequested(schoolId: auth.user.schoolId),
+        );
+      }
+    });
+  }
+
   @override
   void dispose() {
     _subscription?.cancel();
     _scanTimeout?.cancel();
+    _autoContinueTimer?.cancel();
+    _syncTimer?.cancel();
     _adapter.stop();
     _adapter.dispose();
     super.dispose();
+  }
+
+  void _selectScope(AttendanceScope scope) {
+    setState(() {
+      _scope = scope;
+      _state = _ScanState.ready;
+    });
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<AttendanceBloc>().add(
+        LoadRosterRequested(
+          schoolId: authState.user.schoolId,
+          category: AttendanceCategory.students,
+          scopeId: scope.id,
+          operatorUser: authState.user,
+        ),
+      );
+    }
   }
 
   Future<void> _startScan() async {
@@ -142,7 +204,22 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
 
     final identity = resolverResult.fold((failure) => null, (r) => r);
     if (identity is! StudentResolvedIdentity) {
+      HapticFeedback.heavyImpact();
       setState(() => _state = _ScanState.invalid);
+      _scheduleAutoContinue();
+      return;
+    }
+
+    final scope = _scope;
+    if (scope != null && identity.classId != scope.id) {
+      HapticFeedback.heavyImpact();
+      setState(() {
+        _name = identity.name;
+        _subtitle = identity.studentCode;
+        _photoUrl = identity.photoUrl;
+        _state = _ScanState.wrongClass;
+      });
+      _scheduleAutoContinue();
       return;
     }
 
@@ -160,8 +237,9 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
       id: '',
       schoolId: user.schoolId,
       category: AttendanceCategory.students,
-      scopeId: identity.classId,
-      scopeName: identity.classId,
+      scopeId: scope?.id ?? identity.classId,
+      scopeName: scope?.name ?? identity.classId,
+      sessionType: _sessionType,
       date: _scannedAt!,
       personId: identity.id,
       personName: identity.name,
@@ -179,22 +257,56 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
     );
   }
 
-  void _reset() {
-    _scanTimeout?.cancel();
-    _subscription?.cancel();
-    _subscription = null;
-    setState(() => _state = _ScanState.ready);
+  /// Rapid-attendance UX per spec section 4/5: the teacher never presses
+  /// "Scan Another" after a normal tap - the overlay clears itself and a
+  /// fresh session opens automatically after a short pause.
+  void _scheduleAutoContinue() {
+    _autoContinueTimer?.cancel();
+    _autoContinueTimer = Timer(const Duration(milliseconds: 1600), () {
+      if (!mounted) return;
+      _startScan();
+    });
+  }
+
+  void _finishDone() {
+    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AttendanceBloc, AttendanceState>(
       listener: (context, state) {
-        if (state is AttendanceMarkSuccess) {
-          setState(() => _state = _ScanState.success);
+        if (state is ScopesLoaded) {
+          if (state.scopes.length == 1) {
+            _selectScope(state.scopes.first);
+          } else if (state.scopes.isEmpty) {
+            setState(() {
+              _deniedMessage =
+                  'No class has been assigned to your account. Contact your '
+                  'Institution Administrator.';
+              _state = _ScanState.denied;
+            });
+          } else {
+            setState(() {
+              _availableScopes = state.scopes;
+              _state = _ScanState.pickingScope;
+            });
+          }
+        } else if (state is RosterLoaded) {
+          setState(() => _rosterSize = state.roster.length);
+        } else if (state is AttendanceMarkSuccess) {
+          HapticFeedback.lightImpact();
+          setState(() {
+            _presentPersonIds.add(state.record.personId);
+            _state = _ScanState.success;
+          });
+          _scheduleAutoContinue();
         } else if (state is AttendanceDuplicate) {
+          HapticFeedback.selectionClick();
           setState(() => _state = _ScanState.duplicate);
+          _scheduleAutoContinue();
         } else if (state is AttendanceActionDenied) {
+          HapticFeedback.heavyImpact();
           setState(() {
             _deniedMessage = state.message;
             _state = _ScanState.denied;
@@ -206,17 +318,75 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background(context),
         appBar: AppBar(
-          title: const Text('NFC Scan'),
+          title: Text(_scope == null ? 'Attendance' : _scope!.name),
           backgroundColor: Colors.transparent,
           elevation: 0,
+          actions: [
+            if (_scope != null)
+              TextButton(onPressed: _finishDone, child: const Text('DONE')),
+          ],
         ),
-        body: _buildBody(context),
+        body: Column(
+          children: [
+            if (_scope != null) _buildHeader(context),
+            Expanded(child: _buildBody(context)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final remaining = (_rosterSize - _presentPersonIds.length).clamp(
+      0,
+      _rosterSize,
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        0,
+        AppSpacing.xl,
+        AppSpacing.m,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Present: ${_presentPersonIds.length} / $_rosterSize',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: AppColors.success(context),
+            ),
+          ),
+          Text(
+            'Remaining: $remaining',
+            style: TextStyle(color: AppColors.textMuted(context)),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildBody(BuildContext context) {
     switch (_state) {
+      case _ScanState.resolvingScope:
+        return const Center(child: SchoolPulseLoader());
+      case _ScanState.pickingScope:
+        return ListView.builder(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          itemCount: _availableScopes.length,
+          itemBuilder: (context, index) {
+            final scope = _availableScopes[index];
+            return Card(
+              margin: const EdgeInsets.only(bottom: AppSpacing.m),
+              child: ListTile(
+                title: Text(scope.name),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _selectScope(scope),
+              ),
+            );
+          },
+        );
       case _ScanState.ready:
         return Center(
           child: Padding(
@@ -227,7 +397,7 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
                 _NfcCircle(color: AppColors.success(context)),
                 const SizedBox(height: AppSpacing.x3l),
                 Text(
-                  'Ready to scan',
+                  'Tap student card',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
@@ -236,7 +406,7 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
                 ),
                 const SizedBox(height: AppSpacing.s),
                 Text(
-                  'Hold ID card near the NFC reader',
+                  'Hold the card near the top of the phone.',
                   style: TextStyle(color: AppColors.textMuted(context)),
                 ),
                 const SizedBox(height: AppSpacing.x3l),
@@ -245,14 +415,6 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
                   child: FilledButton(
                     onPressed: _startScan,
                     child: const Text('Start Scanning'),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.m),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
                   ),
                 ),
               ],
@@ -270,7 +432,7 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
                 _NfcCircle(color: AppColors.primary(context), pulsing: true),
                 const SizedBox(height: AppSpacing.x3l),
                 Text(
-                  'Scanning...',
+                  'Tap student card',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
@@ -279,24 +441,11 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
                 ),
                 const SizedBox(height: AppSpacing.s),
                 Text(
-                  'Keep the ID card on the reader',
+                  'Hold the card near the top of the phone.',
                   style: TextStyle(color: AppColors.textMuted(context)),
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 const SchoolPulseLoader(),
-                const SizedBox(height: AppSpacing.x3l),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () async {
-                      _scanTimeout?.cancel();
-                      await _subscription?.cancel();
-                      await _adapter.stop();
-                      _reset();
-                    },
-                    child: const Text('Cancel'),
-                  ),
-                ),
               ],
             ),
           ),
@@ -310,8 +459,8 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
               : '',
           statusLabel: 'Present',
           photoUrl: _photoUrl,
-          onScanAnother: _reset,
-          onDone: () => Navigator.of(context).pop(),
+          onScanAnother: _startScan,
+          onDone: _finishDone,
         );
       case _ScanState.duplicate:
         return ScanResultCard(
@@ -319,20 +468,72 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
           name: _name,
           subtitle: _subtitle,
           timeLabel: '',
-          statusLabel: 'Already marked today',
+          statusLabel: 'Already marked present',
           photoUrl: _photoUrl,
-          onScanAnother: _reset,
-          onDone: () => Navigator.of(context).pop(),
+          onScanAnother: _startScan,
+          onDone: _finishDone,
         );
       case _ScanState.invalid:
-        return ScanResultCard(
-          isInvalid: true,
-          name: '',
-          subtitle: '',
-          timeLabel: '',
-          statusLabel: '',
-          onScanAnother: _reset,
-          onDone: () => Navigator.of(context).pop(),
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.help_outline,
+                  color: AppColors.danger(context),
+                  size: 64,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  'Card not recognised',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.s),
+                Text(
+                  'Ask the School Admin to register this card.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.textMuted(context)),
+                ),
+              ],
+            ),
+          ),
+        );
+      case _ScanState.wrongClass:
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 32,
+                  backgroundImage: _photoUrl != null
+                      ? NetworkImage(_photoUrl!)
+                      : null,
+                  child: _photoUrl == null ? const Icon(Icons.person) : null,
+                ),
+                const SizedBox(height: AppSpacing.l),
+                Text(
+                  _name,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: AppSpacing.s),
+                Text(
+                  'Not in this class',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.warning(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       case _ScanState.denied:
         return Center(
@@ -357,8 +558,8 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 FilledButton(
-                  onPressed: _reset,
-                  child: const Text('Scan Another'),
+                  onPressed: () => setState(() => _state = _ScanState.ready),
+                  child: const Text('Continue'),
                 ),
               ],
             ),
@@ -375,9 +576,9 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
                 size: 64,
               ),
               const SizedBox(height: AppSpacing.xl),
-              const Text('NFC scan failed. Please try again.'),
+              const Text('Card was moved too quickly. Tap again.'),
               const SizedBox(height: AppSpacing.xl),
-              FilledButton(onPressed: _reset, child: const Text('Retry')),
+              FilledButton(onPressed: _startScan, child: const Text('Retry')),
             ],
           ),
         );

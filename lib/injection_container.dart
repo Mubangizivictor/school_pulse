@@ -191,6 +191,8 @@ import 'package:school_pulse/features/attendance_hub/presentation/bloc/attendanc
 import 'package:school_pulse/features/attendance_hub/domain/repositories/attendance_repository.dart';
 import 'package:school_pulse/features/attendance_hub/data/repositories/attendance_repository_impl.dart';
 import 'package:school_pulse/features/attendance_hub/data/datasources/attendance_remote_data_source.dart';
+import 'package:school_pulse/features/attendance_hub/data/datasources/attendance_local_data_source.dart';
+import 'package:school_pulse/features/attendance_hub/data/datasources/attendance_local_data_source_factory.dart';
 import 'package:school_pulse/features/attendance_hub/domain/services/attendance_participant_resolver.dart';
 import 'package:school_pulse/features/attendance_hub/domain/services/attendance_participant_resolver_impl.dart';
 import 'package:school_pulse/features/attendance_hub/domain/repositories/sheets_integration_repository.dart';
@@ -882,6 +884,8 @@ Future<void> init() async {
   sl.registerLazySingleton<AttendanceRepository>(
     () => AttendanceRepositoryImpl(
       remoteDataSource: sl(),
+      localDataSource: sl(),
+      networkInfo: sl(),
       structureRepository: sl(),
       studentRepository: sl(),
       getStaffMembers: sl(),
@@ -890,6 +894,10 @@ Future<void> init() async {
 
   sl.registerLazySingleton<AttendanceRemoteDataSource>(
     () => AttendanceRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  sl.registerLazySingleton<AttendanceLocalDataSource>(
+    () => createAttendanceLocalDataSource(isar: kIsWeb ? null : sl<Isar>()),
   );
 
   // Central attendance access resolver - see the class doc comment for why

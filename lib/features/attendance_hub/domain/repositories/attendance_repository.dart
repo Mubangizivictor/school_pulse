@@ -24,8 +24,13 @@ abstract class AttendanceRepository {
     AttendanceAccessContext access,
   );
 
-  /// Marks one person. Returns a ValidationFailure with a 'duplicate'
-  /// message if a record already exists for this exact session/person/day.
+  /// Marks one person. Local-first: the record lands in the on-device
+  /// queue before any network call, so a scan is never lost to a dropped
+  /// connection - the returned record's `syncStatus` reflects whether the
+  /// immediate push succeeded (`synced`) or is queued (`pending`). Returns
+  /// a ValidationFailure with a 'duplicate' message if a record already
+  /// exists for this exact session/person/day, checked locally first so
+  /// duplicates are caught even fully offline.
   Future<Either<Failure, AttendanceRecord>> markAttendance(
     AttendanceRecord record,
   );
@@ -33,6 +38,13 @@ abstract class AttendanceRepository {
   Future<Either<Failure, List<AttendanceRecord>>> markBatch(
     List<AttendanceRecord> records,
   );
+
+  /// Pushes every locally-queued (`syncStatus == pending`) record for
+  /// [schoolId] that a connection is now available for. Safe to call
+  /// repeatedly (e.g. from a periodic timer or on reconnect) - already
+  /// synced rows are skipped and a push failure just leaves a row pending
+  /// for the next sweep rather than raising an error.
+  Future<void> syncPendingAttendance(String schoolId);
 
   /// Records returned are restricted to [access] - a Class Teacher only
   /// sees Previous Attendance sessions for their assigned classes, never the

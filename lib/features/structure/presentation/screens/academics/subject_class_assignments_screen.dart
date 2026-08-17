@@ -4,16 +4,33 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import '../../bloc/structure_bloc.dart';
 import '../../bloc/structure_state.dart';
+import '../../widgets/structure_wizard_banner.dart';
 
 /// A dedicated, card-led view of the assignments stored on Subject records.
 /// The canonical edit form remains Subjects, so assignments and subjects never
 /// drift into competing data models.
 class SubjectClassAssignmentsScreen extends StatelessWidget {
-  const SubjectClassAssignmentsScreen({super.key});
+  const SubjectClassAssignmentsScreen({
+    super.key,
+    this.wizardStep,
+    this.wizardTotal,
+  });
+
+  final int? wizardStep;
+  final int? wizardTotal;
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: const AdminAppBar(title: 'Subject–Class Assignments'),
+    appBar: AdminAppBar(
+      title: 'Subject–Class Assignments',
+      bottom: wizardStep == null || wizardTotal == null
+          ? null
+          : StructureWizardBanner(
+              stepId: 'subject-class-assignments',
+              stepNumber: wizardStep!,
+              totalSteps: wizardTotal!,
+            ),
+    ),
     body: BlocBuilder<StructureBloc, StructureState>(
       builder: (context, state) {
         final activeSubjects = state.subjects.where((s) => s.isActive).toList();

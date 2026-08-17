@@ -79,6 +79,15 @@ async function seed() {
       teacherFull: {
         role: 'classTeacher', roles: ['classTeacher'], schoolId: 'schoolFull', studentIds: [],
       },
+      // Not schoolAdmin/director/headTeacher/deputyHead/securityHead - a
+      // role (hrOfficer, otherwise unused by any credential test fixture so
+      // granting it here can't leak into teacherA/otherTeacherA's own
+      // classTeacher role) explicitly granted identity.credential.manage
+      // via role_permission_overrides, to prove the override path (not just
+      // the admin-role fast path) actually grants credential authority.
+      credentialManagerA: {
+        role: 'hrOfficer', roles: ['hrOfficer'], schoolId: 'schoolA', studentIds: [],
+      },
     };
 
     await Promise.all(
@@ -198,6 +207,33 @@ async function seed() {
       setDoc(doc(db, 'schools/schoolA/subject_audit_logs/auditA'), {
         schoolId: 'schoolA', userId: 'teacherA', action: 'attendance.submitted',
         classId: 'p7', academicYearId: '2026',
+      }),
+
+      // Grants credentialManagerA (hrOfficer) the identity.credential.manage
+      // override, mirroring how a School Admin would actually delegate this
+      // authority via role_permission_overrides rather than a hardcoded
+      // role check. hrOfficer specifically (not classTeacher) so this can't
+      // leak into teacherA/otherTeacherA's own role-based tests.
+      setDoc(doc(db, 'schools/schoolA/role_permission_overrides/hrOfficer'), {
+        role: 'hrOfficer', permissions: ['identity.credential.manage'], updatedBy: 'adminA',
+      }),
+      // A pre-existing active credential bound to studentA, used by the
+      // duplicate-assignment/ownership-immutability/cross-school tests.
+      setDoc(doc(db, 'schools/schoolA/credentials/CARDA001'), {
+        credentialValue: 'CARDA001', credentialType: 'nfc', identityId: 'SP-STUDENT-A',
+        identityType: 'student', schoolId: 'schoolA', status: 'active',
+        updatedAt: new Date().toISOString(), credentialVersion: 1,
+      }),
+      // A revoked credential, used by the reuse/reassignment test.
+      setDoc(doc(db, 'schools/schoolA/credentials/CARDA002'), {
+        credentialValue: 'CARDA002', credentialType: 'nfc', identityId: 'SP-STUDENT-OLD',
+        identityType: 'student', schoolId: 'schoolA', status: 'revoked',
+        updatedAt: new Date().toISOString(), credentialVersion: 1,
+      }),
+      setDoc(doc(db, 'schools/schoolB/credentials/CARDB001'), {
+        credentialValue: 'CARDB001', credentialType: 'nfc', identityId: 'SP-STUDENT-B',
+        identityType: 'student', schoolId: 'schoolB', status: 'active',
+        updatedAt: new Date().toISOString(), credentialVersion: 1,
       }),
     ]);
   });
@@ -1749,5 +1785,147 @@ describe('Module Control Center + Institution Policy Engine', () => {
     await assertFails(setDoc(doc(dbFor('adminA'), 'schools/schoolA/communication_templates/tmpl2'), {
       name: 'Forged', schoolId: 'schoolA', body: 'x',
     }));
+  });
+});
+
+describe('NFC credential lifecycle', () => {
+  function newCredential(overrides = {}) {
+    return {
+      credentialValue: 'CARDA999', credentialType: 'nfc', identityId: 'SP-STUDENT-NEW',
+      identityType: 'student', schoolId: 'schoolA', status: 'active',
+      updatedAt: new Date().toISOString(), credentialVersion: 1,
+      ...overrides,
+    };
+  }
+
+  test('an authorised School Admin can register a new credential', async () => {
+    await assertSucceeds(setDoc(
+      doc(dbFor('adminA'), 'schools/schoolA/credentials/CARDA999'),
+      newCredential(),
+    ));
+  });
+
+  test('an ordinary Class Teacher cannot register a credential', async () => {
+    await assertFails(setDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/credentials/CARDA999'),
+      newCredential(),
+    ));
+  });
+
+  test('an ordinary Class Teacher cannot replace a credential '
+    + '(revoke the old one or write the new one)', async () => {
+    await assertFails(updateDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/credentials/CARDA001'),
+      { status: 'revoked', updatedAt: new Date().toISOString() },
+    ));
+    await assertFails(setDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/credentials/CARDA999'),
+      newCredential({ identityId: 'SP-STUDENT-A' }),
+    ));
+  });
+
+  test('an ordinary Class Teacher cannot revoke a credential', async () => {
+    await assertFails(updateDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/credentials/CARDA001'),
+      { status: 'revoked', updatedAt: new Date().toISOString() },
+    ));
+    await assertFails(setDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/revoked_credentials/CARDA001'),
+      { credentialValue: 'CARDA001', schoolId: 'schoolA', revokedAt: new Date().toISOString(), reason: 'lost' },
+    ));
+  });
+
+  test('an ordinary Class Teacher cannot reactivate a revoked credential', async () => {
+    await assertFails(updateDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/credentials/CARDA002'),
+      { status: 'active', updatedAt: new Date().toISOString() },
+    ));
+  });
+
+  test('unauthorised staff cannot mark a card lost (revoke with a "lost" reason '
+    + 'is still a revoke - no separate lost-card document type exists)', async () => {
+    await assertFails(updateDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/credentials/CARDA001'),
+      { status: 'revoked', updatedAt: new Date().toISOString() },
+    ));
+  });
+
+  test('a credential-manage grant delegated via role_permission_overrides '
+    + '(not just an admin-tier role) can perform the supported lifecycle actions', async () => {
+    const db = dbFor('credentialManagerA');
+    await assertSucceeds(setDoc(doc(db, 'schools/schoolA/credentials/CARDA999'), newCredential()));
+    await assertSucceeds(updateDoc(
+      doc(db, 'schools/schoolA/credentials/CARDA999'),
+      { status: 'revoked', updatedAt: new Date().toISOString() },
+    ));
+    await assertSucceeds(setDoc(
+      doc(db, 'schools/schoolA/revoked_credentials/CARDA999'),
+      { credentialValue: 'CARDA999', schoolId: 'schoolA', revokedAt: new Date().toISOString(), reason: 'lost' },
+    ));
+    // Reuse-after-revocation: reassigning CARDA002 (already 'revoked') to a
+    // different student is the one case identityId is allowed to change.
+    await assertSucceeds(updateDoc(
+      doc(db, 'schools/schoolA/credentials/CARDA002'),
+      { identityId: 'SP-STUDENT-BRAND-NEW', status: 'active', updatedAt: new Date().toISOString() },
+    ));
+  });
+
+  test('School A admin cannot write or overwrite a School B credential', async () => {
+    await assertFails(updateDoc(
+      doc(dbFor('adminA'), 'schools/schoolB/credentials/CARDB001'),
+      { status: 'revoked', updatedAt: new Date().toISOString() },
+    ));
+    await assertFails(setDoc(
+      doc(dbFor('adminA'), 'schools/schoolB/credentials/CARDB999'),
+      newCredential({ credentialValue: 'CARDB999', schoolId: 'schoolB' }),
+    ));
+  });
+
+  test('a School A teacher cannot read or write School B credential mappings', async () => {
+    await assertFails(getDoc(doc(dbFor('teacherA'), 'schools/schoolB/credentials/CARDB001')));
+    await assertFails(setDoc(
+      doc(dbFor('teacherA'), 'schools/schoolB/credentials/CARDB999'),
+      newCredential({ credentialValue: 'CARDB999', schoolId: 'schoolB' }),
+    ));
+  });
+
+  test('a malicious update cannot move an active credential from one student to another '
+    + 'without going through revoke first', async () => {
+    await assertFails(updateDoc(
+      doc(dbFor('adminA'), 'schools/schoolA/credentials/CARDA001'),
+      { identityId: 'SP-STUDENT-HIJACKED', updatedAt: new Date().toISOString() },
+    ));
+  });
+
+  test('a malformed credential status is rejected', async () => {
+    await assertFails(setDoc(
+      doc(dbFor('adminA'), 'schools/schoolA/credentials/CARDA998'),
+      newCredential({ credentialValue: 'CARDA998', status: 'super-active' }),
+    ));
+    await assertFails(updateDoc(
+      doc(dbFor('adminA'), 'schools/schoolA/credentials/CARDA001'),
+      { status: 'disabled-ish', updatedAt: new Date().toISOString() },
+    ));
+  });
+
+  test('credential documents are never deleted - revoke is a status change, '
+    + 'history must survive', async () => {
+    await assertFails(deleteDoc(doc(dbFor('adminA'), 'schools/schoolA/credentials/CARDA001')));
+  });
+
+  test('the legitimate attendance workflow still works: an ordinary Class '
+    + 'Teacher can read a credential mapping to resolve a scanned card, '
+    + 'even one they have never seen before, purely to mark attendance', async () => {
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/credentials/CARDA001')));
+    // The revocation denylist is checked before the credential cache at
+    // scan time (IdentityResolverImpl._resolveNfc) - a teacher must be able
+    // to read it too, or every scan would appear to hang/fail offline.
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/revoked_credentials/CARDA003'), {
+        credentialValue: 'CARDA003', schoolId: 'schoolA',
+        revokedAt: new Date().toISOString(), reason: 'lost',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/revoked_credentials/CARDA003')));
   });
 });

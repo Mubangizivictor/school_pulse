@@ -14,6 +14,14 @@ class CachedCredential {
   String status; // 'active' | 'revoked'
   DateTime updatedAt;
 
+  /// Payload format version this credential was assigned under - a bare
+  /// physical card UID has no format of its own to version, so this exists
+  /// for a future on-card payload (see nfc_scan_screen.dart's card-format
+  /// validation notes) without requiring every existing 'nfc'/'qr'/
+  /// 'manualCode' credential to be reissued. Unresolvable server data
+  /// defaults to 1 rather than failing the read.
+  int credentialVersion;
+
   CachedCredential({
     required this.credentialValue,
     required this.credentialType,
@@ -22,6 +30,7 @@ class CachedCredential {
     required this.schoolId,
     required this.status,
     required this.updatedAt,
+    this.credentialVersion = 1,
   });
 }
 

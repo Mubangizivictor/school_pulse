@@ -17,9 +17,19 @@ import '../../widgets/academics_ui_kit.dart';
 import '../../widgets/structure_dialogs.dart' show showDeleteConfirmDialog;
 import '../../widgets/structure_empty_hint.dart';
 import 'years_terms_screen.dart' show AppSearchFieldCompat;
+import '../../widgets/structure_wizard_banner.dart';
 
 class ClassesStreamsScreen extends StatefulWidget {
-  const ClassesStreamsScreen({super.key});
+  const ClassesStreamsScreen({
+    super.key,
+    this.wizardStep,
+    this.wizardTotal,
+    this.wizardStepId = 'classes',
+  });
+
+  final int? wizardStep;
+  final int? wizardTotal;
+  final String wizardStepId;
 
   @override
   State<ClassesStreamsScreen> createState() => _ClassesStreamsScreenState();
@@ -29,6 +39,15 @@ class _ClassesStreamsScreenState extends State<ClassesStreamsScreen> {
   int _tab = 0;
   String _query = '';
 
+  @override
+  void didUpdateWidget(covariant ClassesStreamsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.wizardStepId == 'streams' &&
+        oldWidget.wizardStepId != 'streams') {
+      _tab = 1;
+    }
+  }
+
   /// One-shot, school-wide aggregate fetched once per screen visit - not
   /// stored in StructureBloc/State since it belongs to Students, not
   /// Structure; Structure only borrows it for this one overview tile.
@@ -37,6 +56,7 @@ class _ClassesStreamsScreenState extends State<ClassesStreamsScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.wizardStepId == 'streams') _tab = 1;
     final schoolId =
         (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
     _totalStudentsFuture = di.sl<StructureDependencyService>().countAllStudents(
@@ -52,7 +72,16 @@ class _ClassesStreamsScreenState extends State<ClassesStreamsScreen> {
       builder: (context, state) {
         final bloc = context.read<StructureBloc>();
         return Scaffold(
-          appBar: const AdminAppBar(title: 'Classes & Streams'),
+          appBar: AdminAppBar(
+            title: 'Classes & Streams',
+            bottom: widget.wizardStep == null || widget.wizardTotal == null
+                ? null
+                : StructureWizardBanner(
+                    stepId: _tab == 0 ? 'classes' : 'streams',
+                    stepNumber: widget.wizardStep!,
+                    totalSteps: widget.wizardTotal!,
+                  ),
+          ),
           body: Column(
             children: [
               Padding(

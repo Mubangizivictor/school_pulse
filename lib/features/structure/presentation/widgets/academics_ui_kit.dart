@@ -386,6 +386,7 @@ class AcademicsListScaffold extends StatelessWidget {
   final String fabLabel;
   final VoidCallback onFabPressed;
   final List<Widget>? headerExtra;
+  final PreferredSizeWidget? appBarBottom;
 
   const AcademicsListScaffold({
     super.key,
@@ -397,12 +398,13 @@ class AcademicsListScaffold extends StatelessWidget {
     required this.fabLabel,
     required this.onFabPressed,
     this.headerExtra,
+    this.appBarBottom,
   });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AdminAppBar(title: title),
+      appBar: AdminAppBar(title: title, bottom: appBarBottom),
       body: Column(
         children: [
           Padding(

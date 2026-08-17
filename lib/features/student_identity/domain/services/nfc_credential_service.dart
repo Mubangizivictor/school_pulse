@@ -32,10 +32,7 @@ class NfcCredentialService {
       identityType: 'student',
       schoolId: schoolId,
     );
-    return result.fold(
-      Left.new,
-      (_) => studentIdentityRepository.updateNfcStatus(studentId, 'active'),
-    );
+    return _enrichDuplicateAndActivate(result, studentId);
   }
 
   Future<Either<Failure, void>> replaceForStudent({
@@ -54,10 +51,44 @@ class NfcCredentialService {
       schoolId: schoolId,
       reason: reason,
     );
-    return result.fold(
-      Left.new,
-      (_) => studentIdentityRepository.updateNfcStatus(studentId, 'active'),
-    );
+    // replace() assigns the new card internally, so the same
+    // already-registered-elsewhere conflict assignToStudent handles can
+    // surface here too (revoke of the old card still succeeds either way).
+    return _enrichDuplicateAndActivate(result, studentId);
+  }
+
+  /// Shared tail for assign/replace: on a card-already-registered
+  /// conflict, resolves the other student's name so an authorised admin
+  /// can act on it instead of getting a dead-end "already assigned"
+  /// message; on success, flips this student's own nfcStatus to active.
+  Future<Either<Failure, void>> _enrichDuplicateAndActivate(
+    Either<Failure, void> result,
+    String studentId,
+  ) async {
+    if (result.isLeft()) {
+      final failure = result.fold((f) => f, (_) => null)!;
+      if (failure is! DuplicateCredentialFailure ||
+          failure.conflictingIdentityType != 'student') {
+        return Left(failure);
+      }
+      final conflictingStudent = await studentIdentityRepository
+          .getStudentByUniqueId(failure.conflictingIdentityId);
+      final name = conflictingStudent.fold(
+        (_) => null,
+        (student) => student?.name,
+      );
+      return Left(
+        DuplicateCredentialFailure(
+          conflictingIdentityId: failure.conflictingIdentityId,
+          conflictingIdentityType: failure.conflictingIdentityType,
+          message: name != null
+              ? 'This card is already registered to $name.'
+              : failure.message,
+        ),
+      );
+    }
+
+    return studentIdentityRepository.updateNfcStatus(studentId, 'active');
   }
 
   Future<Either<Failure, void>> revokeForStudent({

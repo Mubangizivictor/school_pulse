@@ -197,6 +197,16 @@ class Permission {
   static const securityExport = 'security.export';
   static const securityManagePolicy = 'security.manage_policy';
 
+  // NFC/QR credential lifecycle administration - deliberately separate from
+  // securityIdentityVerify (which only lets a gate/attendance operator USE
+  // an already-issued credential to identify someone) and from
+  // attendance.*.scan (marking attendance with a credential). This gates
+  // register/assign/replace/revoke/reactivate - i.e. deciding which
+  // physical card identifies which student/staff member - so an ordinary
+  // Class Teacher who can scan attendance must not implicitly be able to
+  // reassign or revoke anyone's card.
+  static const identityCredentialManage = 'identity.credential.manage';
+
   // Admissions / enrollment (enforced) - gates AdmissionBloc's
   // EnrollStudentRequested handler, per the product requirement that
   // enrollment is permission-based, never a hardcoded job-title check.
@@ -497,6 +507,7 @@ class Permission {
     ('Verification', verificationOverride),
     ('Verification', verificationAuditRead),
     ('Verification', verificationDeviceManage),
+    ('Verification', identityCredentialManage),
 
     ('Notifications', notificationView),
     ('Notifications', notificationSend),

@@ -14,6 +14,7 @@ CachedCredential _credentialToPlain(CachedCredentialIsar c) => CachedCredential(
   schoolId: c.schoolId,
   status: c.status,
   updatedAt: c.updatedAt,
+  credentialVersion: c.credentialVersion,
 );
 
 CachedCredentialIsar _credentialToIsar(CachedCredential c) =>
@@ -24,7 +25,8 @@ CachedCredentialIsar _credentialToIsar(CachedCredential c) =>
       ..identityType = c.identityType
       ..schoolId = c.schoolId
       ..status = c.status
-      ..updatedAt = c.updatedAt;
+      ..updatedAt = c.updatedAt
+      ..credentialVersion = c.credentialVersion;
 
 RevokedCredential _revocationToPlain(RevokedCredentialIsar r) =>
     RevokedCredential(

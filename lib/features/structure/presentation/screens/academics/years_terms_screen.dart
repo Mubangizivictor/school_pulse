@@ -15,6 +15,7 @@ import '../../bloc/structure_state.dart';
 import '../../widgets/academics_ui_kit.dart';
 import '../../widgets/structure_dialogs.dart' show showDeleteConfirmDialog;
 import '../../widgets/structure_empty_hint.dart';
+import '../../widgets/structure_wizard_banner.dart';
 
 enum _YearFilter { all, current, upcoming, completed, inactive }
 
@@ -25,8 +26,15 @@ enum _YearOrder { newest, oldest, name }
 enum _TermOrder { displayOrder, startDate, name }
 
 class YearsTermsScreen extends StatefulWidget {
-  const YearsTermsScreen({super.key, this.showTerms = false});
+  const YearsTermsScreen({
+    super.key,
+    this.showTerms = false,
+    this.wizardStep,
+    this.wizardTotal,
+  });
   final bool showTerms;
+  final int? wizardStep;
+  final int? wizardTotal;
 
   @override
   State<YearsTermsScreen> createState() => _YearsTermsScreenState();
@@ -66,6 +74,13 @@ class _YearsTermsScreenState extends State<YearsTermsScreen> {
         return Scaffold(
           appBar: AdminAppBar(
             title: _tab == 0 ? 'Academic Years' : 'Terms & Semesters',
+            bottom: widget.wizardStep == null || widget.wizardTotal == null
+                ? null
+                : StructureWizardBanner(
+                    stepId: _tab == 0 ? 'academic-years' : 'terms',
+                    stepNumber: widget.wizardStep!,
+                    totalSteps: widget.wizardTotal!,
+                  ),
           ),
           body: Column(
             children: [

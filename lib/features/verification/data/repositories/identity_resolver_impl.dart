@@ -222,6 +222,7 @@ class IdentityResolverImpl implements IdentityResolver {
         updatedAt:
             DateTime.tryParse(data['updatedAt'] as String? ?? '') ??
             DateTime.now(),
+        credentialVersion: data['credentialVersion'] as int? ?? 1,
       );
 
       await localDataSource.cacheCredential(credential);

@@ -12,9 +12,12 @@ import '../../bloc/structure_state.dart';
 import '../../widgets/academics_ui_kit.dart';
 import '../../widgets/structure_dialogs.dart' show showDeleteConfirmDialog;
 import '../../widgets/structure_empty_hint.dart';
+import '../../widgets/structure_wizard_banner.dart';
 
 class DepartmentsScreen extends StatefulWidget {
-  const DepartmentsScreen({super.key});
+  const DepartmentsScreen({super.key, this.wizardStep, this.wizardTotal});
+  final int? wizardStep;
+  final int? wizardTotal;
 
   @override
   State<DepartmentsScreen> createState() => _DepartmentsScreenState();
@@ -46,6 +49,13 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
           fabLabel: 'Add Department',
           onFabPressed: () =>
               _openForm(context, schoolId: schoolId, bloc: bloc),
+          appBarBottom: widget.wizardStep == null || widget.wizardTotal == null
+              ? null
+              : StructureWizardBanner(
+                  stepId: 'departments',
+                  stepNumber: widget.wizardStep!,
+                  totalSteps: widget.wizardTotal!,
+                ),
           body: departments.isEmpty
               ? StructureEmptyHint(
                   _query.isEmpty

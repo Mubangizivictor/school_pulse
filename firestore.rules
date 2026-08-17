@@ -960,11 +960,71 @@ service cloud.firestore {
     // RevokedCredentialIsar. NfcCredentialRepositoryImpl pushes here on
     // every change; IdentityResolverImpl falls back to reading here when
     // a card was never scanned on this device before.
+    //
+    // Read stays open to any staff member in the school: an ordinary Class
+    // Teacher's device must be able to resolve/cache a card it has never
+    // seen before (IdentityResolverImpl's remote fallback) purely to mark
+    // attendance - that is a lookup, not a lifecycle action. Write is
+    // gated to identity.credential.manage, mirroring
+    // hasCalendarManagePermission's admin-default-or-role-override
+    // pattern: register/assign/replace/revoke/reactivate/disable/mark-lost
+    // all funnel through NfcCredentialRepositoryImpl's assign/revoke/
+    // reactivate calls, which only ever `set()` this same doc shape - there
+    // is no separate "disable"/"lost" document type to gate differently.
+    function hasCredentialManagePermission(schoolId) {
+      return hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead', 'securityHead']) || (
+        isStaff() && exists(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())) &&
+        'identity.credential.manage' in get(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())).data.permissions
+      );
+    }
+
+    // schoolId/credentialValue never move on an update, full stop - a
+    // crafted edit must never relocate a card to a different tenant or
+    // change which physical UID a doc describes.
+    //
+    // identityId/identityType are allowed to change ONLY when the existing
+    // doc is already 'revoked' - that is NfcCredentialRepositoryImpl.assign's
+    // legitimate "reuse a lost/replaced card for a new student" path
+    // (revoke-then-reassign, e.g. after RevokeNfcCardEvent then a fresh
+    // AssignNfcCardEvent for someone else). While a card is 'active', its
+    // ownership is immutable: the only sanctioned way to move it from
+    // Student A to Student B is revoke (status -> 'revoked') first, then a
+    // separate write to reassign - never a single update that swaps
+    // identityId in place on an active card.
+    function credentialOwnershipUnchanged() {
+      return request.resource.data.schoolId == resource.data.schoolId &&
+        request.resource.data.credentialValue == resource.data.credentialValue &&
+        (
+          (request.resource.data.identityId == resource.data.identityId &&
+           request.resource.data.identityType == resource.data.identityType) ||
+          resource.data.status == 'revoked'
+        );
+    }
+
+    function isValidCredentialStatus() {
+      return request.resource.data.status in ['active', 'revoked'];
+    }
+
     match /schools/{schoolId}/credentials/{id} {
-      allow read, write: if isStaff() && isSameSchool(schoolId);
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && hasCredentialManagePermission(schoolId) &&
+        isValidCredentialStatus();
+      allow update: if isSameSchool(schoolId) && hasCredentialManagePermission(schoolId) &&
+        credentialOwnershipUnchanged() && isValidCredentialStatus();
+      // No delete: revoke is a status change (see NfcCredentialRepositoryImpl.revoke),
+      // never document removal - credential history must survive a lifecycle change.
+      allow delete: if false;
     }
     match /schools/{schoolId}/revoked_credentials/{id} {
-      allow read, write: if isStaff() && isSameSchool(schoolId);
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && hasCredentialManagePermission(schoolId);
+      // Only NfcCredentialRepositoryImpl.assign's reuse-after-revocation
+      // path removes a denylist entry (deleteRevocation), and only once the
+      // credential is being actively reassigned under the same permission
+      // gate - never a bare "make this card usable again by deleting its
+      // revocation record" from an unrelated caller.
+      allow update: if false;
+      allow delete: if isSameSchool(schoolId) && hasCredentialManagePermission(schoolId);
     }
     // Verification engine's own audit trail (Phase 1). This match block
     // was missing even though VerificationEventRecorderImpl has pushed to
