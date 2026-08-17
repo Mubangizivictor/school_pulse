@@ -40,13 +40,26 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
     _sessionActive = true;
     try {
       await NfcManager.instance.startSession(
+        // nfc_manager 3.x includes ISO18092/FeliCa in its default iOS
+        // polling set. Core NFC requires extra FeliCa system-code entries
+        // when that mode is requested, and without them the native reader
+        // can fail to start even though the device supports NFC. School
+        // Pulse student cards use normal ISO14443 cards; ISO15693 is kept
+        // for compatible tags. Restricting the session avoids the hidden
+        // FeliCa requirement and gives iOS a deterministic polling set.
+        pollingOptions: const {
+          NfcPollingOption.iso14443,
+          NfcPollingOption.iso15693,
+        },
         alertMessage: 'Hold the student card near the top edge of your iPhone.',
         onDiscovered: (tag) async {
           final uid = _extractUid(tag);
           if (uid == null) {
             if (!_controller.isClosed) {
               _controller.addError(
-                StateError('The NFC tag was detected but its card UID could not be read.'),
+                StateError(
+                  'The NFC tag was detected but its card UID could not be read.',
+                ),
               );
             }
             return;
