@@ -1,429 +1,515 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import '../../domain/entities/structure_entities.dart';
+import '../../domain/services/structure_integrity_validator.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
 import '../widgets/structure_dialogs.dart';
 import '../widgets/structure_empty_hint.dart';
 
-/// Levels, Academic Years/Terms, Classes/Streams, and Subjects - the core
-/// academic hierarchy every other module reads from.
-class AcademicStructureScreen extends StatefulWidget {
-  const AcademicStructureScreen({super.key});
+const _validator = StructureIntegrityValidator();
 
-  @override
-  State<AcademicStructureScreen> createState() => _AcademicStructureScreenState();
-}
+/// One academic setup task at a time. The Structure wizard passes `section`
+/// in the query string, avoiding the old tabbed/random-navigation experience.
+class AcademicStructureScreen extends StatelessWidget {
+  final String section;
 
-class _AcademicStructureScreenState extends State<AcademicStructureScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  static const _tabs = [
-    Tab(text: 'Levels'),
-    Tab(text: 'Years & Terms'),
-    Tab(text: 'Classes & Streams'),
-    Tab(text: 'Subjects'),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+  const AcademicStructureScreen({super.key, this.section = 'levels'});
 
   @override
   Widget build(BuildContext context) {
+    final requested = GoRouterState.of(context).uri.queryParameters['section'] ?? section;
+    final normalized = const {
+      'levels',
+      'years',
+      'terms',
+      'classes',
+      'streams',
+      'subjects',
+    }.contains(requested)
+        ? requested
+        : 'levels';
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Academic Structure'),
-        bottom: TabBar(controller: _tabController, isScrollable: true, tabs: _tabs),
-      ),
+      appBar: AppBar(title: Text(_title(normalized))),
       body: BlocBuilder<StructureBloc, StructureState>(
-        builder: (context, state) {
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _LevelsTab(state: state),
-              _YearsAndTermsTab(state: state),
-              _ClassesAndStreamsTab(state: state),
-              _SubjectsTab(state: state),
-            ],
-          );
+        builder: (context, state) => switch (normalized) {
+          'years' => _years(context, state),
+          'terms' => _terms(context, state),
+          'classes' => _classes(context, state),
+          'streams' => _streams(context, state),
+          'subjects' => _subjects(context, state),
+          _ => _levels(context, state),
         },
       ),
     );
   }
-}
 
-class _LevelsTab extends StatelessWidget {
-  final StructureState state;
-  const _LevelsTab({required this.state});
+  String _title(String value) => switch (value) {
+        'years' => 'Academic Years',
+        'terms' => 'Terms / Semesters',
+        'classes' => 'Classes',
+        'streams' => 'Streams / Sections',
+        'subjects' => 'Subjects',
+        _ => 'Educational Levels',
+      };
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _levels(BuildContext context, StructureState state) {
     final bloc = context.read<StructureBloc>();
-    return Scaffold(
-      body: state.levels.isEmpty
-          ? const StructureEmptyHint('No educational levels yet.\nAdd Kindergarten, Primary, Secondary - or whatever tiers this school offers.')
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
+    return _AcademicSectionPage(
+      intro: 'Define the education tiers offered by this school. Classes are created only after levels exist.',
+      addLabel: 'Add Level',
+      onAdd: () => showLevelFormDialog(
+        context,
+        onSave: (value) => _dispatchIfValid(
+          context,
+          _validator.validateLevel(value, state.levels),
+          () => bloc.add(SaveLevelRequested(value)),
+        ),
+      ),
+      child: state.levels.isEmpty
+          ? const StructureEmptyHint('No educational levels yet. Add only the levels this school actually offers.')
+          : ListView.separated(
+              padding: EdgeInsets.zero,
               itemCount: state.levels.length,
-              itemBuilder: (context, index) {
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, index) {
                 final level = state.levels[index];
+                final classCount = state.classes.where((item) => item.levelId == level.id && item.isActive).length;
                 return AppCard(
-                  margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
-                    title: Text(level.name, style: TextStyle(decoration: level.isActive ? null : TextDecoration.lineThrough)),
-                    subtitle: Text([if (level.code.isNotEmpty) level.code, if (level.description.isNotEmpty) level.description].join(' - ')),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined),
-                          onPressed: () => showLevelFormDialog(
-                            context,
-                            existing: level,
-                            onSave: (updated) => bloc.add(SaveLevelRequested(updated)),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          onPressed: () async {
-                            final confirmed = await showDeleteConfirmDialog(context, title: 'Delete Level', message: 'Delete "${level.name}"?');
-                            if (confirmed == true) bloc.add(DeleteLevelRequested(level.id));
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showLevelFormDialog(context, onSave: (level) => bloc.add(SaveLevelRequested(level))),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Level'),
-      ),
-    );
-  }
-}
-
-class _YearsAndTermsTab extends StatelessWidget {
-  final StructureState state;
-  const _YearsAndTermsTab({required this.state});
-
-  @override
-  Widget build(BuildContext context) {
-    final bloc = context.read<StructureBloc>();
-    final dateFmt = DateFormat('MMM dd, yyyy');
-    return ListView(
-      padding: const EdgeInsets.all(12),
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Academic Years', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            TextButton.icon(
-              onPressed: () => showAcademicYearFormDialog(context, onSave: (y) => bloc.add(SaveAcademicYearRequested(y))),
-              icon: const Icon(Icons.add),
-              label: const Text('Add Year'),
-            ),
-          ],
-        ),
-        if (state.academicYears.isEmpty) const StructureEmptyHint('No academic years defined yet.'),
-        ...state.academicYears.map((year) => AppCard(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                title: Row(
-                  children: [
-                    Text(year.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    if (year.isCurrent) ...[
-                      const SizedBox(width: 8),
-                      const Chip(label: Text('Current'), visualDensity: VisualDensity.compact),
-                    ],
-                  ],
-                ),
-                subtitle: Text('${dateFmt.format(year.startDate)} - ${dateFmt.format(year.endDate)}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (!year.isCurrent)
-                      IconButton(
-                        icon: const Icon(Icons.check_circle_outline),
-                        tooltip: 'Set as current year',
-                        onPressed: () => bloc.add(SetCurrentAcademicYearRequested(year.id)),
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined),
-                      onPressed: () => showAcademicYearFormDialog(
-                        context,
-                        existing: year,
-                        onSave: (updated) => bloc.add(SaveAcademicYearRequested(updated)),
+                    title: Text(
+                      level.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        decoration: level.isActive ? null : TextDecoration.lineThrough,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      onPressed: () async {
-                        final confirmed = await showDeleteConfirmDialog(context, title: 'Delete Year', message: 'Delete "${year.name}"?');
-                        if (confirmed == true) bloc.add(DeleteAcademicYearRequested(year.id));
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            )),
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Terms / Semesters', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            TextButton.icon(
-              onPressed: state.academicYears.isEmpty
-                  ? null
-                  : () => showAcademicTermFormDialog(
-                        context,
-                        years: state.academicYears,
-                        onSave: (t) => bloc.add(SaveAcademicTermRequested(t)),
-                      ),
-              icon: const Icon(Icons.add),
-              label: const Text('Add Term'),
-            ),
-          ],
-        ),
-        if (state.academicYears.isEmpty)
-          const StructureEmptyHint('Add an academic year first.')
-        else if (state.academicTerms.isEmpty)
-          const StructureEmptyHint('No terms defined yet.\nAdd Term 1/2/3, Semester 1/2, or whatever system this school uses.'),
-        ...state.academicTerms.map((term) {
-          final year = state.academicYears.where((y) => y.id == term.academicYearId).firstOrNull;
-          return AppCard(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              title: Row(
-                children: [
-                  Text(term.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  if (term.isCurrent) ...[
-                    const SizedBox(width: 8),
-                    const Chip(label: Text('Current'), visualDensity: VisualDensity.compact),
-                  ],
-                ],
-              ),
-              subtitle: Text('${year?.name ?? 'Unknown year'} - ${dateFmt.format(term.startDate)} to ${dateFmt.format(term.endDate)}'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!term.isCurrent)
-                    IconButton(
-                      icon: const Icon(Icons.check_circle_outline),
-                      tooltip: 'Set as current term',
-                      onPressed: () => bloc.add(SetCurrentAcademicTermRequested(term.id)),
-                    ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => showAcademicTermFormDialog(
-                      context,
-                      existing: term,
-                      years: state.academicYears,
-                      onSave: (updated) => bloc.add(SaveAcademicTermRequested(updated)),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: () async {
-                      final confirmed = await showDeleteConfirmDialog(context, title: 'Delete Term', message: 'Delete "${term.name}"?');
-                      if (confirmed == true) bloc.add(DeleteAcademicTermRequested(term.id));
-                    },
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
-      ],
-    );
-  }
-}
-
-class _ClassesAndStreamsTab extends StatelessWidget {
-  final StructureState state;
-  const _ClassesAndStreamsTab({required this.state});
-
-  @override
-  Widget build(BuildContext context) {
-    final bloc = context.read<StructureBloc>();
-    return ListView(
-      padding: const EdgeInsets.all(12),
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Classes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            TextButton.icon(
-              onPressed: state.levels.isEmpty
-                  ? null
-                  : () => showClassFormDialog(context, levels: state.levels, onSave: (c) => bloc.add(SaveClassRequested(c))),
-              icon: const Icon(Icons.add),
-              label: const Text('Add Class'),
-            ),
-          ],
-        ),
-        if (state.levels.isEmpty)
-          const StructureEmptyHint('Add an educational level first (see the Levels tab).')
-        else if (state.classes.isEmpty)
-          const StructureEmptyHint('No classes defined yet.'),
-        ...state.classes.map((schoolClass) {
-          final level = state.levels.where((l) => l.id == schoolClass.levelId).firstOrNull;
-          final streamCount = state.streams.where((s) => s.classId == schoolClass.id).length;
-          return AppCard(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              title: Text(schoolClass.name, style: TextStyle(decoration: schoolClass.isActive ? null : TextDecoration.lineThrough)),
-              subtitle: Text('${level?.name ?? 'No level'} - $streamCount stream(s) - Capacity ${schoolClass.capacity}'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => showClassFormDialog(
-                      context,
-                      existing: schoolClass,
-                      levels: state.levels,
-                      onSave: (updated) => bloc.add(SaveClassRequested(updated)),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: () async {
-                      final confirmed = await showDeleteConfirmDialog(context, title: 'Delete Class', message: 'Delete "${schoolClass.name}"?');
-                      if (confirmed == true) bloc.add(DeleteClassRequested(schoolClass.id));
-                    },
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Streams / Sections', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            TextButton.icon(
-              onPressed: state.classes.isEmpty
-                  ? null
-                  : () => showStreamFormDialog(context, classes: state.classes, onSave: (s) => bloc.add(SaveStreamRequested(s))),
-              icon: const Icon(Icons.add),
-              label: const Text('Add Stream'),
-            ),
-          ],
-        ),
-        if (state.classes.isEmpty)
-          const StructureEmptyHint('Add a class first.')
-        else if (state.streams.isEmpty)
-          const StructureEmptyHint('No streams defined yet.\nAdd East/West, A/B/C, or whatever sections this school uses.'),
-        ...state.streams.map((stream) {
-          final schoolClass = state.classes.where((c) => c.id == stream.classId).firstOrNull;
-          return AppCard(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              title: Text(stream.name, style: TextStyle(decoration: stream.isActive ? null : TextDecoration.lineThrough)),
-              subtitle: Text('${schoolClass?.name ?? 'No class'} - Capacity ${stream.capacity}'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => showStreamFormDialog(
-                      context,
-                      existing: stream,
-                      classes: state.classes,
-                      onSave: (updated) => bloc.add(SaveStreamRequested(updated)),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: () async {
-                      final confirmed = await showDeleteConfirmDialog(context, title: 'Delete Stream', message: 'Delete "${stream.name}"?');
-                      if (confirmed == true) bloc.add(DeleteStreamRequested(stream.id));
-                    },
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
-      ],
-    );
-  }
-}
-
-class _SubjectsTab extends StatelessWidget {
-  final StructureState state;
-  const _SubjectsTab({required this.state});
-
-  @override
-  Widget build(BuildContext context) {
-    final bloc = context.read<StructureBloc>();
-    return Scaffold(
-      body: state.subjects.isEmpty
-          ? const StructureEmptyHint('No subjects defined yet.')
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: state.subjects.length,
-              itemBuilder: (context, index) {
-                final subject = state.subjects[index];
-                final department = state.departments.where((d) => d.id == subject.departmentId).firstOrNull;
-                final color = subject.color.isNotEmpty
-                    ? Color(int.parse(subject.color.replaceFirst('#', '0xff')))
-                    : Colors.blueGrey;
-                return AppCard(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    leading: CircleAvatar(backgroundColor: color, radius: 12),
-                    title: Text(subject.name, style: TextStyle(decoration: subject.isActive ? null : TextDecoration.lineThrough)),
                     subtitle: Text([
-                      department?.name ?? 'No department',
-                      if (subject.isElective) 'Elective',
-                      if (subject.isPractical) 'Practical',
-                    ].join(' - ')),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+                      if (level.code.trim().isNotEmpty) level.code.trim(),
+                      '$classCount active class${classCount == 1 ? '' : 'es'}',
+                    ].join(' • ')),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: () => showLevelFormDialog(
+                        context,
+                        existing: level,
+                        onSave: (value) => _dispatchIfValid(
+                          context,
+                          _validator.validateLevel(value, state.levels),
+                          () => bloc.add(SaveLevelRequested(value)),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _years(BuildContext context, StructureState state) {
+    final bloc = context.read<StructureBloc>();
+    final fmt = DateFormat('dd MMM yyyy');
+    return _AcademicSectionPage(
+      intro: 'Create school years first. Exactly one non-archived year should be current before year-scoped setup continues.',
+      addLabel: 'Add Academic Year',
+      onAdd: () => showAcademicYearFormDialog(
+        context,
+        onSave: (value) => _dispatchIfValid(
+          context,
+          _validator.validateAcademicYear(value, state.academicYears),
+          () => bloc.add(SaveAcademicYearRequested(value)),
+        ),
+      ),
+      child: state.academicYears.isEmpty
+          ? const StructureEmptyHint('No academic years configured yet.')
+          : ListView.separated(
+              padding: EdgeInsets.zero,
+              itemCount: state.academicYears.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, index) {
+                final year = state.academicYears[index];
+                final termCount = state.academicTerms.where((term) => term.academicYearId == year.id).length;
+                return AppCard(
+                  child: ListTile(
+                    title: Row(
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined),
-                          onPressed: () => showSubjectFormDialog(
+                        Expanded(child: Text(year.name, style: const TextStyle(fontWeight: FontWeight.w700))),
+                        if (year.isCurrent) const Chip(label: Text('Current')),
+                      ],
+                    ),
+                    subtitle: Text('${fmt.format(year.startDate)} – ${fmt.format(year.endDate)}\n$termCount academic period${termCount == 1 ? '' : 's'}'),
+                    isThreeLine: true,
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (action) {
+                        if (action == 'current') {
+                          bloc.add(SetCurrentAcademicYearRequested(year.id));
+                        } else {
+                          showAcademicYearFormDialog(
                             context,
-                            existing: subject,
-                            departments: state.departments,
-                            onSave: (updated) => bloc.add(SaveSubjectRequested(updated)),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          onPressed: () async {
-                            final confirmed = await showDeleteConfirmDialog(context, title: 'Delete Subject', message: 'Delete "${subject.name}"?');
-                            if (confirmed == true) bloc.add(DeleteSubjectRequested(subject.id));
-                          },
-                        ),
+                            existing: year,
+                            onSave: (value) => _dispatchIfValid(
+                              context,
+                              _validator.validateAcademicYear(value, state.academicYears),
+                              () => bloc.add(SaveAcademicYearRequested(value)),
+                            ),
+                          );
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        if (!year.isCurrent) const PopupMenuItem(value: 'current', child: Text('Set as current')),
+                        const PopupMenuItem(value: 'edit', child: Text('Edit')),
                       ],
                     ),
                   ),
                 );
               },
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showSubjectFormDialog(context, departments: state.departments, onSave: (s) => bloc.add(SaveSubjectRequested(s))),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Subject'),
+    );
+  }
+
+  Widget _terms(BuildContext context, StructureState state) {
+    final bloc = context.read<StructureBloc>();
+    final fmt = DateFormat('dd MMM yyyy');
+    final currentYear = state.academicYears.where((year) => year.isCurrent && !year.isArchived).firstOrNull;
+    final items = currentYear == null
+        ? <AcademicTerm>[]
+        : state.academicTerms.where((term) => term.academicYearId == currentYear.id).toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+
+    return _AcademicSectionPage(
+      intro: currentYear == null
+          ? 'Set one academic year as current before adding its terms or semesters.'
+          : 'Configure periods inside ${currentYear.name}. Dates must remain inside the year and may not overlap.',
+      addLabel: 'Add Term / Semester',
+      onAdd: currentYear == null
+          ? null
+          : () => showAcademicTermFormDialog(
+                context,
+                years: [currentYear],
+                onSave: (value) => _dispatchIfValid(
+                  context,
+                  _validator.validateAcademicTerm(value, state.academicYears, state.academicTerms),
+                  () => bloc.add(SaveAcademicTermRequested(value)),
+                ),
+              ),
+      child: currentYear == null
+          ? const StructureEmptyHint('Return to Academic Years and select one current year first.')
+          : items.isEmpty
+              ? const StructureEmptyHint('No terms or semesters configured for the current year.')
+              : ListView.separated(
+                  padding: EdgeInsets.zero,
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (_, index) {
+                    final term = items[index];
+                    return AppCard(
+                      child: ListTile(
+                        title: Row(
+                          children: [
+                            Expanded(child: Text(term.name, style: const TextStyle(fontWeight: FontWeight.w700))),
+                            if (term.isCurrent) const Chip(label: Text('Current')),
+                          ],
+                        ),
+                        subtitle: Text('${fmt.format(term.startDate)} – ${fmt.format(term.endDate)}'),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (action) {
+                            if (action == 'current') {
+                              bloc.add(SetCurrentAcademicTermRequested(term.id));
+                            } else {
+                              showAcademicTermFormDialog(
+                                context,
+                                existing: term,
+                                years: [currentYear],
+                                onSave: (value) => _dispatchIfValid(
+                                  context,
+                                  _validator.validateAcademicTerm(value, state.academicYears, state.academicTerms),
+                                  () => bloc.add(SaveAcademicTermRequested(value)),
+                                ),
+                              );
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            if (!term.isCurrent) const PopupMenuItem(value: 'current', child: Text('Set as current')),
+                            const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+
+  Widget _classes(BuildContext context, StructureState state) {
+    final bloc = context.read<StructureBloc>();
+    final activeLevels = state.levels.where((item) => item.isActive).toList();
+    return _AcademicSectionPage(
+      intro: 'Create classes under existing levels. Class definitions never require teachers; staff assignments happen later.',
+      addLabel: 'Add Class',
+      onAdd: activeLevels.isEmpty
+          ? null
+          : () => showClassFormDialog(
+                context,
+                levels: activeLevels,
+                onSave: (value) => _dispatchIfValid(
+                  context,
+                  _validator.validateClass(
+                    value,
+                    levels: state.levels,
+                    classes: state.classes,
+                    streams: state.streams,
+                  ),
+                  () => bloc.add(SaveClassRequested(value)),
+                ),
+              ),
+      child: activeLevels.isEmpty
+          ? const StructureEmptyHint('Add an educational level before creating classes.')
+          : state.classes.isEmpty
+              ? const StructureEmptyHint('No classes configured yet.')
+              : ListView.separated(
+                  padding: EdgeInsets.zero,
+                  itemCount: state.classes.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (_, index) {
+                    final schoolClass = state.classes[index];
+                    final level = state.levels.where((item) => item.id == schoolClass.levelId).firstOrNull;
+                    final activeStreams = state.streams.where((item) => item.classId == schoolClass.id && item.isActive);
+                    final allocated = activeStreams.fold<int>(0, (sum, item) => sum + item.capacity);
+                    final available = schoolClass.capacity > 0 ? (schoolClass.capacity - allocated).clamp(0, schoolClass.capacity) : 0;
+                    return AppCard(
+                      child: ListTile(
+                        title: Text(
+                          schoolClass.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            decoration: schoolClass.isActive ? null : TextDecoration.lineThrough,
+                          ),
+                        ),
+                        subtitle: Text([
+                          level?.name ?? 'Missing level',
+                          'Capacity ${schoolClass.capacity}',
+                          if (allocated > 0) '$allocated allocated • $available available',
+                        ].join(' • ')),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: () => showClassFormDialog(
+                            context,
+                            existing: schoolClass,
+                            levels: activeLevels,
+                            onSave: (value) => _dispatchIfValid(
+                              context,
+                              _validator.validateClass(
+                                value,
+                                levels: state.levels,
+                                classes: state.classes,
+                                streams: state.streams,
+                              ),
+                              () => bloc.add(SaveClassRequested(value)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+
+  Widget _streams(BuildContext context, StructureState state) {
+    final bloc = context.read<StructureBloc>();
+    final activeClasses = state.classes.where((item) => item.isActive).toList();
+    return _AcademicSectionPage(
+      intro: 'Streams are children of a class. The sum of active stream capacities must stay inside the parent class capacity.',
+      addLabel: 'Add Stream / Section',
+      onAdd: activeClasses.isEmpty
+          ? null
+          : () => showStreamFormDialog(
+                context,
+                classes: activeClasses,
+                onSave: (value) => _dispatchIfValid(
+                  context,
+                  _validator.validateStream(value, classes: state.classes, streams: state.streams),
+                  () => bloc.add(SaveStreamRequested(value)),
+                ),
+              ),
+      child: activeClasses.isEmpty
+          ? const StructureEmptyHint('Create classes before adding streams or sections.')
+          : state.streams.isEmpty
+              ? const StructureEmptyHint('No streams configured yet.')
+              : ListView.separated(
+                  padding: EdgeInsets.zero,
+                  itemCount: state.streams.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (_, index) {
+                    final stream = state.streams[index];
+                    final parent = state.classes.where((item) => item.id == stream.classId).firstOrNull;
+                    final allocated = state.streams
+                        .where((item) => item.classId == stream.classId && item.isActive)
+                        .fold<int>(0, (sum, item) => sum + item.capacity);
+                    final available = parent == null ? 0 : (parent.capacity - allocated).clamp(0, parent.capacity);
+                    return AppCard(
+                      child: ListTile(
+                        title: Text(
+                          stream.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            decoration: stream.isActive ? null : TextDecoration.lineThrough,
+                          ),
+                        ),
+                        subtitle: Text('${parent?.name ?? 'Missing class'} • Capacity ${stream.capacity}\nClass allocation $allocated / ${parent?.capacity ?? 0} • $available unallocated'),
+                        isThreeLine: true,
+                        trailing: IconButton(
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: () => showStreamFormDialog(
+                            context,
+                            existing: stream,
+                            classes: activeClasses,
+                            onSave: (value) => _dispatchIfValid(
+                              context,
+                              _validator.validateStream(value, classes: state.classes, streams: state.streams),
+                              () => bloc.add(SaveStreamRequested(value)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+
+  Widget _subjects(BuildContext context, StructureState state) {
+    final bloc = context.read<StructureBloc>();
+    final departments = state.departments.where((item) => item.isActive).toList();
+    return _AcademicSectionPage(
+      intro: 'Define the subject catalogue here. Teachers are assigned later, so Subject creation cannot create circular setup dependencies.',
+      addLabel: 'Add Subject',
+      onAdd: () => showSubjectFormDialog(
+        context,
+        departments: departments,
+        onSave: (value) => _dispatchIfValid(
+          context,
+          _validator.validateSubject(value, subjects: state.subjects, departments: state.departments),
+          () => bloc.add(SaveSubjectRequested(value)),
+        ),
+      ),
+      child: state.subjects.isEmpty
+          ? const StructureEmptyHint('No subjects configured yet.')
+          : ListView.separated(
+              padding: EdgeInsets.zero,
+              itemCount: state.subjects.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, index) {
+                final subject = state.subjects[index];
+                final department = state.departments.where((item) => item.id == subject.departmentId).firstOrNull;
+                return AppCard(
+                  child: ListTile(
+                    leading: CircleAvatar(radius: 8, backgroundColor: _safeColor(subject.color)),
+                    title: Text(
+                      subject.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        decoration: subject.isActive ? null : TextDecoration.lineThrough,
+                      ),
+                    ),
+                    subtitle: Text([
+                      if (subject.code.trim().isNotEmpty) subject.code.trim(),
+                      if (department != null) department.name,
+                      subject.isElective ? 'Elective' : 'Core / standard',
+                      if (subject.isPractical) 'Practical',
+                    ].join(' • ')),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: () => showSubjectFormDialog(
+                        context,
+                        existing: subject,
+                        departments: departments,
+                        onSave: (value) => _dispatchIfValid(
+                          context,
+                          _validator.validateSubject(value, subjects: state.subjects, departments: state.departments),
+                          () => bloc.add(SaveSubjectRequested(value)),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+class _AcademicSectionPage extends StatelessWidget {
+  final String intro;
+  final String addLabel;
+  final VoidCallback? onAdd;
+  final Widget child;
+
+  const _AcademicSectionPage({
+    required this.intro,
+    required this.addLabel,
+    required this.onAdd,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              intro,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onAdd,
+                icon: const Icon(Icons.add),
+                label: Text(addLabel),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(child: child),
+          ],
+        ),
       ),
     );
   }
+}
+
+void _dispatchIfValid(
+  BuildContext context,
+  String? validationError,
+  VoidCallback dispatch,
+) {
+  if (validationError == null) {
+    dispatch();
+    return;
+  }
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(validationError)));
+}
+
+Color _safeColor(String raw) {
+  final parsed = int.tryParse(raw.replaceFirst('#', ''), radix: 16);
+  return parsed == null ? Colors.blueGrey : Color(0xFF000000 | parsed);
+}
+
+extension _FirstOrNullExtension<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }

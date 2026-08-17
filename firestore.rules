@@ -62,11 +62,6 @@ service cloud.firestore {
       return isParent() && studentId in myUser().studentIds;
     }
 
-    // Real tenant-ownership check (as opposed to most collections below,
-    // which rely on client-side `where('schoolId', ...)` filtering only) -
-    // used by the appointments module's collections so a signed-in user
-    // from one school can never read/write another school's bookings even
-    // if they guess a document id.
     function isSameSchool(schoolId) {
       return isSignedIn() && myUser().schoolId == schoolId;
     }
@@ -75,21 +70,6 @@ service cloud.firestore {
       return isStudent() && myUser().studentId == studentId;
     }
 
-    // Users can read their own profile, or any profile if they're staff
-    // (e.g. admin user management).
-    //
-    // Self-service create is only for parents (first phone sign-in) - staff
-    // accounts are created server-side by the createStaffAccount Cloud
-    // Function via the Admin SDK, which bypasses these rules entirely. This
-    // restriction stops a client from self-assigning a staff role by
-    // calling Firebase Auth directly and writing its own profile doc.
-    //
-    // The only client updates ever allowed are: a signed-in user flipping
-    // their own mustChangePassword flag to false (after setting a new
-    // password to replace an admin-issued temporary one), or a parent
-    // growing their own studentIds list (redeeming another family access
-    // code for a sibling). Nothing else (role, shrinking studentIds, etc.)
-    // is client-editable.
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isStaff());
       allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.role == 'parent';
@@ -101,19 +81,11 @@ service cloud.firestore {
            resource.data.role == 'parent' &&
            request.resource.data.studentIds.size() > resource.data.studentIds.size())
         )) ||
-        // Admin console (User Management: edit details, toggle active/
-        // inactive, reassign roles) manages OTHER staff profiles - staff
-        // accounts only, never a parent's own profile.
         (isStaff() && resource.data.role != 'parent')
       );
-      // "Delete Account" in User Management removes the Firestore profile
-      // (the paired Firebase Auth account persists - removing that needs
-      // the Admin SDK). Staff-on-staff only.
       allow delete: if isStaff() && resource.data.role != 'parent';
     }
 
-    // Sanitized directory used by parent-facing contact actions. It contains
-    // no email, phone, token, or account-management fields from users/{uid}.
     match /school_contacts/{uid} {
       allow read: if isSameSchool(resource.data.schoolId);
       allow create: if hasAnyRole([
@@ -134,28 +106,17 @@ service cloud.firestore {
         ]) && isSameSchool(resource.data.schoolId);
     }
 
-    // Family access codes link one code to one or more students (siblings).
-    // A parent must be able to resolve a code before they've signed in, so
-    // direct-by-ID reads are public - but the collection can't be listed or
-    // enumerated without already knowing a code. Only staff can create/
-    // regenerate codes.
     match /parent_access_codes/{code} {
       allow get: if true;
       allow list: if isStaff();
       allow write: if isStaff();
     }
 
-    // Students are readable by any staff member, or by the parent(s)
-    // linked to that student via users/{uid}.studentIds, or the student
-    // themselves.
     match /students/{studentId} {
       allow read: if isStaff() || isParentOf(studentId) || isMe(studentId);
       allow write: if isStaff();
     }
 
-    // Per-student records: parents can read only their own children's
-    // records; staff can read and write everything. No client writes for
-    // parents or students.
     function isStudentRecordReadable() {
       return isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
     }
@@ -174,8 +135,6 @@ service cloud.firestore {
     }
     match /payments/{docId} {
       allow read: if isStudentRecordReadable();
-      // Parents may record a new payment for their own child; only staff
-      // may modify/delete existing payment history.
       allow create: if isStaff() || isParentOf(request.resource.data.studentId);
       allow update, delete: if isStaff();
     }
@@ -184,9 +143,6 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
-    // School-scoped clinical records. Teachers and unrelated operational
-    // roles cannot browse medical information. Parents/students receive
-    // read-only access to records for their own learner account.
     match /health_profiles/{docId} {
       allow read: if isSameSchool(resource.data.schoolId) && (
         canManageClinicalRecords() || isParentOf(resource.data.studentId) ||
@@ -289,17 +245,10 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ---- Patron (boys' boarding) module -------------------------------
-    // Boarding roll-call. Distinct from the generic `attendance` collection
-    // used by the classroom attendance engine.
     match /boarding_attendance/{docId} {
       allow read: if isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
       allow write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
-    // Boarding-specific discipline incidents (separate from the general
-    // Guidance & Discipline module's discipline_incidents collection).
-    // isPrivate defaults true in the app - parents only ever see a doc once
-    // a patron explicitly discloses it by setting isPrivate: false.
     match /boarding_discipline/{docId} {
       allow read: if isStaff() || (
         resource.data.isPrivate == false &&
@@ -315,12 +264,9 @@ service cloud.firestore {
       allow read: if isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
       allow write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
-    // Bed-to-bed / dorm-to-dorm move log, kept separately from the
-    // per-dormitory `beds` subcollection so history survives a bed deletion.
     match /bed_transfers/{docId} {
       allow read, write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
-    // Sensitive - counseling referrals are staff-only, never parent-visible.
     match /boarding_counseling_referrals/{docId} {
       allow read, write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
@@ -341,77 +287,45 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
-    // Attendance collection (new)
     match /attendance/{docId} {
       allow read: if isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
       allow write: if isStaff();
-
-      // Matron/Patron night roll call: attendance/{date}/students/{studentId}.
       match /students/{studentId} {
         allow read, write: if isStaff();
       }
     }
 
-    // Attendance logs/summaries
     match /attendance_logs/{docId} {
       allow read: if isStaff();
       allow write: if isStaff();
     }
 
-    // School statistics for Dean/Admin dashboards
     match /school_stats/{docId} {
       allow read: if isStaff();
       allow write: if isStaff();
     }
 
-    // Per-user FCM device tokens - staff need read access so
-    // NotificationService.sendDirectNotification can resolve another
-    // user's tokens when pushing a direct alert; only the owner may write.
     match /users/{uid}/tokens/{tokenId} {
-      // Any signed-in user can read another user's tokens - needed so
-      // sendDirectNotification can look up a message recipient's tokens
-      // regardless of whether the sender is staff or a parent. Tokens are
-      // opaque FCM registration ids; only the Admin SDK (Cloud Functions)
-      // can actually use one to send a push, so this isn't a write/spoof
-      // vector, only a lookup.
       allow read: if isSignedIn();
       allow write: if isSignedIn() && request.auth.uid == uid;
     }
 
-    // Broadcast/direct notifications (NotificationService) and per-student
-    // alerts (health/academic/discipline) share this collection. The
-    // userId clause covers sendDirectNotification's 1:1 messages (staff-to-
-    // staff and staff-to-parent both work now that loginParent() gives
-    // parents a real Firebase Auth session via a Cloud Function-minted
-    // custom token). The targets clause covers BroadcastSmsScreen
-    // broadcasts: myUser().groups is computed at login (loginParent Cloud
-    // Function) from "Parents" plus "Class:<their children's classes>".
     match /alerts/{alertId} {
       allow read: if isStaff() ||
         (resource.data.studentId != null && (isParentOf(resource.data.studentId) || isMe(resource.data.studentId))) ||
         (resource.data.userId != null && isSignedIn() && resource.data.userId == request.auth.uid) ||
         (resource.data.targets is list && isParent() && resource.data.targets.hasAny(myUser().groups));
-      // Staff can create any alert (broadcast, per-student, or 1:1 direct
-      // message). Parents may only create a 1:1 direct message to someone
-      // else - never a broadcast (no `targets`) and never a `studentId`
-      // (which would let them CC an unrelated third parent into the
-      // conversation via the studentId read clause above).
       allow create: if isStaff() ||
         (isParent() &&
          request.resource.data.userId is string &&
          request.resource.data.userId != request.auth.uid &&
          !('targets' in request.resource.data) &&
          !('studentId' in request.resource.data));
-      // Marking an alert as read only ever touches the `readBy` array -
-      // safe for any signed-in user to do on any alert, staff or parent.
       allow update: if isStaff() ||
         (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']));
       allow delete: if isStaff();
     }
 
-    // Front-desk visitor log and appointment scheduling. Real isSameSchool()
-    // tenant isolation - client queries already filter by schoolId
-    // (VisitorRemoteDataSource.getVisitors), so this is safe to tighten.
     match /visitors/{id} {
       allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
@@ -420,18 +334,11 @@ service cloud.firestore {
       allow read, write: if isStaff();
     }
 
-    // Appointments & Meeting Management module - distinct from the
-    // front-desk `appointments` collection above (that's the visitor
-    // quick-scheduler). Real schoolId ownership is enforced via
-    // isSameSchool() rather than relying on client-side query filters.
     match /appointment_types/{id} {
       allow read: if isSignedIn();
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
-    // Keyed by the staff member's own uid. Any signed-in user can read (so
-    // parents can compute booking slots); only the staff member themselves
-    // or an admin-console role can write it.
     match /staff_availability/{staffId} {
       allow read: if isSignedIn();
       allow write: if isStaff() && (
@@ -444,29 +351,16 @@ service cloud.firestore {
       allow create: if isSignedIn() &&
         isSameSchool(request.resource.data.schoolId) &&
         request.resource.data.requesterId == request.auth.uid;
-      // Staff (approve/reject/reschedule/check-in/check-out/complete) can
-      // update any field; the requesting parent can only ever flip status
-      // (e.g. to cancel their own request) - never rewrite host, time, or
-      // response fields.
       allow update: if (isStaff() && isSameSchool(resource.data.schoolId)) || (
         isParent() && resource.data.requesterId == request.auth.uid &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'respondedBy', 'responseNote'])
       );
       allow delete: if false;
-
-      // Confidential meeting outcomes/remarks - staff only, never the
-      // parent who requested the meeting.
       match /private_notes/{noteId} {
         allow read, write: if isStaff();
       }
     }
 
-    // Assessment, Marks Entry & Report Card Engine - nested under
-    // schools/{schoolId} like biometrics/branding/appointments, with real
-    // tenant isolation via isSameSchool() rather than client-side filtering.
-    // Marks are staff-only (teacher entry, dean/headteacher moderation) -
-    // parents/students never read raw marks, only the aggregated,
-    // published reportCards doc for their own child.
     match /schools/{schoolId}/assessmentTypes/{id} {
       allow read: if isSameSchool(schoolId);
       allow write: if isStaff() && isSameSchool(schoolId);
@@ -504,28 +398,17 @@ service cloud.firestore {
       allow read: if isSameSchool(schoolId);
       allow write: if isStaff() && isSameSchool(schoolId);
     }
-    // QR verification lookup - public, read-only, and must never contain
-    // PII: only a report/verification reference, checked against
-    // reportCards server-side by the verification screen.
     match /schools/{schoolId}/reportVerifications/{code} {
       allow get: if true;
       allow list: if false;
       allow write: if isStaff() && isSameSchool(schoolId);
     }
 
-    // Security Operations & Gate Management - gates, student/staff
-    // movements, incidents, emergencies, patrols, lost & found, and pickup
-    // authorizations. Real isSameSchool() tenant isolation (not just
-    // isStaff()) since this is safety-critical data, and
-    // pickup_authorizations is read client-side via a collectionGroup query
-    // that spans every school.
     match /schools/{schoolId}/gates/{id} {
       allow read: if isSameSchool(schoolId);
       allow write: if isSameSchool(schoolId) &&
         hasAnyRole(['securityHead', 'gatekeeper', 'schoolAdmin', 'director', 'headTeacher']);
     }
-    // Movement logs are an append-only audit trail - never editable or
-    // deletable by a client, even a staff one, once written.
     match /schools/{schoolId}/student_movements/{id} {
       allow read: if (isStaff() && isSameSchool(schoolId)) ||
         isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
@@ -548,19 +431,10 @@ service cloud.firestore {
     match /schools/{schoolId}/lost_and_found/{id} {
       allow read, write: if isStaff() && isSameSchool(schoolId);
     }
-    // Parents may read their own child's authorized-pickup list (surfaced
-    // in the parent app); only staff can create/edit entries.
     match /schools/{schoolId}/pickup_authorizations/{id} {
       allow read: if (isStaff() && isSameSchool(schoolId)) || isParentOf(resource.data.studentId);
       allow write: if isStaff() && isSameSchool(schoolId);
     }
-    // getPickupAuthorizations() reads via collectionGroup('pickup_authorizations')
-    // (it needs to look up a student's authorized pickup list without
-    // already knowing their schoolId) - the fixed-depth rule above only
-    // authorizes direct schools/{schoolId}/pickup_authorizations reads, not
-    // collection-group queries, which Firestore requires a {path=**}
-    // wildcard rule to enable. Uses resource.data.schoolId (every doc has
-    // one) instead of a path capture for the same tenant-isolation check.
     match /{path=**}/pickup_authorizations/{id} {
       allow read: if (isStaff() && isSameSchool(resource.data.schoolId)) || isParentOf(resource.data.studentId);
     }
@@ -569,33 +443,18 @@ service cloud.firestore {
       allow write: if isSameSchool(schoolId) &&
         hasAnyRole(['securityHead', 'schoolAdmin', 'director', 'headTeacher']);
     }
-    // NFC credential lifecycle (assign/replace/revoke/reactivate) - the
-    // cross-device sync counterpart to CachedCredentialIsar/
-    // RevokedCredentialIsar. NfcCredentialRepositoryImpl pushes here on
-    // every change; IdentityResolverImpl falls back to reading here when
-    // a card was never scanned on this device before.
     match /schools/{schoolId}/credentials/{id} {
       allow read, write: if isStaff() && isSameSchool(schoolId);
     }
     match /schools/{schoolId}/revoked_credentials/{id} {
       allow read, write: if isStaff() && isSameSchool(schoolId);
     }
-    // Verification engine's own audit trail (Phase 1). This match block
-    // was missing even though VerificationEventRecorderImpl has pushed to
-    // this path since Phase 1 shipped - every push was silently rejected
-    // by Firestore's default-deny and swallowed by the push's own
-    // try/catch (the local record still succeeded, so nothing user-facing
-    // broke, but the "audit trail" existed only on-device, never synced).
     match /schools/{schoolId}/verification_events/{id} {
       allow read: if isStaff() && isSameSchool(schoolId);
       allow create: if isStaff() && isSameSchool(schoolId);
       allow update, delete: if false;
     }
 
-    // Visitor Management enterprise collections - blacklist, pre-approval,
-    // scheduled visits (host approval workflow) and gate-logged deliveries.
-    // Same isSameSchool() tenant isolation as `visitors` above - client
-    // queries already filter by schoolId (VisitorRemoteDataSource).
     match /visitor_blacklist/{id} {
       allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
@@ -613,14 +472,12 @@ service cloud.firestore {
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
 
-    // Immutable system activity feed - only ever appended to, never edited.
     match /audit_logs/{id} {
       allow read: if isStaff();
       allow create: if isStaff();
       allow update, delete: if false;
     }
 
-    // School-wide configuration, plus its archived-term history.
     match /config/{configId} {
       allow read, write: if isStaff();
       match /history/{historyId} {
@@ -628,19 +485,12 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
-    // Appointments module booking policy (advance booking window, same-day/
-    // weekend rules, cancellation policy, etc.) - a doc inside the same
-    // `config` collection as `config/system`. Parents need read access to
-    // enforce booking-window rules client-side; only staff can edit it.
     match /config/appointment_policy {
       allow read: if isSignedIn();
       allow write: if isStaff();
     }
 
-    // School structure management (Admin > Structure) - the school's
-    // educational structure and master data, readable by any signed-in
-    // user (students/parents may need e.g. class names) but only
-    // editable by staff.
+    // School structure management.
     match /educational_levels/{id} {
       allow read: if isSignedIn();
       allow write: if isStaff();
@@ -681,6 +531,42 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isStaff();
     }
+
+    // Sequential Structure runtime data. Every document carries schoolId;
+    // unlike the legacy master-data collections above, these new records are
+    // tenant-isolated in rules as well as in repository queries.
+    match /structure_setup_preferences/{schoolId} {
+  allow read, delete: if isStaff() && isSameSchool(schoolId);
+  allow create: if isStaff() &&
+    request.resource.data.schoolId == schoolId && isSameSchool(schoolId);
+  allow update: if isStaff() && isSameSchool(schoolId) &&
+    request.resource.data.schoolId == schoolId;
+}
+match /structure_curriculum_assignments/{id} {
+  allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+  allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+  allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+    request.resource.data.schoolId == resource.data.schoolId;
+}
+match /structure_teaching_assignments/{id} {
+  allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+  allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+  allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+    request.resource.data.schoolId == resource.data.schoolId;
+}
+match /structure_class_timetables/{id} {
+  allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+  allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+  allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+    request.resource.data.schoolId == resource.data.schoolId;
+}
+match /structure_timetable_lessons/{id} {
+  allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+  allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+  allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+    request.resource.data.schoolId == resource.data.schoolId;
+}
+
     match /houses/{id} {
       allow read: if isSignedIn();
       allow write: if isStaff();
@@ -758,18 +644,12 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
-    // Staff clock-in/out records for the attendance monitor.
     match /staff_attendance/{id} {
       allow read, write: if isStaff();
     }
-
-    // Per-role dashboard summary docs (e.g. stats/attendance_summary,
-    // stats/security_summary) read by gatekeeper/security/transport/matron/
-    // catering/games/exams dashboards.
     match /stats/{docId} {
       allow read, write: if isStaff();
     }
-
     match /bus_routes/{id} {
       allow read: if isSignedIn();
       allow write: if isStaff();
@@ -780,9 +660,6 @@ service cloud.firestore {
     match /dormitories/{id} {
       allow read: if isSignedIn();
       allow write: if isStaff();
-
-      // Per-bed allocation state, owned by the Patron/Matron boarding
-      // modules - not touched by any other feature.
       match /beds/{bedId} {
         allow read, write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
       }
@@ -828,10 +705,6 @@ service cloud.firestore {
     match /sports_houses/{id} {
       allow read, write: if isStaff();
     }
-    match /subjects/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
-    }
     match /inventory_items/{id} {
       allow read, write: if isStaff();
     }
@@ -843,10 +716,6 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
-    // Subscription/billing. Status transitions (pending -> success/failed,
-    // renewalDate extension) are only ever written by the Cloud Functions
-    // webhook handlers via the Admin SDK, which bypasses these rules -
-    // clients never write payment_transactions directly, only read them.
     match /subscription/{id} {
       allow read, write: if isStaff();
     }
@@ -854,15 +723,12 @@ service cloud.firestore {
       allow read: if isStaff();
       allow write: if false;
     }
-    // Each teacher's own lesson plans; any staff can read (e.g. dean review).
     match /lesson_plans/{id} {
       allow read: if isStaff();
       allow create: if isStaff() && request.resource.data.teacherId == request.auth.uid;
       allow update, delete: if isStaff() && resource.data.teacherId == request.auth.uid;
     }
 
-    // Outbound delivery queues - a Cloud Function (Admin SDK, bypasses
-    // rules) drains these, so clients may enqueue but never read them back.
     match /broadcast_queue/{id} {
       allow create: if isStaff();
       allow read, update, delete: if false;
@@ -872,23 +738,11 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
     match /notification_queue/{id} {
-      // Enqueued by sendDirectNotification for both staff-to-X and now
-      // parent-initiated 1:1 messages - see the /alerts create rule above.
       allow create: if isSignedIn();
       allow read, update, delete: if false;
     }
 
-    // ---- SaaS Owner / Platform layer -----------------------------------
-    // These collections back the super_admin feature (school registry,
-    // billing, audit trail). Only the seeded platform-owner account may
-    // touch them; no school-scoped role gets any access, by design - this
-    // is the layer that must stay isolated from every tenant.
     match /schools/{schoolId} {
-      // Read stays app-wide (isSignedIn only) because every tenant module
-      // (branding, biometrics config, identity codes, ...) resolves its own
-      // school doc by id - same tenant-isolation posture the rest of this
-      // file already relies on. Only the owner may create/suspend/edit a
-      // school or change its subscription/enabledFeatures.
       allow read: if isSignedIn();
       allow write: if isSuperAdmin();
     }
@@ -899,16 +753,10 @@ service cloud.firestore {
       allow read, write: if isSuperAdmin();
     }
     match /school_admin_invitations/{id} {
-      // Holds a plaintext temporary password until a Cloud Function
-      // provisions the school admin's real account. The owner may create
-      // one (via createSchool); nobody, including the owner, reads it back
-      // through the client SDK - only the Admin SDK (which bypasses these
-      // rules) may consume and then scrub it.
       allow create: if isSuperAdmin();
       allow read, update, delete: if false;
     }
     match /super_admin_audit_logs/{id} {
-      // Append-only trail. Never client-editable or deletable once written.
       allow read, create: if isSuperAdmin();
       allow update, delete: if false;
     }
@@ -919,9 +767,6 @@ service cloud.firestore {
       allow read, write: if isSuperAdmin();
     }
     match /platform_config/{id} {
-      // Owner-seed idempotency flag, maintenance mode, etc. Only ever
-      // written by trusted server-side scripts/Cloud Functions via the
-      // Admin SDK; the dashboard may read it, never write it directly.
       allow read: if isSuperAdmin();
       allow write: if false;
     }

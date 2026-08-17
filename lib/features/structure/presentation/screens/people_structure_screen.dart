@@ -1,213 +1,274 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import '../../domain/services/structure_integrity_validator.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
 import '../widgets/structure_dialogs.dart';
 import '../widgets/structure_empty_hint.dart';
 
-/// Departments and staff Designations/Roles - the org-structure metadata
-/// other modules (Admin's user management) read from.
-class PeopleStructureScreen extends StatefulWidget {
-  const PeopleStructureScreen({super.key});
+const _validator = StructureIntegrityValidator();
 
-  @override
-  State<PeopleStructureScreen> createState() => _PeopleStructureScreenState();
-}
+/// Definition-first People Structure: define departments and responsibilities
+/// without forcing a person assignment during institutional setup.
+class PeopleStructureScreen extends StatelessWidget {
+  final String section;
 
-class _PeopleStructureScreenState extends State<PeopleStructureScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  static const _tabs = [
-    Tab(text: 'Departments'),
-    Tab(text: 'Staff Roles'),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+  const PeopleStructureScreen({super.key, this.section = 'departments'});
 
   @override
   Widget build(BuildContext context) {
+    final requested = GoRouterState.of(context).uri.queryParameters['section'] ?? section;
+    final normalized = requested == 'roles' ? 'roles' : 'departments';
     return Scaffold(
       appBar: AppBar(
-        title: const Text('People'),
-        bottom: TabBar(controller: _tabController, isScrollable: true, tabs: _tabs),
+        title: Text(normalized == 'roles' ? 'Staff Roles & Responsibilities' : 'Departments'),
       ),
       body: BlocBuilder<StructureBloc, StructureState>(
-        builder: (context, state) {
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _DepartmentsTab(state: state),
-              _StaffRolesTab(state: state),
-            ],
-          );
-        },
+        builder: (context, state) => normalized == 'roles'
+            ? _roles(context, state)
+            : _departments(context, state),
       ),
     );
   }
-}
 
-class _DepartmentsTab extends StatelessWidget {
-  final StructureState state;
-  const _DepartmentsTab({required this.state});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _departments(BuildContext context, StructureState state) {
     final bloc = context.read<StructureBloc>();
-    return Scaffold(
-      body: state.departments.isEmpty
-          ? const StructureEmptyHint('No departments defined yet.')
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
+    return _SectionPage(
+      intro: 'Define departments now. A Head of Department is assigned later, so Department creation never depends on a teacher or staff record.',
+      primaryLabel: 'Add Department',
+      onPrimary: () => showDepartmentFormDialog(
+        context,
+        onSave: (value) => _dispatchIfValid(
+          context,
+          _validator.validateDepartment(value, state.departments),
+          () => bloc.add(SaveDepartmentRequested(value)),
+        ),
+      ),
+      child: state.departments.isEmpty
+          ? const StructureEmptyHint('No departments configured yet.')
+          : ListView.separated(
+              padding: EdgeInsets.zero,
               itemCount: state.departments.length,
-              itemBuilder: (context, index) {
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (_, index) {
                 final department = state.departments[index];
+                final subjectCount = state.subjects
+                    .where((subject) => subject.departmentId == department.id && subject.isActive)
+                    .length;
                 return AppCard(
-                  margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
-                    title: Text(department.name, style: TextStyle(decoration: department.isActive ? null : TextDecoration.lineThrough)),
-                    subtitle: department.description.isNotEmpty ? Text(department.description) : null,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined),
-                          onPressed: () => showDepartmentFormDialog(
-                            context,
-                            existing: department,
-                            onSave: (updated) => bloc.add(SaveDepartmentRequested(updated)),
-                          ),
+                    title: Text(
+                      department.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        decoration: department.isActive ? null : TextDecoration.lineThrough,
+                      ),
+                    ),
+                    subtitle: Text([
+                      if (department.code.trim().isNotEmpty) department.code.trim(),
+                      '$subjectCount active subject${subjectCount == 1 ? '' : 's'}',
+                      if (department.headOfDepartmentStaffId.isEmpty) 'HOD assigned later',
+                    ].join(' • ')),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: () => showDepartmentFormDialog(
+                        context,
+                        existing: department,
+                        onSave: (value) => _dispatchIfValid(
+                          context,
+                          _validator.validateDepartment(value, state.departments),
+                          () => bloc.add(SaveDepartmentRequested(value)),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          onPressed: () async {
-                            final confirmed =
-                                await showDeleteConfirmDialog(context, title: 'Delete Department', message: 'Delete "${department.name}"?');
-                            if (confirmed == true) bloc.add(DeleteDepartmentRequested(department.id));
-                          },
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 );
               },
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showDepartmentFormDialog(context, onSave: (d) => bloc.add(SaveDepartmentRequested(d))),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Department'),
+    );
+  }
+
+  Widget _roles(BuildContext context, StructureState state) {
+    final bloc = context.read<StructureBloc>();
+    final activeDesignations = state.designations.where((item) => item.isActive).toList();
+    return _SectionPage(
+      intro: 'Define reusable responsibilities. One staff account may later hold several roles at the same time; creating a role never creates a separate login.',
+      primaryLabel: 'Add Staff Role',
+      onPrimary: () => showStaffRoleFormDialog(
+        context,
+        designations: activeDesignations,
+        onSave: (value) => _dispatchIfValid(
+          context,
+          _validator.validateRole(
+            value,
+            roles: state.staffRoles,
+            designations: state.designations,
+          ),
+          () => bloc.add(SaveStaffRoleRequested(value)),
+        ),
+      ),
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Designations',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => showDesignationFormDialog(
+                  context,
+                  onSave: (value) => _dispatchIfValid(
+                    context,
+                    _validator.validateDesignation(value, state.designations),
+                    () => bloc.add(SaveDesignationRequested(value)),
+                  ),
+                ),
+                icon: const Icon(Icons.add),
+                label: const Text('Add'),
+              ),
+            ],
+          ),
+          if (state.designations.isEmpty)
+            const StructureEmptyHint('Designations are optional labels such as Teacher, Principal or Bursar.')
+          else
+            ...state.designations.map(
+              (designation) => AppCard(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  title: Text(
+                    designation.name,
+                    style: TextStyle(decoration: designation.isActive ? null : TextDecoration.lineThrough),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => showDesignationFormDialog(
+                      context,
+                      existing: designation,
+                      onSave: (value) => _dispatchIfValid(
+                        context,
+                        _validator.validateDesignation(value, state.designations),
+                        () => bloc.add(SaveDesignationRequested(value)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: 20),
+          Text(
+            'Responsibilities / Roles',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          if (state.staffRoles.isEmpty)
+            const StructureEmptyHint('No staff roles yet. Add only responsibilities the school actually uses.')
+          else
+            ...state.staffRoles.map((role) {
+              final designation = state.designations.where((item) => item.id == role.designationId).firstOrNull;
+              return AppCard(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  title: Text(
+                    role.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      decoration: role.isActive ? null : TextDecoration.lineThrough,
+                    ),
+                  ),
+                  subtitle: Text(designation?.name ?? 'No required designation'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => showStaffRoleFormDialog(
+                      context,
+                      existing: role,
+                      designations: activeDesignations,
+                      onSave: (value) => _dispatchIfValid(
+                        context,
+                        _validator.validateRole(
+                          value,
+                          roles: state.staffRoles,
+                          designations: state.designations,
+                        ),
+                        () => bloc.add(SaveStaffRoleRequested(value)),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+        ],
       ),
     );
   }
 }
 
-class _StaffRolesTab extends StatelessWidget {
-  final StructureState state;
-  const _StaffRolesTab({required this.state});
+class _SectionPage extends StatelessWidget {
+  final String intro;
+  final String primaryLabel;
+  final VoidCallback onPrimary;
+  final Widget child;
+
+  const _SectionPage({
+    required this.intro,
+    required this.primaryLabel,
+    required this.onPrimary,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final bloc = context.read<StructureBloc>();
-    return ListView(
-      padding: const EdgeInsets.all(12),
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Staff Designations', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            TextButton.icon(
-              onPressed: () => showDesignationFormDialog(context, onSave: (d) => bloc.add(SaveDesignationRequested(d))),
-              icon: const Icon(Icons.add),
-              label: const Text('Add'),
-            ),
-          ],
-        ),
-        if (state.designations.isEmpty) const StructureEmptyHint('No designations defined yet.\ne.g. Principal, Bursar, Librarian, Driver.'),
-        ...state.designations.map((designation) => AppCard(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                title: Text(designation.name, style: TextStyle(decoration: designation.isActive ? null : TextDecoration.lineThrough)),
-                subtitle: designation.description.isNotEmpty ? Text(designation.description) : null,
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined),
-                      onPressed: () => showDesignationFormDialog(
-                        context,
-                        existing: designation,
-                        onSave: (updated) => bloc.add(SaveDesignationRequested(updated)),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      onPressed: () async {
-                        final confirmed =
-                            await showDeleteConfirmDialog(context, title: 'Delete Designation', message: 'Delete "${designation.name}"?');
-                        if (confirmed == true) bloc.add(DeleteDesignationRequested(designation.id));
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            )),
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Staff Roles', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            TextButton.icon(
-              onPressed: () => showStaffRoleFormDialog(context, designations: state.designations, onSave: (r) => bloc.add(SaveStaffRoleRequested(r))),
-              icon: const Icon(Icons.add),
-              label: const Text('Add'),
-            ),
-          ],
-        ),
-        if (state.staffRoles.isEmpty)
-          const StructureEmptyHint('No roles defined yet.\ne.g. Class Teacher, Exam Officer, Discipline Teacher - separate from designation.'),
-        ...state.staffRoles.map((role) {
-          final designation = state.designations.where((d) => d.id == role.designationId).firstOrNull;
-          return AppCard(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              title: Text(role.name, style: TextStyle(decoration: role.isActive ? null : TextDecoration.lineThrough)),
-              subtitle: Text(designation?.name ?? 'No designation'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => showStaffRoleFormDialog(
-                      context,
-                      existing: role,
-                      designations: state.designations,
-                      onSave: (updated) => bloc.add(SaveStaffRoleRequested(updated)),
-                    ),
+            Text(
+              intro,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    height: 1.4,
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: () async {
-                      final confirmed = await showDeleteConfirmDialog(context, title: 'Delete Role', message: 'Delete "${role.name}"?');
-                      if (confirmed == true) bloc.add(DeleteStaffRoleRequested(role.id));
-                    },
-                  ),
-                ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onPrimary,
+                icon: const Icon(Icons.add),
+                label: Text(primaryLabel),
               ),
             ),
-          );
-        }),
-      ],
+            const SizedBox(height: 16),
+            Expanded(child: child),
+          ],
+        ),
+      ),
     );
   }
+}
+
+void _dispatchIfValid(
+  BuildContext context,
+  String? validationError,
+  VoidCallback dispatch,
+) {
+  if (validationError == null) {
+    dispatch();
+    return;
+  }
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(validationError)));
+}
+
+extension _FirstOrNullExtension<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }
