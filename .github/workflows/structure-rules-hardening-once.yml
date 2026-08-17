@@ -24,27 +24,13 @@ jobs:
 
           path = Path('firestore.rules')
           text = path.read_text()
-          old = '''    match /structure_setup_preferences/{id} {
-            allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-            allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-          }
-          match /structure_curriculum_assignments/{id} {
-            allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-            allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-          }
-          match /structure_teaching_assignments/{id} {
-            allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-            allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-          }
-          match /structure_class_timetables/{id} {
-            allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-            allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-          }
-          match /structure_timetable_lessons/{id} {
-            allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-            allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-          }'''.replace('          ', '')
-          new = '''    match /structure_setup_preferences/{schoolId} {
+          start_marker = '    match /structure_setup_preferences/{id} {'
+          end_marker = '\n\n    match /houses/{id} {'
+          if text.count(start_marker) != 1 or text.count(end_marker) != 1:
+              raise SystemExit('Could not locate the Structure runtime rules block exactly once')
+          start = text.index(start_marker)
+          end = text.index(end_marker, start)
+          hardened = '''    match /structure_setup_preferences/{schoolId} {
             allow read, delete: if isStaff() && isSameSchool(schoolId);
             allow create: if isStaff() &&
               request.resource.data.schoolId == schoolId && isSameSchool(schoolId);
@@ -74,10 +60,11 @@ jobs:
             allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
             allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
               request.resource.data.schoolId == resource.data.schoolId;
-          }'''.replace('          ', '')
-          if text.count(old) != 1:
-              raise SystemExit('Expected Structure rules block exactly once')
-          path.write_text(text.replace(old, new))
+          }'''
+          # YAML removes the block scalar indentation; normalize only the
+          # indentation intentionally present inside the Python triple string.
+          hardened = '\n'.join(line[10:] if line.startswith('          ') else line for line in hardened.splitlines())
+          path.write_text(text[:start] + hardened + text[end:])
       - name: Commit hardened rules
         shell: bash
         run: |
