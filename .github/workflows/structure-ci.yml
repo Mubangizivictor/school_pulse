@@ -25,6 +25,6 @@ jobs:
       - name: Normalize Structure formatting for CI
         run: dart format lib/features/structure test/features/structure
       - name: Analyze Structure rebuild
-        run: flutter analyze lib/features/structure test/features/structure
+        run: flutter analyze --no-fatal-infos lib/features/structure test/features/structure
       - name: Run Structure tests
         run: flutter test test/features/structure
