@@ -5,22 +5,24 @@ import '../../domain/repositories/structure_setup_repository.dart';
 
 class StructureSetupRepositoryImpl implements StructureSetupRepository {
   final FirebaseFirestore firestore;
-  final FirebaseAuth auth;
+  final FirebaseAuth? auth;
   final String? schoolIdOverride;
 
   StructureSetupRepositoryImpl({
     required this.firestore,
-    FirebaseAuth? auth,
+    this.auth,
     this.schoolIdOverride,
-  }) : auth = auth ?? FirebaseAuth.instance;
+  });
 
   Future<String> _resolveSchoolId() async {
     final override = schoolIdOverride?.trim() ?? '';
     if (override.isNotEmpty) return override;
 
-    final uid = auth.currentUser?.uid;
+    final uid = (auth ?? FirebaseAuth.instance).currentUser?.uid;
     if (uid == null || uid.isEmpty) {
-      throw StateError('An authenticated user is required to load Structure setup.');
+      throw StateError(
+        'An authenticated user is required to load Structure setup.',
+      );
     }
     final userDoc = await firestore.collection('users').doc(uid).get();
     final schoolId = userDoc.data()?['schoolId']?.toString().trim() ?? '';
@@ -60,7 +62,9 @@ class StructureSetupRepositoryImpl implements StructureSetupRepository {
   @override
   Future<void> savePreferences(StructureSetupPreferences preferences) async {
     final schoolId = await _resolveSchoolId();
-    final doc = firestore.collection('structure_setup_preferences').doc(schoolId);
+    final doc = firestore
+        .collection('structure_setup_preferences')
+        .doc(schoolId);
     await doc.set(
       {
         'schoolId': schoolId,
