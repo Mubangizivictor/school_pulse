@@ -31,15 +31,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          grep -q 'match /structure_setup_preferences/{schoolId}' firestore.rules
           for collection in \
-            structure_setup_preferences \
             structure_curriculum_assignments \
             structure_teaching_assignments \
             structure_class_timetables \
             structure_timetable_lessons; do
             grep -q "match /${collection}/{id}" firestore.rules
           done
-          grep -q "isSameSchool(request.resource.data.schoolId)" firestore.rules
-          grep -q "isSameSchool(resource.data.schoolId)" firestore.rules
+          grep -q 'request.resource.data.schoolId == schoolId' firestore.rules
+          immutable_count=$(grep -c 'request.resource.data.schoolId == resource.data.schoolId' firestore.rules)
+          test "$immutable_count" -ge 4
+          grep -q 'isSameSchool(request.resource.data.schoolId)' firestore.rules
+          grep -q 'isSameSchool(resource.data.schoolId)' firestore.rules
       - name: Run Structure tests
         run: flutter test test/features/structure
