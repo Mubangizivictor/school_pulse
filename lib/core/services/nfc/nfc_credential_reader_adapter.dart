@@ -13,10 +13,6 @@ import 'package:school_pulse/features/verification/domain/repositories/credentia
 /// hex-encoded UID via [ScanCredential.nfc], never a tag-tech-specific
 /// type, so business logic never depends on which card technology was
 /// tapped.
-///
-/// A device-facing hardware adapter, not a feature - lives under
-/// `lib/core/services/` alongside `PrinterService`, following the same
-/// convention.
 class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
   final _controller = StreamController<ScanCredential>.broadcast();
   bool _sessionActive = false;
@@ -33,40 +29,65 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
   @override
   Future<void> start(VerificationContext context) async {
     if (_sessionActive) return;
-    if (!await isAvailable()) return;
+
+    final available = await isAvailable();
+    if (!available) {
+      throw StateError(
+        'NFC is not available on this device. iOS Simulator cannot scan NFC cards; use a physical NFC-capable iPhone.',
+      );
+    }
 
     _sessionActive = true;
-    await NfcManager.instance.startSession(
-      alertMessage: 'Hold the card near the top of your phone.',
-      onDiscovered: (tag) async {
-        final uid = _extractUid(tag);
-        if (uid != null) {
-          _controller.add(
-            NfcScanCredential(cardUid: uid, scannedAt: DateTime.now()),
-          );
-        }
-      },
-      onError: (error) async {
-        _sessionActive = false;
-      },
-    );
+    try {
+      await NfcManager.instance.startSession(
+        alertMessage: 'Hold the student card near the top edge of your iPhone.',
+        onDiscovered: (tag) async {
+          final uid = _extractUid(tag);
+          if (uid == null) {
+            if (!_controller.isClosed) {
+              _controller.addError(
+                StateError('The NFC tag was detected but its card UID could not be read.'),
+              );
+            }
+            return;
+          }
+          if (!_controller.isClosed) {
+            _controller.add(
+              NfcScanCredential(cardUid: uid, scannedAt: DateTime.now()),
+            );
+          }
+        },
+        onError: (error) async {
+          _sessionActive = false;
+          if (!_controller.isClosed) {
+            _controller.addError(
+              StateError('iPhone NFC session failed: $error'),
+            );
+          }
+        },
+      );
+    } catch (error) {
+      _sessionActive = false;
+      rethrow;
+    }
   }
 
   @override
   Future<void> stop() async {
     if (!_sessionActive) return;
     _sessionActive = false;
-    await NfcManager.instance.stopSession();
+    try {
+      await NfcManager.instance.stopSession();
+    } catch (_) {
+      // The native session may already have been closed by iOS after a
+      // successful read or native error. Cleanup must remain idempotent.
+    }
   }
 
   void dispose() {
     _controller.close();
   }
 
-  /// Tries every known tag technology in turn since a card's identifier
-  /// lives on a different platform-specific type depending on both the
-  /// card's chipset and the host OS - there is no single cross-platform
-  /// "get UID" call in `nfc_manager`.
   String? _extractUid(NfcTag tag) {
     final identifier =
         NfcA.from(tag)?.identifier ??
