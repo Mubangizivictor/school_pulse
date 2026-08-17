@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -17,13 +18,18 @@ import '../../data/datasources/device_id_provider.dart';
 import '../../domain/entities/attendance_category.dart';
 import '../../domain/entities/attendance_record.dart';
 import '../../domain/entities/attendance_scope.dart';
+import '../../domain/entities/attendance_session_handoff.dart';
 import '../bloc/attendance_bloc.dart';
 import '../bloc/attendance_event.dart';
 import '../bloc/attendance_state.dart';
 import '../widgets/scan_result_card.dart';
 
 class QrScanScreen extends StatefulWidget {
-  const QrScanScreen({super.key});
+  /// Carries scope + present-count over from an NFC screen the teacher just
+  /// switched away from, so the counter doesn't reset to 0/0 mid-session.
+  final AttendanceSessionHandoff? handoff;
+
+  const QrScanScreen({super.key, this.handoff});
 
   @override
   State<QrScanScreen> createState() => _QrScanScreenState();
@@ -51,11 +57,15 @@ class _QrScanScreenState extends State<QrScanScreen> {
   String _deniedMessage = '';
   AttendanceScope? _scope;
   List<AttendanceScope> _availableScopes = const [];
-  final Set<String> _presentPersonIds = {};
+  late final Set<String> _presentPersonIds;
+  int _rosterSize = 0;
 
   @override
   void initState() {
     super.initState();
+    final handoff = widget.handoff;
+    _presentPersonIds = {...?handoff?.presentPersonIds};
+    _rosterSize = handoff?.rosterSize ?? 0;
     // DetectionSpeed.noDuplicates blocks re-detecting the SAME code until a
     // DIFFERENT one is scanned - wrong here, since a student's QR code is
     // permanent and may legitimately need to be re-scanned (retry after a
@@ -67,13 +77,20 @@ class _QrScanScreenState extends State<QrScanScreen> {
     );
     final auth = context.read<AuthBloc>().state;
     if (auth is AuthAuthenticated) {
-      context.read<AttendanceBloc>().add(
-        LoadScopesRequested(
-          schoolId: auth.user.schoolId,
-          category: AttendanceCategory.students,
-          operatorUser: auth.user,
-        ),
-      );
+      if (handoff != null) {
+        // Resuming a session already scoped by the method just switched
+        // from - skip scope re-selection and go straight to scanning.
+        _scope = handoff.scope;
+        _state = _ScanState.scanning;
+      } else {
+        context.read<AttendanceBloc>().add(
+          LoadScopesRequested(
+            schoolId: auth.user.schoolId,
+            category: AttendanceCategory.students,
+            operatorUser: auth.user,
+          ),
+        );
+      }
       context.read<AttendanceBloc>().add(
         SyncPendingAttendanceRequested(schoolId: auth.user.schoolId),
       );
@@ -187,6 +204,33 @@ class _QrScanScreenState extends State<QrScanScreen> {
       _scope = scope;
       _state = _ScanState.scanning;
     });
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<AttendanceBloc>().add(
+        LoadRosterRequested(
+          schoolId: authState.user.schoolId,
+          category: AttendanceCategory.students,
+          scopeId: scope.id,
+          operatorUser: authState.user,
+        ),
+      );
+    }
+  }
+
+  void _switchMethod(String route) {
+    final scope = _scope;
+    if (scope == null) {
+      context.pushReplacement('/staff/attendance/$route');
+      return;
+    }
+    context.pushReplacement(
+      '/staff/attendance/$route',
+      extra: AttendanceSessionHandoff(
+        scope: scope,
+        rosterSize: _rosterSize,
+        presentPersonIds: _presentPersonIds,
+      ),
+    );
   }
 
   @override
@@ -207,6 +251,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
               _state = _ScanState.pickingScope;
             });
           }
+        } else if (state is RosterLoaded) {
+          setState(() => _rosterSize = state.roster.length);
         } else if (state is AttendanceMarkSuccess) {
           HapticFeedback.lightImpact();
           _presentPersonIds.add(state.record.personId);
@@ -230,8 +276,59 @@ class _QrScanScreenState extends State<QrScanScreen> {
           title: Text(_scope?.name ?? 'Attendance'),
           backgroundColor: Colors.transparent,
           elevation: 0,
+          actions: [
+            if (_scope != null)
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.swap_horiz),
+                tooltip: 'Switch method',
+                onSelected: _switchMethod,
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'nfc', child: Text('Switch to NFC')),
+                  PopupMenuItem(
+                    value: 'manual',
+                    child: Text('Switch to Manual'),
+                  ),
+                ],
+              ),
+          ],
         ),
-        body: _buildBody(context),
+        body: Column(
+          children: [
+            if (_scope != null) _buildHeader(context),
+            Expanded(child: _buildBody(context)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final remaining = (_rosterSize - _presentPersonIds.length).clamp(
+      0,
+      _rosterSize,
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        0,
+        AppSpacing.xl,
+        AppSpacing.m,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Present: ${_presentPersonIds.length} / $_rosterSize',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: AppColors.success(context),
+            ),
+          ),
+          Text(
+            'Remaining: $remaining',
+            style: TextStyle(color: AppColors.textMuted(context)),
+          ),
+        ],
       ),
     );
   }

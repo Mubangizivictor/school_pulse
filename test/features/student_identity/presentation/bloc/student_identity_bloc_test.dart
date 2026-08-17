@@ -93,6 +93,7 @@ void main() {
             identityId: any(named: 'identityId'),
             identityType: any(named: 'identityType'),
             schoolId: any(named: 'schoolId'),
+            studentId: any(named: 'studentId'),
           ),
         ).thenAnswer((_) async => const Right(null));
         return bloc;
@@ -126,6 +127,7 @@ void main() {
             identityId: any(named: 'identityId'),
             identityType: any(named: 'identityType'),
             schoolId: any(named: 'schoolId'),
+            studentId: any(named: 'studentId'),
           ),
         ).thenAnswer((_) async => Left(ServerFailure('already assigned')));
         return bloc;

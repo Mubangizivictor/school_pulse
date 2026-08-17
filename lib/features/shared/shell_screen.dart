@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:provider/provider.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
@@ -12,6 +11,8 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/institution/presentation/screens/institution_switcher_sheet.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_quick_add_sheet.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/app_role_session_cubit.dart';
+import 'package:school_pulse/features/auth/presentation/widgets/role_switcher_sheet.dart';
 
 class StaffShell extends StatelessWidget {
   final Widget child;
@@ -61,6 +62,14 @@ class StaffShell extends StatelessWidget {
       return '/staff/patron';
     }
     return '/staff/matron';
+  }
+
+  bool _hasMultipleRoles(BuildContext context) {
+    final state = context.read<AuthBloc>().state;
+    if (state is AuthAuthenticated) {
+      return state.user.roles.length > 1;
+    }
+    return false;
   }
 
   bool _isNurse(BuildContext context) {
@@ -480,6 +489,15 @@ class StaffShell extends StatelessWidget {
                           .toList(),
                     ),
                   ),
+                  if (_hasMultipleRoles(context))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.m),
+                      child: IconButton(
+                        icon: const Icon(Icons.badge_outlined),
+                        tooltip: 'Switch Role',
+                        onPressed: () => RoleSwitcherSheet.show(context),
+                      ),
+                    ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.m),
                     child: IconButton(
@@ -503,6 +521,8 @@ class StaffShell extends StatelessWidget {
               child: Column(
                 children: [
                   const _SupportModeBanner(),
+                  if (isMobile && _hasMultipleRoles(context))
+                    const _RoleBanner(),
                   Expanded(child: child),
                 ],
               ),
@@ -643,6 +663,60 @@ class _SupportModeBanner extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Compact mobile-only row showing which responsibility the user is
+/// currently acting as, with a tap target to switch. Desktop/tablet gets
+/// the equivalent icon button in the NavigationRail instead (no room for a
+/// persistent banner there without disrupting existing layout).
+class _RoleBanner extends StatelessWidget {
+  const _RoleBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return const SizedBox.shrink();
+    final activeRole =
+        context.watch<AppRoleSessionCubit>().state ?? authState.user.role;
+
+    return Material(
+      color: AppColors.surfaceElevated(context),
+      child: InkWell(
+        onTap: () => RoleSwitcherSheet.show(context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.s,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.badge_outlined,
+                size: 18,
+                color: AppColors.primary(context),
+              ),
+              const SizedBox(width: AppSpacing.s),
+              Expanded(
+                child: Text(
+                  UserRoleDisplay.name(activeRole),
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Icon(
+                Icons.unfold_more_rounded,
+                size: 18,
+                color: AppColors.textMuted(context),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -80,6 +80,7 @@ const STAFF_ROLES = [
   "transportCoordinator", "guidanceDiscipline", "storeInventory",
   "receptionist", "gatekeeper", "securityHead",
   "gamesMaster", "cateringManager", "religiousLeader", "hrOfficer",
+  "admissions", "registrar",
 ];
 
 // Maps a UserRole to the StaffResponsibilityType (see
@@ -2342,12 +2343,24 @@ exports.notifyAppointmentStatusChange = appointmentFunctions.notifyAppointmentSt
 exports.sendAppointmentReminderEmails = appointmentFunctions.sendAppointmentReminderEmails;
 
 /**
+ * Attendance -> Google Sheets OAuth connection (per-school Google account).
+ * Kept separate from attendance_sheets.js so the export logic doesn't carry
+ * OAuth/token concerns directly.
+ */
+const attendanceSheetsOAuthFunctions = require("./attendance_sheets_oauth");
+exports.startGoogleSheetsOAuth = attendanceSheetsOAuthFunctions.startGoogleSheetsOAuth;
+exports.googleSheetsOAuthCallback = attendanceSheetsOAuthFunctions.googleSheetsOAuthCallback;
+exports.disconnectGoogleSheetsOAuth = attendanceSheetsOAuthFunctions.disconnectGoogleSheetsOAuth;
+
+/**
  * Attendance -> Google Sheets export. Kept in its own file for the same
  * reason as notifications.js above.
  */
 const attendanceSheetsFunctions = require("./attendance_sheets");
 exports.exportAttendanceRecordToSheets = attendanceSheetsFunctions.exportAttendanceRecordToSheets;
 exports.syncAttendanceToSheetsNow = attendanceSheetsFunctions.syncAttendanceToSheetsNow;
+exports.resyncAttendanceToSheets = attendanceSheetsFunctions.resyncAttendanceToSheets;
+exports.exportAttendanceSessionToSheets = attendanceSheetsFunctions.exportAttendanceSessionToSheets;
 
 // The integration control plane owns safe tenant configuration and audit
 // metadata. Provider credentials remain in server-side secret storage.
@@ -2387,6 +2400,30 @@ const studentCapacityFunctions = require("./student_capacity");
 exports.createStudentWithCapacityCheck = studentCapacityFunctions.createStudentWithCapacityCheck;
 exports.updateStudentStatusWithCapacityAdjustment = studentCapacityFunctions.updateStudentStatusWithCapacityAdjustment;
 exports.backfillActiveStudentCounts = studentCapacityFunctions.backfillActiveStudentCounts;
+
+/**
+ * Student identity credential issuance (QR). Kept out of the Flutter client
+ * for the same reason payments/capacity checks are: minting a token and
+ * reserving a school-scoped sequence number must be atomic and must not
+ * trust the caller's own randomness, which the old client-side
+ * StudentIdentityRepositoryImpl write path did.
+ */
+const studentCredentialFunctions = require("./student_credentials");
+exports.issueStudentIdentity = studentCredentialFunctions.issueStudentIdentity;
+exports.regenerateStudentQrCredential = studentCredentialFunctions.regenerateStudentQrCredential;
+exports.assignNfcCredential = studentCredentialFunctions.assignNfcCredential;
+// Owner-gated, one-time-per-school backfill for students that predate the
+// issueStudentIdentity callable - see functions/student_credentials.js for
+// the idempotent/resumable transaction it shares with issueStudentIdentity.
+exports.backfillStudentIdentities = studentCredentialFunctions.backfillStudentIdentities;
+
+const studentViewFunctions = require("./student_view");
+// Server-side relationship + permission resolver for reading a student's
+// data by section (identity/academic/finance/health/discipline/security) -
+// see functions/student_view.js's doc comment for why Firestore Rules
+// alone cannot enforce e.g. "a Subject Teacher may only read marks for
+// students in their own assigned class/subject".
+exports.getStudentView = studentViewFunctions.getStudentView;
 
 // ---------------------------------------------------------------------------
 // Class Teacher panel - the three actions that must not be a client write.
@@ -2868,7 +2905,7 @@ exports.requestDataOperation = onCall(async (request) => {
   return { jobId: job.id, correlationId, status: base.status };
 });
 
-exports.__test__ = { reportAvailableEventId, chunkIds, notifyParentsOfPublishedReports, isDelegationValid, validatePolicyStages };
+exports.__test__ = { reportAvailableEventId, chunkIds, notifyParentsOfPublishedReports, isDelegationValid, validatePolicyStages, STAFF_ROLES, ADMIN_ROLES };
 
 // Support and audit are isolated in their own module so source business
 // modules only need to emit their existing events, never duplicate tickets.

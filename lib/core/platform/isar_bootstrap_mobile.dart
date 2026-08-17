@@ -3,7 +3,6 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:school_pulse/features/student_identity/data/models/student_cache_isar.dart';
 import 'package:school_pulse/features/student/data/models/student_isar_models.dart';
-import 'package:school_pulse/features/attendance_qr_integration/data/models/attendance_log_isar.dart';
 import 'package:school_pulse/features/inventory/data/models/asset_isar.dart';
 import 'package:school_pulse/features/inventory/data/models/inventory_item_isar.dart';
 import 'package:school_pulse/features/inventory/data/models/stock_movement_isar.dart';
@@ -35,7 +34,6 @@ Future<Isar> open() async {
   return Isar.open([
     StudentCacheIsarSchema,
     StudentProfileIsarSchema,
-    AttendanceLogIsarSchema,
     AssetIsarSchema,
     InventoryItemIsarSchema,
     StockMovementIsarSchema,

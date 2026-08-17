@@ -212,64 +212,133 @@ void main() {
       },
     );
 
+    test('a fresh repository instance (simulating app restart) still finds '
+        'and syncs records that were queued before the restart', () async {
+      // The same Isar-backed local data source persists across restarts on
+      // a real device - a brand-new AttendanceRepositoryImpl wired to it
+      // (as happens when DI re-registers everything on next launch) must
+      // still see and drain whatever was left pending, without any
+      // in-memory state carried over from the previous repository
+      // instance.
+      final restartedRepository = AttendanceRepositoryImpl(
+        remoteDataSource: remote,
+        localDataSource: local,
+        networkInfo: networkInfo,
+        structureRepository: _MockStructureRepository(),
+        studentRepository: _MockStudentRepository(),
+        getStaffMembers: _MockGetStaffMembers(),
+      );
+      when(() => networkInfo.isConnected).thenAnswer((_) async => true);
+      when(
+        () => local.getPending('school-a'),
+      ).thenAnswer((_) async => [record]);
+      when(
+        () => remote.pushRecord(any(), any(), any()),
+      ).thenAnswer((_) async {});
+      when(() => local.markSynced(any())).thenAnswer((_) async {});
+
+      await restartedRepository.syncPendingAttendance('school-a');
+
+      verify(() => remote.pushRecord(any(), any(), any())).called(1);
+      verify(() => local.markSynced(any())).called(1);
+    });
+
+    test('the same student marked present via QR then re-scanned via NFC in '
+        'the same session produces one deterministic id, not two records - '
+        'buildAttendanceRecordId never factors in method', () {
+      final qrId = buildAttendanceRecordId(
+        category: record.category,
+        scopeId: record.scopeId,
+        sessionType: 'daily',
+        date: record.date,
+        personId: record.personId,
+      );
+      final nfcId = buildAttendanceRecordId(
+        category: record.category,
+        scopeId: record.scopeId,
+        sessionType: 'daily',
+        date: record.date,
+        personId: record.personId,
+      );
+
+      expect(qrId, equals(nfcId));
+    });
+
     test(
-      'a fresh repository instance (simulating app restart) still finds '
-      'and syncs records that were queued before the restart',
+      'a student already marked present via QR is rejected as a duplicate '
+      'when the same person is then scanned via NFC in the same session',
       () async {
-        // The same Isar-backed local data source persists across restarts on
-        // a real device - a brand-new AttendanceRepositoryImpl wired to it
-        // (as happens when DI re-registers everything on next launch) must
-        // still see and drain whatever was left pending, without any
-        // in-memory state carried over from the previous repository
-        // instance.
-        final restartedRepository = AttendanceRepositoryImpl(
-          remoteDataSource: remote,
-          localDataSource: local,
-          networkInfo: networkInfo,
-          structureRepository: _MockStructureRepository(),
-          studentRepository: _MockStudentRepository(),
-          getStaffMembers: _MockGetStaffMembers(),
+        final qrRecord = AttendanceRecord(
+          id: record.id,
+          schoolId: record.schoolId,
+          category: record.category,
+          scopeId: record.scopeId,
+          scopeName: record.scopeName,
+          date: record.date,
+          personId: record.personId,
+          personName: record.personName,
+          status: record.status,
+          method: AttendanceMethod.qr,
+          markedBy: record.markedBy,
+          operatorId: record.operatorId,
+          createdAt: record.createdAt,
         );
-        when(() => networkInfo.isConnected).thenAnswer((_) async => true);
-        when(
-          () => local.getPending('school-a'),
-        ).thenAnswer((_) async => [record]);
-        when(
-          () => remote.pushRecord(any(), any(), any()),
-        ).thenAnswer((_) async {});
-        when(() => local.markSynced(any())).thenAnswer((_) async {});
+        final nfcRecord = AttendanceRecord(
+          id: record.id,
+          schoolId: record.schoolId,
+          category: record.category,
+          scopeId: record.scopeId,
+          scopeName: record.scopeName,
+          date: record.date,
+          personId: record.personId,
+          personName: record.personName,
+          status: record.status,
+          method: AttendanceMethod.nfc,
+          markedBy: record.markedBy,
+          operatorId: record.operatorId,
+          createdAt: record.createdAt,
+        );
 
-        await restartedRepository.syncPendingAttendance('school-a');
+        when(() => local.cacheIfAbsent(any())).thenAnswer(
+          (invocation) async =>
+              invocation.positionalArguments.first as AttendanceRecord,
+        );
+        when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+        final firstResult = await repository.markAttendance(qrRecord);
+        expect(firstResult.isRight(), isTrue);
 
-        verify(() => remote.pushRecord(any(), any(), any())).called(1);
-        verify(() => local.markSynced(any())).called(1);
+        when(
+          () => local.cacheIfAbsent(any()),
+        ).thenThrow(LocalDuplicateAttendanceException(qrRecord));
+        final secondResult = await repository.markAttendance(nfcRecord);
+
+        expect(secondResult.isLeft(), isTrue);
+        final failure = secondResult.fold((f) => f, (_) => null);
+        expect((failure as ValidationFailure).field, 'duplicate');
       },
     );
 
-    test(
-      'repeated sync sweeps are idempotent - a record already synced is not '
-      'pushed again',
-      () async {
-        when(() => networkInfo.isConnected).thenAnswer((_) async => true);
-        // First sweep: one pending record.
-        when(
-          () => local.getPending('school-a'),
-        ).thenAnswer((_) async => [record]);
-        when(
-          () => remote.pushRecord(any(), any(), any()),
-        ).thenAnswer((_) async {});
-        when(() => local.markSynced(any())).thenAnswer((_) async {});
-        await repository.syncPendingAttendance('school-a');
+    test('repeated sync sweeps are idempotent - a record already synced is not '
+        'pushed again', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => true);
+      // First sweep: one pending record.
+      when(
+        () => local.getPending('school-a'),
+      ).thenAnswer((_) async => [record]);
+      when(
+        () => remote.pushRecord(any(), any(), any()),
+      ).thenAnswer((_) async {});
+      when(() => local.markSynced(any())).thenAnswer((_) async {});
+      await repository.syncPendingAttendance('school-a');
 
-        // Second sweep: getPending now returns nothing, mirroring
-        // markSynced having flipped the row out of the pending filter -
-        // the sweep must not re-push anything already accounted for.
-        when(() => local.getPending('school-a')).thenAnswer((_) async => []);
-        await repository.syncPendingAttendance('school-a');
+      // Second sweep: getPending now returns nothing, mirroring
+      // markSynced having flipped the row out of the pending filter -
+      // the sweep must not re-push anything already accounted for.
+      when(() => local.getPending('school-a')).thenAnswer((_) async => []);
+      await repository.syncPendingAttendance('school-a');
 
-        verify(() => remote.pushRecord(any(), any(), any())).called(1);
-        verify(() => local.markSynced(any())).called(1);
-      },
-    );
+      verify(() => remote.pushRecord(any(), any(), any())).called(1);
+      verify(() => local.markSynced(any())).called(1);
+    });
   });
 }

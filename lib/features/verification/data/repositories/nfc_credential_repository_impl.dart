@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dartz/dartz.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/network/network_info.dart';
@@ -18,12 +19,55 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
   final VerificationLocalDataSource localDataSource;
   final FirebaseFirestore firestore;
   final NetworkInfo networkInfo;
+  final FirebaseFunctions? functions;
 
   NfcCredentialRepositoryImpl({
     required this.localDataSource,
     required this.firestore,
     required this.networkInfo,
+    this.functions,
   });
+
+  /// Server-side duplicate-tag guard: when online and given [studentId] and
+  /// [schoolId], calls the `assignNfcCredential` Cloud Function, which reads
+  /// and writes schools/{schoolId}/credentials/{cardUid} inside a single
+  /// transaction - the actual source of truth for "is this card already
+  /// bound to someone else", since the local Isar check below only sees
+  /// this device's own cache (see the class doc on why that alone is not
+  /// enough across multiple devices). Returns null (falls through to the
+  /// existing local-only path) when functions is not wired, the caller
+  /// didn't supply the identifiers, or the call fails for a reason other
+  /// than a genuine duplicate - so a network hiccup never blocks the
+  /// existing offline-first behavior.
+  Future<Either<Failure, void>?> _assignServerSide({
+    required String cardUid,
+    required String? studentId,
+    required String schoolId,
+  }) async {
+    if (functions == null || studentId == null) return null;
+    try {
+      await functions!.httpsCallable('assignNfcCredential').call<
+          Map<String, dynamic>>({'cardUid': cardUid, 'studentId': studentId});
+      return null;
+    } on FirebaseFunctionsException catch (e) {
+      if (e.code == 'already-exists') {
+        final details = e.details is Map ? e.details as Map : const {};
+        return Left(
+          DuplicateCredentialFailure(
+            conflictingIdentityId:
+                details['conflictingIdentityId'] as String? ?? '',
+            conflictingIdentityType:
+                details['conflictingIdentityType'] as String? ?? 'student',
+          ),
+        );
+      }
+      // Any other failure (offline, permission, not-found) falls through to
+      // the existing local-first path rather than blocking card assignment.
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   Future<Either<Failure, void>> assign({
@@ -31,8 +75,20 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     required String identityId,
     required String identityType,
     required String schoolId,
+    String? studentId,
   }) async {
     try {
+      if (identityType == 'student') {
+        final serverResult = await _assignServerSide(
+          cardUid: credentialValue,
+          studentId: studentId,
+          schoolId: schoolId,
+        );
+        if (serverResult != null && serverResult.isLeft()) {
+          return serverResult;
+        }
+      }
+
       final existing = await localDataSource.findCredential(
         credentialValue,
         schoolId,
@@ -81,6 +137,7 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     required String identityType,
     required String schoolId,
     required String reason,
+    String? studentId,
   }) async {
     final revokeResult = await revoke(
       credentialValue: oldCredentialValue,
@@ -94,6 +151,7 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
         identityId: identityId,
         identityType: identityType,
         schoolId: schoolId,
+        studentId: studentId,
       ),
     );
   }

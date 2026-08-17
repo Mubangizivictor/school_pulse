@@ -42,12 +42,14 @@ class RoleAssignmentConfigRegistry {
         );
       case UserRole.deanOfStudies:
       case UserRole.guidanceDiscipline:
+      case UserRole.admissions:
         return RoleAssignmentConfigSpec(
           role: role,
           fields: const [RoleFieldKind.approvalScope],
         );
       case UserRole.bursar:
       case UserRole.hrOfficer:
+      case UserRole.registrar:
         return RoleAssignmentConfigSpec(
           role: role,
           fields: const [RoleFieldKind.department],

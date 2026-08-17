@@ -70,7 +70,8 @@ exports.getIntegrationCenter = onCall(async (request) => {
   const sheetsIndex = integrations.findIndex((item) => item.integrationKey === 'google_sheets');
   if (sheetsIndex >= 0 && !snapshots[sheetsIndex].exists && sheetsLegacy.exists) {
     const legacy = sheetsLegacy.data();
-    integrations[sheetsIndex] = { ...integrations[sheetsIndex], status: legacy.linked ? (legacy.lastSyncStatus === 'failed' ? 'failed' : 'connected') : 'notConnected', enabled: legacy.linked === true, connectedAccountDisplay: legacy.spreadsheetName || '', lastSuccessfulSyncAt: legacy.lastSyncStatus === 'success' ? legacy.lastSyncAt || null : null, lastErrorSummary: legacy.lastSyncStatus === 'failed' ? 'The most recent attendance export failed. Open Google Sheets to retry.' : '' };
+    const needsReauth = legacy.connectionStatus === 'needs_attention';
+    integrations[sheetsIndex] = { ...integrations[sheetsIndex], status: needsReauth ? 'failed' : (legacy.linked ? (legacy.lastSyncStatus === 'failed' ? 'failed' : 'connected') : 'notConnected'), enabled: legacy.linked === true, connectedAccountDisplay: legacy.connectedAccountEmail || legacy.spreadsheetName || '', lastSuccessfulSyncAt: legacy.lastSyncStatus === 'success' ? legacy.lastSyncAt || null : null, lastErrorSummary: needsReauth ? 'Google Sheets connection needs to be renewed.' : (legacy.lastSyncStatus === 'failed' ? 'The most recent attendance export failed. Open Google Sheets to retry.' : '') };
   }
   return { institutionId: actor.schoolId, integrations };
 });

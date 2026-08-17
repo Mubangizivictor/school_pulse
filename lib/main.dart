@@ -16,6 +16,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/attendance_hub/domain/repositories/attendance_repository.dart';
 import 'package:school_pulse/features/attendance_hub/presentation/widgets/attendance_sync_lifecycle_gate.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/app_role_session_cubit.dart';
 import 'package:school_pulse/features/institution/presentation/bloc/institution_context_cubit.dart';
 import 'package:school_pulse/features/institution/presentation/widgets/subscription_access_gate.dart';
 import 'package:school_pulse/features/super_admin/presentation/widgets/owner_app_lock_gate.dart';
@@ -165,6 +166,7 @@ class SchoolPulseApp extends StatelessWidget {
           create: (_) => di.sl<AuthBloc>()..add(AuthCheckRequested()),
         ),
         BlocProvider(create: (_) => di.sl<InstitutionContextCubit>()),
+        BlocProvider(create: (_) => di.sl<AppRoleSessionCubit>()),
         BlocProvider(
           create: (_) => di.sl<BrandingBloc>()..add(InitializeBranding()),
         ),
@@ -274,6 +276,12 @@ class SchoolPulseAppView extends StatelessWidget {
                 context.read<InstitutionContextCubit>().restore(
                   state.user.schoolId,
                 );
+                // Restores the last responsibility a multi-role staff
+                // member was acting as (or resolves to roles.first for
+                // everyone else) - fires on both cold-start session
+                // restore and interactive login, same as the tenant
+                // restore above.
+                context.read<AppRoleSessionCubit>().seed(state.user);
               } else {
                 // Registers/refreshes this device in the owner's real
                 // session registry on every successful sign-in, so

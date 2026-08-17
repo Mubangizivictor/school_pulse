@@ -45,6 +45,7 @@ void main() {
           identityId: uniqueSystemId,
           identityType: 'student',
           schoolId: schoolId,
+          studentId: studentId,
         ),
       ).thenAnswer((_) async => const Right(null));
 
@@ -70,6 +71,7 @@ void main() {
             identityId: any(named: 'identityId'),
             identityType: any(named: 'identityType'),
             schoolId: any(named: 'schoolId'),
+            studentId: any(named: 'studentId'),
           ),
         ).thenAnswer((_) async => Left(ServerFailure('already assigned')));
 
@@ -97,6 +99,7 @@ void main() {
             identityId: any(named: 'identityId'),
             identityType: any(named: 'identityType'),
             schoolId: any(named: 'schoolId'),
+            studentId: any(named: 'studentId'),
           ),
         ).thenAnswer(
           (_) async => const Left(
@@ -155,6 +158,7 @@ void main() {
           identityId: any(named: 'identityId'),
           identityType: any(named: 'identityType'),
           schoolId: any(named: 'schoolId'),
+          studentId: any(named: 'studentId'),
         ),
       ).thenAnswer(
         (_) async => const Left(
@@ -249,6 +253,7 @@ void main() {
             identityType: any(named: 'identityType'),
             schoolId: any(named: 'schoolId'),
             reason: any(named: 'reason'),
+            studentId: any(named: 'studentId'),
           ),
         ).thenAnswer((_) async => const Right(null));
 

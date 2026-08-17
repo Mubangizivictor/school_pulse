@@ -7,54 +7,53 @@
  * Google Sheet for reporting/backup - it never reads attendance back out of
  * Sheets.
  *
- * Auth: a single Google service account (credentials in the
- * GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON secret) shared across all schools. Each
- * school shares its spreadsheet with that service account's email once,
- * during setup (see sheets_integration_screen.dart), the same way any
- * third-party Sheets integration is granted access.
+ * Auth: each school connects its own Google account via the OAuth flow in
+ * attendance_sheets_oauth.js. Tokens are never held here - every export
+ * path asks getAuthorizedSheetsClient(schoolId) for a ready-to-use client.
+ *
+ * Idempotency: schools/{schoolId}/attendance_sheets_export_state/{recordId}
+ * is a ledger doc created only after a record's row has been successfully
+ * appended. Every export path (auto-sync trigger, Sync Now, Resync,
+ * session export) checks this ledger before appending and writes it after
+ * a successful append, so re-running any of them never duplicates rows.
  *
  * Flow: attendance_records/{id} onCreate -> look up the school's
- * SheetsIntegration config -> append one row -> record a
- * SheetsSyncLogEntry + update lastSyncAt/lastSyncStatus. Corrections never
- * overwrite in place (attendance_records has no update path - see
- * firestore.rules), so this only ever appends, never edits existing rows.
+ * SheetsIntegration config -> append one row (if not already ledgered) ->
+ * record a SheetsSyncLogEntry + update lastSyncAt/lastSyncStatus.
+ * Corrections never overwrite in place (attendance_records has no update
+ * path - see firestore.rules), so this only ever appends, never edits
+ * existing rows.
  */
 
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
-const { google } = require("googleapis");
+const { getAuthorizedSheetsClient, HEADER_ROW } = require("./attendance_sheets_oauth");
 
 const db = () => admin.firestore();
 
-const HEADER_ROW = [
-  "Date",
-  "Category",
-  "Scope",
-  "Person",
-  "Status",
-  "Method",
-  "Marked By",
-  "Recorded At",
-];
+const APPEND_BATCH_SIZE = 500;
+const RESYNC_DEFAULT_WINDOW_DAYS = 90;
+const RETRY_DELAYS_MS = [500, 2000, 8000];
 
-function sheetsAuth() {
-  const raw = process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON;
-  if (!raw) {
-    throw new Error(
-      "Google Sheets service account is not configured - see functions/.env.example."
-    );
-  }
-  const credentials = JSON.parse(raw);
-  return new google.auth.GoogleAuth({
-    credentials,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function sheetsClient() {
-  const auth = sheetsAuth();
-  return google.sheets({ version: "v4", auth });
+async function retryWithBackoff(fn) {
+  let lastErr;
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const status = err.code || err.status || (err.response && err.response.status);
+      const transient = status === 429 || (typeof status === "number" && status >= 500);
+      if (!transient || attempt === RETRY_DELAYS_MS.length) throw err;
+      await sleep(RETRY_DELAYS_MS[attempt]);
+    }
+  }
+  throw lastErr;
 }
 
 function rowFor(record) {
@@ -71,6 +70,50 @@ function rowFor(record) {
     record.markedBy || "",
     createdAt ? createdAt.toISOString() : "",
   ];
+}
+
+function exportStateCollection(schoolId) {
+  return db()
+    .collection("schools")
+    .doc(schoolId)
+    .collection("attendance_sheets_export_state");
+}
+
+/**
+ * Splits recordIds into already-exported vs. not-yet-exported, using the
+ * ledger. Firestore getAll() is used instead of one get() per id to keep
+ * this to a single round trip per chunk (chunked at 300 to stay well under
+ * getAll's practical limits alongside other traffic).
+ */
+async function partitionByLedger(schoolId, recordIds) {
+  const pending = [];
+  const alreadyExported = [];
+  const chunkSize = 300;
+  for (let i = 0; i < recordIds.length; i += chunkSize) {
+    const chunk = recordIds.slice(i, i + chunkSize);
+    const refs = chunk.map((id) => exportStateCollection(schoolId).doc(id));
+    const snaps = await db().getAll(...refs);
+    snaps.forEach((snap, idx) => {
+      if (snap.exists) alreadyExported.push(chunk[idx]);
+      else pending.push(chunk[idx]);
+    });
+  }
+  return { pending, alreadyExported };
+}
+
+async function markExported(schoolId, recordIds, spreadsheetId) {
+  const chunkSize = 500;
+  for (let i = 0; i < recordIds.length; i += chunkSize) {
+    const chunk = recordIds.slice(i, i + chunkSize);
+    const batch = db().batch();
+    chunk.forEach((id) => {
+      batch.set(exportStateCollection(schoolId).doc(id), {
+        exportedAt: admin.firestore.FieldValue.serverTimestamp(),
+        spreadsheetId,
+      });
+    });
+    await batch.commit();
+  }
 }
 
 /**
@@ -100,16 +143,43 @@ async function ensureWorksheet(sheets, spreadsheetId, worksheetName) {
   }
 }
 
-async function appendRows(spreadsheetId, worksheetName, rows) {
-  const sheets = await sheetsClient();
+async function appendRowBatches(sheets, spreadsheetId, worksheetName, rows) {
   await ensureWorksheet(sheets, spreadsheetId, worksheetName);
-  await sheets.spreadsheets.values.append({
-    spreadsheetId,
-    range: `'${worksheetName}'!A1`,
-    valueInputOption: "USER_ENTERED",
-    insertDataOption: "INSERT_ROWS",
-    requestBody: { values: rows },
-  });
+  for (let i = 0; i < rows.length; i += APPEND_BATCH_SIZE) {
+    const batch = rows.slice(i, i + APPEND_BATCH_SIZE);
+    await retryWithBackoff(() =>
+      sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `'${worksheetName}'!A1`,
+        valueInputOption: "USER_ENTERED",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values: batch },
+      })
+    );
+  }
+}
+
+/**
+ * Exports a set of {id, data} attendance records, skipping any already in
+ * the ledger and marking the survivors as exported only after a
+ * successful append - so a failed batch is safely retryable by simply
+ * calling the exporting operation again.
+ */
+async function exportRecords(schoolId, spreadsheetId, worksheetName, records) {
+  const { pending, alreadyExported } = await partitionByLedger(
+    schoolId,
+    records.map((r) => r.id)
+  );
+  if (pending.length === 0) {
+    return { exported: 0, alreadyExported: alreadyExported.length };
+  }
+  const pendingSet = new Set(pending);
+  const pendingRecords = records.filter((r) => pendingSet.has(r.id));
+  const sheets = await getAuthorizedSheetsClient(schoolId);
+  const rows = pendingRecords.map((r) => rowFor(r.data));
+  await appendRowBatches(sheets, spreadsheetId, worksheetName, rows);
+  await markExported(schoolId, pendingRecords.map((r) => r.id), spreadsheetId);
+  return { exported: pendingRecords.length, alreadyExported: alreadyExported.length };
 }
 
 async function getIntegration(schoolId) {
@@ -148,6 +218,35 @@ async function logSyncResult(schoolId, { success, recordCount, errorMessage }) {
     );
 }
 
+async function callerSchoolId(uid) {
+  const callerDoc = await db().collection("users").doc(uid).get();
+  const schoolId = callerDoc.exists ? callerDoc.data().schoolId : null;
+  if (!schoolId) {
+    throw new HttpsError("failed-precondition", "Your account is not assigned to a school.");
+  }
+  return schoolId;
+}
+
+function friendlyError(err) {
+  if (err.code === "not_connected") {
+    return new HttpsError("failed-precondition", "Connect Google Sheets first.", {
+      reason: "not_connected",
+    });
+  }
+  if (err.code === "needs_reauth") {
+    return new HttpsError(
+      "failed-precondition",
+      "Google Sheets connection needs to be renewed.",
+      { reason: "needs_reauth" }
+    );
+  }
+  return new HttpsError(
+    "internal",
+    "Attendance is saved. Google Sheets will sync automatically when available.",
+    { reason: "temporary" }
+  );
+}
+
 /**
  * Fires once per confirmed attendance mark. Auto-sync only - a school that
  * hasn't linked a spreadsheet, or has turned autoSync off, is a no-op so
@@ -156,7 +255,7 @@ async function logSyncResult(schoolId, { success, recordCount, errorMessage }) {
 exports.exportAttendanceRecordToSheets = onDocumentCreated(
   "schools/{schoolId}/attendance_records/{recordId}",
   async (event) => {
-    const { schoolId } = event.params;
+    const { schoolId, recordId } = event.params;
     const snap = event.data;
     if (!snap) return;
     const record = snap.data();
@@ -166,20 +265,19 @@ exports.exportAttendanceRecordToSheets = onDocumentCreated(
       return;
     }
     if (!integration.spreadsheetId) {
-      // Linked in the UI but never actually granted a real spreadsheet id -
-      // nothing to export to.
       return;
     }
 
     try {
-      await appendRows(
+      const result = await exportRecords(
+        schoolId,
         integration.spreadsheetId,
         integration.worksheetName || "Attendance Records",
-        [rowFor(record)]
+        [{ id: recordId, data: record }]
       );
-      await logSyncResult(schoolId, { success: true, recordCount: 1 });
+      await logSyncResult(schoolId, { success: true, recordCount: result.exported });
     } catch (err) {
-      console.error(`Sheets export failed for ${schoolId}/${event.params.recordId}:`, err);
+      console.error(`Sheets export failed for ${schoolId}/${recordId}:`, err);
       await logSyncResult(schoolId, {
         success: false,
         recordCount: 0,
@@ -192,19 +290,14 @@ exports.exportAttendanceRecordToSheets = onDocumentCreated(
 /**
  * Callable used by the "Sync Now" button - re-exports today's records as a
  * manual catch-up, e.g. after reconnecting a spreadsheet or recovering from
- * a run of failed auto-syncs. Bounded to today only: a full historical
- * backfill is a much bigger operation (pagination, rate limits) that this
- * button was never meant to trigger.
+ * a run of failed auto-syncs. Ledger-guarded, so re-running this never
+ * duplicates rows the auto-sync trigger already exported. Bounded to today
+ * only: a full historical backfill is what Resync (below) is for.
  */
 exports.syncAttendanceToSheetsNow = onCall(async (request) => {
   const auth = request.auth;
   if (!auth) throw new HttpsError("unauthenticated", "You must be signed in.");
-
-  const callerDoc = await db().collection("users").doc(auth.uid).get();
-  const schoolId = callerDoc.exists ? callerDoc.data().schoolId : null;
-  if (!schoolId) {
-    throw new HttpsError("failed-precondition", "Your account is not assigned to a school.");
-  }
+  const schoolId = await callerSchoolId(auth.uid);
 
   const integration = await getIntegration(schoolId);
   if (!integration || !integration.linked) {
@@ -227,24 +320,180 @@ exports.syncAttendanceToSheetsNow = onCall(async (request) => {
     .where("date", ">=", admin.firestore.Timestamp.fromDate(startOfDay))
     .get();
 
-  const rows = recordsSnap.docs.map((doc) => rowFor(doc.data()));
+  const records = recordsSnap.docs.map((doc) => ({ id: doc.id, data: doc.data() }));
 
   try {
-    if (rows.length > 0) {
-      await appendRows(
-        integration.spreadsheetId,
-        integration.worksheetName || "Attendance Records",
-        rows
-      );
-    }
-    await logSyncResult(schoolId, { success: true, recordCount: rows.length });
-    return { recordCount: rows.length };
+    const result = await exportRecords(
+      schoolId,
+      integration.spreadsheetId,
+      integration.worksheetName || "Attendance Records",
+      records
+    );
+    await logSyncResult(schoolId, { success: true, recordCount: result.exported });
+    return { recordCount: result.exported, alreadyExportedCount: result.alreadyExported };
   } catch (err) {
     await logSyncResult(schoolId, {
       success: false,
       recordCount: 0,
       errorMessage: err.message,
     });
-    throw new HttpsError("internal", err.message || "Sync failed.");
+    throw friendlyError(err);
+  }
+});
+
+/**
+ * Authorized administrative operation that safely reconstructs/updates a
+ * school's Google Sheet from authoritative attendance history. Idempotent
+ * via the same ledger as every other export path, and resumable: a batch
+ * that fails is never marked exported, so a second call to this function
+ * picks up exactly where the previous one left off. Defaults to the last
+ * 90 days when no explicit range is supplied - a full all-time backfill
+ * for a school with years of history could mean tens of thousands of rows
+ * and is left to an explicit, deliberate date range instead.
+ */
+exports.resyncAttendanceToSheets = onCall(async (request) => {
+  const auth = request.auth;
+  if (!auth) throw new HttpsError("unauthenticated", "You must be signed in.");
+  const schoolId = await callerSchoolId(auth.uid);
+
+  const integration = await getIntegration(schoolId);
+  if (!integration || !integration.linked || !integration.spreadsheetId) {
+    throw new HttpsError("failed-precondition", "Connect a Google Sheet first.");
+  }
+
+  const now = new Date();
+  const defaultStart = new Date(now.getTime() - RESYNC_DEFAULT_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const startDate = request.data?.startDate ? new Date(request.data.startDate) : defaultStart;
+  const endDate = request.data?.endDate ? new Date(request.data.endDate) : now;
+
+  let recordsScanned = 0;
+  let recordsExported = 0;
+  let recordsSkippedAlreadyExported = 0;
+  let batches = 0;
+  let cursor = null;
+  const pageSize = 1000;
+
+  try {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      let query = db()
+        .collection("schools")
+        .doc(schoolId)
+        .collection("attendance_records")
+        .where("date", ">=", admin.firestore.Timestamp.fromDate(startDate))
+        .where("date", "<=", admin.firestore.Timestamp.fromDate(endDate))
+        .orderBy("date")
+        .limit(pageSize);
+      if (cursor) query = query.startAfter(cursor);
+
+      const pageSnap = await query.get();
+      if (pageSnap.empty) break;
+
+      const records = pageSnap.docs.map((doc) => ({ id: doc.id, data: doc.data() }));
+      recordsScanned += records.length;
+
+      const result = await exportRecords(
+        schoolId,
+        integration.spreadsheetId,
+        integration.worksheetName || "Attendance Records",
+        records
+      );
+      recordsExported += result.exported;
+      recordsSkippedAlreadyExported += result.alreadyExported;
+      if (result.exported > 0) batches += 1;
+
+      cursor = pageSnap.docs[pageSnap.docs.length - 1];
+      if (pageSnap.docs.length < pageSize) break;
+    }
+
+    await logSyncResult(schoolId, { success: true, recordCount: recordsExported });
+    await db()
+      .collection("schools")
+      .doc(schoolId)
+      .collection("integration_logs")
+      .add({
+        institutionId: schoolId,
+        integrationKey: "google_sheets",
+        action: "resynced",
+        actorId: auth.uid,
+        metadata: { recordsExported, startDate: startDate.toISOString(), endDate: endDate.toISOString() },
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+    return { recordsScanned, recordsExported, recordsSkippedAlreadyExported, batches };
+  } catch (err) {
+    await logSyncResult(schoolId, {
+      success: false,
+      recordCount: recordsExported,
+      errorMessage: err.message,
+    });
+    throw friendlyError(err);
+  }
+});
+
+/**
+ * Exports only the records for one Previous Attendance session, called from
+ * AttendanceDetailScreen's Export action. The Flutter screen already holds
+ * the full set of records for the session in memory, so it passes their ids
+ * directly rather than this function re-deriving "session" server-side.
+ */
+exports.__test__ = { rowFor, retryWithBackoff, friendlyError };
+
+exports.exportAttendanceSessionToSheets = onCall(async (request) => {
+  const auth = request.auth;
+  if (!auth) throw new HttpsError("unauthenticated", "You must be signed in.");
+  const schoolId = await callerSchoolId(auth.uid);
+
+  const recordIds = Array.isArray(request.data?.recordIds) ? request.data.recordIds : [];
+  if (recordIds.length === 0) {
+    throw new HttpsError("invalid-argument", "No records to export.");
+  }
+
+  const integration = await getIntegration(schoolId);
+  if (!integration || !integration.linked || !integration.spreadsheetId) {
+    throw new HttpsError("failed-precondition", "Connect a Google Sheet first.");
+  }
+
+  const chunkSize = 500;
+  const records = [];
+  for (let i = 0; i < recordIds.length; i += chunkSize) {
+    const chunk = recordIds.slice(i, i + chunkSize);
+    const refs = chunk.map((id) =>
+      db().collection("schools").doc(schoolId).collection("attendance_records").doc(id)
+    );
+    const snaps = await db().getAll(...refs);
+    snaps.forEach((snap) => {
+      if (snap.exists) records.push({ id: snap.id, data: snap.data() });
+    });
+  }
+
+  try {
+    const result = await exportRecords(
+      schoolId,
+      integration.spreadsheetId,
+      integration.worksheetName || "Attendance Records",
+      records
+    );
+    await logSyncResult(schoolId, { success: true, recordCount: result.exported });
+    await db()
+      .collection("schools")
+      .doc(schoolId)
+      .collection("integration_logs")
+      .add({
+        institutionId: schoolId,
+        integrationKey: "google_sheets",
+        action: "session_exported",
+        actorId: auth.uid,
+        metadata: { recordCount: result.exported, sessionRecordIds: recordIds.slice(0, 50) },
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    return { recordCount: result.exported, alreadyExportedCount: result.alreadyExported };
+  } catch (err) {
+    await logSyncResult(schoolId, {
+      success: false,
+      recordCount: 0,
+      errorMessage: err.message,
+    });
+    throw friendlyError(err);
   }
 });

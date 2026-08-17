@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 import '../../domain/entities/attendance_record.dart';
+import '../../domain/repositories/sheets_integration_repository.dart';
 
-class AttendanceDetailScreen extends StatelessWidget {
+class AttendanceDetailScreen extends StatefulWidget {
   final List<AttendanceRecord> records;
   final String title;
 
@@ -12,6 +17,61 @@ class AttendanceDetailScreen extends StatelessWidget {
     required this.records,
     required this.title,
   });
+
+  @override
+  State<AttendanceDetailScreen> createState() => _AttendanceDetailScreenState();
+}
+
+class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
+  final _sheetsRepo = di.sl<SheetsIntegrationRepository>();
+  bool _exporting = false;
+  bool? _sheetsConnected;
+
+  String get _schoolId {
+    final authState = context.read<AuthBloc>().state;
+    return authState is AuthAuthenticated ? authState.user.schoolId : '';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _checkConnection();
+  }
+
+  Future<void> _checkConnection() async {
+    final result = await _sheetsRepo.getIntegration(_schoolId);
+    if (!mounted) return;
+    setState(() {
+      _sheetsConnected = result.fold((f) => false, (i) => i.linked);
+    });
+  }
+
+  Future<void> _exportToSheets() async {
+    if (_sheetsConnected != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Connect Google Sheets first, from the Attendance home screen.')),
+      );
+      return;
+    }
+    setState(() => _exporting = true);
+    final result = await _sheetsRepo.exportSession(
+      _schoolId,
+      widget.records.map((r) => r.id).toList(),
+    );
+    if (!mounted) return;
+    setState(() => _exporting = false);
+    result.fold(
+      (failure) => ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(failure.message))),
+      (exportResult) {
+        final message = exportResult.recordCount == 0
+            ? 'All ${exportResult.alreadyExportedCount} records were already synced'
+            : 'Exported ${exportResult.recordCount} records'
+                '${exportResult.alreadyExportedCount > 0 ? ' (${exportResult.alreadyExportedCount} already synced)' : ''}';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      },
+    );
+  }
 
   String _statusLabel(AttendanceStatus status) {
     switch (status) {
@@ -41,6 +101,7 @@ class AttendanceDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final records = widget.records;
     final total = records.length;
     final present = records
         .where((r) => r.status == AttendanceStatus.present)
@@ -54,7 +115,7 @@ class AttendanceDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        title: Text(title),
+        title: Text(widget.title),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -130,8 +191,14 @@ class AttendanceDetailScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.ios_share),
+                    onPressed: _exporting ? null : _exportToSheets,
+                    icon: _exporting
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.ios_share),
                     label: const Text('Export'),
                   ),
                 ),

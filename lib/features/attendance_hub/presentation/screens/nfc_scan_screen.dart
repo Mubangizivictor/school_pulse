@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -19,13 +20,18 @@ import '../../data/datasources/device_id_provider.dart';
 import '../../domain/entities/attendance_category.dart';
 import '../../domain/entities/attendance_record.dart';
 import '../../domain/entities/attendance_scope.dart';
+import '../../domain/entities/attendance_session_handoff.dart';
 import '../bloc/attendance_bloc.dart';
 import '../bloc/attendance_event.dart';
 import '../bloc/attendance_state.dart';
 import '../widgets/scan_result_card.dart';
 
 class NfcScanScreen extends StatefulWidget {
-  const NfcScanScreen({super.key});
+  /// Carries scope + present-count over from a QR screen the teacher just
+  /// switched away from, so the counter doesn't reset to 0/0 mid-session.
+  final AttendanceSessionHandoff? handoff;
+
+  const NfcScanScreen({super.key, this.handoff});
 
   @override
   State<NfcScanScreen> createState() => _NfcScanScreenState();
@@ -55,13 +61,14 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
   String _name = '';
   String _subtitle = '';
   String? _photoUrl;
+  bool _wrongClassPhotoFailed = false;
   DateTime? _scannedAt;
   String _deniedMessage = '';
   VerificationContext? _verificationContext;
 
   AttendanceScope? _scope;
   List<AttendanceScope> _availableScopes = const [];
-  final Set<String> _presentPersonIds = {};
+  late final Set<String> _presentPersonIds;
   int _rosterSize = 0;
 
   static const _sessionType = 'daily';
@@ -69,15 +76,25 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
   @override
   void initState() {
     super.initState();
+    final handoff = widget.handoff;
+    _presentPersonIds = {...?handoff?.presentPersonIds};
+    _rosterSize = handoff?.rosterSize ?? 0;
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
-      context.read<AttendanceBloc>().add(
-        LoadScopesRequested(
-          schoolId: authState.user.schoolId,
-          category: AttendanceCategory.students,
-          operatorUser: authState.user,
-        ),
-      );
+      if (handoff != null) {
+        // Resuming a session already scoped by the method just switched
+        // from - skip scope re-selection, land on the ready-to-tap state.
+        _scope = handoff.scope;
+        _state = _ScanState.ready;
+      } else {
+        context.read<AttendanceBloc>().add(
+          LoadScopesRequested(
+            schoolId: authState.user.schoolId,
+            category: AttendanceCategory.students,
+            operatorUser: authState.user,
+          ),
+        );
+      }
       context.read<AttendanceBloc>().add(
         SyncPendingAttendanceRequested(schoolId: authState.user.schoolId),
       );
@@ -217,6 +234,7 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
         _name = identity.name;
         _subtitle = identity.studentCode;
         _photoUrl = identity.photoUrl;
+        _wrongClassPhotoFailed = false;
         _state = _ScanState.wrongClass;
       });
       _scheduleAutoContinue();
@@ -272,6 +290,22 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
     Navigator.of(context).pop();
   }
 
+  void _switchMethod(String route) {
+    final scope = _scope;
+    if (scope == null) {
+      context.pushReplacement('/staff/attendance/$route');
+      return;
+    }
+    context.pushReplacement(
+      '/staff/attendance/$route',
+      extra: AttendanceSessionHandoff(
+        scope: scope,
+        rosterSize: _rosterSize,
+        presentPersonIds: _presentPersonIds,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AttendanceBloc, AttendanceState>(
@@ -322,6 +356,19 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           actions: [
+            if (_scope != null)
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.swap_horiz),
+                tooltip: 'Switch method',
+                onSelected: _switchMethod,
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'qr', child: Text('Switch to QR')),
+                  PopupMenuItem(
+                    value: 'manual',
+                    child: Text('Switch to Manual'),
+                  ),
+                ],
+              ),
             if (_scope != null)
               TextButton(onPressed: _finishDone, child: const Text('DONE')),
           ],
@@ -513,10 +560,23 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
               children: [
                 CircleAvatar(
                   radius: 32,
-                  backgroundImage: _photoUrl != null
+                  backgroundImage: _photoUrl != null && !_wrongClassPhotoFailed
                       ? NetworkImage(_photoUrl!)
                       : null,
-                  child: _photoUrl == null ? const Icon(Icons.person) : null,
+                  onBackgroundImageError:
+                      _photoUrl != null && !_wrongClassPhotoFailed
+                      ? (_, _) {
+                          // Offline device with no local cache of this
+                          // photo - fall back to the icon rather than a
+                          // blank avatar.
+                          if (mounted) {
+                            setState(() => _wrongClassPhotoFailed = true);
+                          }
+                        }
+                      : null,
+                  child: (_photoUrl == null || _wrongClassPhotoFailed)
+                      ? const Icon(Icons.person)
+                      : null,
                 ),
                 const SizedBox(height: AppSpacing.l),
                 Text(

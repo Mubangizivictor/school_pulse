@@ -1,5 +1,20 @@
 import 'package:equatable/equatable.dart';
 
+/// Simple connection states surfaced in the UI - deliberately not
+/// Google/OAuth terminology, per the "translate errors" requirement.
+enum SheetsConnectionStatus { connected, needsAttention, disconnected }
+
+SheetsConnectionStatus _connectionStatusFrom(String? raw) {
+  switch (raw) {
+    case 'connected':
+      return SheetsConnectionStatus.connected;
+    case 'needs_attention':
+      return SheetsConnectionStatus.needsAttention;
+    default:
+      return SheetsConnectionStatus.disconnected;
+  }
+}
+
 class SheetsIntegration extends Equatable {
   final bool linked;
   final String spreadsheetId;
@@ -9,6 +24,10 @@ class SheetsIntegration extends Equatable {
   final String syncFrequency;
   final DateTime? lastSyncAt;
   final String lastSyncStatus;
+  final String connectedAccountEmail;
+  final SheetsConnectionStatus connectionStatus;
+  final String connectedBy;
+  final DateTime? connectedAt;
 
   const SheetsIntegration({
     this.linked = false,
@@ -19,7 +38,38 @@ class SheetsIntegration extends Equatable {
     this.syncFrequency = 'Every marking',
     this.lastSyncAt,
     this.lastSyncStatus = '',
+    this.connectedAccountEmail = '',
+    this.connectionStatus = SheetsConnectionStatus.disconnected,
+    this.connectedBy = '',
+    this.connectedAt,
   });
+
+  factory SheetsIntegration.fromMap(Map<String, dynamic> map) {
+    DateTime? toDate(dynamic value) {
+      if (value == null) return null;
+      if (value is DateTime) return value;
+      try {
+        return (value as dynamic).toDate() as DateTime;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return SheetsIntegration(
+      linked: map['linked'] == true,
+      spreadsheetId: (map['spreadsheetId'] as String?) ?? '',
+      spreadsheetName: (map['spreadsheetName'] as String?) ?? '',
+      worksheetName: (map['worksheetName'] as String?) ?? '',
+      autoSync: map['autoSync'] != false,
+      syncFrequency: (map['syncFrequency'] as String?) ?? 'Every marking',
+      lastSyncAt: toDate(map['lastSyncAt']),
+      lastSyncStatus: (map['lastSyncStatus'] as String?) ?? '',
+      connectedAccountEmail: (map['connectedAccountEmail'] as String?) ?? '',
+      connectionStatus: _connectionStatusFrom(map['connectionStatus'] as String?),
+      connectedBy: (map['connectedBy'] as String?) ?? '',
+      connectedAt: toDate(map['connectedAt']),
+    );
+  }
 
   SheetsIntegration copyWith({
     bool? linked,
@@ -30,6 +80,10 @@ class SheetsIntegration extends Equatable {
     String? syncFrequency,
     DateTime? lastSyncAt,
     String? lastSyncStatus,
+    String? connectedAccountEmail,
+    SheetsConnectionStatus? connectionStatus,
+    String? connectedBy,
+    DateTime? connectedAt,
   }) {
     return SheetsIntegration(
       linked: linked ?? this.linked,
@@ -40,6 +94,10 @@ class SheetsIntegration extends Equatable {
       syncFrequency: syncFrequency ?? this.syncFrequency,
       lastSyncAt: lastSyncAt ?? this.lastSyncAt,
       lastSyncStatus: lastSyncStatus ?? this.lastSyncStatus,
+      connectedAccountEmail: connectedAccountEmail ?? this.connectedAccountEmail,
+      connectionStatus: connectionStatus ?? this.connectionStatus,
+      connectedBy: connectedBy ?? this.connectedBy,
+      connectedAt: connectedAt ?? this.connectedAt,
     );
   }
 
@@ -53,7 +111,36 @@ class SheetsIntegration extends Equatable {
     syncFrequency,
     lastSyncAt,
     lastSyncStatus,
+    connectedAccountEmail,
+    connectionStatus,
+    connectedBy,
+    connectedAt,
   ];
+}
+
+class ResyncResult extends Equatable {
+  final int recordsScanned;
+  final int recordsExported;
+  final int recordsSkippedAlreadyExported;
+
+  const ResyncResult({
+    required this.recordsScanned,
+    required this.recordsExported,
+    required this.recordsSkippedAlreadyExported,
+  });
+
+  @override
+  List<Object?> get props => [recordsScanned, recordsExported, recordsSkippedAlreadyExported];
+}
+
+class SessionExportResult extends Equatable {
+  final int recordCount;
+  final int alreadyExportedCount;
+
+  const SessionExportResult({required this.recordCount, required this.alreadyExportedCount});
+
+  @override
+  List<Object?> get props => [recordCount, alreadyExportedCount];
 }
 
 class SheetsSyncLogEntry extends Equatable {

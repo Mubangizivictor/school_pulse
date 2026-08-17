@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/app_role_session_cubit.dart';
 import 'package:school_pulse/features/branding/domain/entities/school_branding.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
@@ -40,11 +41,24 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
     if (!mounted || _routed) return;
     _routed = true;
     final user = widget.user;
-    context.go(
-      user.roles.length > 1 && user.role != UserRole.parent
-          ? '/staff/hub'
-          : UserRoleRouting.dashboardPath(user.role),
-    );
+    if (user.roles.length > 1 && user.role != UserRole.parent) {
+      // A previously-persisted active role (set by RoleSwitcherSheet, or
+      // restored on a prior launch) skips the hub and returns the user
+      // straight to where they left off. A first-ever session, or one
+      // where the persisted role was since revoked, has nothing to
+      // restore - AppRoleSessionCubit.seed (called from main.dart's
+      // AuthAuthenticated listener) resolves that case to roles.first,
+      // which is intentionally NOT good enough to skip the hub, since the
+      // user never actually chose that role.
+      final activeRole = context.read<AppRoleSessionCubit>().state;
+      if (activeRole != null) {
+        context.go(UserRoleRouting.dashboardPath(activeRole));
+        return;
+      }
+      context.go('/staff/hub');
+      return;
+    }
+    context.go(UserRoleRouting.dashboardPath(user.role));
   }
 
   @override

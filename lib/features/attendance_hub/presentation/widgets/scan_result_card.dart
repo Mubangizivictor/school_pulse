@@ -4,7 +4,7 @@ import 'package:school_pulse/design_system/theme/app_spacing.dart';
 
 /// Matches the mockup's "Attendance Marked" card - big check circle, avatar,
 /// name/class/time/status rows, then Mark Another / Done buttons.
-class ScanResultCard extends StatelessWidget {
+class ScanResultCard extends StatefulWidget {
   final bool isDuplicate;
   final bool isInvalid;
   final String? photoUrl;
@@ -29,17 +29,37 @@ class ScanResultCard extends StatelessWidget {
   });
 
   @override
+  State<ScanResultCard> createState() => _ScanResultCardState();
+}
+
+class _ScanResultCardState extends State<ScanResultCard> {
+  // A cached photoUrl points at Firebase Storage - while offline (the
+  // expected state during QR/NFC attendance per the offline-first spec),
+  // NetworkImage fails to load but CircleAvatar's `child` is only shown when
+  // `backgroundImage` is null, so without this the avatar would render
+  // blank instead of falling back to the person icon.
+  bool _photoFailed = false;
+
+  @override
+  void didUpdateWidget(covariant ScanResultCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.photoUrl != widget.photoUrl) _photoFailed = false;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final color = isInvalid
+    final color = widget.isInvalid
         ? AppColors.danger(context)
-        : isDuplicate
+        : widget.isDuplicate
         ? AppColors.warning(context)
         : AppColors.success(context);
-    final title = isInvalid
+    final title = widget.isInvalid
         ? 'Invalid Card'
-        : isDuplicate
+        : widget.isDuplicate
         ? 'Already Marked'
         : 'Attendance Marked';
+    final photoUrl = widget.photoUrl;
+    final showPhoto = photoUrl != null && !_photoFailed;
 
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -55,9 +75,9 @@ class ScanResultCard extends StatelessWidget {
               border: Border.all(color: color, width: 2),
             ),
             child: Icon(
-              isInvalid
+              widget.isInvalid
                   ? Icons.error_outline
-                  : isDuplicate
+                  : widget.isDuplicate
                   ? Icons.info_outline
                   : Icons.check,
               color: color,
@@ -74,7 +94,7 @@ class ScanResultCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
-          if (!isInvalid)
+          if (!widget.isInvalid)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.l),
@@ -82,10 +102,20 @@ class ScanResultCard extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 28,
-                      backgroundImage: photoUrl != null
-                          ? NetworkImage(photoUrl!)
+                      backgroundImage: showPhoto
+                          ? NetworkImage(photoUrl)
                           : null,
-                      child: photoUrl == null ? const Icon(Icons.person) : null,
+                      onBackgroundImageError: showPhoto
+                          ? (_, _) {
+                              // Offline device, no local cache of this
+                              // photo, or a bad URL - never leave the
+                              // avatar blank, fall back to the icon.
+                              if (mounted) {
+                                setState(() => _photoFailed = true);
+                              }
+                            }
+                          : null,
+                      child: showPhoto ? null : const Icon(Icons.person),
                     ),
                     const SizedBox(width: AppSpacing.m),
                     Expanded(
@@ -93,11 +123,11 @@ class ScanResultCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            name,
+                            widget.name,
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           Text(
-                            subtitle,
+                            widget.subtitle,
                             style: TextStyle(
                               color: AppColors.textMuted(context),
                               fontSize: 12,
@@ -107,7 +137,7 @@ class ScanResultCard extends StatelessWidget {
                           Row(
                             children: [
                               Text(
-                                timeLabel,
+                                widget.timeLabel,
                                 style: TextStyle(
                                   color: AppColors.textMuted(context),
                                   fontSize: 12,
@@ -115,7 +145,7 @@ class ScanResultCard extends StatelessWidget {
                               ),
                               const SizedBox(width: AppSpacing.m),
                               Text(
-                                statusLabel,
+                                widget.statusLabel,
                                 style: TextStyle(
                                   color: color,
                                   fontWeight: FontWeight.w600,
@@ -135,14 +165,17 @@ class ScanResultCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: onScanAnother,
+              onPressed: widget.onScanAnother,
               child: const Text('Mark Another'),
             ),
           ),
           const SizedBox(height: AppSpacing.m),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton(onPressed: onDone, child: const Text('Done')),
+            child: OutlinedButton(
+              onPressed: widget.onDone,
+              child: const Text('Done'),
+            ),
           ),
         ],
       ),

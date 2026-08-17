@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -6,6 +8,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/injection_container.dart' as di;
+import 'package:url_launcher/url_launcher.dart';
 import '../../domain/entities/sheets_integration.dart';
 import '../../domain/repositories/sheets_integration_repository.dart';
 
@@ -23,6 +26,10 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
   List<SheetsSyncLogEntry> _log = [];
   bool _loading = true;
   bool _syncing = false;
+  bool _resyncing = false;
+  bool _connecting = false;
+  Timer? _connectPollTimer;
+
   String get _schoolId {
     final authState = context.read<AuthBloc>().state;
     return authState is AuthAuthenticated ? authState.user.schoolId : '';
@@ -34,10 +41,17 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _connectPollTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     setState(() => _loading = true);
     final integrationResult = await _repo.getIntegration(_schoolId);
     final logResult = await _repo.getSyncLog(_schoolId);
+    if (!mounted) return;
     setState(() {
       _integration = integrationResult.fold(
         (f) => const SheetsIntegration(),
@@ -48,118 +62,152 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
     });
   }
 
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> _connect() async {
-    final nameController = TextEditingController();
-    final idController = TextEditingController();
-    final result = await showDialog<(String, String)>(
+    setState(() => _connecting = true);
+    final result = await _repo.startConnect(_schoolId);
+    await result.fold(
+      (failure) async {
+        setState(() => _connecting = false);
+        _showMessage(failure.message);
+      },
+      (authUrl) async {
+        final launched = await launchUrl(
+          Uri.parse(authUrl),
+          mode: LaunchMode.externalApplication,
+        );
+        if (!launched) {
+          setState(() => _connecting = false);
+          _showMessage('Could not open the browser to connect Google Sheets.');
+          return;
+        }
+        _pollForConnection();
+      },
+    );
+  }
+
+  /// The OAuth handshake finishes in a browser tab, out-of-band from this
+  /// screen, so completion is detected by polling getIntegration until it
+  /// reports linked, rather than a deep-link back into the app.
+  void _pollForConnection() {
+    var elapsedSeconds = 0;
+    const pollInterval = Duration(seconds: 2);
+    const timeout = Duration(seconds: 60);
+    _connectPollTimer?.cancel();
+    _connectPollTimer = Timer.periodic(pollInterval, (timer) async {
+      elapsedSeconds += pollInterval.inSeconds;
+      final result = await _repo.getIntegration(_schoolId);
+      final integration = result.fold((f) => null, (i) => i);
+      if (integration != null && integration.linked) {
+        timer.cancel();
+        if (!mounted) return;
+        setState(() {
+          _integration = integration;
+          _connecting = false;
+        });
+        _load();
+        return;
+      }
+      if (elapsedSeconds >= timeout.inSeconds) {
+        timer.cancel();
+        if (!mounted) return;
+        setState(() => _connecting = false);
+        _showMessage(
+          'Still waiting for Google sign-in. Finish connecting in the browser, then reopen this screen.',
+        );
+      }
+    });
+  }
+
+  Future<void> _disconnect() async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Connect Spreadsheet'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Spreadsheet name'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: idController,
-              decoration: const InputDecoration(
-                labelText: 'Spreadsheet ID',
-                hintText: 'From the sheet URL: .../d/<this part>/edit',
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.s),
-              decoration: BoxDecoration(
-                color: AppColors.warning(dialogContext).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: AppColors.warning(
-                    dialogContext,
-                  ).withValues(alpha: 0.4),
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    size: 18,
-                    color: AppColors.warning(dialogContext),
-                  ),
-                  const SizedBox(width: AppSpacing.s),
-                  Expanded(
-                    child: Text(
-                      'Before connecting: share this spreadsheet with the '
-                      'school\'s Sheets export service account (Editor '
-                      'access - ask your administrator for its email). '
-                      'Every sync will silently fail until it\'s shared.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary(dialogContext),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        title: const Text('Disconnect Google Sheets'),
+        content: const Text(
+          'School Pulse will stop exporting attendance to this spreadsheet. '
+          'Existing attendance records and the spreadsheet itself are not affected.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, (
-              nameController.text.trim(),
-              idController.text.trim(),
-            )),
-            child: const Text('Connect'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.danger(dialogContext),
+            ),
+            child: const Text('Disconnect'),
           ),
         ],
       ),
     );
-    if (result == null || result.$1.isEmpty || result.$2.isEmpty) return;
-
-    final updated = _integration.copyWith(
-      linked: true,
-      spreadsheetName: result.$1,
-      spreadsheetId: result.$2,
-      worksheetName: 'Attendance Records',
+    if (confirmed != true) return;
+    final result = await _repo.disconnect(_schoolId);
+    await _load();
+    if (!mounted) return;
+    result.fold(
+      (failure) => _showMessage(failure.message),
+      (_) => _showMessage('Google Sheets disconnected'),
     );
-    await _repo.saveIntegration(_schoolId, updated);
-    await _load();
-  }
-
-  Future<void> _disconnect() async {
-    await _repo.disconnect(_schoolId);
-    await _load();
   }
 
   Future<void> _syncNow() async {
     setState(() => _syncing = true);
     final result = await _repo.triggerSync(_schoolId, 0);
     await _load();
-    setState(() => _syncing = false);
     if (!mounted) return;
+    setState(() => _syncing = false);
     result.fold(
-      (failure) => ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(failure.message))),
-      (_) => ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Synced to Google Sheets'))),
+      (failure) => _showMessage(failure.message),
+      (_) => _showMessage('Synced to Google Sheets'),
+    );
+  }
+
+  Future<void> _resync() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Resync Attendance'),
+        content: const Text(
+          'Rebuilds the last 90 days of attendance in Google Sheets from '
+          'School Pulse. Records already in the sheet are left as-is - this '
+          'only fills in anything missing.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Resync'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _resyncing = true);
+    final result = await _repo.resync(_schoolId);
+    await _load();
+    if (!mounted) return;
+    setState(() => _resyncing = false);
+    result.fold(
+      (failure) => _showMessage(failure.message),
+      (r) => _showMessage(
+        'Exported ${r.recordsExported} records (${r.recordsSkippedAlreadyExported} already synced)',
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final needsReauth = _integration.connectionStatus == SheetsConnectionStatus.needsAttention;
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
@@ -172,6 +220,32 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
           : ListView(
               padding: const EdgeInsets.all(AppSpacing.xl),
               children: [
+                if (needsReauth) ...[
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.m),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning(context).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.warning(context).withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: AppColors.warning(context)),
+                        const SizedBox(width: AppSpacing.s),
+                        const Expanded(
+                          child: Text('Google Sheets connection needs to be renewed.'),
+                        ),
+                        TextButton(
+                          onPressed: _connecting ? null : _connect,
+                          child: const Text('Reconnect'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.l),
@@ -189,11 +263,22 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
                                   : AppColors.textMuted(context),
                             ),
                             const SizedBox(width: AppSpacing.s),
-                            Text(_integration.linked ? 'Linked' : 'Not Linked'),
+                            Text(_integration.linked ? 'Connected' : 'Not Connected'),
                           ],
                         ),
                         if (_integration.linked) ...[
                           const SizedBox(height: AppSpacing.m),
+                          if (_integration.connectedAccountEmail.isNotEmpty) ...[
+                            Text(
+                              'Connected Account',
+                              style: TextStyle(
+                                color: AppColors.textMuted(context),
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(_integration.connectedAccountEmail),
+                            const SizedBox(height: AppSpacing.s),
+                          ],
                           Text(
                             'Spreadsheet',
                             style: TextStyle(
@@ -202,19 +287,10 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
                             ),
                           ),
                           Text(_integration.spreadsheetName),
-                          const SizedBox(height: AppSpacing.s),
-                          Text(
-                            'Worksheet',
-                            style: TextStyle(
-                              color: AppColors.textMuted(context),
-                              fontSize: 12,
-                            ),
-                          ),
-                          Text(_integration.worksheetName),
                           if (_integration.lastSyncAt != null) ...[
                             const SizedBox(height: AppSpacing.s),
                             Text(
-                              'Last Sync',
+                              'Last Synced',
                               style: TextStyle(
                                 color: AppColors.textMuted(context),
                                 fontSize: 12,
@@ -239,10 +315,7 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
                           ),
                           value: _integration.autoSync,
                           onChanged: (v) async {
-                            await _repo.saveIntegration(
-                              _schoolId,
-                              _integration.copyWith(autoSync: v),
-                            );
+                            await _repo.updateAutoSync(_schoolId, v);
                             await _load();
                           },
                         ),
@@ -261,6 +334,20 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Text('Sync Now'),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.m),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: _resyncing ? null : _resync,
+                      child: _resyncing
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Resync Attendance'),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.m),
@@ -306,8 +393,10 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: _connect,
-                      child: const Text('Connect Google Sheets'),
+                      onPressed: _connecting ? null : _connect,
+                      child: _connecting
+                          ? const Text('Waiting for Google sign-in…')
+                          : const Text('Connect Google Sheets'),
                     ),
                   ),
               ],

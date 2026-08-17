@@ -62,6 +62,17 @@ class StudentProfileScreen extends StatelessWidget {
                 ),
                 if (student.streamId != null)
                   _buildInfoTile(context, 'Stream', student.streamId!),
+                if (student.academicYearId.isNotEmpty)
+                  _buildInfoTile(
+                    context,
+                    'Academic Year',
+                    student.academicYearId,
+                  ),
+                _buildInfoTile(
+                  context,
+                  'Status',
+                  student.status.name.toUpperCase(),
+                ),
               ]),
               const SizedBox(height: 24),
               _buildSection(context, 'Personal Details', [

@@ -236,6 +236,7 @@ import 'package:school_pulse/design_system/components/pulse_logo.dart';
 
 import 'package:school_pulse/features/attendance/presentation/screens/attendance_method_screen.dart';
 import 'package:school_pulse/features/attendance_hub/domain/entities/attendance_category.dart';
+import 'package:school_pulse/features/attendance_hub/domain/entities/attendance_session_handoff.dart';
 import 'package:school_pulse/features/attendance_hub/presentation/bloc/attendance_bloc.dart';
 import 'package:school_pulse/features/attendance_hub/presentation/screens/manual_attendance_screen.dart'
     as attendance_hub;
@@ -519,6 +520,22 @@ final router = GoRouter(
       }
     }
 
+    // Force a first-login password/PIN change before any protected route
+    // renders, even for a session restored on relaunch or reached via a
+    // deep link - staff_login_screens.dart's BlocConsumer listener only
+    // catches the moment of login itself, not an already-authenticated
+    // session landing here later (app restart, deep link, notification
+    // tap). This is the actual enforcement boundary; that listener is a
+    // fast-path UX nicety only.
+    if (authState is AuthAuthenticated && authState.user.mustChangePassword) {
+      final targetPath = authState.user.role == UserRole.schoolAdmin
+          ? '/auth/onboarding'
+          : '/auth/force-setup';
+      if (state.uri.path != targetPath) {
+        return targetPath;
+      }
+    }
+
     return null;
   },
   routes: [
@@ -678,13 +695,33 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/auth/force-setup',
-      builder: (context, state) =>
-          ForceSetPasswordScreen(user: state.extra as UserEntity?),
+      builder: (context, state) {
+        final authState = context.read<AuthBloc>().state;
+        // extra carries the user across the normal login->force-setup
+        // handoff; the router-level mustChangePassword guard above can also
+        // land here directly (relaunch/deep-link) with no extra, so fall
+        // back to AuthBloc's already-authenticated user in that case.
+        final user =
+            state.extra as UserEntity? ??
+            (authState is AuthAuthenticated ? authState.user : null);
+        return ForceSetPasswordScreen(user: user);
+      },
     ),
     GoRoute(
       path: '/auth/onboarding',
-      builder: (context, state) =>
-          OnboardingFlowScreen(user: state.extra as UserEntity),
+      redirect: (context, state) {
+        final authState = context.read<AuthBloc>().state;
+        if (state.extra == null && authState is! AuthAuthenticated) {
+          return '/welcome';
+        }
+        return null;
+      },
+      builder: (context, state) {
+        final authState = context.read<AuthBloc>().state;
+        final user =
+            state.extra as UserEntity? ?? (authState as AuthAuthenticated).user;
+        return OnboardingFlowScreen(user: user);
+      },
     ),
     GoRoute(path: '/login', redirect: (context, state) => '/welcome'),
     ShellRoute(
@@ -2191,7 +2228,9 @@ final router = GoRouter(
               path: 'nfc',
               builder: (context, state) => BlocProvider(
                 create: (_) => di.sl<AttendanceBloc>(),
-                child: const attendance_hub.NfcScanScreen(),
+                child: attendance_hub.NfcScanScreen(
+                  handoff: state.extra as AttendanceSessionHandoff?,
+                ),
               ),
             ),
             // Legacy route kept as a redirect in case anything still links
@@ -2205,7 +2244,9 @@ final router = GoRouter(
               path: 'qr',
               builder: (context, state) => BlocProvider(
                 create: (_) => di.sl<AttendanceBloc>(),
-                child: const attendance_hub.QrScanScreen(),
+                child: attendance_hub.QrScanScreen(
+                  handoff: state.extra as AttendanceSessionHandoff?,
+                ),
               ),
             ),
             // Legacy route kept as a redirect in case anything still links

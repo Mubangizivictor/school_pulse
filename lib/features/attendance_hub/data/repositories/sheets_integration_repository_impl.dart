@@ -14,6 +14,30 @@ class SheetsIntegrationRepositoryImpl implements SheetsIntegrationRepository {
     required this.functions,
   });
 
+  /// Maps backend errors to plain-language messages. Cloud Functions
+  /// attaches a machine-readable `reason` in `details` (see
+  /// friendlyError() in functions/attendance_sheets.js) so this never has
+  /// to string-match a raw Google/OAuth error message.
+  Failure _mapError(Object error) {
+    if (error is FirebaseFunctionsException) {
+      final details = error.details;
+      final reason = details is Map ? details['reason'] as String? : null;
+      switch (reason) {
+        case 'not_connected':
+          return ServerFailure('Connect Google Sheets first.');
+        case 'needs_reauth':
+          return ServerFailure('Google Sheets connection needs to be renewed.');
+        case 'temporary':
+          return ServerFailure(
+            'Attendance is saved. Google Sheets will sync automatically when available.',
+          );
+        default:
+          return ServerFailure(error.message ?? 'Google Sheets sync failed.');
+      }
+    }
+    return ServerFailure('Google Sheets sync failed.');
+  }
+
   @override
   Future<Either<Failure, SheetsIntegration>> getIntegration(
     String schoolId,
@@ -26,22 +50,35 @@ class SheetsIntegrationRepositoryImpl implements SheetsIntegrationRepository {
   }
 
   @override
-  Future<Either<Failure, void>> saveIntegration(
-    String schoolId,
-    SheetsIntegration integration,
-  ) async {
+  Future<Either<Failure, String>> startConnect(String schoolId) async {
     try {
-      await remoteDataSource.saveIntegration(schoolId, integration);
-      return const Right(null);
-    } catch (_) {
-      return Left(ServerFailure());
+      final callable = functions.httpsCallable('startGoogleSheetsOAuth');
+      final result = await callable.call();
+      final authUrl = (result.data as Map)['authUrl'] as String?;
+      if (authUrl == null || authUrl.isEmpty) {
+        return Left(ServerFailure('Could not start the Google Sheets connection.'));
+      }
+      return Right(authUrl);
+    } catch (e) {
+      return Left(_mapError(e));
     }
   }
 
   @override
   Future<Either<Failure, void>> disconnect(String schoolId) async {
     try {
-      await remoteDataSource.disconnect(schoolId);
+      final callable = functions.httpsCallable('disconnectGoogleSheetsOAuth');
+      await callable.call();
+      return const Right(null);
+    } catch (e) {
+      return Left(_mapError(e));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateAutoSync(String schoolId, bool autoSync) async {
+    try {
+      await remoteDataSource.updatePreferences(schoolId, autoSync: autoSync);
       return const Right(null);
     } catch (_) {
       return Left(ServerFailure());
@@ -66,18 +103,62 @@ class SheetsIntegrationRepositoryImpl implements SheetsIntegrationRepository {
   ) async {
     // The real export runs server-side: syncAttendanceToSheetsNow (Cloud
     // Function) re-appends today's attendance_records rows to the linked
-    // spreadsheet using a service account, and writes its own
-    // SheetsSyncLogEntry/lastSyncAt - the same trigger that fires
-    // automatically on every new attendance mark when autoSync is on. This
-    // call is just the manual "Sync Now" catch-up path.
+    // spreadsheet, skipping anything already exported, and writes its own
+    // SheetsSyncLogEntry/lastSyncAt - the same path the auto-sync trigger
+    // uses when autoSync is on. This call is just the manual "Sync Now"
+    // catch-up path.
     try {
       final callable = functions.httpsCallable('syncAttendanceToSheetsNow');
       await callable.call();
       return const Right(null);
-    } on FirebaseFunctionsException catch (e) {
-      return Left(ServerFailure(e.message ?? 'Google Sheets sync failed.'));
-    } catch (_) {
-      return Left(ServerFailure('Google Sheets sync failed.'));
+    } catch (e) {
+      return Left(_mapError(e));
+    }
+  }
+
+  @override
+  Future<Either<Failure, ResyncResult>> resync(
+    String schoolId, {
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      final callable = functions.httpsCallable('resyncAttendanceToSheets');
+      final result = await callable.call({
+        if (startDate != null) 'startDate': startDate.toIso8601String(),
+        if (endDate != null) 'endDate': endDate.toIso8601String(),
+      });
+      final data = Map<String, dynamic>.from(result.data as Map);
+      return Right(
+        ResyncResult(
+          recordsScanned: data['recordsScanned'] as int? ?? 0,
+          recordsExported: data['recordsExported'] as int? ?? 0,
+          recordsSkippedAlreadyExported:
+              data['recordsSkippedAlreadyExported'] as int? ?? 0,
+        ),
+      );
+    } catch (e) {
+      return Left(_mapError(e));
+    }
+  }
+
+  @override
+  Future<Either<Failure, SessionExportResult>> exportSession(
+    String schoolId,
+    List<String> recordIds,
+  ) async {
+    try {
+      final callable = functions.httpsCallable('exportAttendanceSessionToSheets');
+      final result = await callable.call({'recordIds': recordIds});
+      final data = Map<String, dynamic>.from(result.data as Map);
+      return Right(
+        SessionExportResult(
+          recordCount: data['recordCount'] as int? ?? 0,
+          alreadyExportedCount: data['alreadyExportedCount'] as int? ?? 0,
+        ),
+      );
+    } catch (e) {
+      return Left(_mapError(e));
     }
   }
 }

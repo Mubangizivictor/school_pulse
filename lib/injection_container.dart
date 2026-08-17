@@ -35,6 +35,7 @@ import 'package:school_pulse/core/access/effective_access_resolver.dart';
 import 'package:school_pulse/core/utils/device_id_service.dart';
 import 'package:school_pulse/core/services/printer/printer_service.dart';
 import 'package:school_pulse/features/gate_ops/domain/repositories/gate_ops_repository.dart';
+import 'package:school_pulse/features/gate_ops/domain/services/security_student_projection_service.dart';
 import 'package:school_pulse/features/gate_ops/domain/usecases/watch_gates.dart';
 import 'package:school_pulse/features/gate_ops/domain/usecases/record_movement_event.dart';
 import 'package:school_pulse/features/gate_ops/domain/usecases/watch_movement_events.dart';
@@ -65,9 +66,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get_it/get_it.dart';
 import 'package:school_pulse/core/network/network_info.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
-import 'package:school_pulse/features/attendance_qr_integration/domain/repositories/attendance_qr_repository.dart';
-import 'package:school_pulse/features/attendance_qr_integration/data/repositories/attendance_qr_repository_factory.dart';
-import 'package:school_pulse/features/attendance_qr_integration/presentation/bloc/attendance_qr_bloc.dart';
 import 'package:school_pulse/features/student_identity/data/repositories/student_identity_local_cache_factory.dart';
 import 'package:school_pulse/features/inventory/data/datasources/stores_assets_local_data_source_factory.dart';
 import 'package:school_pulse/features/library/data/datasources/local/library_local_data_source_factory.dart';
@@ -339,6 +337,9 @@ import 'package:school_pulse/features/teacher/data/repositories/class_student_re
 import 'package:school_pulse/features/teacher/data/repositories/lesson_attendance_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/lesson_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/marks_repository_impl.dart';
+import 'package:school_pulse/features/auth/data/services/app_role_session_service_impl.dart';
+import 'package:school_pulse/features/auth/domain/services/app_role_session_service.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/app_role_session_cubit.dart';
 import 'package:school_pulse/features/teacher/data/repositories/staff_assignment_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/subject_student_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/services/academic_calendar_service_impl.dart';
@@ -720,26 +721,13 @@ Future<void> init() async {
   sl.registerLazySingleton<StudentIdentityRepository>(
     () => StudentIdentityRepositoryImpl(
       firestore: sl(),
+      functions: sl(),
       localCache: createStudentIdentityLocalCache(
         isar: kIsWeb ? null : sl<Isar>(),
       ),
       idGenerator: sl(),
       verificationLocalDataSource: sl(),
     ),
-  );
-
-  // Was built correctly (offline-first Isar queue, real StudentIdentity
-  // lookup) but never registered, so the QR/manual attendance stub
-  // screens had nothing real to call - see qr_scanner_screen.dart etc.
-  sl.registerLazySingleton<AttendanceQrRepository>(
-    () => createAttendanceQrRepository(
-      firestore: sl<FirebaseFirestore>(),
-      isar: kIsWeb ? null : sl<Isar>(),
-    ),
-  );
-  sl.registerFactory(
-    () =>
-        AttendanceQrBloc(attendanceRepository: sl(), identityRepository: sl()),
   );
 
   // Was never registered even though StudentIdCardScreen already read it
@@ -1011,6 +999,13 @@ Future<void> init() async {
       permissionEvaluator: sl(),
       studentRepository: sl(),
       financeRepository: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton(
+    () => SecurityStudentProjectionService(
+      permissionEvaluator: sl(),
+      studentRepository: sl(),
     ),
   );
 
@@ -1593,6 +1588,18 @@ Future<void> init() async {
     ),
   );
 
+  // Tracks which top-level UserRole a multi-role staff member is currently
+  // acting as. Distinct from ActiveResponsibilityService above, which is
+  // scoped one level down to a single teacher's class/subject
+  // responsibility - the two are siblings, not a replacement for one
+  // another.
+  sl.registerLazySingleton<AppRoleSessionService>(
+    () => AppRoleSessionServiceImpl(preferences: sl()),
+  );
+  sl.registerLazySingleton<AppRoleSessionCubit>(
+    () => AppRoleSessionCubit(service: sl()),
+  );
+
   sl.registerLazySingleton<AcademicCalendarService>(
     () => AcademicCalendarServiceImpl(structureRepository: sl()),
   );
@@ -1930,6 +1937,7 @@ Future<void> init() async {
       localDataSource: sl(),
       firestore: sl(),
       networkInfo: sl(),
+      functions: sl(),
     ),
   );
 

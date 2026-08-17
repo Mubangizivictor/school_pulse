@@ -126,6 +126,10 @@ class StaffHubScreen extends StatelessWidget {
         return Icons.support_agent;
       case UserRole.hrOfficer:
         return Icons.badge;
+      case UserRole.admissions:
+        return Icons.how_to_reg;
+      case UserRole.registrar:
+        return Icons.folder_shared;
       case UserRole.parent:
         return Icons.person;
       case UserRole.superAdmin:

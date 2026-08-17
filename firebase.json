@@ -52,6 +52,13 @@
         }
       },
       {
+        "source": "/verify-student",
+        "function": {
+          "functionId": "verifyStudentQrCredential",
+          "region": "europe-west1"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

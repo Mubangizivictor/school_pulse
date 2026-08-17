@@ -156,6 +156,13 @@ service cloud.firestore {
     // growing their own studentIds list (redeeming another family access
     // code for a sibling). Nothing else (role, shrinking studentIds, etc.)
     // is client-editable.
+    // Short-lived CSRF state for the Google Sheets OAuth connect flow -
+    // Admin SDK (Cloud Functions) only. Not scoped under a school since a
+    // school isn't known/trusted yet at the point this doc is created.
+    match /attendance_sheets_oauth_state/{nonce} {
+      allow read, write: if false;
+    }
+
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isStaff());
       allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.role == 'parent';
@@ -2289,6 +2296,19 @@ service cloud.firestore {
       allow read: if isSameSchool(schoolId) && isStaff();
       allow create: if isSameSchool(schoolId) && isStaff();
       allow update, delete: if false;
+    }
+
+    // Google OAuth tokens for the Sheets export - Admin SDK (Cloud
+    // Functions) only. Never readable/writable from any client, regardless
+    // of role, since these carry live Google access/refresh tokens.
+    match /schools/{schoolId}/attendance_sheets_oauth/{docId} {
+      allow read, write: if false;
+    }
+
+    // Per-record idempotency ledger for the Sheets export - Admin SDK only.
+    // Clients never need to read this; every export path is a callable.
+    match /schools/{schoolId}/attendance_sheets_export_state/{recordId} {
+      allow read, write: if false;
     }
 
     match /schools/{schoolId}/subject_enrollments/{enrollmentId} {

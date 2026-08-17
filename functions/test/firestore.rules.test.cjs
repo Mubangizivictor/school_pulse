@@ -1928,4 +1928,212 @@ describe('NFC credential lifecycle', () => {
     });
     await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/revoked_credentials/CARDA003')));
   });
+
+  test('a QR-typed credential is gated by the same credential-manage rule '
+    + 'as NFC - credentialType is just a field, not a separate rule path', async () => {
+    const qrCredential = {
+      credentialValue: 'SPQR1TOKENAAA', credentialType: 'qr', identityId: 'SP-STUDENT-NEW',
+      identityType: 'student', schoolId: 'schoolA', status: 'active',
+      updatedAt: new Date().toISOString(), credentialVersion: 1,
+    };
+    await assertFails(setDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/credentials/SPQR1TOKENAAA'),
+      qrCredential,
+    ));
+    await assertSucceeds(setDoc(
+      doc(dbFor('adminA'), 'schools/schoolA/credentials/SPQR1TOKENAAA'),
+      qrCredential,
+    ));
+    // Same read-for-attendance-use exception NFC gets: a teacher may read
+    // an unfamiliar QR credential mapping purely to resolve a scan.
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/credentials/SPQR1TOKENAAA')));
+  });
+});
+
+describe('attendance_records: real per-school collection AttendanceRemoteDataSource writes to', () => {
+  function attendanceRecord(overrides = {}) {
+    return {
+      schoolId: 'schoolA', category: 'students', scopeId: 'p7', scopeName: 'P7',
+      sessionType: 'daily', date: '2026-08-17T00:00:00.000Z',
+      personId: 'studentA', personName: 'A Student', status: 'present',
+      method: 'qr', markedBy: 'Teacher A', operatorId: 'teacherA',
+      createdAt: new Date().toISOString(), roleAssignmentId: 'assignP7',
+      ...overrides,
+    };
+  }
+
+  test('a Class Teacher holding the P7 assignment can write a QR attendance '
+    + 'record for P7, exactly as they could for NFC or manual', async () => {
+    await assertSucceeds(setDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/attendance_records/qr_p7_daily_20260817_studentA'),
+      attendanceRecord(),
+    ));
+  });
+
+  test('the same P7 assignment cannot write attendance for a different class', async () => {
+    await assertFails(setDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/attendance_records/qr_p6_daily_20260817_studentA'),
+      attendanceRecord({ scopeId: 'p6' }),
+    ));
+  });
+
+  test('a teacher holding only the P6 assignment cannot write attendance for P7 via QR', async () => {
+    await assertFails(setDoc(
+      doc(dbFor('otherTeacherA'), 'schools/schoolA/attendance_records/qr_p7_daily_20260817_studentB'),
+      attendanceRecord({ scopeId: 'p7', operatorId: 'otherTeacherA', roleAssignmentId: 'assignP6' }),
+    ));
+  });
+
+  test('a School B teacher cannot write an attendance record into School A', async () => {
+    await assertFails(setDoc(
+      doc(dbFor('teacherB'), 'schools/schoolA/attendance_records/qr_p7_daily_20260817_studentC'),
+      attendanceRecord({ operatorId: 'teacherB' }),
+    ));
+  });
+
+  test('attendance records are never updated or deleted in place - the '
+    + 'correction trail is a separate collection', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), 'schools/schoolA/attendance_records/qr_p7_daily_20260817_studentD'),
+        attendanceRecord(),
+      );
+    });
+    await assertFails(updateDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/attendance_records/qr_p7_daily_20260817_studentD'),
+      { status: 'absent' },
+    ));
+    await assertFails(deleteDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/attendance_records/qr_p7_daily_20260817_studentD'),
+    ));
+  });
+});
+
+describe('Google Sheets OAuth: tokens, CSRF state, and export ledger are Admin-SDK only', () => {
+  test('schoolAdmin cannot read or write attendance_sheets_oauth tokens directly', async () => {
+    await assertFails(setDoc(
+      doc(dbFor('adminA'), 'schools/schoolA/attendance_sheets_oauth/tokens'),
+      { refreshToken: 'leaked' },
+    ));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), 'schools/schoolA/attendance_sheets_oauth/tokens'),
+        { refreshToken: 'secret' },
+      );
+    });
+    await assertFails(getDoc(doc(dbFor('adminA'), 'schools/schoolA/attendance_sheets_oauth/tokens')));
+  });
+
+  test('no signed-in user can read or write the OAuth CSRF state collection', async () => {
+    await assertFails(setDoc(
+      doc(dbFor('adminA'), 'attendance_sheets_oauth_state', 'nonce1'),
+      { schoolId: 'schoolA', uid: 'adminA' },
+    ));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), 'attendance_sheets_oauth_state', 'nonce1'),
+        { schoolId: 'schoolA', uid: 'adminA' },
+      );
+    });
+    await assertFails(getDoc(doc(dbFor('adminA'), 'attendance_sheets_oauth_state', 'nonce1')));
+  });
+
+  test('the per-record export idempotency ledger is not client-readable or writable', async () => {
+    await assertFails(setDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/attendance_sheets_export_state/rec1'),
+      { exportedAt: new Date().toISOString() },
+    ));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), 'schools/schoolA/attendance_sheets_export_state/rec1'),
+        { exportedAt: new Date().toISOString() },
+      );
+    });
+    await assertFails(getDoc(doc(dbFor('adminA'), 'schools/schoolA/attendance_sheets_export_state/rec1')));
+  });
+});
+
+// Section 7 audit (student identity/credential system): confirms the
+// tenant-isolation guarantees issueStudentIdentity/regenerateStudentQrCredential/
+// assignNfcCredential rely on (those Cloud Functions bypass rules via the
+// Admin SDK, but everything a client can read/write directly around a
+// student's identity must still be same-school-only, same as every other
+// per-tenant collection).
+describe('student identity + credential tenant isolation', () => {
+  test('a School A staff member cannot read a School B student even '
+    + 'knowing/guessing its document id', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'students/studentInSchoolB'), {
+        schoolId: 'schoolB', name: 'B Student', status: 'active',
+      });
+    });
+    await assertFails(getDoc(doc(dbFor('teacherA'), 'students/studentInSchoolB')));
+    await assertSucceeds(getDoc(doc(dbFor('teacherB'), 'students/studentInSchoolB')));
+  });
+
+  test('a School A staff member cannot create a student doc for School B, '
+    + 'even by supplying schoolId: schoolB in the payload', async () => {
+    await assertFails(setDoc(doc(dbFor('teacherA'), 'students/forgedStudent'), {
+      schoolId: 'schoolB', name: 'Forged', status: 'active',
+    }));
+  });
+
+  test('a student doc can never be re-parented to another school via update', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'students/studentToReparent'), {
+        schoolId: 'schoolA', name: 'A Student', status: 'active',
+      });
+    });
+    await assertFails(updateDoc(doc(dbFor('teacherA'), 'students/studentToReparent'), {
+      schoolId: 'schoolB',
+    }));
+  });
+
+  test('student_identities: a School B staff member cannot read a School A '
+    + "student's identity doc (uniqueSystemId/QR lookup), even across the "
+    + 'collection issueStudentIdentity writes to', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'student_identities/identityInSchoolA'), {
+        studentId: 'studentInSchoolA', schoolId: 'schoolA',
+        uniqueSystemId: 'SP-STUDENT-isolationtest', schoolStudentId: 'SP2026000999',
+      });
+    });
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'student_identities/identityInSchoolA')));
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'student_identities/identityInSchoolA')));
+  });
+
+  test('student_identities: a School A staff member cannot create an identity '
+    + 'doc claiming schoolId: schoolB', async () => {
+    await assertFails(setDoc(doc(dbFor('teacherA'), 'student_identities/forgedIdentity'), {
+      studentId: 'someStudent', schoolId: 'schoolB',
+      uniqueSystemId: 'SP-STUDENT-forged', schoolStudentId: 'SP2026000998',
+    }));
+  });
+
+  test('student_identities: schoolId is locked on update, same as students/{id}', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'student_identities/identityToReparent'), {
+        studentId: 'studentX', schoolId: 'schoolA',
+        uniqueSystemId: 'SP-STUDENT-reparent', schoolStudentId: 'SP2026000997',
+      });
+    });
+    await assertFails(updateDoc(doc(dbFor('teacherA'), 'student_identities/identityToReparent'), {
+      schoolId: 'schoolB',
+    }));
+  });
+
+  test('a QR credential minted for School A cannot be read by School B staff, '
+    + 'even though the collectionGroup query the public verification endpoint '
+    + 'uses runs under the Admin SDK and bypasses this rule entirely', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/credentials/isolationTestToken'), {
+        credentialValue: 'isolationTestToken', credentialType: 'qr',
+        identityId: 'SP-STUDENT-isolationtest', identityType: 'student',
+        schoolId: 'schoolA', status: 'active', updatedAt: new Date().toISOString(),
+        credentialVersion: 1,
+      });
+    });
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools/schoolA/credentials/isolationTestToken')));
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/credentials/isolationTestToken')));
+  });
 });

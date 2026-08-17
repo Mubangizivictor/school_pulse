@@ -31,6 +31,7 @@ class NfcCredentialService {
       identityId: uniqueSystemId,
       identityType: 'student',
       schoolId: schoolId,
+      studentId: studentId,
     );
     return _enrichDuplicateAndActivate(result, studentId);
   }
@@ -50,6 +51,7 @@ class NfcCredentialService {
       identityType: 'student',
       schoolId: schoolId,
       reason: reason,
+      studentId: studentId,
     );
     // replace() assigns the new card internally, so the same
     // already-registered-elsewhere conflict assignToStudent handles can

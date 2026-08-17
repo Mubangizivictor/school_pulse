@@ -20,6 +20,7 @@ const mtnMomo = require('./mtn_momo');
 const emailVerification = require('./email_verification');
 const subscriptionCenter = require('./subscription_center');
 const documentVerification = require('./documents/verification_endpoint');
+const studentCredentialVerification = require('./documents/student_verification_endpoint');
 
 // payments is intentionally spread after owner: it replaces the old
 // approval/status exports with the payment-gated onboarding lifecycle while
@@ -47,4 +48,5 @@ module.exports = {
   ...emailVerification,
   ...subscriptionCenter,
   ...documentVerification,
+  ...studentCredentialVerification,
 };

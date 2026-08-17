@@ -22,6 +22,8 @@ enum UserRole {
   religiousLeader,
   receptionist,
   hrOfficer,
+  admissions,
+  registrar,
   superAdmin,
   student,
 }
@@ -77,6 +79,10 @@ class UserRoleDisplay {
         return 'Receptionist';
       case UserRole.hrOfficer:
         return 'HR Officer';
+      case UserRole.admissions:
+        return 'Admissions';
+      case UserRole.registrar:
+        return 'Registrar';
       case UserRole.superAdmin:
         return 'Platform Owner';
     }

@@ -18,11 +18,22 @@ abstract class NfcCredentialRepository {
   /// or [revoke] first. Reassigning a previously-revoked card ("reuse
   /// after secure deactivation") is allowed and clears the old denylist
   /// entry so the card resolves again.
+  ///
+  /// [studentId] is optional for backward compatibility with existing call
+  /// sites, but when supplied on a student assignment (`identityType ==
+  /// 'student'`) and the device is online, this duplicate check is
+  /// escalated to the server-authoritative `assignNfcCredential` Cloud
+  /// Function transaction first - the local-cache-only check above cannot
+  /// see another device's concurrent assignment of the same physical card,
+  /// so it is advisory, not the real security boundary. See that
+  /// function's doc comment in functions/student_credentials.js for why a
+  /// single atomic transaction is required here.
   Future<Either<Failure, void>> assign({
     required String credentialValue,
     required String identityId,
     required String identityType,
     required String schoolId,
+    String? studentId,
   });
 
   /// Revokes [oldCredentialValue] and assigns [newCredentialValue] to the
@@ -34,6 +45,7 @@ abstract class NfcCredentialRepository {
     required String identityType,
     required String schoolId,
     required String reason,
+    String? studentId,
   });
 
   /// Adds the card to the denylist and marks the cached mapping revoked.

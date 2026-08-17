@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../../../student/domain/entities/student.dart';
@@ -14,6 +15,7 @@ import '../../../verification/domain/services/qr_credential_codec.dart';
 
 class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   final FirebaseFirestore firestore;
+  final FirebaseFunctions functions;
   final StudentIdentityLocalCache localCache;
   final IdGeneratorService idGenerator;
   final VerificationLocalDataSource verificationLocalDataSource;
@@ -21,6 +23,7 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
 
   StudentIdentityRepositoryImpl({
     required this.firestore,
+    required this.functions,
     required this.localCache,
     required this.idGenerator,
     required this.verificationLocalDataSource,
@@ -66,36 +69,59 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
         );
       }
 
-      // Callers that already generated codes (e.g. AdmissionService, which
-      // must mint a studentCode before the student doc exists) pass them in
-      // so the Student record and its identity stay consistent. Otherwise
-      // fall back to generating them here.
-      final resolvedUniqueSystemId =
-          uniqueSystemId ?? idGenerator.generateUniqueSystemId();
-      String resolvedSchoolStudentId;
-      if (schoolStudentId != null) {
-        resolvedSchoolStudentId = schoolStudentId;
-      } else {
-        final schoolPrefix = student.className
-            .substring(0, min(2, student.className.length))
-            .toUpperCase();
-        final year = DateTime.now().year;
-        resolvedSchoolStudentId = '$schoolPrefix-$year-${student.studentId}';
+      // AdmissionService must mint a studentCode/uniqueSystemId *before* the
+      // Student document exists (finalizeAdmission needs it as an input), so
+      // it still supplies both codes here and this path keeps writing
+      // directly - the Cloud Function's own sequence reservation would be
+      // redundant with AdmissionService's own admission-number sequence.
+      // Every other caller (e.g. the "Generate Identity" bloc action, which
+      // passes neither) goes through issueStudentIdentity so token minting
+      // and sequence reservation happen atomically server-side instead of
+      // via two unguarded client writes.
+      if (uniqueSystemId != null && schoolStudentId != null) {
+        final model = StudentIdentityModel(
+          studentId: student.id,
+          schoolId: student.schoolId,
+          uniqueSystemId: uniqueSystemId,
+          schoolStudentId: schoolStudentId,
+          qrCodeData: qrCredentialCodec.issuePayload(),
+        );
+
+        final identityDoc = await firestore
+            .collection('student_identities')
+            .add(model.toFirestore());
+        await _storeQrCredential(model, identityDoc.id);
+        return Right(model);
       }
 
-      final model = StudentIdentityModel(
-        studentId: student.id,
-        schoolId: student.schoolId,
-        uniqueSystemId: resolvedUniqueSystemId,
-        schoolStudentId: resolvedSchoolStudentId,
-        qrCodeData: qrCredentialCodec.issuePayload(),
+      final callable = functions.httpsCallable('issueStudentIdentity');
+      final result = await callable.call<Map<String, dynamic>>({
+        'studentId': student.id,
+        'schoolPrefix': student.className.isNotEmpty
+            ? student.className.substring(0, min(2, student.className.length))
+            : 'SP',
+      });
+      final identityData = Map<String, dynamic>.from(
+        result.data['identity'] as Map,
       );
-
-      final identityDoc = await firestore
-          .collection('student_identities')
-          .add(model.toFirestore());
-      await _storeQrCredential(model, identityDoc.id);
+      final model = StudentIdentityModel.fromFirestore(identityData);
+      final token = qrCredentialCodec.parse(model.qrCodeData);
+      if (token != null) {
+        await verificationLocalDataSource.cacheCredential(
+          CachedCredential(
+            credentialValue: token,
+            credentialType: 'qr',
+            identityId: model.uniqueSystemId,
+            identityType: 'student',
+            schoolId: model.schoolId,
+            status: 'active',
+            updatedAt: DateTime.now(),
+          ),
+        );
+      }
       return Right(model);
+    } on FirebaseFunctionsException catch (e) {
+      return Left(ServerFailure(e.message ?? e.code));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -106,26 +132,16 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     StudentIdentity identity,
   ) async {
     try {
-      final snapshot = await firestore
-          .collection('student_identities')
-          .where('studentId', isEqualTo: identity.studentId)
-          .limit(1)
-          .get();
-      if (snapshot.docs.isEmpty) {
-        return Left(ServerFailure('Identity not found'));
-      }
+      final callable = functions.httpsCallable(
+        'regenerateStudentQrCredential',
+      );
+      final result = await callable.call<Map<String, dynamic>>({
+        'studentId': identity.studentId,
+      });
+      final newQrCodeData = result.data['qrCodeData'] as String;
 
       final oldToken = qrCredentialCodec.parse(identity.qrCodeData);
       if (oldToken != null) {
-        await firestore
-            .collection('schools')
-            .doc(identity.schoolId)
-            .collection('credentials')
-            .doc(oldToken)
-            .update({
-              'status': 'replaced',
-              'updatedAt': DateTime.now().toIso8601String(),
-            });
         final old = await verificationLocalDataSource.findCredential(
           oldToken,
           identity.schoolId,
@@ -136,19 +152,32 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
           await verificationLocalDataSource.cacheCredential(old);
         }
       }
+
       final updated = StudentIdentityModel(
         studentId: identity.studentId,
         schoolId: identity.schoolId,
         uniqueSystemId: identity.uniqueSystemId,
         schoolStudentId: identity.schoolStudentId,
-        qrCodeData: qrCredentialCodec.issuePayload(),
+        qrCodeData: newQrCodeData,
         nfcStatus: identity.nfcStatus,
       );
-      await snapshot.docs.single.reference.update({
-        'qrCodeData': updated.qrCodeData,
-      });
-      await _storeQrCredential(updated, snapshot.docs.single.id);
+      final newToken = qrCredentialCodec.parse(newQrCodeData);
+      if (newToken != null) {
+        await verificationLocalDataSource.cacheCredential(
+          CachedCredential(
+            credentialValue: newToken,
+            credentialType: 'qr',
+            identityId: identity.uniqueSystemId,
+            identityType: 'student',
+            schoolId: identity.schoolId,
+            status: 'active',
+            updatedAt: DateTime.now(),
+          ),
+        );
+      }
       return Right(updated);
+    } on FirebaseFunctionsException catch (e) {
+      return Left(ServerFailure(e.message ?? e.code));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
