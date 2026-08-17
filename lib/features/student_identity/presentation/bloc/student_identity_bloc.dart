@@ -28,8 +28,8 @@ class StudentIdentityBloc
           (failure) async => emit(StudentIdentityError(failure.message)),
           (identity) async {
             final cardUid = await _lookupAssignedCard(
-              identity.uniqueSystemId,
-              event.schoolId,
+              identity.studentId,
+              identity.schoolId,
             );
             final effective = cardUid != null && identity.nfcStatus != 'revoked'
                 ? _withNfcStatus(identity, 'active')
@@ -40,7 +40,7 @@ class StudentIdentityBloc
       } on TimeoutException {
         emit(
           const StudentIdentityError(
-            'Student identity is taking too long to load. Check Firebase Functions/network access and try again.',
+            'Student identity is taking too long to load. Check your connection and try again.',
           ),
         );
       } catch (error) {
@@ -96,7 +96,7 @@ class StudentIdentityBloc
           (failure) => emit(StudentIdentityError(failure.message)),
           (identity) => emit(
             StudentIdentityActionSuccess(
-              'New QR credential generated. Previous card is inactive.',
+              'New QR credential generated. Previous QR is inactive.',
               identity,
             ),
           ),
@@ -121,10 +121,9 @@ class StudentIdentityBloc
         await _emitNfcActionResult(
           result,
           emit,
-          successMessage: 'Card assigned',
+          successMessage: 'Card assigned and ready for attendance',
           successStatus: 'active',
           studentId: event.studentId,
-          uniqueSystemId: event.uniqueSystemId,
           schoolId: event.schoolId,
         );
       } on TimeoutException {
@@ -152,7 +151,6 @@ class StudentIdentityBloc
           successMessage: 'Card replaced',
           successStatus: 'active',
           studentId: event.studentId,
-          uniqueSystemId: event.uniqueSystemId,
           schoolId: event.schoolId,
         );
       } on TimeoutException {
@@ -213,13 +211,13 @@ class StudentIdentityBloc
   }
 
   Future<String?> _lookupAssignedCard(
-    String uniqueSystemId,
+    String studentId,
     String schoolId,
   ) async {
     try {
       final result = await nfcCredentialService
           .findAssignedCardForStudent(
-            uniqueSystemId: uniqueSystemId,
+            uniqueSystemId: studentId,
             schoolId: schoolId,
           )
           .timeout(const Duration(seconds: 8));
@@ -248,7 +246,6 @@ class StudentIdentityBloc
     required String successStatus,
     required String studentId,
     required String schoolId,
-    String? uniqueSystemId,
   }) async {
     await result.fold(
       (failure) async => emit(StudentIdentityError(failure.message)),
@@ -261,17 +258,13 @@ class StudentIdentityBloc
             (failure) async => emit(StudentIdentityError(failure.message)),
             (identity) async {
               final cardUid = await _lookupAssignedCard(
-                identity.uniqueSystemId,
-                schoolId,
-              );
-              final effectiveIdentity = _withNfcStatus(
-                identity,
-                successStatus,
+                identity.studentId,
+                identity.schoolId,
               );
               emit(
                 StudentIdentityActionSuccess(
                   successMessage,
-                  effectiveIdentity,
+                  _withNfcStatus(identity, successStatus),
                   assignedCardUid: cardUid,
                 ),
               );
