@@ -19,6 +19,10 @@ class ClassTimetableRepositoryImpl implements ClassTimetableRepository {
       firestore.collection('structure_class_timetables');
   CollectionReference<Map<String, dynamic>> get _lessons =>
       firestore.collection('structure_timetable_lessons');
+  CollectionReference<Map<String, dynamic>> get _curriculum =>
+      firestore.collection('structure_curriculum_assignments');
+  CollectionReference<Map<String, dynamic>> get _teachingAssignments =>
+      firestore.collection('structure_teaching_assignments');
 
   @override
   Stream<List<ClassTimetable>> watchTimetables() async* {
@@ -26,9 +30,11 @@ class ClassTimetableRepositoryImpl implements ClassTimetableRepository {
     yield* _timetables
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => _timetableFromMap(doc.id, doc.data()))
-            .toList(growable: false));
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => _timetableFromMap(doc.id, doc.data()))
+              .toList(growable: false),
+        );
   }
 
   @override
@@ -38,9 +44,11 @@ class ClassTimetableRepositoryImpl implements ClassTimetableRepository {
         .where('schoolId', isEqualTo: schoolId)
         .where('isActive', isEqualTo: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => _lessonFromMap(doc.id, doc.data()))
-            .toList(growable: false));
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => _lessonFromMap(doc.id, doc.data()))
+              .toList(growable: false),
+        );
   }
 
   @override
@@ -53,7 +61,9 @@ class ClassTimetableRepositoryImpl implements ClassTimetableRepository {
         timetable.termId.isEmpty ||
         timetable.classId.isEmpty ||
         timetable.name.trim().isEmpty) {
-      throw StateError('Academic year, term, class and timetable name are required.');
+      throw StateError(
+        'Academic year, term, class and timetable name are required.',
+      );
     }
     await _timetables.doc(timetable.id).set(_timetableToMap(timetable));
   }
@@ -67,6 +77,7 @@ class ClassTimetableRepositoryImpl implements ClassTimetableRepository {
     if (lesson.subjectId.isEmpty || lesson.teacherId.isEmpty) {
       throw StateError('A lesson requires a subject and teacher.');
     }
+    await _validateLessonDependencies(lesson, schoolId);
 
     final snapshot = await _lessons
         .where('schoolId', isEqualTo: schoolId)
@@ -88,6 +99,61 @@ class ClassTimetableRepositoryImpl implements ClassTimetableRepository {
     await _lessons.doc(lesson.id).set(_lessonToMap(lesson));
   }
 
+  Future<void> _validateLessonDependencies(
+    ClassTimetableLesson lesson,
+    String schoolId,
+  ) async {
+    final timetableSnapshot = await _timetables.doc(lesson.timetableId).get();
+    final timetableData = timetableSnapshot.data();
+    if (!timetableSnapshot.exists ||
+        timetableData == null ||
+        timetableData['schoolId'] != schoolId) {
+      throw StateError('Create the target class timetable before adding lessons.');
+    }
+    if (timetableData['academicYearId'] != lesson.academicYearId ||
+        timetableData['termId'] != lesson.termId ||
+        timetableData['classId'] != lesson.classId ||
+        (timetableData['streamId']?.toString() ?? '') != lesson.streamId) {
+      throw StateError('Lesson target does not match its class timetable.');
+    }
+
+    final curriculumSnapshot = await _curriculum
+        .where('schoolId', isEqualTo: schoolId)
+        .where('academicYearId', isEqualTo: lesson.academicYearId)
+        .where('classId', isEqualTo: lesson.classId)
+        .where('subjectId', isEqualTo: lesson.subjectId)
+        .where('isActive', isEqualTo: true)
+        .get();
+    final curriculumAllowed = curriculumSnapshot.docs.any((doc) {
+      final streamId = doc.data()['streamId']?.toString() ?? '';
+      return streamId.isEmpty || streamId == lesson.streamId;
+    });
+    if (!curriculumAllowed) {
+      throw StateError(
+        'This subject is not allocated to the selected class/stream in the current academic year.',
+      );
+    }
+
+    final assignmentSnapshot = await _teachingAssignments
+        .where('schoolId', isEqualTo: schoolId)
+        .where('academicYearId', isEqualTo: lesson.academicYearId)
+        .where('staffId', isEqualTo: lesson.teacherId)
+        .where('classId', isEqualTo: lesson.classId)
+        .where('subjectId', isEqualTo: lesson.subjectId)
+        .where('responsibilityType', isEqualTo: 'subjectTeacher')
+        .where('isActive', isEqualTo: true)
+        .get();
+    final teacherAllowed = assignmentSnapshot.docs.any((doc) {
+      final streamId = doc.data()['streamId']?.toString() ?? '';
+      return streamId.isEmpty || streamId == lesson.streamId;
+    });
+    if (!teacherAllowed) {
+      throw StateError(
+        'The selected staff member is not assigned to teach this subject for this class/stream.',
+      );
+    }
+  }
+
   @override
   Future<void> deleteLesson(String lessonId) async {
     final schoolId = await tenantResolver.resolve();
@@ -96,7 +162,10 @@ class ClassTimetableRepositoryImpl implements ClassTimetableRepository {
     if (!snapshot.exists || snapshot.data()?['schoolId'] != schoolId) {
       throw StateError('Lesson not found in the active school.');
     }
-    await ref.update({'isActive': false, 'updatedAt': FieldValue.serverTimestamp()});
+    await ref.update({
+      'isActive': false,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   @override
@@ -118,11 +187,16 @@ class ClassTimetableRepositoryImpl implements ClassTimetableRepository {
     final lessons = lessonSnapshot.docs
         .map((doc) => _lessonFromMap(doc.id, doc.data()))
         .toList(growable: false);
-    for (final lesson in lessons.where((item) => item.timetableId == timetableId)) {
-      final other = lessons.where((item) => item.id != lesson.id);
+    final targetLessons =
+        lessons.where((item) => item.timetableId == timetableId).toList();
+    if (targetLessons.isEmpty) {
+      throw StateError('Add at least one valid lesson before publishing.');
+    }
+    for (final lesson in targetLessons) {
+      await _validateLessonDependencies(lesson, schoolId);
       final conflicts = conflictResolver.findConflicts(
         proposed: lesson,
-        existing: other,
+        existing: lessons.where((item) => item.id != lesson.id),
       );
       if (conflicts.isNotEmpty) {
         throw StateError('Cannot publish: ${conflicts.first.message}');
@@ -168,7 +242,8 @@ class ClassTimetableRepositoryImpl implements ClassTimetableRepository {
   }
 
   ClassTimetable _timetableFromMap(String id, Map<String, dynamic> map) {
-    final statusRaw = map['status']?.toString() ?? ClassTimetableStatus.draft.name;
+    final statusRaw =
+        map['status']?.toString() ?? ClassTimetableStatus.draft.name;
     final status = ClassTimetableStatus.values.firstWhere(
       (value) => value.name == statusRaw,
       orElse: () => ClassTimetableStatus.draft,
