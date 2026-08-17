@@ -21,132 +21,99 @@ class StructureScreen extends StatelessWidget {
           firestore: FirebaseFirestore.instance,
         ),
       ),
-      child: const _StructureSetupView(),
+      child: const _StructureWizard(),
     );
   }
 }
 
-class _StructureSetupView extends StatefulWidget {
-  const _StructureSetupView();
+class _StructureWizard extends StatefulWidget {
+  const _StructureWizard();
 
   @override
-  State<_StructureSetupView> createState() => _StructureSetupViewState();
+  State<_StructureWizard> createState() => _StructureWizardState();
 }
 
-class _StructureSetupViewState extends State<_StructureSetupView> {
+class _StructureWizardState extends State<_StructureWizard> {
   static const _engine = StructureSetupEngine();
-  StructureSetupStepId? _manualStepId;
+  StructureSetupStepId? _selectedStep;
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<StructureBloc, StructureState>(
-      builder: (context, structureState) {
+      builder: (context, structure) {
         return BlocBuilder<StructureSetupCubit, StructureSetupCubitState>(
-          builder: (context, setupState) {
-            if (structureState.isLoading || setupState.isLoading) {
+          builder: (context, setup) {
+            if (structure.isLoading || setup.isLoading) {
               return const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               );
             }
 
             final resolution = _engine.resolve(
-              _contextFrom(structureState, setupState.preferences),
+              _context(structure, setup.preferences),
             );
 
-            if (setupState.preferences.onboardingCompleted &&
+            if (setup.preferences.onboardingCompleted &&
                 resolution.isReady &&
-                _manualStepId == null) {
-              return _ManagementView(
-                resolution: resolution,
-                onOpen: (step) => _openConfiguration(context, step),
-                onReviewWizard: () {
-                  final first = resolution.steps
-                      .where((step) =>
-                          step.id != StructureSetupStepId.review &&
-                          (step.applicable || step.isSatisfied))
-                      .firstOrNull;
-                  if (first != null) {
-                    setState(() => _manualStepId = first.id);
-                  }
-                },
-              );
+                _selectedStep == null) {
+              return _management(context, resolution);
             }
 
-            final current = _currentStep(resolution);
-            if (current == null) {
+            final step = _resolveStep(resolution);
+            if (step == null) {
               return const Scaffold(
-                body: Center(child: Text('No Structure setup step is available.')),
+                body: Center(child: Text('Structure setup is unavailable.')),
               );
             }
 
-            final ordered = resolution.steps
-                .where((step) => step.applicable || step.id == current.id)
+            final visible = resolution.steps
+                .where((item) => item.applicable || item.id == step.id)
                 .toList(growable: false);
-            final index = ordered.indexWhere((step) => step.id == current.id);
-            final safeIndex = index < 0 ? 0 : index;
+            final index = visible.indexWhere((item) => item.id == step.id);
 
             return Scaffold(
               appBar: AppBar(
                 title: const Text('Structure Setup'),
                 actions: [
                   IconButton(
-                    tooltip: 'Validate structure',
-                    onPressed: () => _showValidation(context, resolution),
+                    tooltip: 'Validate Structure',
                     icon: const Icon(Icons.fact_check_outlined),
+                    onPressed: () => _showValidation(context, resolution),
                   ),
                 ],
               ),
-              body: SafeArea(
-                child: Column(
-                  children: [
-                    LinearProgressIndicator(
-                      value: resolution.progress.clamp(0.0, 1.0).toDouble(),
-                      minHeight: 4,
-                    ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 720),
-                            child: _StepContent(
-                              step: current,
-                              number: safeIndex + 1,
-                              total: ordered.length,
-                              resolution: resolution,
-                              state: structureState,
-                              preferences: setupState.preferences,
-                              onConfigure: current.route.isEmpty
-                                  ? null
-                                  : () => _openConfiguration(context, current),
-                              onChoice: (choice) => _choose(
-                                context,
-                                current,
-                                choice,
-                                structureState,
-                              ),
-                            ),
+              body: Column(
+                children: [
+                  LinearProgressIndicator(
+                    value: resolution.progress.clamp(0.0, 1.0).toDouble(),
+                    minHeight: 4,
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 36),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 720),
+                          child: _stepContent(
+                            context,
+                            structure,
+                            setup.preferences,
+                            resolution,
+                            step,
+                            index < 0 ? 1 : index + 1,
+                            visible.length,
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              bottomNavigationBar: _BottomActions(
-                canBack: _previousStep(resolution, current) != null,
-                canContinue: current.isSatisfied ||
-                    (current.id == StructureSetupStepId.review &&
-                        resolution.isReady),
-                saving: setupState.isSaving,
-                finish: current.id == StructureSetupStepId.review,
-                onBack: () {
-                  final previous = _previousStep(resolution, current);
-                  if (previous != null) {
-                    setState(() => _manualStepId = previous.id);
-                  }
-                },
-                onContinue: () => _continue(context, resolution, current),
+              bottomNavigationBar: _actions(
+                context,
+                resolution,
+                step,
+                setup.isSaving,
               ),
             );
           },
@@ -155,7 +122,7 @@ class _StructureSetupViewState extends State<_StructureSetupView> {
     );
   }
 
-  StructureSetupContext _contextFrom(
+  StructureSetupContext _context(
     StructureState state,
     StructureSetupPreferences preferences,
   ) {
@@ -192,214 +159,27 @@ class _StructureSetupViewState extends State<_StructureSetupView> {
     );
   }
 
-  StructureSetupStepResult? _currentStep(StructureSetupResolution resolution) {
-    if (_manualStepId != null) {
-      final match = resolution.steps.where((step) => step.id == _manualStepId);
-      if (match.isNotEmpty) return match.first;
+  StructureSetupStepResult? _resolveStep(StructureSetupResolution resolution) {
+    if (_selectedStep != null) {
+      final matches = resolution.steps.where((item) => item.id == _selectedStep);
+      if (matches.isNotEmpty) return matches.first;
     }
     return resolution.nextStep;
   }
 
-  StructureSetupStepResult? _previousStep(
-    StructureSetupResolution resolution,
-    StructureSetupStepResult current,
-  ) {
-    final index = resolution.steps.indexWhere((step) => step.id == current.id);
-    for (var i = index - 1; i >= 0; i--) {
-      final candidate = resolution.steps[i];
-      if (candidate.applicable || candidate.isSatisfied) return candidate;
-    }
-    return null;
-  }
-
-  Future<void> _openConfiguration(
+  Widget _stepContent(
     BuildContext context,
+    StructureState state,
+    StructureSetupPreferences preferences,
+    StructureSetupResolution resolution,
     StructureSetupStepResult step,
-  ) async {
-    if (step.route.isEmpty) return;
-    await context.read<StructureSetupCubit>().rememberStep(step.id.name);
-    if (!context.mounted) return;
-    await context.push(step.route);
-    if (!mounted) return;
-    setState(() => _manualStepId = step.id);
-  }
-
-  Future<void> _choose(
-    BuildContext context,
-    StructureSetupStepResult step,
-    StructureUseChoice choice,
-    StructureState structureState,
-  ) async {
-    setState(() => _manualStepId = step.id);
-    final cubit = context.read<StructureSetupCubit>();
-
-    switch (step.id) {
-      case StructureSetupStepId.departments:
-        await cubit.setDepartments(choice);
-        return;
-      case StructureSetupStepId.streams:
-        await cubit.setStreams(choice);
-        return;
-      case StructureSetupStepId.learningSpaces:
-        await cubit.setRooms(choice);
-        return;
-      case StructureSetupStepId.houses:
-        await cubit.setHouses(choice);
-        return;
-      case StructureSetupStepId.clubs:
-        await cubit.setClubs(choice);
-        return;
-      case StructureSetupStepId.boarding:
-        await cubit.setBoarding(choice);
-        if (!context.mounted) return;
-        context.read<StructureBloc>().add(
-              UpdateFeatureTogglesRequested(
-                structureState.featureToggles.copyWith(
-                  boarding: choice == StructureUseChoice.enabled,
-                  hostel: choice == StructureUseChoice.enabled,
-                ),
-              ),
-            );
-        return;
-      case StructureSetupStepId.transport:
-        await cubit.setTransport(choice);
-        if (!context.mounted) return;
-        context.read<StructureBloc>().add(
-              UpdateFeatureTogglesRequested(
-                structureState.featureToggles.copyWith(
-                  transport: choice == StructureUseChoice.enabled,
-                ),
-              ),
-            );
-        return;
-      default:
-        return;
-    }
-  }
-
-  Future<void> _continue(
-    BuildContext context,
-    StructureSetupResolution resolution,
-    StructureSetupStepResult current,
-  ) async {
-    if (current.id == StructureSetupStepId.review) {
-      if (!resolution.isReady) {
-        _showValidation(context, resolution);
-        return;
-      }
-      await context.read<StructureSetupCubit>().markOnboardingCompleted();
-      if (mounted) setState(() => _manualStepId = null);
-      return;
-    }
-    if (!current.isSatisfied) return;
-    await context.read<StructureSetupCubit>().rememberStep(current.id.name);
-    if (mounted) setState(() => _manualStepId = null);
-  }
-
-  void _showValidation(
-    BuildContext context,
-    StructureSetupResolution resolution,
+    int number,
+    int total,
   ) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        final issues = resolution.issues;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 580),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    resolution.isReady
-                        ? 'Structure is ready'
-                        : 'Structure needs attention',
-                    style: Theme.of(sheetContext)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    resolution.isReady
-                        ? 'All required Structure checks passed.'
-                        : '${issues.where((issue) => issue.severity == StructureIssueSeverity.critical).length} critical issue(s) found.',
-                  ),
-                  const SizedBox(height: 16),
-                  if (issues.isEmpty)
-                    const ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.check_circle_outline),
-                      title: Text('No structural integrity issues found.'),
-                    )
-                  else
-                    Flexible(
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: issues.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
-                        itemBuilder: (_, index) {
-                          final issue = issues[index];
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: Icon(
-                              issue.severity == StructureIssueSeverity.critical
-                                  ? Icons.error_outline
-                                  : Icons.warning_amber_outlined,
-                            ),
-                            title: Text(issue.message),
-                            subtitle: Text(_pretty(issue.stepId.name)),
-                          );
-                        },
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () => Navigator.pop(sheetContext),
-                      child: const Text('Done'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _StepContent extends StatelessWidget {
-  final StructureSetupStepResult step;
-  final int number;
-  final int total;
-  final StructureSetupResolution resolution;
-  final StructureState state;
-  final StructureSetupPreferences preferences;
-  final VoidCallback? onConfigure;
-  final ValueChanged<StructureUseChoice> onChoice;
-
-  const _StepContent({
-    required this.step,
-    required this.number,
-    required this.total,
-    required this.resolution,
-    required this.state,
-    required this.preferences,
-    required this.onConfigure,
-    required this.onChoice,
-  });
-
-  @override
-  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final choice = _choiceFor(step.id, preferences);
+    final choice = _choice(step.id, preferences);
+    final route = _route(step.id);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -422,7 +202,9 @@ class _StepContent extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           step.title,
-          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
         ),
         const SizedBox(height: 10),
         Text(
@@ -434,38 +216,43 @@ class _StepContent extends StatelessWidget {
         ),
         const SizedBox(height: 28),
         if (!step.prerequisitesComplete)
-          const _Panel(
+          const _InfoCard(
             icon: Icons.lock_outline,
             title: 'Previous setup is required',
-            body: 'Complete the previous Structure step before configuring this one.',
+            body: 'Complete the previous Structure step before this one.',
           )
         else ...[
           if (choice != null) ...[
-            _ChoiceQuestion(
+            _DecisionQuestion(
               stepId: step.id,
               value: choice,
-              onChanged: onChoice,
+              onChanged: (value) => _saveChoice(
+                context,
+                state,
+                step.id,
+                value,
+              ),
             ),
             const SizedBox(height: 20),
           ],
-          _Panel(
+          _InfoCard(
             icon: step.isSatisfied
                 ? Icons.check_circle_outline
                 : Icons.pending_actions_outlined,
             title: step.isSatisfied ? 'Ready to continue' : 'Current setup',
-            body: _snapshot(step.id, state, choice),
+            body: _summary(step.id, state, choice),
           ),
           if (step.issues.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            _IssuePanel(issues: step.issues),
+            const SizedBox(height: 18),
+            _IssueCard(issues: step.issues),
           ],
-          if (onConfigure != null &&
+          if (route != null &&
               (choice == null || choice == StructureUseChoice.enabled)) ...[
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: onConfigure,
+                onPressed: () => _openStep(context, step, route),
                 icon: const Icon(Icons.tune_outlined),
                 label: Text(
                   step.complete
@@ -477,13 +264,13 @@ class _StepContent extends StatelessWidget {
           ],
           if (step.id == StructureSetupStepId.review) ...[
             const SizedBox(height: 20),
-            _Panel(
+            _InfoCard(
               icon: resolution.isReady
                   ? Icons.verified_outlined
                   : Icons.rule_folder_outlined,
               title: resolution.isReady
                   ? 'Structure is ready'
-                  : 'Final checks are not clean yet',
+                  : 'Structure needs attention',
               body:
                   '${resolution.requiredSteps.where((item) => item.isSatisfied).length} of ${resolution.requiredSteps.length} required steps are valid. ${resolution.issues.length} issue(s) are reported.',
             ),
@@ -492,14 +279,279 @@ class _StepContent extends StatelessWidget {
       ],
     );
   }
+
+  Widget _actions(
+    BuildContext context,
+    StructureSetupResolution resolution,
+    StructureSetupStepResult current,
+    bool saving,
+  ) {
+    final previous = _previous(resolution, current);
+    final isReview = current.id == StructureSetupStepId.review;
+    final canContinue = current.isSatisfied || (isReview && resolution.isReady);
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(
+            top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+          ),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 104,
+              child: OutlinedButton(
+                onPressed: previous == null || saving
+                    ? null
+                    : () => setState(() => _selectedStep = previous.id),
+                child: const Text('Back'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton(
+                onPressed: !canContinue || saving
+                    ? null
+                    : () => _continue(context, resolution, current),
+                child: saving
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(isReview ? 'Finish Setup' : 'Continue'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  StructureSetupStepResult? _previous(
+    StructureSetupResolution resolution,
+    StructureSetupStepResult current,
+  ) {
+    final index = resolution.steps.indexWhere((item) => item.id == current.id);
+    for (var i = index - 1; i >= 0; i--) {
+      final item = resolution.steps[i];
+      if (item.applicable || item.isSatisfied) return item;
+    }
+    return null;
+  }
+
+  Future<void> _openStep(
+    BuildContext context,
+    StructureSetupStepResult step,
+    String route,
+  ) async {
+    await context.read<StructureSetupCubit>().rememberStep(step.id.name);
+    if (!context.mounted) return;
+    await context.push(route);
+    if (!mounted) return;
+    setState(() => _selectedStep = step.id);
+  }
+
+  Future<void> _continue(
+    BuildContext context,
+    StructureSetupResolution resolution,
+    StructureSetupStepResult step,
+  ) async {
+    if (step.id == StructureSetupStepId.review) {
+      if (!resolution.isReady) {
+        _showValidation(context, resolution);
+        return;
+      }
+      await context.read<StructureSetupCubit>().markOnboardingCompleted();
+    } else {
+      await context.read<StructureSetupCubit>().rememberStep(step.id.name);
+    }
+    if (mounted) setState(() => _selectedStep = null);
+  }
+
+  Future<void> _saveChoice(
+    BuildContext context,
+    StructureState state,
+    StructureSetupStepId id,
+    StructureUseChoice value,
+  ) async {
+    setState(() => _selectedStep = id);
+    final cubit = context.read<StructureSetupCubit>();
+    switch (id) {
+      case StructureSetupStepId.departments:
+        await cubit.setDepartments(value);
+        return;
+      case StructureSetupStepId.streams:
+        await cubit.setStreams(value);
+        return;
+      case StructureSetupStepId.learningSpaces:
+        await cubit.setRooms(value);
+        return;
+      case StructureSetupStepId.houses:
+        await cubit.setHouses(value);
+        return;
+      case StructureSetupStepId.clubs:
+        await cubit.setClubs(value);
+        return;
+      case StructureSetupStepId.boarding:
+        await cubit.setBoarding(value);
+        if (!context.mounted) return;
+        context.read<StructureBloc>().add(
+              UpdateFeatureTogglesRequested(
+                state.featureToggles.copyWith(
+                  boarding: value == StructureUseChoice.enabled,
+                  hostel: value == StructureUseChoice.enabled,
+                ),
+              ),
+            );
+        return;
+      case StructureSetupStepId.transport:
+        await cubit.setTransport(value);
+        if (!context.mounted) return;
+        context.read<StructureBloc>().add(
+              UpdateFeatureTogglesRequested(
+                state.featureToggles.copyWith(
+                  transport: value == StructureUseChoice.enabled,
+                ),
+              ),
+            );
+        return;
+      default:
+        return;
+    }
+  }
+
+  Scaffold _management(
+    BuildContext context,
+    StructureSetupResolution resolution,
+  ) {
+    final steps = resolution.steps
+        .where((item) => item.applicable && item.id != StructureSetupStepId.review)
+        .toList(growable: false);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('School Structure')),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          const _InfoCard(
+            icon: Icons.verified_outlined,
+            title: 'Structure ready',
+            body:
+                'Required school structure is valid. Every completed section remains editable.',
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: steps.isEmpty
+                ? null
+                : () => setState(() => _selectedStep = steps.first.id),
+            icon: const Icon(Icons.account_tree_outlined),
+            label: const Text('Review step by step'),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Manage Structure',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 8),
+          ...steps.map(
+            (step) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                step.isSatisfied
+                    ? Icons.check_circle_outline
+                    : Icons.error_outline,
+              ),
+              title: Text(step.title),
+              subtitle: Text(step.section),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _route(step.id) == null
+                  ? null
+                  : () => _openStep(context, step, _route(step.id)!),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showValidation(
+    BuildContext context,
+    StructureSetupResolution resolution,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 580),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  resolution.isReady
+                      ? 'Structure is ready'
+                      : 'Structure needs attention',
+                  style: Theme.of(sheet).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                if (resolution.issues.isEmpty)
+                  const Text('All required structural checks passed.')
+                else
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: resolution.issues.length,
+                      separatorBuilder: (_, _) => const Divider(),
+                      itemBuilder: (_, index) {
+                        final issue = resolution.issues[index];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            issue.severity == StructureIssueSeverity.critical
+                                ? Icons.error_outline
+                                : Icons.warning_amber_outlined,
+                          ),
+                          title: Text(issue.message),
+                          subtitle: Text(_pretty(issue.stepId.name)),
+                        );
+                      },
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(sheet),
+                    child: const Text('Done'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _ChoiceQuestion extends StatelessWidget {
+class _DecisionQuestion extends StatelessWidget {
   final StructureSetupStepId stepId;
   final StructureUseChoice value;
   final ValueChanged<StructureUseChoice> onChanged;
 
-  const _ChoiceQuestion({
+  const _DecisionQuestion({
     required this.stepId,
     required this.value,
     required this.onChanged,
@@ -513,10 +565,10 @@ class _ChoiceQuestion extends StatelessWidget {
       StructureSetupStepId.streams =>
         'Does this school use streams or sections?',
       StructureSetupStepId.learningSpaces =>
-        'Do you want School Pulse to manage rooms and learning spaces?',
+        'Do you want to manage rooms and learning spaces?',
       StructureSetupStepId.houses => 'Does this school use houses?',
       StructureSetupStepId.clubs =>
-        'Do you want to configure clubs and societies now?',
+        'Do you want to configure clubs and societies?',
       StructureSetupStepId.boarding => 'Does this school provide boarding?',
       StructureSetupStepId.transport =>
         'Does this school operate school transport?',
@@ -528,10 +580,9 @@ class _ChoiceQuestion extends StatelessWidget {
       children: [
         Text(
           question,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w800),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
         ),
         const SizedBox(height: 12),
         Row(
@@ -566,12 +617,12 @@ class _ChoiceQuestion extends StatelessWidget {
   }
 }
 
-class _Panel extends StatelessWidget {
+class _InfoCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String body;
 
-  const _Panel({
+  const _InfoCard({
     required this.icon,
     required this.title,
     required this.body,
@@ -609,167 +660,39 @@ class _Panel extends StatelessWidget {
   }
 }
 
-class _IssuePanel extends StatelessWidget {
+class _IssueCard extends StatelessWidget {
   final List<StructureSetupIssue> issues;
-
-  const _IssuePanel({required this.issues});
+  const _IssueCard({required this.issues});
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: scheme.errorContainer.withValues(alpha: 0.45),
+        color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Before you continue', style: TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          ...issues.map(
-            (issue) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text('• ${issue.message}'),
-            ),
+          const Text(
+            'Before you continue',
+            style: TextStyle(fontWeight: FontWeight.w800),
           ),
+          const SizedBox(height: 8),
+          ...issues.map((issue) => Text('• ${issue.message}')),
         ],
       ),
     );
   }
 }
 
-class _BottomActions extends StatelessWidget {
-  final bool canBack;
-  final bool canContinue;
-  final bool saving;
-  final bool finish;
-  final VoidCallback onBack;
-  final VoidCallback onContinue;
-
-  const _BottomActions({
-    required this.canBack,
-    required this.canContinue,
-    required this.saving,
-    required this.finish,
-    required this.onBack,
-    required this.onContinue,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          border: Border(top: BorderSide(color: scheme.outlineVariant)),
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 104,
-              child: OutlinedButton(
-                onPressed: canBack && !saving ? onBack : null,
-                child: const Text('Back'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FilledButton(
-                onPressed: canContinue && !saving ? onContinue : null,
-                child: saving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(finish ? 'Finish setup' : 'Continue'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ManagementView extends StatelessWidget {
-  final StructureSetupResolution resolution;
-  final ValueChanged<StructureSetupStepResult> onOpen;
-  final VoidCallback onReviewWizard;
-
-  const _ManagementView({
-    required this.resolution,
-    required this.onOpen,
-    required this.onReviewWizard,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final items = resolution.steps
-        .where((step) =>
-            step.id != StructureSetupStepId.review && step.applicable)
-        .toList(growable: false);
-    return Scaffold(
-      appBar: AppBar(title: const Text('School Structure')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _Panel(
-            icon: resolution.isReady
-                ? Icons.verified_outlined
-                : Icons.warning_amber_outlined,
-            title:
-                resolution.isReady ? 'Structure ready' : 'Structure needs attention',
-            body: resolution.isReady
-                ? 'Required school structure is valid. Completed sections remain editable.'
-                : '${resolution.issues.length} issue(s) need attention.',
-          ),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: onReviewWizard,
-            icon: const Icon(Icons.account_tree_outlined),
-            label: const Text('Review setup step by step'),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Manage structure',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          ...items.map(
-            (step) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                step.isSatisfied
-                    ? Icons.check_circle_outline
-                    : Icons.error_outline,
-              ),
-              title: Text(step.title),
-              subtitle: Text(step.section),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: step.route.isEmpty ? null : () => onOpen(step),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-StructureUseChoice? _choiceFor(
-  StructureSetupStepId step,
+StructureUseChoice? _choice(
+  StructureSetupStepId id,
   StructureSetupPreferences preferences,
 ) {
-  return switch (step) {
+  return switch (id) {
     StructureSetupStepId.departments => preferences.departments,
     StructureSetupStepId.streams => preferences.streams,
     StructureSetupStepId.learningSpaces => preferences.rooms,
@@ -781,18 +704,59 @@ StructureUseChoice? _choiceFor(
   };
 }
 
-String _snapshot(
-  StructureSetupStepId step,
+String? _route(StructureSetupStepId id) => switch (id) {
+      StructureSetupStepId.institution => '/staff/admin/structure/institution',
+      StructureSetupStepId.academicYear =>
+        '/staff/admin/structure/academic?section=years',
+      StructureSetupStepId.academicTerms =>
+        '/staff/admin/structure/academic?section=terms',
+      StructureSetupStepId.levels =>
+        '/staff/admin/structure/academic?section=levels',
+      StructureSetupStepId.departments =>
+        '/staff/admin/structure/people?section=departments',
+      StructureSetupStepId.classes =>
+        '/staff/admin/structure/academic?section=classes',
+      StructureSetupStepId.streams =>
+        '/staff/admin/structure/academic?section=streams',
+      StructureSetupStepId.subjects =>
+        '/staff/admin/structure/academic?section=subjects',
+      StructureSetupStepId.assessmentAndGrading =>
+        '/staff/admin/structure/assessment',
+      StructureSetupStepId.learningSpaces =>
+        '/staff/admin/structure/campus?section=facilities',
+      StructureSetupStepId.schoolDay =>
+        '/staff/admin/structure/operations?section=timetable',
+      StructureSetupStepId.staffRoles =>
+        '/staff/admin/structure/people?section=roles',
+      StructureSetupStepId.houses =>
+        '/staff/admin/structure/campus?section=houses',
+      StructureSetupStepId.clubs =>
+        '/staff/admin/structure/campus?section=clubs',
+      StructureSetupStepId.boarding =>
+        '/staff/admin/structure/campus?section=hostel',
+      StructureSetupStepId.transport =>
+        '/staff/admin/structure/campus?section=transport',
+      StructureSetupStepId.attendance =>
+        '/staff/admin/structure/operations?section=attendance',
+      StructureSetupStepId.financeFoundation =>
+        '/staff/admin/structure/operations?section=fees',
+      StructureSetupStepId.communication =>
+        '/staff/admin/structure/operations?section=communication',
+      StructureSetupStepId.review => null,
+    };
+
+String _summary(
+  StructureSetupStepId id,
   StructureState state,
   StructureUseChoice? choice,
 ) {
   if (choice == StructureUseChoice.disabled) return 'Not used by this school.';
-  return switch (step) {
+  return switch (id) {
     StructureSetupStepId.institution => state.institutionProfile.name.isEmpty
-        ? 'School identity has not been completed.'
+        ? 'School identity is incomplete.'
         : state.institutionProfile.name,
     StructureSetupStepId.academicYear =>
-      '${state.academicYears.length} academic year(s) • ${state.academicYears.where((item) => item.isCurrent).length} current',
+      '${state.academicYears.length} year(s) • ${state.academicYears.where((item) => item.isCurrent).length} current',
     StructureSetupStepId.academicTerms =>
       '${state.academicTerms.length} term/semester record(s)',
     StructureSetupStepId.levels =>
@@ -808,11 +772,11 @@ String _snapshot(
     StructureSetupStepId.assessmentAndGrading =>
       '${state.assessmentTypes.where((item) => item.isActive).length} assessment type(s) • ${state.gradingSystems.where((item) => item.isActive).length} grading system(s)',
     StructureSetupStepId.learningSpaces =>
-      '${state.facilities.where((item) => item.isActive).length} active space(s)',
+      '${state.facilities.where((item) => item.isActive).length} active learning space(s)',
     StructureSetupStepId.schoolDay =>
       '${state.timetableConfig.teachingDays.length} teaching day(s) • ${state.timetableConfig.slots.length} slot(s)',
     StructureSetupStepId.staffRoles =>
-      '${state.staffRoles.where((item) => item.isActive).length} active role(s)',
+      '${state.staffRoles.where((item) => item.isActive).length} active responsibility/role definition(s)',
     StructureSetupStepId.houses =>
       '${state.houses.where((item) => item.isActive).length} active house(s)',
     StructureSetupStepId.clubs =>
@@ -826,9 +790,8 @@ String _snapshot(
     StructureSetupStepId.financeFoundation =>
       '${state.feeCategories.where((item) => item.isActive).length} active fee category(s)',
     StructureSetupStepId.communication =>
-      '${state.announcementCategories.where((item) => item.isActive).length + state.notificationCategories.where((item) => item.isActive).length} category(s) • ${state.messageTemplates.where((item) => item.isActive).length} template(s)',
-    StructureSetupStepId.review =>
-      'Run the final integrity review before completing setup.',
+      '${state.announcementCategories.where((item) => item.isActive).length + state.notificationCategories.where((item) => item.isActive).length} communication category(s) • ${state.messageTemplates.where((item) => item.isActive).length} template(s)',
+    StructureSetupStepId.review => 'Run the final integrity review.',
   };
 }
 
@@ -842,6 +805,6 @@ String _pretty(String raw) {
       : '${spaced[0].toUpperCase()}${spaced.substring(1)}';
 }
 
-extension _FirstOrNullExtension<T> on Iterable<T> {
+extension _FirstOrNull<T> on Iterable<T> {
   T? get firstOrNull => isEmpty ? null : first;
 }
