@@ -14,6 +14,8 @@ class TeachingAssignmentRepositoryImpl implements TeachingAssignmentRepository {
 
   CollectionReference<Map<String, dynamic>> get _collection =>
       firestore.collection('structure_teaching_assignments');
+  CollectionReference<Map<String, dynamic>> get _curriculum =>
+      firestore.collection('structure_curriculum_assignments');
 
   @override
   Stream<List<TeachingAssignment>> watchAssignments() async* {
@@ -37,9 +39,14 @@ class TeachingAssignmentRepositoryImpl implements TeachingAssignmentRepository {
       throw StateError('Staff member and academic year are required.');
     }
 
-    final staffDoc = await firestore.collection('users').doc(assignment.staffId).get();
-    if (!staffDoc.exists || staffDoc.data()?['schoolId']?.toString() != schoolId) {
+    final staffDoc =
+        await firestore.collection('users').doc(assignment.staffId).get();
+    final staffData = staffDoc.data();
+    if (!staffDoc.exists || staffData?['schoolId']?.toString() != schoolId) {
       throw StateError('The selected staff member does not belong to this school.');
+    }
+    if (staffData?['isActive'] == false) {
+      throw StateError('The selected staff account is inactive.');
     }
 
     switch (assignment.responsibilityType) {
@@ -47,6 +54,7 @@ class TeachingAssignmentRepositoryImpl implements TeachingAssignmentRepository {
         if (assignment.classId.isEmpty || assignment.subjectId.isEmpty) {
           throw StateError('Subject Teacher requires a class and subject.');
         }
+        await _validateSubjectTeacherCurriculum(assignment, schoolId);
         break;
       case TeachingResponsibilityType.classTeacher:
         if (assignment.classId.isEmpty) {
@@ -64,7 +72,10 @@ class TeachingAssignmentRepositoryImpl implements TeachingAssignmentRepository {
         .where('schoolId', isEqualTo: schoolId)
         .where('academicYearId', isEqualTo: assignment.academicYearId)
         .where('staffId', isEqualTo: assignment.staffId)
-        .where('responsibilityType', isEqualTo: assignment.responsibilityType.name)
+        .where(
+          'responsibilityType',
+          isEqualTo: assignment.responsibilityType.name,
+        )
         .where('classId', isEqualTo: assignment.classId)
         .where('streamId', isEqualTo: assignment.streamId)
         .where('subjectId', isEqualTo: assignment.subjectId)
@@ -75,28 +86,39 @@ class TeachingAssignmentRepositoryImpl implements TeachingAssignmentRepository {
       throw StateError('This staff responsibility is already assigned.');
     }
 
-    if (assignment.responsibilityType == TeachingResponsibilityType.classTeacher) {
+    if (assignment.responsibilityType ==
+        TeachingResponsibilityType.classTeacher) {
       final target = await _collection
           .where('schoolId', isEqualTo: schoolId)
           .where('academicYearId', isEqualTo: assignment.academicYearId)
-          .where('responsibilityType', isEqualTo: TeachingResponsibilityType.classTeacher.name)
+          .where(
+            'responsibilityType',
+            isEqualTo: TeachingResponsibilityType.classTeacher.name,
+          )
           .where('classId', isEqualTo: assignment.classId)
           .where('streamId', isEqualTo: assignment.streamId)
           .where('isActive', isEqualTo: true)
           .get();
       if (target.docs.any((doc) => doc.id != assignment.id)) {
-        throw StateError('This class/stream already has an active Class Teacher.');
+        throw StateError(
+          'This class/stream already has an active Class Teacher.',
+        );
       }
 
       final staffPrimary = await _collection
           .where('schoolId', isEqualTo: schoolId)
           .where('academicYearId', isEqualTo: assignment.academicYearId)
-          .where('responsibilityType', isEqualTo: TeachingResponsibilityType.classTeacher.name)
+          .where(
+            'responsibilityType',
+            isEqualTo: TeachingResponsibilityType.classTeacher.name,
+          )
           .where('staffId', isEqualTo: assignment.staffId)
           .where('isActive', isEqualTo: true)
           .get();
       if (staffPrimary.docs.any((doc) => doc.id != assignment.id)) {
-        throw StateError('This staff member is already an active Class Teacher for another class/stream in this academic year.');
+        throw StateError(
+          'This staff member is already an active Class Teacher for another class/stream in this academic year.',
+        );
       }
     }
 
@@ -121,12 +143,36 @@ class TeachingAssignmentRepositoryImpl implements TeachingAssignmentRepository {
     });
   }
 
+  Future<void> _validateSubjectTeacherCurriculum(
+    TeachingAssignment assignment,
+    String schoolId,
+  ) async {
+    final snapshot = await _curriculum
+        .where('schoolId', isEqualTo: schoolId)
+        .where('academicYearId', isEqualTo: assignment.academicYearId)
+        .where('classId', isEqualTo: assignment.classId)
+        .where('subjectId', isEqualTo: assignment.subjectId)
+        .where('isActive', isEqualTo: true)
+        .get();
+    final valid = snapshot.docs.any((doc) {
+      final curriculumStream = doc.data()['streamId']?.toString() ?? '';
+      return curriculumStream.isEmpty ||
+          curriculumStream == assignment.streamId;
+    });
+    if (!valid) {
+      throw StateError(
+        'Allocate this subject to the class/stream curriculum before assigning a Subject Teacher.',
+      );
+    }
+  }
+
   @override
   Future<void> endAssignment(String assignmentId, {DateTime? endDate}) async {
     final schoolId = await tenantResolver.resolve();
     final ref = _collection.doc(assignmentId);
     final snapshot = await ref.get();
-    if (!snapshot.exists || snapshot.data()?['schoolId']?.toString() != schoolId) {
+    if (!snapshot.exists ||
+        snapshot.data()?['schoolId']?.toString() != schoolId) {
       throw StateError('Teaching assignment not found in the active school.');
     }
     await ref.update({
