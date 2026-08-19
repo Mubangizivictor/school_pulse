@@ -223,38 +223,7 @@ class _HeroSummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome back,',
-                      style: TextStyle(
-                        color: scheme.onPrimary.withValues(alpha: 0.85),
-                        fontSize: 13,
-                      ),
-                    ),
-                    Text(
-                      firstName,
-                      style: TextStyle(
-                        color: scheme.onPrimary,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.s),
-                    Text(
-                      "Here's what's happening today.",
-                      style: TextStyle(
-                        color: scheme.onPrimary.withValues(alpha: 0.85),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
                 builder: (context, state) {
                   final label = state is AdminDashboardLoaded
@@ -291,6 +260,19 @@ class _HeroSummaryCard extends StatelessWidget {
                   );
                 },
               ),
+              const SizedBox(width: AppSpacing.m),
+              Expanded(
+                child: Text(
+                  '${_greeting()}, $firstName',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: scheme.onPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.l),
@@ -298,6 +280,13 @@ class _HeroSummaryCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
   }
 }
 
