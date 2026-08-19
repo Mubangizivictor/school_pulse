@@ -521,9 +521,20 @@ class StaffShell extends StatelessWidget {
               color: AppColors.background(context),
               child: Column(
                 children: [
-                  const _SupportModeBanner(),
-                  if (isMobile && _hasMultipleRoles(context))
-                    const _RoleBanner(),
+                  // Only these banners need the notch/status-bar inset - the
+                  // routed screen below is its own full Scaffold (with its
+                  // own AppBar/SafeArea), so wrapping the whole column would
+                  // double that padding under a status bar it already clears.
+                  SafeArea(
+                    bottom: false,
+                    child: Column(
+                      children: [
+                        const _SupportModeBanner(),
+                        if (isMobile && _hasMultipleRoles(context))
+                          const _RoleBanner(),
+                      ],
+                    ),
+                  ),
                   Expanded(child: child),
                 ],
               ),
