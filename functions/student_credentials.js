@@ -112,7 +112,7 @@ async function issueIdentityInTransaction(tx, db, { studentId, schoolId, schoolP
   tx.set(credentialRef, {
     credentialValue: token.split(".")[1],
     credentialType: "qr",
-    identityId: uniqueSystemId,
+    identityId: studentId,
     identityType: "student",
     schoolId,
     status: "active",
@@ -193,7 +193,7 @@ exports.regenerateStudentQrCredential = onCall(async (request) => {
     tx.set(newCredentialRef, {
       credentialValue: newToken.split(".")[1],
       credentialType: "qr",
-      identityId: identity.uniqueSystemId,
+      identityId: studentId,
       identityType: "student",
       schoolId: callerSchoolId,
       status: "active",
@@ -261,7 +261,16 @@ exports.assignNfcCredential = onCall(async (request) => {
 
     if (credentialSnap.exists) {
       const existing = credentialSnap.data();
-      if (existing.status === "active" && existing.identityId !== identity.uniqueSystemId) {
+      // Migration-aware "same student" check: an existing credential may
+      // still carry the legacy identityId contract (StudentIdentity.
+      // uniqueSystemId) from before credential.identityId was canonicalized
+      // to the real students/{studentId} document ID. Treat either form as
+      // "this card already belongs to this student" so a legacy test card
+      // can be reassigned/rewritten into canonical form without tripping a
+      // false already-exists conflict.
+      const belongsToThisStudent = existing.identityId === studentId
+        || existing.identityId === identity.uniqueSystemId;
+      if (existing.status === "active" && !belongsToThisStudent) {
         // Duplicate-tag conflict - one active NFC credential cannot belong
         // to two students. Surface enough for the client to render the
         // same "already registered to X" UX NfcCredentialService already
@@ -275,10 +284,14 @@ exports.assignNfcCredential = onCall(async (request) => {
       }
     }
 
+    // Canonical contract: credential.identityId is ALWAYS the real
+    // students/{studentId} document ID, never StudentIdentity.
+    // uniqueSystemId. identityDocumentId separately tracks the
+    // student_identities doc for audit/QR-regeneration use.
     tx.set(credentialRef, {
       credentialValue: normalizedCardUid,
       credentialType: "nfc",
-      identityId: identity.uniqueSystemId,
+      identityId: studentId,
       identityType: "student",
       schoolId: callerSchoolId,
       status: "active",
@@ -296,7 +309,7 @@ exports.assignNfcCredential = onCall(async (request) => {
 
     tx.set(identityDoc.ref, { nfcStatus: "active", updatedAt: now }, { merge: true });
 
-    return { cardUid: normalizedCardUid, identityId: identity.uniqueSystemId };
+    return { cardUid: normalizedCardUid, identityId: studentId };
   });
 
   return result;
@@ -407,6 +420,70 @@ exports.backfillStudentIdentities = onCall(async (request) => {
   }
 
   return { ok: true, schools: results };
+});
+
+/**
+ * Server-side resolver/migration path for legacy credentials whose
+ * identityId still carries StudentIdentity.uniqueSystemId instead of the
+ * canonical students/{studentId} document ID (pre-dating the identityId
+ * contract fix in assignNfcCredential/issueIdentityInTransaction). The
+ * Flutter client cannot query student_identities directly for this - that
+ * collection has no per-user access rule - so this callable does the
+ * uniqueSystemId -> studentId lookup server-side, validates the resolved
+ * student belongs to the caller's school, and migrates the credential
+ * document to the canonical form so every subsequent scan resolves via the
+ * fast students/{id} direct-read path without needing this function again.
+ */
+exports.resolveStudentCredential = onCall(async (request) => {
+  const { db, schoolId: callerSchoolId } = await requireStaffCaller(request.auth);
+  const credentialValue = request.data?.credentialValue;
+  if (typeof credentialValue !== "string" || !credentialValue.trim()) {
+    throw new HttpsError("invalid-argument", "credentialValue is required.");
+  }
+
+  const credentialRef = db.collection("schools").doc(callerSchoolId)
+    .collection("credentials").doc(credentialValue.trim());
+  const credentialSnap = await credentialRef.get();
+  if (!credentialSnap.exists) {
+    return { found: false };
+  }
+  const credential = credentialSnap.data();
+  if (credential.identityType !== "student") {
+    return { found: false };
+  }
+
+  // Already canonical - identityId is a real student doc ID in this school.
+  const directStudentDoc = await db.collection("students").doc(credential.identityId).get();
+  if (directStudentDoc.exists && directStudentDoc.data().schoolId === callerSchoolId) {
+    return { found: true, studentId: directStudentDoc.id, migrated: false };
+  }
+
+  // Legacy path: identityId is a StudentIdentity.uniqueSystemId. Map it to
+  // the real studentId, validate school ownership, then rewrite the
+  // credential document into canonical form.
+  const identitySnap = await db.collection("student_identities")
+    .where("uniqueSystemId", "==", credential.identityId).limit(1).get();
+  if (identitySnap.empty) {
+    return { found: false };
+  }
+  const identityDoc = identitySnap.docs[0];
+  const identity = identityDoc.data();
+  if (identity.schoolId !== callerSchoolId) {
+    return { found: false };
+  }
+
+  const studentDoc = await db.collection("students").doc(identity.studentId).get();
+  if (!studentDoc.exists || studentDoc.data().schoolId !== callerSchoolId) {
+    return { found: false };
+  }
+
+  await credentialRef.set({
+    identityId: identity.studentId,
+    identityDocumentId: identityDoc.id,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  return { found: true, studentId: identity.studentId, migrated: true };
 });
 
 exports.__test__ = { issueIdentityInTransaction, mintQrToken, reserveSequence, isStaffRole };

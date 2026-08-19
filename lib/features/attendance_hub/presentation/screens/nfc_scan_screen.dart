@@ -43,9 +43,10 @@ enum _ScanState {
   ready,
   scanning,
   resolving,
+  notAssigned,
+  invalidAssignment,
   success,
   duplicate,
-  invalid,
   wrongClass,
   denied,
   failed,
@@ -62,6 +63,7 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
   String _subtitle = '';
   String? _photoUrl;
   bool _wrongClassPhotoFailed = false;
+  String? _wrongClassName;
   DateTime? _scannedAt;
   String _deniedMessage = '';
   VerificationContext? _verificationContext;
@@ -222,7 +224,20 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
     final identity = resolverResult.fold((failure) => null, (r) => r);
     if (identity is! StudentResolvedIdentity) {
       HapticFeedback.heavyImpact();
-      setState(() => _state = _ScanState.invalid);
+      // A physically-detected card that resolves to no credential mapping
+      // ("Card detected but not assigned to a student") is a distinct
+      // failure from a credential that exists but whose student record is
+      // gone or invalid ("Card assignment is invalid. Reassign this
+      // card.") - both used to collapse into the same generic "Card not
+      // recognised" state.
+      final reason = identity is UnresolvedResolvedIdentity
+          ? identity.reason
+          : 'unknown_credential';
+      setState(() {
+        _state = reason == 'unknown_credential'
+            ? _ScanState.notAssigned
+            : _ScanState.invalidAssignment;
+      });
       _scheduleAutoContinue();
       return;
     }
@@ -230,11 +245,17 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
     final scope = _scope;
     if (scope != null && identity.classId != scope.id) {
       HapticFeedback.heavyImpact();
+      final matchingScope = _availableScopes
+          .where((s) => s.id == identity.classId)
+          .toList();
       setState(() {
         _name = identity.name;
         _subtitle = identity.studentCode;
         _photoUrl = identity.photoUrl;
         _wrongClassPhotoFailed = false;
+        _wrongClassName = matchingScope.isNotEmpty
+            ? matchingScope.first.name
+            : identity.classId;
         _state = _ScanState.wrongClass;
       });
       _scheduleAutoContinue();
@@ -520,7 +541,7 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
           onScanAnother: _startScan,
           onDone: _finishDone,
         );
-      case _ScanState.invalid:
+      case _ScanState.notAssigned:
         return Center(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.xl),
@@ -534,7 +555,8 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 Text(
-                  'Card not recognised',
+                  'Card detected but not assigned to a student.',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -546,6 +568,32 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
                   'Ask the School Admin to register this card.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.textMuted(context)),
+                ),
+              ],
+            ),
+          ),
+        );
+      case _ScanState.invalidAssignment:
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  color: AppColors.danger(context),
+                  size: 64,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  'Card assignment is invalid. Reassign this card.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: AppColors.textPrimary(context),
+                  ),
                 ),
               ],
             ),
@@ -585,7 +633,10 @@ class _NfcScanScreenState extends State<NfcScanScreen> {
                 ),
                 const SizedBox(height: AppSpacing.s),
                 Text(
-                  'Not in this class',
+                  _scope != null
+                      ? 'This student belongs to ${_wrongClassName ?? 'another class'}, not ${_scope!.name}.'
+                      : 'Not in this class',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppColors.warning(context),

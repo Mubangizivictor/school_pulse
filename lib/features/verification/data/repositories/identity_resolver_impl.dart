@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
@@ -68,17 +69,35 @@ class IdentityResolverImpl implements IdentityResolver {
     final result = await studentIdentityRepository.getStudentByUniqueId(code);
     return result.fold(
       Left.new,
-      (student) => Right(
-        student == null || (schoolId != null && student.schoolId != schoolId)
-            ? const UnresolvedResolvedIdentity(reason: 'unknown_credential')
-            : StudentResolvedIdentity(
-                id: student.id,
-                name: student.name,
-                studentCode: student.studentCode,
-                classId: student.classId,
-                photoUrl: student.photoUrl,
-              ),
-      ),
+      (student) {
+        debugPrint(
+          '[SchoolPulse:NFC] student lookup=${student == null ? 'missing' : 'found'}',
+        );
+        if (student == null) {
+          debugPrint('[SchoolPulse:NFC] final resolution=failed reason=unknown_credential');
+          return const Right(
+            UnresolvedResolvedIdentity(reason: 'unknown_credential'),
+          );
+        }
+        if (schoolId != null && student.schoolId != schoolId) {
+          debugPrint('[SchoolPulse:NFC] final resolution=failed reason=school_mismatch');
+          return const Right(
+            UnresolvedResolvedIdentity(reason: 'unknown_credential'),
+          );
+        }
+        debugPrint('[SchoolPulse:NFC] student=${student.name}');
+        debugPrint('[SchoolPulse:NFC] class=${student.classId}');
+        debugPrint('[SchoolPulse:NFC] final resolution=success');
+        return Right(
+          StudentResolvedIdentity(
+            id: student.id,
+            name: student.name,
+            studentCode: student.studentCode,
+            classId: student.classId,
+            photoUrl: student.photoUrl,
+          ),
+        );
+      },
     );
   }
 
@@ -181,9 +200,12 @@ class IdentityResolverImpl implements IdentityResolver {
     VerificationContext context,
   ) async {
     final schoolId = context.gate.schoolId;
+    debugPrint('[SchoolPulse:NFC] UID=$cardUid');
+    debugPrint('[SchoolPulse:NFC] school=$schoolId');
 
     final revoked = await localDataSource.findRevocation(cardUid, schoolId);
     if (revoked != null) {
+      debugPrint('[SchoolPulse:NFC] final resolution=failed reason=revoked_credential');
       return const Right(
         UnresolvedResolvedIdentity(reason: 'revoked_credential'),
       );
@@ -194,13 +216,24 @@ class IdentityResolverImpl implements IdentityResolver {
       schoolId,
       expectedType: 'nfc',
     );
-    return resolved.fold(Left.new, (cached) {
+    return resolved.fold((failure) {
+      debugPrint('[SchoolPulse:NFC] final resolution=failed reason=${failure.runtimeType}');
+      return Left(failure);
+    }, (cached) {
+      debugPrint(
+        '[SchoolPulse:NFC] remote credential=${cached == null ? 'missing' : 'found'}',
+      );
       if (cached == null) {
+        debugPrint('[SchoolPulse:NFC] final resolution=failed reason=unknown_credential');
         return const Right(
           UnresolvedResolvedIdentity(reason: 'unknown_credential'),
         );
       }
+      debugPrint('[SchoolPulse:NFC] credential type=${cached.credentialType}');
+      debugPrint('[SchoolPulse:NFC] identity type=${cached.identityType}');
+      debugPrint('[SchoolPulse:NFC] identity id=${cached.identityId}');
       if (cached.status != 'active') {
+        debugPrint('[SchoolPulse:NFC] final resolution=failed reason=revoked_credential');
         return const Right(
           UnresolvedResolvedIdentity(reason: 'revoked_credential'),
         );
@@ -226,6 +259,9 @@ class IdentityResolverImpl implements IdentityResolver {
     var cached = await localDataSource.findCredential(
       credentialValue,
       schoolId,
+    );
+    debugPrint(
+      '[SchoolPulse:NFC] local credential=${cached == null ? 'missing' : 'found'}',
     );
 
     // Never seen on this device - it may have been assigned/revoked on a
@@ -260,6 +296,20 @@ class IdentityResolverImpl implements IdentityResolver {
     return Right(cached);
   }
 
+  /// Accepts a Firestore [Timestamp], a [DateTime], an ISO-8601 [String], or
+  /// null, and always returns a usable [DateTime]. Cloud Functions write
+  /// `serverTimestamp()`, which Firestore hands back as a [Timestamp], not a
+  /// String - a bare `DateTime.tryParse(data[x] as String? ?? '')` throws a
+  /// type-cast exception on that shape, which was being swallowed by the
+  /// outer try/catch here and silently turning a valid, correctly-resolved
+  /// NFC card into `unknown_credential`.
+  DateTime _parseFirestoreDateTime(Object? value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+    return DateTime.now();
+  }
+
   Future<({CachedCredential? credential, bool isRevoked})>
   _fetchRemoteCredentialState(String cardUid, String schoolId) async {
     try {
@@ -275,9 +325,7 @@ class IdentityResolverImpl implements IdentityResolver {
           RevokedCredential(
             credentialValue: cardUid,
             schoolId: schoolId,
-            revokedAt:
-                DateTime.tryParse(data['revokedAt'] as String? ?? '') ??
-                DateTime.now(),
+            revokedAt: _parseFirestoreDateTime(data['revokedAt']),
             reason: data['reason'] as String? ?? 'revoked',
           ),
         );
@@ -300,17 +348,18 @@ class IdentityResolverImpl implements IdentityResolver {
         identityType: data['identityType'] as String,
         schoolId: schoolId,
         status: data['status'] as String? ?? 'active',
-        updatedAt:
-            DateTime.tryParse(data['updatedAt'] as String? ?? '') ??
-            DateTime.now(),
+        updatedAt: _parseFirestoreDateTime(data['updatedAt']),
         credentialVersion: data['credentialVersion'] as int? ?? 1,
       );
 
       await localDataSource.cacheCredential(credential);
       return (credential: credential, isRevoked: false);
-    } catch (_) {
+    } catch (e) {
       // Offline, or no Firestore doc reachable - fall through to
-      // "unknown", exactly the behavior before this fallback existed.
+      // "unknown", exactly the behavior before this fallback existed. Now
+      // logged rather than silently swallowed, so a real bug here (vs.
+      // genuine offline/missing-doc) is visible in development.
+      debugPrint('[SchoolPulse:NFC] remote credential fetch failed: $e');
       return (credential: null, isRevoked: false);
     }
   }
