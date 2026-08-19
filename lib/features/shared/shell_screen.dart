@@ -11,7 +11,6 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/institution/presentation/screens/institution_switcher_sheet.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_quick_add_sheet.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/app_role_session_cubit.dart';
 import 'package:school_pulse/features/auth/presentation/widgets/role_switcher_sheet.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
 
@@ -521,22 +520,12 @@ class StaffShell extends StatelessWidget {
               color: AppColors.background(context),
               child: Column(
                 children: [
-                  // Only these banners need the notch/status-bar inset - the
-                  // routed screen below is its own full Scaffold (with its
-                  // own AppBar/SafeArea), so wrapping the whole column would
-                  // double that padding under a status bar it already clears.
-                  SafeArea(
-                    bottom: false,
-                    child: Column(
-                      children: [
-                        const _SupportModeBanner(),
-                        if (isMobile &&
-                            _hasMultipleRoles(context) &&
-                            GoRouterState.of(context).uri.path != '/staff/hub')
-                          const _RoleBanner(),
-                      ],
-                    ),
-                  ),
+                  // Only needs the notch/status-bar inset - the routed
+                  // screen below is its own full Scaffold (with its own
+                  // AppBar/SafeArea), so wrapping the whole column would
+                  // double that padding under a status bar it already
+                  // clears.
+                  SafeArea(bottom: false, child: const _SupportModeBanner()),
                   Expanded(child: child),
                 ],
               ),
@@ -684,60 +673,6 @@ class _SupportModeBanner extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-/// Compact mobile-only row showing which responsibility the user is
-/// currently acting as, with a tap target to switch. Desktop/tablet gets
-/// the equivalent icon button in the NavigationRail instead (no room for a
-/// persistent banner there without disrupting existing layout).
-class _RoleBanner extends StatelessWidget {
-  const _RoleBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    final authState = context.watch<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) return const SizedBox.shrink();
-    final activeRole =
-        context.watch<AppRoleSessionCubit>().state ?? authState.user.role;
-
-    return Material(
-      color: AppColors.surfaceElevated(context),
-      child: InkWell(
-        onTap: () => RoleSwitcherSheet.show(context),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.s,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.badge_outlined,
-                size: 18,
-                color: AppColors.primary(context),
-              ),
-              const SizedBox(width: AppSpacing.s),
-              Expanded(
-                child: Text(
-                  UserRoleDisplay.name(activeRole),
-                  style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.textPrimary(context),
-                    fontWeight: FontWeight.w600,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Icon(
-                Icons.unfold_more_rounded,
-                size: 18,
-                color: AppColors.textMuted(context),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

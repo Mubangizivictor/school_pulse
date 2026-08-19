@@ -8,8 +8,11 @@ import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_ev
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_state.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/quick_access_prefs.dart';
 import 'package:school_pulse/features/admin/data/models/audit_log.dart';
+import 'package:school_pulse/core/user_roles.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/app_role_session_cubit.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/auth/presentation/widgets/role_switcher_sheet.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
 import 'package:school_pulse/features/branding/presentation/widgets/school_badge.dart';
@@ -98,6 +101,18 @@ class _DashboardHeader extends StatelessWidget {
         ? brandingState.branding
         : null;
 
+    final authState = context.watch<AuthBloc>().state;
+    final roles = authState is AuthAuthenticated
+        ? authState.user.roles
+        : const <UserRole>[];
+    final activeRole =
+        context.watch<AppRoleSessionCubit>().state ??
+        (roles.isNotEmpty ? roles.first : null);
+    final roleLabel = activeRole != null
+        ? UserRoleDisplay.name(activeRole)
+        : 'School Admin';
+    final canSwitchRoles = roles.length > 1;
+
     return SafeArea(
       bottom: false,
       child: Padding(
@@ -122,14 +137,39 @@ class _DashboardHeader extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'School Admin',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 19,
-                          fontWeight: FontWeight.w800,
-                          color: Theme.of(context).colorScheme.onSurface,
+                      InkWell(
+                        onTap: canSwitchRoles
+                            ? () => RoleSwitcherSheet.show(context)
+                            : null,
+                        borderRadius: BorderRadius.circular(6),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                roleLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w800,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                            if (canSwitchRoles) ...[
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.unfold_more_rounded,
+                                size: 18,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                       Text(
