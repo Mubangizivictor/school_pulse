@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 
-/// Matches the mockup's "Attendance Marked" card - big check circle, avatar,
-/// name/class/time/status rows, then Mark Another / Done buttons.
+/// Compact attendance result preview used after QR/NFC resolution.
+/// Normal successful scans auto-continue; manual controls remain available
+/// for duplicate/invalid exceptional states when needed.
 class ScanResultCard extends StatefulWidget {
   final bool isDuplicate;
   final bool isInvalid;
+  final bool autoContinue;
   final String? photoUrl;
   final String name;
   final String subtitle;
@@ -26,6 +28,7 @@ class ScanResultCard extends StatefulWidget {
     this.photoUrl,
     this.isDuplicate = false,
     this.isInvalid = false,
+    this.autoContinue = false,
   });
 
   @override
@@ -33,11 +36,6 @@ class ScanResultCard extends StatefulWidget {
 }
 
 class _ScanResultCardState extends State<ScanResultCard> {
-  // A cached photoUrl points at Firebase Storage - while offline (the
-  // expected state during QR/NFC attendance per the offline-first spec),
-  // NetworkImage fails to load but CircleAvatar's `child` is only shown when
-  // `backgroundImage` is null, so without this the avatar would render
-  // blank instead of falling back to the person icon.
   bool _photoFailed = false;
 
   @override
@@ -61,123 +59,154 @@ class _ScanResultCardState extends State<ScanResultCard> {
     final photoUrl = widget.photoUrl;
     final showPhoto = photoUrl != null && !_photoFailed;
 
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color.withValues(alpha: 0.15),
-              border: Border.all(color: color, width: 2),
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 82,
+              height: 82,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.withValues(alpha: 0.14),
+                border: Border.all(color: color, width: 2),
+              ),
+              child: Icon(
+                widget.isInvalid
+                    ? Icons.error_outline
+                    : widget.isDuplicate
+                    ? Icons.info_outline
+                    : Icons.check_rounded,
+                color: color,
+                size: 44,
+              ),
             ),
-            child: Icon(
-              widget.isInvalid
-                  ? Icons.error_outline
-                  : widget.isDuplicate
-                  ? Icons.info_outline
-                  : Icons.check,
-              color: color,
-              size: 48,
+            const SizedBox(height: AppSpacing.l),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 22,
+                color: AppColors.textPrimary(context),
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              color: AppColors.textPrimary(context),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          if (!widget.isInvalid)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.l),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundImage: showPhoto
-                          ? NetworkImage(photoUrl)
-                          : null,
-                      onBackgroundImageError: showPhoto
-                          ? (_, _) {
-                              // Offline device, no local cache of this
-                              // photo, or a bad URL - never leave the
-                              // avatar blank, fall back to the icon.
-                              if (mounted) {
-                                setState(() => _photoFailed = true);
+            const SizedBox(height: AppSpacing.l),
+            if (!widget.isInvalid)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.l),
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 42,
+                        backgroundImage: showPhoto ? NetworkImage(photoUrl) : null,
+                        onBackgroundImageError: showPhoto
+                            ? (_, _) {
+                                if (mounted) {
+                                  setState(() => _photoFailed = true);
+                                }
                               }
-                            }
-                          : null,
-                      child: showPhoto ? null : const Icon(Icons.person),
-                    ),
-                    const SizedBox(width: AppSpacing.m),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                            : null,
+                        child: showPhoto
+                            ? null
+                            : const Icon(Icons.person, size: 38),
+                      ),
+                      const SizedBox(height: AppSpacing.m),
+                      Text(
+                        widget.name,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 20,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.s),
+                      Text(
+                        widget.subtitle,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.textMuted(context),
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.m),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            widget.name,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          Text(
-                            widget.subtitle,
-                            style: TextStyle(
+                          if (widget.timeLabel.isNotEmpty) ...[
+                            Icon(
+                              Icons.schedule,
+                              size: 16,
                               color: AppColors.textMuted(context),
-                              fontSize: 12,
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Text(
-                                widget.timeLabel,
-                                style: TextStyle(
-                                  color: AppColors.textMuted(context),
-                                  fontSize: 12,
-                                ),
+                            const SizedBox(width: 4),
+                            Text(
+                              widget.timeLabel,
+                              style: TextStyle(
+                                color: AppColors.textMuted(context),
+                                fontSize: 13,
                               ),
-                              const SizedBox(width: AppSpacing.m),
-                              Text(
-                                widget.statusLabel,
-                                style: TextStyle(
-                                  color: color,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+                            ),
+                            const SizedBox(width: AppSpacing.l),
+                          ],
+                          Icon(Icons.check_circle, size: 17, color: color),
+                          const SizedBox(width: 4),
+                          Text(
+                            widget.statusLabel,
+                            style: TextStyle(
+                              color: color,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          const SizedBox(height: AppSpacing.x3l),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: widget.onScanAnother,
-              child: const Text('Mark Another'),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.m),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: widget.onDone,
-              child: const Text('Done'),
-            ),
-          ),
-        ],
+            const SizedBox(height: AppSpacing.l),
+            if (widget.autoContinue)
+              Column(
+                children: [
+                  SizedBox(
+                    width: 180,
+                    child: LinearProgressIndicator(
+                      minHeight: 4,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s),
+                  Text(
+                    'Waiting for the next student…',
+                    style: TextStyle(
+                      color: AppColors.textMuted(context),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              )
+            else ...[
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: widget.onScanAnother,
+                  child: const Text('Scan Another'),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.m),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: widget.onDone,
+                  child: const Text('Done'),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
