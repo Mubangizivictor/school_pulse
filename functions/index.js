@@ -2455,6 +2455,16 @@ exports.provisionStudentAccessCode = studentCredentialFunctions.provisionStudent
 exports.resetStudentPin = studentCredentialFunctions.resetStudentPin;
 exports.setStudentAccessCodeStatus = studentCredentialFunctions.setStudentAccessCodeStatus;
 
+// Staff ID card + NFC - mirrors the student credential functions above
+// against users/staff_identities instead of students/student_identities.
+// Kept in a separate file/export set rather than parametrizing the student
+// functions so a staff-side change can never regress the shipped student
+// flow. See functions/staff_credentials.js.
+const staffCredentialFunctions = require("./staff_credentials");
+exports.issueStaffIdentity = staffCredentialFunctions.issueStaffIdentity;
+exports.regenerateStaffQrCredential = staffCredentialFunctions.regenerateStaffQrCredential;
+exports.assignStaffNfcCredential = staffCredentialFunctions.assignStaffNfcCredential;
+
 const studentViewFunctions = require("./student_view");
 // Server-side relationship + permission resolver for reading a student's
 // data by section (identity/academic/finance/health/discipline/security) -

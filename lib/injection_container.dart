@@ -160,6 +160,10 @@ import 'package:school_pulse/features/student/presentation/bloc/admission_bloc.d
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
 import 'package:school_pulse/features/student_identity/data/repositories/student_identity_repository_impl.dart';
 import 'package:school_pulse/features/student_identity/presentation/bloc/student_identity_bloc.dart';
+import 'package:school_pulse/features/auth/domain/repositories/staff_identity_repository.dart';
+import 'package:school_pulse/features/auth/data/repositories/staff_identity_repository_impl.dart';
+import 'package:school_pulse/features/auth/domain/services/staff_nfc_credential_service.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/staff_identity_bloc.dart';
 import 'package:school_pulse/features/student_identity/domain/services/id_card_service.dart';
 import 'package:school_pulse/features/auth/domain/services/staff_id_card_service.dart';
 import 'package:school_pulse/features/student_identity/domain/services/id_generator_service.dart';
@@ -744,6 +748,23 @@ Future<void> init() async {
   // thrown a ProviderNotFoundException the moment anyone navigated to it.
   sl.registerFactory(
     () => StudentIdentityBloc(repository: sl(), nfcCredentialService: sl()),
+  );
+
+  // Staff Identity (ID card + NFC) - mirrors the student registrations
+  // above, minus the Isar offline cache split (admin-only, low-frequency
+  // lookups; see StaffIdentityRepositoryImpl's doc comment).
+  sl.registerLazySingleton<StaffIdentityRepository>(
+    () => StaffIdentityRepositoryImpl(
+      firestore: sl(),
+      functions: sl(),
+      verificationLocalDataSource: sl(),
+    ),
+  );
+  sl.registerLazySingleton(
+    () => StaffNfcCredentialService(nfcCredentialRepository: sl()),
+  );
+  sl.registerFactory(
+    () => StaffIdentityBloc(repository: sl(), nfcCredentialService: sl()),
   );
 
   // Features - Auth

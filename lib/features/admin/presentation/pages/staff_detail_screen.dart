@@ -6,10 +6,14 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/admin/presentation/add_staff_wizard/add_staff_wizard_controller.dart';
+import 'package:school_pulse/features/admin/presentation/pages/edit_staff_screen.dart';
+import 'package:school_pulse/features/admin/presentation/pages/staff_id_card_screen.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/data/models/user_model.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/staff_identity_bloc.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/role_assignment_cubit.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/role_assignment_state.dart';
@@ -36,11 +40,18 @@ class StaffDetailScreen extends StatefulWidget {
 class _StaffDetailScreenState extends State<StaffDetailScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  late Future<DocumentSnapshot<Map<String, dynamic>>> _userFuture;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadUser();
+  }
+
+  void _loadUser() {
+    _userFuture =
+        FirebaseFirestore.instance.collection('users').doc(widget.uid).get();
   }
 
   @override
@@ -53,49 +64,102 @@ class _StaffDetailScreenState extends State<StaffDetailScreen>
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => di.sl<RoleAssignmentCubit>(),
-      child: Scaffold(
-        backgroundColor: AppColors.background(context),
-        appBar: AdminAppBar(
-          title: 'Staff Profile',
-          bottom: TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(text: 'Profile'),
-              Tab(text: 'Roles & Responsibilities'),
-            ],
-          ),
-        ),
-        body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-          future: FirebaseFirestore.instance
-              .collection('users')
-              .doc(widget.uid)
-              .get(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: SchoolPulseLoader());
-            }
-            if (!snapshot.hasData || !snapshot.data!.exists) {
-              return const EmptyState(
-                icon: Icons.person_off_outlined,
-                title: 'Staff member not found',
-                message: 'This profile may have been removed.',
-              );
-            }
-            final user = UserModel.fromJson({
+      child: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        future: _userFuture,
+        builder: (context, snapshot) {
+          UserModel? user;
+          if (snapshot.connectionState == ConnectionState.done &&
+              snapshot.hasData &&
+              snapshot.data!.exists) {
+            user = UserModel.fromJson({
               ...snapshot.data!.data()!,
               'id': widget.uid,
             });
+          }
 
-            return TabBarView(
-              controller: _tabController,
-              children: [
-                _ProfileTab(user: user),
-                _RolesTab(staff: user),
-              ],
-            );
-          },
-        ),
+          return Scaffold(
+            backgroundColor: AppColors.background(context),
+            appBar: AdminAppBar(
+              title: 'Staff Profile',
+              actions: user == null
+                  ? null
+                  : [
+                      IconButton(
+                        icon: const Icon(Icons.badge_outlined),
+                        tooltip: 'Staff ID Card',
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider(
+                              create: (_) => di.sl<StaffIdentityBloc>(),
+                              child: StaffIdCardScreen(staff: user!),
+                            ),
+                          ),
+                        ),
+                      ),
+                      _EditStaffAction(
+                        user: user,
+                        onSaved: () => setState(_loadUser),
+                      ),
+                    ],
+              bottom: TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(text: 'Profile'),
+                  Tab(text: 'Roles & Responsibilities'),
+                ],
+              ),
+            ),
+            body: Builder(
+              builder: (context) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Center(child: SchoolPulseLoader());
+                }
+                if (user == null) {
+                  return const EmptyState(
+                    icon: Icons.person_off_outlined,
+                    title: 'Staff member not found',
+                    message: 'This profile may have been removed.',
+                  );
+                }
+                return TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _ProfileTab(user: user),
+                    _RolesTab(staff: user),
+                  ],
+                );
+              },
+            ),
+          );
+        },
       ),
+    );
+  }
+}
+
+/// Edit action shown in Profile-tab context, gated to the same admin
+/// roles allowed to submit staff changes via the Add Staff wizard.
+class _EditStaffAction extends StatelessWidget {
+  const _EditStaffAction({required this.user, required this.onSaved});
+  final UserModel user;
+  final VoidCallback onSaved;
+
+  @override
+  Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    if (authState is! AuthAuthenticated ||
+        !AddStaffWizardController.canSubmit(authState.user.roles)) {
+      return const SizedBox.shrink();
+    }
+    return IconButton(
+      icon: const Icon(Icons.edit_outlined),
+      tooltip: 'Edit Staff',
+      onPressed: () async {
+        final saved = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(builder: (_) => EditStaffScreen(user: user)),
+        );
+        if (saved == true) onSaved();
+      },
     );
   }
 }
