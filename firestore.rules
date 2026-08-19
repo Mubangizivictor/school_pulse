@@ -62,14 +62,100 @@ service cloud.firestore {
       return isParent() && studentId in myUser().studentIds;
     }
 
+    // Real tenant-ownership check (as opposed to most collections below,
+    // which rely on client-side `where('schoolId', ...)` filtering only) -
+    // used by the appointments module's collections so a signed-in user
+    // from one school can never read/write another school's bookings even
+    // if they guess a document id.
     function isSameSchool(schoolId) {
       return isSignedIn() && myUser().schoolId == schoolId;
+    }
+
+    // Subscription write-lock. accessMode is server-authoritative (written
+    // by payment approval/rejection and the hourly lifecycle sweep in
+    // public_functions/). The two-arg get() defaults to 'full' when the
+    // field is absent, so a school that predates these Cloud Functions - or
+    // simply hasn't been touched by one yet since this rule deployed - is
+    // never locked out by this rule alone. superAdmin (the SaaS owner
+    // console) always bypasses this: billing state must never prevent the
+    // platform owner from managing a tenant.
+    function schoolAccessMode(schoolId) {
+      return get(/databases/$(database)/documents/schools/$(schoolId)).data.get('accessMode', 'full');
+    }
+
+    function schoolCanWrite(schoolId) {
+      return isSuperAdmin() ||
+        (schoolAccessMode(schoolId) != 'readOnly' && schoolAccessMode(schoolId) != 'blocked');
+    }
+
+    // Patron (boys') / Matron (girls') boarding modules are gender-scoped
+    // by client-side query convention only (`_kGender` in each module's own
+    // data source) - a Patron account using the Firestore SDK directly could
+    // otherwise read/write the opposite gender's boarding records. This
+    // enforces that same scoping server-side for the boarding-domain
+    // collections that carry a `gender` field directly (dormitories,
+    // welfare_records), while schoolAdmin/headTeacher/director keep full
+    // cross-gender access since they legitimately oversee both sides.
+    // Deliberately NOT applied to /students - that collection is read/
+    // written broadly by every staff module (teachers, bursar, etc.), and a
+    // gender gate there would incorrectly restrict non-boarding staff whose
+    // account happens to also hold a boardingPatron/boardingMatron role.
+    function canAccessBoardingGender(gender) {
+      return hasAnyRole(['schoolAdmin', 'headTeacher', 'director']) ||
+        (hasAnyRole(['boardingPatron']) && gender == 'Male') ||
+        (hasAnyRole(['boardingMatron']) && gender == 'Female');
+    }
+
+    function canManageAppointments() {
+      return isStaff() && (
+        hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead', 'receptionist', 'securityHead']) ||
+        (('permissions' in myUser()) && 'appointments.manage' in myUser().permissions)
+      );
+    }
+
+    // Phase 3.5: tenant-lock hardening. A Structure record's schoolId is
+    // its ownership boundary - once created, no client write may move it to
+    // a different school by changing this field, even a staff member who is
+    // same-school on both the before and after values (an update touching
+    // `resource.data.schoolId` requires the two to already match, and a
+    // request that changes it therefore always resolves to a
+    // cross-tenant re-parenting attempt). There is deliberately no
+    // client-side transfer path: a record does not move between schools by
+    // editing this field, full stop. If that's ever a real product need, it
+    // goes through a Cloud Function with the Admin SDK (bypasses rules) and
+    // an audit log entry - not a rule exception.
+    function schoolIdUnchanged() {
+      return request.resource.data.schoolId == resource.data.schoolId;
+    }
+
+    // Institution Context Phase 1: a signed-in user has an active
+    // membership in institutionId, either as their home schoolId or via an
+    // additive institution_memberships doc (multi-institution switching).
+    function isActiveMembership(institutionId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/institution_memberships/$(request.auth.uid + '_' + institutionId)) &&
+        get(/databases/$(database)/documents/institution_memberships/$(request.auth.uid + '_' + institutionId)).data.status == 'active';
     }
 
     function isMe(studentId) {
       return isStudent() && myUser().studentId == studentId;
     }
 
+    // Users can read their own profile, or any profile if they're staff
+    // (e.g. admin user management).
+    //
+    // Self-service create is only for parents (first phone sign-in) - staff
+    // accounts are created server-side by the createStaffAccount Cloud
+    // Function via the Admin SDK, which bypasses these rules entirely. This
+    // restriction stops a client from self-assigning a staff role by
+    // calling Firebase Auth directly and writing its own profile doc.
+    //
+    // The only client updates ever allowed are: a signed-in user flipping
+    // their own mustChangePassword flag to false (after setting a new
+    // password to replace an admin-issued temporary one), or a parent
+    // growing their own studentIds list (redeeming another family access
+    // code for a sibling). Nothing else (role, shrinking studentIds, etc.)
+    // is client-editable.
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isStaff());
       allow create: if isSignedIn() && request.auth.uid == uid && request.resource.data.role == 'parent';
@@ -79,27 +165,60 @@ service cloud.firestore {
            request.resource.data.mustChangePassword == false) ||
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentIds']) &&
            resource.data.role == 'parent' &&
-           request.resource.data.studentIds.size() > resource.data.studentIds.size())
+           request.resource.data.studentIds.size() > resource.data.studentIds.size()) ||
+          // Two-Factor Auth toggle in Security & Privacy - a user may only
+          // flip their own mfaEnabled flag, nothing else in the same write.
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mfaEnabled'])) ||
+          // Self-service profile edits cannot alter identity, role, or school.
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'phoneNumber', 'photoUrl'
+          ]))
         )) ||
-        (isStaff() && resource.data.role != 'parent')
+        // Admin console (User Management: edit details, toggle active/
+        // inactive, reassign roles) manages OTHER staff profiles - staff
+        // accounts only, never a parent's own profile. Restricted to
+        // role-admin staff (not blanket isStaff()) since this path can
+        // write role/roles - any signed-in staff member editing any other
+        // staff member's roles would be a privilege-escalation path.
+        (hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+         resource.data.role != 'parent' &&
+         isSameSchool(resource.data.schoolId) &&
+         request.resource.data.schoolId == resource.data.schoolId)
       );
-      allow delete: if isStaff() && resource.data.role != 'parent';
+      // "Delete Account" in User Management removes the Firestore profile
+      // (the paired Firebase Auth account persists - removing that needs
+      // the Admin SDK). Role-admin staff only, same reasoning as update above.
+      // Deputy Head is deliberately excluded here, mirroring ADMIN_ROLES in
+      // functions/index.js (createStaffAccount) - Deputy Head shares the
+      // admin console UI but was never granted staff-invitation authority,
+      // and editing another staff member's role is equally sensitive.
+      allow delete: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+        resource.data.role != 'parent' &&
+        isSameSchool(resource.data.schoolId);
     }
 
+    // Sanitized directory used by parent-facing contact actions. It contains
+    // no email, phone, token, or account-management fields from users/{uid}.
     match /school_contacts/{uid} {
       allow read: if isSameSchool(resource.data.schoolId);
       allow create: if hasAnyRole([
           'schoolAdmin', 'headTeacher', 'director'
         ]) && isSameSchool(request.resource.data.schoolId) &&
         request.resource.data.keys().hasOnly([
-          'name', 'role', 'roles', 'schoolId', 'isActive'
-        ]);
+          'name', 'role', 'roles', 'schoolId', 'isActive', 'phone'
+        ]) ||
+        (isSignedIn() && request.auth.uid == uid &&
+          isSameSchool(resource.data.schoolId) &&
+          request.resource.data.schoolId == resource.data.schoolId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'phone'
+          ]));
       allow update: if hasAnyRole([
           'schoolAdmin', 'headTeacher', 'director'
         ]) && isSameSchool(resource.data.schoolId) &&
         request.resource.data.schoolId == resource.data.schoolId &&
         request.resource.data.keys().hasOnly([
-          'name', 'role', 'roles', 'schoolId', 'isActive'
+          'name', 'role', 'roles', 'schoolId', 'isActive', 'phone'
         ]);
       allow delete: if hasAnyRole([
           'schoolAdmin', 'headTeacher', 'director'
@@ -199,51 +318,187 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+
+    // Family access codes link one code to one or more students (siblings).
+    // A parent must be able to resolve a code before they've signed in, so
+    // direct-by-ID reads are public - but the collection can't be listed or
+    // enumerated without already knowing a code. Only staff can create/
+    // regenerate codes, and only in their own school. The schoolId is
+    // immutable after creation so a code cannot be reassigned to another
+    // tenant by an update.
     match /parent_access_codes/{code} {
       allow get: if true;
-      allow list: if isStaff();
-      allow write: if isStaff();
+      allow list: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
+    // Pre-login students look themselves up by code before they have a
+    // session, same as parent_access_codes. All mutations (provision, PIN
+    // reset, enable/disable) now go exclusively through
+    // provisionStudentAccessCode/resetStudentPin/setStudentAccessCodeStatus
+    // (functions/student_credentials.js) so code entropy and PIN clearing
+    // never trust the client - this supersedes the original direct-write
+    // design below with a server-only one; direct writes are denied.
     match /student_access_codes/{code} {
-      // Pre-login students look themselves up by code before they have a
-      // session, same as parent_access_codes. Admin can list/query by
-      // studentId for the Portal Codes screen. All mutations (provision,
-      // PIN reset, enable/disable) go exclusively through
-      // provisionStudentAccessCode/resetStudentPin/setStudentAccessCodeStatus
-      // (functions/student_credentials.js) so code entropy and PIN clearing
-      // never trust the client - direct writes are denied here.
       allow get: if true;
       allow list: if isStaff() && isSameSchool(resource.data.schoolId);
       allow write: if false;
     }
 
-    match /students/{studentId} {
-      // isStaff() alone carries no tenant scope - without isSameSchool here,
-      // any staff account (regardless of school) could read/write any
-      // student document by id. Direct client writes are additionally
-      // narrowed to updates only: creation goes through
-      // createStudentWithCapacityCheck (functions/student_capacity.js),
-      // which enforces the subscription seat cap the Admin SDK write path
-      // would otherwise bypass.
-      allow read: if (isStaff() && isSameSchool(resource.data.schoolId)) ||
-        isParentOf(studentId) || isMe(studentId);
+    // Students are readable by any staff member, or by the parent(s)
+    // linked to that student via users/{uid}.studentIds, or the student
+    // themselves.
+    // Phase 4 security gate: this collection had no rule block at all -
+    // every read/write was default-denied, so the existing admission
+    // pipeline (submit -> review -> enroll, staff-only per the router's
+    // role gate on /admissions/new) was non-functional in production.
+    // Staff-only throughout since applicants have no users/{uid} account
+    // yet at this stage - admission is always staff-mediated today.
+    match /admission_applications/{applicationId} {
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
-        isSameSchool(request.resource.data.schoolId);
-      allow create, delete: if false;
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if false;
     }
 
+    match /students/{studentId} {
+      // Every read is tenant-scoped. A staff member from school A must not
+      // be able to fetch a guessed student id from school B.
+      allow read: if isSameSchool(resource.data.schoolId) &&
+        (isStaff() || isParentOf(studentId) || isMe(studentId));
+      // Phase 4 security gate: previously any staff account from any
+      // school could write any other school's student doc if they knew
+      // or guessed the id - isStaff() alone never checked tenancy. create
+      // and update now both require same-school, and update additionally
+      // locks schoolId so a doc can never be re-parented to another
+      // school by editing this field.
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolCanWrite(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        schoolCanWrite(resource.data.schoolId);
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
+    }
+
+    // QR/NFC identity lookup for ID cards - StudentIdentityRepository
+    // queries this by uniqueSystemId before reading the /students/{id} doc
+    // it references. Now carries schoolId (backfilled going forward as
+    // records are regenerated) so it can use the same isSameSchool +
+    // immutable-tenant pattern as /students/{studentId} above, closing the
+    // cross-tenant read/write hole that existed while this had no tenancy
+    // check at all.
+    match /student_identities/{identityId} {
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if false;
+    }
+
+    // Phase 4: real parent<->student link, replacing the bare
+    // studentIds array (still kept in place elsewhere for backward
+    // compatibility) with a per-relationship record that can carry
+    // metadata, be locked, and be reallocated with a reason and full
+    // history. Ordinary parents/students never get create/update here -
+    // a relationship is admin-created or reallocated only, never
+    // self-service, per the "parents must not publicly link themselves to
+    // students" requirement.
+    match /parent_student_relationships/{relationshipId} {
+      allow read: if isSameSchool(resource.data.schoolId) && (
+        hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) ||
+        (isParent() && resource.data.userId == request.auth.uid) ||
+        isMe(resource.data.studentId)
+      );
+      allow create: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+        isSameSchool(request.resource.data.schoolId) &&
+        request.resource.data.status == 'active';
+      // Reallocation only: schoolId/studentId are permanently locked (a
+      // relationship never moves to a different school or student -
+      // reallocation always creates a new doc instead), status may only
+      // move active -> superseded/revoked, never back, and a
+      // supersessionReason is mandatory.
+      allow update: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+        isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        request.resource.data.studentId == resource.data.studentId &&
+        resource.data.status == 'active' &&
+        request.resource.data.status in ['superseded', 'revoked'] &&
+        request.resource.data.keys().hasAll(['supersessionReason']) &&
+        request.resource.data.supersessionReason is string &&
+        request.resource.data.supersessionReason.size() > 0;
+      allow delete: if false;
+    }
+
+    // Phase 4: placement history. students/{id}.classId/streamId/
+    // academicYearId stay the "current" pointer every existing module
+    // already queries - this collection only records a snapshot each time
+    // that placement actually changes, so a promotion/transfer no longer
+    // silently overwrites history.
+    match /student_enrolments/{enrolmentId} {
+      allow read: if isSameSchool(resource.data.schoolId) && (
+        isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId)
+      );
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      // Only closing out a record (status/endDate) is allowed - the
+      // placement it recorded is never rewritten after the fact.
+      allow update: if isStaff() &&
+        isSameSchool(resource.data.schoolId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'endDate']) &&
+        request.resource.data.classId == resource.data.classId &&
+        request.resource.data.get('streamId', null) == resource.data.get('streamId', null) &&
+        request.resource.data.academicYearId == resource.data.academicYearId;
+      allow delete: if false;
+    }
+
+    // Phase 4: institution-configurable guardian-linking policy. Doc id is
+    // the schoolId itself. Any signed-in same-school user may read it
+    // (parents need to know the limit before attempting to add a
+    // guardian); only top-tier admins may change it.
+    match /people_policies/{schoolId} {
+      allow read: if isSameSchool(schoolId);
+      allow write: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) && isSameSchool(schoolId);
+    }
+
+    // Per-student records: parents can read only their own children's
+    // records; staff can read and write everything. No client writes for
+    // parents or students.
     function isStudentRecordReadable() {
       return isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
+    }
+
+    // Cross-references the linked student's own schoolId for records that
+    // carry a studentId but no schoolId field of their own (discipline
+    // incidents, counseling sessions) - same firestore.get() pattern used
+    // for storage.rules' student documents. isStudentRecordReadable() alone
+    // never checked tenancy, so any staff member at any school could read
+    // every school's discipline/counseling records.
+    function isSameSchoolAsStudent(studentId) {
+      return isSameSchool(
+        get(/databases/$(database)/documents/students/$(studentId)).data.schoolId
+      );
     }
 
     match /academic_records/{docId} {
       allow read: if isStudentRecordReadable();
       allow write: if isStaff();
     }
+    // Phase 5 security gate: previously any staff/parent/self with
+    // isStudentRecordReadable() could read this doc regardless of school,
+    // and any staff account from any school could write it - isStaff()
+    // alone never checked tenancy. schoolId is now required on both sides
+    // and locked on update.
     match /attendance_records/{docId} {
-      allow read: if isStudentRecordReadable();
-      allow write: if isStaff();
+      allow read: if isStudentRecordReadable() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolCanWrite(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        schoolCanWrite(resource.data.schoolId);
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /fees/{docId} {
       allow read: if isStudentRecordReadable();
@@ -251,6 +506,8 @@ service cloud.firestore {
     }
     match /payments/{docId} {
       allow read: if isStudentRecordReadable();
+      // Parents may record a new payment for their own child; only staff
+      // may modify/delete existing payment history.
       allow create: if isStaff() || isParentOf(request.resource.data.studentId);
       allow update, delete: if isStaff();
     }
@@ -259,6 +516,9 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
+    // School-scoped clinical records. Teachers and unrelated operational
+    // roles cannot browse medical information. Parents/students receive
+    // read-only access to records for their own learner account.
     match /health_profiles/{docId} {
       allow read: if isSameSchool(resource.data.schoolId) && (
         canManageClinicalRecords() || isParentOf(resource.data.studentId) ||
@@ -347,47 +607,77 @@ service cloud.firestore {
 
     match /welfare_records/{docId} {
       allow read: if isSameSchool(resource.data.schoolId) && (
-        hasAnyRole(['boardingMatron', 'boardingPatron', 'schoolAdmin', 'headTeacher']) ||
+        canAccessBoardingGender(resource.data.get('gender', null)) ||
         (resource.data.isPrivate == false && (
           hasAnyRole(['nurse']) || isParentOf(resource.data.studentId) ||
           isMe(resource.data.studentId)
         ))
       );
-      allow create: if hasAnyRole(['boardingMatron', 'boardingPatron']) &&
+      allow create: if canAccessBoardingGender(request.resource.data.get('gender', null)) &&
         isSameSchool(request.resource.data.schoolId);
-      allow update: if hasAnyRole(['boardingMatron', 'boardingPatron']) &&
+      allow update: if canAccessBoardingGender(resource.data.get('gender', null)) &&
         isSameSchool(resource.data.schoolId) &&
         request.resource.data.schoolId == resource.data.schoolId;
       allow delete: if false;
     }
 
+    // ---- Patron (boys') / Matron (girls') boarding modules -------------
+    // Shared collections, gender-scoped by a `gender` field on each doc.
+    // Boarding roll-call. Distinct from the generic `attendance` collection
+    // used by the classroom attendance engine.
+    // Phase 5 security gate: previously any hasAnyRole()-qualifying staff
+    // member could read/write ANY school's boarding roll call - no
+    // isSameSchool check existed, and the write path (matron/patron
+    // datasources) never even set a schoolId field on these docs. Both are
+    // now required. The write rule keeps hasAnyRole as an unconditional
+    // OR-branch (every current boarding staff member's access is preserved
+    // with zero migration) and adds a second, additive OR-branch for the
+    // assignment-scoped path once staff_role_assignments rows with a
+    // 'patron'/'matron' responsibility exist and roleAssignmentId/
+    // academicYearId are written by the client - not exercised by any
+    // write today, purely forward-compatible.
     match /boarding_attendance/{docId} {
-      allow read: if isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
-      allow write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow read: if isSameSchool(resource.data.schoolId) &&
+        (isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId));
+      allow write: if isSameSchool(request.resource.data.schoolId) && (
+        hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']) ||
+        (request.resource.data.keys().hasAll(['roleAssignmentId', 'academicYearId']) &&
+          holdsAssignment(request.resource.data.schoolId, request.resource.data.roleAssignmentId,
+            null, null, request.resource.data.academicYearId) &&
+          grantsPermission(request.resource.data.schoolId, request.resource.data.roleAssignmentId,
+            'attendance.boarding.scan'))
+      );
     }
+    // Boarding-specific discipline incidents (separate from the general
+    // Guidance & Discipline module's discipline_incidents collection).
+    // isPrivate defaults true in the app - parents only ever see a doc once
+    // a patron explicitly discloses it by setting isPrivate: false.
     match /boarding_discipline/{docId} {
       allow read: if isStaff() || (
         resource.data.isPrivate == false &&
         (isParentOf(resource.data.studentId) || isMe(resource.data.studentId))
       );
-      allow write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
     match /boarding_announcements/{docId} {
       allow read: if isSignedIn();
-      allow write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
     match /boarding_leave_requests/{docId} {
       allow read: if isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
-      allow write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
+    // Bed-to-bed / dorm-to-dorm move log, kept separately from the
+    // per-dormitory `beds` subcollection so history survives a bed deletion.
     match /bed_transfers/{docId} {
-      allow read, write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow read, write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
+    // Sensitive - counseling referrals are staff-only, never parent-visible.
     match /boarding_counseling_referrals/{docId} {
-      allow read, write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow read, write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
     match /boarding_behaviour_observations/{docId} {
-      allow read, write: if hasAnyRole(['boardingPatron', 'schoolAdmin', 'headTeacher', 'director']);
+      allow read, write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
     }
 
     match /library_books/{docId} {
@@ -395,116 +685,169 @@ service cloud.firestore {
       allow write: if isStaff();
     }
     match /discipline_incidents/{docId} {
-      allow read: if isStudentRecordReadable();
-      allow write: if isStaff();
+      allow read: if isStudentRecordReadable() && isSameSchoolAsStudent(resource.data.studentId);
+      allow create: if isStaff() && isSameSchoolAsStudent(request.resource.data.studentId);
+      allow update, delete: if isStaff() && isSameSchoolAsStudent(resource.data.studentId);
     }
     match /transport/{docId} {
       allow read: if isStudentRecordReadable();
       allow write: if isStaff();
     }
 
+    // Attendance collection (new). Phase 5 security gate: write had no
+    // isSameSchool check at all; read likewise let any staff/parent/self
+    // reach a doc regardless of school.
     match /attendance/{docId} {
-      allow read: if isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
-      allow write: if isStaff();
-      // Legacy/unused nested path - no current reader/writer found in
-      // functions/ or lib/ (all real student writes go through the
-      // top-level /students/{studentId} match above). Tenant-scoped to
-      // match it rather than left wide open.
+      allow read: if isSameSchool(resource.data.schoolId) &&
+        (isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
+
+      // Matron/Patron night roll call: attendance/{date}/students/{studentId}.
+      // schoolId lives on the parent attendance/{date} doc, not this
+      // subdocument, so scope is checked via a lookup.
       match /students/{studentId} {
         allow read, write: if isStaff() &&
-          isSameSchool(get(/databases/$(database)/documents/students/$(studentId)).data.schoolId);
+          isSameSchool(get(/databases/$(database)/documents/attendance/$(docId)).data.schoolId);
       }
     }
 
+    // Attendance logs/summaries. Phase 5 security gate: no isSameSchool
+    // check existed on either read or write.
     match /attendance_logs/{docId} {
-      allow read: if isStaff();
-      allow write: if isStaff();
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
+    // School statistics for Dean/Admin dashboards
     match /school_stats/{docId} {
-      allow read: if isStaff();
-      allow write: if isStaff();
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
+    // Per-user FCM device tokens - staff need read access so
+    // NotificationService.sendDirectNotification can resolve another
+    // user's tokens when pushing a direct alert; only the owner may write.
     match /users/{uid}/tokens/{tokenId} {
+      // Any signed-in user can read another user's tokens - needed so
+      // sendDirectNotification can look up a message recipient's tokens
+      // regardless of whether the sender is staff or a parent. Tokens are
+      // opaque FCM registration ids; only the Admin SDK (Cloud Functions)
+      // can actually use one to send a push, so this isn't a write/spoof
+      // vector, only a lookup.
       allow read: if isSignedIn();
       allow write: if isSignedIn() && request.auth.uid == uid;
     }
 
+    // Broadcast/direct notifications (NotificationService) and per-student
+    // alerts (health/academic/discipline) share this collection. The
+    // userId clause covers sendDirectNotification's 1:1 messages (staff-to-
+    // staff and staff-to-parent both work now that loginParent() gives
+    // parents a real Firebase Auth session via a Cloud Function-minted
+    // custom token). The targets clause covers BroadcastSmsScreen
+    // broadcasts: myUser().groups is computed at login (loginParent Cloud
+    // Function) from "Parents" plus "Class:<their children's classes>".
     match /alerts/{alertId} {
-      allow read: if isStaff() ||
+      allow read: if (isStaff() && isSameSchool(resource.data.schoolId)) ||
         (resource.data.studentId != null && (isParentOf(resource.data.studentId) || isMe(resource.data.studentId))) ||
         (resource.data.userId != null && isSignedIn() && resource.data.userId == request.auth.uid) ||
         (resource.data.targets is list && isParent() && resource.data.targets.hasAny(myUser().groups));
-      allow create: if isStaff() ||
+      // Staff can create any alert (broadcast, per-student, or 1:1 direct
+      // message). Parents may only create a 1:1 direct message to someone
+      // else - never a broadcast (no `targets`) and never a `studentId`
+      // (which would let them CC an unrelated third parent into the
+      // conversation via the studentId read clause above).
+      allow create: if (isStaff() && isSameSchool(request.resource.data.schoolId)) ||
         (isParent() &&
          request.resource.data.userId is string &&
          request.resource.data.userId != request.auth.uid &&
          !('targets' in request.resource.data) &&
-         !('studentId' in request.resource.data));
-      allow update: if isStaff() ||
+         !('studentId' in request.resource.data) &&
+         isSameSchool(request.resource.data.schoolId));
+      // Marking an alert as read only ever touches the `readBy` array -
+      // safe for any signed-in user to do on any alert, staff or parent.
+      allow update: if (isStaff() && isSameSchool(resource.data.schoolId)) ||
         (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']));
-      allow delete: if isStaff();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
-    match /visitors/{id} {
-      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-    }
-    match /appointments/{id} {
-      allow read, write: if isStaff();
-    }
-
+    // Appointments & Meeting Management module. Real schoolId ownership is enforced via
+    // isSameSchool() rather than relying on client-side query filters.
     match /appointment_types/{id} {
-      allow read: if isSignedIn();
+      allow read: if isSameSchool(resource.data.schoolId);
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
+    // Keyed by the staff member's own uid. Any same-school signed-in user
+    // can read (so parents can compute booking slots); only the staff
+    // member themselves
+    // or an admin-console role can write it.
     match /staff_availability/{staffId} {
-      allow read: if isSignedIn();
-      allow write: if isStaff() && (
+      allow read: if isSameSchool(resource.data.schoolId);
+      allow write: if isStaff() && isSameSchool(request.resource.data.schoolId) && (
         request.auth.uid == staffId ||
         myRole() in ['schoolAdmin', 'director', 'headTeacher', 'deputyHead']
       );
     }
     match /meeting_appointments/{id} {
-      allow read: if isStaff() || (isParent() && resource.data.requesterId == request.auth.uid);
-      allow create: if isSignedIn() &&
-        isSameSchool(request.resource.data.schoolId) &&
-        request.resource.data.requesterId == request.auth.uid;
-      allow update: if (isStaff() && isSameSchool(resource.data.schoolId)) || (
+      allow read: if isSameSchool(resource.data.schoolId) && (isStaff() || (isParent() && resource.data.requesterId == request.auth.uid));
+      allow create: if canManageAppointments() &&
+        isSameSchool(request.resource.data.schoolId);
+      // Staff (approve/reject/reschedule/check-in/check-out/complete) can
+      // update any field; the requesting parent can only ever flip status
+      // (e.g. to cancel their own request) - never rewrite host, time, or
+      // response fields.
+      allow update: if (canManageAppointments() && isSameSchool(resource.data.schoolId)) || (
         isParent() && resource.data.requesterId == request.auth.uid &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'respondedBy', 'responseNote'])
       );
-      allow delete: if false;
+      allow delete: if canManageAppointments() && isSameSchool(resource.data.schoolId);
+
+      // Confidential meeting outcomes/remarks - staff only, never the
+      // parent who requested the meeting.
       match /private_notes/{noteId} {
         allow read, write: if isStaff();
       }
     }
 
+    // Assessment, Marks Entry & Report Card Engine - nested under
+    // schools/{schoolId} like biometrics/branding/appointments, with real
+    // tenant isolation via isSameSchool() rather than client-side filtering.
+    // Marks are staff-only (teacher entry, dean/headteacher moderation) -
+    // parents/students never read raw marks, only the aggregated,
+    // published reportCards doc for their own child.
     match /schools/{schoolId}/assessmentTypes/{id} {
       allow read: if isSameSchool(schoolId);
       allow write: if isStaff() && isSameSchool(schoolId);
     }
-    match /schools/{schoolId}/gradingSystems/{id} {
-      allow read: if isSameSchool(schoolId);
-      allow write: if isStaff() && isSameSchool(schoolId);
-    }
+    // Grading system configuration lives at the top-level
+    // structure_grading_systems/grade_bands collections (see below), not
+    // nested under schools/{schoolId} - this nested path was never written
+    // by any live code path and has been removed as dead configuration.
     match /schools/{schoolId}/assessmentMarks/{id} {
-      allow read, write: if isStaff() && isSameSchool(schoolId);
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow write: if isStaff() && isSameSchool(schoolId) && schoolCanWrite(schoolId);
       match /auditLog/{entryId} {
         allow read: if isStaff() && isSameSchool(schoolId);
-        allow create: if isStaff() && isSameSchool(schoolId);
+        allow create: if isStaff() && isSameSchool(schoolId) && schoolCanWrite(schoolId);
         allow update, delete: if false;
       }
     }
     match /schools/{schoolId}/reportCards/{id} {
       allow read: if (isStaff() && isSameSchool(schoolId)) ||
         isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
-      allow write: if isStaff() && isSameSchool(schoolId);
+      allow write: if isStaff() && isSameSchool(schoolId) && schoolCanWrite(schoolId);
       match /auditLog/{entryId} {
         allow read: if isStaff() && isSameSchool(schoolId);
-        allow create: if isStaff() && isSameSchool(schoolId);
+        allow create: if isStaff() && isSameSchool(schoolId) && schoolCanWrite(schoolId);
         allow update, delete: if false;
       }
     }
@@ -519,17 +862,28 @@ service cloud.firestore {
       allow read: if isSameSchool(schoolId);
       allow write: if isStaff() && isSameSchool(schoolId);
     }
+    // QR verification lookup - public, read-only, and must never contain
+    // PII: only a report/verification reference, checked against
+    // reportCards server-side by the verification screen.
     match /schools/{schoolId}/reportVerifications/{code} {
       allow get: if true;
       allow list: if false;
       allow write: if isStaff() && isSameSchool(schoolId);
     }
 
+    // Security Operations & Gate Management - gates, student/staff
+    // movements, incidents, emergencies, patrols, lost & found, and pickup
+    // authorizations. Real isSameSchool() tenant isolation (not just
+    // isStaff()) since this is safety-critical data, and
+    // pickup_authorizations is read client-side via a collectionGroup query
+    // that spans every school.
     match /schools/{schoolId}/gates/{id} {
       allow read: if isSameSchool(schoolId);
       allow write: if isSameSchool(schoolId) &&
         hasAnyRole(['securityHead', 'gatekeeper', 'schoolAdmin', 'director', 'headTeacher']);
     }
+    // Movement logs are an append-only audit trail - never editable or
+    // deletable by a client, even a staff one, once written.
     match /schools/{schoolId}/student_movements/{id} {
       allow read: if (isStaff() && isSameSchool(schoolId)) ||
         isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
@@ -543,6 +897,22 @@ service cloud.firestore {
     match /schools/{schoolId}/security_incidents/{id} {
       allow read, write: if isStaff() && isSameSchool(schoolId);
     }
+    // GateOpsRemoteDataSourceImpl has read/written these two paths since the
+    // gate_ops rebuild shipped, but no match block existed for either -
+    // every visitor check-in/out and movement-event write was silently
+    // rejected by Firestore's default-deny (the Gatekeeper's visitor desk
+    // screen is the one live gate_ops UI, so this broke it end-to-end).
+    // personId on a movement event may be a studentId (gate entry/exit),
+    // hence the parent/self read branch, matching student_movements above.
+    match /schools/{schoolId}/movement_events/{id} {
+      allow read: if (isStaff() && isSameSchool(schoolId)) ||
+        isParentOf(resource.data.personId) || isMe(resource.data.personId);
+      allow create: if isStaff() && isSameSchool(schoolId);
+      allow update, delete: if false;
+    }
+    match /schools/{schoolId}/visitors/{id} {
+      allow read, write: if isStaff() && isSameSchool(schoolId);
+    }
     match /schools/{schoolId}/emergency_events/{id} {
       allow read, write: if isStaff() && isSameSchool(schoolId);
     }
@@ -552,10 +922,19 @@ service cloud.firestore {
     match /schools/{schoolId}/lost_and_found/{id} {
       allow read, write: if isStaff() && isSameSchool(schoolId);
     }
+    // Parents may read their own child's authorized-pickup list (surfaced
+    // in the parent app); only staff can create/edit entries.
     match /schools/{schoolId}/pickup_authorizations/{id} {
       allow read: if (isStaff() && isSameSchool(schoolId)) || isParentOf(resource.data.studentId);
       allow write: if isStaff() && isSameSchool(schoolId);
     }
+    // getPickupAuthorizations() reads via collectionGroup('pickup_authorizations')
+    // (it needs to look up a student's authorized pickup list without
+    // already knowing their schoolId) - the fixed-depth rule above only
+    // authorizes direct schools/{schoolId}/pickup_authorizations reads, not
+    // collection-group queries, which Firestore requires a {path=**}
+    // wildcard rule to enable. Uses resource.data.schoolId (every doc has
+    // one) instead of a path capture for the same tenant-isolation check.
     match /{path=**}/pickup_authorizations/{id} {
       allow read: if (isStaff() && isSameSchool(resource.data.schoolId)) || isParentOf(resource.data.studentId);
     }
@@ -564,18 +943,33 @@ service cloud.firestore {
       allow write: if isSameSchool(schoolId) &&
         hasAnyRole(['securityHead', 'schoolAdmin', 'director', 'headTeacher']);
     }
+    // NFC credential lifecycle (assign/replace/revoke/reactivate) - the
+    // cross-device sync counterpart to CachedCredentialIsar/
+    // RevokedCredentialIsar. NfcCredentialRepositoryImpl pushes here on
+    // every change; IdentityResolverImpl falls back to reading here when
+    // a card was never scanned on this device before.
     match /schools/{schoolId}/credentials/{id} {
       allow read, write: if isStaff() && isSameSchool(schoolId);
     }
     match /schools/{schoolId}/revoked_credentials/{id} {
       allow read, write: if isStaff() && isSameSchool(schoolId);
     }
+    // Verification engine's own audit trail (Phase 1). This match block
+    // was missing even though VerificationEventRecorderImpl has pushed to
+    // this path since Phase 1 shipped - every push was silently rejected
+    // by Firestore's default-deny and swallowed by the push's own
+    // try/catch (the local record still succeeded, so nothing user-facing
+    // broke, but the "audit trail" existed only on-device, never synced).
     match /schools/{schoolId}/verification_events/{id} {
       allow read: if isStaff() && isSameSchool(schoolId);
       allow create: if isStaff() && isSameSchool(schoolId);
       allow update, delete: if false;
     }
 
+    // Visitor Management enterprise collections - blacklist, pre-approval,
+    // scheduled visits (host approval workflow) and gate-logged deliveries.
+    // Same isSameSchool() tenant isolation as `visitors` above - client
+    // queries already filter by schoolId (VisitorRemoteDataSource).
     match /visitor_blacklist/{id} {
       allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
@@ -593,184 +987,356 @@ service cloud.firestore {
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
 
+    // Immutable system activity feed - only ever appended to, never edited.
     match /audit_logs/{id} {
-      allow read: if isStaff();
-      allow create: if isStaff();
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow update, delete: if false;
     }
 
+    // School-wide configuration, plus its archived-term history.
     match /config/{configId} {
-      allow read, write: if isStaff();
+      // Tenant configuration now lives at schools/{schoolId}/config. Root
+      // config documents are platform-owned operational records, never a
+      // cross-school settings store for ordinary staff.
+      allow read, write: if isSuperAdmin();
       match /history/{historyId} {
-        allow read, create: if isStaff();
+        allow read, create: if isSuperAdmin();
         allow update, delete: if false;
       }
     }
+    // Appointments module booking policy (advance booking window, same-day/
+    // weekend rules, cancellation policy, etc.) - a doc inside the same
+    // `config` collection as `config/system`. Parents need read access to
+    // enforce booking-window rules client-side; only top-tier administrators
+    // can edit this legacy platform policy document.
     match /config/appointment_policy {
       allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow write: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']);
     }
 
-    // School structure management.
+    // School structure management (Admin > Structure) - the school's
+    // educational structure and master data, readable by any signed-in
+    // user (students/parents may need e.g. class names) but only
+    // editable by staff.
     match /educational_levels/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /academic_years/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /academic_terms/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /classes/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /class_streams/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /subjects/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /departments/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /staff_designations/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      // Role definitions are tenant-owned configuration.  A general staff
+      // account must never create a role and then use its label as a route to
+      // escalation; only the existing school administration set manages it.
+      allow create: if hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']) &&
+        isSameSchool(request.resource.data.schoolId);
+      allow update: if hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']) &&
+        isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      // Definitions with history are archived instead of hard-deleted.
+      allow delete: if false;
     }
     match /staff_roles/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
-    match /structure_config/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+    // Fixed as of Phase 2: feature_toggles/institution_profile/timetable_config
+    // are actually read/written at schools/{schoolId}/config/{document} (see
+    // StructureRemoteDataSourceImpl), not a flat structure_config collection -
+    // that flat rule never matched anything real and left this path with no
+    // rule at all (default-deny). schoolId here comes from the path segment,
+    // not resource.data, since these are nested tenant subdocuments.
+    match /schools/{schoolId}/config/{document} {
+      allow read: if isSignedIn() && isSameSchool(schoolId);
+      // The institution profile controls tenant identity, contact details and
+      // branding. It is intentionally stricter than operational config so a
+      // general staff account cannot impersonate the institution.
+      allow write: if isSameSchool(schoolId) && (
+        (document == 'institution_profile' &&
+          hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director'])) ||
+        (document != 'institution_profile' && isStaff())
+      );
     }
-
+    // Central module configuration. Subscription entitlement is written only
+    // by trusted server-side billing code; tenant admins can update local
+    // enablement but cannot forge entitlement or re-parent configuration.
+    match /schools/{schoolId}/module_configuration/{moduleKey} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if false;
+      allow update: if isSameSchool(schoolId) &&
+        hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']) &&
+        request.resource.data.institutionId == schoolId &&
+        resource.data.institutionId == schoolId &&
+        request.resource.data.moduleKey == moduleKey &&
+        request.resource.data.entitled == resource.data.entitled &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'enabled', 'configurationVersion', 'updatedAt', 'updatedBy', 'reason',
+          'enabledAt', 'disabledAt'
+        ]);
+      allow delete: if false;
+    }
+    // Policies remain tenant-bound and immutable by ownership. A version
+    // subcollection is append-only, so previous decisions are never erased.
+    match /schools/{schoolId}/institution_policies/{policyId} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']) && request.resource.data.institutionId == schoolId;
+      allow update: if isSameSchool(schoolId) && hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']) && request.resource.data.institutionId == resource.data.institutionId && resource.data.institutionId == schoolId;
+      allow delete: if false;
+      match /versions/{version} {
+        allow read: if isSameSchool(schoolId);
+        allow create: if isSameSchool(schoolId) && hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']) && request.resource.data.institutionId == schoolId;
+        allow update, delete: if false;
+      }
+    }
+    match /schools/{schoolId}/module_policy_audit/{auditId} {
+      allow read: if isSameSchool(schoolId) && hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']);
+      allow write: if false;
+    }
+    match /campuses/{id} {
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
+    }
     // Sequential Structure runtime data. Every document carries schoolId;
     // unlike the legacy master-data collections above, these new records are
     // tenant-isolated in rules as well as in repository queries.
     match /structure_setup_preferences/{schoolId} {
-  allow read, delete: if isStaff() && isSameSchool(schoolId);
-  allow create: if isStaff() &&
-    request.resource.data.schoolId == schoolId && isSameSchool(schoolId);
-  allow update: if isStaff() && isSameSchool(schoolId) &&
-    request.resource.data.schoolId == schoolId;
-}
-match /structure_curriculum_assignments/{id} {
-  allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-  allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-  allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
-    request.resource.data.schoolId == resource.data.schoolId;
-}
-match /structure_teaching_assignments/{id} {
-  allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-  allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-  allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
-    request.resource.data.schoolId == resource.data.schoolId;
-}
-match /structure_class_timetables/{id} {
-  allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-  allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-  allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
-    request.resource.data.schoolId == resource.data.schoolId;
-}
-match /structure_timetable_lessons/{id} {
-  allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-  allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-  allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
-    request.resource.data.schoolId == resource.data.schoolId;
-}
+      allow read, delete: if isStaff() && isSameSchool(schoolId);
+      allow create: if isStaff() &&
+        request.resource.data.schoolId == schoolId && isSameSchool(schoolId);
+      allow update: if isStaff() && isSameSchool(schoolId) &&
+        request.resource.data.schoolId == schoolId;
+    }
+    match /structure_curriculum_assignments/{id} {
+      allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+    }
+    match /structure_teaching_assignments/{id} {
+      allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+    }
+    match /structure_class_timetables/{id} {
+      allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+    }
+    match /structure_timetable_lessons/{id} {
+      allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+    }
 
     match /houses/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /clubs/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /facilities/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /hostels/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /hostel_rooms/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /transport_routes/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /transport_stops/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /transport_vehicles/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /structure_fee_categories/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /structure_assessment_types/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /structure_grading_systems/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /grade_bands/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /attendance_types/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /attendance_sessions/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /announcement_categories/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /notification_categories/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /message_templates/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /document_templates/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /custom_fields/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolIdUnchanged();
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
+    // Staff clock-in/out records for the attendance monitor. Phase 5
+    // security gate: no isSameSchool check existed. No client write path
+    // exists yet (StaffAttendanceRepository is read-only today), so this
+    // is a straight tightening rather than an OR-fallback migration.
     match /staff_attendance/{id} {
-      allow read, write: if isStaff();
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        schoolCanWrite(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        schoolCanWrite(resource.data.schoolId);
+      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
+
+    // Per-role dashboard summary docs (e.g. stats/attendance_summary,
+    // stats/security_summary) read by gatekeeper/security/transport/matron/
+    // catering/games/exams dashboards.
     match /stats/{docId} {
       allow read, write: if isStaff();
     }
+
     match /bus_routes/{id} {
       allow read: if isSignedIn();
       allow write: if isStaff();
@@ -780,7 +1346,16 @@ match /structure_timetable_lessons/{id} {
     }
     match /dormitories/{id} {
       allow read: if isSignedIn();
-      allow write: if isStaff();
+      // Gender-gated so a Patron/Matron account can't write the opposite
+      // gender's dormitory via a direct SDK call, mirroring the app's own
+      // query-level convention. NOTE: these docs carry no schoolId field
+      // today (addDormitory never sets one), so this rule - like the prior
+      // isStaff()-only one - still can't enforce tenant isolation; that
+      // needs a schema backfill before it can be added here.
+      allow write: if canAccessBoardingGender(resource.data.get('gender', request.resource.data.get('gender', null)));
+
+      // Per-bed allocation state, owned by the Patron/Matron boarding
+      // modules - not touched by any other feature.
       match /beds/{bedId} {
         allow read, write: if hasAnyRole(['boardingPatron', 'boardingMatron', 'schoolAdmin', 'headTeacher', 'director']);
       }
@@ -795,14 +1370,28 @@ match /structure_timetable_lessons/{id} {
       allow read, write: if isStaff();
     }
     match /counseling_sessions/{id} {
-      allow read, write: if isStaff();
+      allow read: if isStaff() && isSameSchoolAsStudent(resource.data.studentId);
+      allow create: if isStaff() && isSameSchoolAsStudent(request.resource.data.studentId);
+      allow update, delete: if isStaff() && isSameSchoolAsStudent(resource.data.studentId);
     }
+    // homework previously had no schoolId field (client filtered reads by
+    // className alone, and class names like "P.1" plausibly collide across
+    // schools) - backfilled the field client-side and locked this down.
+    // Existing docs written before this fix have no schoolId and will fail
+    // isSameSchool() until re-saved.
     match /homework/{id} {
-      allow read: if isSignedIn();
-      allow write: if isStaff();
+      allow read: if isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
+    // Payroll previously had no schoolId field at all (client never set
+    // one), so any staff member at any school could read/write every
+    // school's salary data via a bare isStaff() check. Backfilled the field
+    // client-side and locked this down; existing docs written before this
+    // fix have no schoolId and will fail isSameSchool() until re-saved.
     match /payroll/{id} {
-      allow read, write: if isStaff();
+      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
     }
     match /pickup_logs/{id} {
       allow read, write: if isStaff();
@@ -826,60 +1415,329 @@ match /structure_timetable_lessons/{id} {
     match /sports_houses/{id} {
       allow read, write: if isStaff();
     }
+    // Phase 3.5: this duplicated the schoolId-scoped /subjects/{id} match
+    // above with a looser, unscoped rule. Firestore rules union every
+    // matching block, so this second block silently widened Subjects to
+    // cross-tenant read and write regardless of the tenant lock on the
+    // first one - removed rather than tightened, since the real rule
+    // already exists above.
     match /inventory_items/{id} {
       allow read, write: if isStaff();
     }
     match /inventory_movements/{id} {
       allow read, write: if isStaff();
     }
+
     match /school_events/{id} {
       allow read: if isSignedIn();
       allow write: if isStaff();
     }
 
+    // Stores and procurement records are used by the inventory team and
+    // approving staff.  They must be explicitly matched; otherwise Firestore
+    // denies every request to these top-level collections.
+    match /assets/{id} {
+      allow read, write: if isStaff();
+    }
+    match /suppliers/{id} {
+      allow read, write: if isStaff();
+    }
+    match /purchase_orders/{id} {
+      allow read, write: if isStaff();
+    }
+    match /procurement_requests/{id} {
+      allow read, write: if isStaff();
+    }
+    // Retired: replaced by schools/{schoolId}/calendar_events/{eventId}
+    // (schoolId-scoped, permission-gated) - see School Calendar rules above.
+
+    // Subscription/billing. Status transitions (pending -> success/failed,
+    // renewalDate extension) are only ever written by the Cloud Functions
+    // webhook handlers via the Admin SDK, which bypasses these rules -
+    // clients never write payment_transactions directly, only read them.
     match /subscription/{id} {
       allow read, write: if isStaff();
     }
+    // Tenant-isolated: only staff at the transaction's own school (or the
+    // SaaS owner console) may read it. This previously allowed any staff
+    // member at any school to read every school's payment_transactions -
+    // amounts, masked phone numbers and references included. The MTN MoMo
+    // settlement path (mtn_momo.js:checkAndSettle) writes into this exact
+    // collection, which is what surfaced the gap; fixed here rather than
+    // left open now that automated payments land here too. Writes remain
+    // Admin-SDK-only - no client, including the school that owns the
+    // transaction, may create/update one directly.
     match /payment_transactions/{id} {
-      allow read: if isStaff();
+      allow read: if isSuperAdmin() || isSameSchool(resource.data.schoolId);
       allow write: if false;
     }
+    // MTN Mobile Money Collections payment attempts. Named mtn_payments
+    // (not payments) deliberately - a top-level payments/{docId} collection
+    // already exists above (line ~369) for the unrelated Finance/Bursar
+    // student-fee flow with a completely different access model (parents
+    // and staff can read/write it); reusing that path here would have
+    // silently OR'd the two rule blocks together on the same documents.
+    // Server-authoritative: initiateMtnPayment/checkMtnPaymentStatus (Admin
+    // SDK, public_functions codebase) are the only writers. Unlike
+    // payment_transactions above, Flutter reads this collection directly to
+    // drive the live awaitingApproval/checking UI between polls, so the
+    // read is scoped to the caller's own school rather than any staff
+    // member anywhere.
+    match /mtn_payments/{paymentId} {
+      allow read: if isSuperAdmin() ||
+        (isSameSchool(resource.data.schoolId) &&
+          hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'bursar']));
+      allow write: if false;
+    }
+    // Each teacher's own lesson plans; any staff can read (e.g. dean review).
     match /lesson_plans/{id} {
       allow read: if isStaff();
       allow create: if isStaff() && request.resource.data.teacherId == request.auth.uid;
       allow update, delete: if isStaff() && resource.data.teacherId == request.auth.uid;
     }
 
+    // Outbound delivery queues - a Cloud Function (Admin SDK, bypasses
+    // rules) drains these, so clients may enqueue but never read them back.
     match /broadcast_queue/{id} {
-      allow create: if isStaff();
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow read, update, delete: if false;
     }
     match /sms_queue/{id} {
-      allow create: if isStaff();
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow read, update, delete: if false;
     }
+    match /email_queue/{id} {
+      // Written only by the Admin SDK when a recipient opted into email
+      // copies. No client path creates these, and none reads them back.
+      allow read, write: if false;
+    }
+    match /transactional_email_queue/{id} {
+      // Templated transactional email queue (Resend-backed). Admin SDK only
+      // — this is the integration seam other Cloud Functions codebases use
+      // to send transactional email without holding the Resend secret
+      // themselves. No client path may read, create, or modify these.
+      allow read, write: if false;
+    }
+    match /email_deliveries/{id} {
+      // Per-eventId delivery/idempotency log written by sendTemplatedEmail.
+      // Admin SDK only.
+      allow read, write: if false;
+    }
     match /notification_queue/{id} {
-      allow create: if isSignedIn();
+      // Enqueued by sendDirectNotification for both staff-to-X and now
+      // parent-initiated 1:1 messages - see the /alerts create rule above.
+      allow create: if isSignedIn() && isSameSchool(request.resource.data.schoolId);
       allow read, update, delete: if false;
     }
 
+    // ---- Notification module -------------------------------------------
+    // One document per recipient. Tenancy is enforced on every operation:
+    // a notification is readable only by the user it is addressed to, within
+    // their own school. There is no "read all notifications for a school"
+    // path from the client - delivery reporting is aggregated server-side.
+    match /notifications/{notificationId} {
+      function isMine() {
+        return isSignedIn()
+          && resource.data.recipientUserId == request.auth.uid
+          && resource.data.schoolId == myUser().schoolId;
+      }
+
+      // The only fields a recipient may ever change: their own engagement
+      // state. Content, sender, tenancy, routing and delivery status are
+      // written exclusively by the Admin SDK (which bypasses these rules).
+      function onlyStateFieldsChanged() {
+        return request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            'isRead', 'readAt',
+            'openedAt',
+            'acknowledgedAt',
+            'isPinned',
+            'isArchived'
+          ]);
+      }
+
+      allow read: if isMine();
+
+      // Clients never author notifications directly - they write a
+      // notification_request and a Cloud Function fans it out. This closes
+      // the hole where a client could forge a notification that appears to
+      // come from the school office.
+      allow create: if false;
+
+      allow update: if isMine() && onlyStateFieldsChanged();
+
+      // Deleting is permitted only for the recipient's own record, and only
+      // when it is not an unacknowledged alert - a parent must not be able to
+      // clear an emergency notice out of the audit trail before confirming it.
+      allow delete: if isMine()
+        && !(resource.data.requiresAcknowledgment == true
+             && resource.data.acknowledgedAt == null);
+    }
+
+    // Send requests. An authorised sender writes one of these; the Cloud
+    // Function resolves the audience and performs the fan-out with the Admin
+    // SDK, because recipient resolution needs reads the sender themselves is
+    // deliberately not permitted to make.
+    match /notification_requests/{requestId} {
+      allow create: if isStaff()
+        && request.resource.data.schoolId == myUser().schoolId
+        // Sender identity is stamped from the caller's own token, so a
+        // request cannot be attributed to somebody else.
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        // Emergency alerts are restricted to leadership and security heads.
+        && (
+          request.resource.data.category != 'emergency'
+          || hasAnyRole(['schoolAdmin', 'director', 'headTeacher',
+                         'deputyHead', 'securityHead'])
+        );
+
+      // A sender may follow their own request to see delivery counts.
+      allow read: if isStaff()
+        && resource.data.senderId == request.auth.uid
+        && resource.data.schoolId == myUser().schoolId;
+
+      // Status transitions are the Cloud Function's business. A sender may
+      // cancel a request that has not gone out yet, and nothing more.
+      allow update: if isStaff()
+        && resource.data.senderId == request.auth.uid
+        && resource.data.status in ['pending', 'scheduled']
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.diff(resource.data)
+             .affectedKeys().hasOnly(['status', 'cancelledAt']);
+
+      allow delete: if false;
+    }
+
+    // Per-user notification preferences, under the owning school.
+    match /schools/{schoolId}/notification_settings/{userId} {
+      allow read, write: if isSignedIn()
+        && request.auth.uid == userId
+        && myUser().schoolId == schoolId;
+    }
+
+    // School-wide notification policy. Readable by anyone in the school
+    // (the client needs it to evaluate delivery), writable only by admins.
+    match /schools/{schoolId}/notification_policy/{docId} {
+      allow read: if isSignedIn() && myUser().schoolId == schoolId;
+      allow write: if hasAnyRole(['schoolAdmin', 'director', 'headTeacher'])
+        && myUser().schoolId == schoolId;
+    }
+
+    // Reusable notification templates, scoped to one school.
+    match /schools/{schoolId}/notification_templates/{templateId} {
+      allow read: if isStaff() && myUser().schoolId == schoolId;
+      allow write: if hasAnyRole(['schoolAdmin', 'director', 'headTeacher',
+                                  'deputyHead'])
+        && myUser().schoolId == schoolId;
+    }
+
+    // ---- SaaS Owner / Platform layer -----------------------------------
+    // These collections back the super_admin feature (school registry,
+    // billing, audit trail). Only the seeded platform-owner account may
+    // touch them; no school-scoped role gets any access, by design - this
+    // is the layer that must stay isolated from every tenant.
     match /schools/{schoolId} {
-      allow read: if isSignedIn();
+      // This document mixes public branding (name/motto/badge/colors) with
+      // billing/subscription and contact PII (subscription.price,
+      // activeStudentCount, contactEmail/Phone, metadata.lastPaymentId,
+      // ...), so read access is scoped to the caller's own tenant -
+      // isSameSchool covers the normal case, isActiveMembership covers a
+      // director/consultant who has switched into a secondary institution
+      // via institution_switcher_sheet, and isSuperAdmin covers the SaaS
+      // owner console's school registry. Only the owner may
+      // create/suspend/edit a school or change its subscription/
+      // enabledFeatures.
+      allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId) || isSuperAdmin();
       allow write: if isSuperAdmin();
     }
+
+    // Central Approval Center. Decisions, policy edits, delegations and
+    // escalations are callable-function only, so clients cannot forge an
+    // approver, bypass source-version checks, or mutate an audit trail.
+    match /schools/{schoolId}/approval_requests/{requestId} {
+      allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId);
+      allow create, update, delete: if false;
+      match /actions/{actionId} {
+        allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId);
+        allow write: if false;
+      }
+    }
+    match /schools/{schoolId}/approval_policies/{policyId} {
+      allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/approval_delegations/{delegationId} {
+      allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/approval_escalations/{escalationId} {
+      allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId);
+      allow write: if false;
+    }
+    // Deprecated as of Phase 1 institution model - schools/{id} is now the
+    // sole tenant source of truth (classification/divisions/displayLabel
+    // live there). No new docs are written here going forward; existing
+    // docs and this rule are left in place, not migrated, in this phase.
     match /tenants/{tenantId} {
       allow read, write: if isSuperAdmin();
+    }
+    // Additive multi-institution membership (Phase 1). Provisioned only by
+    // the provisionSchoolAdmin Cloud Function via the Admin SDK, which
+    // bypasses these rules - client writes are never allowed, matching the
+    // platform_config pattern above.
+    match /institution_memberships/{membershipId} {
+      allow read: if isSignedIn() &&
+        (request.auth.uid == resource.data.userId || isSuperAdmin());
+      allow write: if false;
+    }
+    // First-login onboarding progress, one doc per membership
+    // (userId_institutionId). Only the owning user may read/advance their
+    // own progress, and only within the institution they actually belong
+    // to - isSameSchool() (or an active membership) stops cross-tenant
+    // peeking at another institution's onboarding state.
+    match /onboarding_state/{stateId} {
+      allow read, update: if isSignedIn() &&
+        request.auth.uid == resource.data.userId &&
+        (isSameSchool(resource.data.institutionId) || isActiveMembership(resource.data.institutionId));
+      allow create: if isSignedIn() &&
+        request.auth.uid == request.resource.data.userId &&
+        (isSameSchool(request.resource.data.institutionId) || isActiveMembership(request.resource.data.institutionId));
+      allow delete: if false;
     }
     match /subscription_plans/{id} {
       allow read, write: if isSuperAdmin();
     }
     match /school_admin_invitations/{id} {
+      // Holds a plaintext temporary password until a Cloud Function
+      // provisions the school admin's real account. The owner may create
+      // one (via createSchool); nobody, including the owner, reads it back
+      // through the client SDK - only the Admin SDK (which bypasses these
+      // rules) may consume and then scrub it.
       allow create: if isSuperAdmin();
       allow read, update, delete: if false;
     }
     match /super_admin_audit_logs/{id} {
+      // Append-only trail. Never client-editable or deletable once written.
       allow read, create: if isSuperAdmin();
       allow update, delete: if false;
+    }
+    match /support_mode_sessions/{ownerId} {
+      // Server-written only, by enterSupportMode/exitSupportMode (Admin
+      // SDK, bypasses these rules). The owner console reads its own session
+      // doc to show the "acting as" banner and countdown.
+      allow read: if isSuperAdmin() && request.auth.uid == ownerId;
+      allow write: if false;
+    }
+    match /super_admin_notifications/{id} {
+      // Server-written only (manual payment submission/approval/rejection
+      // Cloud Functions via the Admin SDK, which bypasses these rules). The
+      // owner console reads this collection directly, same trust model as
+      // super_admin_audit_logs above; the client never creates, updates or
+      // deletes a notification doc.
+      allow read: if isSuperAdmin();
+      allow create, update, delete: if false;
     }
     match /invoices/{id} {
       allow read, write: if isSuperAdmin();
@@ -888,8 +1746,777 @@ match /structure_timetable_lessons/{id} {
       allow read, write: if isSuperAdmin();
     }
     match /platform_config/{id} {
+      // Owner-seed idempotency flag, maintenance mode, etc. Only ever
+      // written by trusted server-side scripts/Cloud Functions via the
+      // Admin SDK; the dashboard may read it, never write it directly.
       allow read: if isSuperAdmin();
       allow write: if false;
+    }
+    match /owner_recovery_codes/{ownerId} {
+      // TOTP recovery-code hashes (owner_recovery_codes.js). Never
+      // client-readable - even a hash of a high-entropy code is more than
+      // the client needs, and the owner-console UI only ever learns the
+      // plaintext codes once, synchronously, from the
+      // generateOwnerRecoveryCodes callable's response. Admin SDK only.
+      allow read, write: if false;
+    }
+    match /owner_recovery_challenges/{challengeId} {
+      // Short-lived, single-use proof that a caller reached the owner
+      // account's MFA-required stage via a real first-factor login, before
+      // verifyOwnerRecoveryCode will accept a recovery code
+      // (owner_recovery_codes.js: beginOwnerRecoveryChallenge /
+      // verifyOwnerRecoveryCode). Never client-readable or writable - the
+      // challenge ID itself is the only thing the client ever sees, as the
+      // synchronous return value of beginOwnerRecoveryChallenge. Admin SDK
+      // only.
+      allow read, write: if false;
+    }
+    match /owner_security_sessions/{sessionId} {
+      // The unified elevated-session record every owner authentication
+      // path (password+TOTP, Google+TOTP, recovery code) converges into
+      // (owner_security_session.js: establishOwnerSecuritySession /
+      // validateOwnerSecuritySession). The client only ever learns the
+      // opaque sessionId as a callable return value and asks the server to
+      // validate it - it never reads this collection directly. Admin SDK
+      // only.
+      allow read, write: if false;
+    }
+    match /_owner_rate_limits/{bucketId} {
+      // Transactional per-owner-per-bucket-per-hour counters
+      // (owner_rate_limit.js). Admin SDK only; nothing here is ever
+      // client-relevant.
+      allow read, write: if false;
+    }
+    match /super_admin_sign_in_events/{eventId} {
+      // Server-written only, by the logOwnerSignIn callable (Admin SDK,
+      // bypasses these rules) invoked right after a successful owner
+      // login. The owner console reads its own flagged sign-ins to power
+      // the Security Settings "Suspicious Activity" section, same
+      // trust model as super_admin_audit_logs/super_admin_notifications
+      // above; the client never creates, updates or deletes an event.
+      allow read: if isSuperAdmin() && resource.data.ownerId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+    match /super_admin_settings/{ownerId} {
+      // Owner-scoped app settings (notification channel toggles, quiet
+      // hours, digest frequency, and security preferences under a
+      // namespaced `security` sub-map). Unlike super_admin_notifications
+      // this is client-writable, but only by the owner it belongs to -
+      // never on behalf of another uid, and only a superAdmin account at
+      // all.
+      allow read, write: if isSuperAdmin() && request.auth.uid == ownerId;
+
+      // Real device/session registry backing Trusted Devices / Active
+      // Sessions in the Security screens. Nested under the parent owner
+      // settings doc (not a new top-level collection) to keep the same
+      // ownership convention as the `security` sub-map above - one device
+      // doc per install, keyed by a client-generated stable device id.
+      // Client-writable (create/update/delete) but only for the owner's
+      // own uid, matching the parent doc's rule.
+      match /sessions/{deviceId} {
+        allow read, write: if isSuperAdmin() && request.auth.uid == ownerId;
+      }
+    }
+
+    // Help & Support module (owner console). Client-created and
+    // client-appended-to, unlike the two server-written collections above -
+    // an owner files their own ticket and replies to it, scoped by
+    // ownerId so one owner account can never read or write another's
+    // support history even if it guesses a document id.
+    match /super_admin_support_tickets/{ticketId} {
+      allow read: if isSuperAdmin() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSuperAdmin() && request.resource.data.ownerId == request.auth.uid;
+      // Only updatedAt may move on a plain ticket update from the client;
+      // status/priority changes by a future admin/agent panel go through
+      // the Admin SDK, which bypasses these rules.
+      allow update: if isSuperAdmin() && resource.data.ownerId == request.auth.uid &&
+        request.resource.data.ownerId == resource.data.ownerId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt']);
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        function ticketOwnerId() {
+          return get(/databases/$(database)/documents/super_admin_support_tickets/$(ticketId)).data.ownerId;
+        }
+        // Any authenticated message in an owner's own ticket may be read -
+        // this also covers future agent-authored replies written by an
+        // admin panel/Cloud Function via the Admin SDK, which bypasses
+        // this rule on write but must still be readable by the owner here.
+        allow read: if isSuperAdmin() && ticketOwnerId() == request.auth.uid;
+        allow create: if isSuperAdmin() && ticketOwnerId() == request.auth.uid &&
+          request.resource.data.sender == 'owner' &&
+          request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    // ---------------------------------------------------------------
+    // Subject Teacher panel
+    //
+    // Everything here is nested under schools/{schoolId}, so tenant
+    // isolation is enforced by the path itself rather than by trusting a
+    // schoolId field the client supplied. isSameSchool() is the gate; a
+    // teacher signed into one school cannot reach another's documents even
+    // by guessing document ids.
+    //
+    // The rules below never grant on job title. Access is decided by
+    // whether the requesting user holds an *assignment row* covering the
+    // document's subject and class - the same model the client enforces,
+    // re-checked here because a hidden button is not security.
+    // ---------------------------------------------------------------
+
+    // No dedicated examination-officer UserRole exists in this codebase yet;
+    // that responsibility is carried by the Dean of Studies today.
+    function schoolAcademicAdmin() {
+      return hasAnyRole([
+        'schoolAdmin', 'headTeacher', 'deputyHead', 'director', 'deanOfStudies'
+      ]);
+    }
+
+    // The caller's assignment row, looked up by its document id. Reading it
+    // here is what lets a rule ask "does this teacher actually hold this
+    // responsibility" instead of taking the client's word for it.
+    function assignment(schoolId, assignmentId) {
+      return get(/databases/$(database)/documents/schools/$(schoolId)/staff_role_assignments/$(assignmentId)).data;
+    }
+
+    function assignmentExists(schoolId, assignmentId) {
+      return exists(/databases/$(database)/documents/schools/$(schoolId)/staff_role_assignments/$(assignmentId));
+    }
+
+    // An assignment authorises a write only when it belongs to the caller,
+    // is still active, and covers the subject/class/year of the document
+    // being written. All four conditions, every time.
+    function holdsAssignment(schoolId, assignmentId, subjectId, classId, academicYearId) {
+      return assignmentExists(schoolId, assignmentId)
+        && assignment(schoolId, assignmentId).userId == request.auth.uid
+        && assignment(schoolId, assignmentId).status == 'active'
+        && assignment(schoolId, assignmentId).academicYearId == academicYearId
+        && (subjectId == null || assignment(schoolId, assignmentId).subjectId == subjectId)
+        && (classId == null || assignment(schoolId, assignmentId).classId == classId);
+    }
+
+    function grantsPermission(schoolId, assignmentId, permissionId) {
+      return assignmentExists(schoolId, assignmentId)
+        && permissionId in assignment(schoolId, assignmentId).permissionScope.permissions;
+    }
+
+    match /schools/{schoolId}/staff_role_assignments/{assignmentId} {
+      // A teacher may read their own responsibilities and nothing else -
+      // the switcher needs them, but one teacher's timetable is not another
+      // teacher's business.
+      allow read: if isSameSchool(schoolId)
+        && (resource.data.userId == request.auth.uid || schoolAcademicAdmin());
+
+      // Assigning, suspending and re-scoping responsibilities is entirely
+      // the admin's. A teacher writing here could grant themselves any
+      // subject in the school, so there is no teacher path at all.
+      allow create, update: if isSameSchool(schoolId) && schoolAcademicAdmin();
+
+      // Ended assignments are suspended or expired, never deleted - the
+      // audit trail references them by id.
+      allow delete: if false;
+    }
+
+    // A class/stream's timetable envelope (draft/active/archived, versioned).
+    // Timetable creation, editing and publishing is admin-owned; every
+    // teacher and student at the school can read timetables so their own
+    // class/subject view can be derived from the same source of truth.
+    match /schools/{schoolId}/timetables/{timetableId} {
+      allow read: if isSameSchool(schoolId);
+      allow create, update: if isSameSchool(schoolId) && schoolAcademicAdmin();
+      // Superseded timetables are archived, never deleted - printed copies
+      // and audit history reference them by id.
+      allow delete: if false;
+    }
+
+    // One scheduled subject+teacher(+room) assignment inside a timetable.
+    // Same read/write split as timetables above: everyone at the school can
+    // read (a teacher's own timetable and a room's schedule are both
+    // projections of this collection), only an academic admin can write.
+    match /schools/{schoolId}/timetable_lessons/{lessonId} {
+      allow read: if isSameSchool(schoolId);
+      allow create, update, delete: if isSameSchool(schoolId) && schoolAcademicAdmin();
+    }
+
+    // Per-school customization of a role's default permission set (see
+    // RolePermissionOverride / role_management_screen.dart). One doc per
+    // role (docId == the UserRole enum name). Read is staff-wide since the
+    // effective-permission resolver on every device needs to fetch these;
+    // write is limited to the same admin set that controls
+    // staff_role_assignments, since this changes what an entire role can do.
+    match /schools/{schoolId}/role_permission_overrides/{roleId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow create, update: if isSameSchool(schoolId) && schoolAcademicAdmin();
+      allow delete: if false;
+    }
+
+    // School Calendar (academic years, terms, calendar events, settings).
+    // Only schoolAdmin by default, or a role explicitly granted
+    // 'calendar.manage' via role_permission_overrides, may write. Every
+    // other signed-in staff/parent/student in the same school has read-only
+    // access. See Permission.calendarManage in lib/core/permissions/permission.dart.
+    function hasCalendarManagePermission(schoolId) {
+      return hasAnyRole(['schoolAdmin']) || (
+        isStaff() && exists(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())) &&
+        'calendar.manage' in get(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())).data.permissions
+      );
+    }
+
+    match /schools/{schoolId}/academic_years/{yearId} {
+      allow read: if isSameSchool(schoolId);
+      allow write: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+
+      match /terms/{termId} {
+        allow read: if isSameSchool(schoolId);
+        allow write: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+      }
+    }
+
+    match /schools/{schoolId}/calendar_events/{eventId} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) &&
+        request.resource.data.schoolId == schoolId;
+      // A calendar event can never be moved to a different tenant through an
+      // update. This protects historical links, reminders and audit records.
+      allow update: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        request.resource.data.schoolId == schoolId;
+      allow delete: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+    }
+
+    // Calendar-control-centre records are separate from the legacy global
+    // Structure collections. They are intentionally tenant-scoped, and each
+    // update keeps the record inside the tenant and its original owner year.
+    match /schools/{schoolId}/academic_periods/{periodId} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) &&
+        request.resource.data.institutionId == schoolId;
+      allow update: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) &&
+        request.resource.data.institutionId == resource.data.institutionId &&
+        request.resource.data.institutionId == schoolId &&
+        request.resource.data.academicYearId == resource.data.academicYearId;
+      allow delete: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+    }
+
+    match /schools/{schoolId}/calendar_rules/{ruleId} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) && request.resource.data.institutionId == schoolId;
+      allow update: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) && request.resource.data.institutionId == resource.data.institutionId && request.resource.data.institutionId == schoolId;
+      allow delete: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+    }
+
+    match /schools/{schoolId}/exam_windows/{windowId} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) && request.resource.data.institutionId == schoolId;
+      allow update: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) && request.resource.data.institutionId == resource.data.institutionId && request.resource.data.institutionId == schoolId;
+      allow delete: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+    }
+
+    match /schools/{schoolId}/reporting_deadlines/{deadlineId} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) && request.resource.data.institutionId == schoolId;
+      allow update: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId) && request.resource.data.institutionId == resource.data.institutionId && request.resource.data.institutionId == schoolId;
+      allow delete: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+    }
+
+    match /schools/{schoolId}/calendar_settings/{settingId} {
+      allow read: if isSameSchool(schoolId);
+      allow write: if isSameSchool(schoolId) && hasCalendarManagePermission(schoolId);
+    }
+
+    // School-wide Announcements. Default admin set (schoolAdmin, headTeacher,
+    // director), or a role explicitly granted 'announcement.manage' via
+    // role_permission_overrides, may write. Published announcements are
+    // readable by everyone in the same school; drafts are only readable by
+    // whoever can manage announcements. See Permission.announcementManage in
+    // lib/core/permissions/permission.dart.
+    function hasAnnouncementManagePermission(schoolId) {
+      return hasAnyRole(['schoolAdmin', 'headTeacher', 'director']) || (
+        isStaff() && exists(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())) &&
+        'announcement.manage' in get(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())).data.permissions
+      );
+    }
+
+    match /schools/{schoolId}/announcements/{announcementId} {
+      allow read: if isSameSchool(schoolId) &&
+        (resource.data.status == 'published' || hasAnnouncementManagePermission(schoolId));
+      allow create: if isSameSchool(schoolId) &&
+        hasAnnouncementManagePermission(schoolId) &&
+        request.resource.data.schoolId == schoolId &&
+        schoolCanWrite(schoolId);
+      allow update, delete: if isSameSchool(schoolId) && hasAnnouncementManagePermission(schoolId) &&
+        schoolCanWrite(schoolId);
+    }
+
+    // Communication campaigns are created and transitioned only through
+    // authenticated Cloud Functions. The client may inspect its institution's
+    // campaign history only when it has the same leadership authority as the
+    // publisher; recipients read their own notification records instead.
+    match /schools/{schoolId}/communication_campaigns/{campaignId} {
+      allow read: if isSameSchool(schoolId) && hasAnnouncementManagePermission(schoolId);
+      allow write: if false;
+    }
+
+    match /schools/{schoolId}/communication_audit/{auditId} {
+      allow read: if isSameSchool(schoolId) && hasAnnouncementManagePermission(schoolId);
+      allow write: if false;
+    }
+
+    // Unified Attendance (attendance_hub). Marking is gated per-category by
+    // the matching attendance.*.scan permission (or attendance.override),
+    // resolved the same role-default-or-override way as calendar - see
+    // Permission.attendance*Scan in lib/core/permissions/permission.dart and
+    // permissionForCategory() in attendance_category_permission.dart. Read is
+    // staff-wide within the same school; writes are never permitted from
+    // parents/students.
+    function hasAttendancePermission(schoolId, permissionId) {
+      return hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead']) || (
+        isStaff() && exists(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())) &&
+        (
+          permissionId in get(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())).data.permissions ||
+          'attendance.override' in get(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())).data.permissions
+        )
+      );
+    }
+
+    // category -> permission id doesn't follow a string pattern (students
+    // maps to 'attendance.class.scan', hostel to 'attendance.boarding.scan')
+    // so the mapping is spelled out explicitly here, mirroring
+    // permissionForCategory() in attendance_category_permission.dart exactly.
+    function attendanceCategoryPermission(category) {
+      return category == 'students' ? 'attendance.class.scan' :
+        category == 'staff' ? 'attendance.staff.scan' :
+        category == 'gate' ? 'attendance.gate.scan' :
+        category == 'meals' ? 'attendance.meals.scan' :
+        category == 'library' ? 'attendance.library.scan' :
+        category == 'transport' ? 'attendance.transport.scan' :
+        category == 'visitors' ? 'attendance.visitors.scan' :
+        category == 'hostel' ? 'attendance.boarding.scan' :
+        'attendance.custom.scan';
+    }
+
+    // Scope check for the two categories AttendanceParticipantResolver
+    // (lib/features/attendance_hub/domain/services) resolves real assignment
+    // data for: 'students' (Class/Subject Teacher -> classId) and 'hostel'
+    // (Matron/Patron -> houseId). hasAttendancePermission already lets an
+    // admin-tier role (schoolAdmin/director/headTeacher/deputyHead) or
+    // anyone holding attendance.override bypass unconditionally - those
+    // callers never carry a roleAssignmentId, so this only runs for callers
+    // who do. Every other category is scoped by permission alone this pass,
+    // same as before, since no assignment data exists yet to check against.
+    function hasAttendanceScopeAccess(schoolId, data) {
+      return !(data.category in ['students', 'hostel'])
+        || hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead'])
+        || (
+          data.roleAssignmentId is string
+          && assignmentExists(schoolId, data.roleAssignmentId)
+          && assignment(schoolId, data.roleAssignmentId).userId == request.auth.uid
+          && assignment(schoolId, data.roleAssignmentId).status == 'active'
+          && (
+            (data.category == 'students'
+              && assignment(schoolId, data.roleAssignmentId).classId == data.scopeId)
+            || (data.category == 'hostel'
+              && assignment(schoolId, data.roleAssignmentId).houseId == data.scopeId)
+          )
+        );
+    }
+
+    match /schools/{schoolId}/attendance_records/{recordId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow create: if isSameSchool(schoolId) &&
+        hasAttendancePermission(schoolId, attendanceCategoryPermission(request.resource.data.category)) &&
+        hasAttendanceScopeAccess(schoolId, request.resource.data) &&
+        request.resource.data.schoolId == schoolId &&
+        schoolCanWrite(schoolId);
+      // Records are corrected via a separate attendance_corrections trail,
+      // never overwritten in place - see AttendanceCorrectionRequest in the
+      // implementation plan. No update/delete path exists yet.
+      allow update, delete: if false;
+    }
+
+    // Google Sheets integration config/history for the Attendance feature -
+    // school-admin-managed like calendar_settings, since it changes where
+    // every category's attendance data flows.
+    match /schools/{schoolId}/attendance_sheets_integration/{docId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if isSameSchool(schoolId) && hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead']);
+    }
+
+    match /schools/{schoolId}/attendance_sheets_sync_log/{logId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow create: if isSameSchool(schoolId) && isStaff();
+      allow update, delete: if false;
+    }
+
+    match /schools/{schoolId}/subject_enrollments/{enrollmentId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      // A teacher may enroll into a subject they actually teach, and only
+      // when their assignment carries the permission. Note the enrollment's
+      // own subject/class must match the assignment's - this is what stops
+      // the Maths teacher adding students to Physics.
+      allow create: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          request.resource.data.subjectId,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'subject.student.enroll')
+        ));
+
+      allow update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          resource.data.subjectId,
+                          resource.data.classId,
+                          resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'subject.student.remove')
+          // A mandatory subject is the academic office's call, never the
+          // teacher's, whatever permission they hold.
+          && resource.data.isMandatory == false
+        ));
+
+      // Enrollment history is what historical marks hang off. Closing a row
+      // is an update; removing it is not on offer.
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/lessons/{lessonId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      // The timetable owns lessons. A teacher records what happened during
+      // one - start time, status, topic - but may not create a period,
+      // move it, change the room, or reassign it to themselves. Those
+      // fields are absent from the allowed set below rather than merely
+      // hidden in the UI.
+      //
+      // Entitlement is proved through the assignment, not through a staffId
+      // on the user doc: user profiles here carry staffCode, so a
+      // myUser().staffId comparison would silently deny every teacher.
+      allow update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          resource.data.subjectId,
+                          resource.data.classId,
+                          resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'subject.lesson.start')
+          // The lesson must be theirs to record against - holding a
+          // Mathematics assignment is not entitlement to another teacher's
+          // Mathematics period.
+          && (resource.data.teacherStaffId
+                == assignment(schoolId, request.resource.data.roleAssignmentId).staffId
+              || resource.data.substituteStaffId
+                == assignment(schoolId, request.resource.data.roleAssignmentId).staffId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'statusReason', 'actualStart', 'actualEnd',
+                        'topic', 'subtopic', 'attendanceSubmitted',
+                        'roleAssignmentId', 'updatedAt'])
+        ));
+
+      allow create, delete: if isSameSchool(schoolId) && schoolAcademicAdmin();
+    }
+
+    match /schools/{schoolId}/lesson_attendance/{lessonId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      // One register per lesson, keyed on the lesson id, so a replay
+      // overwrites rather than creating a second register for the period.
+      // The writer has to hold an assignment covering the register's own
+      // subject and class - not merely be a teacher somewhere.
+      allow create, update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          request.resource.data.subjectId,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'subject.attendance.take')
+          // Once submitted, only a holder of the edit permission may touch
+          // it again - an ordinary re-save cannot quietly rewrite a
+          // register the school has already acted on.
+          && (!(resource != null && resource.data.status == 'submitted')
+              || grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                                  'subject.attendance.edit'))
+          // Locked registers are the academic office's alone.
+          && !(resource != null && resource.data.status == 'locked')
+        ));
+
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/subject_assessments/{assessmentId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow create: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          request.resource.data.subjectId,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'subject.assessment.create')
+        ));
+      // Status transitions (open, approve, lock, publish) belong to the
+      // Assessment Engine and the academic office, never to the teacher
+      // whose marks are being approved.
+      allow update, delete: if isSameSchool(schoolId) && schoolAcademicAdmin();
+    }
+
+    match /schools/{schoolId}/student_marks/{markId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      allow create, update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          request.resource.data.subjectId,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'subject.marks.enter')
+          // Approved and published marks feed report cards. A teacher
+          // cannot overwrite one; the route back is a correction request
+          // the academic office acts on.
+          && !(resource != null
+               && resource.data.markStatus in ['approved', 'published'])
+          && (!(resource != null && resource.data.markStatus == 'submitted')
+              || grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                                  'subject.marks.edit_submitted'))
+        ));
+
+      // Marks are an academic record. Superseding one is an update that
+      // leaves an audit row; deleting it leaves nothing.
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/marks_correction_requests/{requestId} {
+      // A teacher may raise a request and read their own; only the academic
+      // office may decide one.
+      allow create: if isSameSchool(schoolId)
+        && isStaff()
+        && request.resource.data.requestedByUserId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow read: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || resource.data.requestedByUserId == request.auth.uid);
+      allow update: if isSameSchool(schoolId) && schoolAcademicAdmin();
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/subject_audit_logs/{auditId} {
+      // Append-only. A teacher can write their own trail and read it back,
+      // but the update and delete paths are closed to everyone including
+      // admins - an audit log a user can rewrite is not an audit log.
+      allow create: if isSameSchool(schoolId)
+        && isStaff()
+        && request.resource.data.userId == request.auth.uid;
+      allow read: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || resource.data.userId == request.auth.uid);
+      allow update, delete: if false;
+    }
+
+    // ---- Class Teacher panel -------------------------------------------
+    //
+    // Same shape as the subject.* blocks above and for the same reason: a
+    // permission is never enough on its own. Every write proves entitlement
+    // through an assignment whose own classId matches the document's, which
+    // is what stops the Primary 7 class teacher writing against Primary 6.
+    // `null` is passed for subjectId throughout because a Class Teacher
+    // assignment has no subject - the class is the whole scope.
+
+    match /schools/{schoolId}/class_attendance_sessions/{sessionId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      // One register per class per day, keyed on a deterministic id, so a
+      // resubmission overwrites rather than creating a second register the
+      // school would then have to reconcile.
+      allow create, update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          null,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.attendance.take')
+          // A submitted register may only be touched again by a holder of
+          // the edit permission - an ordinary re-save must not quietly
+          // rewrite attendance the school has already acted on.
+          && (!(resource != null && resource.data.status == 'submitted')
+              || grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                                  'class.attendance.edit'))
+          // Locked registers belong to the academic office alone.
+          && !(resource != null && resource.data.status == 'locked')
+        ));
+
+      // Registers are corrected through the audited edit path, never removed.
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/class_attendance_corrections/{correctionId} {
+      // A teacher raises a correction request; only the academic office
+      // decides one. Backdating attendance is not a teacher's call.
+      allow create: if isSameSchool(schoolId)
+        && isStaff()
+        && request.resource.data.requestedByUserId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow read: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || resource.data.requestedByUserId == request.auth.uid);
+      allow update: if isSameSchool(schoolId) && schoolAcademicAdmin();
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/class_homework/{homeworkId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      allow create, update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          null,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.homework.create')
+          // Publishing is what reaches students and parents, so it carries
+          // its own permission beyond merely being able to draft.
+          && (request.resource.data.status == 'draft'
+              || grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                                  'class.homework.publish'))
+        ));
+
+      allow delete: if isSameSchool(schoolId) && schoolAcademicAdmin();
+    }
+
+    match /schools/{schoolId}/class_behaviour_records/{recordId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      allow create: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          null,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.behaviour.record')
+        ));
+
+      // A teacher may close their own follow-up, but the official outcome of
+      // a discipline case is the discipline office's decision, so the fields
+      // a teacher can touch are enumerated rather than left open.
+      allow update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          null,
+                          resource.data.classId,
+                          resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.behaviour.record')
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['note', 'followUpRequired', 'followUpClosed',
+                        'followUpNote', 'updatedBy', 'updatedAt'])
+        ));
+
+      // Finalised conduct records are part of a student's file.
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/class_announcements/{announcementId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      allow create, update: if isSameSchool(schoolId) && schoolCanWrite(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          null,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.announcement.create')
+          && (request.resource.data.status == 'draft'
+              || grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                                  'class.announcement.publish'))
+        ));
+
+      allow delete: if isSameSchool(schoolId) && schoolAcademicAdmin();
+    }
+
+    match /schools/{schoolId}/class_report_entries/{entryId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      // The class teacher's own sections of a report. Everything the Report
+      // Card Engine owns - marks, grades, totals, publication status - is
+      // absent from the allowed set, so a teacher cannot promote their own
+      // draft to published by writing the field directly.
+      allow create, update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          null,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.report.entry')
+          && request.resource.data.status in
+              ['draft', 'in_progress', 'class_teacher_completed']
+          // A report already approved upstream is out of the teacher's hands.
+          && !(resource != null && resource.data.status in
+                ['academic_office_approved', 'leadership_approved',
+                 'published', 'archived'])
+        ));
+
+      allow delete: if false;
+    }
+
+    match /schools/{schoolId}/class_tasks/{taskId} {
+      // Tasks are the teacher's own working list, so ownership rather than
+      // assignment scope is the test - but still never cross-school.
+      allow read: if isSameSchool(schoolId)
+        && isStaff()
+        && (resource.data.ownerUserId == request.auth.uid
+            || request.auth.uid in resource.data.get('collaboratorUserIds', [])
+            || schoolAcademicAdmin());
+
+      allow create: if isSameSchool(schoolId)
+        && isStaff()
+        && request.resource.data.ownerUserId == request.auth.uid;
+
+      allow update: if isSameSchool(schoolId)
+        && isStaff()
+        && (resource.data.ownerUserId == request.auth.uid
+            || request.auth.uid in resource.data.get('collaboratorUserIds', []));
+
+      allow delete: if isSameSchool(schoolId)
+        && isStaff()
+        && resource.data.ownerUserId == request.auth.uid;
+    }
+
+    match /schools/{schoolId}/class_resources/{resourceId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      allow create: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          null,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.resource.upload')
+        ));
+
+      allow update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          resource.data.uploadedByUserId == request.auth.uid
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'class.resource.upload')
+        ));
+
+      // Detaching a resource from a class is an update; removing the stored
+      // original is the owner's or an admin's, never a side effect of
+      // tidying one class's folder.
+      allow delete: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          resource.data.uploadedByUserId == request.auth.uid
+          && grantsPermission(schoolId, resource.data.roleAssignmentId,
+                              'class.resource.delete')
+        ));
     }
   }
 }
