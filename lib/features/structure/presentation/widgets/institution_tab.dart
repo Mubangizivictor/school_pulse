@@ -561,7 +561,18 @@ class _InstitutionFormState extends State<_InstitutionForm> {
         }
       });
       _markDirty();
-    } catch (_) {
+    } on FirebaseException catch (e) {
+      debugPrint(
+        'Branding upload failed (${isLogo ? 'logo' : 'badge'}): '
+        '${e.code} — ${e.message}',
+      );
+      if (!mounted) return;
+      final message = e.code == 'unauthorized'
+          ? 'You do not have permission to upload this ${isLogo ? 'logo' : 'badge'}.'
+          : 'Could not upload the ${isLogo ? 'logo' : 'badge'} (${e.code}). Try again.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e, stack) {
+      debugPrint('Branding upload failed (${isLogo ? 'logo' : 'badge'}): $e\n$stack');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

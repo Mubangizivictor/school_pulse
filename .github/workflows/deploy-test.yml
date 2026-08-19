@@ -9,6 +9,7 @@ on:
       - 'lib/features/structure/**'
       - 'test/features/structure/**'
       - 'firestore.rules'
+      - 'storage.rules'
       - 'firebase.json'
       - '.firebaserc'
   workflow_dispatch:
@@ -58,7 +59,7 @@ jobs:
           retention-days: 14
 
   deploy-firestore:
-    name: Deploy Structure Firestore Rules
+    name: Deploy Structure Firestore and Storage Rules
     needs: verify-and-build
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -78,7 +79,7 @@ jobs:
       - name: Install Firebase CLI
         run: npm install --global firebase-tools
 
-      - name: Deploy Firestore rules to school-pulse-3d95b
+      - name: Deploy Firestore and Storage rules to school-pulse-3d95b
         shell: bash
         run: |
           set -euo pipefail
@@ -86,7 +87,7 @@ jobs:
 
           if [ -n "${FIREBASE_TOKEN:-}" ]; then
             firebase deploy \
-              --only firestore:rules \
+              --only firestore:rules,storage \
               --project "$PROJECT_ID" \
               --non-interactive \
               --token "$FIREBASE_TOKEN"
@@ -116,6 +117,6 @@ jobs:
           export GOOGLE_APPLICATION_CREDENTIALS="$CREDENTIAL_FILE"
 
           firebase deploy \
-            --only firestore:rules \
+            --only firestore:rules,storage \
             --project "$PROJECT_ID" \
             --non-interactive
