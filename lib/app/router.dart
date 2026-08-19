@@ -127,6 +127,12 @@ import 'package:school_pulse/features/shared/presentation/staff_hub_screen.dart'
 import 'package:school_pulse/features/student/domain/entities/admission_application.dart';
 import 'package:school_pulse/features/student/presentation/screens/admission_review_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/admissions_list_screen.dart';
+import 'package:school_pulse/features/student/presentation/screens/admin_students_dashboard_screen.dart';
+import 'package:school_pulse/features/student/presentation/screens/admin_students_list_screen.dart';
+import 'package:school_pulse/features/student/presentation/screens/admin_student_profile_screen.dart';
+import 'package:school_pulse/features/student/presentation/screens/admin_student_documents_screen.dart';
+import 'package:school_pulse/features/student/presentation/screens/student_portal_codes_screen.dart';
+import 'package:school_pulse/features/student_identity/presentation/screens/identity_and_cards_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/new_application_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
 import 'package:school_pulse/features/profile/presentation/screens/profile_more_screen.dart';
@@ -1968,6 +1974,60 @@ final router = GoRouter(
                   builder: (context, state) => AdmissionReviewScreen(
                     application: state.extra as AdmissionApplication,
                   ),
+                ),
+              ],
+            ),
+            GoRoute(
+              path: 'students',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                const permitted = {
+                  UserRole.schoolAdmin,
+                  UserRole.director,
+                  UserRole.headTeacher,
+                  UserRole.deputyHead,
+                  UserRole.deanOfStudies,
+                  UserRole.receptionist,
+                  UserRole.hrOfficer,
+                };
+                if (!auth.user.roles.any(permitted.contains)) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
+              builder: (context, state) => const AdminStudentsDashboardScreen(),
+              routes: [
+                GoRoute(
+                  path: 'list',
+                  builder: (context, state) => const AdminStudentsListScreen(),
+                ),
+                GoRoute(
+                  path: ':id',
+                  builder: (context, state) => AdminStudentProfileScreen(
+                    studentId: state.pathParameters['id']!,
+                  ),
+                  routes: [
+                    GoRoute(
+                      path: 'documents',
+                      builder: (context, state) => AdminStudentDocumentsScreen(
+                        student: state.extra as Student,
+                        canMutate: true,
+                      ),
+                    ),
+                    GoRoute(
+                      path: 'identity',
+                      builder: (context, state) => IdentityAndCardsScreen(
+                        student: state.extra as Student,
+                      ),
+                    ),
+                    GoRoute(
+                      path: 'portal',
+                      builder: (context, state) => StudentPortalCodesScreen(
+                        student: state.extra as Student,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

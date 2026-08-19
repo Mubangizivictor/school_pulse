@@ -17,6 +17,8 @@ import 'package:school_pulse/features/structure/presentation/bloc/structure_stat
 import 'package:school_pulse/injection_container.dart' as di;
 
 import 'admin_student_documents_screen.dart';
+import 'student_portal_codes_screen.dart';
+import 'package:school_pulse/features/student_identity/presentation/screens/identity_and_cards_screen.dart';
 
 /// Admin-facing student profile screen.
 ///
@@ -103,6 +105,26 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
                         );
                       }
                       break;
+                    case 'identity':
+                      if (student != null) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                IdentityAndCardsScreen(student: student),
+                          ),
+                        );
+                      }
+                      break;
+                    case 'portal':
+                      if (student != null) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                StudentPortalCodesScreen(student: student),
+                          ),
+                        );
+                      }
+                      break;
                   }
                 },
                 itemBuilder: (context) => const [
@@ -111,6 +133,20 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
                     child: ListTile(
                       leading: Icon(Icons.folder_outlined),
                       title: Text('Documents'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'identity',
+                    child: ListTile(
+                      leading: Icon(Icons.badge_outlined),
+                      title: Text('Identity & Cards'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'portal',
+                    child: ListTile(
+                      leading: Icon(Icons.lock_outline),
+                      title: Text('Portal Access'),
                     ),
                   ),
                   PopupMenuItem(
