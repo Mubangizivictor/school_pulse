@@ -57,7 +57,8 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
         // Poll only ISO14443 so Core NFC is not asked to negotiate unrelated
         // technologies and the assignment path stays deterministic.
         pollingOptions: const {NfcPollingOption.iso14443},
-        alertMessage: 'Hold the NTAG213 student card near the top edge of your iPhone.',
+        alertMessage:
+            'Hold the NTAG213 student card near the top edge of your iPhone.',
         onDiscovered: (tag) async {
           debugPrint('[SchoolPulse:NFC] Core NFC discovered a tag');
 
@@ -76,9 +77,8 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
 
           debugPrint('[SchoolPulse:NFC] UID=$uid');
 
-          // Publish the credential immediately. The assignment UI subscribes
-          // before start() is called, so this completes the scan without
-          // waiting for its 30-second guard timeout.
+          // Publish first so the Flutter attendance state can begin resolving
+          // the student immediately.
           if (!_controller.isClosed) {
             _controller.add(
               NfcScanCredential(cardUid: uid, scannedAt: DateTime.now()),
@@ -87,9 +87,13 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
 
           _sessionActive = false;
           try {
-            await NfcManager.instance.stopSession(
-              alertMessage: 'Student card detected successfully.',
-            );
+            // Do not pass a success alertMessage here. On iOS that keeps the
+            // native Core NFC sheet visible after detection and hides School
+            // Pulse's own student attendance preview underneath it. Close the
+            // native sheet immediately; the app owns the success/duplicate/
+            // wrong-class result UI and automatically re-arms for the next
+            // student after its short preview.
+            await NfcManager.instance.stopSession();
           } catch (_) {
             // iOS may have invalidated the session immediately after read.
           }
