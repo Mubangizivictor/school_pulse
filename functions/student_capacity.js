@@ -62,6 +62,20 @@ exports.createStudentWithCapacityCheck = onCall(async (request) => {
   const studentWillBeActive = ACTIVE_ENROLMENT_STATUSES.has(String(student.status || ""));
 
   const result = await db.runTransaction(async (tx) => {
+    // Reads must precede writes in a Firestore transaction, so check the
+    // application (if any) for a prior successful run before touching the
+    // school doc. A retried/double-tapped enroll call must not mint a
+    // second student for the same application.
+    if (applicationRef) {
+      const applicationSnap = await tx.get(applicationRef);
+      if (applicationSnap.exists) {
+        const existingStudentId = applicationSnap.data()?.studentId;
+        if (existingStudentId) {
+          return { studentId: existingStudentId, alreadyEnrolled: true };
+        }
+      }
+    }
+
     const schoolSnap = await tx.get(schoolRef);
     if (!schoolSnap.exists) {
       throw new HttpsError("failed-precondition", "School not found.");
