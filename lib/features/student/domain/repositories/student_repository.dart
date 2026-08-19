@@ -6,6 +6,7 @@ import '../entities/student.dart';
 import '../entities/admission_application.dart';
 import '../entities/student_enums.dart';
 import '../entities/parent_access_code.dart';
+import '../entities/student_access_code.dart';
 
 abstract class StudentRepository {
   // Student Management
@@ -104,6 +105,20 @@ abstract class StudentRepository {
   Future<Either<Failure, void>> deleteAccessCode(String code);
   Future<Either<Failure, void>> updateAccessCode(ParentAccessCode code);
   Future<Either<Failure, ParentAccessCode>> resolveAccessCode(String code);
+
+  // Student Portal Access Codes
+  Future<Either<Failure, String>> provisionStudentAccessCode(
+    String studentId,
+  );
+  Future<Either<Failure, void>> resetStudentPin(String code);
+  Future<Either<Failure, void>> setStudentAccessCodeStatus(
+    String code,
+    bool isActive, {
+    String? reason,
+  });
+  Future<Either<Failure, StudentAccessCode?>> getStudentAccessCode(
+    String studentId,
+  );
 
   // Homework
   Future<Either<Failure, List<Homework>>> getHomeworkForStudent(

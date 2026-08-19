@@ -9,6 +9,7 @@ import '../../domain/entities/student.dart';
 import '../../domain/entities/admission_application.dart';
 import '../../domain/entities/student_enums.dart';
 import '../../domain/entities/parent_access_code.dart';
+import '../../domain/entities/student_access_code.dart';
 import '../../domain/repositories/student_repository.dart';
 import '../datasources/student_local_data_source.dart';
 import '../datasources/student_remote_data_source.dart';
@@ -565,6 +566,58 @@ class StudentRepositoryImpl implements StudentRepository {
         return Left(ServerFailure('No account found with this code.'));
       }
       return Right(accessCode);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> provisionStudentAccessCode(
+    String studentId,
+  ) async {
+    try {
+      return Right(
+        await remoteDataSource.provisionStudentAccessCode(studentId),
+      );
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> resetStudentPin(String code) async {
+    try {
+      await remoteDataSource.resetStudentPin(code);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> setStudentAccessCodeStatus(
+    String code,
+    bool isActive, {
+    String? reason,
+  }) async {
+    try {
+      await remoteDataSource.setStudentAccessCodeStatus(
+        code,
+        isActive,
+        reason: reason,
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, StudentAccessCode?>> getStudentAccessCode(
+    String studentId,
+  ) async {
+    try {
+      return Right(await remoteDataSource.getStudentAccessCode(studentId));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

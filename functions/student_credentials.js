@@ -420,4 +420,133 @@ exports.resolveStudentCredential = onCall(async (request) => {
   return { found: true, studentId: identity.studentId, migrated: true };
 });
 
-exports.__test__ = { issueIdentityInTransaction, mintQrToken, reserveSequence, isStaffRole };
+// Excludes visually-ambiguous characters (0/O, 1/I/L) - these codes are read
+// aloud/typed on a phone keypad by students and parents.
+const ACCESS_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+
+function generateAccessCode(prefix, length = 8) {
+  let suffix = "";
+  const bytes = randomBytes(length);
+  for (let i = 0; i < length; i++) {
+    suffix += ACCESS_CODE_ALPHABET[bytes[i] % ACCESS_CODE_ALPHABET.length];
+  }
+  return `${prefix}${suffix}`;
+}
+
+/**
+ * Issues (or re-issues) a student's portal access code server-side. Doc ID
+ * is the code itself, matching parent_access_codes, so the pre-login screen
+ * can do a rule-safe direct get. No PIN is set here - the student proves the
+ * code via completeStudentPinSetup on first login, matching the parent flow.
+ */
+exports.provisionStudentAccessCode = onCall(async (request) => {
+  const { db, schoolId: callerSchoolId } = await requireStaffCaller(request.auth);
+  const studentId = request.data?.studentId;
+  if (typeof studentId !== "string" || !studentId) {
+    throw new HttpsError("invalid-argument", "studentId is required.");
+  }
+
+  const studentSnap = await db.collection("students").doc(studentId).get();
+  if (!studentSnap.exists) {
+    throw new HttpsError("not-found", "Student not found.");
+  }
+  const student = studentSnap.data() || {};
+  if (student.schoolId !== callerSchoolId) {
+    throw new HttpsError("permission-denied", "Cannot provision portal access for a different school's student.");
+  }
+
+  const existingSnap = await db.collection("student_access_codes")
+    .where("studentId", "==", studentId).limit(1).get();
+
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  const codeRef = existingSnap.empty
+    ? db.collection("student_access_codes").doc(generateAccessCode("S"))
+    : existingSnap.docs[0].ref;
+
+  const data = {
+    studentCode: codeRef.id,
+    schoolId: callerSchoolId,
+    studentId,
+    studentName: student.name || "",
+    isActive: true,
+    mustChangePin: true,
+    updatedAt: now,
+  };
+  if (existingSnap.empty) {
+    data.createdAt = now;
+  }
+  await codeRef.set(data, { merge: true });
+
+  return { code: codeRef.id };
+});
+
+/**
+ * Forces a student's next login to require a fresh PIN (admin "Reset PIN").
+ * Clears the stored PIN and any lockout state rather than picking a new PIN
+ * server-side, so no PIN value - old or new - ever needs to travel back to
+ * the admin client.
+ */
+exports.resetStudentPin = onCall(async (request) => {
+  const { db, schoolId: callerSchoolId } = await requireStaffCaller(request.auth);
+  const code = request.data?.code;
+  if (typeof code !== "string" || !code.trim()) {
+    throw new HttpsError("invalid-argument", "code is required.");
+  }
+
+  const codeRef = db.collection("student_access_codes").doc(code.trim());
+  const snap = await codeRef.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "Access code not found.");
+  }
+  const data = snap.data() || {};
+  if (data.schoolId !== callerSchoolId) {
+    throw new HttpsError("permission-denied", "Cannot reset a code for a different school's student.");
+  }
+
+  await codeRef.update({
+    pin: admin.firestore.FieldValue.delete(),
+    mustChangePin: true,
+    failedPinAttempts: 0,
+    pinLockedUntil: admin.firestore.FieldValue.delete(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { ok: true };
+});
+
+/**
+ * Enables/disables a student's portal access (admin toggle). Disabled
+ * accounts are rejected at loginStudent regardless of a correct PIN.
+ */
+exports.setStudentAccessCodeStatus = onCall(async (request) => {
+  const { db, schoolId: callerSchoolId } = await requireStaffCaller(request.auth);
+  const code = request.data?.code;
+  const isActive = request.data?.isActive;
+  const reason = request.data?.reason || null;
+  if (typeof code !== "string" || !code.trim()) {
+    throw new HttpsError("invalid-argument", "code is required.");
+  }
+  if (typeof isActive !== "boolean") {
+    throw new HttpsError("invalid-argument", "isActive must be a boolean.");
+  }
+
+  const codeRef = db.collection("student_access_codes").doc(code.trim());
+  const snap = await codeRef.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "Access code not found.");
+  }
+  const data = snap.data() || {};
+  if (data.schoolId !== callerSchoolId) {
+    throw new HttpsError("permission-denied", "Cannot modify a code for a different school's student.");
+  }
+
+  await codeRef.update({
+    isActive,
+    deactivationReason: isActive ? admin.firestore.FieldValue.delete() : reason,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { ok: true };
+});
+
+exports.__test__ = { issueIdentityInTransaction, mintQrToken, reserveSequence, isStaffRole, generateAccessCode };

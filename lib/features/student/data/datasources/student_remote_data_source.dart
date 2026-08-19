@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -5,6 +6,28 @@ import '../../../teacher/domain/entities/homework.dart';
 import '../models/student_model.dart';
 import '../models/admission_application_model.dart';
 import '../models/parent_access_code_model.dart';
+import '../models/student_access_code_model.dart';
+
+// Excludes visually-ambiguous characters (0/O, 1/I/L) since these codes are
+// read aloud/typed by parents and students on a phone keypad.
+const _accessCodeAlphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+final _accessCodeRandom = Random.secure();
+
+/// Generates a school-issued access code that is unguessable (unlike the
+/// previous scheme of a fixed prefix + trailing epoch-millis digits, which
+/// was sequential and predictable) and free of characters that are easily
+/// confused when read aloud or hand-copied.
+String _generateAccessCode({required String prefix, int length = 8}) {
+  final suffix = String.fromCharCodes(
+    List.generate(
+      length,
+      (_) => _accessCodeAlphabet.codeUnitAt(
+        _accessCodeRandom.nextInt(_accessCodeAlphabet.length),
+      ),
+    ),
+  );
+  return '$prefix$suffix';
+}
 
 /// Thrown when createStudentWithCapacityCheck rejects a create because the
 /// school has reached its plan's maxStudents limit, so callers can show a
@@ -95,6 +118,16 @@ abstract class StudentRemoteDataSource {
     String schoolId,
     String className,
   );
+
+  // Student Portal Access Codes
+  Future<String> provisionStudentAccessCode(String studentId);
+  Future<void> resetStudentPin(String code);
+  Future<void> setStudentAccessCodeStatus(
+    String code,
+    bool isActive, {
+    String? reason,
+  });
+  Future<StudentAccessCodeModel?> getStudentAccessCode(String studentId);
 }
 
 class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
@@ -171,7 +204,12 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     if (query != null && query.isNotEmpty) {
       final lowerQuery = query.toLowerCase();
       students = students
-          .where((s) => s.name.toLowerCase().contains(lowerQuery))
+          .where(
+            (s) =>
+                s.name.toLowerCase().contains(lowerQuery) ||
+                s.studentCode.toLowerCase().contains(lowerQuery) ||
+                s.admissionNumber.toLowerCase().contains(lowerQuery),
+          )
           .toList();
     }
 
@@ -408,10 +446,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     required String phoneNumber,
     String? parentName,
   }) async {
-    // Note: The actual code generation should ideally happen in a service/usecase
-    // that has access to the IdentityService, but for now we follow the structure.
-    final parentCode =
-        'P${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final parentCode = _generateAccessCode(prefix: 'P');
     // The code is also the document ID so pre-login users can perform the
     // rule-safe direct get without permission to enumerate access codes.
     final docRef = firestore.collection('parent_access_codes').doc(parentCode);
@@ -441,8 +476,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     }
     final oldData = oldSnapshot.data()!;
 
-    final newCode =
-        'P${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final newCode = _generateAccessCode(prefix: 'P');
     final newRef = firestore.collection('parent_access_codes').doc(newCode);
 
     final batch = firestore.batch();
@@ -519,5 +553,53 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
             .toList(),
       );
     }).toList();
+  }
+
+  // --- Student Portal Access Codes ---
+  // Code entropy and PIN clearing must not trust the caller, so all of
+  // these route through Cloud Functions rather than writing
+  // student_access_codes directly. See functions/student_credentials.js.
+
+  @override
+  Future<String> provisionStudentAccessCode(String studentId) async {
+    final callable = functions.httpsCallable('provisionStudentAccessCode');
+    final result = await callable.call<Map<String, dynamic>>({
+      'studentId': studentId,
+    });
+    return result.data['code'] as String;
+  }
+
+  @override
+  Future<void> resetStudentPin(String code) async {
+    final callable = functions.httpsCallable('resetStudentPin');
+    await callable.call<Map<String, dynamic>>({'code': code});
+  }
+
+  @override
+  Future<void> setStudentAccessCodeStatus(
+    String code,
+    bool isActive, {
+    String? reason,
+  }) async {
+    final callable = functions.httpsCallable('setStudentAccessCodeStatus');
+    await callable.call<Map<String, dynamic>>({
+      'code': code,
+      'isActive': isActive,
+      'reason': reason,
+    });
+  }
+
+  @override
+  Future<StudentAccessCodeModel?> getStudentAccessCode(
+    String studentId,
+  ) async {
+    final snapshot = await firestore
+        .collection('student_access_codes')
+        .where('studentId', isEqualTo: studentId)
+        .limit(1)
+        .get();
+    if (snapshot.docs.isEmpty) return null;
+    final doc = snapshot.docs.first;
+    return StudentAccessCodeModel.fromFirestore(doc.data(), doc.id);
   }
 }

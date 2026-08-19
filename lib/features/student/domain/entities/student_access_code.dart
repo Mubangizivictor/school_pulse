@@ -10,11 +10,11 @@ class StudentAccessCode extends Equatable {
   final String studentId;
   final String studentName;
   final String? phoneNumber;
-  final String? pin;
   final bool mustChangePin;
 
   final bool isActive;
   final String? deactivationReason;
+  final DateTime? lastLoginAt;
 
   String get code => studentCode;
 
@@ -25,10 +25,10 @@ class StudentAccessCode extends Equatable {
     required this.studentId,
     required this.studentName,
     this.phoneNumber,
-    this.pin,
     this.mustChangePin = true,
     this.isActive = true,
     this.deactivationReason,
+    this.lastLoginAt,
   });
 
   @override
@@ -39,9 +39,9 @@ class StudentAccessCode extends Equatable {
     studentId,
     studentName,
     phoneNumber,
-    pin,
     mustChangePin,
     isActive,
     deactivationReason,
+    lastLoginAt,
   ];
 }

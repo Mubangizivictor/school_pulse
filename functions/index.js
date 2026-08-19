@@ -4,6 +4,7 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { randomBytes, randomUUID, createHash } = require("crypto");
 const admin = require("firebase-admin");
 const { requirePlatformOwner, OwnerAuthorizationError } = require("./vendor/owner-auth");
+const { hashPin, verifyPin, assertNotLockedOut, failedAttemptUpdate, clearLockoutUpdate } = require("./vendor/pin-auth");
 
 admin.initializeApp();
 const supportAuditFunctions = require("./support_audit")({ admin, onCall, HttpsError });
@@ -1755,9 +1756,19 @@ exports.loginParent = onCall(async (request) => {
   if (data.phoneNumber !== phoneNumber) {
     throw new HttpsError("permission-denied", "Phone number does not match this access code.");
   }
-  if (data.pin !== pin) {
+  assertNotLockedOut(data, HttpsError);
+  const verification = verifyPin(pin, data.pin);
+  if (!verification.valid) {
+    await codeRef.update(failedAttemptUpdate(data, admin));
     throw new HttpsError("permission-denied", "Incorrect PIN.");
   }
+  const lockoutUpdate = clearLockoutUpdate(admin);
+  if (verification.legacy) {
+    // Opportunistically upgrade a legacy plaintext PIN to a hashed one now
+    // that it's been proven correct.
+    lockoutUpdate.pin = hashPin(pin);
+  }
+  await codeRef.update(lockoutUpdate);
 
   const uid = `parent_${code}`;
   const studentIds = data.studentIds || [];
@@ -1813,7 +1824,12 @@ exports.completeParentPinSetup = onCall(async (request) => {
     throw new HttpsError("permission-denied", "Phone number does not match this access code.");
   }
 
-  await codeRef.update({ pin: newPin, mustChangePin: false });
+  await codeRef.update({
+    pin: hashPin(newPin),
+    mustChangePin: false,
+    failedPinAttempts: 0,
+    pinLockedUntil: admin.firestore.FieldValue.delete(),
+  });
   return { success: true };
 });
 
@@ -1842,9 +1858,17 @@ exports.loginStudent = onCall(async (request) => {
   if (data.phoneNumber !== phoneNumber) {
     throw new HttpsError("permission-denied", "Phone number does not match this access code.");
   }
-  if (data.pin !== pin) {
+  assertNotLockedOut(data, HttpsError);
+  const verification = verifyPin(pin, data.pin);
+  if (!verification.valid) {
+    await codeRef.update(failedAttemptUpdate(data, admin));
     throw new HttpsError("permission-denied", "Incorrect PIN.");
   }
+  const lockoutUpdate = clearLockoutUpdate(admin);
+  if (verification.legacy) {
+    lockoutUpdate.pin = hashPin(pin);
+  }
+  await codeRef.update(lockoutUpdate);
 
   const uid = data.studentId;
   if (!uid) {
@@ -1888,7 +1912,12 @@ exports.completeStudentPinSetup = onCall(async (request) => {
     throw new HttpsError("permission-denied", "Phone number does not match this access code.");
   }
 
-  await codeRef.update({ pin: newPin, mustChangePin: false });
+  await codeRef.update({
+    pin: hashPin(newPin),
+    mustChangePin: false,
+    failedPinAttempts: 0,
+    pinLockedUntil: admin.firestore.FieldValue.delete(),
+  });
   return { success: true };
 });
 
@@ -2419,6 +2448,12 @@ exports.resolveStudentCredential = studentCredentialFunctions.resolveStudentCred
 // issueStudentIdentity callable - see functions/student_credentials.js for
 // the idempotent/resumable transaction it shares with issueStudentIdentity.
 exports.backfillStudentIdentities = studentCredentialFunctions.backfillStudentIdentities;
+// Student Portal access-code provisioning (admin generate/reset/enable-
+// disable) - server-side for the same reason as above: code entropy and
+// PIN clearing must not trust the caller.
+exports.provisionStudentAccessCode = studentCredentialFunctions.provisionStudentAccessCode;
+exports.resetStudentPin = studentCredentialFunctions.resetStudentPin;
+exports.setStudentAccessCodeStatus = studentCredentialFunctions.setStudentAccessCodeStatus;
 
 const studentViewFunctions = require("./student_view");
 // Server-side relationship + permission resolver for reading a student's
