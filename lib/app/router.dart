@@ -245,7 +245,6 @@ import 'package:school_pulse/features/super_admin/presentation/pages/support_tic
 import 'package:school_pulse/features/super_admin/presentation/pages/contact_about_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/privacy_policy_screen.dart';
 import 'package:school_pulse/features/games/presentation/screens/games_dashboard_screen.dart';
-import 'package:school_pulse/features/dean/presentation/screens/dean_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/shell/dean_shell.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -1454,7 +1453,7 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/dean',
-          builder: (context, state) => const DeanDashboardScreen(),
+          builder: (context, state) => const DeanShell(),
           routes: [
             GoRoute(
               path: 'curriculum',
@@ -1496,6 +1495,36 @@ final router = GoRouter(
             GoRoute(
               path: 'analytics',
               builder: (context, state) => const PerformanceAnalyticsScreen(),
+            ),
+            GoRoute(
+              path: 'today',
+              builder: (context, state) => const TodaysOperationsScreen(),
+            ),
+            GoRoute(
+              path: 'alerts',
+              builder: (context, state) => const AcademicAlertsScreen(),
+            ),
+            GoRoute(
+              path: 'exams',
+              builder: (context, state) => const ExamsOverviewScreen(),
+            ),
+            GoRoute(
+              path: 'missed-lessons',
+              builder: (context, state) => const MissedLessonsScreen(),
+            ),
+            GoRoute(
+              path: 'assessments',
+              builder: (context, state) => const AssessmentsOverviewScreen(),
+            ),
+            GoRoute(
+              path: 'students/:id',
+              builder: (context, state) => StudentAcademicProfileScreen(
+                studentId: state.pathParameters['id'] ?? '',
+              ),
+            ),
+            GoRoute(
+              path: 'more',
+              builder: (context, state) => const DeanMoreScreen(),
             ),
           ],
         ),
