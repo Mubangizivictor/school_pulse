@@ -113,83 +113,78 @@ class _DashboardHeader extends StatelessWidget {
         : 'School Admin';
     final canSwitchRoles = roles.length > 1;
 
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xl,
-          AppSpacing.s,
-          AppSpacing.xl,
-          AppSpacing.s,
-        ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: Row(
-              children: [
-                SchoolBadge(
-                  badgeUrl: branding?.badgeUrl ?? branding?.logoUrl,
-                  size: 56,
-                ),
-                const SizedBox(width: AppSpacing.l),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      InkWell(
-                        onTap: canSwitchRoles
-                            ? () => RoleSwitcherSheet.show(context)
-                            : null,
-                        borderRadius: BorderRadius.circular(6),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                roleLabel,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 19,
-                                  fontWeight: FontWeight.w800,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface,
-                                ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.s,
+        AppSpacing.xl,
+        AppSpacing.s,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: Row(
+            children: [
+              SchoolBadge(
+                badgeUrl: branding?.badgeUrl ?? branding?.logoUrl,
+                size: 56,
+              ),
+              const SizedBox(width: AppSpacing.l),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    InkWell(
+                      onTap: canSwitchRoles
+                          ? () => RoleSwitcherSheet.show(context)
+                          : null,
+                      borderRadius: BorderRadius.circular(6),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              roleLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.w800,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
-                            if (canSwitchRoles) ...[
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.unfold_more_rounded,
-                                size: 18,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                            ],
+                          ),
+                          if (canSwitchRoles) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.unfold_more_rounded,
+                              size: 18,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
                           ],
-                        ),
+                        ],
                       ),
-                      Text(
-                        branding?.schoolName ?? 'School Pulse',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    ),
+                    Text(
+                      branding?.schoolName ?? 'School Pulse',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const NotificationBellButton(
-                  key: Key('admin-dashboard-notifications-button'),
-                ),
-              ],
-            ),
+              ),
+              const NotificationBellButton(
+                key: Key('admin-dashboard-notifications-button'),
+              ),
+            ],
           ),
         ),
       ),
