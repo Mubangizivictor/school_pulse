@@ -97,10 +97,12 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
     try {
       switch (category) {
         case AttendanceCategory.students:
-          // One canonical roster source: all students for this tenant, then
-          // filter by the Structure class id stored on Student.classId. This
-          // avoids a fragile compound query/index path and makes mismatched
-          // placement data visible deterministically.
+          // getAllStudents(schoolId) is already tenant-scoped. Do not apply a
+          // second legacy Student.schoolId equality check here: older student
+          // objects may carry stale embedded tenant metadata even though the
+          // canonical document was returned through the authenticated school's
+          // repository query. The selected Structure class id is the roster
+          // boundary.
           final allResult = await studentRepository.getAllStudents(
             schoolId: schoolId,
           );
@@ -110,9 +112,8 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
               students
                   .where(
                     (s) =>
-                        s.schoolId == schoolId &&
                         s.classId == scopeId &&
-                        s.status.name == 'active',
+                        s.status.name.toLowerCase() == 'active',
                   )
                   .map(
                     (s) => AttendancePerson(
@@ -155,10 +156,51 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
     }
   }
 
+  Future<Failure?> _validateStudentPlacement(AttendanceRecord record) async {
+    if (record.category != AttendanceCategory.students) return null;
+
+    final allResult = await studentRepository.getAllStudents(
+      schoolId: record.schoolId,
+    );
+    return allResult.fold<Failure?>(
+      (failure) => failure,
+      (students) {
+        final matches = students.where((s) => s.id == record.personId).toList();
+        if (matches.isEmpty) {
+          return const ValidationFailure(
+            'This student is not in the current school roster.',
+            field: 'student',
+          );
+        }
+        final student = matches.first;
+        if (student.status.name.toLowerCase() != 'active') {
+          return const ValidationFailure(
+            'This student is not active and cannot be marked present.',
+            field: 'student',
+          );
+        }
+        if (student.classId != record.scopeId) {
+          return ValidationFailure(
+            'This student belongs to a different class. Select the student\'s actual class before marking attendance.',
+            field: 'scope',
+          );
+        }
+        return null;
+      },
+    );
+  }
+
   @override
   Future<Either<Failure, AttendanceRecord>> markAttendance(
     AttendanceRecord record,
   ) async {
+    // Correctness must not depend only on NFC/QR identity metadata. Before a
+    // student attendance write, validate the canonical student placement
+    // against the selected class. This makes it impossible for a P4 card to
+    // create a P5 attendance record even if an old identity cache is stale.
+    final placementFailure = await _validateStudentPlacement(record);
+    if (placementFailure != null) return Left(placementFailure);
+
     final pendingRecord = record.copyWith(
       syncStatus: AttendanceSyncStatus.pending,
     );
@@ -232,6 +274,10 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
     List<AttendanceRecord> records,
   ) async {
     try {
+      for (final record in records) {
+        final placementFailure = await _validateStudentPlacement(record);
+        if (placementFailure != null) return Left(placementFailure);
+      }
       final saved = await remoteDataSource.markBatch(
         records.map(AttendanceRecordModel.fromEntity).toList(),
       );
