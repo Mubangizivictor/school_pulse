@@ -226,6 +226,19 @@ class _HeroSummaryCard extends StatelessWidget {
         children: [
           Row(
             children: [
+              Expanded(
+                child: Text(
+                  '${_greeting()}, $firstName',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: scheme.onPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.m),
               BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
                 builder: (context, state) {
                   final label = state is AdminDashboardLoaded
@@ -271,19 +284,6 @@ class _HeroSummaryCard extends StatelessWidget {
                     ),
                   );
                 },
-              ),
-              const SizedBox(width: AppSpacing.m),
-              Expanded(
-                child: Text(
-                  '${_greeting()}, $firstName',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: scheme.onPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
               ),
             ],
           ),

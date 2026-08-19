@@ -255,7 +255,7 @@ class GetAdminDashboardStats
             (total, p) => total + p.amount,
           ),
         );
-        periodLabel = forTerm.name;
+        periodLabel = '${forTerm.name} · ${forTerm.startDate.year}';
       } else {
         final kpiResult = await financeRepository
             .getFinancialDashboardKPIs(schoolId)
@@ -271,7 +271,9 @@ class GetAdminDashboardStats
               .first
               .timeout(const Duration(seconds: 10));
           final current = terms.where((t) => t.isCurrent).firstOrNull;
-          periodLabel = current?.name;
+          periodLabel = current == null
+              ? null
+              : '${current.name} · ${current.startDate.year}';
         } catch (_) {
           // Structure not configured yet - leave label null.
         }
