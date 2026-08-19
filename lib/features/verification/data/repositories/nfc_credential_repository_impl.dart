@@ -23,16 +23,23 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
   Future<Either<Failure, void>?> _assignServerSide({
     required String cardUid,
     required String? studentId,
+    required String? staffId,
     required String schoolId,
   }) async {
-    if (functions == null || studentId == null) return null;
+    if (functions == null) return null;
+    if (studentId == null && staffId == null) return null;
     if (!await networkInfo.isConnected) return null;
 
     try {
-      await functions!.httpsCallable('assignNfcCredential').call<Map<String, dynamic>>({
-        'cardUid': cardUid,
-        'studentId': studentId,
-      });
+      final callableName = staffId != null
+          ? 'assignStaffNfcCredential'
+          : 'assignNfcCredential';
+      final payload = staffId != null
+          ? {'cardUid': cardUid, 'staffId': staffId}
+          : {'cardUid': cardUid, 'studentId': studentId};
+      await functions!
+          .httpsCallable(callableName)
+          .call<Map<String, dynamic>>(payload);
       return const Right(null);
     } on FirebaseFunctionsException catch (e) {
       if (e.code == 'already-exists') {
@@ -42,7 +49,8 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
             conflictingIdentityId:
                 details['conflictingIdentityId'] as String? ?? '',
             conflictingIdentityType:
-                details['conflictingIdentityType'] as String? ?? 'student',
+                details['conflictingIdentityType'] as String? ??
+                (staffId != null ? 'staff' : 'student'),
           ),
         );
       }
@@ -63,13 +71,15 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     required String identityType,
     required String schoolId,
     String? studentId,
+    String? staffId,
   }) async {
     try {
       var serverConfirmed = false;
-      if (identityType == 'student') {
+      if (identityType == 'student' || identityType == 'staff') {
         final serverResult = await _assignServerSide(
           cardUid: credentialValue,
           studentId: studentId,
+          staffId: staffId,
           schoolId: schoolId,
         );
         if (serverResult != null) {
@@ -125,6 +135,7 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     required String schoolId,
     required String reason,
     String? studentId,
+    String? staffId,
   }) async {
     final revokeResult = await revoke(
       credentialValue: oldCredentialValue,
@@ -139,6 +150,7 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
         identityType: identityType,
         schoolId: schoolId,
         studentId: studentId,
+        staffId: staffId,
       ),
     );
   }

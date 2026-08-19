@@ -34,6 +34,7 @@ abstract class NfcCredentialRepository {
     required String identityType,
     required String schoolId,
     String? studentId,
+    String? staffId,
   });
 
   /// Revokes [oldCredentialValue] and assigns [newCredentialValue] to the
@@ -46,6 +47,7 @@ abstract class NfcCredentialRepository {
     required String schoolId,
     required String reason,
     String? studentId,
+    String? staffId,
   });
 
   /// Adds the card to the denylist and marks the cached mapping revoked.

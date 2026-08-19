@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/components/pulse_button.dart';
 import 'package:school_pulse/design_system/components/pulse_text_field.dart';
@@ -11,6 +12,9 @@ import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/set_new_password.dart';
 import 'package:school_pulse/features/auth/domain/usecases/complete_parent_pin_setup.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 /// Shown right after a first successful login if a password or PIN change is required.
@@ -73,21 +77,34 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
           newPin: password,
         ),
       );
-      _handleResult(result);
+      await _handleResult(result);
     } else {
       final result = await di.sl<SetNewPassword>()(password);
-      _handleResult(result);
+      await _handleResult(result);
     }
   }
 
-  void _handleResult(dynamic result) {
+  Future<void> _handleResult(dynamic result) async {
     if (!mounted) return;
-    result.fold(
-      (failure) => setState(() {
+    await result.fold(
+      (failure) async => setState(() {
         _isLoading = false;
         _error = failure.message;
       }),
-      (_) {
+      (_) async {
+        // The router's top-level redirect re-checks AuthBloc's cached
+        // mustChangePassword on every navigation (see router.dart) - it's
+        // the actual enforcement boundary, re-run even for an
+        // already-authenticated session. Without refreshing AuthBloc here
+        // first, that redirect still sees the stale pre-reset value and
+        // bounces straight back to this same screen the instant we
+        // navigate away, with no visible error.
+        final authBloc = context.read<AuthBloc>();
+        authBloc.add(AuthCheckRequested());
+        await authBloc.stream.firstWhere(
+          (state) => state is! AuthLoading,
+        );
+        if (!mounted) return;
         setState(() => _isLoading = false);
         _routeToDashboard();
       },

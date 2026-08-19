@@ -17,11 +17,15 @@ class StaffIdCardService {
     required String staffCode,
     required String roleLabel,
     Uint8List? staffPhotoBytes,
+    // Signed StaffIdentity.qrCodeData token to encode instead of the raw
+    // staffCode - falls back to staffCode for callers issued before signed
+    // identities existed.
+    String? qrData,
   }) async {
     final pdf = pw.Document();
 
     final qrValidationResult = QrValidator.validate(
-      data: staffCode,
+      data: qrData ?? staffCode,
       version: QrVersions.auto,
       errorCorrectionLevel: QrErrorCorrectLevel.L,
     );
