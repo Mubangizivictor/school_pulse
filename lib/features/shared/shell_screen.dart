@@ -530,7 +530,9 @@ class StaffShell extends StatelessWidget {
                     child: Column(
                       children: [
                         const _SupportModeBanner(),
-                        if (isMobile && _hasMultipleRoles(context))
+                        if (isMobile &&
+                            _hasMultipleRoles(context) &&
+                            GoRouterState.of(context).uri.path != '/staff/hub')
                           const _RoleBanner(),
                       ],
                     ),
