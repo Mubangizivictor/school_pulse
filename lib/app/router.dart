@@ -40,6 +40,8 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/staff_panel_host.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/presentation/pages/user_management_page.dart';
+import 'package:school_pulse/features/admin/presentation/pages/staff_list_page.dart';
+import 'package:school_pulse/features/admin/presentation/pages/staff_detail_screen.dart';
 import 'package:school_pulse/features/admin/presentation/add_staff_wizard/add_staff_wizard_page.dart';
 import 'package:school_pulse/features/admin/broadcast_sms_screen.dart';
 import 'package:school_pulse/features/admin/system_config_screen.dart';
@@ -1582,8 +1584,17 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'users',
-              builder: (context, state) => const UserManagementPage(),
+              builder: (context, state) => const StaffListPage(),
               routes: [
+                GoRoute(
+                  path: 'overview',
+                  builder: (context, state) => const UserManagementPage(),
+                ),
+                GoRoute(
+                  path: ':uid',
+                  builder: (context, state) =>
+                      StaffDetailScreen(uid: state.pathParameters['uid']!),
+                ),
                 GoRoute(
                   path: 'add-staff',
                   redirect: (context, state) {
