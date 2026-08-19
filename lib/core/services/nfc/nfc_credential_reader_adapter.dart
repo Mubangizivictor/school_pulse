@@ -14,6 +14,7 @@ import 'package:school_pulse/features/verification/domain/repositories/credentia
 class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
   final _controller = StreamController<ScanCredential>.broadcast();
   bool _sessionActive = false;
+  bool _continuousAttendanceSession = false;
 
   @override
   ScanCredentialKind get kind => ScanCredentialKind.nfc;
@@ -33,11 +34,30 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
       );
     }
 
-    // Never silently return because of a stale Dart-side flag. iOS can close
-    // a Core NFC session itself (timeout/cancel/system interruption) before
-    // our state receives a matching callback. A stale `_sessionActive=true`
-    // previously made every later Assign Card attempt a no-op that merely
-    // waited for the UI timeout.
+    final wantsContinuousAttendance = context.purpose == 'attendance.nfc.scan';
+
+    // Attendance is a rapid multi-student workflow. nfc_manager 3.5.x
+    // supports keeping the iOS reader session alive with
+    // invalidateAfterFirstRead=false and re-arming it with restartPolling().
+    // If School Pulse asks to start again while that session is still alive,
+    // do NOT close/re-open Apple's sheet - simply poll for the next card.
+    if (_sessionActive &&
+        _continuousAttendanceSession &&
+        wantsContinuousAttendance) {
+      debugPrint('[SchoolPulse:NFC] re-arming continuous attendance polling');
+      try {
+        await NfcManager.instance.restartPolling();
+        return;
+      } catch (error) {
+        // If iOS already invalidated the native session, fall through and
+        // create a fresh one instead of leaving attendance stuck.
+        debugPrint('[SchoolPulse:NFC] restartPolling failed; reopening: $error');
+        _sessionActive = false;
+      }
+    }
+
+    // Assignment and other one-shot workflows must always begin with a clean
+    // native session. Also clear an attendance session that iOS invalidated.
     if (_sessionActive) {
       debugPrint('[SchoolPulse:NFC] clearing stale NFC session before restart');
       try {
@@ -48,17 +68,24 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
       _sessionActive = false;
     }
 
-    debugPrint('[SchoolPulse:NFC] starting fresh ISO14443 session');
+    _continuousAttendanceSession = wantsContinuousAttendance;
+    debugPrint(
+      wantsContinuousAttendance
+          ? '[SchoolPulse:NFC] starting continuous ISO14443 attendance session'
+          : '[SchoolPulse:NFC] starting fresh ISO14443 session',
+    );
     _sessionActive = true;
 
     try {
       await NfcManager.instance.startSession(
-        // The test cards are NXP NTAG213: ISO 14443-3A / NFC Forum Type 2.
-        // Poll only ISO14443 so Core NFC is not asked to negotiate unrelated
-        // technologies and the assignment path stays deterministic.
+        // NTAG213 = ISO 14443-3A / NFC Forum Type 2.
         pollingOptions: const {NfcPollingOption.iso14443},
-        alertMessage:
-            'Hold the NTAG213 student card near the top edge of your iPhone.',
+        // For attendance, keep the iOS NFCTagReaderSession alive after a read
+        // so the next child does not require pressing Start Scanning again.
+        invalidateAfterFirstRead: !wantsContinuousAttendance,
+        alertMessage: wantsContinuousAttendance
+            ? 'Attendance scanning is active. Tap student cards one after another.'
+            : 'Hold the NTAG213 student card near the top edge of your iPhone.',
         onDiscovered: (tag) async {
           debugPrint('[SchoolPulse:NFC] Core NFC discovered a tag');
 
@@ -72,35 +99,41 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
                 ),
               );
             }
+            if (_continuousAttendanceSession && _sessionActive) {
+              try {
+                await NfcManager.instance.restartPolling();
+              } catch (_) {}
+            }
             return;
           }
 
           debugPrint('[SchoolPulse:NFC] UID=$uid');
 
-          // Publish first so the Flutter attendance state can begin resolving
-          // the student immediately.
           if (!_controller.isClosed) {
             _controller.add(
               NfcScanCredential(cardUid: uid, scannedAt: DateTime.now()),
             );
           }
 
+          if (_continuousAttendanceSession) {
+            // Do not invalidate the native reader. The attendance screen will
+            // resolve/save/show the student and then call start() again after
+            // its short preview; start() above converts that into
+            // restartPolling() rather than opening a new sheet.
+            return;
+          }
+
           _sessionActive = false;
           try {
-            // Do not pass a success alertMessage here. On iOS that keeps the
-            // native Core NFC sheet visible after detection and hides School
-            // Pulse's own student attendance preview underneath it. Close the
-            // native sheet immediately; the app owns the success/duplicate/
-            // wrong-class result UI and automatically re-arms for the next
-            // student after its short preview.
             await NfcManager.instance.stopSession();
           } catch (_) {
-            // iOS may have invalidated the session immediately after read.
+            // iOS may have invalidated the one-shot session already.
           }
         },
         onError: (error) async {
           debugPrint('[SchoolPulse:NFC] native session error: $error');
           _sessionActive = false;
+          _continuousAttendanceSession = false;
           if (!_controller.isClosed) {
             _controller.addError(
               StateError('iPhone NFC session failed: $error'),
@@ -113,16 +146,25 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
     } catch (error) {
       debugPrint('[SchoolPulse:NFC] startSession threw: $error');
       _sessionActive = false;
+      _continuousAttendanceSession = false;
       rethrow;
     }
   }
 
   @override
   Future<void> stop() async {
-    // Cleanup is intentionally attempted even if our Dart-side flag says the
-    // session is inactive. This keeps native and Dart state synchronized.
+    // During attendance the screen calls stop() after each discovered
+    // credential while it resolves/saves the student. Treat that as a soft
+    // pause: keep the native session alive so the scheduled next scan can use
+    // restartPolling() without requiring the user to close/re-open anything.
+    if (_continuousAttendanceSession && _sessionActive) {
+      debugPrint('[SchoolPulse:NFC] soft-pausing continuous attendance session');
+      return;
+    }
+
     final wasActive = _sessionActive;
     _sessionActive = false;
+    _continuousAttendanceSession = false;
     if (wasActive) {
       debugPrint('[SchoolPulse:NFC] stopping NFC session');
     }
@@ -134,13 +176,18 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
   }
 
   void dispose() {
+    // dispose is the true end of an attendance session (Done/back/navigation),
+    // so force-close the native reader even though stop() is intentionally a
+    // soft pause during the rapid multi-card loop.
+    _sessionActive = false;
+    _continuousAttendanceSession = false;
+    try {
+      NfcManager.instance.stopSession();
+    } catch (_) {}
     _controller.close();
   }
 
   String? _extractUid(NfcTag tag) {
-    // On iOS an NTAG213 normally appears through MiFare; on Android it may
-    // appear as NfcA/MifareUltralight. Keep all compatible representations
-    // so the same physical card has one normalized UID on every platform.
     final identifier =
         MiFare.from(tag)?.identifier ??
         NfcA.from(tag)?.identifier ??
