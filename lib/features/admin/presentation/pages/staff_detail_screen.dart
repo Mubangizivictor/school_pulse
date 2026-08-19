@@ -387,8 +387,12 @@ class _RolesTabState extends State<_RolesTab> {
                   Builder(
                     builder: (context) {
                       final authState = context.watch<AuthBloc>().state;
+                      final isSelf =
+                          authState is AuthAuthenticated &&
+                          authState.user.id == widget.staff.id;
                       final canEdit =
                           authState is AuthAuthenticated &&
+                          !isSelf &&
                           AddStaffWizardController.canSubmit(
                             authState.user.roles,
                           );
@@ -401,6 +405,28 @@ class _RolesTabState extends State<_RolesTab> {
                     },
                   ),
                 ],
+              ),
+              Builder(
+                builder: (context) {
+                  final authState = context.watch<AuthBloc>().state;
+                  final isSelf =
+                      authState is AuthAuthenticated &&
+                      authState.user.id == widget.staff.id;
+                  if (!isSelf) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      "You can't edit your own roles - ask another "
+                      'Director, Head Teacher, or School Admin to make '
+                      'this change.',
+                      style: TextStyle(
+                        color: AppColors.textMuted(context),
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  );
+                },
               ),
               Text(
                 widget.staff.roles.isEmpty
@@ -540,7 +566,10 @@ class _AccountRolesEditorSheetState extends State<_AccountRolesEditorSheet> {
     result.fold(
       (failure) => setState(() {
         _saving = false;
-        _error = failure.message;
+        _error = failure.message.contains('permission-denied')
+            ? "You don't have permission to make this change. "
+                  'Ask a Director, Head Teacher, or School Admin.'
+            : failure.message;
       }),
       (_) => Navigator.of(context).pop(UserModel.fromEntity(updated)),
     );
