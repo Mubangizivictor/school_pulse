@@ -492,7 +492,7 @@ final Map<String, _QuickAccessItem> _quickAccessCatalog = {
     label: 'Students',
     icon: Icons.school_rounded,
     color: Colors.blueAccent,
-    route: '/staff/students',
+    route: '/staff/admin/students',
   ),
   'staff': const _QuickAccessItem(
     id: 'staff',
