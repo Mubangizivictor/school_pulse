@@ -152,6 +152,8 @@ import 'package:school_pulse/features/student/domain/usecases/get_all_students.d
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
 import 'package:school_pulse/features/student/domain/usecases/get_homework_for_student.dart';
 import 'package:school_pulse/features/student/domain/usecases/search_students.dart';
+import 'package:school_pulse/features/student/domain/usecases/manage_student_portal_access.dart';
+import 'package:school_pulse/features/student/presentation/bloc/student_portal_access_cubit.dart';
 import 'package:school_pulse/features/student/presentation/bloc/students_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/student_homework_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/admission_bloc.dart';
@@ -1739,6 +1741,20 @@ Future<void> init() async {
   sl.registerLazySingleton(() => ToggleAccessCodeStatus(sl()));
   sl.registerLazySingleton(() => DeleteAccessCode(sl()));
   sl.registerLazySingleton(() => UpdateAccessCode(sl()));
+
+  // Admin - Student Portal Access (StudentRepository already registered above)
+  sl.registerLazySingleton(() => ProvisionStudentAccessCode(sl()));
+  sl.registerLazySingleton(() => ResetStudentPin(sl()));
+  sl.registerLazySingleton(() => SetStudentAccessCodeStatus(sl()));
+  sl.registerLazySingleton(() => GetStudentAccessCode(sl()));
+  sl.registerFactory(
+    () => StudentPortalAccessCubit(
+      provisionStudentAccessCode: sl(),
+      resetStudentPin: sl(),
+      setStudentAccessCodeStatus: sl(),
+      getStudentAccessCode: sl(),
+    ),
+  );
 
   // Admin - Staff Accounts (AuthRepository already registered above)
   sl.registerLazySingleton(() => GetStaffMembers(sl()));
