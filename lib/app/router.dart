@@ -1597,11 +1597,6 @@ final router = GoRouter(
                   builder: (context, state) => const UserManagementPage(),
                 ),
                 GoRoute(
-                  path: ':uid',
-                  builder: (context, state) =>
-                      StaffDetailScreen(uid: state.pathParameters['uid']!),
-                ),
-                GoRoute(
                   path: 'add-staff',
                   redirect: (context, state) {
                     final auth = context.read<AuthBloc>().state;
@@ -1622,6 +1617,14 @@ final router = GoRouter(
                     return null;
                   },
                   builder: (context, state) => const AddStaffWizardPage(),
+                ),
+                // Must stay below the literal 'overview'/'add-staff' routes -
+                // go_router matches path segments in declaration order, and
+                // this wildcard would otherwise capture them as a :uid.
+                GoRoute(
+                  path: ':uid',
+                  builder: (context, state) =>
+                      StaffDetailScreen(uid: state.pathParameters['uid']!),
                 ),
               ],
             ),

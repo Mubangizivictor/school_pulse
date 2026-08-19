@@ -219,6 +219,11 @@ class _RolesTab extends StatefulWidget {
 }
 
 class _RolesTabState extends State<_RolesTab> {
+  static String _firstNameOrFallback(String name) {
+    final first = name.trim().split(' ').firstOrNull ?? '';
+    return first.isEmpty || first.endsWith('.') ? 'This staff member' : first;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -294,7 +299,7 @@ class _RolesTabState extends State<_RolesTab> {
                 ),
               ),
               Text(
-                '${widget.staff.name.split(' ').first} has '
+                '${_firstNameOrFallback(widget.staff.name)} has '
                 '${assignments.length} active role'
                 '${assignments.length == 1 ? '' : 's'}',
                 style: Theme.of(context).textTheme.labelSmall,
