@@ -170,11 +170,38 @@ class _IdentityErrorState extends StatelessWidget {
   }
 }
 
+/// Front + back of the card, matching the two-sided student ID card layout:
+/// front carries the photo/name/role identity, back carries the QR and
+/// authenticity/return-if-found footer. Shown side by side in a scrollable
+/// row instead of stacked, since a physical card has both sides at once.
 class _IdCardPreview extends StatelessWidget {
   const _IdCardPreview({required this.staff, required this.identity});
 
   final UserEntity staff;
   final StaffIdentity identity;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CardFront(staff: staff),
+          const SizedBox(width: 16),
+          _CardBack(staff: staff, identity: identity),
+        ],
+      ),
+    );
+  }
+}
+
+const _cardWidth = 240.0;
+const _cardHeight = 380.0;
+
+class _CardFront extends StatelessWidget {
+  const _CardFront({required this.staff});
+  final UserEntity staff;
 
   @override
   Widget build(BuildContext context) {
@@ -188,51 +215,130 @@ class _IdCardPreview extends StatelessWidget {
 
     return Card(
       elevation: 4,
-      child: Container(
-        width: 320,
-        padding: const EdgeInsets.all(20),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: SizedBox(
+        width: _cardWidth,
+        height: _cardHeight,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              schoolName.toUpperCase(),
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: scheme.primary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'STAFF',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.2,
-                color: Colors.amber.shade800,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              color: scheme.primary,
+              child: Column(
+                children: [
+                  Text(
+                    schoolName.toUpperCase(),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'STAFF',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.4,
+                      color: Colors.amber.shade400,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 18),
             CircleAvatar(
-              radius: 46,
+              radius: 44,
               backgroundImage: staff.photoUrl?.isNotEmpty == true
                   ? NetworkImage(staff.photoUrl!)
                   : null,
               child: staff.photoUrl?.isNotEmpty == true
                   ? null
-                  : const Icon(Icons.person, size: 44),
+                  : const Icon(Icons.person, size: 42),
             ),
             const SizedBox(height: 14),
-            Text(
-              staff.name.toUpperCase(),
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                staff.name.toUpperCase(),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
             ),
-            const SizedBox(height: 14),
-            Text(roleLabel),
-            if (staff.staffCode != null) Text('Staff Code: ${staff.staffCode}'),
-            const SizedBox(height: 18),
+            const SizedBox(height: 4),
+            Text(roleLabel, style: Theme.of(context).textTheme.bodySmall),
+            const Spacer(),
+            if (staff.staffCode != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  staff.staffCode!,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.primary,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CardBack extends StatelessWidget {
+  const _CardBack({required this.staff, required this.identity});
+  final UserEntity staff;
+  final StaffIdentity identity;
+
+  @override
+  Widget build(BuildContext context) {
+    final schoolName =
+        context.watch<ThemeProvider>().config?.schoolName ??
+        'SCHOOL PULSE ACADEMY';
+    final scheme = Theme.of(context).colorScheme;
+
+    return Card(
+      elevation: 4,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: SizedBox(
+        width: _cardWidth,
+        height: _cardHeight,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              color: scheme.primary,
+              child: Text(
+                'STAFF ID CARD',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: scheme.onPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
             QrImageView(
               data: identity.qrCodeData.isNotEmpty
                   ? identity.qrCodeData
@@ -240,9 +346,78 @@ class _IdCardPreview extends StatelessWidget {
               version: QrVersions.auto,
               size: 132,
             ),
+            const SizedBox(height: 18),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'THIS CARD IS THE PROPERTY OF $schoolName',
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _BackBadge(
+                  icon: Icons.verified_user_outlined,
+                  label: 'Identity\nVerified',
+                ),
+                _BackBadge(
+                  icon: Icons.lock_outline,
+                  label: 'Non-\nTransferable',
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                'If found, please return to the school office.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _BackBadge extends StatelessWidget {
+  const _BackBadge({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: scheme.primary.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 18, color: scheme.primary),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.labelSmall,
+        ),
+      ],
     );
   }
 }
