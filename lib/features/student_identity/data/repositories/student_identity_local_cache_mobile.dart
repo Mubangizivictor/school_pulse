@@ -25,6 +25,7 @@ class StudentIdentityLocalCacheMobile implements StudentIdentityLocalCache {
         ..name = student.name
         ..photoUrl = student.photoUrl
         ..className = student.className
+        ..stream = student.streamId
         ..schoolStudentId = identity.schoolStudentId
         ..schoolId = student.schoolId;
 
@@ -50,6 +51,7 @@ class StudentIdentityLocalCacheMobile implements StudentIdentityLocalCache {
       dateOfBirth: DateTime(2000),
       gender: Gender.male,
       classId: cached.className,
+      streamId: cached.stream,
       academicYearId: '',
       status: StudentStatus.active,
       level: EducationLevel.primary,
