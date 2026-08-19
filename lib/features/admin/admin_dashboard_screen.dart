@@ -30,6 +30,15 @@ class AdminDashboardScreen extends StatelessWidget {
       create: (context) =>
           di.sl<AdminDashboardBloc>()..add(LoadAdminDashboardStats()),
       child: Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          surfaceTintColor: Colors.transparent,
+          scrolledUnderElevation: 3,
+          titleSpacing: 0,
+          toolbarHeight: kToolbarHeight + 16,
+          title: _DashboardHeader(),
+        ),
         body: Builder(
           builder: (context) => RefreshIndicator(
             onRefresh: () async {
@@ -38,50 +47,33 @@ class AdminDashboardScreen extends StatelessWidget {
                 (state) => state is! AdminDashboardLoading,
               );
             },
-            child: CustomScrollView(
+            child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                // Keep the school-admin identity visible while the dashboard
-                // content scrolls. Other admin pages use [AdminAppBar], which
-                // is scaffold-pinned by default; the dashboard needs a pinned
-                // sliver because it owns its scroll view directly.
-                SliverAppBar(
-                  pinned: true,
-                  automaticallyImplyLeading: false,
-                  toolbarHeight: 88,
-                  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                  surfaceTintColor: Colors.transparent,
-                  titleSpacing: 0,
-                  title: _DashboardHeader(),
-                ),
-                SliverToBoxAdapter(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 640),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.xl,
-                          0,
-                          AppSpacing.xl,
-                          AppSpacing.x3l,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const _HeroSummaryCard(),
-                            const SizedBox(height: AppSpacing.xl),
-                            _QuickAccessSection(),
-                            const SizedBox(height: AppSpacing.xl),
-                            const _PendingApprovalsCard(),
-                            const SizedBox(height: AppSpacing.l),
-                            const _RecentActivityCard(),
-                          ],
-                        ),
-                      ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.l,
+                      AppSpacing.xl,
+                      AppSpacing.x3l,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _HeroSummaryCard(),
+                        const SizedBox(height: AppSpacing.xl),
+                        _QuickAccessSection(),
+                        const SizedBox(height: AppSpacing.xl),
+                        const _PendingApprovalsCard(),
+                        const SizedBox(height: AppSpacing.l),
+                        const _RecentActivityCard(),
+                      ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
