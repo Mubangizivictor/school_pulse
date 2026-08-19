@@ -3,8 +3,8 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 
 /// Compact attendance result preview used after QR/NFC resolution.
-/// Normal successful scans auto-continue; manual controls remain available
-/// for duplicate/invalid exceptional states when needed.
+/// Attendance scanning is continuous by default: show the student briefly,
+/// then let the screen re-arm the NFC reader automatically.
 class ScanResultCard extends StatefulWidget {
   final bool isDuplicate;
   final bool isInvalid;
@@ -28,7 +28,7 @@ class ScanResultCard extends StatefulWidget {
     this.photoUrl,
     this.isDuplicate = false,
     this.isInvalid = false,
-    this.autoContinue = false,
+    this.autoContinue = true,
   });
 
   @override
@@ -180,7 +180,7 @@ class _ScanResultCardState extends State<ScanResultCard> {
                   ),
                   const SizedBox(height: AppSpacing.s),
                   Text(
-                    'Waiting for the next student…',
+                    'Ready for the next student…',
                     style: TextStyle(
                       color: AppColors.textMuted(context),
                       fontWeight: FontWeight.w600,
