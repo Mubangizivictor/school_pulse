@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/components/circular_progress_gauge.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_radius.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
-import 'package:school_pulse/injection_container.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/injection_container.dart';
 import '../../domain/entities/academic_dashboard_stats.dart';
 
 class DeanDashboardScreen extends StatelessWidget {
@@ -20,33 +24,26 @@ class DeanDashboardScreen extends StatelessWidget {
     return BlocProvider(
       create: (context) => sl<DeanBloc>()..add(AcademicDashboardRequested()),
       child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          actions: [
-            NotificationBellButton(
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-            ),
-            const SizedBox(width: 8),
-          ],
-        ),
+        backgroundColor: AppColors.background(context),
         body: CustomScrollView(
           slivers: [
+            _buildAppBar(context),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(AppSpacing.xl),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildGreeting(context),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.x3l),
+                    _buildAcademicHealthGauge(context),
+                    const SizedBox(height: AppSpacing.x3l),
                     _buildActionGrid(context),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.x3l),
                     _buildStatsOverview(context),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.x3l),
                     _buildPerformanceSection(context),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.x3l),
                     _buildAlertsSection(context),
                   ],
                 ),
@@ -55,6 +52,21 @@ class DeanDashboardScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAppBar(BuildContext context) {
+    return SliverAppBar(
+      pinned: true,
+      expandedHeight: 80,
+      backgroundColor: AppColors.surface(context),
+      title: Text('Academic Command Centre', style: AppTypography.titleLarge),
+      actions: [
+        const NotificationBellButton(),
+        const SizedBox(width: AppSpacing.m),
+        IconButton(icon: const Icon(Icons.settings_outlined), onPressed: () {}),
+        const SizedBox(width: AppSpacing.m),
+      ],
     );
   }
 
@@ -67,22 +79,83 @@ class DeanDashboardScreen extends StatelessWidget {
           children: [
             Text(
               'Welcome, $name',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: AppTypography.headlineSmall.copyWith(
+                color: AppColors.textPrimary(context),
+              ),
             ),
             BlocBuilder<DeanBloc, DeanState>(
               builder: (context, state) {
                 if (state is AcademicDashboardLoaded) {
                   return Text(
                     '${state.stats.currentAcademicYear} • ${state.stats.currentTerm}',
-                    style: TextStyle(color: Theme.of(context).hintColor),
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textMuted(context),
+                    ),
                   );
                 }
-                return const Text('Loading academic session...');
+                return Text(
+                  'Loading academic session...',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
+                );
               },
             ),
           ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAcademicHealthGauge(BuildContext context) {
+    return BlocBuilder<DeanBloc, DeanState>(
+      builder: (context, state) {
+        if (state is! AcademicDashboardLoaded) {
+          return const SizedBox.shrink();
+        }
+        final stats = state.stats;
+        final health = (stats.overallSchoolAverage / 100).clamp(0.0, 1.0);
+        return AppCard(
+          child: Row(
+            children: [
+              CircularProgressGauge(
+                value: health,
+                label: 'Academic Health',
+                size: 108,
+                strokeWidth: 10,
+              ),
+              const SizedBox(width: AppSpacing.x3l),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'School Average',
+                      style: AppTypography.titleSmall.copyWith(
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s),
+                    Text(
+                      '${stats.overallSchoolAverage.toStringAsFixed(1)}%',
+                      style: AppTypography.headlineMedium.copyWith(
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s),
+                    Text(
+                      'Trend: ${stats.attendanceTrend > 0 ? "+" : ""}${stats.attendanceTrend}%',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: stats.attendanceTrend >= 0
+                            ? AppColors.success(context)
+                            : AppColors.danger(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -93,49 +166,41 @@ class DeanDashboardScreen extends StatelessWidget {
       _ActionItem(
         icon: Icons.menu_book,
         label: 'Curriculum',
-        color: Colors.blue,
         route: '/staff/dean/curriculum',
       ),
       _ActionItem(
         icon: Icons.assignment_ind,
         label: 'Workload',
-        color: Colors.purple,
         route: '/staff/dean/workload',
       ),
       _ActionItem(
         icon: Icons.history_edu,
         label: 'Lessons',
-        color: Colors.orange,
         route: '/staff/dean/lessons',
       ),
       _ActionItem(
         icon: Icons.grading,
         label: 'Quality QA',
-        color: Colors.green,
         route: '/staff/dean/marks-qa',
       ),
       _ActionItem(
         icon: Icons.verified_user,
         label: 'Report Approvals',
-        color: Colors.red,
         route: '/staff/dean/approvals',
       ),
       _ActionItem(
         icon: Icons.psychology,
         label: 'Interventions',
-        color: Colors.teal,
         route: '/staff/dean/interventions',
       ),
       _ActionItem(
         icon: Icons.visibility,
         label: 'Observations',
-        color: Colors.indigo,
         route: '/staff/dean/observations',
       ),
       _ActionItem(
         icon: Icons.analytics,
         label: 'Analytics',
-        color: Colors.amber,
         route: '/staff/dean/analytics',
       ),
     ];
@@ -148,8 +213,8 @@ class DeanDashboardScreen extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
+            crossAxisSpacing: AppSpacing.l,
+            mainAxisSpacing: AppSpacing.l,
             childAspectRatio: 2.5,
           ),
           itemCount: actions.length,
@@ -160,19 +225,20 @@ class DeanDashboardScreen extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(AppSpacing.m),
                     decoration: BoxDecoration(
-                      color: action.color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.primary(context).withValues(alpha: 0.1),
+                      borderRadius: AppRadius.medium,
                     ),
-                    child: Icon(action.icon, color: action.color, size: 24),
+                    child: Icon(
+                      action.icon,
+                      color: AppColors.primary(context),
+                      size: 24,
+                    ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.l),
                   Expanded(
-                    child: Text(
-                      action.label,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
+                    child: Text(action.label, style: AppTypography.titleSmall),
                   ),
                 ],
               ),
@@ -192,31 +258,31 @@ class DeanDashboardScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SectionHeader(title: 'Academic Pulse'),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.l),
               Wrap(
-                spacing: 12,
-                runSpacing: 12,
+                spacing: AppSpacing.l,
+                runSpacing: AppSpacing.l,
                 children: [
                   _StatBox(
                     label: 'Lessons Today',
                     value: '${stats.lessonsConductedToday}',
                     subValue: '${stats.lessonsMissedToday} missed',
                     icon: Icons.class_,
-                    color: Colors.blue,
+                    color: AppColors.primary(context),
                   ),
                   _StatBox(
                     label: 'Pending Marks',
                     value: '${stats.marksPendingEntry}',
                     subValue: 'Assessments: ${stats.assessmentsPending}',
                     icon: Icons.pending_actions,
-                    color: Colors.orange,
+                    color: AppColors.warning(context),
                   ),
                   _StatBox(
                     label: 'Reports to Approve',
                     value: '${stats.reportCardsPendingApproval}',
                     subValue: '${stats.reportCardsPublished} published',
                     icon: Icons.fact_check,
-                    color: Colors.green,
+                    color: AppColors.success(context),
                   ),
                   _StatBox(
                     label: 'School Average',
@@ -224,14 +290,14 @@ class DeanDashboardScreen extends StatelessWidget {
                     subValue:
                         'Trend: ${stats.attendanceTrend > 0 ? "+" : ""}${stats.attendanceTrend}%',
                     icon: Icons.trending_up,
-                    color: Colors.purple,
+                    color: AppColors.secondary(context),
                   ),
                 ],
               ),
             ],
           );
         }
-        return const Center(child: SchoolPulseLoader());
+        return const Center(child: CircularProgressIndicator());
       },
     );
   }
@@ -248,20 +314,22 @@ class DeanDashboardScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Top Performing Classes',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: AppTypography.titleSmall,
                       ),
-                      const Divider(),
+                      Divider(color: AppColors.border(context)),
                       ...state.stats.topPerformingClasses.map(
                         (c) => ListTile(
                           dense: true,
-                          title: Text(c.className),
+                          title: Text(
+                            c.className,
+                            style: AppTypography.bodyMedium,
+                          ),
                           trailing: Text(
                             '${c.average}%',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
+                            style: AppTypography.labelLarge.copyWith(
+                              color: AppColors.success(context),
                             ),
                           ),
                         ),
@@ -270,28 +338,27 @@ class DeanDashboardScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.xl),
               Expanded(
                 child: AppCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Subject Rankings',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const Divider(),
+                      Text('Subject Rankings', style: AppTypography.titleSmall),
+                      Divider(color: AppColors.border(context)),
                       ...state.stats.subjectRankings
                           .take(5)
                           .map(
                             (s) => ListTile(
                               dense: true,
-                              title: Text(s.subjectName),
+                              title: Text(
+                                s.subjectName,
+                                style: AppTypography.bodyMedium,
+                              ),
                               trailing: Text(
                                 '${s.average}%',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue,
+                                style: AppTypography.labelLarge.copyWith(
+                                  color: AppColors.primary(context),
                                 ),
                               ),
                             ),
@@ -316,27 +383,15 @@ class DeanDashboardScreen extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SectionHeader(title: 'Academic Alerts'),
-              const SizedBox(height: 12),
+              const SectionHeader(title: 'Critical Attention'),
+              const SizedBox(height: AppSpacing.l),
               ...state.stats.activeAlerts.map(
-                (alert) => AppCard(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  color: _getAlertColor(alert.severity).withValues(alpha: 0.05),
-                  child: ListTile(
-                    leading: Icon(
-                      Icons.warning_amber,
-                      color: _getAlertColor(alert.severity),
-                    ),
-                    title: Text(
-                      alert.title,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(alert.message),
-                    trailing: Text(
-                      _formatTime(alert.timestamp),
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
+                (alert) => AlertBanner(
+                  title: alert.title,
+                  message:
+                      '${alert.message}  •  ${_formatTime(alert.timestamp)}',
+                  color: _getAlertColor(context, alert.severity),
+                  icon: Icons.warning_amber,
                 ),
               ),
             ],
@@ -347,16 +402,16 @@ class DeanDashboardScreen extends StatelessWidget {
     );
   }
 
-  Color _getAlertColor(AlertSeverity severity) {
+  Color _getAlertColor(BuildContext context, AlertSeverity severity) {
     switch (severity) {
       case AlertSeverity.critical:
-        return Colors.red;
+        return AppColors.danger(context);
       case AlertSeverity.high:
-        return Colors.orange;
+        return AppColors.warning(context);
       case AlertSeverity.medium:
-        return Colors.blue;
+        return AppColors.information(context);
       case AlertSeverity.low:
-        return Colors.grey;
+        return AppColors.textMuted(context);
     }
   }
 
@@ -368,15 +423,9 @@ class DeanDashboardScreen extends StatelessWidget {
 class _ActionItem {
   final IconData icon;
   final String label;
-  final Color color;
   final String route;
 
-  _ActionItem({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.route,
-  });
+  _ActionItem({required this.icon, required this.label, required this.route});
 }
 
 class _StatBox extends StatelessWidget {
@@ -399,31 +448,35 @@ class _StatBox extends StatelessWidget {
     final width = (MediaQuery.of(context).size.width - 48) / 2;
     return Container(
       width: width > 200 ? 200 : width,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-        ),
+        color: AppColors.surface(context),
+        borderRadius: AppRadius.medium,
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color, size: 20),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.l),
           Text(
             value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: AppTypography.titleLarge.copyWith(
+              color: AppColors.textPrimary(context),
+            ),
           ),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            style: AppTypography.labelMedium.copyWith(
+              color: AppColors.textSecondary(context),
+            ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             subValue,
-            style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor),
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textMuted(context),
+            ),
           ),
         ],
       ),

@@ -7,6 +7,8 @@ import '../../domain/entities/lesson_tracking.dart';
 import '../../domain/entities/teacher_workload.dart';
 import '../../domain/entities/homework_record.dart';
 import '../../domain/entities/assessment_moderation.dart';
+import '../../domain/entities/report_card_approval.dart';
+import '../../domain/entities/today_operations.dart';
 
 abstract class DeanState extends Equatable {
   const DeanState();
@@ -75,6 +77,13 @@ class PendingModerationAssessmentsLoaded extends DeanState {
   List<Object?> get props => [assessments];
 }
 
+class PendingReportApprovalsLoaded extends DeanState {
+  final List<ReportCardApproval> approvals;
+  const PendingReportApprovalsLoaded(this.approvals);
+  @override
+  List<Object?> get props => [approvals];
+}
+
 class PerformanceAnalyticsLoaded extends DeanState {
   final Map<String, dynamic> analytics;
   const PerformanceAnalyticsLoaded(this.analytics);
@@ -108,6 +117,35 @@ class ExaminationSchedulesLoaded extends DeanState {
   const ExaminationSchedulesLoaded(this.schedules);
   @override
   List<Object?> get props => [schedules];
+}
+
+class TodaysOperationsLoaded extends DeanState {
+  final TodaysOperations operations;
+  const TodaysOperationsLoaded(this.operations);
+  @override
+  List<Object?> get props => [operations];
+}
+
+class MissedLessonsLoaded extends DeanState {
+  final List<LessonRecord> lessons;
+  final Map<String, bool> resolvedById;
+  const MissedLessonsLoaded(this.lessons, this.resolvedById);
+  @override
+  List<Object?> get props => [lessons, resolvedById];
+}
+
+class AssessmentsOverviewLoaded extends DeanState {
+  final List<AssessmentModeration> assessments;
+  const AssessmentsOverviewLoaded(this.assessments);
+  @override
+  List<Object?> get props => [assessments];
+}
+
+class StudentAcademicProfileLoaded extends DeanState {
+  final Map<String, dynamic> profile;
+  const StudentAcademicProfileLoaded(this.profile);
+  @override
+  List<Object?> get props => [profile];
 }
 
 class DeanOperationSuccess extends DeanState {

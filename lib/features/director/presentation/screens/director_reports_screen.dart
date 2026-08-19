@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/director/presentation/widgets/director_drawer.dart';
 
 class DirectorReportsScreen extends StatelessWidget {
   const DirectorReportsScreen({super.key});
@@ -7,6 +8,7 @@ class DirectorReportsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const DirectorDrawer(),
       appBar: AppBar(title: const Text('Strategic Reports')),
       body: ListView(
         padding: const EdgeInsets.all(16),

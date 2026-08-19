@@ -7,6 +7,9 @@ import '../../domain/entities/academic_intervention.dart';
 import '../../domain/entities/class_observation.dart';
 import '../../domain/entities/curriculum.dart';
 import '../../domain/entities/assessment_moderation.dart';
+import '../../domain/entities/report_card_approval.dart';
+import '../../domain/entities/today_operations.dart';
+import '../../domain/entities/examination_schedule.dart';
 
 abstract class DeanRemoteDataSource {
   Future<DeanStatsModel> getDeanDashboardStats();
@@ -44,6 +47,9 @@ abstract class DeanRemoteDataSource {
   Future<void> approveAssessmentMarks(String assessmentId);
   Future<void> rejectAssessmentMarks(String assessmentId, String reason);
   Future<List<AssessmentModeration>> getPendingModerationAssessments();
+  Future<void> approveReportCards(List<String> reportCardIds);
+  Future<void> rejectReportCards(List<String> reportCardIds, String reason);
+  Future<List<ReportCardApproval>> getPendingReportApprovals();
   Future<Map<String, dynamic>> getPerformanceAnalytics({
     required String type,
     String? id,
@@ -52,6 +58,10 @@ abstract class DeanRemoteDataSource {
   });
   Future<Map<String, dynamic>> getMasterTimetable();
   Future<List> getExaminationSchedules();
+  Future<TodaysOperations> getTodaysOperations();
+  Future<(List<LessonRecord>, Map<String, bool>)> getMissedLessons();
+  Future<List<AssessmentModeration>> getAssessmentsOverview();
+  Future<Map<String, dynamic>> getStudentAcademicProfile(String studentId);
   Future<void> sendAcademicAnnouncement({
     required String title,
     required String message,
@@ -111,6 +121,27 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
           message: "Mathematics department is below 80% coverage.",
           severity: AlertSeverity.high,
           timestamp: DateTime.now(),
+        ),
+        AcademicAlert(
+          id: "a2",
+          title: "Marks Entry Overdue",
+          message: "S.4 Science Mid-Term marks are 3 days overdue.",
+          severity: AlertSeverity.critical,
+          timestamp: DateTime.now().subtract(const Duration(hours: 6)),
+        ),
+        AcademicAlert(
+          id: "a3",
+          title: "Substitute Needed",
+          message: "P.6 English lesson at 11:00am has no assigned teacher.",
+          severity: AlertSeverity.medium,
+          timestamp: DateTime.now().subtract(const Duration(hours: 1)),
+        ),
+        AcademicAlert(
+          id: "a4",
+          title: "Syllabus Coverage Dip",
+          message: "History coverage dropped slightly this week.",
+          severity: AlertSeverity.low,
+          timestamp: DateTime.now().subtract(const Duration(days: 1)),
         ),
       ],
     );
@@ -392,6 +423,39 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   }
 
   @override
+  Future<void> approveReportCards(List<String> reportCardIds) async {}
+
+  @override
+  Future<void> rejectReportCards(
+    List<String> reportCardIds,
+    String reason,
+  ) async {}
+
+  @override
+  Future<List<ReportCardApproval>> getPendingReportApprovals() async {
+    return [
+      const ReportCardApproval(
+        id: "rc1",
+        studentId: "st1",
+        studentName: "Namono Grace",
+        className: "P.7 Blue",
+        averageScore: 88.5,
+        term: "Term 3",
+        year: "2024",
+      ),
+      const ReportCardApproval(
+        id: "rc2",
+        studentId: "st2",
+        studentName: "Musa Kevin",
+        className: "P.7 Blue",
+        averageScore: 72.1,
+        term: "Term 3",
+        year: "2024",
+      ),
+    ];
+  }
+
+  @override
   Future<Map<String, dynamic>> getPerformanceAnalytics({
     required String type,
     String? id,
@@ -416,6 +480,38 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
       'topStudents': [
         {'name': 'Namono Grace', 'class': 'P.7 Blue', 'score': 0.92},
       ],
+      'unebReadiness': {
+        'overallReadiness': 0.78,
+        'mockExamsCompleted': 3,
+        'mockExamsPlanned': 4,
+        'candidatesRegistered': 240,
+        'subjectBreakdown': [
+          {
+            'subject': 'Mathematics',
+            'readiness': 0.82,
+            'passRateProjection': 0.75,
+          },
+          {'subject': 'English', 'readiness': 0.88, 'passRateProjection': 0.81},
+          {'subject': 'Science', 'readiness': 0.70, 'passRateProjection': 0.66},
+          {
+            'subject': 'Social Studies',
+            'readiness': 0.74,
+            'passRateProjection': 0.69,
+          },
+        ],
+      },
+      'reportsReadiness': {
+        'overallReadiness': 0.62,
+        'reportCardsPublished': 0,
+        'reportCardsPendingApproval': 150,
+        'marksFullyEntered': 0.71,
+        'classBreakdown': [
+          {'className': 'P.7 Blue', 'readiness': 0.90},
+          {'className': 'P.7 Red', 'readiness': 0.65},
+          {'className': 'S.4 Science', 'readiness': 0.55},
+          {'className': 'S.4 Arts', 'readiness': 0.40},
+        ],
+      },
     };
   }
 
@@ -423,7 +519,225 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   Future<Map<String, dynamic>> getMasterTimetable() async => {};
 
   @override
-  Future<List> getExaminationSchedules() async => [];
+  Future<List<ExaminationSchedule>> getExaminationSchedules() async {
+    return [
+      ExaminationSchedule(
+        id: "ex1",
+        examName: "Mid-Term Examination",
+        subjectId: "s1",
+        subjectName: "Mathematics",
+        className: "S.4 Science",
+        date: DateTime.now().add(const Duration(days: 2)),
+        startTime: "08:00",
+        durationLabel: "2h 30m",
+        venue: "Main Hall",
+        status: ExaminationStatus.scheduled,
+      ),
+      ExaminationSchedule(
+        id: "ex2",
+        examName: "Mid-Term Examination",
+        subjectId: "s2",
+        subjectName: "English",
+        className: "S.4 Science",
+        date: DateTime.now().add(const Duration(days: 2)),
+        startTime: "11:00",
+        durationLabel: "2h",
+        venue: "Main Hall",
+        status: ExaminationStatus.scheduled,
+      ),
+      ExaminationSchedule(
+        id: "ex3",
+        examName: "End of Term Exam",
+        subjectId: "s3",
+        subjectName: "Physics",
+        className: "S.4 Science",
+        date: DateTime.now().subtract(const Duration(days: 1)),
+        startTime: "09:00",
+        durationLabel: "3h",
+        venue: "Lab Block",
+        status: ExaminationStatus.marksPending,
+      ),
+      ExaminationSchedule(
+        id: "ex4",
+        examName: "Continuous Assessment Test",
+        subjectId: "s1",
+        subjectName: "Mathematics",
+        className: "P.7 Blue",
+        date: DateTime.now().subtract(const Duration(days: 5)),
+        startTime: "10:00",
+        durationLabel: "1h 30m",
+        venue: "P.7 Blue Classroom",
+        status: ExaminationStatus.published,
+      ),
+      ExaminationSchedule(
+        id: "ex5",
+        examName: "Mock UNEB Exam",
+        subjectId: "s4",
+        subjectName: "Biology",
+        className: "S.4 Science",
+        date: DateTime.now(),
+        startTime: "13:00",
+        durationLabel: "2h",
+        venue: "Science Block",
+        status: ExaminationStatus.inProgress,
+      ),
+      ExaminationSchedule(
+        id: "ex6",
+        examName: "End of Term Exam",
+        subjectId: "s5",
+        subjectName: "History",
+        className: "S.3 Arts",
+        date: DateTime.now().add(const Duration(days: 7)),
+        startTime: "08:30",
+        durationLabel: "2h",
+        venue: "Room 12",
+        status: ExaminationStatus.scheduled,
+      ),
+    ];
+  }
+
+  @override
+  Future<TodaysOperations> getTodaysOperations() async {
+    return const TodaysOperations(
+      lessonsScheduled: 210,
+      lessonsCompleted: 168,
+      lessonsInProgress: 12,
+      lessonsMissed: 5,
+      assessmentsToday: 8,
+      awaitingConfirmation: 3,
+      teacherAbsences: 4,
+      substituteLessons: 3,
+      examinationsToday: 1,
+      meetingsToday: 2,
+    );
+  }
+
+  @override
+  Future<(List<LessonRecord>, Map<String, bool>)> getMissedLessons() async {
+    final lessons = [
+      LessonRecord(
+        id: "ml1",
+        subjectId: "s2",
+        subjectName: "English",
+        classId: "c4",
+        className: "P.6 Green",
+        teacherId: "t2",
+        teacherName: "Jane Smith",
+        scheduledAt: DateTime.now().subtract(const Duration(hours: 3)),
+        status: LessonStatus.missed,
+        remarks: "Teacher on sick leave, no substitute assigned",
+      ),
+      LessonRecord(
+        id: "ml2",
+        subjectId: "s3",
+        subjectName: "Physics",
+        classId: "c2",
+        className: "S.4 Science",
+        teacherId: "t3",
+        teacherName: "Robert Okello",
+        scheduledAt: DateTime.now().subtract(const Duration(days: 1, hours: 2)),
+        status: LessonStatus.missed,
+        remarks: "Lab unavailable due to maintenance",
+      ),
+      LessonRecord(
+        id: "ml3",
+        subjectId: "s1",
+        subjectName: "Mathematics",
+        classId: "c1",
+        className: "P.7 Blue",
+        teacherId: "t1",
+        teacherName: "John Doe",
+        scheduledAt: DateTime.now().subtract(const Duration(days: 2, hours: 1)),
+        status: LessonStatus.missed,
+        remarks: "Resolved: makeup lesson held Saturday",
+      ),
+    ];
+    final resolvedById = {"ml1": false, "ml2": false, "ml3": true};
+    return (lessons, resolvedById);
+  }
+
+  @override
+  Future<List<AssessmentModeration>> getAssessmentsOverview() async {
+    return [
+      AssessmentModeration(
+        id: "ao1",
+        assessmentId: "as1",
+        title: "Mid-Term Algebra Test",
+        className: "Year 10A",
+        subjectName: "Mathematics",
+        teacherName: "John Doe",
+        submissionCount: 28,
+        totalStudents: 30,
+        averageScore: 72.5,
+        status: ModerationStatus.pending,
+        createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      ),
+      AssessmentModeration(
+        id: "ao2",
+        assessmentId: "as2",
+        title: "Weekly Physics Quiz",
+        className: "S.4 Science",
+        subjectName: "Physics",
+        teacherName: "Jane Smith",
+        submissionCount: 45,
+        totalStudents: 45,
+        averageScore: 68.2,
+        status: ModerationStatus.approved,
+        createdAt: DateTime.now().subtract(const Duration(hours: 5)),
+      ),
+      AssessmentModeration(
+        id: "ao3",
+        assessmentId: "as3",
+        title: "English Comprehension CAT",
+        className: "P.6 Green",
+        subjectName: "English",
+        teacherName: "Robert Okello",
+        submissionCount: 30,
+        totalStudents: 32,
+        averageScore: 61.0,
+        status: ModerationStatus.rejected,
+        rejectionReason: "Marks entry incomplete for 2 students",
+        createdAt: DateTime.now().subtract(const Duration(days: 3)),
+      ),
+    ];
+  }
+
+  @override
+  Future<Map<String, dynamic>> getStudentAcademicProfile(
+    String studentId,
+  ) async {
+    return {
+      'studentId': studentId,
+      'studentName': 'Namono Grace',
+      'className': 'P.7 Blue',
+      'admissionNumber': 'SP-2024-0142',
+      'attendanceRate': 0.94,
+      'overallAverage': 84.2,
+      'term1Marks': {
+        'Mathematics': 78.0,
+        'English': 82.0,
+        'Science': 75.0,
+        'Social Studies': 88.0,
+      },
+      'term2Marks': {
+        'Mathematics': 85.0,
+        'English': 86.0,
+        'Science': 80.0,
+        'Social Studies': 90.0,
+      },
+      'subjectTeachers': [
+        {'subject': 'Mathematics', 'teacher': 'John Doe'},
+        {'subject': 'English', 'teacher': 'Jane Smith'},
+        {'subject': 'Science', 'teacher': 'Robert Okello'},
+        {'subject': 'Social Studies', 'teacher': 'Mary Namutebi'},
+      ],
+      'interventions': [
+        {'reason': 'Declining Mathematics scores', 'status': 'inProgress'},
+      ],
+      'remarks':
+          'Consistent improvement across Term 2; recommend continued remedial support in Science.',
+    };
+  }
 
   @override
   Future<void> sendAcademicAnnouncement({

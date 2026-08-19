@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_radius.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
@@ -15,110 +18,103 @@ class TeacherWorkloadScreen extends StatelessWidget {
     return BlocProvider(
       create: (context) => sl<DeanBloc>()..add(TeacherWorkloadsRequested()),
       child: Scaffold(
+        backgroundColor: AppColors.background(context),
         appBar: AppBar(title: const Text('Teacher Workload Monitoring')),
         body: BlocBuilder<DeanBloc, DeanState>(
           builder: (context, state) {
             if (state is TeacherWorkloadsLoaded) {
               return ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.xl),
                 itemCount: state.workloads.length,
                 itemBuilder: (context, index) {
                   final workload = state.workloads[index];
+                  final completionFraction = workload.weeklyLessonsCount > 0
+                      ? (workload.lessonsDelivered /
+                            workload.weeklyLessonsCount)
+                      : 0.0;
                   final completionText = workload.weeklyLessonsCount > 0
-                      ? '${(workload.lessonsDelivered / workload.weeklyLessonsCount * 100).toStringAsFixed(0)}%'
+                      ? '${(completionFraction * 100).toStringAsFixed(0)}%'
                       : 'N/A';
 
                   return AppCard(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
+                    margin: const EdgeInsets.only(bottom: AppSpacing.l),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            AvatarInitials(
+                              name: workload.teacherName,
+                              size: 40,
+                            ),
+                            const SizedBox(width: AppSpacing.l),
+                            Expanded(
+                              child: Text(
                                 workload.teacherName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
+                                style: AppTypography.titleSmall,
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  'Load: ${workload.weeklyLessonsCount} hrs/wk',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                            ),
+                            StatusBadge(
+                              label: '${workload.weeklyLessonsCount} hrs/wk',
+                              color: AppColors.primary(context),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.l),
+                        LinearProgressIndicator(
+                          value: completionFraction,
+                          backgroundColor: AppColors.border(context),
+                          color: AppColors.success(context),
+                          minHeight: 8,
+                          borderRadius: AppRadius.small,
+                        ),
+                        const SizedBox(height: AppSpacing.m),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Lesson Completion: $completionText',
+                              style: AppTypography.bodySmall,
+                            ),
+                            Text(
+                              'Missed: ${workload.lessonsMissed}',
+                              style: AppTypography.bodySmall.copyWith(
+                                color: workload.lessonsMissed > 0
+                                    ? AppColors.danger(context)
+                                    : AppColors.textMuted(context),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          LinearProgressIndicator(
-                            value: workload.weeklyLessonsCount > 0
-                                ? workload.lessonsDelivered /
-                                      workload.weeklyLessonsCount
-                                : 0,
-                            backgroundColor: Colors.grey.shade200,
-                            color: Colors.green,
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Lesson Completion: $completionText',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              Text(
-                                'Missed: ${workload.lessonsMissed}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: workload.lessonsMissed > 0
-                                      ? Colors.red
-                                      : Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Divider(),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _WorkloadMetric(
-                                label: 'Assessments',
-                                value: '${workload.assessmentsCreated}',
-                              ),
-                              _WorkloadMetric(
-                                label: 'Pending Marks',
-                                value: '${workload.marksPending}',
-                                color: Colors.orange,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                            ),
+                          ],
+                        ),
+                        Divider(color: AppColors.border(context)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _WorkloadMetric(
+                              label: 'Assessments',
+                              value: '${workload.assessmentsCreated}',
+                            ),
+                            _WorkloadMetric(
+                              label: 'Pending Marks',
+                              value: '${workload.marksPending}',
+                              color: AppColors.warning(context),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   );
                 },
               );
             }
             if (state is DeanLoading) {
-              return const Center(child: SchoolPulseLoader());
+              return const Center(child: CircularProgressIndicator());
             }
-            return const Center(child: Text('No workload data available.'));
+            return const EmptyState(
+              icon: Icons.assignment_ind,
+              title: 'No workload data',
+              message: 'No workload data available.',
+            );
           },
         ),
       ),
@@ -139,15 +135,15 @@ class _WorkloadMetric extends StatelessWidget {
       children: [
         Text(
           value,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            color: color,
+          style: AppTypography.titleMedium.copyWith(
+            color: color ?? AppColors.textPrimary(context),
           ),
         ),
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor),
+          style: AppTypography.labelSmall.copyWith(
+            color: AppColors.textMuted(context),
+          ),
         ),
       ],
     );

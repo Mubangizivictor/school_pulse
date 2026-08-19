@@ -162,19 +162,33 @@ class Step11ReviewConfirm extends StatelessWidget {
     }
 
     await controller.logAudit();
-    if (controller.draft.documents.isNotEmpty && controller.resultUid != null) {
-      final failed = await StaffDocumentsUploader().uploadAll(
-        schoolId: controller.schoolId,
-        uid: controller.resultUid!,
-        documents: controller.draft.documents,
-      );
-      if (failed.isNotEmpty && context.mounted) {
+    if (controller.resultUid != null) {
+      final uploader = StaffDocumentsUploader();
+      final uid = controller.resultUid!;
+      String? photoWarning;
+      if (controller.draft.photo != null) {
+        final ok = await uploader.uploadPhoto(
+          uid: uid,
+          photo: controller.draft.photo!,
+        );
+        if (!ok) photoWarning = 'the profile photo failed to upload';
+      }
+      List<String> failedDocuments = const [];
+      if (controller.draft.documents.isNotEmpty) {
+        failedDocuments = await uploader.uploadAll(
+          schoolId: controller.schoolId,
+          uid: uid,
+          documents: controller.draft.documents,
+        );
+      }
+      if (context.mounted && (photoWarning != null || failedDocuments.isNotEmpty)) {
+        final parts = [
+          if (photoWarning != null) photoWarning,
+          if (failedDocuments.isNotEmpty)
+            '${failedDocuments.length} document(s) failed to upload',
+        ];
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Account created, but ${failed.length} document(s) failed to upload.',
-            ),
-          ),
+          SnackBar(content: Text('Account created, but ${parts.join(' and ')}.')),
         );
       }
     }

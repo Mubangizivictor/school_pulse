@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/components/circular_progress_gauge.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_radius.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
 import '../../../domain/entities/curriculum.dart';
 
 class SyllabusCoverageScreen extends StatelessWidget {
@@ -10,26 +15,21 @@ class SyllabusCoverageScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(title: Text(subject.name)),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSummaryCard(),
-            const SizedBox(height: 24),
-            const Text(
-              'Topics & Subtopics',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
+            _buildSummaryCard(context),
+            const SizedBox(height: AppSpacing.x3l),
+            Text('Topics & Subtopics', style: AppTypography.titleLarge),
+            const SizedBox(height: AppSpacing.l),
             ...subject.topics.map((topic) => _TopicExpansionTile(topic: topic)),
-            const SizedBox(height: 24),
-            const Text(
-              'Learning Objectives',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.x3l),
+            Text('Learning Objectives', style: AppTypography.titleLarge),
+            const SizedBox(height: AppSpacing.l),
             ...subject.objectives.map((obj) => _ObjectiveTile(objective: obj)),
           ],
         ),
@@ -37,37 +37,18 @@ class SyllabusCoverageScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryCard() {
+  Widget _buildSummaryCard(BuildContext context) {
     return AppCard(
       child: Column(
         children: [
-          const Text(
-            'Overall Syllabus Coverage',
-            style: TextStyle(fontWeight: FontWeight.bold),
+          Text('Overall Syllabus Coverage', style: AppTypography.titleSmall),
+          const SizedBox(height: AppSpacing.xl),
+          CircularProgressGauge(
+            value: subject.currentCoverage / 100,
+            label: 'Coverage',
+            size: 108,
           ),
-          const SizedBox(height: 16),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                height: 100,
-                width: 100,
-                child: CircularProgressIndicator(
-                  value: subject.currentCoverage / 100,
-                  strokeWidth: 10,
-                  backgroundColor: Colors.grey[200],
-                ),
-              ),
-              Text(
-                '${subject.currentCoverage.toStringAsFixed(0)}%',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.xl),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -108,9 +89,16 @@ class _SummaryItem extends StatelessWidget {
       children: [
         Text(
           value,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: AppTypography.titleLarge.copyWith(
+            color: AppColors.textPrimary(context),
+          ),
         ),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(
+          label,
+          style: AppTypography.labelMedium.copyWith(
+            color: AppColors.textMuted(context),
+          ),
+        ),
       ],
     );
   }
@@ -127,30 +115,44 @@ class _TopicExpansionTile extends StatelessWidget {
     final totalCount = topic.subTopics.length;
     final progress = totalCount > 0 ? completedCount / totalCount : 0.0;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.m),
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: AppRadius.medium,
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
-        title: Text(
-          topic.title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+        title: Text(topic.title, style: AppTypography.titleSmall),
+        subtitle: Text(
+          '$completedCount/$totalCount subtopics completed',
+          style: AppTypography.bodySmall.copyWith(
+            color: AppColors.textMuted(context),
+          ),
         ),
-        subtitle: Text('$completedCount/$totalCount subtopics completed'),
-        leading: CircularProgressIndicator(
-          value: progress,
-          strokeWidth: 3,
-          backgroundColor: Colors.grey[200],
+        leading: SizedBox(
+          width: 28,
+          height: 28,
+          child: CircularProgressIndicator(
+            value: progress,
+            strokeWidth: 3,
+            backgroundColor: AppColors.border(context),
+            color: AppColors.primary(context),
+          ),
         ),
         children: topic.subTopics
             .map(
               (st) => ListTile(
                 dense: true,
-                title: Text(st.title),
+                title: Text(st.title, style: AppTypography.bodyMedium),
                 trailing: Icon(
                   st.isCompleted
                       ? Icons.check_circle
                       : Icons.radio_button_unchecked,
-                  color: st.isCompleted ? Colors.green : Colors.grey,
+                  color: st.isCompleted
+                      ? AppColors.success(context)
+                      : AppColors.textMuted(context),
                 ),
               ),
             )
@@ -167,30 +169,23 @@ class _ObjectiveTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.m),
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: AppRadius.medium,
+        border: Border.all(color: AppColors.border(context)),
+      ),
       child: ListTile(
         leading: Icon(
           Icons.track_changes,
-          color: objective.isCore ? Colors.blue : Colors.grey,
+          color: objective.isCore
+              ? AppColors.primary(context)
+              : AppColors.textMuted(context),
         ),
-        title: Text(objective.description),
+        title: Text(objective.description, style: AppTypography.bodyMedium),
         trailing: objective.isCore
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text(
-                  'CORE',
-                  style: TextStyle(
-                    fontSize: 8,
-                    color: Colors.blue,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              )
+            ? StatusBadge(label: 'Core', color: AppColors.primary(context))
             : null,
       ),
     );

@@ -97,6 +97,24 @@ class RejectAssessmentMarksRequested extends DeanEvent {
   List<Object?> get props => [assessmentId, reason];
 }
 
+// Report Card Approval
+class PendingReportApprovalsRequested extends DeanEvent {}
+
+class ApproveReportCardsRequested extends DeanEvent {
+  final List<String> reportCardIds;
+  const ApproveReportCardsRequested(this.reportCardIds);
+  @override
+  List<Object?> get props => [reportCardIds];
+}
+
+class RejectReportCardsRequested extends DeanEvent {
+  final List<String> reportCardIds;
+  final String reason;
+  const RejectReportCardsRequested(this.reportCardIds, this.reason);
+  @override
+  List<Object?> get props => [reportCardIds, reason];
+}
+
 // Performance Analytics
 class PerformanceAnalyticsRequested extends DeanEvent {
   final String type;
@@ -147,6 +165,23 @@ class RecordObservationRequested extends DeanEvent {
 class MasterTimetableRequested extends DeanEvent {}
 
 class ExaminationSchedulesRequested extends DeanEvent {}
+
+// Today's Operations
+class TodaysOperationsRequested extends DeanEvent {}
+
+// Missed Lessons
+class MissedLessonsRequested extends DeanEvent {}
+
+// Assessments Overview
+class AssessmentsOverviewRequested extends DeanEvent {}
+
+// Student Academic Profile
+class StudentAcademicProfileRequested extends DeanEvent {
+  final String studentId;
+  const StudentAcademicProfileRequested(this.studentId);
+  @override
+  List<Object?> get props => [studentId];
+}
 
 // Communication
 class SendAcademicAnnouncementRequested extends DeanEvent {

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
@@ -17,6 +19,7 @@ class MarksQAScreen extends StatelessWidget {
       create: (context) =>
           sl<DeanBloc>()..add(PendingModerationAssessmentsRequested()),
       child: Scaffold(
+        backgroundColor: AppColors.background(context),
         appBar: AppBar(title: const Text('Marks Quality Assurance')),
         body: BlocListener<DeanBloc, DeanState>(
           listener: (context, state) {
@@ -32,11 +35,13 @@ class MarksQAScreen extends StatelessWidget {
           child: BlocBuilder<DeanBloc, DeanState>(
             builder: (context, state) {
               if (state is DeanLoading) {
-                return const Center(child: SchoolPulseLoader());
+                return const Center(child: CircularProgressIndicator());
               } else if (state is PendingModerationAssessmentsLoaded) {
                 if (state.assessments.isEmpty) {
-                  return const Center(
-                    child: Text('No assessments pending moderation.'),
+                  return const EmptyState(
+                    icon: Icons.grading,
+                    title: 'All caught up',
+                    message: 'No assessments pending moderation.',
                   );
                 }
                 return _buildAssessmentList(context, state.assessments);
@@ -56,34 +61,40 @@ class MarksQAScreen extends StatelessWidget {
     List<AssessmentModeration> assessments,
   ) {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.xl),
       itemCount: assessments.length,
       itemBuilder: (context, index) {
         final assessment = assessments[index];
         return AppCard(
-          margin: const EdgeInsets.only(bottom: 12),
+          margin: const EdgeInsets.only(bottom: AppSpacing.l),
+          padding: EdgeInsets.zero,
           child: ExpansionTile(
-            title: Text(
-              assessment.title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+            title: Text(assessment.title, style: AppTypography.titleSmall),
             subtitle: Text(
               '${assessment.className} • ${assessment.subjectName}',
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textMuted(context),
+              ),
             ),
             children: [
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(AppSpacing.xl),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Teacher: ${assessment.teacherName}'),
+                    Text(
+                      'Teacher: ${assessment.teacherName}',
+                      style: AppTypography.bodyMedium,
+                    ),
                     Text(
                       'Submissions: ${assessment.submissionCount} / ${assessment.totalStudents}',
+                      style: AppTypography.bodyMedium,
                     ),
                     Text(
                       'Average Score: ${assessment.averageScore.toStringAsFixed(1)}%',
+                      style: AppTypography.bodyMedium,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.xl),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -93,11 +104,11 @@ class MarksQAScreen extends StatelessWidget {
                             assessment.assessmentId,
                           ),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
+                            foregroundColor: AppColors.danger(context),
                           ),
                           child: const Text('Reject'),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.m),
                         ElevatedButton(
                           onPressed: () {
                             context.read<DeanBloc>().add(
@@ -149,9 +160,9 @@ class MarksQAScreen extends StatelessWidget {
               );
               Navigator.pop(dialogContext);
             },
-            child: const Text(
+            child: Text(
               'Submit Rejection',
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: AppColors.danger(dialogContext)),
             ),
           ),
         ],

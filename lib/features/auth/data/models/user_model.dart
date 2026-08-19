@@ -26,6 +26,9 @@ class UserModel extends UserEntity {
     super.dateJoined,
     super.address,
     super.emergencyContact,
+    super.nationality,
+    super.alternatePhone,
+    super.documents,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -83,6 +86,17 @@ class UserModel extends UserEntity {
               json['emergencyContact'] as Map<String, dynamic>,
             )
           : null,
+      nationality: json['nationality'] as String?,
+      alternatePhone: json['alternatePhone'] as String?,
+      documents: json['documents'] != null
+          ? (json['documents'] as List)
+                .map(
+                  (d) => StaffDocumentRef.fromJson(
+                    Map<String, dynamic>.from(d as Map),
+                  ),
+                )
+                .toList()
+          : const [],
     );
   }
 
@@ -121,6 +135,9 @@ class UserModel extends UserEntity {
       'dateJoined': dateJoined != null ? Timestamp.fromDate(dateJoined!) : null,
       'address': address,
       'emergencyContact': emergencyContact?.toJson(),
+      'nationality': nationality,
+      'alternatePhone': alternatePhone,
+      'documents': documents.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -149,6 +166,9 @@ class UserModel extends UserEntity {
       dateJoined: entity.dateJoined,
       address: entity.address,
       emergencyContact: entity.emergencyContact,
+      nationality: entity.nationality,
+      alternatePhone: entity.alternatePhone,
+      documents: entity.documents,
     );
   }
 }

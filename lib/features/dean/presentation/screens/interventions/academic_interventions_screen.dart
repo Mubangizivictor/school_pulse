@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
@@ -17,12 +19,28 @@ class AcademicInterventionsScreen extends StatefulWidget {
 }
 
 class _AcademicInterventionsScreenState
-    extends State<AcademicInterventionsScreen> {
+    extends State<AcademicInterventionsScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => sl<DeanBloc>()..add(InterventionsRequested()),
       child: Scaffold(
+        backgroundColor: AppColors.background(context),
         appBar: AppBar(
           title: const Text('Academic Interventions'),
           actions: [
@@ -33,6 +51,13 @@ class _AcademicInterventionsScreenState
               ),
             ),
           ],
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: 'Active'),
+              Tab(text: 'Completed'),
+            ],
+          ),
         ),
         body: BlocConsumer<DeanBloc, DeanState>(
           listener: (context, state) {
@@ -45,44 +70,43 @@ class _AcademicInterventionsScreenState
           },
           builder: (context, state) {
             if (state is DeanLoading) {
-              return const Center(child: SchoolPulseLoader());
+              return const Center(child: CircularProgressIndicator());
             } else if (state is InterventionsLoaded) {
               if (state.interventions.isEmpty) {
-                return const Center(child: Text('No interventions active.'));
+                return const EmptyState(
+                  icon: Icons.psychology,
+                  title: 'No interventions',
+                  message: 'No interventions active.',
+                );
               }
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: state.interventions.length,
-                itemBuilder: (context, index) {
-                  final intervention = state.interventions[index];
-                  return AppCard(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      title: Text(
-                        intervention.studentName,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(intervention.reason),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              _buildTypeBadge(intervention.type),
-                              const SizedBox(width: 8),
-                              _buildStatusBadge(intervention.status),
-                            ],
-                          ),
-                        ],
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      isThreeLine: true,
-                      onTap: () =>
-                          _showUpdateStatusSheet(context, intervention),
-                    ),
-                  );
-                },
+              final active = state.interventions
+                  .where(
+                    (i) =>
+                        i.status != InterventionStatus.completed &&
+                        i.status != InterventionStatus.cancelled,
+                  )
+                  .toList();
+              final completed = state.interventions
+                  .where(
+                    (i) =>
+                        i.status == InterventionStatus.completed ||
+                        i.status == InterventionStatus.cancelled,
+                  )
+                  .toList();
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildInterventionList(
+                    context,
+                    active,
+                    'No active interventions.',
+                  ),
+                  _buildInterventionList(
+                    context,
+                    completed,
+                    'No completed interventions.',
+                  ),
+                ],
               );
             } else if (state is DeanError) {
               return Center(child: Text(state.message));
@@ -94,55 +118,74 @@ class _AcademicInterventionsScreenState
     );
   }
 
-  Widget _buildTypeBadge(InterventionType type) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.blue.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        type.name.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 10,
-          color: Colors.blue,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+  Widget _buildInterventionList(
+    BuildContext context,
+    List<AcademicIntervention> interventions,
+    String emptyMessage,
+  ) {
+    if (interventions.isEmpty) {
+      return EmptyState(
+        icon: Icons.psychology_outlined,
+        title: 'Nothing here',
+        message: emptyMessage,
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      itemCount: interventions.length,
+      itemBuilder: (context, index) {
+        final intervention = interventions[index];
+        return AppCard(
+          margin: const EdgeInsets.only(bottom: AppSpacing.l),
+          child: ListTile(
+            title: Text(
+              intervention.studentName,
+              style: AppTypography.titleSmall,
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(intervention.reason, style: AppTypography.bodySmall),
+                const SizedBox(height: AppSpacing.s),
+                Row(
+                  children: [
+                    _buildTypeBadge(context, intervention.type),
+                    const SizedBox(width: AppSpacing.m),
+                    _buildStatusBadge(context, intervention.status),
+                  ],
+                ),
+              ],
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            isThreeLine: true,
+            onTap: () => _showUpdateStatusSheet(context, intervention),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildStatusBadge(InterventionStatus status) {
+  Widget _buildTypeBadge(BuildContext context, InterventionType type) {
+    return StatusBadge(label: type.name, color: AppColors.primary(context));
+  }
+
+  Widget _buildStatusBadge(BuildContext context, InterventionStatus status) {
     Color color;
     switch (status) {
       case InterventionStatus.pending:
-        color = Colors.orange;
+        color = AppColors.warning(context);
         break;
       case InterventionStatus.inProgress:
-        color = Colors.blue;
+        color = AppColors.information(context);
         break;
       case InterventionStatus.completed:
-        color = Colors.green;
+        color = AppColors.success(context);
         break;
       case InterventionStatus.cancelled:
-        color = Colors.grey;
+        color = AppColors.textMuted(context);
         break;
     }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        status.name.toUpperCase(),
-        style: TextStyle(
-          fontSize: 10,
-          color: color,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
+    return StatusBadge(label: status.name, color: color);
   }
 
   void _showCreateInterventionSheet(BuildContext context) {
@@ -202,9 +245,9 @@ class _CreateInterventionSheetState extends State<CreateInterventionSheet> {
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 16,
-        right: 16,
-        top: 16,
+        left: AppSpacing.xl,
+        right: AppSpacing.xl,
+        top: AppSpacing.xl,
       ),
       child: Form(
         key: _formKey,
@@ -213,13 +256,13 @@ class _CreateInterventionSheetState extends State<CreateInterventionSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SectionHeader(title: 'New Intervention Plan'),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.xl),
             TextFormField(
               decoration: const InputDecoration(labelText: 'Student Name'),
               validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
               onSaved: (v) => _studentName = v!,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.xl),
             TextFormField(
               decoration: const InputDecoration(
                 labelText: 'Reason for Intervention',
@@ -228,7 +271,7 @@ class _CreateInterventionSheetState extends State<CreateInterventionSheet> {
               validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
               onSaved: (v) => _reason = v!,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.xl),
             DropdownButtonFormField<InterventionType>(
               initialValue: _type,
               decoration: const InputDecoration(labelText: 'Intervention Type'),
@@ -242,7 +285,7 @@ class _CreateInterventionSheetState extends State<CreateInterventionSheet> {
                   .toList(),
               onChanged: (v) => setState(() => _type = v!),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.x3l),
             ElevatedButton(
               onPressed: () {
                 if (_formKey.currentState?.validate() ?? false) {
@@ -265,7 +308,7 @@ class _CreateInterventionSheetState extends State<CreateInterventionSheet> {
               },
               child: const Text('Create Plan'),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.xl),
           ],
         ),
       ),
@@ -306,16 +349,16 @@ class _UpdateInterventionStatusSheetState
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 16,
-        right: 16,
-        top: 16,
+        left: AppSpacing.xl,
+        right: AppSpacing.xl,
+        top: AppSpacing.xl,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionHeader(title: 'Update: ${widget.intervention.studentName}'),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.xl),
           DropdownButtonFormField<InterventionStatus>(
             initialValue: _status,
             decoration: const InputDecoration(labelText: 'Status'),
@@ -329,13 +372,13 @@ class _UpdateInterventionStatusSheetState
                 .toList(),
             onChanged: (v) => setState(() => _status = v!),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.xl),
           TextFormField(
             controller: _outcomesController,
             decoration: const InputDecoration(labelText: 'Outcomes / Progress'),
             maxLines: 3,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.x3l),
           ElevatedButton(
             onPressed: () {
               widget.onUpdated(_status, _outcomesController.text);
@@ -343,7 +386,7 @@ class _UpdateInterventionStatusSheetState
             },
             child: const Text('Update Status'),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.xl),
         ],
       ),
     );

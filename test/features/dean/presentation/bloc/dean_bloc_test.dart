@@ -5,6 +5,9 @@ import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/features/dean/domain/entities/academic_dashboard_stats.dart';
 import 'package:school_pulse/features/dean/domain/entities/academic_intervention.dart';
+import 'package:school_pulse/features/dean/domain/entities/assessment_moderation.dart';
+import 'package:school_pulse/features/dean/domain/entities/lesson_tracking.dart';
+import 'package:school_pulse/features/dean/domain/entities/today_operations.dart';
 import 'package:school_pulse/features/dean/domain/repositories/dean_repository.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
@@ -149,5 +152,158 @@ void main() {
         ],
       );
     });
+  });
+
+  final tOperations = const TodaysOperations(
+    lessonsScheduled: 210,
+    lessonsCompleted: 168,
+    lessonsInProgress: 12,
+    lessonsMissed: 5,
+    assessmentsToday: 8,
+    awaitingConfirmation: 3,
+    teacherAbsences: 4,
+    substituteLessons: 3,
+    examinationsToday: 1,
+    meetingsToday: 2,
+  );
+
+  final tLessonRecord = LessonRecord(
+    id: "ml1",
+    subjectId: "s2",
+    subjectName: "English",
+    classId: "c4",
+    className: "P.6 Green",
+    teacherId: "t2",
+    teacherName: "Jane Smith",
+    scheduledAt: DateTime(2024, 1, 1),
+    status: LessonStatus.missed,
+  );
+
+  final tAssessment = AssessmentModeration(
+    id: "ao1",
+    assessmentId: "as1",
+    title: "Mid-Term Algebra Test",
+    className: "Year 10A",
+    subjectName: "Mathematics",
+    teacherName: "John Doe",
+    submissionCount: 28,
+    totalStudents: 30,
+    averageScore: 72.5,
+    createdAt: DateTime(2024, 1, 1),
+  );
+
+  group('DeanBloc - Todays Operations', () {
+    blocTest<DeanBloc, DeanState>(
+      'should emit [DeanLoading, TodaysOperationsLoaded] when operations fetched successfully',
+      build: () {
+        when(
+          () => mockRepository.getTodaysOperations(),
+        ).thenAnswer((_) async => Right(tOperations));
+        return bloc;
+      },
+      act: (bloc) => bloc.add(TodaysOperationsRequested()),
+      expect: () => [DeanLoading(), TodaysOperationsLoaded(tOperations)],
+    );
+
+    blocTest<DeanBloc, DeanState>(
+      'should emit [DeanLoading, DeanError] when fetching operations fails',
+      build: () {
+        when(
+          () => mockRepository.getTodaysOperations(),
+        ).thenAnswer((_) async => const Left(ServerFailure('Error')));
+        return bloc;
+      },
+      act: (bloc) => bloc.add(TodaysOperationsRequested()),
+      expect: () => [DeanLoading(), const DeanError('Error')],
+    );
+  });
+
+  group('DeanBloc - Missed Lessons', () {
+    blocTest<DeanBloc, DeanState>(
+      'should emit [DeanLoading, MissedLessonsLoaded] when missed lessons fetched successfully',
+      build: () {
+        when(() => mockRepository.getMissedLessons()).thenAnswer(
+          (_) async => Right(([tLessonRecord], <String, bool>{"ml1": false})),
+        );
+        return bloc;
+      },
+      act: (bloc) => bloc.add(MissedLessonsRequested()),
+      expect: () => [
+        DeanLoading(),
+        MissedLessonsLoaded([tLessonRecord], const {"ml1": false}),
+      ],
+    );
+
+    blocTest<DeanBloc, DeanState>(
+      'should emit [DeanLoading, DeanError] when fetching missed lessons fails',
+      build: () {
+        when(
+          () => mockRepository.getMissedLessons(),
+        ).thenAnswer((_) async => const Left(ServerFailure('Error')));
+        return bloc;
+      },
+      act: (bloc) => bloc.add(MissedLessonsRequested()),
+      expect: () => [DeanLoading(), const DeanError('Error')],
+    );
+  });
+
+  group('DeanBloc - Assessments Overview', () {
+    blocTest<DeanBloc, DeanState>(
+      'should emit [DeanLoading, AssessmentsOverviewLoaded] when assessments fetched successfully',
+      build: () {
+        when(
+          () => mockRepository.getAssessmentsOverview(),
+        ).thenAnswer((_) async => Right([tAssessment]));
+        return bloc;
+      },
+      act: (bloc) => bloc.add(AssessmentsOverviewRequested()),
+      expect: () => [
+        DeanLoading(),
+        AssessmentsOverviewLoaded([tAssessment]),
+      ],
+    );
+
+    blocTest<DeanBloc, DeanState>(
+      'should emit [DeanLoading, DeanError] when fetching assessments fails',
+      build: () {
+        when(
+          () => mockRepository.getAssessmentsOverview(),
+        ).thenAnswer((_) async => const Left(ServerFailure('Error')));
+        return bloc;
+      },
+      act: (bloc) => bloc.add(AssessmentsOverviewRequested()),
+      expect: () => [DeanLoading(), const DeanError('Error')],
+    );
+  });
+
+  group('DeanBloc - Student Academic Profile', () {
+    final tProfile = <String, dynamic>{
+      'studentId': 'st1',
+      'studentName': 'Namono Grace',
+    };
+
+    blocTest<DeanBloc, DeanState>(
+      'should emit [DeanLoading, StudentAcademicProfileLoaded] when profile fetched successfully',
+      build: () {
+        when(
+          () => mockRepository.getStudentAcademicProfile('st1'),
+        ).thenAnswer((_) async => Right(tProfile));
+        return bloc;
+      },
+      act: (bloc) => bloc.add(const StudentAcademicProfileRequested('st1')),
+      expect: () => [DeanLoading(), StudentAcademicProfileLoaded(tProfile)],
+    );
+
+    blocTest<DeanBloc, DeanState>(
+      'should emit [DeanLoading, DeanError] when fetching profile fails',
+      build: () {
+        when(
+          () => mockRepository.getStudentAcademicProfile('st1'),
+        ).thenAnswer((_) async => const Left(ServerFailure('Error')));
+        return bloc;
+      },
+      act: (bloc) => bloc.add(const StudentAcademicProfileRequested('st1')),
+      expect: () => [DeanLoading(), const DeanError('Error')],
+    );
   });
 }

@@ -10,7 +10,9 @@ import 'package:school_pulse/features/admin/presentation/add_staff_wizard/add_st
 import 'package:school_pulse/features/admin/presentation/pages/edit_staff_screen.dart';
 import 'package:school_pulse/features/admin/presentation/pages/staff_id_card_screen.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/assignable_staff_roles.dart';
 import 'package:school_pulse/features/auth/data/models/user_model.dart';
+import 'package:school_pulse/features/auth/domain/usecases/update_staff_member.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/staff_identity_bloc.dart';
@@ -125,7 +127,10 @@ class _StaffDetailScreenState extends State<StaffDetailScreen>
                   controller: _tabController,
                   children: [
                     _ProfileTab(user: user),
-                    _RolesTab(staff: user),
+                    _RolesTab(
+                      staff: user,
+                      onStaffChanged: (_) => setState(_loadUser),
+                    ),
                   ],
                 );
               },
@@ -272,11 +277,16 @@ class _ProfileTab extends StatelessWidget {
   }
 }
 
-/// Primary Role card + All Active Roles list, matching the target design's
-/// staff profile Roles & Responsibilities tab.
+/// Account Roles (the real UserEntity.roles - Deputy Head/School Admin/Dean
+/// of Studies etc., editable here) plus the Structure module's Class/
+/// Subject Assignments (a separate system: which class/subject a Class or
+/// Subject Teacher role is actually attached to). These are deliberately
+/// kept as two clearly-labeled sections rather than merged, since they are
+/// two different data models with different edit paths.
 class _RolesTab extends StatefulWidget {
-  const _RolesTab({required this.staff});
+  const _RolesTab({required this.staff, required this.onStaffChanged});
   final UserModel staff;
+  final ValueChanged<UserModel> onStaffChanged;
 
   @override
   State<_RolesTab> createState() => _RolesTabState();
@@ -298,6 +308,15 @@ class _RolesTabState extends State<_RolesTab> {
         widget.staff.id,
       );
     }
+  }
+
+  Future<void> _editAccountRoles() async {
+    final updated = await showModalBottomSheet<UserModel>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _AccountRolesEditorSheet(staff: widget.staff),
+    );
+    if (updated != null) widget.onStaffChanged(updated);
   }
 
   Future<void> _openAssign() async {
@@ -355,8 +374,60 @@ class _RolesTabState extends State<_RolesTab> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Account Roles',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                  Builder(
+                    builder: (context) {
+                      final authState = context.watch<AuthBloc>().state;
+                      final canEdit =
+                          authState is AuthAuthenticated &&
+                          AddStaffWizardController.canSubmit(
+                            authState.user.roles,
+                          );
+                      if (!canEdit) return const SizedBox.shrink();
+                      return TextButton.icon(
+                        onPressed: _editAccountRoles,
+                        icon: const Icon(Icons.edit_outlined, size: 16),
+                        label: const Text('Edit'),
+                      );
+                    },
+                  ),
+                ],
+              ),
               Text(
-                'Roles & Responsibilities',
+                widget.staff.roles.isEmpty
+                    ? 'No account roles assigned.'
+                    : '${_firstNameOrFallback(widget.staff.name)} holds '
+                          '${widget.staff.roles.length} account role'
+                          '${widget.staff.roles.length == 1 ? '' : 's'}.',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: widget.staff.roles
+                    .map(
+                      (r) => StatusBadge(
+                        label: UserRoleDisplay.name(r),
+                        color: AppColors.primary(context),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 28),
+              const Divider(),
+              const SizedBox(height: 16),
+              Text(
+                'Class / Subject Assignments',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary(context),
@@ -364,7 +435,7 @@ class _RolesTabState extends State<_RolesTab> {
               ),
               Text(
                 '${_firstNameOrFallback(widget.staff.name)} has '
-                '${assignments.length} active role'
+                '${assignments.length} active assignment'
                 '${assignments.length == 1 ? '' : 's'}',
                 style: Theme.of(context).textTheme.labelSmall,
               ),
@@ -423,6 +494,153 @@ class _RolesTabState extends State<_RolesTab> {
         label: const Text('Assign New Role'),
         backgroundColor: AppColors.primary(context),
         foregroundColor: Colors.white,
+      ),
+    );
+  }
+}
+
+/// Lets an admin add/remove this staff member's account-level roles
+/// (Deputy Head, Dean of Studies, Class Teacher, etc.). schoolAdmin is
+/// deliberately not offered - see assignable_staff_roles.dart and the
+/// matching firestore.rules users/{uid} comment: School Admin is
+/// provisioned only through SaaS school registration, never reassignable
+/// in-app, to avoid a staff-editing-staff privilege-escalation path.
+class _AccountRolesEditorSheet extends StatefulWidget {
+  const _AccountRolesEditorSheet({required this.staff});
+  final UserModel staff;
+
+  @override
+  State<_AccountRolesEditorSheet> createState() =>
+      _AccountRolesEditorSheetState();
+}
+
+class _AccountRolesEditorSheetState extends State<_AccountRolesEditorSheet> {
+  late Set<UserRole> _selected;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.staff.roles.toSet();
+  }
+
+  Future<void> _save() async {
+    if (_selected.isEmpty) {
+      setState(() => _error = 'Select at least one role.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    final updated = widget.staff.copyWith(roles: _selected.toList());
+    final result = await di.sl<UpdateStaffMember>()(updated);
+    if (!mounted) return;
+    result.fold(
+      (failure) => setState(() {
+        _saving = false;
+        _error = failure.message;
+      }),
+      (_) => Navigator.of(context).pop(UserModel.fromEntity(updated)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: 20 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Edit Account Roles',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'One login can hold several roles - e.g. Deputy Head + Dean of Studies.',
+              style: TextStyle(color: AppColors.textMuted(context), fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.5,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: assignableStaffRoleGroups.entries.expand((group) {
+                    final roles = group.value
+                        .where(assignableStaffRoles.contains)
+                        .toList();
+                    if (roles.isEmpty) return const <Widget>[];
+                    return [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 4),
+                        child: Text(
+                          group.key.toUpperCase(),
+                          style: TextStyle(
+                            color: AppColors.textMuted(context),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                            letterSpacing: .6,
+                          ),
+                        ),
+                      ),
+                      ...roles.map(
+                        (role) => CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          title: Text(UserRoleDisplay.name(role)),
+                          value: _selected.contains(role),
+                          onChanged: (checked) => setState(() {
+                            if (checked == true) {
+                              _selected.add(role);
+                            } else {
+                              _selected.remove(role);
+                            }
+                          }),
+                        ),
+                      ),
+                    ];
+                  }).toList(),
+                ),
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: TextStyle(color: AppColors.danger(context), fontSize: 12),
+              ),
+            ],
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Save Roles'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

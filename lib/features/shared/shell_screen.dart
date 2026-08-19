@@ -80,6 +80,14 @@ class StaffShell extends StatelessWidget {
     return false;
   }
 
+  bool _isDirector(BuildContext context) {
+    final state = context.read<AuthBloc>().state;
+    if (state is AuthAuthenticated) {
+      return state.user.roles.contains(UserRole.director);
+    }
+    return false;
+  }
+
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
 
@@ -96,6 +104,13 @@ class StaffShell extends StatelessWidget {
       if (location.startsWith('/staff/messages')) return 3;
       if (isMoreSubRoute(location)) return 4;
       if (location.startsWith('/staff/admin')) return 0;
+      return 0;
+    }
+
+    if (_isDirector(context)) {
+      if (location.startsWith('/staff/director/approvals')) return 1;
+      if (location.startsWith('/staff/director/reports')) return 3;
+      if (isMoreSubRoute(location)) return 4;
       return 0;
     }
 
@@ -157,6 +172,27 @@ class StaffShell extends StatelessWidget {
           break;
         case 3:
           context.go('/staff/messages');
+          break;
+        case 4:
+          context.go('/staff/more');
+          break;
+      }
+      return;
+    }
+
+    if (_isDirector(context)) {
+      switch (index) {
+        case 0:
+          context.go(_homePath(context));
+          break;
+        case 1:
+          context.go('/staff/director/approvals');
+          break;
+        case 2:
+          context.push('/staff/director/approvals/submit');
+          break;
+        case 3:
+          context.go('/staff/director/reports');
           break;
         case 4:
           context.go('/staff/more');
@@ -386,6 +422,34 @@ class StaffShell extends StatelessWidget {
       ),
     ];
 
+    final List<NavigationDestination> directorDestinations = [
+      const NavigationDestination(
+        icon: Icon(Icons.home_outlined, size: 24),
+        selectedIcon: Icon(Icons.home_rounded, size: 24),
+        label: 'Home',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.fact_check_outlined, size: 24),
+        selectedIcon: Icon(Icons.fact_check_rounded, size: 24),
+        label: 'Approvals',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.add_circle_rounded, size: 24),
+        selectedIcon: Icon(Icons.add_circle_rounded, size: 24),
+        label: 'Add',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.insights_outlined, size: 24),
+        selectedIcon: Icon(Icons.insights_rounded, size: 24),
+        label: 'Reports',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.grid_view_outlined, size: 24),
+        selectedIcon: Icon(Icons.grid_view_rounded, size: 24),
+        label: 'More',
+      ),
+    ];
+
     final List<NavigationDestination> nurseDestinations = [
       const NavigationDestination(
         icon: Icon(Icons.home_outlined, size: 24),
@@ -409,8 +473,12 @@ class StaffShell extends StatelessWidget {
       ),
     ];
 
+    final isDirector = _isDirector(context);
+
     final destinations = isAdmin
         ? adminDestinations
+        : isDirector
+        ? directorDestinations
         : isTeacher
         ? teacherDestinations
         : isBoarding
@@ -565,8 +633,9 @@ class StaffShell extends StatelessWidget {
                     final index = destinations.indexOf(d);
                     final isSelected =
                         index == _calculateSelectedIndex(context);
-                    final isAdminAddAction = isAdmin && d.label == 'Add';
-                    if (isAdminAddAction) {
+                    final isRaisedAddAction =
+                        (isAdmin || isDirector) && d.label == 'Add';
+                    if (isRaisedAddAction) {
                       return NavigationDestination(
                         icon: Container(
                           padding: const EdgeInsets.all(8),

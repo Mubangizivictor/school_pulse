@@ -9,6 +9,7 @@ import 'package:school_pulse/features/director/presentation/bloc/director_event.
 import 'package:school_pulse/features/director/presentation/bloc/director_state.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/director/domain/entities/director_dashboard_stats.dart';
+import 'package:school_pulse/features/director/presentation/widgets/director_drawer.dart';
 
 class DirectorDashboardScreen extends StatelessWidget {
   const DirectorDashboardScreen({super.key});
@@ -19,9 +20,17 @@ class DirectorDashboardScreen extends StatelessWidget {
     context.read<DirectorBloc>().add(DirectorDashboardRequested());
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+      drawer: const DirectorDrawer(),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu_rounded),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+            tooltip: 'Menu',
+          ),
+        ),
         actions: [
           NotificationBellButton(backgroundColor: actionBg),
           const SizedBox(width: 8),
@@ -36,8 +45,12 @@ class DirectorDashboardScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildGreeting(context),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
+                  const SectionHeader(title: 'Institution Snapshot'),
+                  const SizedBox(height: 12),
                   _buildOverviewGrid(context),
+                  const SizedBox(height: 24),
+                  _buildPerformanceIndex(context),
                   const SizedBox(height: 24),
                   _buildFinancialPulse(context),
                   const SizedBox(height: 24),
@@ -57,30 +70,121 @@ class DirectorDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildGreeting(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, state) {
-        final name = (state is AuthAuthenticated)
-            ? state.user.name
+      builder: (context, authState) {
+        final name = (authState is AuthAuthenticated)
+            ? authState.user.name
             : 'Director';
+        final hour = DateTime.now().hour;
+        final greeting = hour < 12
+            ? 'Good morning'
+            : hour < 17
+            ? 'Good afternoon'
+            : 'Good evening';
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [scheme.primary, scheme.tertiary],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$greeting, $name',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: scheme.onPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              BlocBuilder<DirectorBloc, DirectorState>(
+                builder: (context, state) {
+                  final subtitle = state is DirectorDashboardLoaded
+                      ? '${state.stats.activeAcademicYear} • ${state.stats.currentTerm}'
+                      : 'Loading school oversight data...';
+                  return Text(
+                    subtitle,
+                    style: TextStyle(color: scheme.onPrimary.withValues(alpha: 0.85)),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPerformanceIndex(BuildContext context) {
+    return BlocBuilder<DirectorBloc, DirectorState>(
+      builder: (context, state) {
+        if (state is! DirectorDashboardLoaded) return const SizedBox.shrink();
+        final stats = state.stats;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Welcome, $name',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            SectionHeader(
+              title: 'School Performance Index',
+              actionLabel: 'View Details',
+              onActionPressed: () => context.push('/staff/director/performance'),
             ),
-            BlocBuilder<DirectorBloc, DirectorState>(
-              builder: (context, state) {
-                if (state is DirectorDashboardLoaded) {
-                  return Text(
-                    'Institution Oversight • ${state.stats.activeAcademicYear} • ${state.stats.currentTerm}',
-                    style: TextStyle(color: Theme.of(context).hintColor),
-                  );
-                }
-                return const Text('Loading school oversight data...');
-              },
+            const SizedBox(height: 12),
+            AppCard(
+              child: Row(
+                children: [
+                  CircularPercentGauge(
+                    percent: (stats.overallSchoolAverage / 100).clamp(0, 1),
+                    centerLabel: '${stats.overallSchoolAverage.round()}%',
+                    subLabel: stats.overallSchoolAverage >= 80
+                        ? 'Good'
+                        : stats.overallSchoolAverage >= 60
+                        ? 'Fair'
+                        : 'Needs Attention',
+                    size: 110,
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        LabeledProgressRow(
+                          label: 'Academic',
+                          percent: (stats.overallSchoolAverage / 100).clamp(0, 1),
+                          trailingText: '${stats.overallSchoolAverage.round()}%',
+                          color: Colors.blue,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                        ),
+                        LabeledProgressRow(
+                          label: 'Financial',
+                          percent: (stats.collectionPercentage / 100).clamp(0, 1),
+                          trailingText: '${stats.collectionPercentage.round()}%',
+                          color: Colors.green,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                        ),
+                        LabeledProgressRow(
+                          label: 'Operational',
+                          percent: (stats.staffAttendanceRate / 100).clamp(0, 1),
+                          trailingText: '${stats.staffAttendanceRate.round()}%',
+                          color: Colors.orange,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                        ),
+                        LabeledProgressRow(
+                          label: 'Engagement',
+                          percent: (stats.parentPortalUsageRate / 100).clamp(0, 1),
+                          trailingText: '${stats.parentPortalUsageRate.round()}%',
+                          color: Colors.purple,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         );
@@ -93,9 +197,13 @@ class DirectorDashboardScreen extends StatelessWidget {
       builder: (context, state) {
         if (state is DirectorDashboardLoaded) {
           final stats = state.stats;
-          return Wrap(
-            spacing: 12,
-            runSpacing: 12,
+          return GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.5,
             children: [
               _OverviewCard(
                 label: 'Total Students',
@@ -206,7 +314,12 @@ class DirectorDashboardScreen extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SectionHeader(title: 'Academic Performance'),
+              SectionHeader(
+                title: 'Academic Performance',
+                actionLabel: 'View Details',
+                onActionPressed: () =>
+                    context.push('/staff/director/performance'),
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -293,31 +406,19 @@ class DirectorDashboardScreen extends StatelessWidget {
         'icon': Icons.insights,
         'label': 'Strategic Reports',
         'color': Colors.purple,
-        'route': '/director/reports',
+        'route': '/staff/director/reports',
       },
       {
         'icon': Icons.track_changes,
         'label': 'School Goals',
         'color': Colors.orange,
-        'route': '/director/goals',
+        'route': '/staff/director/goals',
       },
       {
         'icon': Icons.groups,
         'label': 'Management Meetings',
         'color': Colors.teal,
-        'route': '/director/meetings',
-      },
-      {
-        'icon': Icons.campaign,
-        'label': 'Announcements',
-        'color': Colors.red,
-        'route': '/director/announcements',
-      },
-      {
-        'icon': Icons.domain,
-        'label': 'Campus Monitor',
-        'color': Colors.indigo,
-        'route': '/director/campuses',
+        'route': '/staff/director/meetings',
       },
     ];
 
@@ -439,9 +540,7 @@ class _OverviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = (MediaQuery.of(context).size.width - 64) / 2;
     return Container(
-      width: width > 220 ? 220 : width,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,

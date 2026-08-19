@@ -1,15 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/components/circular_progress_gauge.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_radius.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
 import 'package:school_pulse/injection_container.dart';
 
-class PerformanceAnalyticsScreen extends StatelessWidget {
+/// Academic Performance screen: UNEB Readiness + Reports Readiness as two
+/// tabs within this one screen, both driven by the same
+/// [PerformanceAnalyticsRequested]/[PerformanceAnalyticsLoaded] event/state
+/// pair (reading the `unebReadiness` / `reportsReadiness` keys from
+/// `analytics`).
+class PerformanceAnalyticsScreen extends StatefulWidget {
   const PerformanceAnalyticsScreen({super.key});
+
+  @override
+  State<PerformanceAnalyticsScreen> createState() =>
+      _PerformanceAnalyticsScreenState();
+}
+
+class _PerformanceAnalyticsScreenState extends State<PerformanceAnalyticsScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,31 +47,30 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
           sl<DeanBloc>()
             ..add(const PerformanceAnalyticsRequested(type: 'school')),
       child: Scaffold(
-        appBar: AppBar(title: const Text('Academic Performance')),
+        backgroundColor: AppColors.background(context),
+        appBar: AppBar(
+          title: const Text('Academic Performance'),
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: 'UNEB Readiness'),
+              Tab(text: 'Reports Readiness'),
+            ],
+          ),
+        ),
         body: BlocBuilder<DeanBloc, DeanState>(
           builder: (context, state) {
             if (state is DeanLoading) {
-              return const Center(child: SchoolPulseLoader());
+              return const Center(child: CircularProgressIndicator());
             } else if (state is PerformanceAnalyticsLoaded) {
-              return ListView(
-                padding: const EdgeInsets.all(16),
+              final uneb = (state.analytics['unebReadiness'] as Map?) ?? {};
+              final reports =
+                  (state.analytics['reportsReadiness'] as Map?) ?? {};
+              return TabBarView(
+                controller: _tabController,
                 children: [
-                  _buildGradeDistribution(
-                    context,
-                    state.analytics['gradeDistribution'] ?? {},
-                  ),
-                  const SizedBox(height: 24),
-                  _buildSubjectPerformance(
-                    context,
-                    state.analytics['subjectPassRates'] ?? [],
-                  ),
-                  const SizedBox(height: 24),
-                  const SectionHeader(title: 'Top Performing Students'),
-                  const SizedBox(height: 12),
-                  _buildTopStudents(
-                    context,
-                    state.analytics['topStudents'] ?? [],
-                  ),
+                  _buildUnebReadiness(context, uneb),
+                  _buildReportsReadiness(context, reports),
                 ],
               );
             } else if (state is DeanError) {
@@ -55,187 +83,183 @@ class PerformanceAnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildGradeDistribution(
-    BuildContext context,
-    Map<String, dynamic> data,
-  ) {
-    final grades = ['D1', 'D2', 'C3', 'C4', 'C5', 'C6', 'P7', 'P8', 'F9'];
-    return AppCard(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Grade Distribution',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 200,
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: 100,
-                barTouchData: BarTouchData(enabled: false),
-                titlesData: FlTitlesData(
-                  show: true,
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        if (value.toInt() >= grades.length) {
-                          return const SizedBox.shrink();
-                        }
-                        return SideTitleWidget(
-                          axisSide: meta.axisSide,
-                          child: Text(
-                            grades[value.toInt()],
-                            style: const TextStyle(fontSize: 10),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                gridData: const FlGridData(show: false),
-                borderData: FlBorderData(show: false),
-                barGroups: List.generate(grades.length, (index) {
-                  final grade = grades[index];
-                  final value = (data[grade] ?? 0).toDouble();
-                  return _makeGroupData(index, value, _getColorForGrade(grade));
-                }),
+  Widget _buildUnebReadiness(BuildContext context, Map data) {
+    final overall = ((data['overallReadiness'] ?? 0) as num).toDouble();
+    final subjects = (data['subjectBreakdown'] as List?) ?? [];
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      children: [
+        AppCard(
+          child: Column(
+            children: [
+              CircularProgressGauge(
+                value: overall,
+                label: 'UNEB Readiness',
+                size: 128,
               ),
-            ),
+              const SizedBox(height: AppSpacing.xl),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _SummaryStat(
+                    label: 'Mock Exams',
+                    value:
+                        '${data['mockExamsCompleted'] ?? 0}/${data['mockExamsPlanned'] ?? 0}',
+                  ),
+                  _SummaryStat(
+                    label: 'Candidates',
+                    value: '${data['candidatesRegistered'] ?? 0}',
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Color _getColorForGrade(String grade) {
-    if (grade.startsWith('D')) return Colors.blue;
-    if (grade.startsWith('C')) return Colors.green;
-    if (grade.startsWith('P')) return Colors.orange;
-    return Colors.red;
-  }
-
-  BarChartGroupData _makeGroupData(int x, double y, Color color) {
-    return BarChartGroupData(
-      x: x,
-      barRods: [
-        BarChartRodData(
-          toY: y,
-          color: color,
-          width: 16,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
         ),
+        const SizedBox(height: AppSpacing.x3l),
+        const SectionHeader(title: 'Subject Readiness'),
+        const SizedBox(height: AppSpacing.l),
+        ...subjects.map((s) {
+          final readiness = ((s['readiness'] ?? 0) as num).toDouble();
+          final projection = ((s['passRateProjection'] ?? 0) as num).toDouble();
+          return _ReadinessRow(
+            title: s['subject'] ?? '',
+            subtitle:
+                'Projected pass rate: ${(projection * 100).toStringAsFixed(0)}%',
+            value: readiness,
+          );
+        }),
       ],
     );
   }
 
-  Widget _buildSubjectPerformance(
-    BuildContext context,
-    List<dynamic> subjects,
-  ) {
-    return AppCard(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Subject Pass Rates',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          ...subjects.map(
-            (s) => _SubjectRow(
-              subject: s['subject'] ?? '',
-              rate: (s['rate'] ?? 0).toDouble(),
-              color: (s['rate'] ?? 0) > 0.8 ? Colors.green : Colors.orange,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTopStudents(BuildContext context, List<dynamic> students) {
-    return Column(
-      children: students.asMap().entries.map((entry) {
-        final idx = entry.key;
-        final s = entry.value;
-        return AppCard(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Text(
-                '${idx + 1}',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                ),
+  Widget _buildReportsReadiness(BuildContext context, Map data) {
+    final overall = ((data['overallReadiness'] ?? 0) as num).toDouble();
+    final classes = (data['classBreakdown'] as List?) ?? [];
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      children: [
+        AppCard(
+          child: Column(
+            children: [
+              CircularProgressGauge(
+                value: overall,
+                label: 'Reports Readiness',
+                size: 128,
               ),
-            ),
-            title: Text(
-              s['name'] ?? '',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(s['class'] ?? ''),
-            trailing: Text(
-              '${(s['score'] * 100).toInt()}%',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
+              const SizedBox(height: AppSpacing.xl),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _SummaryStat(
+                    label: 'Published',
+                    value: '${data['reportCardsPublished'] ?? 0}',
+                  ),
+                  _SummaryStat(
+                    label: 'Pending Approval',
+                    value: '${data['reportCardsPendingApproval'] ?? 0}',
+                  ),
+                  _SummaryStat(
+                    label: 'Marks Entered',
+                    value:
+                        '${(((data['marksFullyEntered'] ?? 0) as num) * 100).toStringAsFixed(0)}%',
+                  ),
+                ],
+              ),
+            ],
           ),
-        );
-      }).toList(),
+        ),
+        const SizedBox(height: AppSpacing.x3l),
+        const SectionHeader(title: 'Class Readiness'),
+        const SizedBox(height: AppSpacing.l),
+        ...classes.map((c) {
+          final readiness = ((c['readiness'] ?? 0) as num).toDouble();
+          return _ReadinessRow(
+            title: c['className'] ?? '',
+            subtitle: null,
+            value: readiness,
+          );
+        }),
+      ],
     );
   }
 }
 
-class _SubjectRow extends StatelessWidget {
-  final String subject;
-  final double rate;
-  final Color color;
+class _SummaryStat extends StatelessWidget {
+  final String label;
+  final String value;
 
-  const _SubjectRow({
-    required this.subject,
-    required this.rate,
-    required this.color,
+  const _SummaryStat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: AppTypography.titleLarge.copyWith(
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+        Text(
+          label,
+          style: AppTypography.labelMedium.copyWith(
+            color: AppColors.textMuted(context),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReadinessRow extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final double value;
+
+  const _ReadinessRow({
+    required this.title,
+    this.subtitle,
+    required this.value,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+    final color = value >= 0.8
+        ? AppColors.success(context)
+        : value >= 0.5
+        ? AppColors.warning(context)
+        : AppColors.danger(context);
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.m),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(subject, style: const TextStyle(fontSize: 13)),
+              Text(title, style: AppTypography.titleSmall),
               Text(
-                '${(rate * 100).toInt()}%',
-                style: TextStyle(fontWeight: FontWeight.bold, color: color),
+                '${(value * 100).toStringAsFixed(0)}%',
+                style: AppTypography.labelLarge.copyWith(color: color),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          if (subtitle != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              subtitle!,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textMuted(context),
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.m),
           LinearProgressIndicator(
-            value: rate,
-            backgroundColor: color.withValues(alpha: 0.1),
+            value: value,
+            backgroundColor: AppColors.border(context),
             color: color,
-            minHeight: 6,
-            borderRadius: BorderRadius.circular(3),
+            minHeight: 8,
+            borderRadius: AppRadius.small,
           ),
         ],
       ),

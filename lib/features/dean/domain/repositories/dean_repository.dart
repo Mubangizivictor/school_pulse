@@ -8,6 +8,8 @@ import '../entities/academic_intervention.dart';
 import '../entities/class_observation.dart';
 import '../entities/homework_record.dart';
 import '../entities/assessment_moderation.dart';
+import '../entities/report_card_approval.dart';
+import '../entities/today_operations.dart';
 
 abstract class DeanRepository {
   Future<Either<Failure, AcademicDashboardStats>> getAcademicDashboardStats();
@@ -53,6 +55,14 @@ abstract class DeanRepository {
   Future<Either<Failure, List<AssessmentModeration>>>
   getPendingModerationAssessments();
 
+  // Report Card Approval
+  Future<Either<Failure, void>> approveReportCards(List<String> reportCardIds);
+  Future<Either<Failure, void>> rejectReportCards(
+    List<String> reportCardIds,
+    String reason,
+  );
+  Future<Either<Failure, List<ReportCardApproval>>> getPendingReportApprovals();
+
   // Performance Analytics
   Future<Either<Failure, Map<String, dynamic>>> getPerformanceAnalytics({
     required String type, // 'school', 'class', 'subject', 'teacher', 'student'
@@ -79,6 +89,21 @@ abstract class DeanRepository {
   // Timetable & Exams
   Future<Either<Failure, Map<String, dynamic>>> getMasterTimetable();
   Future<Either<Failure, List<dynamic>>> getExaminationSchedules();
+
+  // Today's Operations
+  Future<Either<Failure, TodaysOperations>> getTodaysOperations();
+
+  // Missed Lessons
+  Future<Either<Failure, (List<LessonRecord>, Map<String, bool>)>>
+  getMissedLessons();
+
+  // Assessments Overview
+  Future<Either<Failure, List<AssessmentModeration>>> getAssessmentsOverview();
+
+  // Student Academic Profile
+  Future<Either<Failure, Map<String, dynamic>>> getStudentAcademicProfile(
+    String studentId,
+  );
 
   // Communication
   Future<Either<Failure, void>> sendAcademicAnnouncement({

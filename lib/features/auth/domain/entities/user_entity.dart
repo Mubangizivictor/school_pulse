@@ -32,6 +32,9 @@ class UserEntity extends Equatable {
   final DateTime? dateJoined;
   final String? address;
   final StaffEmergencyContact? emergencyContact;
+  final String? nationality;
+  final String? alternatePhone;
+  final List<StaffDocumentRef> documents;
 
   const UserEntity({
     required this.id,
@@ -58,6 +61,9 @@ class UserEntity extends Equatable {
     this.dateJoined,
     this.address,
     this.emergencyContact,
+    this.nationality,
+    this.alternatePhone,
+    this.documents = const [],
   });
 
   UserRole get role =>
@@ -84,6 +90,9 @@ class UserEntity extends Equatable {
     DateTime? dateJoined,
     String? address,
     StaffEmergencyContact? emergencyContact,
+    String? nationality,
+    String? alternatePhone,
+    List<StaffDocumentRef>? documents,
   }) {
     return UserEntity(
       id: id,
@@ -110,6 +119,9 @@ class UserEntity extends Equatable {
       dateJoined: dateJoined ?? this.dateJoined,
       address: address ?? this.address,
       emergencyContact: emergencyContact ?? this.emergencyContact,
+      nationality: nationality ?? this.nationality,
+      alternatePhone: alternatePhone ?? this.alternatePhone,
+      documents: documents ?? this.documents,
     );
   }
 
@@ -139,7 +151,48 @@ class UserEntity extends Equatable {
     dateJoined,
     address,
     emergencyContact,
+    nationality,
+    alternatePhone,
+    documents,
   ];
+}
+
+/// A reference to a staff document already uploaded to Storage, stored on
+/// the user doc so it can be listed/viewed without a separate Storage list
+/// call. storagePath matches the layout StaffDocumentsUploader writes to:
+/// schools/$schoolId/staff/$uid/documents/...
+class StaffDocumentRef extends Equatable {
+  final String type;
+  final String fileName;
+  final String storagePath;
+  final DateTime? uploadedAt;
+
+  const StaffDocumentRef({
+    required this.type,
+    required this.fileName,
+    required this.storagePath,
+    this.uploadedAt,
+  });
+
+  @override
+  List<Object?> get props => [type, fileName, storagePath, uploadedAt];
+
+  Map<String, dynamic> toJson() => {
+    'type': type,
+    'fileName': fileName,
+    'storagePath': storagePath,
+    'uploadedAt': uploadedAt?.toIso8601String(),
+  };
+
+  factory StaffDocumentRef.fromJson(Map<String, dynamic> json) =>
+      StaffDocumentRef(
+        type: json['type'] ?? '',
+        fileName: json['fileName'] ?? '',
+        storagePath: json['storagePath'] ?? '',
+        uploadedAt: json['uploadedAt'] is String
+            ? DateTime.tryParse(json['uploadedAt'] as String)
+            : null,
+      );
 }
 
 class StaffEmergencyContact extends Equatable {

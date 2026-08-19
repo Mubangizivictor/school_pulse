@@ -180,10 +180,20 @@ service cloud.firestore {
         // role-admin staff (not blanket isStaff()) since this path can
         // write role/roles - any signed-in staff member editing any other
         // staff member's roles would be a privilege-escalation path.
+        // schoolAdmin itself is never grantable here even by another
+        // schoolAdmin - it is provisioned only through SaaS school
+        // registration, mirroring the Add Staff wizard's role picker
+        // (assignable_staff_roles.dart excludes it for the same reason).
+        // A record that already had schoolAdmin may keep it across an
+        // unrelated edit; this path may only ever remove it, never add it.
         (hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
          resource.data.role != 'parent' &&
          isSameSchool(resource.data.schoolId) &&
-         request.resource.data.schoolId == resource.data.schoolId)
+         request.resource.data.schoolId == resource.data.schoolId &&
+         ('schoolAdmin' in resource.data.get('roles', []) ||
+          !('schoolAdmin' in request.resource.data.get('roles', []))) &&
+         (resource.data.get('role', '') == 'schoolAdmin' ||
+          request.resource.data.get('role', '') != 'schoolAdmin'))
       );
       // "Delete Account" in User Management removes the Firestore profile
       // (the paired Firebase Auth account persists - removing that needs
@@ -392,6 +402,19 @@ service cloud.firestore {
     // cross-tenant read/write hole that existed while this had no tenancy
     // check at all.
     match /student_identities/{identityId} {
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if false;
+    }
+
+    // Staff equivalent of student_identities above - same tenant-isolation
+    // shape. Writes normally go through the issueStaffIdentity/
+    // assignStaffNfcCredential callables (functions/staff_credentials.js),
+    // but this still needs to allow client reads/creates the same way the
+    // student rule does for its own callable-backed writes.
+    match /staff_identities/{identityId} {
       allow read: if isStaff() && isSameSchool(resource.data.schoolId);
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
@@ -1675,6 +1698,22 @@ service cloud.firestore {
     match /schools/{schoolId}/approval_escalations/{escalationId} {
       allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId);
       allow write: if false;
+    }
+
+    // Director governance: Strategic Goals and Leadership Meetings are
+    // single-owner (director-authored) records, not multi-party approval
+    // workflows, so writes go directly through client SDK rules rather than
+    // callable functions - restricted to the leadership roles that create
+    // and track them. All staff may read for visibility.
+    match /schools/{schoolId}/strategic_goals/{goalId} {
+      allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId);
+      allow write: if hasAnyRole(['director', 'headTeacher', 'deputyHead'])
+        && myUser().schoolId == schoolId;
+    }
+    match /schools/{schoolId}/leadership_meetings/{meetingId} {
+      allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId);
+      allow write: if hasAnyRole(['director', 'headTeacher', 'deputyHead'])
+        && myUser().schoolId == schoolId;
     }
     // Deprecated as of Phase 1 institution model - schools/{id} is now the
     // sole tenant source of truth (classification/divisions/displayLabel

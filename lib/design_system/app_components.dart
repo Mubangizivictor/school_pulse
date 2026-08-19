@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
@@ -1176,6 +1177,397 @@ class SectionHeader extends StatelessWidget {
           if (trailing != null) ...[const SizedBox(width: 8), trailing!],
           if (actionLabel != null)
             TextButton(onPressed: onActionPressed, child: Text(actionLabel!)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Circular percentage gauge used on Director-style performance screens
+/// (e.g. "School Performance Index — 85% Good"). Purely presentational -
+/// callers supply the value and any label text.
+class CircularPercentGauge extends StatelessWidget {
+  final double percent; // 0.0 - 1.0
+  final String centerLabel;
+  final String? subLabel;
+  final double size;
+  final double strokeWidth;
+  final Color? color;
+
+  const CircularPercentGauge({
+    super.key,
+    required this.percent,
+    required this.centerLabel,
+    this.subLabel,
+    this.size = 140,
+    this.strokeWidth = 12,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final activeColor = color ?? Theme.of(context).colorScheme.primary;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox.expand(
+            child: CircularProgressIndicator(
+              value: 1,
+              strokeWidth: strokeWidth,
+              color: activeColor.withValues(alpha: 0.1),
+            ),
+          ),
+          SizedBox.expand(
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: percent.clamp(0.0, 1.0)),
+              duration: const Duration(milliseconds: 900),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) => CircularProgressIndicator(
+                value: value,
+                strokeWidth: strokeWidth,
+                strokeCap: StrokeCap.round,
+                color: activeColor,
+                backgroundColor: Colors.transparent,
+              ),
+            ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                centerLabel,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              if (subLabel != null)
+                Text(
+                  subLabel!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A single labeled horizontal progress bar row - e.g. "Academic  86%" with
+/// a bar beneath it. Used for performance/collection breakdown lists.
+class LabeledProgressRow extends StatelessWidget {
+  final String label;
+  final double percent; // 0.0 - 1.0
+  final String? trailingText;
+  final Color? color;
+  final EdgeInsetsGeometry padding;
+
+  const LabeledProgressRow({
+    super.key,
+    required this.label,
+    required this.percent,
+    this.trailingText,
+    this.color,
+    this.padding = const EdgeInsets.symmetric(vertical: 8),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final activeColor = color ?? Theme.of(context).colorScheme.primary;
+    final pctText = trailingText ?? '${(percent * 100).round()}%';
+    return Padding(
+      padding: padding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+              Text(
+                pctText,
+                style: TextStyle(fontWeight: FontWeight.w800, color: activeColor),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: percent.clamp(0.0, 1.0),
+              minHeight: 8,
+              backgroundColor: activeColor.withValues(alpha: 0.1),
+              color: activeColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small line/trend chart used in Director-style "Performance Trend" and
+/// "Revenue Trend" cards. Thin wrapper around fl_chart's LineChart so
+/// screens don't each hand-roll chart config.
+class TrendLineChart extends StatelessWidget {
+  final List<double> values;
+  final List<String>? xLabels;
+  final Color? color;
+  final double height;
+  final bool showDots;
+
+  const TrendLineChart({
+    super.key,
+    required this.values,
+    this.xLabels,
+    this.color,
+    this.height = 120,
+    this.showDots = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (values.isEmpty) {
+      return SizedBox(
+        height: height,
+        child: Center(
+          child: Text(
+            'No trend data yet',
+            style: TextStyle(color: Theme.of(context).hintColor, fontSize: 12),
+          ),
+        ),
+      );
+    }
+    final activeColor = color ?? Theme.of(context).colorScheme.primary;
+    final maxY = values.reduce((a, b) => a > b ? a : b);
+    final minY = values.reduce((a, b) => a < b ? a : b);
+    final pad = (maxY - minY).abs() < 1 ? 1.0 : (maxY - minY) * 0.2;
+    return SizedBox(
+      height: height,
+      child: LineChart(
+        LineChartData(
+          minY: (minY - pad).clamp(0, double.infinity),
+          maxY: maxY + pad,
+          gridData: const FlGridData(show: false),
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            leftTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: xLabels != null,
+                reservedSize: 22,
+                getTitlesWidget: (value, meta) {
+                  final i = value.toInt();
+                  if (xLabels == null || i < 0 || i >= xLabels!.length) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      xLabels![i],
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          lineTouchData: const LineTouchData(enabled: true),
+          lineBarsData: [
+            LineChartBarData(
+              spots: [
+                for (int i = 0; i < values.length; i++)
+                  FlSpot(i.toDouble(), values[i]),
+              ],
+              isCurved: true,
+              color: activeColor,
+              barWidth: 3,
+              dotData: FlDotData(show: showDots),
+              belowBarData: BarAreaData(
+                show: true,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    activeColor.withValues(alpha: 0.18),
+                    activeColor.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Small labeled monthly/period bar chart (distinct from
+/// [PerformanceBarChart] which is per-subject) - used for "Revenue Overview"
+/// style cards with a handful of period buckets.
+class TrendBarChart extends StatelessWidget {
+  final Map<String, double> data;
+  final Color? color;
+  final double height;
+
+  const TrendBarChart({
+    super.key,
+    required this.data,
+    this.color,
+    this.height = 120,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (data.isEmpty) {
+      return SizedBox(
+        height: height,
+        child: Center(
+          child: Text(
+            'No data yet',
+            style: TextStyle(color: Theme.of(context).hintColor, fontSize: 12),
+          ),
+        ),
+      );
+    }
+    final activeColor = color ?? Theme.of(context).colorScheme.primary;
+    final maxValue = data.values.reduce((a, b) => a > b ? a : b);
+    return SizedBox(
+      height: height,
+      child: BarChart(
+        BarChartData(
+          maxY: maxValue <= 0 ? 1 : maxValue * 1.2,
+          gridData: const FlGridData(show: false),
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            leftTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 22,
+                getTitlesWidget: (value, meta) {
+                  final i = value.toInt();
+                  final keys = data.keys.toList();
+                  if (i < 0 || i >= keys.length) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      keys[i],
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          barGroups: [
+            for (int i = 0; i < data.length; i++)
+              BarChartGroupData(
+                x: i,
+                barRods: [
+                  BarChartRodData(
+                    toY: data.values.elementAt(i),
+                    color: activeColor,
+                    width: 16,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Segmented tab control - a pill-style alternative to [TabBar] used across
+/// Director screens for filters like "Pending | Completed | Rejected".
+/// Stateless: the caller owns [selectedIndex] and reacts via [onChanged].
+class SegmentedTabControl extends StatelessWidget {
+  final List<String> labels;
+  final int selectedIndex;
+  final ValueChanged<int> onChanged;
+
+  const SegmentedTabControl({
+    super.key,
+    required this.labels,
+    required this.selectedIndex,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          for (int i = 0; i < labels.length; i++)
+            Expanded(
+              child: GestureDetector(
+                onTap: () => onChanged(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: i == selectedIndex ? colors.primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    labels[i],
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: i == selectedIndex
+                          ? colors.onPrimary
+                          : colors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -195,6 +195,8 @@ class UserRoleRouting {
         return '/parent/home';
       case UserRole.director:
         return '/staff/director';
+      case UserRole.deanOfStudies:
+        return '/staff/dean';
       case UserRole.headTeacher:
       case UserRole.schoolAdmin:
       case UserRole.deputyHead:

@@ -211,6 +211,13 @@ import 'package:school_pulse/features/dean/presentation/screens/curriculum/curri
 import 'package:school_pulse/features/dean/presentation/screens/monitoring/lesson_monitoring_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/qa/marks_qa_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/observations/class_observations_screen.dart';
+import 'package:school_pulse/features/dean/presentation/screens/operations/todays_operations_screen.dart';
+import 'package:school_pulse/features/dean/presentation/screens/alerts/academic_alerts_screen.dart';
+import 'package:school_pulse/features/dean/presentation/screens/exams/exams_overview_screen.dart';
+import 'package:school_pulse/features/dean/presentation/screens/monitoring/missed_lessons_screen.dart';
+import 'package:school_pulse/features/dean/presentation/screens/assessments/assessments_overview_screen.dart';
+import 'package:school_pulse/features/dean/presentation/screens/students/student_academic_profile_screen.dart';
+import 'package:school_pulse/features/dean/presentation/screens/more/dean_more_screen.dart';
 import 'package:school_pulse/features/religion/presentation/religious_leader_dashboard_screen.dart';
 import 'package:school_pulse/features/exams/presentation/exams_dashboard_screen.dart';
 import 'package:school_pulse/features/hr/presentation/screens/hr_dashboard_screen.dart';
@@ -220,6 +227,8 @@ import 'package:school_pulse/features/approvals/presentation/screens/approval_de
 import 'package:school_pulse/features/approvals/presentation/screens/approval_request_submission_screen.dart';
 import 'package:school_pulse/features/director/presentation/screens/director_dashboard_screen.dart';
 import 'package:school_pulse/features/director/presentation/screens/director_reports_screen.dart';
+import 'package:school_pulse/features/director/presentation/screens/strategic_goals_screen.dart';
+import 'package:school_pulse/features/director/presentation/screens/leadership_meetings_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/student_id_card_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/batch_id_card_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
@@ -237,6 +246,7 @@ import 'package:school_pulse/features/super_admin/presentation/pages/contact_abo
 import 'package:school_pulse/features/super_admin/presentation/pages/privacy_policy_screen.dart';
 import 'package:school_pulse/features/games/presentation/screens/games_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/dean_dashboard_screen.dart';
+import 'package:school_pulse/features/dean/presentation/shell/dean_shell.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
@@ -1528,6 +1538,14 @@ final router = GoRouter(
             GoRoute(
               path: 'reports',
               builder: (context, state) => const DirectorReportsScreen(),
+            ),
+            GoRoute(
+              path: 'goals',
+              builder: (context, state) => const StrategicGoalsScreen(),
+            ),
+            GoRoute(
+              path: 'meetings',
+              builder: (context, state) => const LeadershipMeetingsScreen(),
             ),
           ],
         ),

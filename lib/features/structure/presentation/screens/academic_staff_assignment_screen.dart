@@ -52,140 +52,141 @@ class _AcademicStaffAssignmentScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Academic Staff Assignments')),
-      body: BlocBuilder<StructureBloc, StructureState>(
-        builder: (context, structure) {
-          final currentYear = structure.academicYears
-              .where((item) => item.isCurrent && !item.isArchived)
-              .firstOrNull;
-          if (currentYear == null) {
-            return const _Message(
-              title: 'Current academic year required',
-              body:
-                  'Set a current academic year before assigning teachers and academic responsibilities.',
-            );
-          }
-
-          return FutureBuilder<String>(
-            future: _schoolId,
-            builder: (context, schoolSnapshot) {
-              if (schoolSnapshot.hasError) {
-                return _Message(
-                  title: 'School context unavailable',
-                  body: schoolSnapshot.error.toString(),
-                );
-              }
-              if (!schoolSnapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              return StreamBuilder<List<UserEntity>>(
-                stream: _peopleRepository.watchSchoolStaff(
-                  schoolSnapshot.data!,
-                ),
-                builder: (context, staffSnapshot) {
-                  if (staffSnapshot.hasError) {
-                    return _Message(
-                      title: 'Could not load staff',
-                      body: staffSnapshot.error.toString(),
-                    );
-                  }
-                  if (!staffSnapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  final staff = staffSnapshot.data!
-                      .where((item) => item.isActive)
-                      .toList(growable: false);
-                  if (staff.isEmpty) {
-                    return const _Message(
-                      title: 'Add staff accounts first',
-                      body:
-                          'Academic responsibilities attach to existing staff accounts. One account can hold several responsibilities; do not create duplicate accounts for each role.',
-                    );
-                  }
-
-                  return StreamBuilder<List<CurriculumAssignment>>(
-                    stream: _curriculumRepository.watchAssignments(),
-                    builder: (context, curriculumSnapshot) {
-                      if (!curriculumSnapshot.hasData) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      final curriculum = curriculumSnapshot.data!
-                          .where(
-                            (item) =>
-                                item.isActive &&
-                                item.academicYearId == currentYear.id,
-                          )
-                          .toList(growable: false);
-
-                      return StreamBuilder<List<TeachingAssignment>>(
-                        stream: _assignmentRepository.watchAssignments(),
-                        builder: (context, assignmentSnapshot) {
-                          if (assignmentSnapshot.hasError) {
-                            return _Message(
-                              title: 'Could not load assignments',
-                              body: assignmentSnapshot.error.toString(),
-                            );
-                          }
-                          if (!assignmentSnapshot.hasData) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-                          final assignments = assignmentSnapshot.data!
-                              .where(
-                                (item) =>
-                                    item.isActive &&
-                                    item.academicYearId == currentYear.id,
-                              )
-                              .toList(growable: false);
-
-                          return _AssignmentList(
-                            structure: structure,
-                            staff: staff,
-                            assignments: assignments,
-                            onAdd: () => _showAssignmentForm(
-                              context,
-                              structure,
-                              staff,
-                              curriculum,
-                              currentYear.id,
-                            ),
-                            onEdit: (assignment) => _showAssignmentForm(
-                              context,
-                              structure,
-                              staff,
-                              curriculum,
-                              currentYear.id,
-                              existing: assignment,
-                            ),
-                            onEnd: (assignment) async {
-                              try {
-                                await _assignmentRepository.endAssignment(
-                                  assignment.id,
-                                );
-                              } catch (error) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context)
-                                    ..hideCurrentSnackBar()
-                                    ..showSnackBar(
-                                      SnackBar(content: Text(error.toString())),
-                                    );
-                                }
-                              }
-                            },
-                          );
-                        },
-                      );
-                    },
-                  );
-                },
-              );
-            },
+    return BlocBuilder<StructureBloc, StructureState>(
+      builder: (context, structure) {
+        final currentYear = structure.academicYears
+            .where((item) => item.isCurrent && !item.isArchived)
+            .firstOrNull;
+        if (currentYear == null) {
+          return const _Message(
+            title: 'Current academic year required',
+            body:
+                'Set a current academic year before assigning teachers and academic responsibilities.',
           );
-        },
-      ),
+        }
+
+        return FutureBuilder<String>(
+          future: _schoolId,
+          builder: (context, schoolSnapshot) {
+            if (schoolSnapshot.hasError) {
+              return _Message(
+                title: 'School context unavailable',
+                body: schoolSnapshot.error.toString(),
+              );
+            }
+            if (!schoolSnapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            return StreamBuilder<List<UserEntity>>(
+              stream: _peopleRepository.watchSchoolStaff(schoolSnapshot.data!),
+              builder: (context, staffSnapshot) {
+                if (staffSnapshot.hasError) {
+                  return _Message(
+                    title: 'Could not load staff',
+                    body: staffSnapshot.error.toString(),
+                  );
+                }
+                if (!staffSnapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final staff = staffSnapshot.data!
+                    .where((item) => item.isActive)
+                    .toList(growable: false);
+                if (staff.isEmpty) {
+                  return const _Message(
+                    title: 'Add staff accounts first',
+                    body:
+                        'Academic responsibilities attach to existing staff accounts. One account can hold several responsibilities; do not create duplicate accounts for each role.',
+                  );
+                }
+
+                return StreamBuilder<List<CurriculumAssignment>>(
+                  stream: _curriculumRepository.watchAssignments(),
+                  builder: (context, curriculumSnapshot) {
+                    if (curriculumSnapshot.hasError) {
+                      return _Message(
+                        title: 'Could not load curriculum assignments',
+                        body: curriculumSnapshot.error.toString(),
+                      );
+                    }
+                    if (!curriculumSnapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final curriculum = curriculumSnapshot.data!
+                        .where(
+                          (item) =>
+                              item.isActive &&
+                              item.academicYearId == currentYear.id,
+                        )
+                        .toList(growable: false);
+
+                    return StreamBuilder<List<TeachingAssignment>>(
+                      stream: _assignmentRepository.watchAssignments(),
+                      builder: (context, assignmentSnapshot) {
+                        if (assignmentSnapshot.hasError) {
+                          return _Message(
+                            title: 'Could not load assignments',
+                            body: assignmentSnapshot.error.toString(),
+                          );
+                        }
+                        if (!assignmentSnapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        final assignments = assignmentSnapshot.data!
+                            .where(
+                              (item) =>
+                                  item.isActive &&
+                                  item.academicYearId == currentYear.id,
+                            )
+                            .toList(growable: false);
+
+                        return _AssignmentList(
+                          structure: structure,
+                          staff: staff,
+                          assignments: assignments,
+                          onAdd: () => _showAssignmentForm(
+                            context,
+                            structure,
+                            staff,
+                            curriculum,
+                            currentYear.id,
+                          ),
+                          onEdit: (assignment) => _showAssignmentForm(
+                            context,
+                            structure,
+                            staff,
+                            curriculum,
+                            currentYear.id,
+                            existing: assignment,
+                          ),
+                          onEnd: (assignment) async {
+                            try {
+                              await _assignmentRepository.endAssignment(
+                                assignment.id,
+                              );
+                            } catch (error) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context)
+                                  ..hideCurrentSnackBar()
+                                  ..showSnackBar(
+                                    SnackBar(content: Text(error.toString())),
+                                  );
+                              }
+                            }
+                          },
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
@@ -484,87 +485,98 @@ class _AssignmentList extends StatelessWidget {
       for (final item in structure.departments) item.id: item,
     };
 
-    return Scaffold(
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'Assign real staff only after the academic structure exists. A person can be a Subject Teacher for many classes while also being a Class Teacher, HOD, Patron, Bursar or another system role.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                height: 1.4,
+    return Stack(
+      children: [
+        Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Assign real staff only after the academic structure exists. A person can be a Subject Teacher for many classes while also being a Class Teacher, HOD, Patron, Bursar or another system role.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  height: 1.4,
+                ),
               ),
             ),
-          ),
-          Expanded(
-            child: assignments.isEmpty
-                ? const _Message(
-                    title: 'No academic responsibilities assigned',
-                    body:
-                        'Assign Subject Teachers, Class Teachers and Heads of Department without creating duplicate staff accounts.',
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                    itemCount: assignments.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final assignment = assignments[index];
-                      return Card(
-                        child: ListTile(
-                          title: Text(
-                            staffById[assignment.staffId]?.name ??
-                                'Missing staff account',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          subtitle: Text(
-                            [
-                              _responsibilityLabel(
-                                assignment.responsibilityType,
+            Expanded(
+              child: assignments.isEmpty
+                  ? const _Message(
+                      title: 'No academic responsibilities assigned',
+                      body:
+                          'Assign Subject Teachers, Class Teachers and Heads of Department without creating duplicate staff accounts.',
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                      itemCount: assignments.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final assignment = assignments[index];
+                        return Card(
+                          child: ListTile(
+                            title: Text(
+                              staffById[assignment.staffId]?.name ??
+                                  'Missing staff account',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
                               ),
-                              if (assignment.departmentId.isNotEmpty)
-                                departmentsById[assignment.departmentId]
-                                        ?.name ??
-                                    'Missing department',
-                              if (assignment.classId.isNotEmpty)
-                                classesById[assignment.classId]?.name ??
-                                    'Missing class',
-                              if (assignment.streamId.isNotEmpty)
-                                streamsById[assignment.streamId]?.name ??
-                                    'Missing stream',
-                              if (assignment.subjectId.isNotEmpty)
-                                subjectsById[assignment.subjectId]?.name ??
-                                    'Missing subject',
-                            ].join(' • '),
+                            ),
+                            subtitle: Text(
+                              [
+                                _responsibilityLabel(
+                                  assignment.responsibilityType,
+                                ),
+                                if (assignment.departmentId.isNotEmpty)
+                                  departmentsById[assignment.departmentId]
+                                          ?.name ??
+                                      'Missing department',
+                                if (assignment.classId.isNotEmpty)
+                                  classesById[assignment.classId]?.name ??
+                                      'Missing class',
+                                if (assignment.streamId.isNotEmpty)
+                                  streamsById[assignment.streamId]?.name ??
+                                      'Missing stream',
+                                if (assignment.subjectId.isNotEmpty)
+                                  subjectsById[assignment.subjectId]?.name ??
+                                      'Missing subject',
+                              ].join(' • '),
+                            ),
+                            trailing: PopupMenuButton<String>(
+                              onSelected: (action) {
+                                if (action == 'edit') {
+                                  onEdit(assignment);
+                                } else {
+                                  onEnd(assignment);
+                                }
+                              },
+                              itemBuilder: (_) => const [
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: Text('Edit'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'end',
+                                  child: Text('End assignment'),
+                                ),
+                              ],
+                            ),
                           ),
-                          trailing: PopupMenuButton<String>(
-                            onSelected: (action) {
-                              if (action == 'edit') {
-                                onEdit(assignment);
-                              } else {
-                                onEnd(assignment);
-                              }
-                            },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(value: 'edit', child: Text('Edit')),
-                              PopupMenuItem(
-                                value: 'end',
-                                child: Text('End assignment'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+        Positioned(
+          right: 16,
+          bottom: 16,
+          child: FloatingActionButton.extended(
+            onPressed: onAdd,
+            icon: const Icon(Icons.add),
+            label: const Text('Assign Responsibility'),
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: onAdd,
-        icon: const Icon(Icons.add),
-        label: const Text('Assign Responsibility'),
-      ),
+        ),
+      ],
     );
   }
 }

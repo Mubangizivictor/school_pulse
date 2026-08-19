@@ -32,6 +32,11 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
     on<ApproveAssessmentMarksRequested>(_onApproveAssessmentMarksRequested);
     on<RejectAssessmentMarksRequested>(_onRejectAssessmentMarksRequested);
 
+    // Report Card Approval
+    on<PendingReportApprovalsRequested>(_onPendingReportApprovalsRequested);
+    on<ApproveReportCardsRequested>(_onApproveReportCardsRequested);
+    on<RejectReportCardsRequested>(_onRejectReportCardsRequested);
+
     // Performance Analytics
     on<PerformanceAnalyticsRequested>(_onPerformanceAnalyticsRequested);
 
@@ -47,6 +52,18 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
     // Timetable & Exams
     on<MasterTimetableRequested>(_onMasterTimetableRequested);
     on<ExaminationSchedulesRequested>(_onExaminationSchedulesRequested);
+
+    // Today's Operations
+    on<TodaysOperationsRequested>(_onTodaysOperationsRequested);
+
+    // Missed Lessons
+    on<MissedLessonsRequested>(_onMissedLessonsRequested);
+
+    // Assessments Overview
+    on<AssessmentsOverviewRequested>(_onAssessmentsOverviewRequested);
+
+    // Student Academic Profile
+    on<StudentAcademicProfileRequested>(_onStudentAcademicProfileRequested);
 
     // Communication
     on<SendAcademicAnnouncementRequested>(_onSendAcademicAnnouncementRequested);
@@ -216,6 +233,47 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
     );
   }
 
+  Future<void> _onPendingReportApprovalsRequested(
+    PendingReportApprovalsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
+    emit(DeanLoading());
+    final result = await repository.getPendingReportApprovals();
+    result.fold(
+      (failure) => emit(DeanError(failure.message)),
+      (approvals) => emit(PendingReportApprovalsLoaded(approvals)),
+    );
+  }
+
+  Future<void> _onApproveReportCardsRequested(
+    ApproveReportCardsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
+    emit(DeanLoading());
+    final result = await repository.approveReportCards(event.reportCardIds);
+    result.fold(
+      (failure) => emit(DeanError(failure.message)),
+      (_) => emit(
+        const DeanOperationSuccess('Report cards approved for publication'),
+      ),
+    );
+  }
+
+  Future<void> _onRejectReportCardsRequested(
+    RejectReportCardsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
+    emit(DeanLoading());
+    final result = await repository.rejectReportCards(
+      event.reportCardIds,
+      event.reason,
+    );
+    result.fold(
+      (failure) => emit(DeanError(failure.message)),
+      (_) => emit(const DeanOperationSuccess('Report cards rejected')),
+    );
+  }
+
   Future<void> _onPerformanceAnalyticsRequested(
     PerformanceAnalyticsRequested event,
     Emitter<DeanState> emit,
@@ -318,6 +376,54 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
     result.fold(
       (failure) => emit(DeanError(failure.message)),
       (schedules) => emit(ExaminationSchedulesLoaded(schedules)),
+    );
+  }
+
+  Future<void> _onTodaysOperationsRequested(
+    TodaysOperationsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
+    emit(DeanLoading());
+    final result = await repository.getTodaysOperations();
+    result.fold(
+      (failure) => emit(DeanError(failure.message)),
+      (operations) => emit(TodaysOperationsLoaded(operations)),
+    );
+  }
+
+  Future<void> _onMissedLessonsRequested(
+    MissedLessonsRequested event,
+    Emitter<DeanState> emit,
+  ) async {
+    emit(DeanLoading());
+    final result = await repository.getMissedLessons();
+    result.fold(
+      (failure) => emit(DeanError(failure.message)),
+      (data) => emit(MissedLessonsLoaded(data.$1, data.$2)),
+    );
+  }
+
+  Future<void> _onAssessmentsOverviewRequested(
+    AssessmentsOverviewRequested event,
+    Emitter<DeanState> emit,
+  ) async {
+    emit(DeanLoading());
+    final result = await repository.getAssessmentsOverview();
+    result.fold(
+      (failure) => emit(DeanError(failure.message)),
+      (assessments) => emit(AssessmentsOverviewLoaded(assessments)),
+    );
+  }
+
+  Future<void> _onStudentAcademicProfileRequested(
+    StudentAcademicProfileRequested event,
+    Emitter<DeanState> emit,
+  ) async {
+    emit(DeanLoading());
+    final result = await repository.getStudentAcademicProfile(event.studentId);
+    result.fold(
+      (failure) => emit(DeanError(failure.message)),
+      (profile) => emit(StudentAcademicProfileLoaded(profile)),
     );
   }
 

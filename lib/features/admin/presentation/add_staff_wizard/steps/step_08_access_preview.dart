@@ -17,8 +17,13 @@ class Step08AccessPreview extends StatelessWidget {
     final controller = context.watch<AddStaffWizardController>();
     final entries = AccessPreviewMapper.build(controller.draft.selectedRoles);
     final dashboards = entries.map((e) => e.dashboardPath).toSet().toList();
-    final allPermissions =
-        entries.expand((e) => e.permissionLabels).toSet().toList()..sort();
+    final allPermissionIds = entries
+        .expand((e) => e.permissionIds)
+        .toSet()
+        .toList();
+    final groupedPermissions = AccessPreviewMapper.groupByModule(
+      allPermissionIds,
+    );
 
     return WizardScaffold(
       title: 'Add Staff Member',
@@ -72,7 +77,7 @@ class Step08AccessPreview extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                if (allPermissions.isEmpty)
+                if (groupedPermissions.isEmpty)
                   Text(
                     'Standard access for the selected role(s); no elevated permissions.',
                     style: TextStyle(
@@ -81,17 +86,45 @@ class Step08AccessPreview extends StatelessWidget {
                     ),
                   )
                 else
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: allPermissions
-                        .map(
-                          (p) => StatusBadge(
-                            label: p,
-                            color: AppColors.information(context),
+                  ...groupedPermissions.expand(
+                    (group) => [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10, bottom: 4),
+                        child: Text(
+                          group.key,
+                          style: TextStyle(
+                            color: AppColors.primary(context),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
                           ),
-                        )
-                        .toList(),
+                        ),
+                      ),
+                      ...group.value.map(
+                        (label) => Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.check,
+                                size: 14,
+                                color: AppColors.textMuted(context),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  label,
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary(context),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
               ],
             ),
