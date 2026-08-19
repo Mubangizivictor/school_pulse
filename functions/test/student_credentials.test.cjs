@@ -75,3 +75,44 @@ test('issueIdentityInTransaction skips on a schoolId mismatch without '
   assert.equal(outcome.reason, 'school-mismatch');
   assert.equal(calls.set, 0);
 });
+
+test('issueIdentityInTransaction writes the QR credential with '
+  + 'identityId=studentId (the canonical students/{id} document ID), not '
+  + 'StudentIdentity.uniqueSystemId - the contract Attendance/IdentityResolver '
+  + 'depends on for the fast direct-read path', async () => {
+  const writes = [];
+  const makeRef = (kind, id) => ({
+    __kind: kind,
+    id: id || 'generated-id',
+    collection: (subName) => makeCollection(subName),
+  });
+  function makeCollection(name) {
+    return {
+      doc: (id) => makeRef(
+        name === 'students' ? 'student'
+          : name === 'counters' ? 'counter'
+          : name === 'credentials' ? 'credential'
+          : 'other',
+        id,
+      ),
+      where: () => ({ limit: () => ({ __kind: 'identityQuery' }) }),
+    };
+  }
+  const fakeTx = {
+    get: async (ref) => {
+      if (ref.__kind === 'student') return { exists: true, data: () => ({ schoolId: 'schoolA' }) };
+      if (ref.__kind === 'counter') return { exists: false };
+      return { empty: true, docs: [] };
+    },
+    set: (ref, data) => { writes.push({ ref, data }); },
+  };
+  const fakeDb = { collection: makeCollection };
+  const outcome = await __test__.issueIdentityInTransaction(fakeTx, fakeDb, {
+    studentId: 's1', schoolId: 'schoolA', schoolPrefix: 'SP',
+  });
+  assert.equal(outcome.created, true);
+  const credentialWrite = writes.find((w) => w.data.credentialType === 'qr');
+  assert.ok(credentialWrite, 'expected a QR credential write');
+  assert.equal(credentialWrite.data.identityId, 's1');
+  assert.notEqual(credentialWrite.data.identityId, outcome.identity.uniqueSystemId);
+});

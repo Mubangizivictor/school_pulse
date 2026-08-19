@@ -2412,6 +2412,9 @@ const studentCredentialFunctions = require("./student_credentials");
 exports.issueStudentIdentity = studentCredentialFunctions.issueStudentIdentity;
 exports.regenerateStudentQrCredential = studentCredentialFunctions.regenerateStudentQrCredential;
 exports.assignNfcCredential = studentCredentialFunctions.assignNfcCredential;
+// Server-side legacy-credential resolver/migration for cards issued before
+// credential.identityId was canonicalized to students/{studentId}.
+exports.resolveStudentCredential = studentCredentialFunctions.resolveStudentCredential;
 // Owner-gated, one-time-per-school backfill for students that predate the
 // issueStudentIdentity callable - see functions/student_credentials.js for
 // the idempotent/resumable transaction it shares with issueStudentIdentity.

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
 import 'package:dartz/dartz.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -384,6 +385,46 @@ void main() {
         // Write-through: the next scan on this device should resolve
         // offline without hitting Firestore again.
         verify(() => localDataSource.cacheCredential(any())).called(1);
+      },
+    );
+
+    test(
+      'resolves correctly when updatedAt is a Firestore Timestamp (what '
+      'Cloud Functions actually write via serverTimestamp()), not an ISO '
+      'string - a bare DateTime.tryParse(x as String) would throw here '
+      'and silently turn a valid card into unknown_credential',
+      () async {
+        when(
+          () => localDataSource.findRevocation('UID-TS', 'school-1'),
+        ).thenAnswer((_) async => null);
+        when(
+          () => localDataSource.findCredential('UID-TS', 'school-1'),
+        ).thenAnswer((_) async => null);
+        await firestore
+            .collection('schools')
+            .doc('school-1')
+            .collection('credentials')
+            .doc('UID-TS')
+            .set({
+              'credentialValue': 'UID-TS',
+              'credentialType': 'nfc',
+              'identityId': 'SP-0001',
+              'identityType': 'student',
+              'schoolId': 'school-1',
+              'status': 'active',
+              'updatedAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
+            });
+        when(
+          () => studentIdentityRepository.getStudentByUniqueId('SP-0001'),
+        ).thenAnswer((_) async => Right(student));
+
+        final result = await resolver.resolve(
+          NfcScanCredential(cardUid: 'UID-TS', scannedAt: DateTime.now()),
+          context,
+        );
+
+        final identity = result.getOrElse(() => throw Exception());
+        expect(identity, isA<StudentResolvedIdentity>());
       },
     );
 
