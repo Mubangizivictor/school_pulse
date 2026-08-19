@@ -11,6 +11,7 @@ import 'package:school_pulse/features/admin/domain/repositories/admin_attendance
 import 'package:school_pulse/features/finance/domain/repositories/finance_repository.dart';
 import 'package:school_pulse/features/finance/domain/entities/expenditure.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
+import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 
 /// One row of the dashboard's "Live Services" panel.
 class ServiceStatusItem extends Equatable {
@@ -78,6 +79,13 @@ class AdminDashboardStats extends Equatable {
   /// real approvals queue this dashboard has access to today.
   final int pendingExpenditureRequestsCount;
 
+  /// True when these stats were computed for a past term rather than the
+  /// currently active one. activeStaffCount/totalStudentsCount are always
+  /// a live "right now" count regardless of this flag - there is no
+  /// historical enrollment/staffing data model yet - so the UI uses this
+  /// to label those two tiles as current-only when a past term is shown.
+  final bool isHistoricalTerm;
+
   const AdminDashboardStats({
     this.schoolId,
     required this.activeStaffCount,
@@ -96,6 +104,7 @@ class AdminDashboardStats extends Equatable {
     this.termFeesCollected,
     this.currentPeriodLabel,
     this.pendingExpenditureRequestsCount = 0,
+    this.isHistoricalTerm = false,
   });
 
   @override
@@ -117,10 +126,24 @@ class AdminDashboardStats extends Equatable {
     termFeesCollected,
     currentPeriodLabel,
     pendingExpenditureRequestsCount,
+    isHistoricalTerm,
   ];
 }
 
-class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
+/// Optional term override for the dashboard KPIs that support historical
+/// scoping (Attendance, Fees Collected). Null (the default) keeps today's
+/// exact current-term behavior.
+class AdminDashboardStatsParams extends Equatable {
+  final AcademicTerm? forTerm;
+
+  const AdminDashboardStatsParams({this.forTerm});
+
+  @override
+  List<Object?> get props => [forTerm];
+}
+
+class GetAdminDashboardStats
+    implements UseCase<AdminDashboardStats, AdminDashboardStatsParams> {
   final AuthRepository authRepository;
   final GateOpsRepository gateOpsRepository;
   final FirebaseFirestore firestore;
@@ -138,7 +161,10 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
   });
 
   @override
-  Future<Either<Failure, AdminDashboardStats>> call(NoParams params) async {
+  Future<Either<Failure, AdminDashboardStats>> call(
+    AdminDashboardStatsParams params,
+  ) async {
+    final forTerm = params.forTerm;
     try {
       final currentUserResult = await authRepository.getCurrentUser();
       final schoolId = currentUserResult.fold((_) => null, (u) => u?.schoolId);
@@ -201,20 +227,55 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
       int pendingExpenditure = 0;
 
       final attendanceResult = await adminAttendanceRepository
-          .getStudentAttendanceStats(schoolId)
+          .getStudentAttendanceStats(
+            schoolId,
+            startDate: forTerm?.startDate,
+            endDate: forTerm?.endDate,
+          )
           .timeout(const Duration(seconds: 10));
       attendanceResult.fold(
         (_) => null,
         (stats) => attendancePercent = stats.$1,
       );
 
-      final kpiResult = await financeRepository
-          .getFinancialDashboardKPIs(schoolId)
-          .timeout(const Duration(seconds: 10));
-      kpiResult.fold((_) => null, (kpis) {
-        final value = kpis['termCollections'];
-        if (value is num) feesCollected = value.toDouble();
-      });
+      if (forTerm != null) {
+        // A specific past/other term was requested - sum actual payments
+        // in that term's date range instead of the current-year KPI.
+        final paymentsResult = await financeRepository
+            .getSchoolPayments(
+              schoolId,
+              startDate: forTerm.startDate,
+              endDate: forTerm.endDate,
+            )
+            .timeout(const Duration(seconds: 10));
+        paymentsResult.fold(
+          (_) => null,
+          (payments) => feesCollected = payments.fold<double>(
+            0,
+            (total, p) => total + p.amount,
+          ),
+        );
+        periodLabel = forTerm.name;
+      } else {
+        final kpiResult = await financeRepository
+            .getFinancialDashboardKPIs(schoolId)
+            .timeout(const Duration(seconds: 10));
+        kpiResult.fold((_) => null, (kpis) {
+          final value = kpis['termCollections'];
+          if (value is num) feesCollected = value.toDouble();
+        });
+
+        try {
+          final terms = await structureRepository
+              .watchAcademicTerms(schoolId)
+              .first
+              .timeout(const Duration(seconds: 10));
+          final current = terms.where((t) => t.isCurrent).firstOrNull;
+          periodLabel = current?.name;
+        } catch (_) {
+          // Structure not configured yet - leave label null.
+        }
+      }
 
       final expenditureResult = await financeRepository
           .getExpenditureRequests(schoolId)
@@ -224,17 +285,6 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
             .where((r) => r.status == ExpenditureStatus.pending)
             .length;
       });
-
-      try {
-        final terms = await structureRepository
-            .watchAcademicTerms(schoolId)
-            .first
-            .timeout(const Duration(seconds: 10));
-        final current = terms.where((t) => t.isCurrent).firstOrNull;
-        periodLabel = current?.name;
-      } catch (_) {
-        // Structure not configured yet - leave label null.
-      }
 
       return Right(
         AdminDashboardStats(
@@ -255,6 +305,7 @@ class GetAdminDashboardStats implements UseCase<AdminDashboardStats, NoParams> {
           termFeesCollected: feesCollected,
           currentPeriodLabel: periodLabel,
           pendingExpenditureRequestsCount: pendingExpenditure,
+          isHistoricalTerm: forTerm != null && !forTerm.isCurrent,
         ),
       );
     } catch (e) {

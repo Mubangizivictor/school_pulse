@@ -1,5 +1,4 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
 import '../../domain/usecases/get_admin_dashboard_stats.dart';
 import 'admin_dashboard_event.dart';
@@ -16,7 +15,9 @@ class AdminDashboardBloc
   }) : super(AdminDashboardInitial()) {
     on<LoadAdminDashboardStats>((event, emit) async {
       emit(AdminDashboardLoading());
-      final result = await getAdminDashboardStats(NoParams());
+      final result = await getAdminDashboardStats(
+        AdminDashboardStatsParams(forTerm: event.forTerm),
+      );
       if (isClosed) return;
       result.fold((failure) => emit(AdminDashboardError(failure.message)), (
         stats,

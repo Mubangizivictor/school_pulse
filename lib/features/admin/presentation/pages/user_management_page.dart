@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/core/usecases/usecase.dart';
 import '../../data/models/audit_log.dart';
 import '../../data/repositories/audit_repository.dart';
 import 'package:school_pulse/features/admin/domain/usecases/get_admin_dashboard_stats.dart';
@@ -134,7 +133,7 @@ class UsersOverviewView extends StatelessWidget {
 
   Widget _buildStats(BuildContext context) {
     return FutureBuilder(
-      future: di.sl<GetAdminDashboardStats>()(NoParams()),
+      future: di.sl<GetAdminDashboardStats>()(const AdminDashboardStatsParams()),
       builder: (context, snapshot) {
         final stats = snapshot.data?.getOrElse(
           () => const AdminDashboardStats(

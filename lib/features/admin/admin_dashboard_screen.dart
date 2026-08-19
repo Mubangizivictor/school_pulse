@@ -18,6 +18,8 @@ import 'package:school_pulse/features/branding/presentation/bloc/branding_state.
 import 'package:school_pulse/features/branding/presentation/widgets/school_badge.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
@@ -229,33 +231,43 @@ class _HeroSummaryCard extends StatelessWidget {
                   final label = state is AdminDashboardLoaded
                       ? state.stats.currentPeriodLabel
                       : null;
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.m,
-                      vertical: AppSpacing.s,
-                    ),
-                    decoration: BoxDecoration(
-                      color: scheme.onPrimary.withValues(alpha: 0.16),
-                      borderRadius: AppRadius.full,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.calendar_today_rounded,
-                          size: 14,
-                          color: scheme.onPrimary,
-                        ),
-                        const SizedBox(width: AppSpacing.s),
-                        Text(
-                          label ?? 'This Term',
-                          style: TextStyle(
+                  return InkWell(
+                    borderRadius: AppRadius.full,
+                    onTap: () => _showTermPicker(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.m,
+                        vertical: AppSpacing.s,
+                      ),
+                      decoration: BoxDecoration(
+                        color: scheme.onPrimary.withValues(alpha: 0.16),
+                        borderRadius: AppRadius.full,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_today_rounded,
+                            size: 14,
                             color: scheme.onPrimary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: AppSpacing.s),
+                          Text(
+                            label ?? 'This Term',
+                            style: TextStyle(
+                              color: scheme.onPrimary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          Icon(
+                            Icons.unfold_more_rounded,
+                            size: 14,
+                            color: scheme.onPrimary.withValues(alpha: 0.85),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -288,6 +300,98 @@ class _HeroSummaryCard extends StatelessWidget {
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
   }
+
+  void _showTermPicker(BuildContext context) {
+    final dashboardBloc = context.read<AdminDashboardBloc>();
+    final authState = context.read<AuthBloc>().state;
+    final schoolId = authState is AuthAuthenticated
+        ? authState.user.schoolId
+        : null;
+    if (schoolId == null || schoolId.isEmpty) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _TermPickerSheet(
+        schoolId: schoolId,
+        onPicked: (term) => dashboardBloc.add(
+          LoadAdminDashboardStats(forTerm: term.isCurrent ? null : term),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lets School Admin pick any configured term (current or past) to view
+/// Attendance/Fees for that term instead of the live current one. Students
+/// and Staff counts stay live regardless - see AdminDashboardStats.isHistoricalTerm.
+class _TermPickerSheet extends StatelessWidget {
+  const _TermPickerSheet({required this.schoolId, required this.onPicked});
+
+  final String schoolId;
+  final ValueChanged<AcademicTerm> onPicked;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SectionHeader(title: 'Switch Term'),
+            const SizedBox(height: 12),
+            StreamBuilder<List<AcademicTerm>>(
+              stream: di.sl<StructureRepository>().watchAcademicTerms(schoolId),
+              builder: (context, snapshot) {
+                final terms = (snapshot.data ?? const <AcademicTerm>[])
+                    .where((t) => !t.isArchived)
+                    .toList()
+                  ..sort((a, b) => a.order.compareTo(b.order));
+                if (!snapshot.hasData) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (terms.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text('No terms configured yet.'),
+                  );
+                }
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: terms.length,
+                  itemBuilder: (context, index) {
+                    final term = terms[index];
+                    return ListTile(
+                      leading: const Icon(Icons.calendar_today_rounded),
+                      title: Text(term.name),
+                      subtitle: Text(
+                        '${_formatDate(term.startDate)} - ${_formatDate(term.endDate)}',
+                      ),
+                      trailing: term.isCurrent
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : null,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        onPicked(term);
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _formatDate(DateTime date) =>
+      '${date.day}/${date.month}/${date.year}';
 }
 
 class _KpiRow extends StatelessWidget {
@@ -318,13 +422,17 @@ class _KpiRow extends StatelessWidget {
           _KpiTileData(
             title: 'Students',
             valueText: '${stats.totalStudentsCount}',
-            subtitle: 'Active students',
+            subtitle: stats.isHistoricalTerm
+                ? 'Active now (current)'
+                : 'Active students',
             icon: Icons.school_rounded,
           ),
           _KpiTileData(
             title: 'Staff',
             valueText: '${stats.activeStaffCount}',
-            subtitle: 'Active staff',
+            subtitle: stats.isHistoricalTerm
+                ? 'Active now (current)'
+                : 'Active staff',
             icon: Icons.badge_rounded,
           ),
           _KpiTileData(
@@ -332,13 +440,13 @@ class _KpiRow extends StatelessWidget {
             valueText: stats.studentAttendancePercent == null
                 ? '—'
                 : '${stats.studentAttendancePercent!.round()}%',
-            subtitle: 'This week',
+            subtitle: stats.currentPeriodLabel ?? 'This week',
             icon: Icons.fact_check_rounded,
           ),
           _KpiTileData(
             title: 'Fees Collected',
             valueText: feesLabel ?? '—',
-            subtitle: 'This year',
+            subtitle: stats.currentPeriodLabel ?? 'This year',
             icon: Icons.account_balance_wallet_rounded,
           ),
         ];

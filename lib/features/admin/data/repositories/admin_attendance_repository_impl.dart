@@ -10,26 +10,20 @@ class AdminAttendanceRepositoryImpl implements AdminAttendanceRepository {
 
   @override
   Future<Either<Failure, (double, List<double>)>> getStudentAttendanceStats(
-    String schoolId,
-  ) async {
+    String schoolId, {
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     try {
-      final now = DateTime.now();
-      final last7Days = List.generate(7, (i) => now.subtract(Duration(days: i)))
-          .where(
-            (date) =>
-                date.weekday != DateTime.saturday &&
-                date.weekday != DateTime.sunday,
-          )
-          .take(5)
-          .toList()
-          .reversed
-          .toList();
+      final sampleDays = (startDate != null && endDate != null)
+          ? _schoolDaysInRange(startDate, endDate, cap: 30)
+          : _lastSchoolDays(DateTime.now(), count: 5);
 
       final List<double> weeklyStats = [];
       double totalSum = 0;
       int daysWithData = 0;
 
-      for (final date in last7Days) {
+      for (final date in sampleDays) {
         final startOfDay = DateTime(date.year, date.month, date.day);
         final endOfDay = startOfDay.add(const Duration(days: 1));
 
@@ -86,5 +80,41 @@ class AdminAttendanceRepositoryImpl implements AdminAttendanceRepository {
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
+  }
+
+  List<DateTime> _lastSchoolDays(DateTime from, {required int count}) {
+    return List.generate(7, (i) => from.subtract(Duration(days: i)))
+        .where(
+          (date) =>
+              date.weekday != DateTime.saturday &&
+              date.weekday != DateTime.sunday,
+        )
+        .take(count)
+        .toList()
+        .reversed
+        .toList();
+  }
+
+  /// School days across [start]..[end] inclusive, sampled down to at most
+  /// [cap] evenly-spaced days so a full term doesn't trigger dozens of
+  /// Firestore reads for one dashboard stat.
+  List<DateTime> _schoolDaysInRange(
+    DateTime start,
+    DateTime end,
+    {required int cap}
+  ) {
+    final schoolDays = <DateTime>[];
+    var cursor = DateTime(start.year, start.month, start.day);
+    final last = DateTime(end.year, end.month, end.day);
+    while (!cursor.isAfter(last)) {
+      if (cursor.weekday != DateTime.saturday &&
+          cursor.weekday != DateTime.sunday) {
+        schoolDays.add(cursor);
+      }
+      cursor = cursor.add(const Duration(days: 1));
+    }
+    if (schoolDays.length <= cap) return schoolDays;
+    final step = schoolDays.length / cap;
+    return List.generate(cap, (i) => schoolDays[(i * step).floor()]);
   }
 }
