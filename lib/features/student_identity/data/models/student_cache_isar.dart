@@ -13,9 +13,9 @@ class StudentCacheIsar {
   late String uniqueSystemId; // SP-STUDENT-a82jd92
 
   late String name;
-  late String? photoUrl;
+  String? photoUrl;
   late String className;
-  late String? stream;
+  String? stream;
   late String schoolStudentId; // MH-2026-000001
   late String schoolId;
 }
