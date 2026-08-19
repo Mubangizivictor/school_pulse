@@ -205,9 +205,32 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
+    match /student_access_codes/{code} {
+      // Pre-login students look themselves up by code before they have a
+      // session, same as parent_access_codes. Admin can list/query by
+      // studentId for the Portal Codes screen. All mutations (provision,
+      // PIN reset, enable/disable) go exclusively through
+      // provisionStudentAccessCode/resetStudentPin/setStudentAccessCodeStatus
+      // (functions/student_credentials.js) so code entropy and PIN clearing
+      // never trust the client - direct writes are denied here.
+      allow get: if true;
+      allow list: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow write: if false;
+    }
+
     match /students/{studentId} {
-      allow read: if isStaff() || isParentOf(studentId) || isMe(studentId);
-      allow write: if isStaff();
+      // isStaff() alone carries no tenant scope - without isSameSchool here,
+      // any staff account (regardless of school) could read/write any
+      // student document by id. Direct client writes are additionally
+      // narrowed to updates only: creation goes through
+      // createStudentWithCapacityCheck (functions/student_capacity.js),
+      // which enforces the subscription seat cap the Admin SDK write path
+      // would otherwise bypass.
+      allow read: if (isStaff() && isSameSchool(resource.data.schoolId)) ||
+        isParentOf(studentId) || isMe(studentId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        isSameSchool(request.resource.data.schoolId);
+      allow create, delete: if false;
     }
 
     function isStudentRecordReadable() {
@@ -383,8 +406,13 @@ service cloud.firestore {
     match /attendance/{docId} {
       allow read: if isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
       allow write: if isStaff();
+      // Legacy/unused nested path - no current reader/writer found in
+      // functions/ or lib/ (all real student writes go through the
+      // top-level /students/{studentId} match above). Tenant-scoped to
+      // match it rather than left wide open.
       match /students/{studentId} {
-        allow read, write: if isStaff();
+        allow read, write: if isStaff() &&
+          isSameSchool(get(/databases/$(database)/documents/students/$(studentId)).data.schoolId);
       }
     }
 
