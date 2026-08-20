@@ -330,17 +330,20 @@ class _IncidentCard extends StatelessWidget {
         subtitle: Text(
           '${incident.category} - ${DateFormat('MMM d').format(incident.date)}',
         ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            SeverityBadge(severity: incident.severity),
-            const SizedBox(height: 4),
-            StatusBadge(
-              label: incident.status,
-              color: _statusColor(semanticColors),
-            ),
-          ],
+        trailing: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              SeverityBadge(severity: incident.severity),
+              const SizedBox(height: 4),
+              StatusBadge(
+                label: incident.status,
+                color: _statusColor(semanticColors),
+              ),
+            ],
+          ),
         ),
         children: [
           Padding(
