@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/network/network_info.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/attendance_hub/domain/repositories/attendance_repository.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/matron/domain/repositories/matron_repository.dart';
+import 'package:school_pulse/features/patron/domain/repositories/patron_repository.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 /// Drains the locally-queued attendance sync on app resume and on
@@ -92,6 +95,25 @@ class _AttendanceSyncLifecycleGateState
         authState.user.schoolId,
       ),
     );
+
+    // Boarding roll call (Patron/Matron) has its own offline queue over the
+    // same lifecycle triggers - see BoardingAttendanceLocalDataSource. Only
+    // the role actually in effect is drained, since PatronBloc/MatronBloc
+    // exist for every signed-in user regardless of role via the DI graph.
+    if (authState.user.roles.contains(UserRole.boardingPatron)) {
+      unawaited(
+        di.sl<PatronRepository>().syncPendingBoardingAttendance(
+          authState.user.schoolId,
+        ),
+      );
+    }
+    if (authState.user.roles.contains(UserRole.boardingMatron)) {
+      unawaited(
+        di.sl<MatronRepository>().syncPendingBoardingAttendance(
+          authState.user.schoolId,
+        ),
+      );
+    }
   }
 
   @override

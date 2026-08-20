@@ -1,11 +1,19 @@
+import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/features/patron/data/sources/patron_remote_data_source.dart';
 import 'package:school_pulse/features/patron/domain/entities/patron_entities.dart';
 import 'package:school_pulse/features/patron/domain/repositories/patron_repository.dart';
+import 'package:school_pulse/features/shared/boarding/data/datasources/boarding_attendance_local_data_source.dart';
 
 class PatronRepositoryImpl implements PatronRepository {
   final PatronRemoteDataSource remoteDataSource;
+  final BoardingAttendanceLocalDataSource localAttendanceDataSource;
+  final NetworkInfo networkInfo;
 
-  PatronRepositoryImpl({required this.remoteDataSource});
+  PatronRepositoryImpl({
+    required this.remoteDataSource,
+    required this.localAttendanceDataSource,
+    required this.networkInfo,
+  });
 
   @override
   Stream<PatronDashboardOverview> watchDashboardOverview(String schoolId) {
@@ -131,8 +139,83 @@ class PatronRepositoryImpl implements PatronRepository {
   }
 
   @override
-  Future<void> bulkRecordAttendance(List<BoardingAttendance> records) {
-    return remoteDataSource.bulkRecordAttendance(records);
+  Future<void> bulkRecordAttendance(List<BoardingAttendance> records) async {
+    // Cache first so the roll call is never lost to a dropped connection,
+    // then push if we currently have a connection - mirrors
+    // AttendanceRepositoryImpl's (attendance_hub) offline-first pattern.
+    await localAttendanceDataSource.cacheAll(
+      records
+          .map(
+            (r) => LocalBoardingAttendanceRecord(
+              schoolId: r.schoolId,
+              dormitoryId: r.dormitoryId,
+              studentId: r.studentId,
+              studentName: r.studentName,
+              type: r.type,
+              date: r.date,
+              status: r.status,
+              remarks: r.remarks,
+              recordedBy: r.recordedBy,
+            ),
+          )
+          .toList(),
+    );
+
+    if (!await networkInfo.isConnected) return;
+
+    try {
+      await remoteDataSource.bulkRecordAttendance(records);
+      for (final r in records) {
+        await localAttendanceDataSource.markSynced(
+          schoolId: r.schoolId,
+          dormitoryId: r.dormitoryId,
+          type: r.type,
+          date: r.date,
+          studentId: r.studentId,
+        );
+      }
+    } catch (_) {
+      // Left pending - syncPendingBoardingAttendance retries later.
+    }
+  }
+
+  @override
+  Future<void> syncPendingBoardingAttendance(String schoolId) async {
+    if (!await networkInfo.isConnected) return;
+    final pending = await localAttendanceDataSource.getPending(schoolId);
+    if (pending.isEmpty) return;
+
+    try {
+      await remoteDataSource.bulkRecordAttendance(
+        pending
+            .map(
+              (r) => BoardingAttendance(
+                id: '',
+                schoolId: r.schoolId,
+                studentId: r.studentId,
+                studentName: r.studentName,
+                dormitoryId: r.dormitoryId,
+                date: r.date,
+                type: r.type,
+                status: r.status,
+                remarks: r.remarks,
+                recordedBy: r.recordedBy,
+              ),
+            )
+            .toList(),
+      );
+      for (final r in pending) {
+        await localAttendanceDataSource.markSynced(
+          schoolId: r.schoolId,
+          dormitoryId: r.dormitoryId,
+          type: r.type,
+          date: r.date,
+          studentId: r.studentId,
+        );
+      }
+    } catch (_) {
+      // Stays pending; the next sync trigger (reconnect/app resume) retries.
+    }
   }
 
   @override

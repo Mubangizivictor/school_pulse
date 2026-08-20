@@ -25,6 +25,7 @@ import 'package:school_pulse/features/notifications/data/models/notification_tok
 import 'package:school_pulse/features/messages/data/models/pending_message_isar.dart';
 import 'package:school_pulse/features/teacher/data/models/class_teacher_isar_models.dart';
 import 'package:school_pulse/features/teacher/data/models/subject_teacher_isar_models.dart';
+import 'package:school_pulse/features/shared/boarding/data/models/boarding_attendance_isar.dart';
 
 /// Isar's web engine persists to IndexedDB and ignores the directory path;
 /// `getApplicationDocumentsDirectory()` has no web implementation and
@@ -100,5 +101,6 @@ Future<Isar> open() async {
     DocumentTemplateDefIsarSchema,
     CustomFieldDefIsarSchema,
     AttendanceRecordIsarSchema,
+    BoardingAttendanceIsarSchema,
   ], directory: dir.path);
 }

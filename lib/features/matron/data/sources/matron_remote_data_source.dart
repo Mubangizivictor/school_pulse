@@ -7,6 +7,8 @@ import 'package:school_pulse/features/matron/domain/entities/matron_entities.dar
 import 'package:school_pulse/features/matron/domain/repositories/matron_repository.dart';
 import 'package:school_pulse/features/matron/domain/entities/boarding_entities.dart'
     as legacy;
+import 'package:school_pulse/features/shared/boarding/data/models/boarding_attendance_isar.dart'
+    show buildBoardingAttendanceRecordId;
 
 /// Girls' boarding is always scoped to this gender so Matron never reads or
 /// writes a boys' (Patron) dormitory/student record, even though both
@@ -803,7 +805,21 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
   Future<void> bulkRecordAttendance(List<BoardingAttendance> records) async {
     final batch = firestore.batch();
     for (var record in records) {
-      final docRef = firestore.collection('boarding_attendance').doc();
+      // Deterministic doc id keyed on (school, dorm, session type, day,
+      // student) makes a retried offline sync idempotent - re-pushing the
+      // same roll call overwrites the same doc instead of creating a
+      // duplicate. See BoardingAttendanceLocalDataSource for the offline
+      // queue this retries from.
+      final recordId = buildBoardingAttendanceRecordId(
+        schoolId: record.schoolId,
+        dormitoryId: record.dormitoryId,
+        type: record.type,
+        date: record.date,
+        studentId: record.studentId,
+      );
+      final docRef = firestore
+          .collection('boarding_attendance')
+          .doc(recordId);
       batch.set(docRef, {
         'schoolId': record.schoolId,
         'studentId': record.studentId,

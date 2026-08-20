@@ -298,6 +298,8 @@ import 'package:school_pulse/features/patron/domain/repositories/patron_reposito
 import 'package:school_pulse/features/patron/data/repositories/patron_repository_impl.dart';
 import 'package:school_pulse/features/patron/data/sources/patron_remote_data_source.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_bloc.dart';
+import 'package:school_pulse/features/shared/boarding/data/datasources/boarding_attendance_local_data_source.dart';
+import 'package:school_pulse/features/shared/boarding/data/datasources/boarding_attendance_local_data_source_factory.dart';
 
 // Notifications
 import 'package:school_pulse/features/notifications/domain/repositories/notifications_repository.dart';
@@ -1189,11 +1191,23 @@ Future<void> init() async {
     ),
   );
 
+  // Shared by Matron and Patron - one offline cache for boarding roll call,
+  // since both write the same `boarding_attendance` collection shape.
+  sl.registerLazySingleton<BoardingAttendanceLocalDataSource>(
+    () => createBoardingAttendanceLocalDataSource(
+      isar: kIsWeb ? null : sl<Isar>(),
+    ),
+  );
+
   // Features - Matron
   sl.registerFactory(() => MatronBloc(repository: sl()));
 
   sl.registerLazySingleton<MatronRepository>(
-    () => MatronRepositoryImpl(remoteDataSource: sl()),
+    () => MatronRepositoryImpl(
+      remoteDataSource: sl(),
+      localAttendanceDataSource: sl(),
+      networkInfo: sl(),
+    ),
   );
 
   sl.registerLazySingleton<MatronRemoteDataSource>(
@@ -1204,7 +1218,11 @@ Future<void> init() async {
   sl.registerFactory(() => PatronBloc(repository: sl()));
 
   sl.registerLazySingleton<PatronRepository>(
-    () => PatronRepositoryImpl(remoteDataSource: sl()),
+    () => PatronRepositoryImpl(
+      remoteDataSource: sl(),
+      localAttendanceDataSource: sl(),
+      networkInfo: sl(),
+    ),
   );
 
   sl.registerLazySingleton<PatronRemoteDataSource>(
