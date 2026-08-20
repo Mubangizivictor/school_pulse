@@ -28,6 +28,8 @@ import 'package:school_pulse/features/patron/domain/entities/patron_entities.dar
 import 'package:school_pulse/features/matron/presentation/screens/bed_management_screen.dart'
     as matron_scr;
 import 'package:school_pulse/features/patron/presentation/screens/bed_management_screen.dart';
+import 'package:school_pulse/features/matron/presentation/screens/roll_call_screen.dart';
+import 'package:school_pulse/features/patron/presentation/screens/roll_call_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/force_set_password_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/onboarding/onboarding_flow_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/school_splash_screen.dart';
@@ -1320,6 +1322,10 @@ final router = GoRouter(
               ],
             ),
             GoRoute(
+              path: 'roll-call',
+              builder: (context, state) => const MatronRollCallScreen(),
+            ),
+            GoRoute(
               path: 'leave',
               builder: (context, state) =>
                   const matron_scr.LeaveManagementScreen(),
@@ -1397,6 +1403,10 @@ final router = GoRouter(
                       BedManagementScreen(dormitory: state.extra as Dormitory),
                 ),
               ],
+            ),
+            GoRoute(
+              path: 'roll-call',
+              builder: (context, state) => const PatronRollCallScreen(),
             ),
             GoRoute(
               path: 'leave',

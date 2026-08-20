@@ -160,6 +160,20 @@ class DormitoryCard extends StatelessWidget {
   final VoidCallback? onLeadership;
   final VoidCallback? onMore;
 
+  /// Compact list-display mode: drops the Room Leader/Dorm Prefect rows and
+  /// the Beds/Students/Leadership/More action-row footer, in favour of a
+  /// whole-card [onTap] for list navigation. Defaults to false so existing
+  /// call sites (`dormitory_management_screen.dart`) keep today's full
+  /// behaviour unchanged.
+  final bool compact;
+
+  /// Plain "Boys Dormitory" / "Girls Dormitory" subtitle shown under the
+  /// name in compact mode. Ignored in full mode.
+  final String? subtitle;
+
+  /// Whole-card tap target, used in compact mode for list navigation.
+  final VoidCallback? onTap;
+
   const DormitoryCard({
     super.key,
     required this.name,
@@ -172,6 +186,9 @@ class DormitoryCard extends StatelessWidget {
     this.onStudents,
     this.onLeadership,
     this.onMore,
+    this.compact = false,
+    this.subtitle,
+    this.onTap,
   });
 
   @override
@@ -192,6 +209,7 @@ class DormitoryCard extends StatelessWidget {
     return AppCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.l),
       padding: const EdgeInsets.all(AppSpacing.l),
+      onTap: compact ? onTap : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -200,14 +218,29 @@ class DormitoryCard extends StatelessWidget {
               Icon(Icons.home_outlined, color: accent, size: 22),
               const SizedBox(width: AppSpacing.m),
               Expanded(
-                child: Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (compact && subtitle != null && subtitle!.isNotEmpty)
+                      Text(
+                        subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontSize: 12,
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               StatusBadge(label: '$occupantCount/$capacity', color: barColor),
@@ -245,52 +278,54 @@ class DormitoryCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.l),
-          _LeadershipRow(
-            icon: Icons.emoji_events_outlined,
-            label: 'Room Leader',
-            value: roomLeaderName,
-          ),
-          const SizedBox(height: AppSpacing.m),
-          _LeadershipRow(
-            icon: Icons.shield_outlined,
-            label: 'Dorm Prefect',
-            value: dormPrefectName,
-          ),
-          const SizedBox(height: AppSpacing.m),
-          Divider(
-            height: 1,
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: _CardAction(
-                  icon: Icons.bed_outlined,
-                  label: 'Beds',
-                  onTap: onBeds,
+          if (!compact) ...[
+            const SizedBox(height: AppSpacing.l),
+            _LeadershipRow(
+              icon: Icons.emoji_events_outlined,
+              label: 'Room Leader',
+              value: roomLeaderName,
+            ),
+            const SizedBox(height: AppSpacing.m),
+            _LeadershipRow(
+              icon: Icons.shield_outlined,
+              label: 'Dorm Prefect',
+              value: dormPrefectName,
+            ),
+            const SizedBox(height: AppSpacing.m),
+            Divider(
+              height: 1,
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: _CardAction(
+                    icon: Icons.bed_outlined,
+                    label: 'Beds',
+                    onTap: onBeds,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _CardAction(
-                  icon: Icons.groups_outlined,
-                  label: 'Students',
-                  onTap: onStudents,
+                Expanded(
+                  child: _CardAction(
+                    icon: Icons.groups_outlined,
+                    label: 'Students',
+                    onTap: onStudents,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _CardAction(
-                  icon: Icons.workspace_premium_outlined,
-                  label: 'Leadership',
-                  onTap: onLeadership,
+                Expanded(
+                  child: _CardAction(
+                    icon: Icons.workspace_premium_outlined,
+                    label: 'Leadership',
+                    onTap: onLeadership,
+                  ),
                 ),
-              ),
-              SizedBox(
-                width: 44,
-                child: _CardAction(icon: Icons.more_horiz, onTap: onMore),
-              ),
-            ],
-          ),
+                SizedBox(
+                  width: 44,
+                  child: _CardAction(icon: Icons.more_horiz, onTap: onMore),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
