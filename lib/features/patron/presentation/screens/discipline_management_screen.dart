@@ -4,12 +4,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/patron/domain/entities/patron_entities.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_bloc.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_event.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_state.dart';
+import 'package:school_pulse/features/shared/boarding/boarding_list_widgets.dart';
 
 const _kSeverities = ['Low', 'Medium', 'High'];
 const _kCategories = [
@@ -94,22 +96,22 @@ class _DisciplineManagementScreenState
                 .toList();
 
             return ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.l),
               children: [
                 if (open.isNotEmpty) ...[
                   SectionHeader(title: 'Open Cases (${open.length})'),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.s),
                   ...open.map(
                     (i) => _IncidentCard(
                       incident: i,
                       currentUserName: _currentUserName(context),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.l),
                 ],
                 if (resolved.isNotEmpty) ...[
-                  SectionHeader(title: 'Resolved (${resolved.length})'),
-                  const SizedBox(height: 8),
+                  SectionHeader(title: 'Recent Actions (${resolved.length})'),
+                  const SizedBox(height: AppSpacing.s),
                   ...resolved.map(
                     (i) => _IncidentCard(
                       incident: i,
@@ -310,22 +312,11 @@ class _IncidentCard extends StatelessWidget {
     }
   }
 
-  Color _severityColor(SemanticColors semanticColors) {
-    switch (incident.severity) {
-      case 'High':
-        return semanticColors.error;
-      case 'Medium':
-        return semanticColors.warning;
-      default:
-        return Colors.grey;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
     return AppCard(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: AppSpacing.m),
       padding: EdgeInsets.zero,
       child: ExpansionTile(
         leading: CircleAvatar(
@@ -343,10 +334,7 @@ class _IncidentCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            StatusBadge(
-              label: incident.severity,
-              color: _severityColor(semanticColors),
-            ),
+            SeverityBadge(severity: incident.severity),
             const SizedBox(height: 4),
             StatusBadge(
               label: incident.status,

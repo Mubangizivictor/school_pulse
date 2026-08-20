@@ -197,6 +197,9 @@ import 'package:school_pulse/features/patron/presentation/screens/communication_
     as patron_scr;
 import 'package:school_pulse/features/patron/presentation/screens/reports_screen.dart'
     as patron_scr;
+import 'package:school_pulse/features/shared/boarding/boarding_more_screen.dart';
+import 'package:school_pulse/features/matron/presentation/screens/student_profile_screen.dart';
+import 'package:school_pulse/features/patron/presentation/screens/student_profile_screen.dart';
 import 'package:school_pulse/features/catering/presentation/catering_dashboard_screen.dart';
 import 'package:school_pulse/features/catering/presentation/screens/catering_student_lookup_screen.dart';
 import 'package:school_pulse/features/gate_ops/presentation/home/gatekeeper_home_screen.dart';
@@ -1326,6 +1329,20 @@ final router = GoRouter(
               builder: (context, state) => const MatronRollCallScreen(),
             ),
             GoRoute(
+              path: 'students/:id',
+              builder: (context, state) => MatronStudentProfileScreen(
+                studentId: state.pathParameters['id']!,
+              ),
+            ),
+            GoRoute(
+              path: 'more',
+              builder: (context, state) =>
+                  const BoardingMoreScreen(
+                    basePath: '/staff/matron',
+                    genderLabel: 'Girls',
+                  ),
+            ),
+            GoRoute(
               path: 'leave',
               builder: (context, state) =>
                   const matron_scr.LeaveManagementScreen(),
@@ -1407,6 +1424,20 @@ final router = GoRouter(
             GoRoute(
               path: 'roll-call',
               builder: (context, state) => const PatronRollCallScreen(),
+            ),
+            GoRoute(
+              path: 'students/:id',
+              builder: (context, state) => PatronStudentProfileScreen(
+                studentId: state.pathParameters['id']!,
+              ),
+            ),
+            GoRoute(
+              path: 'more',
+              builder: (context, state) =>
+                  const BoardingMoreScreen(
+                    basePath: '/staff/patron',
+                    genderLabel: 'Boys',
+                  ),
             ),
             GoRoute(
               path: 'leave',

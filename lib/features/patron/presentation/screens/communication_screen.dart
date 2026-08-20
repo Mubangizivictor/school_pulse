@@ -3,12 +3,14 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/patron/domain/entities/patron_entities.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_bloc.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_event.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_state.dart';
+import 'package:school_pulse/features/shared/boarding/boarding_list_widgets.dart';
 
 const _kTargetGroups = ['Parents', 'Patrons (Boys)', 'All Staff'];
 
@@ -63,56 +65,22 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
               message: 'Tap + to send a boarding announcement.',
             );
           }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: state.announcements.length,
-            itemBuilder: (context, index) {
-              final a = state.announcements[index];
-              return AppCard(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  leading: const Icon(
-                    Icons.campaign_outlined,
-                    color: Colors.orange,
-                  ),
-                  title: Text(
-                    a.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 4),
-                      Text(a.content),
-                      if (a.targetGroups.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 6,
-                          children: a.targetGroups
-                              .map(
-                                (g) => Chip(
-                                  label: Text(
-                                    g,
-                                    style: const TextStyle(fontSize: 10),
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                              )
-                              .toList(),
-                        ),
-                      ],
-                      const SizedBox(height: 4),
-                      Text(
-                        DateFormat('MMM d, yyyy h:mm a').format(a.date),
-                        style: Theme.of(context).textTheme.labelSmall,
-                      ),
-                    ],
-                  ),
-                ),
-              );
+          // Tabs use only fields that actually exist on
+          // BoardingAnnouncement (targetDormitoryId) - no fabricated
+          // "Urgent" tab since nothing backs an urgency flag.
+          return TabbedListScaffold<BoardingAnnouncement>(
+            tabLabels: const ['All', 'General', 'Dormitory'],
+            items: state.announcements,
+            filter: (tabIndex, a) => switch (tabIndex) {
+              1 => a.targetDormitoryId == null,
+              2 => a.targetDormitoryId != null,
+              _ => true,
             },
+            emptyIcon: Icons.campaign_outlined,
+            emptyTitle: 'No Announcements',
+            emptyMessage: 'Nothing to show for this tab yet.',
+            padding: const EdgeInsets.all(AppSpacing.l),
+            itemBuilder: (context, a) => _AnnouncementCard(announcement: a),
           );
         },
       ),
@@ -240,6 +208,61 @@ class _ComposeSheetState extends State<_ComposeSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AnnouncementCard extends StatelessWidget {
+  final BoardingAnnouncement announcement;
+  const _AnnouncementCard({required this.announcement});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.m),
+      padding: const EdgeInsets.all(AppSpacing.l),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.campaign_outlined, color: Colors.orange, size: 20),
+              const SizedBox(width: AppSpacing.s),
+              Expanded(
+                child: Text(
+                  announcement.title,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s),
+          Text(announcement.content),
+          if (announcement.targetGroups.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.s),
+            Wrap(
+              spacing: 6,
+              children: announcement.targetGroups
+                  .map(
+                    (g) => Chip(
+                      label: Text(g, style: const TextStyle(fontSize: 10)),
+                      padding: EdgeInsets.zero,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.m),
+          Text(
+            DateFormat('MMM d, yyyy h:mm a').format(announcement.date),
+            style: theme.textTheme.labelSmall,
+          ),
+        ],
       ),
     );
   }

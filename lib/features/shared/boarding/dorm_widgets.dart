@@ -244,6 +244,14 @@ class DormitoryCard extends StatelessWidget {
                 ),
               ),
               StatusBadge(label: '$occupantCount/$capacity', color: barColor),
+              if (compact && onMore != null) ...[
+                const SizedBox(width: AppSpacing.s),
+                SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: _CardAction(icon: Icons.more_horiz, onTap: onMore),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: AppSpacing.l),
