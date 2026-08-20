@@ -125,8 +125,9 @@ class StaffShell extends StatelessWidget {
 
     if (_isBoarding(context)) {
       final root = _boardingRoot(context);
-      if (location.startsWith('/staff/messages')) return 3;
-      if (location.startsWith('/staff/tasks')) return 2;
+      if (location.startsWith('$root/more')) return 4;
+      if (location.startsWith('/staff/tasks')) return 3;
+      if (location.startsWith('$root/roll-call')) return 2;
       if (location.startsWith('$root/dorms')) return 1;
       if (isMoreSubRoute(location)) return 4;
       return 0;
@@ -232,13 +233,13 @@ class StaffShell extends StatelessWidget {
           context.go('$root/dorms');
           break;
         case 2:
-          context.go('/staff/tasks');
+          context.go('$root/roll-call');
           break;
         case 3:
-          context.go('/staff/messages');
+          context.go('/staff/tasks');
           break;
         case 4:
-          context.go('/staff/more');
+          context.go('$root/more');
           break;
       }
       return;
@@ -383,14 +384,14 @@ class StaffShell extends StatelessWidget {
         label: 'Dorms',
       ),
       const NavigationDestination(
+        icon: Icon(Icons.assignment_ind_outlined, size: 24),
+        selectedIcon: Icon(Icons.assignment_ind_rounded, size: 24),
+        label: 'Roll Call',
+      ),
+      const NavigationDestination(
         icon: Icon(Icons.assignment_outlined, size: 24),
         selectedIcon: Icon(Icons.assignment_rounded, size: 24),
         label: 'Tasks',
-      ),
-      const NavigationDestination(
-        icon: MessagesNavIcon(icon: Icons.chat_bubble_outline_rounded),
-        selectedIcon: MessagesNavIcon(icon: Icons.chat_bubble_rounded),
-        label: 'Messages',
       ),
       const NavigationDestination(
         icon: Icon(Icons.grid_view_outlined, size: 24),
