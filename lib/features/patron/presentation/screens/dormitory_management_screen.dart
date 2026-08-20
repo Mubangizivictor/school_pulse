@@ -190,8 +190,10 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
                     accent: Theme.of(context).colorScheme.primary,
                     compact: true,
                     subtitle: 'Boys Dormitory',
-                    onTap: () =>
-                        context.push('/staff/patron/dorms/beds', extra: dorm),
+                    onTap: () => context.push(
+                      '/staff/patron/dorms/students',
+                      extra: dorm,
+                    ),
                     onMore: () => _showDormMenu(context, dorm, semanticColors),
                   ),
             ],
@@ -232,6 +234,14 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
               onTap: () {
                 Navigator.pop(sheetContext);
                 _showAllocationSheet(context, dorm);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.bed_outlined),
+              title: const Text('Manage Beds'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.push('/staff/patron/dorms/beds', extra: dorm);
               },
             ),
             ListTile(

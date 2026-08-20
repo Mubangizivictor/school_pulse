@@ -200,6 +200,8 @@ import 'package:school_pulse/features/patron/presentation/screens/reports_screen
 import 'package:school_pulse/features/shared/boarding/boarding_more_screen.dart';
 import 'package:school_pulse/features/matron/presentation/screens/student_profile_screen.dart';
 import 'package:school_pulse/features/patron/presentation/screens/student_profile_screen.dart';
+import 'package:school_pulse/features/matron/presentation/screens/dorm_student_roster_screen.dart';
+import 'package:school_pulse/features/patron/presentation/screens/dorm_student_roster_screen.dart';
 import 'package:school_pulse/features/catering/presentation/catering_dashboard_screen.dart';
 import 'package:school_pulse/features/catering/presentation/screens/catering_student_lookup_screen.dart';
 import 'package:school_pulse/features/gate_ops/presentation/home/gatekeeper_home_screen.dart';
@@ -1322,6 +1324,12 @@ final router = GoRouter(
                     dormitory: state.extra as matron_scr.Dormitory,
                   ),
                 ),
+                GoRoute(
+                  path: 'students',
+                  builder: (context, state) => MatronDormStudentRosterScreen(
+                    dormitory: state.extra as matron_scr.Dormitory,
+                  ),
+                ),
               ],
             ),
             GoRoute(
@@ -1336,11 +1344,10 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'more',
-              builder: (context, state) =>
-                  const BoardingMoreScreen(
-                    basePath: '/staff/matron',
-                    genderLabel: 'Girls',
-                  ),
+              builder: (context, state) => const BoardingMoreScreen(
+                basePath: '/staff/matron',
+                genderLabel: 'Girls',
+              ),
             ),
             GoRoute(
               path: 'leave',
@@ -1419,6 +1426,12 @@ final router = GoRouter(
                   builder: (context, state) =>
                       BedManagementScreen(dormitory: state.extra as Dormitory),
                 ),
+                GoRoute(
+                  path: 'students',
+                  builder: (context, state) => PatronDormStudentRosterScreen(
+                    dormitory: state.extra as Dormitory,
+                  ),
+                ),
               ],
             ),
             GoRoute(
@@ -1433,11 +1446,10 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'more',
-              builder: (context, state) =>
-                  const BoardingMoreScreen(
-                    basePath: '/staff/patron',
-                    genderLabel: 'Boys',
-                  ),
+              builder: (context, state) => const BoardingMoreScreen(
+                basePath: '/staff/patron',
+                genderLabel: 'Boys',
+              ),
             ),
             GoRoute(
               path: 'leave',
