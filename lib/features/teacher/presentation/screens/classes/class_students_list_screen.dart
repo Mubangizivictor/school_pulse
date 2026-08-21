@@ -93,15 +93,9 @@ class _ClassStudentsListScreenState extends State<ClassStudentsListScreen> {
                 height: 44,
                 margin: const EdgeInsets.only(right: AppSpacing.l),
                 decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.05),
+                  color: AppColors.surfaceElevated(context),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.1),
-                  ),
+                  border: Border.all(color: AppColors.border(context)),
                 ),
                 child: IconButton(
                   tooltip: 'Filter students',
