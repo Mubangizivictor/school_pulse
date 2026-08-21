@@ -50,6 +50,34 @@ class OfflineOperationType {
   static const resourceMetadata = 'resource.metadata';
   static const auditLog = 'audit.log';
 
+  /// A class teacher's own task list. Save covers both create and edit -
+  /// the replay reads the newest local row either way - and complete/delete
+  /// are their own types because they carry no editable payload, just an
+  /// entity id to act on.
+  static const classTaskSave = 'class_task.save';
+  static const classTaskComplete = 'class_task.complete';
+  static const classTaskDelete = 'class_task.delete';
+
+  /// Class-level homework. Save covers both draft-create and edit; publish
+  /// and cancel are their own types because each carries a different status
+  /// transition, matching how the repository already treats them as
+  /// separate calls.
+  static const classHomeworkSave = 'class_homework.save';
+  static const classHomeworkPublish = 'class_homework.publish';
+  static const classHomeworkCancel = 'class_homework.cancel';
+
+  /// A behaviour or achievement entry. Record is the initial observation;
+  /// update covers amending the note/recommendation/follow-up state.
+  static const classBehaviourRecord = 'class_behaviour.record';
+  static const classBehaviourUpdate = 'class_behaviour.update';
+
+  /// An announcement to the class. Save covers draft-create and edit;
+  /// publish and archive are their own types for the same reason homework's
+  /// are.
+  static const classAnnouncementSave = 'class_announcement.save';
+  static const classAnnouncementPublish = 'class_announcement.publish';
+  static const classAnnouncementArchive = 'class_announcement.archive';
+
   /// Operations that may be created while offline. Anything not listed here
   /// is rejected at queue time rather than failing confusingly on replay.
   static const Set<String> offlineCreatable = {
@@ -63,6 +91,17 @@ class OfflineOperationType {
     marksDraft,
     resourceMetadata,
     auditLog,
+    classTaskSave,
+    classTaskComplete,
+    classTaskDelete,
+    classHomeworkSave,
+    classHomeworkPublish,
+    classHomeworkCancel,
+    classBehaviourRecord,
+    classBehaviourUpdate,
+    classAnnouncementSave,
+    classAnnouncementPublish,
+    classAnnouncementArchive,
   };
 }
 

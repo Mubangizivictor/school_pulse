@@ -8,14 +8,19 @@ import 'package:school_pulse/core/permissions/permission.dart';
 import '../../domain/entities/active_responsibility_context.dart';
 import '../../domain/entities/class_behaviour.dart';
 import '../../domain/entities/class_homework.dart';
+import '../../domain/entities/offline_operation.dart';
 import '../../domain/policies/class_work_policy.dart';
 import '../../domain/repositories/class_work_repository.dart';
 import '../../domain/services/class_teacher_assignment_service.dart';
 import '../../domain/services/subject_audit_service.dart';
+import '../datasources/class_teacher_local_data_source.dart';
 import '../datasources/class_teacher_remote_data_source.dart';
+import '../datasources/subject_teacher_local_data_source.dart';
 
 class ClassWorkRepositoryImpl implements ClassWorkRepository {
   final ClassTeacherRemoteDataSource remoteDataSource;
+  final ClassTeacherLocalDataSource localDataSource;
+  final SubjectTeacherLocalDataSource queueDataSource;
   final ClassTeacherAssignmentService assignmentService;
   final SubjectAuditService auditService;
   final NetworkInfo networkInfo;
@@ -23,6 +28,8 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
 
   ClassWorkRepositoryImpl({
     required this.remoteDataSource,
+    required this.localDataSource,
+    required this.queueDataSource,
     required this.assignmentService,
     required this.auditService,
     required this.networkInfo,
@@ -47,9 +54,11 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(
-        NetworkFailure('You are offline. Class work needs a connection.'),
+      final cached = await localDataSource.getHomework(
+        schoolId: context.schoolId,
+        classId: classId,
       );
+      return Right(cached);
     }
 
     try {
@@ -59,8 +68,18 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
         academicYearId: context.academicYearId,
         streamId: context.streamId,
       );
+      await localDataSource.cacheHomework(
+        homework,
+        schoolId: context.schoolId,
+        classId: classId,
+      );
       return Right(homework);
     } catch (_) {
+      final cached = await localDataSource.getHomework(
+        schoolId: context.schoolId,
+        classId: classId,
+      );
+      if (cached.isNotEmpty) return Right(cached);
       return const Left(
         ServerFailure('Could not load class work. Pull down to retry.'),
       );
@@ -95,14 +114,6 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       return Left(ValidationFailure(decision.message ?? 'Could not save.'));
     }
 
-    if (!await networkInfo.isConnected) {
-      return const Left(
-        OfflineNotAllowedFailure(
-          'Setting class work needs an internet connection.',
-        ),
-      );
-    }
-
     final isNew = homework.id.isEmpty;
     final prepared = isNew
         ? _withIdentity(context, homework, uuid.v4())
@@ -111,6 +122,17 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
             updatedAt: DateTime.now(),
             roleAssignmentId: context.roleAssignmentId,
           );
+
+    await localDataSource.saveHomeworkLocal(prepared);
+
+    if (!await networkInfo.isConnected) {
+      await _queue(
+        context,
+        prepared.id,
+        OfflineOperationType.classHomeworkSave,
+      );
+      return Right(prepared);
+    }
 
     try {
       await remoteDataSource.saveHomework(prepared);
@@ -123,7 +145,12 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       );
       return Right(prepared);
     } catch (_) {
-      return const Left(ServerFailure('Could not save this assignment.'));
+      await _queue(
+        context,
+        prepared.id,
+        OfflineOperationType.classHomeworkSave,
+      );
+      return Right(prepared);
     }
   }
 
@@ -134,14 +161,21 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
   }) async {
     // Re-verified against the server: publishing reaches every parent in the
     // class, so a permission removed mid-session must be caught before it is
-    // spent, not after the notification has gone out.
-    final fresh = await assignmentService.authorizeFresh(
-      permission: Permission.classHomeworkPublish,
-      classId: homework.classId,
-      academicYearId: homework.academicYearId,
-    );
-    if (fresh.isLeft()) {
-      return fresh.fold(Left.new, (_) => const Left(PermissionDeniedFailure()));
+    // spent, not after the notification has gone out. Only meaningful when
+    // online - offline this falls back to the context's own scope, since a
+    // fresh server check is not possible without a connection.
+    final isOnline = await networkInfo.isConnected;
+    if (isOnline) {
+      final fresh = await assignmentService.authorizeFresh(
+        permission: Permission.classHomeworkPublish,
+        classId: homework.classId,
+        academicYearId: homework.academicYearId,
+      );
+      if (fresh.isLeft()) {
+        return fresh.fold(Left.new, (_) => const Left(PermissionDeniedFailure()));
+      }
+    } else if (!context.can(Permission.classHomeworkPublish)) {
+      return const Left(PermissionDeniedFailure());
     }
 
     final decision = ClassWorkPolicy.canPublish(
@@ -156,14 +190,6 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       );
     }
 
-    if (!await networkInfo.isConnected) {
-      return const Left(
-        OfflineNotAllowedFailure(
-          'Publishing class work needs an internet connection.',
-        ),
-      );
-    }
-
     final published = homework.copyWith(
       status: ClassHomeworkStatus.published,
       publishedAt: DateTime.now(),
@@ -171,6 +197,17 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       updatedAt: DateTime.now(),
       roleAssignmentId: context.roleAssignmentId,
     );
+
+    await localDataSource.saveHomeworkLocal(published);
+
+    if (!isOnline) {
+      await _queue(
+        context,
+        published.id,
+        OfflineOperationType.classHomeworkPublish,
+      );
+      return Right(published);
+    }
 
     try {
       await remoteDataSource.saveHomework(published);
@@ -184,7 +221,12 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       );
       return Right(published);
     } catch (_) {
-      return const Left(ServerFailure('Could not publish this assignment.'));
+      await _queue(
+        context,
+        published.id,
+        OfflineOperationType.classHomeworkPublish,
+      );
+      return Right(published);
     }
   }
 
@@ -222,6 +264,17 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       roleAssignmentId: context.roleAssignmentId,
     );
 
+    await localDataSource.saveHomeworkLocal(cancelled);
+
+    if (!await networkInfo.isConnected) {
+      await _queue(
+        context,
+        cancelled.id,
+        OfflineOperationType.classHomeworkCancel,
+      );
+      return Right(cancelled);
+    }
+
     try {
       await remoteDataSource.saveHomework(cancelled);
       await auditService.record(
@@ -235,7 +288,12 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       );
       return Right(cancelled);
     } catch (_) {
-      return const Left(ServerFailure('Could not cancel this assignment.'));
+      await _queue(
+        context,
+        cancelled.id,
+        OfflineOperationType.classHomeworkCancel,
+      );
+      return Right(cancelled);
     }
   }
 
@@ -274,9 +332,14 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(
-        NetworkFailure('You are offline. Behaviour records need a connection.'),
+      final cached = await localDataSource.getBehaviourRecords(
+        schoolId: context.schoolId,
+        classId: classId,
       );
+      final filtered = studentId == null
+          ? cached
+          : cached.where((r) => r.studentId == studentId).toList();
+      return Right(filtered);
     }
 
     try {
@@ -286,8 +349,26 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
         academicYearId: context.academicYearId,
         studentId: studentId,
       );
+      // Cached unfiltered (studentId is a read-side narrowing, not a
+      // separate cache partition), so a later whole-class read is not
+      // starved by a student-scoped one.
+      if (studentId == null) {
+        await localDataSource.cacheBehaviourRecords(
+          records,
+          schoolId: context.schoolId,
+          classId: classId,
+        );
+      }
       return Right(records);
     } catch (_) {
+      final cached = await localDataSource.getBehaviourRecords(
+        schoolId: context.schoolId,
+        classId: classId,
+      );
+      final filtered = studentId == null
+          ? cached
+          : cached.where((r) => r.studentId == studentId).toList();
+      if (filtered.isNotEmpty) return Right(filtered);
       return const Left(
         ServerFailure('Could not load behaviour records. Pull down to retry.'),
       );
@@ -312,15 +393,21 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
             ?.valence ==
         BehaviourValence.achievement;
 
-    final fresh = await assignmentService.authorizeFresh(
-      permission: isAchievement
-          ? Permission.classAchievementRecord
-          : Permission.classBehaviourRecord,
-      classId: record.classId,
-      academicYearId: record.academicYearId,
-    );
-    if (fresh.isLeft()) {
-      return fresh.fold(Left.new, (_) => const Left(PermissionDeniedFailure()));
+    final isOnline = await networkInfo.isConnected;
+    final permission = isAchievement
+        ? Permission.classAchievementRecord
+        : Permission.classBehaviourRecord;
+    if (isOnline) {
+      final fresh = await assignmentService.authorizeFresh(
+        permission: permission,
+        classId: record.classId,
+        academicYearId: record.academicYearId,
+      );
+      if (fresh.isLeft()) {
+        return fresh.fold(Left.new, (_) => const Left(PermissionDeniedFailure()));
+      }
+    } else if (!context.can(permission)) {
+      return const Left(PermissionDeniedFailure());
     }
 
     final decision = ClassWorkPolicy.canRecordBehaviour(
@@ -335,14 +422,6 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
         decision.refusal == ClassWorkRefusal.studentNotInClass
             ? PermissionDeniedFailure(decision.message!)
             : ValidationFailure(decision.message!),
-      );
-    }
-
-    if (!await networkInfo.isConnected) {
-      return const Left(
-        OfflineNotAllowedFailure(
-          'Recording behaviour needs an internet connection.',
-        ),
       );
     }
 
@@ -369,6 +448,17 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       roleAssignmentId: context.roleAssignmentId,
     );
 
+    await localDataSource.saveBehaviourRecordLocal(prepared);
+
+    if (!isOnline) {
+      await _queue(
+        context,
+        prepared.id,
+        OfflineOperationType.classBehaviourRecord,
+      );
+      return Right(prepared);
+    }
+
     try {
       await remoteDataSource.saveBehaviourRecord(prepared);
       await auditService.record(
@@ -384,7 +474,12 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       );
       return Right(prepared);
     } catch (_) {
-      return const Left(ServerFailure('Could not save this record.'));
+      await _queue(
+        context,
+        prepared.id,
+        OfflineOperationType.classBehaviourRecord,
+      );
+      return Right(prepared);
     }
   }
 
@@ -408,18 +503,21 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       return Left(PermissionDeniedFailure(decision.message!));
     }
 
-    if (!await networkInfo.isConnected) {
-      return const Left(
-        OfflineNotAllowedFailure(
-          'Updating a behaviour record needs an internet connection.',
-        ),
-      );
-    }
-
     final updated = record.copyWith(
       updatedBy: context.userId,
       updatedAt: DateTime.now(),
     );
+
+    await localDataSource.saveBehaviourRecordLocal(updated);
+
+    if (!await networkInfo.isConnected) {
+      await _queue(
+        context,
+        updated.id,
+        OfflineOperationType.classBehaviourUpdate,
+      );
+      return Right(updated);
+    }
 
     try {
       await remoteDataSource.saveBehaviourRecord(updated);
@@ -435,7 +533,12 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       );
       return Right(updated);
     } catch (_) {
-      return const Left(ServerFailure('Could not update this record.'));
+      await _queue(
+        context,
+        updated.id,
+        OfflineOperationType.classBehaviourUpdate,
+      );
+      return Right(updated);
     }
   }
 
@@ -467,5 +570,24 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
       createdAt: DateTime.now(),
       roleAssignmentId: context.roleAssignmentId,
     );
+  }
+
+  Future<void> _queue(
+    ActiveResponsibilityContext context,
+    String entityId,
+    String type,
+  ) async {
+    final operation = OfflineOperation(
+      operationId: uuid.v4(),
+      entityType: type,
+      entityId: entityId,
+      action: type,
+      createdAt: DateTime.now(),
+      schoolId: context.schoolId,
+      userId: context.userId,
+      roleAssignmentId: context.roleAssignmentId,
+    );
+
+    await queueDataSource.enqueueOperation(operation);
   }
 }

@@ -6,7 +6,11 @@ import 'package:school_pulse/features/teacher/data/datasources/class_teacher_rem
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_local_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_remote_data_source.dart';
 import 'package:school_pulse/features/teacher/data/services/subject_sync_service_impl.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_announcement.dart';
 import 'package:school_pulse/features/teacher/domain/entities/class_attendance.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_behaviour.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_homework.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_task.dart';
 import 'package:school_pulse/features/teacher/domain/entities/lesson_attendance.dart';
 import 'package:school_pulse/features/teacher/domain/entities/offline_operation.dart';
 import 'package:school_pulse/features/teacher/domain/services/subject_audit_service.dart';
@@ -28,6 +32,14 @@ class _FakeAttendance extends Fake implements LessonAttendance {}
 class _FakeClassAttendance extends Fake implements ClassAttendanceSession {}
 
 class _FakeOperationIsar extends Fake implements OfflineOperation {}
+
+class _FakeClassTask extends Fake implements ClassTask {}
+
+class _FakeClassHomework extends Fake implements ClassHomework {}
+
+class _FakeClassBehaviour extends Fake implements ClassBehaviourRecord {}
+
+class _FakeClassAnnouncement extends Fake implements ClassAnnouncement {}
 
 LessonAttendance _register({
   AttendanceRegisterStatus status = AttendanceRegisterStatus.submitted,
@@ -70,6 +82,59 @@ OfflineOperation _queued({
   );
 }
 
+ClassTask _task({ClassTaskStatus status = ClassTaskStatus.pending}) {
+  return ClassTask(
+    id: 'task1',
+    schoolId: 'school1',
+    academicYearId: '2026',
+    title: 'Mark CA scripts',
+    status: status,
+    dueAt: DateTime(2026, 6, 5),
+    ownerUserId: 'user1',
+    createdAt: DateTime(2026, 6, 1, 10),
+    roleAssignmentId: 'a1',
+  );
+}
+
+ClassHomework _homework() {
+  return ClassHomework(
+    id: 'hw1',
+    schoolId: 'school1',
+    classId: 'p7',
+    academicYearId: '2026',
+    title: 'Reading assignment',
+    dueDate: DateTime(2026, 6, 20),
+    createdAt: DateTime(2026, 6, 1),
+    roleAssignmentId: 'a1',
+  );
+}
+
+ClassBehaviourRecord _behaviour() {
+  return ClassBehaviourRecord(
+    id: 'b1',
+    schoolId: 'school1',
+    classId: 'p7',
+    academicYearId: '2026',
+    studentId: 's1',
+    categoryCode: 'merit',
+    recordedAt: DateTime(2026, 6, 1),
+    roleAssignmentId: 'a1',
+  );
+}
+
+ClassAnnouncement _announcement() {
+  return ClassAnnouncement(
+    id: 'ann1',
+    schoolId: 'school1',
+    classId: 'p7',
+    academicYearId: '2026',
+    title: 'Field trip',
+    body: 'Bring a hat.',
+    createdAt: DateTime(2026, 6, 1),
+    roleAssignmentId: 'a1',
+  );
+}
+
 ClassAttendanceSession _classSession({
   ClassAttendanceSessionStatus status = ClassAttendanceSessionStatus.draft,
 }) {
@@ -97,6 +162,10 @@ void main() {
     registerFallbackValue(_FakeAttendance());
     registerFallbackValue(_FakeClassAttendance());
     registerFallbackValue(_FakeOperationIsar());
+    registerFallbackValue(_FakeClassTask());
+    registerFallbackValue(_FakeClassHomework());
+    registerFallbackValue(_FakeClassBehaviour());
+    registerFallbackValue(_FakeClassAnnouncement());
   });
 
   setUp(() {
@@ -337,6 +406,143 @@ void main() {
       expect(result.synced, 1);
       verify(() => classRemote.saveAttendanceSession(any())).called(1);
       verify(() => local.deleteOperation('attendance_sess1')).called(1);
+    },
+  );
+
+  test(
+    'replays a queued task save instead of silently discarding it',
+    () async {
+      // Regression test for the same class of bug as the class-register
+      // one above: classTaskSave/complete used to fall into the "unknown
+      // type" default branch and get dropped from the queue without ever
+      // reaching Firestore.
+      queueContains([
+        _queued(type: OfflineOperationType.classTaskSave, entityId: 'task1'),
+      ]);
+      when(() => classLocal.getTask('task1')).thenAnswer((_) async => _task());
+      when(() => classRemote.saveTask(any())).thenAnswer((_) async {});
+
+      final result = await service.drain();
+
+      expect(result.synced, 1);
+      verify(() => classRemote.saveTask(any())).called(1);
+      verify(() => local.deleteOperation('attendance_task1')).called(1);
+    },
+  );
+
+  test('drops a queued task save whose record is gone', () async {
+    queueContains([
+      _queued(type: OfflineOperationType.classTaskSave, entityId: 'task1'),
+    ]);
+    when(() => classLocal.getTask('task1')).thenAnswer((_) async => null);
+
+    final result = await service.drain();
+
+    expect(result.synced, 1);
+    verifyNever(() => classRemote.saveTask(any()));
+    verify(() => local.deleteOperation('attendance_task1')).called(1);
+  });
+
+  test(
+    'replays a queued task delete against the remote store',
+    () async {
+      queueContains([
+        _queued(
+          type: OfflineOperationType.classTaskDelete,
+          entityId: 'task1',
+        ),
+      ]);
+      when(
+        () => classRemote.deleteTask(
+          schoolId: any(named: 'schoolId'),
+          taskId: any(named: 'taskId'),
+        ),
+      ).thenAnswer((_) async {});
+
+      final result = await service.drain();
+
+      expect(result.synced, 1);
+      verify(
+        () => classRemote.deleteTask(schoolId: 'school1', taskId: 'task1'),
+      ).called(1);
+      verify(() => local.deleteOperation('attendance_task1')).called(1);
+    },
+  );
+
+  test(
+    'replays a queued homework save instead of silently discarding it',
+    () async {
+      queueContains([
+        _queued(type: OfflineOperationType.classHomeworkSave, entityId: 'hw1'),
+      ]);
+      when(
+        () => classLocal.getHomeworkItem('hw1'),
+      ).thenAnswer((_) async => _homework());
+      when(() => classRemote.saveHomework(any())).thenAnswer((_) async {});
+
+      final result = await service.drain();
+
+      expect(result.synced, 1);
+      verify(() => classRemote.saveHomework(any())).called(1);
+      verify(() => local.deleteOperation('attendance_hw1')).called(1);
+    },
+  );
+
+  test('drops a queued homework save whose record is gone', () async {
+    queueContains([
+      _queued(type: OfflineOperationType.classHomeworkPublish, entityId: 'hw1'),
+    ]);
+    when(() => classLocal.getHomeworkItem('hw1')).thenAnswer((_) async => null);
+
+    final result = await service.drain();
+
+    expect(result.synced, 1);
+    verifyNever(() => classRemote.saveHomework(any()));
+    verify(() => local.deleteOperation('attendance_hw1')).called(1);
+  });
+
+  test(
+    'replays a queued behaviour record instead of silently discarding it',
+    () async {
+      queueContains([
+        _queued(type: OfflineOperationType.classBehaviourRecord, entityId: 'b1'),
+      ]);
+      when(
+        () => classLocal.getBehaviourRecord('b1'),
+      ).thenAnswer((_) async => _behaviour());
+      when(
+        () => classRemote.saveBehaviourRecord(any()),
+      ).thenAnswer((_) async {});
+
+      final result = await service.drain();
+
+      expect(result.synced, 1);
+      verify(() => classRemote.saveBehaviourRecord(any())).called(1);
+      verify(() => local.deleteOperation('attendance_b1')).called(1);
+    },
+  );
+
+  test(
+    'replays a queued announcement save instead of silently discarding it',
+    () async {
+      queueContains([
+        _queued(
+          type: OfflineOperationType.classAnnouncementSave,
+          entityId: 'ann1',
+        ),
+      ]);
+      when(
+        () => classLocal.getAnnouncement('ann1'),
+      ).thenAnswer((_) async => _announcement());
+      when(
+        () => classRemote.saveAnnouncement(any()),
+      ).thenAnswer((_) async {});
+
+      final result = await service.drain();
+
+      expect(result.synced, 1);
+      verify(() => classRemote.saveAnnouncement(any())).called(1);
+      verify(() => local.deleteOperation('attendance_ann1')).called(1);
     },
   );
 

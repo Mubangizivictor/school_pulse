@@ -79,4 +79,22 @@ abstract class ClassResourceRepository {
     required ActiveResponsibilityContext context,
     required ClassResource resource,
   });
+
+  /// Downloads the bytes behind [resource] and keeps them on this device, so
+  /// opening it later needs no connection. Needs a connection itself - there
+  /// is nothing to download offline from.
+  Future<Either<Failure, void>> downloadForOffline({
+    required ActiveResponsibilityContext context,
+    required ClassResource resource,
+  });
+
+  /// Drops the on-device copy without touching the resource itself - it
+  /// stays in the class area, just no longer available with no signal.
+  Future<Either<Failure, void>> removeDownload({
+    required ActiveResponsibilityContext context,
+    required ClassResource resource,
+  });
+
+  /// Whether [resource] currently has a usable copy on this device.
+  Future<bool> isDownloaded(String resourceId);
 }

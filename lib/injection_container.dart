@@ -79,8 +79,6 @@ import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.
 import 'package:school_pulse/features/messages/presentation/bloc/conversation_bloc.dart';
 import 'package:school_pulse/features/messages/domain/services/message_outbox_service.dart';
 import 'package:school_pulse/features/messages/data/services/message_outbox_service_impl.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
-import 'package:school_pulse/features/teacher/domain/usecases/generate_reports.dart';
 import 'package:school_pulse/features/finance/domain/services/finance_service.dart';
 import 'package:school_pulse/features/student/domain/services/admission_service.dart';
 import 'package:school_pulse/features/student/domain/services/document_service.dart';
@@ -337,6 +335,8 @@ import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_l
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_remote_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_local_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_remote_data_source.dart';
+import 'package:school_pulse/features/teacher/data/datasources/class_resource_local_data_source.dart';
+import 'package:school_pulse/features/teacher/data/datasources/class_resource_local_data_source_factory.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_local_data_source_factory.dart';
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_local_data_source_factory.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_attendance_repository_impl.dart';
@@ -378,14 +378,18 @@ import 'package:school_pulse/features/teacher/domain/repositories/subject_studen
 import 'package:school_pulse/features/teacher/domain/services/academic_calendar_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/active_responsibility_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/class_teacher_assignment_service.dart';
+import 'package:school_pulse/features/teacher/domain/services/student_guardian_contact_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/subject_audit_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/subject_sync_service.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_dashboard/class_teacher_dashboard_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_timetable/class_timetable_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/teacher_timetable/teacher_timetable_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_history_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_students/class_students_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_announcements/class_announcements_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_performance/class_performance_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_performance/student_assessment_results_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_reports/class_reports_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_tasks/class_tasks_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_work/class_work_bloc.dart';
@@ -1445,8 +1449,6 @@ Future<void> init() async {
   sl.registerLazySingleton(() => SaveReportComment(sl()));
   sl.registerLazySingleton(() => GetCompetencyRatings(sl()));
   sl.registerLazySingleton(() => SaveCompetencyRating(sl()));
-  sl.registerLazySingleton(() => GenerateReports(sl()));
-
   sl.registerLazySingleton<TeacherRepository>(
     () => TeacherRepositoryImpl(remoteDataSource: sl()),
   );
@@ -1454,8 +1456,6 @@ Future<void> init() async {
   sl.registerLazySingleton<TeacherRemoteDataSource>(
     () => TeacherRemoteDataSourceImpl(firestore: sl()),
   );
-
-  sl.registerFactory(() => ReportWizardBloc(generateReports: sl()));
 
   // Features - Subject Teacher panel
   //
@@ -1497,6 +1497,25 @@ Future<void> init() async {
     () => ClassTeacherDashboardBloc(dashboardRepository: sl()),
   );
 
+  // Factory, not a singleton: this bloc holds live stream subscriptions tied
+  // to one BlocProvider's lifetime - reusing one instance across screen
+  // visits would leak the previous visit's listeners.
+  sl.registerFactory(
+    () => ClassTimetableBloc(
+      timetableRepository: sl(),
+      structureRepository: sl(),
+    ),
+  );
+
+  // Factory for the same reason: live stream subscriptions tied to one
+  // screen visit.
+  sl.registerFactory(
+    () => TeacherTimetableBloc(
+      timetableRepository: sl(),
+      structureRepository: sl(),
+    ),
+  );
+
   sl.registerLazySingleton(
     () =>
         ClassStudentsBloc(studentRepository: sl(), attendanceRepository: sl()),
@@ -1520,6 +1539,8 @@ Future<void> init() async {
   sl.registerLazySingleton<ClassWorkRepository>(
     () => ClassWorkRepositoryImpl(
       remoteDataSource: sl(),
+      localDataSource: sl(),
+      queueDataSource: sl(),
       assignmentService: sl(),
       auditService: sl(),
       networkInfo: sl(),
@@ -1533,6 +1554,8 @@ Future<void> init() async {
   sl.registerLazySingleton<ClassCommunicationRepository>(
     () => ClassCommunicationRepositoryImpl(
       remoteDataSource: sl(),
+      localDataSource: sl(),
+      queueDataSource: sl(),
       studentRepository: sl(),
       assignmentService: sl(),
       auditService: sl(),
@@ -1544,9 +1567,16 @@ Future<void> init() async {
     () => ClassPerformanceBloc(performanceRepository: sl()),
   );
 
+  // Factory: each Assessments-tile drill-down opens its own screen instance
+  // and should not share loading state with any other one open elsewhere.
+  sl.registerFactory(
+    () => StudentAssessmentResultsBloc(performanceRepository: sl()),
+  );
+
   sl.registerLazySingleton<ClassPerformanceRepository>(
     () => ClassPerformanceRepositoryImpl(
       remoteDataSource: sl(),
+      localDataSource: sl(),
       studentRepository: sl(),
       attendanceRepository: sl(),
       workRepository: sl(),
@@ -1572,15 +1602,22 @@ Future<void> init() async {
   sl.registerLazySingleton<ClassTaskRepository>(
     () => ClassTaskRepositoryImpl(
       remoteDataSource: sl(),
+      localDataSource: sl(),
+      queueDataSource: sl(),
       auditService: sl(),
       networkInfo: sl(),
     ),
+  );
+
+  sl.registerLazySingleton<ClassResourceLocalDataSource>(
+    () => createClassResourceLocalDataSource(isar: kIsWeb ? null : sl<Isar>()),
   );
 
   sl.registerLazySingleton<ClassResourceRepository>(
     () => ClassResourceRepositoryImpl(
       firestore: sl(),
       storage: sl(),
+      localDataSource: sl(),
       assignmentService: sl(),
       auditService: sl(),
       networkInfo: sl(),
@@ -1851,6 +1888,13 @@ Future<void> init() async {
   sl.registerLazySingleton(() => CreateRelationship(sl()));
   sl.registerLazySingleton(() => ReallocateRelationship(sl()));
   sl.registerLazySingleton(() => GetRelationshipsForStudent(sl()));
+  sl.registerLazySingleton(
+    () => StudentGuardianContactService(
+      assignmentService: sl(),
+      relationshipRepository: sl(),
+      studentRepository: sl(),
+    ),
+  );
   sl.registerLazySingleton(() => GetRelationshipsForParent(sl()));
   sl.registerLazySingleton(() => GetPeoplePolicy(sl()));
   sl.registerLazySingleton(() => UpdatePeoplePolicy(sl()));

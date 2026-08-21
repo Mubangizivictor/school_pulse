@@ -132,11 +132,13 @@ class ResourceDetailsScreen extends StatelessWidget {
                 ),
                 _ActionButton(
                   icon: Icons.file_download_outlined,
-                  label: 'Download',
+                  label: 'Save Offline',
                   color: Colors.green,
-                  onTap: resource.isFolder
+                  onTap: resource.isFolder || resource.isLink
                       ? null
-                      : () => _open(context, resource),
+                      : () => context.read<ClassResourceBloc>().add(
+                          ClassResourceDownloadRequested(resource),
+                        ),
                 ),
                 _ActionButton(
                   icon: Icons.share_outlined,

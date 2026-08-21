@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/components/pulse_card.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_timetable/class_timetable_bloc.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 class ClassTimetableScreen extends StatelessWidget {
   final String classId;
@@ -11,10 +16,49 @@ class ClassTimetableScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) {
+        final bloc = di.sl<ClassTimetableBloc>();
+        final active = context.read<ClassTeacherContextBloc>().state.active;
+        if (active != null) {
+          bloc.add(ClassTimetableRequested(active));
+        }
+        return bloc;
+      },
+      child: const _ClassTimetableView(),
+    );
+  }
+}
+
+class _ClassTimetableView extends StatefulWidget {
+  const _ClassTimetableView();
+
+  @override
+  State<_ClassTimetableView> createState() => _ClassTimetableViewState();
+}
+
+class _ClassTimetableViewState extends State<_ClassTimetableView> {
+  static const _weekdays = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+
+  String? _selectedDay;
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = isDark
         ? AppColors.textPrimaryDark
         : AppColors.textPrimaryLight;
+    final className =
+        context.watch<ClassTeacherContextBloc>().state.active?.className ??
+        '';
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
@@ -35,37 +79,89 @@ class ClassTimetableScreen extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            Text(
-              'P5 East',
-              style: AppTypography.labelSmall.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
+            if (className.isNotEmpty)
+              Text(
+                className,
+                style: AppTypography.labelSmall.copyWith(
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
               ),
-            ),
           ],
         ),
       ),
-      body: Column(
-        children: [
-          _buildDaySelector(isDark),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              itemCount: 6,
-              separatorBuilder: (context, index) =>
-                  const SizedBox(height: AppSpacing.m),
-              itemBuilder: (context, index) =>
-                  _buildTimetableItem(index, isDark),
-            ),
-          ),
-        ],
+      body: BlocBuilder<ClassTimetableBloc, ClassTimetableState>(
+        builder: (context, state) {
+          if (state.isLoading) {
+            return const SchoolPulseLoader();
+          }
+
+          if (state.errorMessage != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Text(
+                  state.errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Theme.of(context).hintColor),
+                ),
+              ),
+            );
+          }
+
+          if (!state.hasPublishedTimetable) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Text(
+                  'No timetable has been published for this class yet.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Theme.of(context).hintColor),
+                ),
+              ),
+            );
+          }
+
+          final days = state.days.isEmpty
+              ? _weekdays.take(6).toList()
+              : (List<String>.from(state.days)
+                  ..sort((a, b) => _weekdays.indexOf(a).compareTo(
+                    _weekdays.indexOf(b),
+                  )));
+          final selected = _selectedDay ?? days.first;
+          final entries = state.entriesFor(selected);
+
+          return Column(
+            children: [
+              _buildDaySelector(isDark, days, selected),
+              Expanded(
+                child: entries.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No lessons scheduled for $selected.',
+                          style: TextStyle(
+                            color: Theme.of(context).hintColor,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(AppSpacing.xl),
+                        itemCount: entries.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: AppSpacing.m),
+                        itemBuilder: (context, index) =>
+                            _buildTimetableItem(entries[index], isDark),
+                      ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildDaySelector(bool isDark) {
-    final days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  Widget _buildDaySelector(bool isDark, List<String> days, String selected) {
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
@@ -73,9 +169,10 @@ class ClassTimetableScreen extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         itemCount: days.length,
         itemBuilder: (context, index) {
-          final isSelected = index == 0;
+          final day = days[index];
+          final isSelected = day == selected;
           return GestureDetector(
-            onTap: () {},
+            onTap: () => setState(() => _selectedDay = day),
             child: Container(
               margin: const EdgeInsets.only(right: AppSpacing.m),
               padding: const EdgeInsets.symmetric(
@@ -94,7 +191,7 @@ class ClassTimetableScreen extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  days[index],
+                  day.substring(0, 3).toUpperCase(),
                   style: AppTypography.labelMedium.copyWith(
                     color: isSelected
                         ? AppColors.royalBlue
@@ -114,48 +211,7 @@ class ClassTimetableScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTimetableItem(int index, bool isDark) {
-    final periods = [
-      {
-        'time': '08:00 - 09:00',
-        'subject': 'Mathematics',
-        'room': 'Room 12',
-        'color': Colors.blue,
-      },
-      {
-        'time': '09:00 - 10:20',
-        'subject': 'English',
-        'room': 'Room 12',
-        'color': Colors.orange,
-      },
-      {
-        'time': '10:20 - 10:50',
-        'subject': 'Break',
-        'room': 'Playground',
-        'color': Colors.green,
-      },
-      {
-        'time': '10:50 - 11:50',
-        'subject': 'Science',
-        'room': 'Lab 1',
-        'color': Colors.purple,
-      },
-      {
-        'time': '11:50 - 12:50',
-        'subject': 'Social Studies',
-        'room': 'Room 12',
-        'color': Colors.red,
-      },
-      {
-        'time': '12:50 - 14:00',
-        'subject': 'Lunch',
-        'room': 'Dining Hall',
-        'color': Colors.teal,
-      },
-    ];
-
-    final period = periods[index];
-
+  Widget _buildTimetableItem(ClassTimetableEntry entry, bool isDark) {
     return PulseCard(
       padding: const EdgeInsets.all(AppSpacing.l),
       child: Row(
@@ -164,7 +220,7 @@ class ClassTimetableScreen extends StatelessWidget {
             width: 4,
             height: 40,
             decoration: BoxDecoration(
-              color: period['color'] as Color,
+              color: _colorFor(entry.slot.colorHex),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -174,7 +230,7 @@ class ClassTimetableScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  period['time'] as String,
+                  '${entry.slot.startTime} - ${entry.slot.endTime}',
                   style: AppTypography.labelSmall.copyWith(
                     color: isDark
                         ? AppColors.textMutedDark
@@ -182,7 +238,9 @@ class ClassTimetableScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  period['subject'] as String,
+                  entry.lesson.subjectName.isNotEmpty
+                      ? entry.lesson.subjectName
+                      : entry.slot.name,
                   style: AppTypography.titleMedium.copyWith(
                     color: isDark
                         ? AppColors.textPrimaryDark
@@ -193,22 +251,27 @@ class ClassTimetableScreen extends StatelessWidget {
               ],
             ),
           ),
-          Text(
-            period['room'] as String,
-            style: AppTypography.labelSmall.copyWith(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
+          if (entry.lesson.roomName != null)
+            Text(
+              entry.lesson.roomName!,
+              style: AppTypography.labelSmall.copyWith(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.s),
-          Icon(
-            Icons.chevron_right,
-            size: 16,
-            color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-          ),
         ],
       ),
     );
+  }
+
+  Color _colorFor(String hex) {
+    if (hex.isEmpty) return AppColors.royalBlue;
+    final cleaned = hex.replaceAll('#', '');
+    final value = int.tryParse(
+      cleaned.length == 6 ? 'FF$cleaned' : cleaned,
+      radix: 16,
+    );
+    return value == null ? AppColors.royalBlue : Color(value);
   }
 }

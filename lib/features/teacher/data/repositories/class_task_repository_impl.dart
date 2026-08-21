@@ -6,19 +6,26 @@ import 'package:school_pulse/core/network/network_info.dart';
 
 import '../../domain/entities/active_responsibility_context.dart';
 import '../../domain/entities/class_task.dart';
+import '../../domain/entities/offline_operation.dart';
 import '../../domain/policies/class_task_policy.dart';
 import '../../domain/repositories/class_task_repository.dart';
 import '../../domain/services/subject_audit_service.dart';
+import '../datasources/class_teacher_local_data_source.dart';
 import '../datasources/class_teacher_remote_data_source.dart';
+import '../datasources/subject_teacher_local_data_source.dart';
 
 class ClassTaskRepositoryImpl implements ClassTaskRepository {
   final ClassTeacherRemoteDataSource remoteDataSource;
+  final ClassTeacherLocalDataSource localDataSource;
+  final SubjectTeacherLocalDataSource queueDataSource;
   final SubjectAuditService auditService;
   final NetworkInfo networkInfo;
   final Uuid uuid;
 
   ClassTaskRepositoryImpl({
     required this.remoteDataSource,
+    required this.localDataSource,
+    required this.queueDataSource,
     required this.auditService,
     required this.networkInfo,
     Uuid? uuid,
@@ -29,9 +36,11 @@ class ClassTaskRepositoryImpl implements ClassTaskRepository {
     required ActiveResponsibilityContext context,
   }) async {
     if (!await networkInfo.isConnected) {
-      return const Left(
-        NetworkFailure('You are offline. Your task list needs a connection.'),
+      final cached = await localDataSource.getTasks(
+        schoolId: context.schoolId,
+        ownerUserId: context.userId,
       );
+      return Right(cached);
     }
 
     try {
@@ -42,8 +51,18 @@ class ClassTaskRepositoryImpl implements ClassTaskRepository {
         schoolId: context.schoolId,
         ownerUserId: context.userId,
       );
+      await localDataSource.cacheTasks(
+        tasks,
+        schoolId: context.schoolId,
+        ownerUserId: context.userId,
+      );
       return Right(tasks);
     } catch (_) {
+      final cached = await localDataSource.getTasks(
+        schoolId: context.schoolId,
+        ownerUserId: context.userId,
+      );
+      if (cached.isNotEmpty) return Right(cached);
       return const Left(
         ServerFailure('Could not load your tasks. Pull down to retry.'),
       );
@@ -76,12 +95,6 @@ class ClassTaskRepositoryImpl implements ClassTaskRepository {
       }
     }
 
-    if (!await networkInfo.isConnected) {
-      return const Left(
-        OfflineNotAllowedFailure('Saving a task needs an internet connection.'),
-      );
-    }
-
     final prepared = isNew
         ? ClassTask(
             id: uuid.v4(),
@@ -109,6 +122,13 @@ class ClassTaskRepositoryImpl implements ClassTaskRepository {
           )
         : task.copyWith(roleAssignmentId: context.roleAssignmentId);
 
+    await localDataSource.saveTaskLocal(prepared);
+
+    if (!await networkInfo.isConnected) {
+      await _queue(context, prepared.id, OfflineOperationType.classTaskSave);
+      return Right(prepared);
+    }
+
     try {
       await remoteDataSource.saveTask(prepared);
       await auditService.record(
@@ -120,7 +140,8 @@ class ClassTaskRepositoryImpl implements ClassTaskRepository {
       );
       return Right(prepared);
     } catch (_) {
-      return const Left(ServerFailure('Could not save this task.'));
+      await _queue(context, prepared.id, OfflineOperationType.classTaskSave);
+      return Right(prepared);
     }
   }
 
@@ -137,20 +158,23 @@ class ClassTaskRepositoryImpl implements ClassTaskRepository {
       return Left(PermissionDeniedFailure(ownership.message!));
     }
 
-    if (!await networkInfo.isConnected) {
-      return const Left(
-        OfflineNotAllowedFailure(
-          'Completing a task needs an internet connection.',
-        ),
-      );
-    }
-
     final completed = task.copyWith(
       status: ClassTaskStatus.completed,
       // Stamped, never typed - the teacher marks it done, the app records when.
       completedAt: DateTime.now(),
       completedBy: context.userId,
     );
+
+    await localDataSource.saveTaskLocal(completed);
+
+    if (!await networkInfo.isConnected) {
+      await _queue(
+        context,
+        completed.id,
+        OfflineOperationType.classTaskComplete,
+      );
+      return Right(completed);
+    }
 
     try {
       await remoteDataSource.saveTask(completed);
@@ -163,7 +187,12 @@ class ClassTaskRepositoryImpl implements ClassTaskRepository {
       );
       return Right(completed);
     } catch (_) {
-      return const Left(ServerFailure('Could not complete this task.'));
+      await _queue(
+        context,
+        completed.id,
+        OfflineOperationType.classTaskComplete,
+      );
+      return Right(completed);
     }
   }
 
@@ -180,12 +209,11 @@ class ClassTaskRepositoryImpl implements ClassTaskRepository {
       );
     }
 
+    await localDataSource.deleteTaskLocal(task.id);
+
     if (!await networkInfo.isConnected) {
-      return const Left(
-        OfflineNotAllowedFailure(
-          'Deleting a task needs an internet connection.',
-        ),
-      );
+      await _queue(context, task.id, OfflineOperationType.classTaskDelete);
+      return const Right(null);
     }
 
     try {
@@ -202,7 +230,27 @@ class ClassTaskRepositoryImpl implements ClassTaskRepository {
       );
       return const Right(null);
     } catch (_) {
-      return const Left(ServerFailure('Could not delete this task.'));
+      await _queue(context, task.id, OfflineOperationType.classTaskDelete);
+      return const Right(null);
     }
+  }
+
+  Future<void> _queue(
+    ActiveResponsibilityContext context,
+    String taskId,
+    String type,
+  ) async {
+    final operation = OfflineOperation(
+      operationId: uuid.v4(),
+      entityType: type,
+      entityId: taskId,
+      action: type,
+      createdAt: DateTime.now(),
+      schoolId: context.schoolId,
+      userId: context.userId,
+      roleAssignmentId: context.roleAssignmentId,
+    );
+
+    await queueDataSource.enqueueOperation(operation);
   }
 }
