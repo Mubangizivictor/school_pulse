@@ -7,7 +7,7 @@ import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 import '../bloc/finance_bloc.dart';
 import '../bloc/finance_event.dart';
 import '../bloc/finance_state.dart';
@@ -49,6 +49,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
 
     return Scaffold(
+      appBar: staffDashboardAppBar(context, roleLabel: 'Finance'),
       body: BlocListener<FinanceBloc, FinanceState>(
         listener: (context, state) {
           if (state is ReceiptVerified) {
@@ -72,92 +73,95 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
             }
 
             if (state is FinanceDashboardLoaded) {
-              final authState = context.watch<AuthBloc>().state;
-              final userName = authState is AuthAuthenticated
-                  ? authState.user.name
-                  : 'User';
-
               return RefreshIndicator(
                 onRefresh: () async => _loadDashboard(),
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    const SizedBox(height: 48), // Space for status bar
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Welcome back,',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.outline,
-                                    ),
-                              ),
-                              Text(
-                                userName,
-                                style: Theme.of(context).textTheme.headlineSmall
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -0.5,
-                                    ),
-                              ),
-                            ],
+                    StaffHeroSummaryCard(
+                      greetingNameFallback: 'there',
+                      kpis: [
+                        StaffKpiData(
+                          title: "Today's Collections",
+                          valueText: CurrencyFormatter.ugx(
+                            state.kpis['todayCollections'] ?? 0,
                           ),
+                          subtitle: 'Collected today',
+                          icon: Icons.today,
+                          color: semanticColors.success,
                         ),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(
-                                Icons.chat_bubble_outline_rounded,
-                              ),
-                              onPressed: () => context.push('/staff/messages'),
-                              tooltip: 'Messages',
-                              style: IconButton.styleFrom(
-                                backgroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainer,
-                              ),
+                        StaffKpiData(
+                          title: 'Outstanding Fees',
+                          valueText: CurrencyFormatter.ugx(
+                            state.kpis['outstandingFees'] ?? 0,
+                          ),
+                          subtitle: 'Still owed',
+                          icon: Icons.warning_amber_rounded,
+                          color: semanticColors.error,
+                        ),
+                        StaffKpiData(
+                          title: 'Fully Paid',
+                          valueText:
+                              '${state.kpis['studentsFullyPaid'] ?? 0}',
+                          subtitle: 'Students',
+                          icon: Icons.verified,
+                          color: semanticColors.success,
+                        ),
+                        StaffKpiData(
+                          title: 'Pending Requests',
+                          valueText:
+                              '${state.kpis['pendingExpenditureRequests'] ?? 0}',
+                          subtitle: 'Awaiting approval',
+                          icon: Icons.pending_actions,
+                          color: semanticColors.info,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.chat_bubble_outline_rounded,
                             ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.search),
-                              onPressed: () =>
-                                  context.push('/staff/bursar/lookup'),
-                              tooltip: 'Student Balance Lookup',
-                              style: IconButton.styleFrom(
-                                backgroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainer,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.qr_code_scanner),
-                              onPressed: () => _scanReceipt(context),
-                              tooltip: 'Verify Receipt',
-                              style: IconButton.styleFrom(
-                                backgroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainer,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            NotificationBellButton(
+                            onPressed: () => context.push('/staff/messages'),
+                            tooltip: 'Messages',
+                            style: IconButton.styleFrom(
                               backgroundColor: Theme.of(
                                 context,
                               ).colorScheme.surfaceContainer,
                             ),
-                          ],
-                        ),
-                      ],
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.search),
+                            onPressed: () =>
+                                context.push('/staff/bursar/lookup'),
+                            tooltip: 'Student Balance Lookup',
+                            style: IconButton.styleFrom(
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainer,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.qr_code_scanner),
+                            onPressed: () => _scanReceipt(context),
+                            tooltip: 'Verify Receipt',
+                            style: IconButton.styleFrom(
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainer,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 12),
                     _buildKPIs(context, state.kpis, semanticColors),
                     const SizedBox(height: 24),
                     const SectionHeader(title: 'Quick Actions'),

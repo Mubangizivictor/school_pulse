@@ -8,6 +8,7 @@ import '../../../../design_system/theme/app_colors.dart';
 import '../../../../design_system/theme/app_radius.dart';
 import '../../../../design_system/theme/app_spacing.dart';
 import '../../../../design_system/theme/app_typography.dart';
+import '../../../shared/staff_dashboard/staff_dashboard_widgets.dart';
 import '../../../../injection_container.dart' as di;
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
@@ -250,17 +251,7 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-      appBar: AppBar(
-        backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Text(
-          'Students',
-          style: AppTypography.titleLarge.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-          ),
-        ),
-      ),
+      appBar: staffDashboardAppBar(context, roleLabel: 'Students'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/staff/admin/admissions/new', extra: widget.schoolId),
         icon: const Icon(Icons.person_add_alt_1),
@@ -308,20 +299,54 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                             ),
                           ),
                           const SizedBox(height: AppSpacing.l),
-                          if (!isLoading)
-                            BlocBuilder<AdmissionBloc, AdmissionState>(
-                              builder: (context, admissionState) {
-                                final pendingAdmissions = admissionState is AdmissionApplicationsLoaded
-                                    ? admissionState.applications
-                                        .where((a) => a.status != AdmissionStatus.rejected)
-                                        .length
-                                    : 0;
-                                return _StatTilesRow(
-                                  students: allStudents,
-                                  pendingAdmissions: pendingAdmissions,
-                                );
-                              },
-                            ),
+                          BlocBuilder<AdmissionBloc, AdmissionState>(
+                            builder: (context, admissionState) {
+                              final pendingAdmissions = admissionState is AdmissionApplicationsLoaded
+                                  ? admissionState.applications
+                                      .where((a) => a.status != AdmissionStatus.rejected)
+                                      .length
+                                  : 0;
+                              final total = allStudents.length;
+                              final active = allStudents.where((s) => s.status == StudentStatus.active).length;
+                              final suspended =
+                                  allStudents.where((s) => s.status == StudentStatus.suspended).length;
+                              return StaffHeroSummaryCard(
+                                greetingNameFallback: 'there',
+                                kpis: isLoading
+                                    ? null
+                                    : [
+                                        StaffKpiData(
+                                          title: 'Total Students',
+                                          valueText: '$total',
+                                          subtitle: 'Enrolled',
+                                          icon: Icons.groups_rounded,
+                                          color: AppColors.information(context),
+                                        ),
+                                        StaffKpiData(
+                                          title: 'Active',
+                                          valueText: '$active',
+                                          subtitle: 'In good standing',
+                                          icon: Icons.verified_rounded,
+                                          color: AppColors.success(context),
+                                        ),
+                                        StaffKpiData(
+                                          title: 'Suspended',
+                                          valueText: '$suspended',
+                                          subtitle: 'Needs review',
+                                          icon: Icons.block_rounded,
+                                          color: AppColors.danger(context),
+                                        ),
+                                        StaffKpiData(
+                                          title: 'New Admissions',
+                                          valueText: '$pendingAdmissions',
+                                          subtitle: 'Pending',
+                                          icon: Icons.how_to_reg_rounded,
+                                          color: AppColors.warning(context),
+                                        ),
+                                      ],
+                              );
+                            },
+                          ),
                           const SizedBox(height: AppSpacing.l),
                           Row(
                             children: [
@@ -453,89 +478,6 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
             );
           },
         ),
-      ),
-    );
-  }
-}
-
-/// Compact stat row - smaller than the original dashboard tiles, matching
-/// the density of the school-admin home screen's own stat row. Favors
-/// actionable roster-health signals (active/suspended/pending admissions)
-/// over gender breakdown, which is one tap away on any student's profile.
-class _StatTilesRow extends StatelessWidget {
-  final List<Student> students;
-  final int pendingAdmissions;
-  const _StatTilesRow({required this.students, required this.pendingAdmissions});
-
-  @override
-  Widget build(BuildContext context) {
-    final total = students.length;
-    final active = students.where((s) => s.status == StudentStatus.active).length;
-    final suspended = students.where((s) => s.status == StudentStatus.suspended).length;
-
-    final tiles = [
-      _StatTile(label: 'Total', value: total, icon: Icons.groups_rounded, color: AppColors.primary(context)),
-      _StatTile(label: 'Active', value: active, icon: Icons.verified_rounded, color: AppColors.success(context)),
-      _StatTile(label: 'Suspended', value: suspended, icon: Icons.block_rounded, color: AppColors.danger(context)),
-      _StatTile(
-        label: 'New Admissions',
-        value: pendingAdmissions,
-        icon: Icons.how_to_reg_rounded,
-        color: AppColors.information(context),
-      ),
-    ];
-
-    return Row(
-      children: [
-        for (var i = 0; i < tiles.length; i++) ...[
-          if (i > 0) const SizedBox(width: AppSpacing.m),
-          Expanded(child: tiles[i]),
-        ],
-      ],
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  final String label;
-  final int value;
-  final IconData icon;
-  final Color color;
-
-  const _StatTile({required this.label, required this.value, required this.icon, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: AppSpacing.m),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        borderRadius: AppRadius.medium,
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            '$value',
-            style: AppTypography.titleMedium.copyWith(
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.labelSmall.copyWith(
-              color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-            ),
-          ),
-        ],
       ),
     );
   }

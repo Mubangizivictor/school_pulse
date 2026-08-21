@@ -35,14 +35,18 @@ class _CompetencyEntryScreenState extends State<CompetencyEntryScreen> {
   void initState() {
     super.initState();
     final wizardState = context.read<ReportWizardBloc>().state;
-    context.read<TeacherBloc>().add(
-      TeacherCompetencyRatingsRequested(
-        className: wizardState.selectedClassName ?? widget.className,
-        term: wizardState.selectedTerm ?? widget.term,
-        year: wizardState.selectedYear ?? widget.year,
-        competency: competency,
-      ),
-    );
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<TeacherBloc>().add(
+        TeacherCompetencyRatingsRequested(
+          schoolId: authState.user.schoolId,
+          className: wizardState.selectedClassName ?? widget.className,
+          term: wizardState.selectedTerm ?? widget.term,
+          year: wizardState.selectedYear ?? widget.year,
+          competency: competency,
+        ),
+      );
+    }
   }
 
   @override
@@ -213,10 +217,15 @@ class _CompetencyEntryScreenState extends State<CompetencyEntryScreen> {
         ? authState.user.id
         : 'teacher_1';
 
+    final schoolId = authState is AuthAuthenticated
+        ? authState.user.schoolId
+        : '';
+
     final rating =
         (existingRating ??
                 CompetencyRating(
                   id: '',
+                  schoolId: schoolId,
                   studentId: student.id,
                   className: wizardState.selectedClassName ?? widget.className,
                   term: wizardState.selectedTerm ?? widget.term,
@@ -233,6 +242,7 @@ class _CompetencyEntryScreenState extends State<CompetencyEntryScreen> {
     // Optimistically update the UI by re-requesting the data
     context.read<TeacherBloc>().add(
       TeacherCompetencyRatingsRequested(
+        schoolId: schoolId,
         className: wizardState.selectedClassName ?? widget.className,
         term: wizardState.selectedTerm ?? widget.term,
         year: wizardState.selectedYear ?? widget.year,

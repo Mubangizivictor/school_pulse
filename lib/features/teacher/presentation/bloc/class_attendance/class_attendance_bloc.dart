@@ -494,6 +494,7 @@ class ClassAttendanceBloc
     ValidationFailure() => failure.message,
     OfflineNotAllowedFailure() => failure.message,
     NetworkFailure() => failure.message,
+    ServerFailure() => failure.message,
     _ => 'Could not save the register. Try again.',
   };
 }

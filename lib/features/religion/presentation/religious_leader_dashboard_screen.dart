@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 import 'bloc/religion_bloc.dart';
 import 'bloc/religion_event.dart';
 import 'bloc/religion_state.dart';
@@ -26,10 +27,7 @@ class _ReligiousLeaderDashboardScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Religious & Spiritual Life'),
-        actions: [const NotificationBellButton()],
-      ),
+      appBar: staffDashboardAppBar(context, roleLabel: 'Religious Leader'),
       body: BlocConsumer<ReligionBloc, ReligionState>(
         listener: (context, state) {
           if (state is ReligionActionSuccess) {
@@ -60,39 +58,38 @@ class _ReligiousLeaderDashboardScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    FadeInSlide(
-                      child: Text(
-                        'Spiritual Oversight',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+                    StaffHeroSummaryCard(
+                      greetingNameFallback: 'there',
+                      kpis: [
+                        StaffKpiData(
+                          title: 'Activities',
+                          valueText: '${state.activities.length}',
+                          subtitle: 'Scheduled',
+                          icon: Icons.event,
+                          color: AppColors.information(context),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FadeInSlide(
-                            delay: const Duration(milliseconds: 100),
-                            child: DashboardStatCard(
-                              title: 'Activities',
-                              value: state.activities.length.toDouble(),
-                              icon: Icons.event,
-                              color: Colors.purple,
-                            ),
-                          ),
+                        StaffKpiData(
+                          title: 'Upcoming',
+                          valueText:
+                              '${state.activities.where((a) => a.dateTime.isAfter(DateTime.now())).length}',
+                          subtitle: 'Not yet held',
+                          icon: Icons.upcoming_outlined,
+                          color: AppColors.success(context),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FadeInSlide(
-                            delay: const Duration(milliseconds: 200),
-                            child: DashboardStatCard(
-                              title: 'Groups',
-                              value: state.groups.length.toDouble(),
-                              icon: Icons.group_work,
-                              color: Colors.orange,
-                            ),
-                          ),
+                        StaffKpiData(
+                          title: 'Groups',
+                          valueText: '${state.groups.length}',
+                          subtitle: 'Spiritual groups',
+                          icon: Icons.group_work,
+                          color: AppColors.warning(context),
+                        ),
+                        StaffKpiData(
+                          title: 'Members',
+                          valueText:
+                              '${state.groups.fold<int>(0, (sum, g) => sum + g.memberCount)}',
+                          subtitle: 'Across all groups',
+                          icon: Icons.groups_outlined,
+                          color: AppColors.danger(context),
                         ),
                       ],
                     ),

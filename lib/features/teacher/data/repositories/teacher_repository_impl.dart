@@ -17,10 +17,14 @@ class TeacherRepositoryImpl implements TeacherRepository {
 
   @override
   Future<Either<Failure, List<TeacherStudent>>> getStudentsByClass(
+    String schoolId,
     String className,
   ) async {
     try {
-      final students = await remoteDataSource.getStudentsByClass(className);
+      final students = await remoteDataSource.getStudentsByClass(
+        schoolId,
+        className,
+      );
       return Right(students);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -134,9 +138,12 @@ class TeacherRepositoryImpl implements TeacherRepository {
   }
 
   @override
-  Future<Either<Failure, void>> deleteHomework(String homeworkId) async {
+  Future<Either<Failure, void>> deleteHomework(
+    String homeworkId, {
+    required String schoolId,
+  }) async {
     try {
-      await remoteDataSource.deleteHomework(homeworkId);
+      await remoteDataSource.deleteHomework(homeworkId, schoolId: schoolId);
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -145,12 +152,14 @@ class TeacherRepositoryImpl implements TeacherRepository {
 
   @override
   Future<Either<Failure, List<ReportComment>>> getReportComments({
+    required String schoolId,
     required String className,
     required String term,
     required String year,
   }) async {
     try {
       final comments = await remoteDataSource.getReportComments(
+        schoolId: schoolId,
         className: className,
         term: term,
         year: year,
@@ -173,6 +182,7 @@ class TeacherRepositoryImpl implements TeacherRepository {
 
   @override
   Future<Either<Failure, List<CompetencyRating>>> getCompetencyRatings({
+    required String schoolId,
     required String className,
     required String term,
     required String year,
@@ -180,6 +190,7 @@ class TeacherRepositoryImpl implements TeacherRepository {
   }) async {
     try {
       final ratings = await remoteDataSource.getCompetencyRatings(
+        schoolId: schoolId,
         className: className,
         term: term,
         year: year,
@@ -205,6 +216,7 @@ class TeacherRepositoryImpl implements TeacherRepository {
 
   @override
   Future<Either<Failure, void>> generateReports({
+    required String schoolId,
     required String className,
     required String term,
     required String year,
@@ -213,6 +225,7 @@ class TeacherRepositoryImpl implements TeacherRepository {
   }) async {
     try {
       await remoteDataSource.generateReports(
+        schoolId: schoolId,
         className: className,
         term: term,
         year: year,

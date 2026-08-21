@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/teacher/domain/entities/active_responsibility_context.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 import 'package:school_pulse/features/teacher/domain/entities/lesson.dart';
 import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
@@ -66,8 +65,6 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
       return const Scaffold(body: Center(child: SchoolPulseLoader()));
     }
 
-    final user = authState.user;
-
     return BlocConsumer<SubjectTeacherContextBloc, SubjectTeacherContextState>(
       listenWhen: (previous, current) =>
           previous.active?.roleAssignmentId !=
@@ -95,19 +92,12 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
       builder: (context, contextState) {
         return Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
+          appBar: staffDashboardAppBar(context, roleLabel: 'Subject Teacher'),
           body: RefreshIndicator(
             onRefresh: () async => _refreshData(),
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                // Custom Header
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
-                    child: _buildHeader(user.name, contextState.active),
-                  ),
-                ),
-
                 if (contextState.isLoading)
                   const SliverFillRemaining(
                     child: Center(child: SchoolPulseLoader()),
@@ -116,9 +106,52 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
                   SliverFillRemaining(child: _buildUnavailable(contextState))
                 else if (contextState.active != null)
                   SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
+                        BlocBuilder<
+                          SubjectTeacherDashboardBloc,
+                          SubjectTeacherDashboardState
+                        >(
+                          builder: (context, stats) {
+                            return StaffHeroSummaryCard(
+                              greetingNameFallback: 'there',
+                              periodLabel:
+                                  contextState.active?.responsibilityLabel,
+                              kpis: [
+                                StaffKpiData(
+                                  title: 'Students Enrolled',
+                                  valueText: _count(stats.studentsEnrolled),
+                                  subtitle: 'Total',
+                                  icon: Icons.people_outline,
+                                  color: AppColors.information(context),
+                                ),
+                                StaffKpiData(
+                                  title: 'Present Today',
+                                  valueText: _count(stats.presentToday),
+                                  subtitle: _percent(stats.presentPercentage),
+                                  icon: Icons.check_circle_outline,
+                                  color: AppColors.success(context),
+                                ),
+                                StaffKpiData(
+                                  title: 'Absent Today',
+                                  valueText: _count(stats.absentToday),
+                                  subtitle: _percent(stats.absentPercentage),
+                                  icon: Icons.person_off_outlined,
+                                  color: AppColors.danger(context),
+                                ),
+                                StaffKpiData(
+                                  title: 'Lessons Today',
+                                  valueText: _count(stats.lessonsToday),
+                                  subtitle: 'Scheduled',
+                                  icon: Icons.menu_book_rounded,
+                                  color: AppColors.warning(context),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 20),
                         _buildMainContextCard(context, contextState),
                         const SizedBox(height: 24),
                         _buildQuickActions(context),
@@ -183,85 +216,6 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
       ctaLabel: 'Retry',
       onCtaPressed: _refreshData,
     );
-  }
-
-  Widget _buildHeader(String name, ActiveResponsibilityContext? active) {
-    return Row(
-      children: [
-        AvatarInitials(
-          name: name,
-          size: 48,
-          ringColor: AppColors.primary(context),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _greeting(),
-                style: TextStyle(
-                  color: AppColors.textSecondary(context),
-                  fontSize: 14,
-                ),
-              ),
-              Text(
-                name,
-                style: TextStyle(
-                  color: AppColors.textPrimary(context),
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                active?.responsibilityLabel ?? 'Subject Teacher',
-                style: TextStyle(
-                  color: AppColors.primary(context),
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ),
-        IconButton(
-          icon: Icon(
-            Theme.of(context).brightness == Brightness.dark
-                ? Icons.wb_sunny_outlined
-                : Icons.nightlight_round_outlined,
-            color: AppColors.textSecondary(context),
-          ),
-          onPressed: () {
-            final provider = context.read<ThemeProvider>();
-            provider.setThemeMode(
-              Theme.of(context).brightness == Brightness.dark
-                  ? ThemeMode.light
-                  : ThemeMode.dark,
-            );
-          },
-        ),
-        IconButton(
-          icon: Icon(
-            Icons.chat_bubble_outline,
-            color: AppColors.textSecondary(context),
-          ),
-          onPressed: () => context.push('/staff/messages'),
-        ),
-        IconButton(
-          icon: Icon(
-            Icons.notifications_none,
-            color: AppColors.textSecondary(context),
-          ),
-          onPressed: () => context.push('/staff/notifications'),
-        ),
-      ],
-    );
-  }
-
-  String _greeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning,';
-    if (hour < 17) return 'Good Afternoon,';
-    return 'Good Evening,';
   }
 
   Widget _buildMainContextCard(
@@ -358,45 +312,6 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Divider(color: AppColors.border(context).withValues(alpha: 0.5)),
-          const SizedBox(height: 12),
-          BlocBuilder<
-            SubjectTeacherDashboardBloc,
-            SubjectTeacherDashboardState
-          >(
-            builder: (context, stats) {
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildMetricItem(
-                    'Students Enrolled',
-                    _count(stats.studentsEnrolled),
-                    'Total',
-                    AppColors.primary(context),
-                  ),
-                  _buildMetricItem(
-                    'Present Today',
-                    _count(stats.presentToday),
-                    _percent(stats.presentPercentage),
-                    AppColors.success(context),
-                  ),
-                  _buildMetricItem(
-                    'Absent Today',
-                    _count(stats.absentToday),
-                    _percent(stats.absentPercentage),
-                    AppColors.danger(context),
-                  ),
-                  _buildMetricItem(
-                    'Lessons Today',
-                    _count(stats.lessonsToday),
-                    'Scheduled',
-                    AppColors.warning(context),
-                  ),
-                ],
-              );
-            },
-          ),
         ],
       ),
     );
@@ -407,45 +322,6 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
   String _count(int? value) => value?.toString() ?? '–';
 
   String _percent(double? value) => value == null ? '–' : '${value.round()}%';
-
-  Widget _buildMetricItem(
-    String label,
-    String value,
-    String subValue,
-    Color color,
-  ) {
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(Icons.people_outline, color: color, size: 18),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textMuted(context), fontSize: 9),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subValue,
-            style: TextStyle(
-              color: color,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildQuickActions(BuildContext context) {
     return Row(

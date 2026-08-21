@@ -1469,6 +1469,20 @@
       ]
     },
     {
+      "collectionGroup": "class_tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ownerUserId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dueAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "class_behaviour_records",
       "queryScope": "COLLECTION",
       "fields": [

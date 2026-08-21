@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
@@ -51,10 +52,10 @@ class HomeworkMonitoringScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            '${(record.submissionRate * 100).toInt()}%',
-                            style: const TextStyle(
+                            '${record.submissionRate.toInt()}%',
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue,
+                              color: AppColors.primary(context),
                             ),
                           ),
                           const Text(

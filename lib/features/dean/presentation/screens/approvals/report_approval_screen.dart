@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
+import 'package:school_pulse/features/dean/presentation/widgets/glass_icon_button.dart';
 import 'package:school_pulse/injection_container.dart';
 import '../../../domain/entities/report_card_approval.dart';
 
@@ -23,15 +25,18 @@ class ReportApprovalScreen extends StatelessWidget {
               builder: (context, state) {
                 if (state is PendingReportApprovalsLoaded &&
                     state.approvals.isNotEmpty) {
-                  return IconButton(
-                    icon: const Icon(Icons.check_circle_outline),
-                    onPressed: () {
-                      final ids = state.approvals.map((a) => a.id).toList();
-                      context.read<DeanBloc>().add(
-                        ApproveReportCardsRequested(ids),
-                      );
-                    },
-                    tooltip: 'Approve All',
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: GlassIconButton(
+                      icon: Icons.check_circle_outline,
+                      tooltip: 'Approve All',
+                      onPressed: () {
+                        final ids = state.approvals.map((a) => a.id).toList();
+                        context.read<DeanBloc>().add(
+                          ApproveReportCardsRequested(ids),
+                        );
+                      },
+                    ),
                   );
                 }
                 return const SizedBox.shrink();
@@ -93,11 +98,11 @@ class ReportApprovalScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.red),
+                  icon: Icon(Icons.close, color: AppColors.danger(context)),
                   onPressed: () => _showRejectDialog(context, report.id),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.check, color: Colors.green),
+                  icon: Icon(Icons.check, color: AppColors.success(context)),
                   onPressed: () {
                     context.read<DeanBloc>().add(
                       ApproveReportCardsRequested([report.id]),
@@ -137,7 +142,10 @@ class ReportApprovalScreen extends StatelessWidget {
               );
               Navigator.pop(dialogContext);
             },
-            child: const Text('Reject', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Reject',
+              style: TextStyle(color: AppColors.danger(context)),
+            ),
           ),
         ],
       ),

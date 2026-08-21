@@ -3,11 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/qr_scanner/presentation/screens/qr_scanner_screen.dart';
 import 'package:school_pulse/features/qr_scanner/domain/entities/scanner_mode.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 import '../domain/entities/meal_record.dart';
 import 'screens/inventory_screen.dart';
 import 'screens/meal_planning_screen.dart';
@@ -71,33 +72,7 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Catering Management'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.search),
-              onPressed: () => context.push('/staff/catering/lookup'),
-              tooltip: 'Meal Eligibility Lookup',
-              style: IconButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.qr_code_scanner),
-              onPressed: () => _scanForMeal(context),
-              tooltip: 'Verify Student Meal',
-              style: IconButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-              ),
-            ),
-            const SizedBox(width: 8),
-            NotificationBellButton(
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-            ),
-            const SizedBox(width: 8),
-          ],
-        ),
+        appBar: staffDashboardAppBar(context, roleLabel: 'Catering'),
         body: RefreshIndicator(
           onRefresh: () async {
             context.read<CateringBloc>().add(LoadCateringDashboard());
@@ -114,7 +89,39 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
                 return ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _buildOverviewGrid(context, data, semanticColors),
+                    StaffHeroSummaryCard(
+                      greetingNameFallback: 'Chef',
+                      kpis: [
+                        StaffKpiData(
+                          title: 'Expected Students',
+                          valueText: '${data['expectedStudents'] ?? 0}',
+                          subtitle: 'Today',
+                          icon: Icons.people_alt_rounded,
+                          color: AppColors.information(context),
+                        ),
+                        StaffKpiData(
+                          title: 'Meals Served',
+                          valueText: '${data['mealsServedToday'] ?? 0}',
+                          subtitle: 'Today',
+                          icon: Icons.restaurant_rounded,
+                          color: AppColors.success(context),
+                        ),
+                        StaffKpiData(
+                          title: 'Boarders',
+                          valueText: '${data['boardersCount'] ?? 0}',
+                          subtitle: 'On roll',
+                          icon: Icons.hotel_rounded,
+                          color: AppColors.warning(context),
+                        ),
+                        StaffKpiData(
+                          title: 'Day Scholars',
+                          valueText: '${data['dayScholarsCount'] ?? 0}',
+                          subtitle: 'On roll',
+                          icon: Icons.school_rounded,
+                          color: AppColors.danger(context),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 24),
                     _buildQuickActions(context),
                     const SizedBox(height: 24),
@@ -159,47 +166,6 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
     );
   }
 
-  Widget _buildOverviewGrid(
-    BuildContext context,
-    Map<String, dynamic> data,
-    SemanticColors semanticColors,
-  ) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.5,
-      children: [
-        DashboardStatCard(
-          title: 'Expected Students',
-          value: (data['expectedStudents'] ?? 0).toDouble(),
-          icon: Icons.people,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        DashboardStatCard(
-          title: 'Meals Served',
-          value: (data['mealsServedToday'] ?? 0).toDouble(),
-          icon: Icons.restaurant,
-          color: semanticColors.success,
-        ),
-        DashboardStatCard(
-          title: 'Boarders',
-          value: (data['boardersCount'] ?? 0).toDouble(),
-          icon: Icons.hotel,
-          color: Colors.blue,
-        ),
-        DashboardStatCard(
-          title: 'Day Scholars',
-          value: (data['dayScholarsCount'] ?? 0).toDouble(),
-          icon: Icons.school,
-          color: Colors.orange,
-        ),
-      ],
-    );
-  }
-
   Widget _buildQuickActions(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,6 +181,16 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
+              _ActionChip(
+                icon: Icons.search,
+                label: 'Eligibility Lookup',
+                onTap: () => context.push('/staff/catering/lookup'),
+              ),
+              _ActionChip(
+                icon: Icons.qr_code_scanner,
+                label: 'Verify Meal',
+                onTap: () => _scanForMeal(context),
+              ),
               _ActionChip(
                 icon: Icons.menu_book,
                 label: 'Menu Planning',

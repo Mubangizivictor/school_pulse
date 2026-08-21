@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 import '../../data/repositories/approval_repository.dart';
 import '../../domain/entities/approval_models.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -143,8 +144,14 @@ class _ApprovalCenterScreenState extends State<ApprovalCenterScreen> {
               ),
               Expanded(
                 child: visible.isEmpty
-                    ? const Center(
-                        child: Text('No approvals match these filters.'),
+                    ? EmptyState(
+                        icon: Icons.fact_check_outlined,
+                        title: requests.isEmpty
+                            ? 'No approval requests yet'
+                            : 'No approvals match these filters',
+                        message: requests.isEmpty
+                            ? 'Requests submitted for your approval will appear here.'
+                            : 'Try a different filter or search term.',
                       )
                     : ListView.separated(
                         padding: const EdgeInsets.all(16),

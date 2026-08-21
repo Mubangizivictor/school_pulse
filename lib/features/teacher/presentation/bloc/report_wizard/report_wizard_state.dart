@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 enum ReportWizardStatus { initial, loading, success, failure }
 
 class ReportWizardState extends Equatable {
+  final String? schoolId;
   final String? selectedClassId;
   final String? selectedClassName;
   final String? selectedYear;
@@ -14,6 +15,7 @@ class ReportWizardState extends Equatable {
   final String? errorMessage;
 
   const ReportWizardState({
+    this.schoolId,
     this.selectedClassId,
     this.selectedClassName,
     this.selectedYear,
@@ -33,6 +35,7 @@ class ReportWizardState extends Equatable {
   });
 
   ReportWizardState copyWith({
+    String? schoolId,
     String? selectedClassId,
     String? selectedClassName,
     String? selectedYear,
@@ -44,6 +47,7 @@ class ReportWizardState extends Equatable {
     String? errorMessage,
   }) {
     return ReportWizardState(
+      schoolId: schoolId ?? this.schoolId,
       selectedClassId: selectedClassId ?? this.selectedClassId,
       selectedClassName: selectedClassName ?? this.selectedClassName,
       selectedYear: selectedYear ?? this.selectedYear,
@@ -58,6 +62,7 @@ class ReportWizardState extends Equatable {
 
   @override
   List<Object?> get props => [
+    schoolId,
     selectedClassId,
     selectedClassName,
     selectedYear,

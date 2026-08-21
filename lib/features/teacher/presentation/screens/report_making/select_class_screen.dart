@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_event.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_state.dart';
@@ -29,6 +31,10 @@ class SelectClassScreen extends StatelessWidget {
       ),
       body: BlocBuilder<ReportWizardBloc, ReportWizardState>(
         builder: (context, state) {
+          final authState = context.watch<AuthBloc>().state;
+          final schoolId = authState is AuthAuthenticated
+              ? authState.user.schoolId
+              : '';
           return Column(
             children: [
               Padding(
@@ -45,7 +51,8 @@ class SelectClassScreen extends StatelessWidget {
                       isSelected: state.selectedClassId == 'p4e',
                       onTap: () {
                         context.read<ReportWizardBloc>().add(
-                          const ReportWizardClassSelected(
+                          ReportWizardClassSelected(
+                            schoolId: schoolId,
                             classId: 'p4e',
                             className: 'Primary 4 - Emerald',
                           ),
@@ -59,7 +66,8 @@ class SelectClassScreen extends StatelessWidget {
                       isSelected: state.selectedClassId == 'p4s',
                       onTap: () {
                         context.read<ReportWizardBloc>().add(
-                          const ReportWizardClassSelected(
+                          ReportWizardClassSelected(
+                            schoolId: schoolId,
                             classId: 'p4s',
                             className: 'Primary 4 - Sapphire',
                           ),
@@ -73,7 +81,8 @@ class SelectClassScreen extends StatelessWidget {
                       isSelected: state.selectedClassId == 'p5e',
                       onTap: () {
                         context.read<ReportWizardBloc>().add(
-                          const ReportWizardClassSelected(
+                          ReportWizardClassSelected(
+                            schoolId: schoolId,
                             classId: 'p5e',
                             className: 'Primary 5 - Emerald',
                           ),
@@ -87,7 +96,8 @@ class SelectClassScreen extends StatelessWidget {
                       isSelected: state.selectedClassId == 'p5s',
                       onTap: () {
                         context.read<ReportWizardBloc>().add(
-                          const ReportWizardClassSelected(
+                          ReportWizardClassSelected(
+                            schoolId: schoolId,
                             classId: 'p5s',
                             className: 'Primary 5 - Sapphire',
                           ),
@@ -101,7 +111,8 @@ class SelectClassScreen extends StatelessWidget {
                       isSelected: state.selectedClassId == 'p6e',
                       onTap: () {
                         context.read<ReportWizardBloc>().add(
-                          const ReportWizardClassSelected(
+                          ReportWizardClassSelected(
+                            schoolId: schoolId,
                             classId: 'p6e',
                             className: 'Primary 6 - Emerald',
                           ),

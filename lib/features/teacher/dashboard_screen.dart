@@ -2,20 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/shared/boarding/boarding_dashboard_widgets.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 import 'package:school_pulse/features/teacher/domain/entities/class_dashboard_summary.dart';
 import 'package:school_pulse/features/teacher/domain/entities/lesson.dart';
+import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_event.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_dashboard/class_teacher_dashboard_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_event.dart';
+import 'package:school_pulse/features/teacher/presentation/routing/class_activity_navigation.dart';
+import 'package:school_pulse/features/teacher/presentation/widgets/responsibility_switcher_sheet.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
@@ -43,19 +47,76 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     );
   }
 
+  Future<void> _openResponsibilitySwitcher(
+    ClassTeacherContextState state,
+  ) async {
+    final chosen = await ResponsibilitySwitcherSheet.show(
+      context,
+      subjectAssignments: state.subjectAssignments,
+      otherResponsibilities: state.otherResponsibilities,
+      activeAssignmentId: state.active?.roleAssignmentId,
+    );
+    if (!mounted || chosen == null) return;
+    context.read<ClassTeacherContextBloc>().add(ClassContextSwitched(chosen));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthBloc>().state;
-    final user = authState is AuthAuthenticated ? authState.user : null;
-
     return Scaffold(
       backgroundColor: AppColors.background(context),
+      appBar: staffDashboardAppBar(
+        context,
+        roleLabel: 'Class Teacher',
+        actions: [
+          BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
+            buildWhen: (previous, current) =>
+                previous.available != current.available ||
+                previous.active?.roleAssignmentId !=
+                    current.active?.roleAssignmentId,
+            builder: (context, state) {
+              if (state.available.length < 2) return const SizedBox.shrink();
+              return IconButton(
+                tooltip: 'Switch active role',
+                icon: const Icon(Icons.swap_horiz_rounded),
+                onPressed: () => _openResponsibilitySwitcher(state),
+              );
+            },
+          ),
+        ],
+      ),
       body: BlocConsumer<ClassTeacherContextBloc, ClassTeacherContextState>(
         listenWhen: (previous, current) =>
             previous.active?.roleAssignmentId !=
                 current.active?.roleAssignmentId ||
             previous.notice != current.notice,
         listener: (context, contextState) {
+          // A class teacher can switch to a subject responsibility from the
+          // same account. Clear class-scoped state first, resolve the subject
+          // context, then replace the dashboard location so Back cannot
+          // reopen the previous class under the new responsibility.
+          if (contextState.handOffTo != null) {
+            final auth = context.read<AuthBloc>().state;
+            if (contextState.handOffTo ==
+                    StaffResponsibilityType.subjectTeacher &&
+                auth is AuthAuthenticated) {
+              context.read<SubjectTeacherContextBloc>().add(
+                ContextRequested(
+                  schoolId: auth.user.schoolId,
+                  userId: auth.user.id,
+                ),
+              );
+              context.go('/staff/dashboard');
+            } else {
+              // Responsibility types without a teacher panel are resolved by
+              // the staff hub. Do not leave the (now cleared) class panel on
+              // screen after a successful switch.
+              context.go('/staff/hub');
+            }
+            context.read<ClassTeacherContextBloc>().add(
+              const ClassContextHandOffConsumed(),
+            );
+            return;
+          }
           final active = contextState.active;
           if (active != null) {
             // Every responsibility change reloads the figures, so the previous
@@ -117,47 +178,16 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.xl,
-                    AppSpacing.x8l,
+                    AppSpacing.l,
                     AppSpacing.xl,
                     AppSpacing.x4l,
                   ),
                   children: [
-                    BoardingDashboardHeader(
-                      userName: user?.name ?? 'Class Teacher',
-                      roleLabel: _roleLabel(contextState, user?.schoolName),
-                      photoUrl: user?.photoUrl,
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(
-                              Theme.of(context).brightness == Brightness.dark
-                                  ? Icons.wb_sunny_outlined
-                                  : Icons.nightlight_round_outlined,
-                            ),
-                            onPressed: () {
-                              final provider = context.read<ThemeProvider>();
-                              provider.setThemeMode(
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? ThemeMode.light
-                                    : ThemeMode.dark,
-                              );
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.chat_bubble_outline_rounded),
-                            onPressed: () => context.push('/staff/messages'),
-                            tooltip: 'Messages',
-                          ),
-                          const NotificationBellButton(),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.x3l),
-
-                    // 1. Overview metrics
-                    BoardingOverviewCard(
-                      metrics: _buildMetrics(context, state),
+                    // 1. Shared hero summary card
+                    StaffHeroSummaryCard(
+                      greetingNameFallback: 'Class Teacher',
+                      kpis: _buildKpis(context, state),
+                      useGlassIconContainers: true,
                     ),
                     const SizedBox(height: AppSpacing.x3l),
 
@@ -181,23 +211,6 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         },
       ),
     );
-  }
-
-  /// "P5 East • Kabale Campus" - built from the verified assignment rather
-  /// than from a field on the user record, which cannot say which of several
-  /// responsibilities is in effect.
-  String _roleLabel(ClassTeacherContextState state, String? schoolName) {
-    final active = state.active;
-    if (active == null) return 'Class Teacher';
-    final placement = [
-      active.className,
-      active.streamName,
-    ].where((e) => e != null && e.isNotEmpty).join(' ');
-    final where = schoolName ?? '';
-    return [
-      placement.isEmpty ? 'Class Teacher' : placement,
-      if (where.isNotEmpty) where,
-    ].join(' • ');
   }
 
   /// Each unavailable reason is its own explanation, because the teacher's
@@ -247,7 +260,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     );
   }
 
-  List<BoardingMetric> _buildMetrics(
+  List<StaffKpiData> _buildKpis(
     BuildContext context,
     ClassTeacherDashboardState state,
   ) {
@@ -259,46 +272,46 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         percentage == null ? 'Not taken' : '${percentage.toStringAsFixed(1)}%';
 
     return [
-      BoardingMetric(
-        label: 'Students',
+      StaffKpiData(
+        title: 'Students',
+        valueText: '$total',
+        subtitle: 'Total',
         icon: Icons.people_outline,
-        color: AppColors.primary(context),
-        value: total,
-        caption: 'Total',
-        captionUsesColor: false,
+        color: AppColors.information(context),
         onTap: () => context.push('/staff/students'),
       ),
-      BoardingMetric(
-        label: 'Present Today',
-        icon: Icons.how_to_reg_outlined,
-        color: AppColors.success(context),
-        value: present ?? 0,
+      StaffKpiData(
+        title: 'Present Today',
+        valueText: '${present ?? 0}',
         // "Not taken" rather than 0% - an unmarked register and a class with
         // nobody present are different facts.
-        caption: share(state.presentPercentage),
+        subtitle: share(state.presentPercentage),
+        icon: Icons.how_to_reg_outlined,
+        color: AppColors.success(context),
         onTap: () => context.push('/staff/roll-call'),
       ),
-      BoardingMetric(
-        label: 'Absent Today',
+      StaffKpiData(
+        title: 'Absent Today',
+        valueText: '${absent ?? 0}',
+        subtitle: share(state.absentPercentage),
         icon: Icons.person_off_outlined,
         color: AppColors.danger(context),
-        value: absent ?? 0,
-        caption: share(state.absentPercentage),
         onTap: () => context.push('/staff/roll-call'),
       ),
-      BoardingMetric(
-        label: 'Assignments',
+      StaffKpiData(
+        title: 'Assignments',
+        valueText: '${state.pendingAssignments ?? 0}',
+        subtitle: 'Pending',
         icon: Icons.assignment_outlined,
+        onTap: () => context.push('/staff/class-tasks'),
         color: AppColors.warning(context),
-        value: state.pendingAssignments ?? 0,
-        caption: 'Pending',
-        onTap: () => context.push('/staff/tasks'),
       ),
     ];
   }
 
   Widget _buildQuickActions(BuildContext context) {
     return BoardingQuickActionGrid(
+      useGlassIconContainers: true,
       actions: [
         BoardingQuickAction(
           label: 'Roll Call',
@@ -441,21 +454,14 @@ class _ActivityCard extends StatelessWidget {
         horizontal: AppSpacing.l,
         vertical: AppSpacing.xl,
       ),
-      onTap: () {},
+      onTap: () => navigateToClassActivity(context, activity),
       child: Row(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.primarySoft(context),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              _iconFor(activity.action),
-              color: AppColors.primary(context),
-              size: 22,
-            ),
+          _DashboardGlassIcon(
+            icon: iconForClassActivity(activity.action),
+            color: AppColors.primary(context),
+            size: 44,
+            iconSize: 22,
           ),
           const SizedBox(width: AppSpacing.l),
           Expanded(
@@ -489,24 +495,6 @@ class _ActivityCard extends StatelessWidget {
     );
   }
 
-  static IconData _iconFor(String action) {
-    if (action.startsWith('attendance')) return Icons.how_to_reg;
-    if (action.startsWith('homework')) return Icons.assignment_outlined;
-    if (action.startsWith('behaviour')) return Icons.flag_outlined;
-    if (action.startsWith('achievement')) return Icons.emoji_events_outlined;
-    if (action.startsWith('announcement')) return Icons.campaign_outlined;
-    if (action.startsWith('message')) return Icons.chat_bubble_outline;
-    if (action.startsWith('report') ||
-        action.startsWith('competency') ||
-        action.startsWith('conduct') ||
-        action.startsWith('comment')) {
-      return Icons.description_outlined;
-    }
-    if (action.startsWith('task')) return Icons.checklist_outlined;
-    if (action.startsWith('resource')) return Icons.folder_open;
-    return Icons.history;
-  }
-
   static String _relativeTime(DateTime when) {
     final difference = DateTime.now().difference(when);
     if (difference.inMinutes < 1) return 'Just now';
@@ -530,7 +518,12 @@ class _EmptyRow extends StatelessWidget {
     final theme = Theme.of(context);
     return Row(
       children: [
-        Icon(icon, size: 20, color: AppColors.textMuted(context)),
+        _DashboardGlassIcon(
+          icon: icon,
+          color: AppColors.textMuted(context),
+          size: 40,
+          iconSize: 20,
+        ),
         const SizedBox(width: AppSpacing.l),
         Expanded(
           child: Text(
@@ -542,6 +535,39 @@ class _EmptyRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The Class Teacher dashboard uses this same translucent surface for every
+/// informational icon, keeping icons visible over both light and dark cards.
+class _DashboardGlassIcon extends StatelessWidget {
+  const _DashboardGlassIcon({
+    required this.icon,
+    required this.color,
+    required this.size,
+    required this.iconSize,
+  });
+
+  final IconData icon;
+  final Color color;
+  final double size;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(size * 0.3),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Icon(icon, size: iconSize, color: color),
     );
   }
 }

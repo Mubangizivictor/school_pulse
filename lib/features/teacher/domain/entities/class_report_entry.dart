@@ -28,10 +28,7 @@ enum ReportEntryStatus {
   /// The states a class teacher may still write in. Past this the report
   /// belongs to the academic office, and the teacher's copy is read-only.
   bool get isTeacherEditable =>
-      this == draft ||
-      this == inProgress ||
-      this == returnedForCorrection ||
-      this == classTeacherCompleted;
+      this == draft || this == inProgress || this == returnedForCorrection;
 
   bool get isApprovedUpstream =>
       this == academicOfficeApproved ||

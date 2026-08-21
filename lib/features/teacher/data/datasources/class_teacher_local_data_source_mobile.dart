@@ -80,6 +80,10 @@ class ClassTeacherLocalDataSourceImpl implements ClassTeacherLocalDataSource {
     required String academicYearId,
     String? streamId,
   }) async {
+    // cacheKey is class+stream+year, not globally unique - schoolId is
+    // filtered in the query itself so a colliding row cached for another
+    // school (e.g. both schools have their own "primary-5") is never
+    // fetched, not merely discarded after the fact.
     final row = await isar.classDashboardCacheIsars
         .filter()
         .cacheKeyEqualTo(
@@ -89,9 +93,10 @@ class ClassTeacherLocalDataSourceImpl implements ClassTeacherLocalDataSource {
             academicYearId: academicYearId,
           ),
         )
+        .and()
+        .schoolIdEqualTo(schoolId)
         .findFirst();
-    if (row == null || row.schoolId != schoolId) return null;
-    return row.toEntity();
+    return row?.toEntity();
   }
 
   @override
@@ -116,10 +121,19 @@ class ClassTeacherLocalDataSourceImpl implements ClassTeacherLocalDataSource {
   }
 
   @override
-  Future<ClassAttendanceSession?> getAttendanceDraft(String sessionId) async {
+  Future<ClassAttendanceSession?> getAttendanceDraft(
+    String sessionId, {
+    required String schoolId,
+  }) async {
+    // sessionId is class+stream+day, not globally unique - two schools can
+    // land on the identical string for their own "Primary 5" class. schoolId
+    // is filtered in the query itself, not checked after the read, so a
+    // colliding row from another school is never even fetched.
     final row = await isar.classAttendanceDraftIsars
         .filter()
         .sessionIdEqualTo(sessionId)
+        .and()
+        .schoolIdEqualTo(schoolId)
         .findFirst();
     return row?.toEntity();
   }

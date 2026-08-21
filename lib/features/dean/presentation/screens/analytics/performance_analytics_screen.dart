@@ -9,6 +9,7 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
+import 'package:school_pulse/features/dean/presentation/screens/more/academic_reports_screen.dart';
 import 'package:school_pulse/injection_container.dart';
 
 /// Academic Performance screen: UNEB Readiness + Reports Readiness as two
@@ -85,7 +86,7 @@ class _PerformanceAnalyticsScreenState extends State<PerformanceAnalyticsScreen>
 
   Widget _buildUnebReadiness(BuildContext context, Map data) {
     final overall = ((data['overallReadiness'] ?? 0) as num).toDouble();
-    final subjects = (data['subjectBreakdown'] as List?) ?? [];
+    final categories = (data['readinessCategories'] as List?) ?? [];
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
@@ -97,6 +98,8 @@ class _PerformanceAnalyticsScreenState extends State<PerformanceAnalyticsScreen>
                 label: 'UNEB Readiness',
                 size: 128,
               ),
+              const SizedBox(height: AppSpacing.m),
+              _readinessStatusBadge(context, overall),
               const SizedBox(height: AppSpacing.xl),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -116,25 +119,39 @@ class _PerformanceAnalyticsScreenState extends State<PerformanceAnalyticsScreen>
           ),
         ),
         const SizedBox(height: AppSpacing.x3l),
-        const SectionHeader(title: 'Subject Readiness'),
+        const SectionHeader(title: 'Readiness Breakdown'),
         const SizedBox(height: AppSpacing.l),
-        ...subjects.map((s) {
-          final readiness = ((s['readiness'] ?? 0) as num).toDouble();
-          final projection = ((s['passRateProjection'] ?? 0) as num).toDouble();
-          return _ReadinessRow(
-            title: s['subject'] ?? '',
-            subtitle:
-                'Projected pass rate: ${(projection * 100).toStringAsFixed(0)}%',
-            value: readiness,
-          );
+        ...categories.map((c) {
+          final readiness = ((c['readiness'] ?? 0) as num).toDouble();
+          return _ReadinessRow(label: c['category'] ?? '', value: readiness);
         }),
+        const SizedBox(height: AppSpacing.l),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AcademicReportsScreen()),
+            ),
+            child: const Text('View Full Readiness Report'),
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildReportsReadiness(BuildContext context, Map data) {
     final overall = ((data['overallReadiness'] ?? 0) as num).toDouble();
-    final classes = (data['classBreakdown'] as List?) ?? [];
+    final classesReady = data['classesReady'] ?? 0;
+    final classesTotal = data['classesTotal'] ?? 0;
+    final marksCompletePct = ((data['marksCompletePct'] ?? 0) as num)
+        .toDouble();
+    final teacherRemarksPct = ((data['teacherRemarksPct'] ?? 0) as num)
+        .toDouble();
+    final classTeacherRemarksPct =
+        ((data['classTeacherRemarksPct'] ?? 0) as num).toDouble();
+    final moderationCompletePct = ((data['moderationCompletePct'] ?? 0) as num)
+        .toDouble();
+    final dosReviewStatus = data['dosReviewStatus'] ?? 'Pending';
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
@@ -146,41 +163,65 @@ class _PerformanceAnalyticsScreenState extends State<PerformanceAnalyticsScreen>
                 label: 'Reports Readiness',
                 size: 128,
               ),
-              const SizedBox(height: AppSpacing.xl),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _SummaryStat(
-                    label: 'Published',
-                    value: '${data['reportCardsPublished'] ?? 0}',
-                  ),
-                  _SummaryStat(
-                    label: 'Pending Approval',
-                    value: '${data['reportCardsPendingApproval'] ?? 0}',
-                  ),
-                  _SummaryStat(
-                    label: 'Marks Entered',
-                    value:
-                        '${(((data['marksFullyEntered'] ?? 0) as num) * 100).toStringAsFixed(0)}%',
-                  ),
-                ],
-              ),
+              const SizedBox(height: AppSpacing.m),
+              _readinessStatusBadge(context, overall),
             ],
           ),
         ),
         const SizedBox(height: AppSpacing.x3l),
-        const SectionHeader(title: 'Class Readiness'),
+        const SectionHeader(title: 'Readiness Breakdown'),
         const SizedBox(height: AppSpacing.l),
-        ...classes.map((c) {
-          final readiness = ((c['readiness'] ?? 0) as num).toDouble();
-          return _ReadinessRow(
-            title: c['className'] ?? '',
-            subtitle: null,
-            value: readiness,
-          );
-        }),
+        _ReportsReadinessRow(
+          label: 'Classes Ready',
+          value: '$classesReady/$classesTotal',
+        ),
+        _ReadinessRow(label: 'Marks Complete', value: marksCompletePct),
+        _ReadinessRow(label: 'Teacher Remarks', value: teacherRemarksPct),
+        _ReadinessRow(
+          label: 'Class Teacher Remarks',
+          value: classTeacherRemarksPct,
+        ),
+        _ReadinessRow(
+          label: 'Moderation Complete',
+          value: moderationCompletePct,
+        ),
+        _ReportsReadinessRow(label: 'DOS Review', value: dosReviewStatus),
       ],
     );
+  }
+
+  Widget _readinessStatusBadge(BuildContext context, double overall) {
+    final _ReadinessStatus status = overall >= 0.85
+        ? _ReadinessStatus.good
+        : overall >= 0.65
+        ? _ReadinessStatus.attentionRequired
+        : overall >= 0.4
+        ? _ReadinessStatus.atRisk
+        : _ReadinessStatus.critical;
+    return StatusBadge(label: status.label, color: status.color(context));
+  }
+}
+
+enum _ReadinessStatus {
+  good('Ready'),
+  attentionRequired('Attention Required'),
+  atRisk('At Risk'),
+  critical('Critical');
+
+  final String label;
+  const _ReadinessStatus(this.label);
+
+  Color color(BuildContext context) {
+    switch (this) {
+      case _ReadinessStatus.good:
+        return AppColors.success(context);
+      case _ReadinessStatus.attentionRequired:
+        return AppColors.warning(context);
+      case _ReadinessStatus.atRisk:
+        return AppColors.warning(context);
+      case _ReadinessStatus.critical:
+        return AppColors.danger(context);
+    }
   }
 }
 
@@ -212,15 +253,10 @@ class _SummaryStat extends StatelessWidget {
 }
 
 class _ReadinessRow extends StatelessWidget {
-  final String title;
-  final String? subtitle;
+  final String label;
   final double value;
 
-  const _ReadinessRow({
-    required this.title,
-    this.subtitle,
-    required this.value,
-  });
+  const _ReadinessRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -229,6 +265,11 @@ class _ReadinessRow extends StatelessWidget {
         : value >= 0.5
         ? AppColors.warning(context)
         : AppColors.danger(context);
+    final status = value >= 0.8
+        ? 'On Track'
+        : value >= 0.5
+        ? 'Attention'
+        : 'Critical';
     return AppCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.m),
       child: Column(
@@ -237,22 +278,15 @@ class _ReadinessRow extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: AppTypography.titleSmall),
+              Expanded(child: Text(label, style: AppTypography.titleSmall)),
               Text(
                 '${(value * 100).toStringAsFixed(0)}%',
                 style: AppTypography.labelLarge.copyWith(color: color),
               ),
+              const SizedBox(width: AppSpacing.m),
+              StatusBadge(label: status, color: color),
             ],
           ),
-          if (subtitle != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              subtitle!,
-              style: AppTypography.bodySmall.copyWith(
-                color: AppColors.textMuted(context),
-              ),
-            ),
-          ],
           const SizedBox(height: AppSpacing.m),
           LinearProgressIndicator(
             value: value,
@@ -260,6 +294,32 @@ class _ReadinessRow extends StatelessWidget {
             color: color,
             minHeight: 8,
             borderRadius: AppRadius.small,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReportsReadinessRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _ReportsReadinessRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.m),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: AppTypography.titleSmall),
+          Text(
+            value,
+            style: AppTypography.labelLarge.copyWith(
+              color: AppColors.textSecondary(context),
+            ),
           ),
         ],
       ),

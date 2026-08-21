@@ -193,7 +193,14 @@ class SubjectTeacherLocalDataSourceImpl
         : await query.and().schoolIdEqualTo(schoolId).findAll();
 
     rows.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-    return rows.map((e) => e.toEntity()).toList();
+    final now = DateTime.now();
+    // A row still inside its backoff window is left in the queue but not
+    // handed to the drain loop, so a failing operation doesn't get replayed
+    // again on the very next poll.
+    return rows
+        .map((e) => e.toEntity())
+        .where((op) => op.isDueFor(now))
+        .toList();
   }
 
   @override

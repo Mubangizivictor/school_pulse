@@ -61,6 +61,7 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
 
     // Assessments Overview
     on<AssessmentsOverviewRequested>(_onAssessmentsOverviewRequested);
+    on<CreateAssessmentRequested>(_onCreateAssessmentRequested);
 
     // Student Academic Profile
     on<StudentAcademicProfileRequested>(_onStudentAcademicProfileRequested);
@@ -408,10 +409,32 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
     Emitter<DeanState> emit,
   ) async {
     emit(DeanLoading());
-    final result = await repository.getAssessmentsOverview();
+    final result = await repository.getAssessmentsOverview(
+      schoolId: event.schoolId,
+    );
     result.fold(
       (failure) => emit(DeanError(failure.message)),
       (assessments) => emit(AssessmentsOverviewLoaded(assessments)),
+    );
+  }
+
+  Future<void> _onCreateAssessmentRequested(
+    CreateAssessmentRequested event,
+    Emitter<DeanState> emit,
+  ) async {
+    emit(DeanLoading());
+    final result = await repository.createAssessment(
+      schoolId: event.schoolId,
+      campusId: event.campusId,
+      title: event.title,
+      subjectId: event.subjectId,
+      classId: event.classId,
+      type: event.type,
+      maximumMark: event.maximumMark,
+    );
+    result.fold(
+      (failure) => emit(DeanError(failure.message)),
+      (_) => emit(const DeanOperationSuccess('Assessment created')),
     );
   }
 

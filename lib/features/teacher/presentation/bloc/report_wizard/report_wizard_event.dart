@@ -8,16 +8,18 @@ abstract class ReportWizardEvent extends Equatable {
 }
 
 class ReportWizardClassSelected extends ReportWizardEvent {
+  final String schoolId;
   final String classId;
   final String className;
 
   const ReportWizardClassSelected({
+    required this.schoolId,
     required this.classId,
     required this.className,
   });
 
   @override
-  List<Object?> get props => [classId, className];
+  List<Object?> get props => [schoolId, classId, className];
 }
 
 class ReportWizardTermProfileSelected extends ReportWizardEvent {

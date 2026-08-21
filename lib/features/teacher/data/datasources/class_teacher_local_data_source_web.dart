@@ -61,8 +61,10 @@ class ClassTeacherLocalDataSourceWeb implements ClassTeacherLocalDataSource {
   }) async {}
 
   @override
-  Future<ClassAttendanceSession?> getAttendanceDraft(String sessionId) async =>
-      null;
+  Future<ClassAttendanceSession?> getAttendanceDraft(
+    String sessionId, {
+    required String schoolId,
+  }) async => null;
 
   @override
   Future<void> saveAttendanceDraft(ClassAttendanceSession session) async {}

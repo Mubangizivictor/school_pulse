@@ -230,9 +230,35 @@ class DeanRepositoryImpl implements DeanRepository {
   }
 
   @override
-  Future<Either<Failure, List<AssessmentModeration>>>
-  getAssessmentsOverview() async {
-    return _callRemote(() => remoteDataSource.getAssessmentsOverview());
+  Future<Either<Failure, List<AssessmentModeration>>> getAssessmentsOverview({
+    required String schoolId,
+  }) async {
+    return _callRemote(
+      () => remoteDataSource.getAssessmentsOverview(schoolId: schoolId),
+    );
+  }
+
+  @override
+  Future<Either<Failure, void>> createAssessment({
+    required String schoolId,
+    String? campusId,
+    required String title,
+    required String subjectId,
+    required String classId,
+    required String type,
+    required double maximumMark,
+  }) async {
+    return _callRemote(
+      () => remoteDataSource.createAssessment(
+        schoolId: schoolId,
+        campusId: campusId,
+        title: title,
+        subjectId: subjectId,
+        classId: classId,
+        type: type,
+        maximumMark: maximumMark,
+      ),
+    );
   }
 
   @override

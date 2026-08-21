@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 import '../bloc/games_bloc.dart';
 import '../bloc/games_event.dart';
 import '../bloc/games_state.dart';
@@ -29,10 +30,7 @@ class _GamesDashboardScreenState extends State<GamesDashboardScreen> {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Games & Sports'),
-        actions: [const NotificationBellButton()],
-      ),
+      appBar: staffDashboardAppBar(context, roleLabel: 'Games & Sports'),
       body: BlocConsumer<GamesBloc, GamesState>(
         listener: (context, state) {
           if (state is ActionSuccess) {
@@ -62,15 +60,55 @@ class _GamesDashboardScreenState extends State<GamesDashboardScreen> {
                 ),
                 children: [
                   FadeInSlide(
-                    child: Text(
-                      'Inter-House Standings',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                      ),
+                    child: StaffHeroSummaryCard(
+                      greetingNameFallback: 'there',
+                      kpis: [
+                        StaffKpiData(
+                          title: 'Houses',
+                          valueText: '${state.houses.length}',
+                          subtitle: 'Competing',
+                          icon: Icons.groups_rounded,
+                          color: AppColors.information(context),
+                        ),
+                        StaffKpiData(
+                          title: 'Leading House',
+                          valueText: state.houses.isEmpty
+                              ? '—'
+                              : state.houses
+                                    .reduce(
+                                      (a, b) =>
+                                          a.totalPoints > b.totalPoints
+                                          ? a
+                                          : b,
+                                    )
+                                    .name,
+                          subtitle: 'Top points',
+                          icon: Icons.emoji_events_rounded,
+                          color: AppColors.success(context),
+                        ),
+                        StaffKpiData(
+                          title: 'Competitions',
+                          valueText: '${state.competitions.length}',
+                          subtitle: 'Upcoming',
+                          icon: Icons.event_note_rounded,
+                          color: AppColors.warning(context),
+                        ),
+                        StaffKpiData(
+                          title: 'Ongoing',
+                          valueText: state.competitions
+                              .where((c) => c.status == 'Ongoing')
+                              .length
+                              .toString(),
+                          subtitle: 'In progress',
+                          icon: Icons.sports_score_rounded,
+                          color: AppColors.danger(context),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 24),
+                  const SectionHeader(title: 'Inter-House Standings'),
+                  const SizedBox(height: 12),
                   _HousePointsGrid(houses: state.houses),
                   const SizedBox(height: 24),
                   const SectionHeader(title: 'Upcoming Competitions'),

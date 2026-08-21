@@ -3,21 +3,16 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_bloc.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_event.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_state.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/quick_access_prefs.dart';
 import 'package:school_pulse/features/admin/data/models/audit_log.dart';
-import 'package:school_pulse/core/user_roles.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/app_role_session_cubit.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/auth/presentation/widgets/role_switcher_sheet.dart';
-import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
-import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
-import 'package:school_pulse/features/branding/presentation/widgets/school_badge.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -32,15 +27,7 @@ class AdminDashboardScreen extends StatelessWidget {
       create: (context) =>
           di.sl<AdminDashboardBloc>()..add(LoadAdminDashboardStats()),
       child: Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          surfaceTintColor: Colors.transparent,
-          scrolledUnderElevation: 3,
-          titleSpacing: 0,
-          toolbarHeight: kToolbarHeight + 16,
-          title: _DashboardHeader(),
-        ),
+        appBar: staffDashboardAppBar(context, roleLabel: 'School Admin'),
         body: Builder(
           builder: (context) => RefreshIndicator(
             onRefresh: () async {
@@ -64,7 +51,70 @@ class AdminDashboardScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _HeroSummaryCard(),
+                        BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
+                          builder: (context, state) {
+                            final label = state is AdminDashboardLoaded
+                                ? state.stats.currentPeriodLabel
+                                : null;
+                            final stats = state is AdminDashboardLoaded
+                                ? state.stats
+                                : null;
+                            final feesLabel = stats?.termFeesCollected == null
+                                ? null
+                                : _formatUgx(stats!.termFeesCollected!);
+                            return StaffHeroSummaryCard(
+                              greetingNameFallback: 'Admin',
+                              periodLabel: label,
+                              onPeriodTap: () => _showTermPicker(context),
+                              kpis: stats == null
+                                  ? null
+                                  : [
+                                      StaffKpiData(
+                                        title: 'Students',
+                                        valueText: '${stats.totalStudentsCount}',
+                                        subtitle: stats.isHistoricalTerm
+                                            ? 'Active now (current)'
+                                            : 'Active students',
+                                        icon: Icons.school_rounded,
+                                        color: AppColors.information(context),
+                                      ),
+                                      StaffKpiData(
+                                        title: 'Staff',
+                                        valueText: '${stats.activeStaffCount}',
+                                        subtitle: stats.isHistoricalTerm
+                                            ? 'Active now (current)'
+                                            : 'Active staff',
+                                        icon: Icons.badge_rounded,
+                                        color: AppColors.danger(context),
+                                      ),
+                                      StaffKpiData(
+                                        title: 'Attendance',
+                                        valueText:
+                                            stats.studentAttendancePercent ==
+                                                null
+                                            ? '—'
+                                            : '${stats.studentAttendancePercent!.round()}%',
+                                        subtitle:
+                                            stats.currentPeriodLabel ??
+                                            'This week',
+                                        icon: Icons.fact_check_rounded,
+                                        color: AppColors.success(context),
+                                      ),
+                                      StaffKpiData(
+                                        title: 'Fees Collected',
+                                        valueText: feesLabel ?? '—',
+                                        subtitle:
+                                            stats.currentPeriodLabel == null
+                                            ? 'UGX · This year'
+                                            : 'UGX · ${stats.currentPeriodLabel}',
+                                        icon: Icons
+                                            .account_balance_wallet_rounded,
+                                        color: AppColors.warning(context),
+                                      ),
+                                    ],
+                            );
+                          },
+                        ),
                         const SizedBox(height: AppSpacing.xl),
                         _QuickAccessSection(),
                         const SizedBox(height: AppSpacing.xl),
@@ -84,242 +134,34 @@ class AdminDashboardScreen extends StatelessWidget {
   }
 }
 
-/// Left: school badge + "School Admin" + real school name. Right:
-/// notification bell (real unread count) + profile button routing into the
-/// existing shared More/account hub.
-class _DashboardHeader extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final brandingState = context.watch<BrandingBloc>().state;
-    final branding = brandingState is BrandingLoaded
-        ? brandingState.branding
-        : null;
+void _showTermPicker(BuildContext context) {
+  final dashboardBloc = context.read<AdminDashboardBloc>();
+  final authState = context.read<AuthBloc>().state;
+  final schoolId = authState is AuthAuthenticated
+      ? authState.user.schoolId
+      : null;
+  if (schoolId == null || schoolId.isEmpty) return;
 
-    final authState = context.watch<AuthBloc>().state;
-    final roles = authState is AuthAuthenticated
-        ? authState.user.roles
-        : const <UserRole>[];
-    final activeRole =
-        context.watch<AppRoleSessionCubit>().state ??
-        (roles.isNotEmpty ? roles.first : null);
-    final roleLabel = activeRole != null
-        ? UserRoleDisplay.name(activeRole)
-        : 'School Admin';
-    final canSwitchRoles = roles.length > 1;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        AppSpacing.s,
-        AppSpacing.xl,
-        AppSpacing.s,
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => _TermPickerSheet(
+      schoolId: schoolId,
+      onPicked: (term) => dashboardBloc.add(
+        LoadAdminDashboardStats(forTerm: term.isCurrent ? null : term),
       ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: Row(
-            children: [
-              SchoolBadge(
-                badgeUrl: branding?.badgeUrl ?? branding?.logoUrl,
-                size: 56,
-              ),
-              const SizedBox(width: AppSpacing.l),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    InkWell(
-                      onTap: canSwitchRoles
-                          ? () => RoleSwitcherSheet.show(context)
-                          : null,
-                      borderRadius: BorderRadius.circular(6),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              roleLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 19,
-                                fontWeight: FontWeight.w800,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          if (canSwitchRoles) ...[
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.unfold_more_rounded,
-                              size: 18,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    Text(
-                      branding?.schoolName ?? 'School Pulse',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const NotificationBellButton(
-                key: Key('admin-dashboard-notifications-button'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+    ),
+  );
 }
 
-/// Large rounded gradient card: "Welcome back, {firstName}", the active
-/// academic period, and the 4 KPI tiles. Uses the theme's own primary and
-/// secondary colors, which are already school-branded via
-/// BrandingThemeEngine, so this looks correct per-tenant without any new
-/// branding plumbing.
-class _HeroSummaryCard extends StatelessWidget {
-  const _HeroSummaryCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final authState = context.watch<AuthBloc>().state;
-    final fullName = authState is AuthAuthenticated ? authState.user.name : '';
-    final firstName = fullName.trim().isEmpty
-        ? 'Admin'
-        : fullName.trim().split(RegExp(r'\s+')).first;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.l),
-      decoration: BoxDecoration(
-        borderRadius: AppRadius.extraLarge,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [scheme.primary, scheme.secondary],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.primary.withValues(alpha: 0.25),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${_greeting()}, $firstName',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: scheme.onPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.m),
-              BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
-                builder: (context, state) {
-                  final label = state is AdminDashboardLoaded
-                      ? state.stats.currentPeriodLabel
-                      : null;
-                  return InkWell(
-                    borderRadius: AppRadius.full,
-                    onTap: () => _showTermPicker(context),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.m,
-                        vertical: AppSpacing.s,
-                      ),
-                      decoration: BoxDecoration(
-                        color: scheme.onPrimary.withValues(alpha: 0.16),
-                        borderRadius: AppRadius.full,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.calendar_today_rounded,
-                            size: 14,
-                            color: scheme.onPrimary,
-                          ),
-                          const SizedBox(width: AppSpacing.s),
-                          Text(
-                            label ?? 'This Term',
-                            style: TextStyle(
-                              color: scheme.onPrimary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          Icon(
-                            Icons.unfold_more_rounded,
-                            size: 14,
-                            color: scheme.onPrimary.withValues(alpha: 0.85),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.l),
-          const _KpiRow(),
-        ],
-      ),
-    );
+String _formatUgx(double amount) {
+  if (amount >= 1000000) {
+    return '${(amount / 1000000).toStringAsFixed(1)}M';
   }
-
-  String _greeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+  if (amount >= 1000) {
+    return '${(amount / 1000).toStringAsFixed(0)}K';
   }
-
-  void _showTermPicker(BuildContext context) {
-    final dashboardBloc = context.read<AdminDashboardBloc>();
-    final authState = context.read<AuthBloc>().state;
-    final schoolId = authState is AuthAuthenticated
-        ? authState.user.schoolId
-        : null;
-    if (schoolId == null || schoolId.isEmpty) return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _TermPickerSheet(
-        schoolId: schoolId,
-        onPicked: (term) => dashboardBloc.add(
-          LoadAdminDashboardStats(forTerm: term.isCurrent ? null : term),
-        ),
-      ),
-    );
-  }
+  return amount.toStringAsFixed(0);
 }
 
 /// Lets School Admin pick any configured term (current or past) to view
@@ -345,10 +187,11 @@ class _TermPickerSheet extends StatelessWidget {
             StreamBuilder<List<AcademicTerm>>(
               stream: di.sl<StructureRepository>().watchAcademicTerms(schoolId),
               builder: (context, snapshot) {
-                final terms = (snapshot.data ?? const <AcademicTerm>[])
-                    .where((t) => !t.isArchived)
-                    .toList()
-                  ..sort((a, b) => a.order.compareTo(b.order));
+                final terms =
+                    (snapshot.data ?? const <AcademicTerm>[])
+                        .where((t) => !t.isArchived)
+                        .toList()
+                      ..sort((a, b) => a.order.compareTo(b.order));
                 if (!snapshot.hasData) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 24),
@@ -392,204 +235,6 @@ class _TermPickerSheet extends StatelessWidget {
 
   static String _formatDate(DateTime date) =>
       '${date.day}/${date.month}/${date.year}';
-}
-
-class _KpiRow extends StatelessWidget {
-  const _KpiRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
-      builder: (context, state) {
-        if (state is AdminDashboardLoading || state is AdminDashboardInitial) {
-          return const _KpiRowSkeleton();
-        }
-        if (state is AdminDashboardError) {
-          return AlertBanner(
-            title: "Couldn't load dashboard stats",
-            message:
-                'Something went wrong on our end. Pull to refresh or check back shortly.',
-            color: Theme.of(context).extension<SemanticColors>()!.error,
-            icon: Icons.error_outline_rounded,
-          );
-        }
-        final stats = (state as AdminDashboardLoaded).stats;
-        final feesLabel = stats.termFeesCollected == null
-            ? null
-            : _formatUgx(stats.termFeesCollected!);
-
-        final tiles = [
-          _KpiTileData(
-            title: 'Students',
-            valueText: '${stats.totalStudentsCount}',
-            subtitle: stats.isHistoricalTerm
-                ? 'Active now (current)'
-                : 'Active students',
-            icon: Icons.school_rounded,
-          ),
-          _KpiTileData(
-            title: 'Staff',
-            valueText: '${stats.activeStaffCount}',
-            subtitle: stats.isHistoricalTerm
-                ? 'Active now (current)'
-                : 'Active staff',
-            icon: Icons.badge_rounded,
-          ),
-          _KpiTileData(
-            title: 'Attendance',
-            valueText: stats.studentAttendancePercent == null
-                ? '—'
-                : '${stats.studentAttendancePercent!.round()}%',
-            subtitle: stats.currentPeriodLabel ?? 'This week',
-            icon: Icons.fact_check_rounded,
-          ),
-          _KpiTileData(
-            title: 'Fees Collected',
-            valueText: feesLabel ?? '—',
-            subtitle: stats.currentPeriodLabel ?? 'This year',
-            icon: Icons.account_balance_wallet_rounded,
-          ),
-        ];
-
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final isNarrow = constraints.maxWidth < 420;
-            if (!isNarrow) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (var i = 0; i < tiles.length; i++) ...[
-                    if (i > 0) const SizedBox(width: AppSpacing.m),
-                    Expanded(child: _KpiTile(data: tiles[i])),
-                  ],
-                ],
-              );
-            }
-            return Column(
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: _KpiTile(data: tiles[0])),
-                    const SizedBox(width: AppSpacing.m),
-                    Expanded(child: _KpiTile(data: tiles[1])),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.m),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: _KpiTile(data: tiles[2])),
-                    const SizedBox(width: AppSpacing.m),
-                    Expanded(child: _KpiTile(data: tiles[3])),
-                  ],
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  static String _formatUgx(double amount) {
-    if (amount >= 1000000) {
-      return 'UGX ${(amount / 1000000).toStringAsFixed(1)}M';
-    }
-    if (amount >= 1000) {
-      return 'UGX ${(amount / 1000).toStringAsFixed(0)}K';
-    }
-    return 'UGX ${amount.toStringAsFixed(0)}';
-  }
-}
-
-class _KpiTileData {
-  final String title;
-  final String valueText;
-  final String subtitle;
-  final IconData icon;
-
-  const _KpiTileData({
-    required this.title,
-    required this.valueText,
-    required this.subtitle,
-    required this.icon,
-  });
-}
-
-class _KpiTile extends StatelessWidget {
-  final _KpiTileData data;
-
-  const _KpiTile({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.m,
-        vertical: AppSpacing.m,
-      ),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: AppRadius.large,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            data.valueText,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 20,
-              letterSpacing: -0.8,
-              height: 1.1,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            data.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          Text(
-            data.subtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 10,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _KpiRowSkeleton extends StatelessWidget {
-  const _KpiRowSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (var i = 0; i < 4; i++) ...[
-          if (i > 0) const SizedBox(width: AppSpacing.m),
-          const Expanded(child: Skeleton(height: 72, borderRadius: 16)),
-        ],
-      ],
-    );
-  }
 }
 
 /// Quick Access destination: fixed metadata (icon/color/route) keyed by id,

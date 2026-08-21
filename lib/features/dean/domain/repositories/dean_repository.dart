@@ -98,7 +98,18 @@ abstract class DeanRepository {
   getMissedLessons();
 
   // Assessments Overview
-  Future<Either<Failure, List<AssessmentModeration>>> getAssessmentsOverview();
+  Future<Either<Failure, List<AssessmentModeration>>> getAssessmentsOverview({
+    required String schoolId,
+  });
+  Future<Either<Failure, void>> createAssessment({
+    required String schoolId,
+    String? campusId,
+    required String title,
+    required String subjectId,
+    required String classId,
+    required String type,
+    required double maximumMark,
+  });
 
   // Student Academic Profile
   Future<Either<Failure, Map<String, dynamic>>> getStudentAcademicProfile(

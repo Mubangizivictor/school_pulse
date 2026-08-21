@@ -17,6 +17,9 @@ abstract class HealthRemoteDataSource {
     StudentHealthProfileModel profile,
     String schoolId,
   );
+  Future<List<StudentHealthProfileModel>> getAllHealthProfiles(
+    String schoolId,
+  );
 
   Future<List<ClinicVisitModel>> getClinicVisits({
     required String schoolId,
@@ -25,6 +28,13 @@ abstract class HealthRemoteDataSource {
     DateTime? endDate,
   });
   Future<void> recordClinicVisit(ClinicVisitModel visit);
+
+  /// Pushes [visit] only if no document with its id exists yet - used by
+  /// the offline sync sweep, where the initial [recordClinicVisit] attempt
+  /// may have already partially or fully succeeded before the app lost
+  /// connection or was killed. Guards against re-sending parent/teacher
+  /// alerts for a visit that was already recorded.
+  Future<void> pushClinicVisitIfAbsent(ClinicVisitModel visit);
 
   Future<List<EmergencyIncidentModel>> getEmergencyIncidents({
     required String schoolId,
@@ -172,6 +182,25 @@ class HealthRemoteDataSourceImpl implements HealthRemoteDataSource {
   }
 
   @override
+  Future<List<StudentHealthProfileModel>> getAllHealthProfiles(
+    String schoolId,
+  ) async {
+    final tenant = _requireSchoolId(schoolId);
+    final snapshot = await firestore
+        .collection('health_profiles')
+        .where('schoolId', isEqualTo: tenant)
+        .get();
+    return snapshot.docs
+        .map(
+          (doc) => StudentHealthProfileModel.fromJson({
+            ...doc.data(),
+            'schoolId': tenant,
+          }),
+        )
+        .toList();
+  }
+
+  @override
   Future<List<ClinicVisitModel>> getClinicVisits({
     required String schoolId,
     String? studentId,
@@ -210,6 +239,33 @@ class HealthRemoteDataSourceImpl implements HealthRemoteDataSource {
     final tenant = _requireSchoolId(visit.schoolId);
     final collection = firestore.collection('clinic_visits');
     final doc = visit.id.isEmpty ? collection.doc() : collection.doc(visit.id);
+    final recipients = await _healthRecipients(
+      tenant,
+      visit.studentId,
+      includeTeacher: visit.outcome.name != 'sentBackToClass',
+    );
+    await _writeRecordAndAlerts(
+      record: doc,
+      recordData: {...visit.toJson(), 'id': doc.id, 'schoolId': tenant},
+      recipients: recipients,
+      schoolId: tenant,
+      studentId: visit.studentId,
+      senderId: visit.recordedBy,
+      title: 'School clinic visit',
+      body: visit.outcome.name == 'sentHome'
+          ? 'The student was seen by the nurse and has been sent home.'
+          : 'A school clinic visit was recorded: ${visit.reason}.',
+      type: 'clinic_visit',
+      recordId: doc.id,
+    );
+  }
+
+  @override
+  Future<void> pushClinicVisitIfAbsent(ClinicVisitModel visit) async {
+    final tenant = _requireSchoolId(visit.schoolId);
+    final doc = firestore.collection('clinic_visits').doc(visit.id);
+    final existing = await doc.get();
+    if (existing.exists) return;
     final recipients = await _healthRecipients(
       tenant,
       visit.studentId,

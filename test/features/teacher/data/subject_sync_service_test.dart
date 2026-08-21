@@ -317,7 +317,10 @@ void main() {
         ),
       ]);
       when(
-        () => classLocal.getAttendanceDraft('sess1'),
+        () => classLocal.getAttendanceDraft(
+          'sess1',
+          schoolId: any(named: 'schoolId'),
+        ),
       ).thenAnswer((_) async => _classSession());
       when(
         () => classRemote.getAttendanceSession(
@@ -347,7 +350,10 @@ void main() {
         ),
       ]);
       when(
-        () => classLocal.getAttendanceDraft('sess1'),
+        () => classLocal.getAttendanceDraft(
+          'sess1',
+          schoolId: any(named: 'schoolId'),
+        ),
       ).thenAnswer((_) async => _classSession());
       when(
         () => classRemote.getAttendanceSession(

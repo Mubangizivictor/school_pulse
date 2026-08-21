@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:school_pulse/features/structure/domain/services/structure_configuration_service.dart';
 import '../models/dean_stats_model.dart';
 import '../../domain/entities/academic_dashboard_stats.dart';
 import '../../domain/entities/teacher_workload.dart';
@@ -60,7 +62,18 @@ abstract class DeanRemoteDataSource {
   Future<List> getExaminationSchedules();
   Future<TodaysOperations> getTodaysOperations();
   Future<(List<LessonRecord>, Map<String, bool>)> getMissedLessons();
-  Future<List<AssessmentModeration>> getAssessmentsOverview();
+  Future<List<AssessmentModeration>> getAssessmentsOverview({
+    required String schoolId,
+  });
+  Future<void> createAssessment({
+    required String schoolId,
+    String? campusId,
+    required String title,
+    required String subjectId,
+    required String classId,
+    required String type,
+    required double maximumMark,
+  });
   Future<Map<String, dynamic>> getStudentAcademicProfile(String studentId);
   Future<void> sendAcademicAnnouncement({
     required String title,
@@ -71,6 +84,44 @@ abstract class DeanRemoteDataSource {
 }
 
 class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
+  DeanRemoteDataSourceImpl({
+    required this.firestore,
+    required this.structureConfigurationService,
+  });
+
+  final FirebaseFirestore firestore;
+  final StructureConfigurationService structureConfigurationService;
+
+  CollectionReference<Map<String, dynamic>> _assessments(String schoolId) =>
+      firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('subject_assessments');
+
+  CollectionReference<Map<String, dynamic>> _marks(String schoolId) =>
+      firestore.collection('schools').doc(schoolId).collection('student_marks');
+
+  static const _visibleStatuses = [
+    'submitted',
+    'approved',
+    'published',
+    'locked',
+    'returned',
+  ];
+
+  ModerationStatus _moderationStatusFor(String status) {
+    switch (status) {
+      case 'approved':
+      case 'published':
+      case 'locked':
+        return ModerationStatus.approved;
+      case 'returned':
+        return ModerationStatus.rejected;
+      default:
+        return ModerationStatus.pending;
+    }
+  }
+
   @override
   Future<DeanStatsModel> getDeanDashboardStats() async {
     return DeanStatsModel(
@@ -152,8 +203,8 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
     return [
       TeacherWorkload(
         teacherId: "t1",
-        teacherName: "John Doe",
-        weeklyLessonsCount: 20,
+        teacherName: "Mr. Ssemanda",
+        weeklyLessonsCount: 22,
         lessonsDelivered: 18,
         lessonsMissed: 2,
         assessmentsCreated: 5,
@@ -172,6 +223,78 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
             classId: "c2",
             className: "P.7 Red",
             weeklyLessons: 10,
+          ),
+        ],
+      ),
+      TeacherWorkload(
+        teacherId: "t2",
+        teacherName: "Ms. Nakato",
+        weeklyLessonsCount: 20,
+        lessonsDelivered: 20,
+        lessonsMissed: 0,
+        assessmentsCreated: 4,
+        marksPending: 0,
+        assignedSubjects: const [
+          AssignedSubject(
+            subjectId: "s2",
+            subjectName: "English",
+            classId: "c3",
+            className: "S3B",
+            weeklyLessons: 20,
+          ),
+        ],
+      ),
+      TeacherWorkload(
+        teacherId: "t3",
+        teacherName: "Mr. Ogwang",
+        weeklyLessonsCount: 25,
+        lessonsDelivered: 15,
+        lessonsMissed: 5,
+        assessmentsCreated: 3,
+        marksPending: 12,
+        assignedSubjects: const [
+          AssignedSubject(
+            subjectId: "s3",
+            subjectName: "Physics",
+            classId: "c4",
+            className: "S4A",
+            weeklyLessons: 25,
+          ),
+        ],
+      ),
+      TeacherWorkload(
+        teacherId: "t4",
+        teacherName: "Ms. Achieng",
+        weeklyLessonsCount: 18,
+        lessonsDelivered: 16,
+        lessonsMissed: 1,
+        assessmentsCreated: 6,
+        marksPending: 8,
+        assignedSubjects: const [
+          AssignedSubject(
+            subjectId: "s4",
+            subjectName: "Biology",
+            classId: "c5",
+            className: "S2B",
+            weeklyLessons: 18,
+          ),
+        ],
+      ),
+      TeacherWorkload(
+        teacherId: "t5",
+        teacherName: "Mr. Kato",
+        weeklyLessonsCount: 15,
+        lessonsDelivered: 12,
+        lessonsMissed: 1,
+        assessmentsCreated: 2,
+        marksPending: 3,
+        assignedSubjects: const [
+          AssignedSubject(
+            subjectId: "s5",
+            subjectName: "History",
+            classId: "c6",
+            className: "S1A",
+            weeklyLessons: 15,
           ),
         ],
       ),
@@ -481,10 +604,18 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
         {'name': 'Namono Grace', 'class': 'P.7 Blue', 'score': 0.92},
       ],
       'unebReadiness': {
-        'overallReadiness': 0.78,
+        'overallReadiness': 0.72,
         'mockExamsCompleted': 3,
         'mockExamsPlanned': 4,
         'candidatesRegistered': 240,
+        'readinessCategories': [
+          {'category': 'Candidate Records', 'readiness': 0.85},
+          {'category': 'Subject Achievement', 'readiness': 0.68},
+          {'category': 'Activities of Integration', 'readiness': 0.60},
+          {'category': 'Project Work', 'readiness': 0.70},
+          {'category': 'CA Marks Completion', 'readiness': 0.75},
+          {'category': 'Exam Readiness', 'readiness': 0.80},
+        ],
         'subjectBreakdown': [
           {
             'subject': 'Mathematics',
@@ -501,7 +632,14 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
         ],
       },
       'reportsReadiness': {
-        'overallReadiness': 0.62,
+        'overallReadiness': 0.78,
+        'classesReady': 10,
+        'classesTotal': 16,
+        'marksCompletePct': 0.78,
+        'teacherRemarksPct': 0.65,
+        'classTeacherRemarksPct': 0.72,
+        'moderationCompletePct': 0.60,
+        'dosReviewStatus': 'Pending',
         'reportCardsPublished': 0,
         'reportCardsPendingApproval': 150,
         'marksFullyEntered': 0.71,
@@ -657,49 +795,142 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   }
 
   @override
-  Future<List<AssessmentModeration>> getAssessmentsOverview() async {
-    return [
-      AssessmentModeration(
-        id: "ao1",
-        assessmentId: "as1",
-        title: "Mid-Term Algebra Test",
-        className: "Year 10A",
-        subjectName: "Mathematics",
-        teacherName: "John Doe",
-        submissionCount: 28,
-        totalStudents: 30,
-        averageScore: 72.5,
-        status: ModerationStatus.pending,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      AssessmentModeration(
-        id: "ao2",
-        assessmentId: "as2",
-        title: "Weekly Physics Quiz",
-        className: "S.4 Science",
-        subjectName: "Physics",
-        teacherName: "Jane Smith",
-        submissionCount: 45,
-        totalStudents: 45,
-        averageScore: 68.2,
-        status: ModerationStatus.approved,
-        createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-      ),
-      AssessmentModeration(
-        id: "ao3",
-        assessmentId: "as3",
-        title: "English Comprehension CAT",
-        className: "P.6 Green",
-        subjectName: "English",
-        teacherName: "Robert Okello",
-        submissionCount: 30,
-        totalStudents: 32,
-        averageScore: 61.0,
-        status: ModerationStatus.rejected,
-        rejectionReason: "Marks entry incomplete for 2 students",
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-      ),
-    ];
+  Future<List<AssessmentModeration>> getAssessmentsOverview({
+    required String schoolId,
+  }) async {
+    final year = await structureConfigurationService.getCurrentAcademicYear(
+      schoolId,
+    );
+    final term = await structureConfigurationService.getCurrentAcademicPeriod(
+      schoolId,
+    );
+    if (year == null) return [];
+
+    Query<Map<String, dynamic>> query = _assessments(schoolId)
+        .where('academicYearId', isEqualTo: year.id)
+        .where('status', whereIn: _visibleStatuses);
+    if (term != null) {
+      query = query.where('termId', isEqualTo: term.id);
+    }
+
+    final snapshot = await query.get();
+    final results = <AssessmentModeration>[];
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final subjectId = data['subjectId'] as String? ?? '';
+      final classId = data['classId'] as String? ?? '';
+      final assessmentId = doc.id;
+
+      final marksSnapshot = await _marks(
+        schoolId,
+      ).where('assessmentId', isEqualTo: assessmentId).get();
+      final scores = marksSnapshot.docs
+          .map((m) => (m.data()['score'] as num?)?.toDouble())
+          .whereType<double>()
+          .toList();
+      final submissionCount = scores.length;
+      final averageScore = scores.isEmpty
+          ? 0.0
+          : scores.reduce((a, b) => a + b) / scores.length;
+
+      final subjectName = await _lookupName(
+        collection: 'subjects',
+        id: subjectId,
+      );
+      final className = await _lookupName(collection: 'classes', id: classId);
+      final teacherStaffId = data['staffId'] as String? ?? '';
+      final teacherName = teacherStaffId.isEmpty
+          ? ''
+          : await _lookupUserName(teacherStaffId);
+
+      results.add(
+        AssessmentModeration(
+          id: assessmentId,
+          assessmentId: assessmentId,
+          title: data['title'] as String? ?? '',
+          className: className,
+          subjectName: subjectName,
+          teacherName: teacherName,
+          submissionCount: submissionCount,
+          totalStudents: submissionCount,
+          averageScore: averageScore,
+          status: _moderationStatusFor(data['status'] as String? ?? ''),
+          rejectionReason: data['rejectionReason'] as String?,
+          createdAt:
+              (data['assessmentDate'] as Timestamp?)?.toDate() ??
+              DateTime.now(),
+          subjectId: subjectId,
+          classId: classId,
+          teacherStaffId: teacherStaffId,
+          academicYearId: data['academicYearId'] as String? ?? '',
+          termId: data['termId'] as String? ?? '',
+        ),
+      );
+    }
+
+    return results;
+  }
+
+  Future<String> _lookupName({
+    required String collection,
+    required String id,
+  }) async {
+    if (id.isEmpty) return '';
+    final doc = await firestore.collection(collection).doc(id).get();
+    if (!doc.exists) return '';
+    final data = doc.data();
+    return (data?['name'] as String?) ?? '';
+  }
+
+  Future<String> _lookupUserName(String uid) async {
+    final doc = await firestore.collection('users').doc(uid).get();
+    if (!doc.exists) return '';
+    final data = doc.data();
+    return (data?['name'] as String?) ?? '';
+  }
+
+  @override
+  Future<void> createAssessment({
+    required String schoolId,
+    String? campusId,
+    required String title,
+    required String subjectId,
+    required String classId,
+    required String type,
+    required double maximumMark,
+  }) async {
+    final year = await structureConfigurationService.getCurrentAcademicYear(
+      schoolId,
+    );
+    final term = await structureConfigurationService.getCurrentAcademicPeriod(
+      schoolId,
+    );
+
+    final componentId = _assessments(schoolId).doc().id;
+    await _assessments(schoolId).add({
+      'campusId': campusId,
+      'academicYearId': year?.id ?? '',
+      'termId': term?.id ?? '',
+      'subjectId': subjectId,
+      'classId': classId,
+      'assessmentTypeId': type.toLowerCase().replaceAll(' ', '_'),
+      'assessmentTypeName': type,
+      'title': title,
+      'maximumMark': maximumMark,
+      'status': 'draft',
+      'requiresApproval': true,
+      'components': [
+        {
+          'id': componentId,
+          'name': title,
+          'maximumMark': maximumMark,
+          'weight': 100.0,
+          'isRequired': true,
+          'entryStatus': 'draft',
+        },
+      ],
+    });
   }
 
   @override

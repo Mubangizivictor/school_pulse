@@ -16,6 +16,9 @@ abstract class HealthRepository {
     StudentHealthProfile profile,
     String schoolId,
   );
+  Future<Either<Failure, List<StudentHealthProfile>>> getAllHealthProfiles(
+    String schoolId,
+  );
 
   // Clinic Visits
   Future<Either<Failure, List<ClinicVisit>>> getClinicVisits({
@@ -25,6 +28,11 @@ abstract class HealthRepository {
     DateTime? endDate,
   });
   Future<Either<Failure, void>> recordClinicVisit(ClinicVisit visit);
+
+  /// Pushes any clinic visits cached locally with a pending sync status.
+  /// A no-op when offline or when there is nothing pending - safe to call
+  /// opportunistically (app resume, connectivity restored).
+  Future<void> syncPendingClinicVisits(String schoolId);
 
   // Emergency Incidents
   Future<Either<Failure, List<EmergencyIncident>>> getEmergencyIncidents({

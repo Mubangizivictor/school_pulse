@@ -3,7 +3,7 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/dean/presentation/screens/alerts/academic_alerts_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/analytics/performance_analytics_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/assessments/assessments_overview_screen.dart';
-import 'package:school_pulse/features/dean/presentation/screens/curriculum/curriculum_management_screen.dart';
+import 'package:school_pulse/features/dean/presentation/screens/curriculum/curriculum_coverage_list_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/dean_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/exams/exams_overview_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/interventions/academic_interventions_screen.dart';
@@ -11,6 +11,7 @@ import 'package:school_pulse/features/dean/presentation/screens/monitoring/lesso
 import 'package:school_pulse/features/dean/presentation/screens/monitoring/missed_lessons_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/more/dean_more_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/operations/todays_operations_screen.dart';
+import 'package:school_pulse/features/dean/presentation/screens/qa/marks_completion_matrix_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/qa/marks_qa_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/students/student_academic_profile_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/workload/teacher_workload_screen.dart';
@@ -37,53 +38,36 @@ class _DeanShellState extends State<DeanShell> {
     (_) => GlobalKey<NavigatorState>(),
   );
 
-  static const List<NavigationDestination> _destinations = [
-    NavigationDestination(
-      icon: Icon(Icons.dashboard_outlined, size: 24),
-      selectedIcon: Icon(
-        Icons.dashboard_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
+  List<NavigationDestination> _destinations(BuildContext context) {
+    final primary = AppColors.primary(context);
+    return [
+      NavigationDestination(
+        icon: const Icon(Icons.dashboard_outlined, size: 24),
+        selectedIcon: Icon(Icons.dashboard_rounded, size: 24, color: primary),
+        label: 'Overview',
       ),
-      label: 'Overview',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.school_outlined, size: 24),
-      selectedIcon: Icon(
-        Icons.school_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
+      NavigationDestination(
+        icon: const Icon(Icons.school_outlined, size: 24),
+        selectedIcon: Icon(Icons.school_rounded, size: 24, color: primary),
+        label: 'Teaching',
       ),
-      label: 'Teaching',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.fact_check_outlined, size: 24),
-      selectedIcon: Icon(
-        Icons.fact_check_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
+      NavigationDestination(
+        icon: const Icon(Icons.fact_check_outlined, size: 24),
+        selectedIcon: Icon(Icons.fact_check_rounded, size: 24, color: primary),
+        label: 'Assessments',
       ),
-      label: 'Assessments',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.bar_chart_outlined, size: 24),
-      selectedIcon: Icon(
-        Icons.bar_chart_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
+      NavigationDestination(
+        icon: const Icon(Icons.bar_chart_outlined, size: 24),
+        selectedIcon: Icon(Icons.bar_chart_rounded, size: 24, color: primary),
+        label: 'Reports',
       ),
-      label: 'Reports',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.grid_view_outlined, size: 24),
-      selectedIcon: Icon(
-        Icons.grid_view_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
+      NavigationDestination(
+        icon: const Icon(Icons.grid_view_outlined, size: 24),
+        selectedIcon: Icon(Icons.grid_view_rounded, size: 24, color: primary),
+        label: 'More',
       ),
-      label: 'More',
-    ),
-  ];
+    ];
+  }
 
   /// Each tab's route table: `/` is the tab root, other entries are screens
   /// pushed on top of that tab per the plan's tab-mapping table.
@@ -111,7 +95,7 @@ class _DeanShellState extends State<DeanShell> {
           case 'missed-lessons':
             return (_) => const MissedLessonsScreen();
           case 'syllabus':
-            return (_) => const CurriculumManagementScreen();
+            return (_) => const CurriculumCoverageListScreen();
           default:
             return (_) => const TeacherWorkloadScreen();
         }
@@ -119,6 +103,8 @@ class _DeanShellState extends State<DeanShell> {
         switch (routeName) {
           case 'marks-qa':
             return (_) => const MarksQAScreen();
+          case 'marks-completion':
+            return (_) => const MarksCompletionMatrixScreen();
           case 'interventions':
             return (_) => const AcademicInterventionsScreen();
           default:
@@ -203,10 +189,10 @@ class _DeanShellState extends State<DeanShell> {
             backgroundColor: isDark
                 ? AppColors.surfaceDark
                 : AppColors.surfaceLight,
-            indicatorColor: AppColors.electricBlue.withValues(alpha: 0.1),
+            indicatorColor: AppColors.primary(context).withValues(alpha: 0.1),
             selectedIndex: _selectedIndex,
             onDestinationSelected: _onDestinationSelected,
-            destinations: _destinations,
+            destinations: _destinations(context),
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           ),
         ),

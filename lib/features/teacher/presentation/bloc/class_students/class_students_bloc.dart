@@ -67,7 +67,7 @@ class ClassStudentsRefined extends ClassStudentsEvent {
   List<Object?> get props => [gender, residency, clearGender, clearResidency];
 }
 
-enum ClassRosterFilter { all, present, absent }
+enum ClassRosterFilter { all, present, absent, late, noData }
 
 class ClassStudentsState extends Equatable {
   final bool isLoading;
@@ -118,6 +118,14 @@ class ClassStudentsState extends Equatable {
         !status.countsAsPresent;
   }).length;
 
+  int get lateCount => students
+      .where((s) => statusOf(s.studentId) == LessonAttendanceStatus.late)
+      .length;
+
+  int get noDataCount => students
+      .where((s) => statusOf(s.studentId) == LessonAttendanceStatus.notMarked)
+      .length;
+
   /// The roster after search, tab and attribute filters. Applied in the BLoC's
   /// state rather than by re-querying, because the whole class is already in
   /// memory and a school class is tens of students, not thousands.
@@ -139,6 +147,10 @@ class ClassStudentsState extends Equatable {
         ClassRosterFilter.absent =>
           statusOf(student.studentId) != LessonAttendanceStatus.notMarked &&
               !statusOf(student.studentId).countsAsPresent,
+        ClassRosterFilter.late =>
+          statusOf(student.studentId) == LessonAttendanceStatus.late,
+        ClassRosterFilter.noData =>
+          statusOf(student.studentId) == LessonAttendanceStatus.notMarked,
       };
     }).toList();
   }

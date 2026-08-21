@@ -368,8 +368,13 @@ class BoardingQuickAction {
 
 class BoardingQuickActionGrid extends StatelessWidget {
   final List<BoardingQuickAction> actions;
+  final bool useGlassIconContainers;
 
-  const BoardingQuickActionGrid({super.key, required this.actions});
+  const BoardingQuickActionGrid({
+    super.key,
+    required this.actions,
+    this.useGlassIconContainers = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -396,7 +401,11 @@ class BoardingQuickActionGrid extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(action.icon, color: action.color, size: 26),
+              _QuickActionIcon(
+                icon: action.icon,
+                color: action.color,
+                useGlassContainer: useGlassIconContainers,
+              ),
               const SizedBox(height: AppSpacing.m),
               Flexible(
                 child: Text(
@@ -416,6 +425,38 @@ class BoardingQuickActionGrid extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _QuickActionIcon extends StatelessWidget {
+  const _QuickActionIcon({
+    required this.icon,
+    required this.color,
+    required this.useGlassContainer,
+  });
+
+  final IconData icon;
+  final Color color;
+  final bool useGlassContainer;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconWidget = Icon(icon, color: color, size: 26);
+    if (!useGlassContainer) return iconWidget;
+
+    return Container(
+      width: 48,
+      height: 48,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+        ),
+      ),
+      child: iconWidget,
     );
   }
 }

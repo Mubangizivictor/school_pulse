@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -11,6 +12,7 @@ import 'package:school_pulse/features/gate_ops/domain/usecases/check_in_visitor.
 import 'package:school_pulse/features/gate_ops/domain/usecases/check_out_visitor.dart';
 import 'package:school_pulse/features/gate_ops/domain/usecases/watch_gates.dart';
 import 'package:school_pulse/features/gate_ops/domain/usecases/watch_visitors.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 /// A focused, at-a-glance visitor desk for the gatekeeper role.
@@ -53,6 +55,7 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
           builder: (context, visitorsSnapshot) {
             final visitors = visitorsSnapshot.data ?? const <Visitor>[];
             return Scaffold(
+              appBar: staffDashboardAppBar(context, roleLabel: 'Gate Keeper'),
               backgroundColor: const Color(0xFFF5F7FB),
               body: SafeArea(
                 child: RefreshIndicator(
@@ -61,20 +64,36 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
                       SliverToBoxAdapter(
-                        child: _DeskHeader(
-                          officerName: auth.user.name,
-                          gateName: gates.isEmpty
-                              ? 'Your assigned gate'
-                              : gates.first.name,
-                          onAddVisitor: () =>
-                              _showCheckInSheet(auth.user, gates),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                          child: StaffHeroSummaryCard(
+                            greetingNameFallback: 'Officer',
+                            kpis: _buildKpis(context, visitors),
+                          ),
                         ),
                       ),
                       SliverPadding(
                         padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
-                            _SummaryStrip(visitors: visitors),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: () =>
+                                    _showCheckInSheet(auth.user, gates),
+                                icon: const Icon(Icons.person_add_alt_1_rounded),
+                                label: const Text('Check in a visitor'),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  textStyle: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
                             const SizedBox(height: 24),
                             _buildDirectory(visitors, gates, auth.user),
                           ]),
@@ -398,6 +417,54 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
         time.month == now.month &&
         time.day == now.day;
   }
+
+  List<StaffKpiData> _buildKpis(BuildContext context, List<Visitor> visitors) {
+    final inside = visitors
+        .where((visitor) => visitor.status == VisitorStatus.checkedIn)
+        .length;
+    final today = visitors.where((visitor) => _isToday(visitor.arrivalTime)).length;
+    final overdue = visitors
+        .where(
+          (visitor) =>
+              visitor.status == VisitorStatus.checkedIn &&
+              DateTime.now().difference(visitor.arrivalTime).inHours >= 4,
+        )
+        .length;
+    final checkedOut = visitors
+        .where((visitor) => visitor.status == VisitorStatus.checkedOut)
+        .length;
+
+    return [
+      StaffKpiData(
+        title: 'Inside Now',
+        valueText: '$inside',
+        subtitle: 'Currently on campus',
+        icon: Icons.login_rounded,
+        color: AppColors.information(context),
+      ),
+      StaffKpiData(
+        title: "Today's Visitors",
+        valueText: '$today',
+        subtitle: 'Total arrivals',
+        icon: Icons.groups_2_outlined,
+        color: AppColors.success(context),
+      ),
+      StaffKpiData(
+        title: 'Needs Review',
+        valueText: '$overdue',
+        subtitle: 'Overstayed 4h+',
+        icon: Icons.schedule_outlined,
+        color: AppColors.warning(context),
+      ),
+      StaffKpiData(
+        title: 'Checked Out',
+        valueText: '$checkedOut',
+        subtitle: 'Completed visits',
+        icon: Icons.logout_rounded,
+        color: AppColors.danger(context),
+      ),
+    ];
+  }
 }
 
 enum _VisitorFilter {
@@ -409,210 +476,6 @@ enum _VisitorFilter {
   final String label;
 }
 
-class _DeskHeader extends StatelessWidget {
-  const _DeskHeader({
-    required this.officerName,
-    required this.gateName,
-    required this.onAddVisitor,
-  });
-  final String officerName;
-  final String gateName;
-  final VoidCallback onAddVisitor;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.fromLTRB(20, 18, 20, 26),
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        colors: [Color(0xFF071A42), Color(0xFF173D7A)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: .14),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.shield_outlined, color: Colors.white),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'GATE DESK',
-                    style: TextStyle(
-                      color: Color(0xFFB8D4FF),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                  Text(
-                    gateName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              onPressed: () {},
-              tooltip: 'More options',
-              icon: const Icon(Icons.more_horiz_rounded, color: Colors.white),
-            ),
-          ],
-        ),
-        const SizedBox(height: 28),
-        Text(
-          'Good day, ${officerName.split(' ').first}',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 26,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Everything you need for a smooth entry point.',
-          style: TextStyle(color: Color(0xFFD9E7FF), fontSize: 14),
-        ),
-        const SizedBox(height: 22),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: onAddVisitor,
-            icon: const Icon(Icons.person_add_alt_1_rounded),
-            label: const Text('Check in a visitor'),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFFFA51F),
-              foregroundColor: const Color(0xFF17233E),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              textStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _SummaryStrip extends StatelessWidget {
-  const _SummaryStrip({required this.visitors});
-  final List<Visitor> visitors;
-
-  @override
-  Widget build(BuildContext context) {
-    final inside = visitors
-        .where((visitor) => visitor.status == VisitorStatus.checkedIn)
-        .length;
-    final today = visitors.where((visitor) {
-      final now = DateTime.now();
-      return visitor.arrivalTime.year == now.year &&
-          visitor.arrivalTime.month == now.month &&
-          visitor.arrivalTime.day == now.day;
-    }).length;
-    final overdue = visitors
-        .where(
-          (visitor) =>
-              visitor.status == VisitorStatus.checkedIn &&
-              DateTime.now().difference(visitor.arrivalTime).inHours >= 4,
-        )
-        .length;
-    return Row(
-      children: [
-        _Metric(
-          value: '$inside',
-          label: 'Inside',
-          icon: Icons.login_rounded,
-          color: const Color(0xFF2563EB),
-        ),
-        const SizedBox(width: 10),
-        _Metric(
-          value: '$today',
-          label: 'Today',
-          icon: Icons.groups_2_outlined,
-          color: const Color(0xFF0F9F6E),
-        ),
-        const SizedBox(width: 10),
-        _Metric(
-          value: '$overdue',
-          label: 'Needs review',
-          icon: Icons.schedule_outlined,
-          color: const Color(0xFFB45309),
-        ),
-      ],
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.value,
-    required this.label,
-    required this.icon,
-    required this.color,
-  });
-  final String value;
-  final String label;
-  final IconData icon;
-  final Color color;
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A0F172A),
-            blurRadius: 16,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 19),
-          const SizedBox(height: 15),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF64748B),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
 
 class _VisitorTile extends StatelessWidget {
   const _VisitorTile({required this.visitor, this.onCheckOut});

@@ -13,6 +13,8 @@ import 'package:school_pulse/features/institution/presentation/screens/instituti
 import 'package:school_pulse/features/admin/presentation/widgets/admin_quick_add_sheet.dart';
 import 'package:school_pulse/features/auth/presentation/widgets/role_switcher_sheet.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
+import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
 
 class StaffShell extends StatelessWidget {
   final Widget child;
@@ -37,6 +39,20 @@ class StaffShell extends StatelessWidget {
       return state.user.roles.any(_teacherRoles.contains);
     }
     return false;
+  }
+
+  /// Class Teacher and Subject Teacher share one account but show different
+  /// nav vocabularies - "Reports/Tasks" for class-level work vs
+  /// "Lessons/Marks" for subject teaching. `StaffPanelHost` already decides
+  /// which dashboard is on screen from the active responsibility; this reads
+  /// the same source so the nav bar never disagrees with the panel it sits
+  /// under. Class Teacher is the default (including while nothing has
+  /// resolved yet), matching `StaffPanelHost`'s own fallback.
+  bool _isSubjectTeacherActive(BuildContext context, {bool listen = true}) {
+    final bloc = listen
+        ? context.watch<SubjectTeacherContextBloc>()
+        : context.read<SubjectTeacherContextBloc>();
+    return bloc.state.active?.roleType == StaffResponsibilityType.subjectTeacher;
   }
 
   static const List<UserRole> _boardingRoles = [
@@ -99,6 +115,13 @@ class StaffShell extends StatelessWidget {
           loc.startsWith('/staff/tasks');
     }
 
+    if (_isDirector(context)) {
+      if (location.startsWith('/staff/director/approvals')) return 1;
+      if (location.startsWith('/staff/director/reports')) return 3;
+      if (isMoreSubRoute(location)) return 4;
+      return 0;
+    }
+
     if (_isAdmin(context)) {
       if (location.contains('/staff/admin/structure')) return 1;
       if (location.startsWith('/staff/messages')) return 3;
@@ -107,18 +130,16 @@ class StaffShell extends StatelessWidget {
       return 0;
     }
 
-    if (_isDirector(context)) {
-      if (location.startsWith('/staff/director/approvals')) return 1;
-      if (location.startsWith('/staff/director/reports')) return 3;
-      if (isMoreSubRoute(location)) return 4;
-      return 0;
-    }
-
     if (_isTeacher(context)) {
       if (location.startsWith('/staff/dashboard')) return 0;
       if (location.startsWith('/staff/students')) return 1;
-      if (location.startsWith('/staff/lessons')) return 2;
-      if (location.startsWith('/staff/marks')) return 3;
+      if (_isSubjectTeacherActive(context)) {
+        if (location.startsWith('/staff/lessons')) return 2;
+        if (location.startsWith('/staff/marks')) return 3;
+      } else {
+        if (location.startsWith('/staff/reports')) return 2;
+        if (location.startsWith('/staff/class-tasks')) return 3;
+      }
       if (isMoreSubRoute(location)) return 4;
       return 0;
     }
@@ -160,27 +181,6 @@ class StaffShell extends StatelessWidget {
   }
 
   void _onItemTapped(int index, BuildContext context) {
-    if (_isAdmin(context)) {
-      switch (index) {
-        case 0:
-          context.go(_homePath(context));
-          break;
-        case 1:
-          context.go('/staff/admin/structure');
-          break;
-        case 2:
-          AdminQuickAddSheet.show(context);
-          break;
-        case 3:
-          context.go('/staff/messages');
-          break;
-        case 4:
-          context.go('/staff/more');
-          break;
-      }
-      return;
-    }
-
     if (_isDirector(context)) {
       switch (index) {
         case 0:
@@ -202,7 +202,29 @@ class StaffShell extends StatelessWidget {
       return;
     }
 
+    if (_isAdmin(context)) {
+      switch (index) {
+        case 0:
+          context.go(_homePath(context));
+          break;
+        case 1:
+          context.go('/staff/admin/structure');
+          break;
+        case 2:
+          AdminQuickAddSheet.show(context);
+          break;
+        case 3:
+          context.go('/staff/messages');
+          break;
+        case 4:
+          context.go('/staff/more');
+          break;
+      }
+      return;
+    }
+
     if (_isTeacher(context)) {
+      final subjectActive = _isSubjectTeacherActive(context, listen: false);
       switch (index) {
         case 0:
           context.go(_homePath(context));
@@ -211,10 +233,10 @@ class StaffShell extends StatelessWidget {
           context.go('/staff/students');
           break;
         case 2:
-          context.go('/staff/lessons');
+          context.go(subjectActive ? '/staff/lessons' : '/staff/reports');
           break;
         case 3:
-          context.go('/staff/marks');
+          context.go(subjectActive ? '/staff/marks' : '/staff/class-tasks');
           break;
         case 4:
           context.go('/staff/more');
@@ -315,8 +337,20 @@ class StaffShell extends StatelessWidget {
     final isAdmin = _isAdmin(context);
     final isTeacher = _isTeacher(context);
     final isBoarding = _isBoarding(context);
+    // Dean of Studies, Bursar and Nurse own their own full-screen bottom nav
+    // (DeanShell / BursarShell / NurseShell) - showing this shell's bar too
+    // would stack two bottom navs on every screen in those sections.
+    final isDeanSection = GoRouterState.of(
+      context,
+    ).uri.path.startsWith('/staff/dean');
+    final isBursarSection = GoRouterState.of(
+      context,
+    ).uri.path.startsWith('/staff/bursar');
+    final isNurseSection = GoRouterState.of(
+      context,
+    ).uri.path.startsWith('/staff/nurse');
 
-    final List<NavigationDestination> teacherDestinations = [
+    final List<NavigationDestination> subjectTeacherDestinations = [
       const NavigationDestination(
         icon: Icon(Icons.home_outlined, size: 24),
         selectedIcon: Icon(Icons.home_rounded, size: 24),
@@ -336,6 +370,34 @@ class StaffShell extends StatelessWidget {
         icon: Icon(Icons.edit_document, size: 24),
         selectedIcon: Icon(Icons.edit_document, size: 24),
         label: 'Marks',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.grid_view_outlined, size: 24),
+        selectedIcon: Icon(Icons.grid_view_rounded, size: 24),
+        label: 'More',
+      ),
+    ];
+
+    final List<NavigationDestination> classTeacherDestinations = [
+      const NavigationDestination(
+        icon: Icon(Icons.home_outlined, size: 24),
+        selectedIcon: Icon(Icons.home_rounded, size: 24),
+        label: 'Home',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.people_outline_rounded, size: 24),
+        selectedIcon: Icon(Icons.people_rounded, size: 24),
+        label: 'Students',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.insights_outlined, size: 24),
+        selectedIcon: Icon(Icons.insights_rounded, size: 24),
+        label: 'Report Cards',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.assignment_outlined, size: 24),
+        selectedIcon: Icon(Icons.assignment_rounded, size: 24),
+        label: 'Tasks',
       ),
       const NavigationDestination(
         icon: Icon(Icons.grid_view_outlined, size: 24),
@@ -476,12 +538,14 @@ class StaffShell extends StatelessWidget {
 
     final isDirector = _isDirector(context);
 
-    final destinations = isAdmin
-        ? adminDestinations
-        : isDirector
+    final destinations = isDirector
         ? directorDestinations
+        : isAdmin
+        ? adminDestinations
         : isTeacher
-        ? teacherDestinations
+        ? (_isSubjectTeacherActive(context)
+              ? subjectTeacherDestinations
+              : classTeacherDestinations)
         : isBoarding
         ? boardingDestinations
         : _isNurse(context)
@@ -603,7 +667,8 @@ class StaffShell extends StatelessWidget {
           ),
         ],
       ),
-      bottomNavigationBar: isMobile
+      bottomNavigationBar:
+          (isMobile && !isDeanSection && !isBursarSection && !isNurseSection)
           ? Container(
               decoration: BoxDecoration(
                 border: Border(

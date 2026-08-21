@@ -103,13 +103,7 @@ class MoreMenuScreen extends StatelessWidget {
                 _MenuTile(
                   icon: Icons.info_outline,
                   title: 'About School Pulse',
-                  onTap: () => showAboutDialog(
-                    context: context,
-                    applicationName: 'School Pulse',
-                    applicationVersion: '1.0.0',
-                    applicationLegalese:
-                        'A school management platform for Uganda.',
-                  ),
+                  onTap: () => context.push('/about-school-pulse'),
                 ),
               ]),
               const SizedBox(height: 32),

@@ -4,9 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_radius.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/auth/presentation/widgets/role_switcher_sheet.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 
 /// New landing screen for the "More" tab - replaces StaffMoreScreen.
 /// No Language tile per the locked-in product decision; dark mode uses
@@ -20,138 +25,225 @@ class ProfileMoreScreen extends StatelessWidget {
     String name = 'Staff Member';
     String role = 'Staff';
     String? photoUrl;
-    bool isAdmin = false;
+    bool isDirector = false;
+    bool isTeacher = false;
 
     if (authState is AuthAuthenticated) {
       name = authState.user.name;
       role = UserRoleDisplay.name(authState.user.role);
       photoUrl = authState.user.photoUrl;
-      isAdmin = authState.user.roles.any(
-        UserRoleDisplay.adminConsoleRoles.contains,
+      isDirector = authState.user.roles.contains(UserRole.director);
+      isTeacher = authState.user.roles.any(
+        (r) => r == UserRole.classTeacher || r == UserRole.subjectTeacher,
       );
     }
+
+    final className = isTeacher
+        ? context.watch<ClassTeacherContextBloc>().state.active?.className
+        : null;
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
           children: [
             _MoreHeader(
+              className: className,
+              onClassTap: () => RoleSwitcherSheet.show(context),
               onSettingsTap: () => context.push('/staff/more/security-privacy'),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
             _ProfileCard(
               name: name,
               role: role,
               photoUrl: photoUrl,
               onTap: () => context.push('/staff/more/edit-profile'),
             ),
-            const SizedBox(height: 24),
+            if (isTeacher) ...[const SizedBox(height: 10), _QuickAccessRow()],
+            if (isDirector) ...[
+              const SizedBox(height: 20),
+              _MoreSection(
+                title: 'DIRECTOR PORTAL',
+                tiles: [
+                  _MoreTileData(
+                    icon: Icons.dashboard_rounded,
+                    iconColor: AppColors.electricBlue,
+                    title: 'Dashboard',
+                    subtitle: 'Institution snapshot and performance',
+                    onTap: () => context.push('/staff/director'),
+                  ),
+                  _MoreTileData(
+                    icon: Icons.speed_rounded,
+                    iconColor: AppColors.electricBlue,
+                    title: 'Performance',
+                    subtitle: 'School performance index and trends',
+                    onTap: () => context.push('/staff/director/performance'),
+                  ),
+                  _MoreTileData(
+                    icon: Icons.account_balance_wallet_rounded,
+                    iconColor: AppColors.emeraldGreen,
+                    title: 'Finance',
+                    subtitle: 'Fee collection, revenue and expenses',
+                    onTap: () => context.push('/staff/director/finance'),
+                  ),
+                  _MoreTileData(
+                    icon: Icons.fact_check_rounded,
+                    iconColor: AppColors.royalBlue,
+                    title: 'Approvals',
+                    subtitle: 'Review and decide pending requests',
+                    onTap: () => context.push('/staff/director/approvals'),
+                  ),
+                  _MoreTileData(
+                    icon: Icons.school_rounded,
+                    iconColor: AppColors.electricBlue,
+                    title: 'Academics',
+                    subtitle: 'Class and subject performance',
+                    onTap: () => context.push('/staff/director/academics'),
+                  ),
+                  _MoreTileData(
+                    icon: Icons.people_alt_rounded,
+                    iconColor: AppColors.royalBlue,
+                    title: 'Students',
+                    subtitle: 'Enrollment and student analytics',
+                    onTap: () => context.push('/staff/director/students'),
+                  ),
+                  _MoreTileData(
+                    icon: Icons.badge_rounded,
+                    iconColor: AppColors.deepOrange,
+                    title: 'Staff',
+                    subtitle: 'Workforce overview',
+                    onTap: () => context.push('/staff/director/staff'),
+                  ),
+                  _MoreTileData(
+                    icon: Icons.family_restroom_rounded,
+                    iconColor: AppColors.goldenYellow,
+                    title: 'Parents & Engagement',
+                    subtitle: 'Portal usage and engagement',
+                    onTap: () => context.push('/staff/director/parents'),
+                  ),
+                  _MoreTileData(
+                    icon: Icons.corporate_fare_rounded,
+                    iconColor: AppColors.emeraldGreen,
+                    title: 'Departments',
+                    subtitle: 'Department directory',
+                    onTap: () => context.push('/staff/director/departments'),
+                  ),
+                  _MoreTileData(
+                    icon: Icons.insights_rounded,
+                    iconColor: AppColors.royalBlue,
+                    title: 'Reports',
+                    subtitle: 'Strategic reports',
+                    onTap: () => context.push('/staff/director/reports'),
+                  ),
+                  _MoreTileData(
+                    icon: Icons.track_changes_rounded,
+                    iconColor: AppColors.deepOrange,
+                    title: 'Goals & Targets',
+                    subtitle: 'Strategic goals tracking',
+                    onTap: () => context.push('/staff/director/goals'),
+                  ),
+                  _MoreTileData(
+                    icon: Icons.groups_rounded,
+                    iconColor: AppColors.electricBlue,
+                    title: 'Meetings',
+                    subtitle: 'Board and management meetings',
+                    onTap: () => context.push('/staff/director/meetings'),
+                  ),
+                  _MoreTileData(
+                    icon: Icons.report_gmailerrorred_rounded,
+                    iconColor: Colors.red,
+                    title: 'Incidents',
+                    subtitle: 'Incident tracking',
+                    onTap: () => context.push('/staff/director/incidents'),
+                  ),
+                  _MoreTileData(
+                    icon: Icons.campaign_rounded,
+                    iconColor: AppColors.royalBlue,
+                    title: 'Communication',
+                    subtitle: 'Announcements and messaging',
+                    onTap: () => context.push('/staff/director/communication'),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 10),
             _MoreSection(
-              title: 'ACCOUNT',
+              title: 'MAIN MENU',
               tiles: [
                 _MoreTileData(
                   icon: Icons.person_outline_rounded,
                   iconColor: AppColors.electricBlue,
-                  title: 'Personal Information',
-                  subtitle: 'Update your personal details',
+                  title: 'My Profile',
+                  subtitle: 'View and update your profile',
                   onTap: () => context.push('/staff/more/personal-information'),
                 ),
+                if (isTeacher)
+                  _MoreTileData(
+                    icon: Icons.verified_user_outlined,
+                    iconColor: AppColors.successGreen,
+                    title: 'Attendance Settings',
+                    subtitle: 'Manage attendance preferences',
+                    onTap: () =>
+                        context.push('/staff/more/attendance-settings'),
+                  ),
                 _MoreTileData(
                   icon: Icons.notifications_none_rounded,
                   iconColor: AppColors.electricBlue,
-                  title: 'Notifications',
+                  title: 'Notification Settings',
                   subtitle: 'Manage your notification preferences',
                   onTap: () =>
                       context.push('/staff/more/notification-preferences'),
                 ),
                 _MoreTileData(
-                  icon: Icons.shield_outlined,
-                  iconColor: AppColors.electricBlue,
-                  title: 'Security & Privacy',
-                  subtitle: 'Password, 2FA and privacy settings',
-                  onTap: () => context.push('/staff/more/security-privacy'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            _MoreSection(
-              title: 'SCHOOL',
-              tiles: [
-                _MoreTileData(
-                  icon: Icons.calendar_today_rounded,
-                  iconColor: AppColors.successGreen,
-                  title: 'School Calendar',
-                  subtitle: 'View academic calendar and events',
-                  onTap: () => context.push('/staff/calendar'),
-                ),
-                _MoreTileData(
-                  icon: Icons.campaign_rounded,
-                  iconColor: AppColors.royalBlue,
-                  title: 'Announcements',
-                  subtitle: 'Stay updated with school news',
-                  onTap: () => context.push('/staff/more/announcements'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            _MoreSection(
-              title: 'DIRECTORY & INFORMATION',
-              tiles: [
-                _MoreTileData(
-                  icon: Icons.info_rounded,
+                  icon: Icons.cloud_upload_outlined,
                   iconColor: AppColors.goldenYellow,
-                  title: 'School Directory',
-                  subtitle: 'View faculty, staff and student directory',
-                  onTap: () => context.push('/staff/more/school-directory'),
+                  title: 'Offline Data',
+                  subtitle: 'Manage offline sync and data',
+                  onTap: () => context.push('/staff/more/offline-data'),
                 ),
-              ],
-            ),
-            if (isAdmin) ...[
-              const SizedBox(height: 20),
-              _MoreSection(
-                title: 'BILLING',
-                tiles: [
-                  _MoreTileData(
-                    icon: Icons.credit_card_rounded,
-                    iconColor: AppColors.deepOrange,
-                    title: 'Subscription & Billing',
-                    subtitle: 'Manage subscription and payment methods',
-                    onTap: () => context.push('/staff/admin/subscription'),
-                  ),
-                ],
-              ),
-            ],
-            const SizedBox(height: 20),
-            _MoreSection(
-              title: 'SUPPORT',
-              tiles: [
                 _MoreTileData(
                   icon: Icons.help_outline_rounded,
-                  iconColor: AppColors.emeraldGreen,
-                  title: 'Help Center',
-                  subtitle: 'Get help and find answers',
+                  iconColor: AppColors.electricBlue,
+                  title: 'Help & Support',
+                  subtitle: 'Get help and contact support',
                   onTap: () => context.push('/staff/more/help-center'),
                 ),
                 _MoreTileData(
-                  icon: Icons.description_outlined,
-                  iconColor: AppColors.goldenYellow,
-                  title: 'Terms of Service',
-                  subtitle: 'Read our terms and conditions',
-                  onTap: () => context.push('/staff/more/terms-of-service'),
+                  icon: Icons.info_outline_rounded,
+                  iconColor: AppColors.deepOrange,
+                  title: 'About School Pulse',
+                  subtitle: 'App version and information',
+                  onTap: () => context.push('/about-school-pulse'),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            const _SectionLabel(title: 'APP SETTINGS'),
-            const SizedBox(height: 8),
-            AppCard(padding: EdgeInsets.zero, child: const ThemeSwitchTile()),
-            const SizedBox(height: 24),
-            SecondaryButton(
-              label: 'Logout',
-              icon: Icons.logout_rounded,
-              onPressed: () => _handleLogout(context),
+            const SizedBox(height: 10),
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: InkWell(
+                onTap: () => _handleLogout(context),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout_rounded, color: Colors.red),
+                      SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          'Sign Out',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.red,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                      Icon(Icons.chevron_right_rounded, color: Colors.red),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -176,9 +268,15 @@ class ProfileMoreScreen extends StatelessWidget {
 }
 
 class _MoreHeader extends StatelessWidget {
+  final String? className;
+  final VoidCallback onClassTap;
   final VoidCallback onSettingsTap;
 
-  const _MoreHeader({required this.onSettingsTap});
+  const _MoreHeader({
+    required this.className,
+    required this.onClassTap,
+    required this.onSettingsTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -191,42 +289,174 @@ class _MoreHeader extends StatelessWidget {
             children: [
               Text(
                 'More',
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary(context),
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
               ),
-              const SizedBox(height: 2),
-              Text(
-                'Manage your account and app preferences',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary(context),
+              if (className != null && className!.isNotEmpty)
+                InkWell(
+                  onTap: onClassTap,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        className!,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary(context),
+                        ),
+                      ),
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 18,
+                        color: AppColors.primary(context),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Text(
+                  'Manage your account and app preferences',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary(context),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpacing.s),
         Container(
-          width: 40,
-          height: 40,
           decoration: BoxDecoration(
-            color: AppColors.surfaceContainer(context),
-            shape: BoxShape.circle,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+            borderRadius: AppRadius.large,
             border: Border.all(
-              color: AppColors.border(context).withValues(alpha: 0.4),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.08),
+            ),
+          ),
+          child: const NotificationBellButton(),
+        ),
+        const SizedBox(width: AppSpacing.s),
+        Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+            borderRadius: AppRadius.large,
+            border: Border.all(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.08),
             ),
           ),
           child: IconButton(
-            padding: EdgeInsets.zero,
-            iconSize: 18,
-            icon: Icon(
-              Icons.settings_outlined,
-              color: AppColors.textPrimary(context),
-            ),
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
             onPressed: onSettingsTap,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickAccessTileData {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final String route;
+
+  const _QuickAccessTileData({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.route,
+  });
+}
+
+class _QuickAccessRow extends StatelessWidget {
+  static const _tiles = [
+    _QuickAccessTileData(
+      icon: Icons.calendar_today_rounded,
+      color: AppColors.successGreen,
+      label: 'Calendar',
+      route: '/staff/calendar',
+    ),
+    _QuickAccessTileData(
+      icon: Icons.chat_bubble_outline_rounded,
+      color: Colors.purple,
+      label: 'Messages',
+      route: '/staff/messages',
+    ),
+    _QuickAccessTileData(
+      icon: Icons.campaign_rounded,
+      color: AppColors.goldenYellow,
+      label: 'News',
+      route: '/staff/more/announcements',
+    ),
+    _QuickAccessTileData(
+      icon: Icons.folder_outlined,
+      color: AppColors.electricBlue,
+      label: 'Resources',
+      route: '/staff/resources',
+    ),
+    _QuickAccessTileData(
+      icon: Icons.menu_book_rounded,
+      color: AppColors.deepOrange,
+      label: 'Lessons',
+      route: '/staff/lesson-plans',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionLabel(title: 'QUICK ACCESS'),
+        const SizedBox(height: 8),
+        AppCard(
+          child: Row(
+            children: [
+              for (final tile in _tiles) ...[
+                Expanded(
+                  child: InkWell(
+                    onTap: () => context.push(tile.route),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: tile.color.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(tile.icon, color: tile.color, size: 20),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            tile.label,
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ],
@@ -274,16 +504,51 @@ class _ProfileCard extends StatelessWidget {
             child: _decorativeCircle(14, AppColors.brightCyan, 0.25),
           ),
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _Avatar(name: name, photoUrl: photoUrl, size: 56),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    _Avatar(name: name, photoUrl: photoUrl, size: 56),
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary(context),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark
+                                ? AppColors.elevatedSurfaceDark
+                                : Colors.white,
+                            width: 2,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          size: 11,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text(
+                        'Good morning,',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary(context),
+                        ),
+                      ),
                       Text(
                         name,
                         maxLines: 1,
@@ -294,35 +559,33 @@ class _ProfileCard extends StatelessWidget {
                           color: AppColors.textPrimary(context),
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        role,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary(context),
-                        ),
-                      ),
                       const SizedBox(height: 6),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Edit Profile',
-                            style: TextStyle(
-                              color: AppColors.primary(context),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          Icon(
-                            Icons.chevron_right_rounded,
-                            size: 18,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary(
+                            context,
+                          ).withValues(alpha: isDark ? 0.22 : 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          role,
+                          style: TextStyle(
                             color: AppColors.primary(context),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
                           ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textMuted(context),
                 ),
               ],
             ),
@@ -456,7 +719,7 @@ class _MoreTile extends StatelessWidget {
     return InkWell(
       onTap: data.onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
             Container(

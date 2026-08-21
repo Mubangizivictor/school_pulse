@@ -82,6 +82,11 @@ class OfflineOperation extends Equatable {
   final String roleAssignmentId;
   final String deviceId;
 
+  /// Earliest time this operation may be replayed again after a failure.
+  /// Null means it has never failed, so it's eligible as soon as it's
+  /// queued.
+  final DateTime? nextRetryAt;
+
   const OfflineOperation({
     required this.operationId,
     required this.entityType,
@@ -96,6 +101,7 @@ class OfflineOperation extends Equatable {
     required this.userId,
     required this.roleAssignmentId,
     this.deviceId = '',
+    this.nextRetryAt,
   });
 
   /// Retries back off and then stop. A permanently failing operation stays in
@@ -105,11 +111,24 @@ class OfflineOperation extends Equatable {
 
   bool get canRetry => retryCount < maxRetries;
 
+  /// Exponential backoff after a failure: 1, 2, 4, 8, 16 minutes, doubling
+  /// per attempt so a transient outage isn't hammered every poll cycle
+  /// while a genuinely-fixed one still catches up within the minute.
+  static Duration backoffFor(int retryCount) =>
+      Duration(minutes: 1 << retryCount.clamp(0, 4));
+
+  bool isDueFor(DateTime now) {
+    final next = nextRetryAt;
+    return next == null || !now.isBefore(next);
+  }
+
   OfflineOperation copyWith({
     int? retryCount,
     String? lastError,
     OfflineSyncStatus? status,
     Map<String, dynamic>? payload,
+    DateTime? nextRetryAt,
+    bool clearNextRetryAt = false,
   }) {
     return OfflineOperation(
       operationId: operationId,
@@ -125,6 +144,7 @@ class OfflineOperation extends Equatable {
       userId: userId,
       roleAssignmentId: roleAssignmentId,
       deviceId: deviceId,
+      nextRetryAt: clearNextRetryAt ? null : (nextRetryAt ?? this.nextRetryAt),
     );
   }
 
@@ -143,5 +163,6 @@ class OfflineOperation extends Equatable {
     userId,
     roleAssignmentId,
     deviceId,
+    nextRetryAt,
   ];
 }

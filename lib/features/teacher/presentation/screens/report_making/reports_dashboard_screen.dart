@@ -1,24 +1,40 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/teacher/domain/entities/class_report_entry.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_reports/class_reports_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
-import 'package:school_pulse/features/teacher/domain/entities/class_report_entry.dart';
 
+/// Real, tenant-scoped class report queue. Academic figures remain owned by
+/// the Report Card Engine; this screen only manages class-teacher sections.
 class ReportsDashboardScreen extends StatefulWidget {
   const ReportsDashboardScreen({super.key});
-
   @override
   State<ReportsDashboardScreen> createState() => _ReportsDashboardScreenState();
 }
 
 class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
+  final _search = TextEditingController();
+  ReportEntryStatus? _filter;
+
   @override
   void initState() {
     super.initState();
+    _search.addListener(() => setState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _load() {
     final active = context.read<ClassTeacherContextBloc>().state.active;
     if (active != null) {
       context.read<ClassReportsBloc>().add(ClassReportsRequested(active));
@@ -26,381 +42,360 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        backgroundColor: AppColors.surfaceElevated(context),
-        foregroundColor: AppColors.textPrimary(context),
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'REPORTS DASHBOARD',
-              style: TextStyle(
-                color: AppColors.textMuted(context),
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-              ),
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppColors.background(context),
+    appBar: AppBar(
+      titleSpacing: AppSpacing.l,
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'REPORT CARDS',
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textMuted(context),
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
             ),
-            Text(
-              'Manage Class Reports',
-              style: TextStyle(
-                color: AppColors.textPrimary(context),
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.settings_outlined,
-              color: AppColors.textPrimary(context),
-            ),
-            onPressed: () {},
           ),
+          Text('Manage Class Reports', style: AppTypography.titleLarge),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: AppColors.border(context).withValues(alpha: 0.5),
-            height: 1,
-          ),
-        ),
       ),
-      body: BlocConsumer<ClassReportsBloc, ClassReportsState>(
-        listenWhen: (previous, current) =>
-            previous.errorMessage != current.errorMessage ||
-            previous.successMessage != current.successMessage,
-        listener: (context, state) {
-          final message = state.successMessage ?? state.errorMessage;
-          if (message == null) return;
+      actions: [
+        IconButton(
+          tooltip: 'Refresh reports',
+          onPressed: _load,
+          icon: const Icon(Icons.refresh_rounded),
+        ),
+      ],
+    ),
+    body: BlocConsumer<ClassReportsBloc, ClassReportsState>(
+      listenWhen: (before, after) =>
+          before.errorMessage != after.errorMessage ||
+          before.successMessage != after.successMessage,
+      listener: (context, state) {
+        final message = state.successMessage ?? state.errorMessage;
+        if (message != null) {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(
-                content: Text(message),
-                backgroundColor: state.successMessage != null
-                    ? AppColors.success(context)
-                    : AppColors.danger(context),
-              ),
-            );
+            ..showSnackBar(SnackBar(content: Text(message)));
           context.read<ClassReportsBloc>().add(
             const ClassReportsFeedbackCleared(),
           );
-        },
-        builder: (context, state) {
-          if (state.isLoading) {
-            return Center(child: const SchoolPulseLoader());
-          }
-
-          final contextState = context.watch<ClassTeacherContextBloc>().state;
-          if (contextState.active == null) {
-            return const EmptyState(
-              icon: Icons.class_outlined,
-              title: 'No class assigned',
-              message:
-                  'You are not currently the Class Teacher for any class, '
-                  'so there are no reports to work on.',
-            );
-          }
-
-          if (state.entries.isEmpty) {
-            return EmptyState(
-              icon: Icons.description_outlined,
-              title: 'No reports to work on',
-              message:
-                  state.errorMessage ??
-                  'No students have been placed in your class for this term.',
-            );
-          }
-
-          final progress = state.progress;
-          final active = contextState.active!;
-          final termLabel = [
-            active.termName,
-            active.academicYearName,
-          ].where((e) => e.isNotEmpty).join(', ');
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppCard(
-                  color: AppColors.primary(context).withValues(alpha: 0.05),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Active Term',
-                            style: TextStyle(
-                              color: AppColors.textPrimary(context),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          StatusBadge(
-                            label: progress.pending == 0
-                                ? 'Complete'
-                                : 'In Progress',
-                            color: progress.pending == 0
-                                ? AppColors.success(context)
-                                : AppColors.information(context),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        termLabel.isEmpty ? 'Current term' : termLabel,
-                        style: TextStyle(
-                          color: AppColors.textPrimary(context),
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _StatMiniCard(
-                              label: 'Students',
-                              value: '${progress.total}',
-                              icon: Icons.people_outline,
-                              color: AppColors.primary(context),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _StatMiniCard(
-                              label: 'Completed',
-                              value: '${progress.complete}',
-                              icon: Icons.check_circle_outline,
-                              color: AppColors.success(context),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _StatMiniCard(
-                              label: 'Pending',
-                              value: '${progress.pending}',
-                              icon: Icons.pending_actions,
-                              color: AppColors.warning(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      PrimaryButton(
-                        label: 'Start Report Entry',
-                        onPressed: () =>
-                            context.push('/staff/reports/select-class'),
-                      ),
-                    ],
+        }
+      },
+      builder: (context, state) {
+        final active = context.watch<ClassTeacherContextBloc>().state.active;
+        if (active == null) return const _NoClass();
+        if (state.isLoading) return const Center(child: SchoolPulseLoader());
+        final rows = state.entries.where((entry) {
+          final query = _search.text.trim().toLowerCase();
+          return (_filter == null || entry.status == _filter) &&
+              (query.isEmpty ||
+                  entry.studentName.toLowerCase().contains(query) ||
+                  entry.studentId.toLowerCase().contains(query));
+        }).toList();
+        final progress = state.progress;
+        final started = state.entries
+            .where((e) => e.status == ReportEntryStatus.inProgress)
+            .length;
+        final fresh = state.entries
+            .where((e) => e.status == ReportEntryStatus.draft)
+            .length;
+        final classLabel = [
+          active.className,
+          active.streamName,
+        ].where((e) => e != null && e.isNotEmpty).join(' - ');
+        final period = [
+          active.termName,
+          active.academicYearName,
+        ].where((e) => e.isNotEmpty).join(' • ');
+        return RefreshIndicator(
+          onRefresh: () async => _load(),
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.l),
+            children: [
+              Text(
+                classLabel.isEmpty ? 'Assigned class' : classLabel,
+                style: AppTypography.titleMedium.copyWith(
+                  color: AppColors.primary(context),
+                ),
+              ),
+              if (period.isNotEmpty)
+                Text(
+                  period,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary(context),
                   ),
                 ),
-                // Named rather than folded into "pending": the teacher cannot
-                // fix an unapproved mark themselves, so this tells them who to
-                // chase instead of implying their own work is unfinished.
-                if (state.unapprovedSubjects.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  AppCard(
-                    color: AppColors.warning(context).withValues(alpha: 0.08),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.hourglass_empty,
-                          size: 18,
-                          color: AppColors.warning(context),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Waiting on approved marks for '
-                            '${state.unapprovedSubjects.join(', ')}.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary(context),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                if (state.returned.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  AppCard(
-                    color: AppColors.danger(context).withValues(alpha: 0.08),
-                    onTap: () => context.push('/staff/reports/select-students'),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.assignment_return_outlined,
-                          size: 18,
-                          color: AppColors.danger(context),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            '${state.returned.length} report'
-                            '${state.returned.length == 1 ? '' : 's'} returned '
-                            'for correction.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary(context),
-                            ),
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          size: 18,
-                          color: AppColors.textMuted(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                SectionHeader(
-                  title: 'Students',
-                  color: AppColors.textPrimary(context),
+              const SizedBox(height: AppSpacing.l),
+              _ProgressCard(
+                total: progress.total,
+                complete: progress.complete,
+                inProgress: started,
+                notStarted: fresh,
+              ),
+              if (state.unapprovedSubjects.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.m),
+                _Notice(
+                  message:
+                      'Waiting for approved marks: ${state.unapprovedSubjects.join(', ')}. Marks are read-only in Report Cards.',
                 ),
-                const SizedBox(height: 12),
-                for (final entry in state.entries)
-                  _ReportEntryCard(
-                    name: entry.studentName.isEmpty
-                        ? entry.studentId
-                        : entry.studentName,
-                    status: entry.status.label,
-                    missing: state
-                        .missingFor(entry)
-                        .map((s) => s.label)
-                        .toList(),
-                    isReturned: entry.wasReturned,
-                    onTap: () => context.push('/staff/reports/select-students'),
-                  ),
               ],
-            ),
-          );
-        },
-      ),
-    );
-  }
+              const SizedBox(height: AppSpacing.l),
+              TextField(
+                controller: _search,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: 'Search student or admission ID',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _FilterChip(
+                      label: 'All (${state.entries.length})',
+                      selected: _filter == null,
+                      onTap: () => setState(() => _filter = null),
+                    ),
+                    for (final status in ReportEntryStatus.values)
+                      _FilterChip(
+                        label: status.label,
+                        selected: _filter == status,
+                        onTap: () => setState(() => _filter = status),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.m),
+              if (rows.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Center(
+                    child: Text(
+                      'No students match this filter.',
+                      style: TextStyle(color: AppColors.textSecondary(context)),
+                    ),
+                  ),
+                )
+              else
+                ...rows.map(
+                  (entry) => _StudentRow(
+                    entry: entry,
+                    missing: state.missingFor(entry),
+                    onTap: () => context.push(
+                      '/staff/reports/student/${entry.studentId}',
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    ),
+  );
 }
 
-/// One student's report row. Shows what is still missing rather than only
-/// that something is, so the teacher knows which screen to open.
-class _ReportEntryCard extends StatelessWidget {
-  final String name;
-  final String status;
-  final List<String> missing;
-  final bool isReturned;
-  final VoidCallback onTap;
+class _ProgressCard extends StatelessWidget {
+  const _ProgressCard({
+    required this.total,
+    required this.complete,
+    required this.inProgress,
+    required this.notStarted,
+  });
+  final int total, complete, inProgress, notStarted;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(AppSpacing.l),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceElevated(context),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AppColors.border(context)),
+    ),
+    child: Row(
+      children: [
+        _Stat(
+          Icons.groups_outlined,
+          total,
+          'Students',
+          AppColors.primary(context),
+        ),
+        _Stat(
+          Icons.check_circle_outline,
+          complete,
+          'Completed',
+          AppColors.success(context),
+        ),
+        _Stat(
+          Icons.edit_outlined,
+          inProgress,
+          'In progress',
+          AppColors.warning(context),
+        ),
+        _Stat(
+          Icons.schedule_outlined,
+          notStarted,
+          'Not started',
+          AppColors.textSecondary(context),
+        ),
+      ],
+    ),
+  );
+}
 
-  const _ReportEntryCard({
-    required this.name,
-    required this.status,
-    required this.missing,
-    required this.isReturned,
+class _Stat extends StatelessWidget {
+  const _Stat(this.icon, this.value, this.label, this.color);
+  final IconData icon;
+  final int value;
+  final String label;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: Column(
+      children: [
+        Icon(icon, color: color, size: 21),
+        const SizedBox(height: 6),
+        Text(
+          '$value',
+          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.w800),
+        ),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTypography.labelSmall.copyWith(
+            color: AppColors.textSecondary(context),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
     required this.onTap,
   });
-
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) {
-    final color = isReturned
-        ? AppColors.danger(context)
-        : (missing.isEmpty
-              ? AppColors.success(context)
-              : AppColors.warning(context));
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: AppCard(
-        padding: const EdgeInsets.all(12),
-        onTap: onTap,
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: TextStyle(
-                      color: AppColors.textPrimary(context),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    missing.isEmpty ? status : 'Missing: ${missing.join(', ')}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary(context),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            StatusBadge(label: status, color: color),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(right: 8),
+    child: FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onTap(),
+    ),
+  );
 }
 
-class _StatMiniCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _StatMiniCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
+class _Notice extends StatelessWidget {
+  const _Notice({required this.message});
+  final String message;
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
-      ),
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(AppSpacing.m),
+    decoration: BoxDecoration(
+      color: AppColors.warning(context).withValues(alpha: .1),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      children: [
+        Icon(Icons.pending_actions_outlined, color: AppColors.warning(context)),
+        const SizedBox(width: 10),
+        Expanded(child: Text(message)),
+      ],
+    ),
+  );
+}
+
+class _NoClass extends StatelessWidget {
+  const _NoClass();
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(height: 8),
+          const Icon(Icons.class_outlined, size: 48),
+          const SizedBox(height: AppSpacing.m),
           Text(
-            value,
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            'No class-teacher assignment is active.',
+            style: AppTypography.titleMedium,
           ),
+          const SizedBox(height: AppSpacing.s),
           Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: AppColors.textSecondary(context),
-            ),
+            'Choose an active class-teacher responsibility to work on report cards.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.textSecondary(context)),
           ),
         ],
+      ),
+    ),
+  );
+}
+
+class _StudentRow extends StatelessWidget {
+  const _StudentRow({
+    required this.entry,
+    required this.missing,
+    required this.onTap,
+  });
+  final ClassReportEntry entry;
+  final List<ReportSection> missing;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final color = entry.status == ReportEntryStatus.returnedForCorrection
+        ? AppColors.danger(context)
+        : missing.isEmpty
+        ? AppColors.success(context)
+        : AppColors.warning(context);
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppSpacing.s),
+      child: ListTile(
+        onTap: onTap,
+        leading: CircleAvatar(
+          child: Text(
+            entry.studentName.isEmpty
+                ? '?'
+                : entry.studentName.substring(0, 1).toUpperCase(),
+          ),
+        ),
+        title: Text(
+          entry.studentName.isEmpty ? entry.studentId : entry.studentName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          missing.isEmpty
+              ? entry.status.label
+              : 'Missing: ${missing.map((s) => s.label).join(', ')}',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              entry.status.label,
+              style: AppTypography.labelSmall.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
       ),
     );
   }

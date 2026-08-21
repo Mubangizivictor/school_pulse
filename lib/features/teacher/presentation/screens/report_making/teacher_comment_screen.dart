@@ -41,13 +41,17 @@ class _TeacherCommentScreenState extends State<TeacherCommentScreen> {
   void initState() {
     super.initState();
     final wizardState = context.read<ReportWizardBloc>().state;
-    context.read<TeacherBloc>().add(
-      TeacherReportCommentsRequested(
-        className: wizardState.selectedClassName ?? widget.className,
-        term: wizardState.selectedTerm ?? widget.term,
-        year: wizardState.selectedYear ?? widget.year,
-      ),
-    );
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<TeacherBloc>().add(
+        TeacherReportCommentsRequested(
+          schoolId: authState.user.schoolId,
+          className: wizardState.selectedClassName ?? widget.className,
+          term: wizardState.selectedTerm ?? widget.term,
+          year: wizardState.selectedYear ?? widget.year,
+        ),
+      );
+    }
   }
 
   @override
@@ -65,6 +69,7 @@ class _TeacherCommentScreenState extends State<TeacherCommentScreen> {
         TeacherReportCommentSaved(
           ReportComment(
             id: '',
+            schoolId: authState.user.schoolId,
             studentId:
                 widget.studentId ??
                 (wizardState.selectedStudentIds.isNotEmpty

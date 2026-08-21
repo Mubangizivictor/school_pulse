@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/injection_container.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/qr_scanner/presentation/screens/qr_scanner_screen.dart';
 import 'package:school_pulse/features/qr_scanner/domain/entities/scanner_mode.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
@@ -12,6 +11,7 @@ import 'package:school_pulse/features/finance/presentation/bloc/finance_event.da
 import 'package:school_pulse/features/finance/presentation/bloc/finance_state.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 import 'bloc/exams_bloc.dart';
 import 'bloc/exams_event.dart';
 import 'bloc/exams_state.dart';
@@ -86,8 +86,6 @@ class _ExamsDashboardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-
     return MultiBlocListener(
       listeners: [
         BlocListener<FinanceBloc, FinanceState>(
@@ -99,16 +97,11 @@ class _ExamsDashboardView extends StatelessWidget {
         ),
       ],
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Exams Portal'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.qr_code_scanner),
-              onPressed: () => _scanForExam(context),
-              tooltip: 'Verify Exam Eligibility',
-            ),
-            const NotificationBellButton(),
-          ],
+        appBar: staffDashboardAppBar(context, roleLabel: 'Exams'),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _scanForExam(context),
+          icon: const Icon(Icons.qr_code_scanner),
+          label: const Text('Verify Eligibility'),
         ),
         body: BlocBuilder<ExamsBloc, ExamsState>(
           builder: (context, state) {
@@ -132,42 +125,40 @@ class _ExamsDashboardView extends StatelessWidget {
                   ),
                   children: [
                     FadeInSlide(
-                      child: Text(
-                        "Examination Management",
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -0.5,
-                        ),
+                      child: StaffHeroSummaryCard(
+                        greetingNameFallback: 'there',
+                        kpis: [
+                          StaffKpiData(
+                            title: 'Pending Results',
+                            valueText: '${state.pendingResults}',
+                            subtitle: 'Awaiting upload',
+                            icon: Icons.pending_actions,
+                            color: AppColors.warning(context),
+                          ),
+                          StaffKpiData(
+                            title: 'Completion',
+                            valueText:
+                                '${(state.completionRate * 100).round()}%',
+                            subtitle: 'Results entered',
+                            icon: Icons.fact_check_outlined,
+                            color: AppColors.success(context),
+                          ),
+                          StaffKpiData(
+                            title: 'Upcoming Sessions',
+                            valueText: '${state.upcomingExams.length}',
+                            subtitle: 'Scheduled',
+                            icon: Icons.event_note_rounded,
+                            color: AppColors.information(context),
+                          ),
+                          StaffKpiData(
+                            title: 'Eligibility Checks',
+                            valueText: 'Scan',
+                            subtitle: 'Verify a student',
+                            icon: Icons.qr_code_scanner_rounded,
+                            color: AppColors.danger(context),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 15),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FadeInSlide(
-                            delay: const Duration(milliseconds: 100),
-                            child: DashboardStatCard(
-                              title: 'Pending Results',
-                              value: state.pendingResults.toDouble(),
-                              icon: Icons.pending_actions,
-                              color: semanticColors.warning,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FadeInSlide(
-                            delay: const Duration(milliseconds: 200),
-                            child: DashboardStatCard(
-                              title: 'Completion',
-                              value: (state.completionRate * 100),
-                              suffix: '%',
-                              icon: Icons.fact_check_outlined,
-                              color: semanticColors.success,
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
                     const SizedBox(height: 24),
                     const FadeInSlide(

@@ -16,6 +16,9 @@ import 'package:school_pulse/features/auth/data/datasources/remembered_login_sto
 import 'package:school_pulse/features/auth/domain/usecases/logout.dart';
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
+import 'package:school_pulse/features/teacher/data/datasources/class_teacher_local_data_source.dart';
+import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_local_data_source.dart';
+import 'package:school_pulse/features/teacher/domain/services/active_responsibility_service.dart';
 import 'package:school_pulse/core/utils/device_id_service.dart';
 import 'package:school_pulse/core/utils/device_info_service.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -40,6 +43,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final ExitSupportMode exitSupportMode;
   final BrandingBloc brandingBloc;
   final VerificationLocalDataSource verificationLocalDataSource;
+  final ClassTeacherLocalDataSource classTeacherLocalDataSource;
+  final SubjectTeacherLocalDataSource subjectTeacherLocalDataSource;
+  final ActiveResponsibilityService activeResponsibilityService;
   final RememberedLoginStore _rememberedLoginStore = RememberedLoginStore();
 
   AuthBloc({
@@ -57,6 +63,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.exitSupportMode,
     required this.brandingBloc,
     required this.verificationLocalDataSource,
+    required this.classTeacherLocalDataSource,
+    required this.subjectTeacherLocalDataSource,
+    required this.activeResponsibilityService,
   }) : super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<LoginWithEmailPressed>(_onLoginWithEmail);
@@ -239,6 +248,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
       } catch (_) {}
     }
+    // Class/Subject Teacher caches (roster, dashboard figures, attendance
+    // drafts, the offline sync queue, the resolved responsibility) are keyed
+    // to the device, not the session - left uncleared, they would hand the
+    // next person to sign in on this device the previous teacher's class
+    // data until every cache entry happened to be overwritten.
+    try {
+      await classTeacherLocalDataSource.clear();
+    } catch (_) {}
+    try {
+      await subjectTeacherLocalDataSource.clearAll();
+    } catch (_) {}
+    try {
+      await activeResponsibilityService.clear();
+    } catch (_) {}
     try {
       await NotificationService().unsubscribeAllTopics();
     } catch (_) {}

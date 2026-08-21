@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/domain/entities/competency_rating.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_event.dart';
@@ -46,8 +48,11 @@ class _BehaviourConductScreenState extends State<BehaviourConductScreen> {
   }
 
   void _fetchRatings() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return;
     context.read<TeacherBloc>().add(
       TeacherCompetencyRatingsRequested(
+        schoolId: authState.user.schoolId,
         className: widget.className,
         term: widget.term,
         year: widget.year,
@@ -182,10 +187,16 @@ class _BehaviourConductScreenState extends State<BehaviourConductScreen> {
     int level,
     CompetencyRating? existingRating,
   ) {
+    final authState = context.read<AuthBloc>().state;
+    final schoolId = authState is AuthAuthenticated
+        ? authState.user.schoolId
+        : '';
+
     final rating =
         (existingRating ??
                 CompetencyRating(
                   id: '',
+                  schoolId: schoolId,
                   studentId: widget.studentId,
                   className: widget.className,
                   term: widget.term,

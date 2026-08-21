@@ -139,11 +139,30 @@ class SubjectTeacherContextBloc
           userId: userId,
           academicYearId: context.academicYearId,
         );
+        final available = refreshed.getOrElse(() => state.available);
+
+        if (context.roleType != StaffResponsibilityType.subjectTeacher) {
+          // The teacher chose a responsibility this panel does not serve
+          // (e.g. Class Teacher). Drop the subject context so no screen here
+          // keeps querying the previous subject/class after the switch -
+          // mirrors ClassTeacherContextBloc's hand-off on the way back.
+          emit(
+            state.copyWith(
+              isSwitching: false,
+              available: available,
+              clearActive: true,
+              clearUnavailable: true,
+              clearError: true,
+            ),
+          );
+          return;
+        }
+
         emit(
           state.copyWith(
             isSwitching: false,
             active: context,
-            available: refreshed.getOrElse(() => state.available),
+            available: available,
             clearUnavailable: true,
             clearError: true,
           ),

@@ -29,6 +29,16 @@ class UpdateStudentHealthProfile {
   }
 }
 
+class GetAllHealthProfiles {
+  final HealthRepository repository;
+  GetAllHealthProfiles(this.repository);
+  Future<Either<Failure, List<StudentHealthProfile>>> call(
+    String schoolId,
+  ) async {
+    return await repository.getAllHealthProfiles(schoolId);
+  }
+}
+
 class GetClinicVisits {
   final HealthRepository repository;
   GetClinicVisits(this.repository);

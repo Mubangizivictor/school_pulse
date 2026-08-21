@@ -11,6 +11,7 @@ class ReportWizardBloc extends Bloc<ReportWizardEvent, ReportWizardState> {
     on<ReportWizardClassSelected>((event, emit) {
       emit(
         state.copyWith(
+          schoolId: event.schoolId,
           selectedClassId: event.classId,
           selectedClassName: event.className,
         ),
@@ -36,7 +37,8 @@ class ReportWizardBloc extends Bloc<ReportWizardEvent, ReportWizardState> {
     });
 
     on<ReportWizardSubmitRequested>((event, emit) async {
-      if (state.selectedClassName == null ||
+      if (state.schoolId == null ||
+          state.selectedClassName == null ||
           state.selectedTerm == null ||
           state.selectedYear == null ||
           state.selectedStudentIds.isEmpty) {
@@ -53,6 +55,7 @@ class ReportWizardBloc extends Bloc<ReportWizardEvent, ReportWizardState> {
 
       final result = await generateReports(
         GenerateReportsParams(
+          schoolId: state.schoolId!,
           className: state.selectedClassName!,
           term: state.selectedTerm!,
           year: state.selectedYear!,

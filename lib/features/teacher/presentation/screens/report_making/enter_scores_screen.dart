@@ -37,13 +37,17 @@ class _EnterScoresScreenState extends State<EnterScoresScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<TeacherBloc>().add(
-      TeacherMarksEntryRequested(
-        className: widget.className,
-        subject: widget.subject,
-        assessment: widget.assessment,
-      ),
-    );
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<TeacherBloc>().add(
+        TeacherMarksEntryRequested(
+          schoolId: authState.user.schoolId,
+          className: widget.className,
+          subject: widget.subject,
+          assessment: widget.assessment,
+        ),
+      );
+    }
   }
 
   @override

@@ -253,6 +253,8 @@ import 'package:school_pulse/features/games/presentation/bloc/games_bloc.dart';
 // Health
 import 'package:school_pulse/features/health/domain/repositories/health_repository.dart';
 import 'package:school_pulse/features/health/data/repositories/health_repository_impl.dart';
+import 'package:school_pulse/features/health/data/datasources/health_local_data_source.dart';
+import 'package:school_pulse/features/health/data/datasources/health_local_data_source_factory.dart';
 import 'package:school_pulse/features/health/data/datasources/health_remote_data_source.dart';
 import 'package:school_pulse/features/health/domain/usecases/health_usecases.dart';
 import 'package:school_pulse/features/health/domain/services/nurse_student_projection_service.dart';
@@ -790,6 +792,9 @@ Future<void> init() async {
       exitSupportMode: sl(),
       brandingBloc: sl(),
       verificationLocalDataSource: sl(),
+      classTeacherLocalDataSource: sl(),
+      subjectTeacherLocalDataSource: sl(),
+      activeResponsibilityService: sl(),
     ),
   );
 
@@ -979,7 +984,10 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<DeanRemoteDataSource>(
-    () => DeanRemoteDataSourceImpl(),
+    () => DeanRemoteDataSourceImpl(
+      firestore: sl(),
+      structureConfigurationService: sl(),
+    ),
   );
 
   // Director
@@ -1061,6 +1069,7 @@ Future<void> init() async {
     () => HealthBloc(
       getStudentHealthProfile: sl(),
       updateStudentHealthProfile: sl(),
+      getAllHealthProfiles: sl(),
       getClinicVisits: sl(),
       recordClinicVisit: sl(),
       getEmergencyIncidents: sl(),
@@ -1076,6 +1085,7 @@ Future<void> init() async {
 
   sl.registerLazySingleton(() => GetStudentHealthProfile(sl()));
   sl.registerLazySingleton(() => UpdateStudentHealthProfile(sl()));
+  sl.registerLazySingleton(() => GetAllHealthProfiles(sl()));
   sl.registerLazySingleton(() => GetClinicVisits(sl()));
   sl.registerLazySingleton(() => RecordClinicVisit(sl()));
   sl.registerLazySingleton(() => GetEmergencyIncidents(sl()));
@@ -1088,11 +1098,19 @@ Future<void> init() async {
   sl.registerLazySingleton(() => GetHealthAnalytics(sl()));
 
   sl.registerLazySingleton<HealthRepository>(
-    () => HealthRepositoryImpl(remoteDataSource: sl()),
+    () => HealthRepositoryImpl(
+      remoteDataSource: sl(),
+      localDataSource: sl(),
+      networkInfo: sl(),
+    ),
   );
 
   sl.registerLazySingleton<HealthRemoteDataSource>(
     () => HealthRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  sl.registerLazySingleton<HealthLocalDataSource>(
+    () => createHealthLocalDataSource(isar: kIsWeb ? null : sl<Isar>()),
   );
 
   sl.registerLazySingleton(
@@ -1758,9 +1776,7 @@ Future<void> init() async {
     () => TransportCoordinatorRepositoryImpl(remoteDataSource: sl()),
   );
 
-  sl.registerFactory(
-    () => TransportCoordinatorBloc(repository: sl()),
-  );
+  sl.registerFactory(() => TransportCoordinatorBloc(repository: sl()));
 
   // Features - Lesson Plans
   sl.registerLazySingleton(() => AddLessonPlan(sl()));

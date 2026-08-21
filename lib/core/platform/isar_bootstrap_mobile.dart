@@ -15,6 +15,7 @@ import 'package:school_pulse/features/branding/data/models/school_branding_isar.
 import 'package:school_pulse/features/biometrics/data/models/biometric_template_isar.dart';
 import 'package:school_pulse/features/gate_ops/data/models/gate_ops_isar_models.dart';
 import 'package:school_pulse/features/attendance_hub/data/models/attendance_record_isar.dart';
+import 'package:school_pulse/features/health/data/models/clinic_visit_isar.dart';
 import 'package:school_pulse/features/structure/data/models/structure_isar_models.dart';
 import 'package:school_pulse/features/exams/data/models/isar_assessment_mark.dart';
 import 'package:school_pulse/features/library/data/models/library_isar_models.dart';
@@ -101,6 +102,7 @@ Future<Isar> open() async {
     DocumentTemplateDefIsarSchema,
     CustomFieldDefIsarSchema,
     AttendanceRecordIsarSchema,
+    ClinicVisitIsarSchema,
     BoardingAttendanceIsarSchema,
   ], directory: dir.path);
 }

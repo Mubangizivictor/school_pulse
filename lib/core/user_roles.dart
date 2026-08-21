@@ -205,6 +205,16 @@ class UserRoleRouting {
         return '/staff/patron';
       case UserRole.boardingMatron:
         return '/staff/matron';
+      case UserRole.transportCoordinator:
+        return '/staff/transport';
+      case UserRole.guidanceDiscipline:
+        return '/staff/discipline';
+      case UserRole.gamesMaster:
+        return '/staff/games';
+      case UserRole.cateringManager:
+        return '/staff/catering';
+      case UserRole.religiousLeader:
+        return '/staff/religious-leader';
       case UserRole.student:
         return '/student/dashboard';
       default:

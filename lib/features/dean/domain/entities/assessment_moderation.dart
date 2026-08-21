@@ -15,6 +15,13 @@ class AssessmentModeration extends Equatable {
   final ModerationStatus status;
   final String? rejectionReason;
   final DateTime createdAt;
+  // Internal ids kept off the UI but needed to target the real
+  // subject_assessments/student_marks documents on write.
+  final String subjectId;
+  final String classId;
+  final String teacherStaffId;
+  final String academicYearId;
+  final String termId;
 
   const AssessmentModeration({
     required this.id,
@@ -29,6 +36,11 @@ class AssessmentModeration extends Equatable {
     this.status = ModerationStatus.pending,
     this.rejectionReason,
     required this.createdAt,
+    this.subjectId = '',
+    this.classId = '',
+    this.teacherStaffId = '',
+    this.academicYearId = '',
+    this.termId = '',
   });
 
   @override
@@ -45,6 +57,11 @@ class AssessmentModeration extends Equatable {
     status,
     rejectionReason,
     createdAt,
+    subjectId,
+    classId,
+    teacherStaffId,
+    academicYearId,
+    termId,
   ];
 
   AssessmentModeration copyWith({
@@ -64,6 +81,11 @@ class AssessmentModeration extends Equatable {
       status: status ?? this.status,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       createdAt: createdAt,
+      subjectId: subjectId,
+      classId: classId,
+      teacherStaffId: teacherStaffId,
+      academicYearId: academicYearId,
+      termId: termId,
     );
   }
 }

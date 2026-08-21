@@ -4,13 +4,26 @@ import '../../../../core/usecases/usecase.dart';
 import '../../presentation/bloc/teacher_state.dart';
 import '../repositories/teacher_repository.dart';
 
-class GetStudentsByClass implements UseCase<List<TeacherStudent>, String> {
+class GetStudentsByClassParams {
+  final String schoolId;
+  final String className;
+
+  GetStudentsByClassParams({required this.schoolId, required this.className});
+}
+
+class GetStudentsByClass
+    implements UseCase<List<TeacherStudent>, GetStudentsByClassParams> {
   final TeacherRepository repository;
 
   GetStudentsByClass(this.repository);
 
   @override
-  Future<Either<Failure, List<TeacherStudent>>> call(String params) async {
-    return await repository.getStudentsByClass(params);
+  Future<Either<Failure, List<TeacherStudent>>> call(
+    GetStudentsByClassParams params,
+  ) async {
+    return await repository.getStudentsByClass(
+      params.schoolId,
+      params.className,
+    );
   }
 }

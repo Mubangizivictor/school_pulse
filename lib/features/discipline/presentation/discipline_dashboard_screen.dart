@@ -15,7 +15,8 @@ import 'package:school_pulse/features/student/domain/usecases/get_all_students.d
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'bloc/discipline_bloc.dart';
 import 'bloc/discipline_event.dart';
 import 'bloc/discipline_state.dart';
@@ -101,71 +102,125 @@ class _DisciplineDashboardScreenState extends State<DisciplineDashboardScreen>
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Discipline & Guidance'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Incidents', icon: Icon(Icons.gavel)),
-            Tab(text: 'Counseling', icon: Icon(Icons.psychology)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            style: IconButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+      appBar: staffDashboardAppBar(context, roleLabel: 'Discipline & Guidance'),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: BlocBuilder<DisciplineBloc, DisciplineState>(
+              builder: (context, state) {
+                final loaded = state is DisciplineLoaded ? state : null;
+                return StaffHeroSummaryCard(
+                  greetingNameFallback: 'there',
+                  kpis: loaded == null
+                      ? null
+                      : [
+                          StaffKpiData(
+                            title: 'Total Incidents',
+                            valueText: '${loaded.incidents.length}',
+                            subtitle: 'Logged',
+                            icon: Icons.gavel_outlined,
+                            color: AppColors.information(context),
+                          ),
+                          StaffKpiData(
+                            title: 'Pending Review',
+                            valueText:
+                                '${loaded.incidents.where((i) => i.resolution.isEmpty).length}',
+                            subtitle: 'Needs action',
+                            icon: Icons.pending_actions_outlined,
+                            color: AppColors.danger(context),
+                          ),
+                          StaffKpiData(
+                            title: 'Counseling Sessions',
+                            valueText: '${loaded.sessions.length}',
+                            subtitle: 'This month',
+                            icon: Icons.psychology_outlined,
+                            color: AppColors.success(context),
+                          ),
+                          StaffKpiData(
+                            title: 'Resolved',
+                            valueText:
+                                '${loaded.incidents.where((i) => i.resolution.isNotEmpty).length}',
+                            subtitle: 'Closed out',
+                            icon: Icons.check_circle_outline_rounded,
+                            color: AppColors.warning(context),
+                          ),
+                        ],
+                );
+              },
             ),
-            onPressed: () {
-              if (_tabController.index == 0) {
-                _showLogIncidentDialog(context);
-              } else {
-                _showLogCounselingDialog(context);
-              }
-            },
           ),
-          const SizedBox(width: 8),
-          NotificationBellButton(
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: BlocBuilder<DisciplineBloc, DisciplineState>(
-        builder: (context, state) {
-          if (state is DisciplineLoading) {
-            return const _DisciplineDashboardSkeleton();
-          }
-
-          if (state is DisciplineError) {
-            return Center(child: Text(state.message));
-          }
-
-          if (state is DisciplineLoaded) {
-            return TabBarView(
-              controller: _tabController,
+          Material(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: Row(
               children: [
-                _IncidentsTab(
-                  state: state,
-                  semanticColors: semanticColors,
-                  studentName: _studentName,
-                  classTeacherFor: _classTeacherFor,
-                  onStartCounseling: (studentId, incidentId) {
-                    _tabController.index = 1;
-                    _showLogCounselingDialog(
+                Expanded(
+                  child: TabBar(
+                    controller: _tabController,
+                    tabs: const [
+                      Tab(text: 'Incidents', icon: Icon(Icons.gavel)),
+                      Tab(text: 'Counseling', icon: Icon(Icons.psychology)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Theme.of(
                       context,
-                      initialStudentId: studentId,
-                      linkedIncidentId: incidentId,
-                    );
+                    ).colorScheme.surfaceContainer,
+                  ),
+                  onPressed: () {
+                    if (_tabController.index == 0) {
+                      _showLogIncidentDialog(context);
+                    } else {
+                      _showLogCounselingDialog(context);
+                    }
                   },
                 ),
-                _CounselingTab(state: state, studentName: _studentName),
+                const SizedBox(width: 8),
               ],
-            );
-          }
+            ),
+          ),
+          Expanded(
+            child: BlocBuilder<DisciplineBloc, DisciplineState>(
+              builder: (context, state) {
+                if (state is DisciplineLoading) {
+                  return const _DisciplineDashboardSkeleton();
+                }
 
-          return const SizedBox.shrink();
-        },
+                if (state is DisciplineError) {
+                  return Center(child: Text(state.message));
+                }
+
+                if (state is DisciplineLoaded) {
+                  return TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _IncidentsTab(
+                        state: state,
+                        semanticColors: semanticColors,
+                        studentName: _studentName,
+                        classTeacherFor: _classTeacherFor,
+                        onStartCounseling: (studentId, incidentId) {
+                          _tabController.index = 1;
+                          _showLogCounselingDialog(
+                            context,
+                            initialStudentId: studentId,
+                            linkedIncidentId: incidentId,
+                          );
+                        },
+                      ),
+                      _CounselingTab(state: state, studentName: _studentName),
+                    ],
+                  );
+                }
+
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

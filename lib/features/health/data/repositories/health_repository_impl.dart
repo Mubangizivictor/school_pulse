@@ -1,11 +1,13 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
+import '../../../../core/network/network_info.dart';
 import '../../domain/entities/clinic_visit.dart';
 import '../../domain/entities/emergency_incident.dart';
 import '../../domain/entities/medical_inventory.dart';
 import '../../domain/entities/medical_supply_request.dart';
 import '../../domain/entities/student_health_profile.dart';
 import '../../domain/repositories/health_repository.dart';
+import '../datasources/health_local_data_source.dart';
 import '../datasources/health_remote_data_source.dart';
 import '../models/clinic_visit_model.dart';
 import '../models/emergency_incident_model.dart';
@@ -15,8 +17,50 @@ import '../models/student_health_profile_model.dart';
 
 class HealthRepositoryImpl implements HealthRepository {
   final HealthRemoteDataSource remoteDataSource;
+  final HealthLocalDataSource localDataSource;
+  final NetworkInfo networkInfo;
 
-  HealthRepositoryImpl({required this.remoteDataSource});
+  HealthRepositoryImpl({
+    required this.remoteDataSource,
+    required this.localDataSource,
+    required this.networkInfo,
+  });
+
+  ClinicVisitModel _toModel(ClinicVisit visit) {
+    return ClinicVisitModel(
+      id: visit.id,
+      studentId: visit.studentId,
+      staffId: visit.staffId,
+      dateTime: visit.dateTime,
+      reason: visit.reason,
+      symptoms: visit.symptoms,
+      temperature: visit.temperature,
+      bloodPressure: visit.bloodPressure,
+      pulseRate: visit.pulseRate,
+      oxygenSaturation: visit.oxygenSaturation,
+      weight: visit.weight,
+      diagnosis: visit.diagnosis,
+      treatmentProvided: visit.treatmentProvided,
+      medicationsGiven: visit.medicationsGiven
+          .map(
+            (e) => AdministeredMedicationModel(
+              medicationId: e.medicationId,
+              medicationName: e.medicationName,
+              dosage: e.dosage,
+              quantity: e.quantity,
+              timeAdministered: e.timeAdministered,
+              administeredBy: e.administeredBy,
+              notes: e.notes,
+            ),
+          )
+          .toList(),
+      observationNotes: visit.observationNotes,
+      followUpRequired: visit.followUpRequired,
+      outcome: visit.outcome,
+      recordedBy: visit.recordedBy,
+      schoolId: visit.schoolId,
+    );
+  }
 
   @override
   Future<Either<Failure, StudentHealthProfile>> getStudentHealthProfile(
@@ -84,6 +128,18 @@ class HealthRepositoryImpl implements HealthRepository {
   }
 
   @override
+  Future<Either<Failure, List<StudentHealthProfile>>> getAllHealthProfiles(
+    String schoolId,
+  ) async {
+    try {
+      final profiles = await remoteDataSource.getAllHealthProfiles(schoolId);
+      return Right(profiles);
+    } catch (e) {
+      return Left(ServerFailure());
+    }
+  }
+
+  @override
   Future<Either<Failure, List<ClinicVisit>>> getClinicVisits({
     required String schoolId,
     String? studentId,
@@ -105,44 +161,30 @@ class HealthRepositoryImpl implements HealthRepository {
 
   @override
   Future<Either<Failure, void>> recordClinicVisit(ClinicVisit visit) async {
+    // Isar-first write: the visit is never lost to a dropped connection or a
+    // killed app, even if the remote push below fails. `syncPendingClinicVisits`
+    // picks up anything still pending on the next connectivity restoration.
+    await localDataSource.cacheClinicVisit(visit);
     try {
-      final model = ClinicVisitModel(
-        id: visit.id,
-        studentId: visit.studentId,
-        staffId: visit.staffId,
-        dateTime: visit.dateTime,
-        reason: visit.reason,
-        symptoms: visit.symptoms,
-        temperature: visit.temperature,
-        bloodPressure: visit.bloodPressure,
-        pulseRate: visit.pulseRate,
-        oxygenSaturation: visit.oxygenSaturation,
-        weight: visit.weight,
-        diagnosis: visit.diagnosis,
-        treatmentProvided: visit.treatmentProvided,
-        medicationsGiven: visit.medicationsGiven
-            .map(
-              (e) => AdministeredMedicationModel(
-                medicationId: e.medicationId,
-                medicationName: e.medicationName,
-                dosage: e.dosage,
-                quantity: e.quantity,
-                timeAdministered: e.timeAdministered,
-                administeredBy: e.administeredBy,
-                notes: e.notes,
-              ),
-            )
-            .toList(),
-        observationNotes: visit.observationNotes,
-        followUpRequired: visit.followUpRequired,
-        outcome: visit.outcome,
-        recordedBy: visit.recordedBy,
-        schoolId: visit.schoolId,
-      );
-      await remoteDataSource.recordClinicVisit(model);
+      await remoteDataSource.recordClinicVisit(_toModel(visit));
+      await localDataSource.markClinicVisitSynced(visit.id);
       return const Right(null);
     } catch (e) {
-      return Left(ServerFailure());
+      // Cached locally and will retry via syncPendingClinicVisits - not a
+      // failure the nurse needs to see as long as the local cache holds.
+      return const Right(null);
+    }
+  }
+
+  @override
+  Future<void> syncPendingClinicVisits(String schoolId) async {
+    if (!await networkInfo.isConnected) return;
+    final pending = await localDataSource.getPendingClinicVisits(schoolId);
+    for (final visit in pending) {
+      try {
+        await remoteDataSource.pushClinicVisitIfAbsent(_toModel(visit));
+        await localDataSource.markClinicVisitSynced(visit.id);
+      } catch (_) {}
     }
   }
 

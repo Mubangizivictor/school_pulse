@@ -1700,6 +1700,51 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Bursar / Finance module. These collections previously had no rule
+    // coverage at all, so every read from FinanceRemoteDataSourceImpl was
+    // silently denied (Firestore denies unmatched paths by default) and the
+    // Bursar dashboard failed to load. Reads are scoped to same-school
+    // leadership/finance roles for visibility (director/headTeacher need to
+    // see collections and spend); writes are scoped to the roles that
+    // actually operate the finance module day to day.
+    function isFinanceStaff() {
+      return hasAnyRole(['bursar', 'schoolAdmin', 'headTeacher', 'director']);
+    }
+    function canWriteFinance() {
+      return hasAnyRole(['bursar', 'schoolAdmin']);
+    }
+    match /schools/{schoolId}/fee_categories/{categoryId} {
+      allow read: if isFinanceStaff() && isSameSchool(schoolId);
+      allow write: if canWriteFinance() && isSameSchool(schoolId);
+    }
+    match /schools/{schoolId}/fee_structures/{structureId} {
+      allow read: if isFinanceStaff() && isSameSchool(schoolId);
+      allow write: if canWriteFinance() && isSameSchool(schoolId);
+    }
+    match /schools/{schoolId}/student_financials/{studentId} {
+      allow read: if isFinanceStaff() && isSameSchool(schoolId);
+      allow write: if canWriteFinance() && isSameSchool(schoolId);
+    }
+    match /schools/{schoolId}/payments/{paymentId} {
+      allow read: if isFinanceStaff() && isSameSchool(schoolId);
+      // Payments are financial transactions - once recorded they must be
+      // corrected via reversal/refund workflows, not client-side edits, so
+      // only create is allowed here (no update/delete).
+      allow create: if canWriteFinance() && isSameSchool(schoolId);
+    }
+    match /schools/{schoolId}/expenditures/{expenditureId} {
+      allow read: if isFinanceStaff() && isSameSchool(schoolId);
+      // Update covers approval decisions too - headTeacher/director act as
+      // approvers on the same collection, not just bursar/schoolAdmin.
+      allow create: if canWriteFinance() && isSameSchool(schoolId);
+      allow update: if isFinanceStaff() && isSameSchool(schoolId);
+      allow delete: if false;
+    }
+    match /schools/{schoolId}/budgets/{budgetId} {
+      allow read: if isFinanceStaff() && isSameSchool(schoolId);
+      allow write: if canWriteFinance() && isSameSchool(schoolId);
+    }
+
     // Director governance: Strategic Goals and Leadership Meetings are
     // single-owner (director-authored) records, not multi-party approval
     // workflows, so writes go directly through client SDK rules rather than

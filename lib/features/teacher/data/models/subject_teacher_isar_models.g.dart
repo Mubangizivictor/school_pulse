@@ -9801,38 +9801,43 @@ const SubjectTeacherOfflineOperationIsarSchema = CollectionSchema(
       name: r'lastError',
       type: IsarType.string,
     ),
-    r'operationId': PropertySchema(
+    r'nextRetryAt': PropertySchema(
       id: 6,
+      name: r'nextRetryAt',
+      type: IsarType.dateTime,
+    ),
+    r'operationId': PropertySchema(
+      id: 7,
       name: r'operationId',
       type: IsarType.string,
     ),
     r'payloadJson': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'payloadJson',
       type: IsarType.string,
     ),
     r'retryCount': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'retryCount',
       type: IsarType.long,
     ),
     r'roleAssignmentId': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'roleAssignmentId',
       type: IsarType.string,
     ),
     r'schoolId': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'schoolId',
       type: IsarType.string,
     ),
     r'status': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'status',
       type: IsarType.string,
     ),
     r'userId': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'userId',
       type: IsarType.string,
     )
@@ -9941,13 +9946,14 @@ void _subjectTeacherOfflineOperationIsarSerialize(
   writer.writeString(offsets[3], object.entityId);
   writer.writeString(offsets[4], object.entityType);
   writer.writeString(offsets[5], object.lastError);
-  writer.writeString(offsets[6], object.operationId);
-  writer.writeString(offsets[7], object.payloadJson);
-  writer.writeLong(offsets[8], object.retryCount);
-  writer.writeString(offsets[9], object.roleAssignmentId);
-  writer.writeString(offsets[10], object.schoolId);
-  writer.writeString(offsets[11], object.status);
-  writer.writeString(offsets[12], object.userId);
+  writer.writeDateTime(offsets[6], object.nextRetryAt);
+  writer.writeString(offsets[7], object.operationId);
+  writer.writeString(offsets[8], object.payloadJson);
+  writer.writeLong(offsets[9], object.retryCount);
+  writer.writeString(offsets[10], object.roleAssignmentId);
+  writer.writeString(offsets[11], object.schoolId);
+  writer.writeString(offsets[12], object.status);
+  writer.writeString(offsets[13], object.userId);
 }
 
 SubjectTeacherOfflineOperationIsar
@@ -9965,13 +9971,14 @@ SubjectTeacherOfflineOperationIsar
   object.entityType = reader.readString(offsets[4]);
   object.id = id;
   object.lastError = reader.readStringOrNull(offsets[5]);
-  object.operationId = reader.readString(offsets[6]);
-  object.payloadJson = reader.readString(offsets[7]);
-  object.retryCount = reader.readLong(offsets[8]);
-  object.roleAssignmentId = reader.readString(offsets[9]);
-  object.schoolId = reader.readString(offsets[10]);
-  object.status = reader.readString(offsets[11]);
-  object.userId = reader.readString(offsets[12]);
+  object.nextRetryAt = reader.readDateTimeOrNull(offsets[6]);
+  object.operationId = reader.readString(offsets[7]);
+  object.payloadJson = reader.readString(offsets[8]);
+  object.retryCount = reader.readLong(offsets[9]);
+  object.roleAssignmentId = reader.readString(offsets[10]);
+  object.schoolId = reader.readString(offsets[11]);
+  object.status = reader.readString(offsets[12]);
+  object.userId = reader.readString(offsets[13]);
   return object;
 }
 
@@ -9995,18 +10002,20 @@ P _subjectTeacherOfflineOperationIsarDeserializeProp<P>(
     case 5:
       return (reader.readStringOrNull(offset)) as P;
     case 6:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 7:
       return (reader.readString(offset)) as P;
     case 8:
-      return (reader.readLong(offset)) as P;
-    case 9:
       return (reader.readString(offset)) as P;
+    case 9:
+      return (reader.readLong(offset)) as P;
     case 10:
       return (reader.readString(offset)) as P;
     case 11:
       return (reader.readString(offset)) as P;
     case 12:
+      return (reader.readString(offset)) as P;
+    case 13:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -11290,6 +11299,92 @@ extension SubjectTeacherOfflineOperationIsarQueryFilter on QueryBuilder<
   QueryBuilder<
       SubjectTeacherOfflineOperationIsar,
       SubjectTeacherOfflineOperationIsar,
+      QAfterFilterCondition> nextRetryAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'nextRetryAt',
+      ));
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
+      QAfterFilterCondition> nextRetryAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'nextRetryAt',
+      ));
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
+      QAfterFilterCondition> nextRetryAtEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'nextRetryAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
+      QAfterFilterCondition> nextRetryAtGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'nextRetryAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
+      QAfterFilterCondition> nextRetryAtLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'nextRetryAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
+      QAfterFilterCondition> nextRetryAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'nextRetryAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
       QAfterFilterCondition> operationIdEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -12359,6 +12454,22 @@ extension SubjectTeacherOfflineOperationIsarQuerySortBy on QueryBuilder<
   }
 
   QueryBuilder<SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar, QAfterSortBy> sortByNextRetryAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'nextRetryAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
+      QAfterSortBy> sortByNextRetryAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'nextRetryAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<SubjectTeacherOfflineOperationIsar,
       SubjectTeacherOfflineOperationIsar, QAfterSortBy> sortByOperationId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'operationId', Sort.asc);
@@ -12568,6 +12679,22 @@ extension SubjectTeacherOfflineOperationIsarQuerySortThenBy on QueryBuilder<
   }
 
   QueryBuilder<SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar, QAfterSortBy> thenByNextRetryAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'nextRetryAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
+      QAfterSortBy> thenByNextRetryAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'nextRetryAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<SubjectTeacherOfflineOperationIsar,
       SubjectTeacherOfflineOperationIsar, QAfterSortBy> thenByOperationId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'operationId', Sort.asc);
@@ -12730,6 +12857,13 @@ extension SubjectTeacherOfflineOperationIsarQueryWhereDistinct on QueryBuilder<
     });
   }
 
+  QueryBuilder<SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar, QDistinct> distinctByNextRetryAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'nextRetryAt');
+    });
+  }
+
   QueryBuilder<
       SubjectTeacherOfflineOperationIsar,
       SubjectTeacherOfflineOperationIsar,
@@ -12843,6 +12977,13 @@ extension SubjectTeacherOfflineOperationIsarQueryProperty on QueryBuilder<
       lastErrorProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'lastError');
+    });
+  }
+
+  QueryBuilder<SubjectTeacherOfflineOperationIsar, DateTime?, QQueryOperations>
+      nextRetryAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'nextRetryAt');
     });
   }
 

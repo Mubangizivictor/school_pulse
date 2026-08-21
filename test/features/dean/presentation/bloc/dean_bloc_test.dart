@@ -252,11 +252,12 @@ void main() {
       'should emit [DeanLoading, AssessmentsOverviewLoaded] when assessments fetched successfully',
       build: () {
         when(
-          () => mockRepository.getAssessmentsOverview(),
+          () => mockRepository.getAssessmentsOverview(schoolId: 'school1'),
         ).thenAnswer((_) async => Right([tAssessment]));
         return bloc;
       },
-      act: (bloc) => bloc.add(AssessmentsOverviewRequested()),
+      act: (bloc) =>
+          bloc.add(const AssessmentsOverviewRequested(schoolId: 'school1')),
       expect: () => [
         DeanLoading(),
         AssessmentsOverviewLoaded([tAssessment]),
@@ -267,11 +268,73 @@ void main() {
       'should emit [DeanLoading, DeanError] when fetching assessments fails',
       build: () {
         when(
-          () => mockRepository.getAssessmentsOverview(),
+          () => mockRepository.getAssessmentsOverview(schoolId: 'school1'),
         ).thenAnswer((_) async => const Left(ServerFailure('Error')));
         return bloc;
       },
-      act: (bloc) => bloc.add(AssessmentsOverviewRequested()),
+      act: (bloc) =>
+          bloc.add(const AssessmentsOverviewRequested(schoolId: 'school1')),
+      expect: () => [DeanLoading(), const DeanError('Error')],
+    );
+
+    blocTest<DeanBloc, DeanState>(
+      'should emit [DeanLoading, DeanOperationSuccess] when assessment created successfully',
+      build: () {
+        when(
+          () => mockRepository.createAssessment(
+            schoolId: 'school1',
+            campusId: any(named: 'campusId'),
+            title: 'Mid-Term',
+            subjectId: 'Mathematics',
+            classId: 'S2A',
+            type: 'Test',
+            maximumMark: 100,
+          ),
+        ).thenAnswer((_) async => const Right(null));
+        return bloc;
+      },
+      act: (bloc) => bloc.add(
+        const CreateAssessmentRequested(
+          schoolId: 'school1',
+          title: 'Mid-Term',
+          subjectId: 'Mathematics',
+          classId: 'S2A',
+          type: 'Test',
+          maximumMark: 100,
+        ),
+      ),
+      expect: () => [
+        DeanLoading(),
+        const DeanOperationSuccess('Assessment created'),
+      ],
+    );
+
+    blocTest<DeanBloc, DeanState>(
+      'should emit [DeanLoading, DeanError] when creating an assessment fails',
+      build: () {
+        when(
+          () => mockRepository.createAssessment(
+            schoolId: 'school1',
+            campusId: any(named: 'campusId'),
+            title: 'Mid-Term',
+            subjectId: 'Mathematics',
+            classId: 'S2A',
+            type: 'Test',
+            maximumMark: 100,
+          ),
+        ).thenAnswer((_) async => const Left(ServerFailure('Error')));
+        return bloc;
+      },
+      act: (bloc) => bloc.add(
+        const CreateAssessmentRequested(
+          schoolId: 'school1',
+          title: 'Mid-Term',
+          subjectId: 'Mathematics',
+          classId: 'S2A',
+          type: 'Test',
+          maximumMark: 100,
+        ),
+      ),
       expect: () => [DeanLoading(), const DeanError('Error')],
     );
   });

@@ -174,6 +174,7 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
     // server once it has moved past what this device knows about.
     final register = await classLocalDataSource.getAttendanceDraft(
       operation.entityId,
+      schoolId: operation.schoolId,
     );
     if (register == null) return _ReplayOutcome.gone;
 
@@ -197,13 +198,19 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
   }
 
   Future<void> _recordFailure(OfflineOperation operation, Object error) async {
+    final nextRetryCount = operation.retryCount + 1;
     await _mark(
       operation,
-      operation.retryCount + 1 >= OfflineOperation.maxRetries
+      nextRetryCount >= OfflineOperation.maxRetries
           ? OfflineSyncStatus.failed
           : OfflineSyncStatus.pending,
       error.toString(),
       incrementRetry: true,
+      // A permanent failure has no next attempt to wait for; a retryable one
+      // backs off so the same transient error isn't replayed next poll.
+      nextRetryAt: nextRetryCount >= OfflineOperation.maxRetries
+          ? null
+          : DateTime.now().add(OfflineOperation.backoffFor(operation.retryCount)),
     );
   }
 
@@ -212,6 +219,7 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
     OfflineSyncStatus status,
     String message, {
     bool incrementRetry = false,
+    DateTime? nextRetryAt,
   }) async {
     // The operation stays in the queue either way. A permanently failing
     // write is still the teacher's work and has to remain visible on the
@@ -223,6 +231,8 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
         retryCount: incrementRetry
             ? operation.retryCount + 1
             : operation.retryCount,
+        nextRetryAt: nextRetryAt,
+        clearNextRetryAt: nextRetryAt == null,
       ),
     );
   }

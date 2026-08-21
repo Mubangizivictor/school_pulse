@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 
 /// Minimal gate-operations dashboard for supervisor/admin roles
 /// (securityHead, receptionist, schoolAdmin, director, headTeacher,
@@ -9,8 +10,24 @@ class GateOpsMinimalDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Gate operations dashboard - coming soon')),
+    return Scaffold(
+      appBar: staffDashboardAppBar(context, roleLabel: 'Gate Operations'),
+      body: const SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, 28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            StaffHeroSummaryCard(greetingNameFallback: 'there', kpis: null),
+            SizedBox(height: 24),
+            Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Text('Gate operations dashboard - coming soon'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

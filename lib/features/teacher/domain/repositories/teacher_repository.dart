@@ -11,6 +11,7 @@ import '../entities/competency_rating.dart';
 
 abstract class TeacherRepository {
   Future<Either<Failure, List<TeacherStudent>>> getStudentsByClass(
+    String schoolId,
     String className,
   );
 
@@ -46,10 +47,14 @@ abstract class TeacherRepository {
   );
   Future<Either<Failure, void>> createHomework(Homework homework);
   Future<Either<Failure, void>> updateHomework(Homework homework);
-  Future<Either<Failure, void>> deleteHomework(String homeworkId);
+  Future<Either<Failure, void>> deleteHomework(
+    String homeworkId, {
+    required String schoolId,
+  });
 
   // Report Comments
   Future<Either<Failure, List<ReportComment>>> getReportComments({
+    required String schoolId,
     required String className,
     required String term,
     required String year,
@@ -58,6 +63,7 @@ abstract class TeacherRepository {
 
   // Competency Ratings
   Future<Either<Failure, List<CompetencyRating>>> getCompetencyRatings({
+    required String schoolId,
     required String className,
     required String term,
     required String year,
@@ -67,6 +73,7 @@ abstract class TeacherRepository {
 
   // Report Generation
   Future<Either<Failure, void>> generateReports({
+    required String schoolId,
     required String className,
     required String term,
     required String year,

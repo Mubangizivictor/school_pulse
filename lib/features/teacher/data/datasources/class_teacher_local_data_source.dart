@@ -47,7 +47,10 @@ abstract class ClassTeacherLocalDataSource {
     String? streamId,
   });
 
-  Future<ClassAttendanceSession?> getAttendanceDraft(String sessionId);
+  Future<ClassAttendanceSession?> getAttendanceDraft(
+    String sessionId, {
+    required String schoolId,
+  });
 
   Future<void> saveAttendanceDraft(ClassAttendanceSession session);
 

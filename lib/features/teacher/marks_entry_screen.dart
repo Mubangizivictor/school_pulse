@@ -59,8 +59,11 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
 
   void _requestMarks() {
     if (_selectedClass == null || _selectedSubject == null) return;
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return;
     context.read<TeacherBloc>().add(
       TeacherMarksEntryRequested(
+        schoolId: authState.user.schoolId,
         className: _selectedClass!,
         subject: _selectedSubject!,
         assessment: _selectedAssessment,

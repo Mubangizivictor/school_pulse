@@ -237,6 +237,7 @@ class ClassTasksBloc extends Bloc<ClassTasksEvent, ClassTasksState> {
     ValidationFailure() => failure.message,
     OfflineNotAllowedFailure() => failure.message,
     NetworkFailure() => failure.message,
+    ServerFailure() => failure.message,
     _ => 'Something went wrong. Try again.',
   };
 }

@@ -8,6 +8,7 @@ import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
 import 'package:school_pulse/injection_container.dart';
+import 'package:intl/intl.dart';
 import '../../../domain/entities/academic_intervention.dart';
 
 class AcademicInterventionsScreen extends StatefulWidget {
@@ -42,15 +43,7 @@ class _AcademicInterventionsScreenState
       child: Scaffold(
         backgroundColor: AppColors.background(context),
         appBar: AppBar(
-          title: const Text('Academic Interventions'),
-          actions: [
-            Builder(
-              builder: (context) => IconButton(
-                icon: const Icon(Icons.add),
-                onPressed: () => _showCreateInterventionSheet(context),
-              ),
-            ),
-          ],
+          title: const Text('Interventions'),
           bottom: TabBar(
             controller: _tabController,
             tabs: const [
@@ -59,60 +52,79 @@ class _AcademicInterventionsScreenState
             ],
           ),
         ),
-        body: BlocConsumer<DeanBloc, DeanState>(
-          listener: (context, state) {
-            if (state is DeanOperationSuccess) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(state.message)));
-              context.read<DeanBloc>().add(InterventionsRequested());
-            }
-          },
-          builder: (context, state) {
-            if (state is DeanLoading) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (state is InterventionsLoaded) {
-              if (state.interventions.isEmpty) {
-                return const EmptyState(
-                  icon: Icons.psychology,
-                  title: 'No interventions',
-                  message: 'No interventions active.',
-                );
-              }
-              final active = state.interventions
-                  .where(
-                    (i) =>
-                        i.status != InterventionStatus.completed &&
-                        i.status != InterventionStatus.cancelled,
-                  )
-                  .toList();
-              final completed = state.interventions
-                  .where(
-                    (i) =>
-                        i.status == InterventionStatus.completed ||
-                        i.status == InterventionStatus.cancelled,
-                  )
-                  .toList();
-              return TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildInterventionList(
-                    context,
-                    active,
-                    'No active interventions.',
+        body: Column(
+          children: [
+            Expanded(
+              child: BlocConsumer<DeanBloc, DeanState>(
+                listener: (context, state) {
+                  if (state is DeanOperationSuccess) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(state.message)));
+                    context.read<DeanBloc>().add(InterventionsRequested());
+                  }
+                },
+                builder: (context, state) {
+                  if (state is DeanLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (state is InterventionsLoaded) {
+                    if (state.interventions.isEmpty) {
+                      return const EmptyState(
+                        icon: Icons.psychology,
+                        title: 'No interventions',
+                        message: 'No interventions active.',
+                      );
+                    }
+                    final active = state.interventions
+                        .where(
+                          (i) =>
+                              i.status != InterventionStatus.completed &&
+                              i.status != InterventionStatus.cancelled,
+                        )
+                        .toList();
+                    final completed = state.interventions
+                        .where(
+                          (i) =>
+                              i.status == InterventionStatus.completed ||
+                              i.status == InterventionStatus.cancelled,
+                        )
+                        .toList();
+                    return TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildInterventionList(
+                          context,
+                          active,
+                          'No active interventions.',
+                        ),
+                        _buildInterventionList(
+                          context,
+                          completed,
+                          'No completed interventions.',
+                        ),
+                      ],
+                    );
+                  } else if (state is DeanError) {
+                    return Center(child: Text(state.message));
+                  }
+                  return const Center(child: Text('Initializing...'));
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Builder(
+                builder: (context) => SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showCreateInterventionSheet(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create New Intervention'),
                   ),
-                  _buildInterventionList(
-                    context,
-                    completed,
-                    'No completed interventions.',
-                  ),
-                ],
-              );
-            } else if (state is DeanError) {
-              return Center(child: Text(state.message));
-            }
-            return const Center(child: Text('Initializing...'));
-          },
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -137,28 +149,45 @@ class _AcademicInterventionsScreenState
         final intervention = interventions[index];
         return AppCard(
           margin: const EdgeInsets.only(bottom: AppSpacing.l),
-          child: ListTile(
-            title: Text(
-              intervention.studentName,
-              style: AppTypography.titleSmall,
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(intervention.reason, style: AppTypography.bodySmall),
-                const SizedBox(height: AppSpacing.s),
-                Row(
+          onTap: () => _showUpdateStatusSheet(context, intervention),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AvatarInitials(name: intervention.studentName, size: 44),
+              const SizedBox(width: AppSpacing.l),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildTypeBadge(context, intervention.type),
-                    const SizedBox(width: AppSpacing.m),
-                    _buildStatusBadge(context, intervention.status),
+                    Text(
+                      intervention.studentName,
+                      style: AppTypography.titleSmall.copyWith(
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(intervention.reason, style: AppTypography.bodySmall),
+                    const SizedBox(height: AppSpacing.xs),
+                    if (intervention.targetDate != null)
+                      Text(
+                        'Due: ${DateFormat('d MMM yyyy').format(intervention.targetDate!)}',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.textMuted(context),
+                        ),
+                      ),
+                    const SizedBox(height: AppSpacing.s),
+                    Row(
+                      children: [
+                        _buildTypeBadge(context, intervention.type),
+                        const SizedBox(width: AppSpacing.m),
+                        _buildStatusBadge(context, intervention.status),
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            isThreeLine: true,
-            onTap: () => _showUpdateStatusSheet(context, intervention),
+              ),
+              Icon(Icons.chevron_right, color: AppColors.textMuted(context)),
+            ],
           ),
         );
       },

@@ -4,6 +4,7 @@ import '../../../../core/usecases/usecase.dart';
 import '../repositories/teacher_repository.dart';
 
 class GenerateReportsParams {
+  final String schoolId;
   final String className;
   final String term;
   final String year;
@@ -11,6 +12,7 @@ class GenerateReportsParams {
   final List<String> enabledSections;
 
   GenerateReportsParams({
+    required this.schoolId,
     required this.className,
     required this.term,
     required this.year,
@@ -27,6 +29,7 @@ class GenerateReports implements UseCase<void, GenerateReportsParams> {
   @override
   Future<Either<Failure, void>> call(GenerateReportsParams params) async {
     return await repository.generateReports(
+      schoolId: params.schoolId,
       className: params.className,
       term: params.term,
       year: params.year,

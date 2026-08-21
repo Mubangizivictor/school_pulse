@@ -262,6 +262,8 @@ class SubjectTeacherOfflineOperationIsar {
   late String roleAssignmentId;
   late String deviceId;
 
+  DateTime? nextRetryAt;
+
   SubjectTeacherOfflineOperationIsar();
 
   factory SubjectTeacherOfflineOperationIsar.fromEntity(OfflineOperation e) {
@@ -278,7 +280,8 @@ class SubjectTeacherOfflineOperationIsar {
       ..schoolId = e.schoolId
       ..userId = e.userId
       ..roleAssignmentId = e.roleAssignmentId
-      ..deviceId = e.deviceId;
+      ..deviceId = e.deviceId
+      ..nextRetryAt = e.nextRetryAt;
   }
 
   OfflineOperation toEntity() {
@@ -296,6 +299,7 @@ class SubjectTeacherOfflineOperationIsar {
       userId: userId,
       roleAssignmentId: roleAssignmentId,
       deviceId: deviceId,
+      nextRetryAt: nextRetryAt,
     );
   }
 

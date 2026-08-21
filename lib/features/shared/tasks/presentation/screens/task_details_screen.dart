@@ -128,11 +128,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             if (isInProgress) ...[
               const SizedBox(height: 24),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Progress',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  const Expanded(
+                    child: Text(
+                      'Progress',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                   Text(
                     '${checklist.where((e) => e.isCompleted).length}/${checklist.length} completed',
@@ -156,11 +157,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
             const SizedBox(height: 24),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Checklist',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                const Expanded(
+                  child: Text(
+                    'Checklist',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 if (!isCompleted)
                   Text(
@@ -251,24 +253,27 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       ),
       bottomNavigationBar: isCompleted
           ? null
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SecondaryButton(
-                      label: isInProgress ? 'Pause Task' : 'Work In Progress',
-                      onPressed: () {},
+          : SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SecondaryButton(
+                        label: isInProgress ? 'Pause Task' : 'Work In Progress',
+                        onPressed: () {},
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: PrimaryButton(
-                      label: isInProgress ? 'Continue' : 'Mark Completed',
-                      onPressed: () {},
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: PrimaryButton(
+                        label: isInProgress ? 'Continue' : 'Mark Completed',
+                        onPressed: () {},
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
     );
@@ -281,14 +286,23 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         children: [
           Icon(icon, size: 18, color: Theme.of(context).colorScheme.outline),
           const SizedBox(width: 12),
-          Text(
-            label,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
-          const Spacer(),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
         ],
       ),
     );

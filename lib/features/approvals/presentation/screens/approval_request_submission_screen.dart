@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 import '../../data/repositories/approval_repository.dart';
 import '../../domain/entities/approval_models.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -147,108 +148,153 @@ class _ApprovalRequestSubmissionScreenState
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              TextField(
-                controller: _title,
-                decoration: const InputDecoration(labelText: 'Title'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _summary,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Summary'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _reason,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Reason (optional)',
+              const SectionHeader(title: 'Request Details'),
+              const SizedBox(height: 8),
+              AppCard(
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _title,
+                      decoration: const InputDecoration(labelText: 'Title'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _summary,
+                      maxLines: 3,
+                      decoration: const InputDecoration(labelText: 'Summary'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _reason,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Reason (optional)',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _amount,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Amount (optional)',
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _amount,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'Amount (optional)',
-                ),
-              ),
-              const SizedBox(height: 16),
               if (!_locked) ...[
-                TextField(
-                  controller: _moduleKey,
-                  decoration: const InputDecoration(labelText: 'Module key'),
+                const SizedBox(height: 20),
+                const SectionHeader(title: 'Source Record'),
+                const SizedBox(height: 4),
+                Text(
+                  'Identifies which record and workflow this request applies to. '
+                  'Requests raised from another screen fill these in automatically.',
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _requestType,
-                  decoration: const InputDecoration(labelText: 'Request type'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _sourceRecordType,
-                  decoration: const InputDecoration(
-                    labelText: 'Source record type',
+                const SizedBox(height: 8),
+                AppCard(
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _moduleKey,
+                        decoration: const InputDecoration(labelText: 'Module key'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _requestType,
+                        decoration: const InputDecoration(labelText: 'Request type'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _sourceRecordType,
+                        decoration: const InputDecoration(
+                          labelText: 'Source record type',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _sourceRecordId,
+                        decoration: const InputDecoration(
+                          labelText: 'Source record ID',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _sourceRecordId,
-                  decoration: const InputDecoration(
-                    labelText: 'Source record ID',
-                  ),
-                ),
-                const SizedBox(height: 16),
               ],
-              DropdownButtonFormField<ApprovalPriority>(
-                initialValue: _priority,
-                decoration: const InputDecoration(labelText: 'Priority'),
-                items: ApprovalPriority.values
-                    .map((p) => DropdownMenuItem(value: p, child: Text(p.name)))
-                    .toList(),
-                onChanged: (v) =>
-                    setState(() => _priority = v ?? ApprovalPriority.normal),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<ApprovalSensitivity>(
-                initialValue: _sensitivity,
-                decoration: const InputDecoration(labelText: 'Sensitivity'),
-                items: ApprovalSensitivity.values
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s.name)))
-                    .toList(),
-                onChanged: (v) => setState(
-                  () => _sensitivity = v ?? ApprovalSensitivity.normal,
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (activePolicies.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    'No active approval policy exists for this module/request type yet. '
-                    'An approvals admin must create one before this can be submitted.',
-                  ),
-                )
-              else
-                DropdownButtonFormField<ApprovalPolicy>(
-                  initialValue: _selectedPolicy,
-                  decoration: const InputDecoration(
-                    labelText: 'Approval policy',
-                  ),
-                  items: activePolicies
-                      .map(
-                        (p) => DropdownMenuItem(
-                          value: p,
-                          child: Text(
-                            '${p.name} (${p.moduleKey}/${p.requestType})',
-                          ),
+              const SizedBox(height: 20),
+              const SectionHeader(title: 'Routing'),
+              const SizedBox(height: 8),
+              AppCard(
+                child: Column(
+                  children: [
+                    DropdownButtonFormField<ApprovalPriority>(
+                      initialValue: _priority,
+                      decoration: const InputDecoration(labelText: 'Priority'),
+                      items: ApprovalPriority.values
+                          .map((p) => DropdownMenuItem(value: p, child: Text(p.name)))
+                          .toList(),
+                      onChanged: (v) => setState(
+                        () => _priority = v ?? ApprovalPriority.normal,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<ApprovalSensitivity>(
+                      initialValue: _sensitivity,
+                      decoration: const InputDecoration(labelText: 'Sensitivity'),
+                      items: ApprovalSensitivity.values
+                          .map((s) => DropdownMenuItem(value: s, child: Text(s.name)))
+                          .toList(),
+                      onChanged: (v) => setState(
+                        () => _sensitivity = v ?? ApprovalSensitivity.normal,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (activePolicies.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 18,
+                              color: Theme.of(context).hintColor,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'No active approval policy exists for this module/request type yet. '
+                                'An approvals admin must create one before this can be submitted.',
+                                style: TextStyle(color: Theme.of(context).hintColor),
+                              ),
+                            ),
+                          ],
                         ),
                       )
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedPolicy = v),
+                    else
+                      DropdownButtonFormField<ApprovalPolicy>(
+                        initialValue: _selectedPolicy,
+                        decoration: const InputDecoration(
+                          labelText: 'Approval policy',
+                        ),
+                        items: activePolicies
+                            .map(
+                              (p) => DropdownMenuItem(
+                                value: p,
+                                child: Text(
+                                  '${p.name} (${p.moduleKey}/${p.requestType})',
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) => setState(() => _selectedPolicy = v),
+                      ),
+                  ],
                 ),
+              ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: _submitting || activePolicies.isEmpty
