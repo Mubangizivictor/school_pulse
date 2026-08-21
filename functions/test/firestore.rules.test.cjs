@@ -664,10 +664,67 @@ describe('reportCards: canonical snapshots are server-write-only', () => {
     await assertFails(getDoc(doc(dbFor('teacherB'), 'schools/schoolA/reportCards/rc1')));
   });
 
-  test('a parent or student has no read path yet - that opens only with Bursar-controlled release, a later phase', async () => {
+  test('a parent or student cannot read an unfinalized, unreleased report card', async () => {
     await seedReportCard();
     await assertFails(getDoc(doc(dbFor('parentA'), 'schools/schoolA/reportCards/rc1')));
     await assertFails(getDoc(doc(dbFor('studentUserA'), 'schools/schoolA/reportCards/rc1')));
+  });
+
+  test('a parent or student cannot read a finalized report card the Bursar has not released', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/reportCards/rcFinalizedHeld'), {
+        schoolId: 'schoolA', studentId: 'studentA', classId: 'p7',
+        academicYearId: '2026', termId: 't2', average: 79, version: 1,
+        isFinalized: true, financialAccessStatus: 'held',
+      });
+    });
+    await assertFails(getDoc(doc(dbFor('parentA'), 'schools/schoolA/reportCards/rcFinalizedHeld')));
+    await assertFails(getDoc(doc(dbFor('studentUserA'), 'schools/schoolA/reportCards/rcFinalizedHeld')));
+  });
+
+  test('the linked parent and the student themself CAN read a finalized, released report card', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/reportCards/rcReleased'), {
+        schoolId: 'schoolA', studentId: 'studentA', classId: 'p7',
+        academicYearId: '2026', termId: 't2', average: 79, version: 1,
+        isFinalized: true, financialAccessStatus: 'released',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'schools/schoolA/reportCards/rcReleased')));
+    await assertSucceeds(getDoc(doc(dbFor('studentUserA'), 'schools/schoolA/reportCards/rcReleased')));
+  });
+
+  test('an unrelated parent cannot read a released report card for a student they are not linked to', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/reportCards/rcReleasedOther'), {
+        schoolId: 'schoolA', studentId: 'studentA', classId: 'p7',
+        academicYearId: '2026', termId: 't2', average: 79, version: 1,
+        isFinalized: true, financialAccessStatus: 'released',
+      });
+    });
+    await assertFails(getDoc(doc(dbFor('parentOtherA'), 'schools/schoolA/reportCards/rcReleasedOther')));
+  });
+
+  test('a released report revoked by the Bursar is denied to parent/student again', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/reportCards/rcRevoked'), {
+        schoolId: 'schoolA', studentId: 'studentA', classId: 'p7',
+        academicYearId: '2026', termId: 't2', average: 79, version: 1,
+        isFinalized: true, financialAccessStatus: 'revoked',
+      });
+    });
+    await assertFails(getDoc(doc(dbFor('parentA'), 'schools/schoolA/reportCards/rcRevoked')));
+  });
+
+  test('another school tenant is denied even for a finalized, released report', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/reportCards/rcReleasedCrossTenant'), {
+        schoolId: 'schoolA', studentId: 'studentA', classId: 'p7',
+        academicYearId: '2026', termId: 't2', average: 79, version: 1,
+        isFinalized: true, financialAccessStatus: 'released',
+      });
+    });
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools/schoolA/reportCards/rcReleasedCrossTenant')));
   });
 
   test('the auditLog subcollection is staff-readable but client-immutable, same as every other audit trail', async () => {
@@ -675,6 +732,24 @@ describe('reportCards: canonical snapshots are server-write-only', () => {
     await assertFails(setDoc(
       doc(dbFor('adminA'), 'schools/schoolA/reportCards/rc1/auditLog/forged'),
       { action: 'report_card.generated' },
+    ));
+  });
+});
+
+describe('reportVerifications: public get(), server-write-only', () => {
+  test('anyone signed in may get() a known verification code, but never list the collection', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/reportVerifications/tok123'), {
+        verificationCode: 'tok123', schoolId: 'schoolA', isFinalized: true, isCurrent: true,
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'schools/schoolA/reportVerifications/tok123')));
+  });
+
+  test('no client - not even staff - may write a verification record directly', async () => {
+    await assertFails(setDoc(
+      doc(dbFor('adminA'), 'schools/schoolA/reportVerifications/forged'),
+      { verificationCode: 'forged', schoolId: 'schoolA', isFinalized: true, isCurrent: true },
     ));
   });
 });

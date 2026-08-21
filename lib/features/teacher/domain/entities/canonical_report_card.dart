@@ -54,6 +54,31 @@ extension AcademicWorkflowStatusDisplay on AcademicWorkflowStatus {
       this == AcademicWorkflowStatus.submittedToHeadteacher;
 }
 
+/// The Bursar-controlled financial-access status - kept entirely separate
+/// from [AcademicWorkflowStatus]. A report can be academicallyFinalized and
+/// still `held`; only the Bursar's release moves it to `released`, and only
+/// the Bursar's revoke (or a lapsed automatic clearance rule) moves it back.
+enum FinancialAccessStatus {
+  held,
+  released,
+  revoked;
+
+  static FinancialAccessStatus fromId(String? id) {
+    for (final s in FinancialAccessStatus.values) {
+      if (s.name == id) return s;
+    }
+    return FinancialAccessStatus.held;
+  }
+}
+
+extension FinancialAccessStatusDisplay on FinancialAccessStatus {
+  String get label => switch (this) {
+    FinancialAccessStatus.held => 'Held by Bursar',
+    FinancialAccessStatus.released => 'Released to Parent/Student',
+    FinancialAccessStatus.revoked => 'Revoked',
+  };
+}
+
 /// One append-only decision in a report card's approval history. Never
 /// rewritten or reordered - see approvalHistory on [CanonicalReportCard].
 class ApprovalHistoryEntry extends Equatable {
@@ -213,6 +238,23 @@ class CanonicalReportCard extends Equatable {
   final String? supersededByReportCardId;
   final List<ApprovalHistoryEntry> approvalHistory;
 
+  /// Bursar-controlled, entirely separate from [academicStatus]. Defaults
+  /// to `held` - a report is never accidentally visible to a parent/student
+  /// before an explicit release decision.
+  final FinancialAccessStatus financialAccessStatus;
+
+  /// The official, immutable PDF's download URL, set once rendered after
+  /// academic finalization. Null before then - there is no "draft PDF URL"
+  /// stored on the document; an unsigned preview is rendered on demand,
+  /// never persisted as if it were official.
+  final String? pdfUrl;
+  final DateTime? pdfGeneratedAt;
+
+  /// The random, non-guessable token embedded in the report's QR code,
+  /// resolvable only through the public verification endpoint - never a
+  /// direct document id, so a QR scan can't be used to enumerate reports.
+  final String? verificationCode;
+
   const CanonicalReportCard({
     required this.reportCardId,
     required this.schoolId,
@@ -247,12 +289,15 @@ class CanonicalReportCard extends Equatable {
     this.supersedesReportCardId,
     this.supersededByReportCardId,
     this.approvalHistory = const [],
+    this.financialAccessStatus = FinancialAccessStatus.held,
+    this.pdfUrl,
+    this.pdfGeneratedAt,
+    this.verificationCode,
   });
 
   /// Every enabled section actually resolved to a complete subject result -
   /// the review-readiness signal the Class Teacher sees before submitting.
-  bool get hasIncompleteSubjects =>
-      subjectResults.any((s) => !s.isComplete);
+  bool get hasIncompleteSubjects => subjectResults.any((s) => !s.isComplete);
 
   List<SubjectResultSnapshot> get incompleteSubjects =>
       subjectResults.where((s) => !s.isComplete).toList();
@@ -292,6 +337,10 @@ class CanonicalReportCard extends Equatable {
     supersedesReportCardId,
     supersededByReportCardId,
     approvalHistory,
+    financialAccessStatus,
+    pdfUrl,
+    pdfGeneratedAt,
+    verificationCode,
   ];
 }
 

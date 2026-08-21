@@ -37,98 +37,102 @@ class _HeadteacherReportQueueScreenState
         : '';
 
     return BlocProvider(
-      create: (context) => sl<HeadteacherReportQueueBloc>()
-        ..add(HeadteacherReportQueueRequested(schoolId)),
+      create: (context) =>
+          sl<HeadteacherReportQueueBloc>()
+            ..add(HeadteacherReportQueueRequested(schoolId)),
       child: Scaffold(
         backgroundColor: AppColors.background(context),
         appBar: AppBar(title: const Text('Report Card Approvals')),
         body:
-            BlocConsumer<HeadteacherReportQueueBloc, HeadteacherReportQueueState>(
-          listener: (context, state) {
-            if (state.successMessage != null) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(state.successMessage!)));
-              setState(_selected.clear);
-              context.read<HeadteacherReportQueueBloc>().add(
-                const HeadteacherReportQueueFeedbackCleared(),
-              );
-            }
-            if (state.errorMessage != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.errorMessage!),
-                  backgroundColor: AppColors.danger(context),
-                ),
-              );
-              context.read<HeadteacherReportQueueBloc>().add(
-                const HeadteacherReportQueueFeedbackCleared(),
-              );
-            }
-          },
-          builder: (context, state) {
-            if (state.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state.pending.isEmpty && state.finalized.isEmpty) {
-              return const EmptyState(
-                icon: Icons.fact_check_outlined,
-                title: 'Nothing awaiting your review',
-                message:
-                    'Report cards signed by the Dean of Studies will '
-                    'appear here.',
-              );
-            }
-            return ListView(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              children: [
-                if (state.pending.isNotEmpty) ...[
-                  _SectionHeader(
-                    title: 'Awaiting your signature',
-                    count: state.pending.length,
-                  ),
-                  const SizedBox(height: AppSpacing.m),
-                  for (final card in state.pending)
-                    _ReportCardTile(
-                      card: card,
-                      selected: _selected.contains(card.reportCardId),
-                      onSelectedChanged: (value) => setState(() {
-                        if (value) {
-                          _selected.add(card.reportCardId);
-                        } else {
-                          _selected.remove(card.reportCardId);
-                        }
-                      }),
-                      onTap: () => _openPreview(context, card),
+            BlocConsumer<
+              HeadteacherReportQueueBloc,
+              HeadteacherReportQueueState
+            >(
+              listener: (context, state) {
+                if (state.successMessage != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(state.successMessage!)),
+                  );
+                  setState(_selected.clear);
+                  context.read<HeadteacherReportQueueBloc>().add(
+                    const HeadteacherReportQueueFeedbackCleared(),
+                  );
+                }
+                if (state.errorMessage != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.errorMessage!),
+                      backgroundColor: AppColors.danger(context),
                     ),
-                  if (_selected.length > 1) ...[
-                    const SizedBox(height: AppSpacing.l),
-                    _BulkSignButton(
-                      count: _selected.length,
-                      isActing: state.isActing,
-                      onPressed: () => _confirmBulkSign(context, state),
-                    ),
+                  );
+                  context.read<HeadteacherReportQueueBloc>().add(
+                    const HeadteacherReportQueueFeedbackCleared(),
+                  );
+                }
+              },
+              builder: (context, state) {
+                if (state.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (state.pending.isEmpty && state.finalized.isEmpty) {
+                  return const EmptyState(
+                    icon: Icons.fact_check_outlined,
+                    title: 'Nothing awaiting your review',
+                    message:
+                        'Report cards signed by the Dean of Studies will '
+                        'appear here.',
+                  );
+                }
+                return ListView(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  children: [
+                    if (state.pending.isNotEmpty) ...[
+                      _SectionHeader(
+                        title: 'Awaiting your signature',
+                        count: state.pending.length,
+                      ),
+                      const SizedBox(height: AppSpacing.m),
+                      for (final card in state.pending)
+                        _ReportCardTile(
+                          card: card,
+                          selected: _selected.contains(card.reportCardId),
+                          onSelectedChanged: (value) => setState(() {
+                            if (value) {
+                              _selected.add(card.reportCardId);
+                            } else {
+                              _selected.remove(card.reportCardId);
+                            }
+                          }),
+                          onTap: () => _openPreview(context, card),
+                        ),
+                      if (_selected.length > 1) ...[
+                        const SizedBox(height: AppSpacing.l),
+                        _BulkSignButton(
+                          count: _selected.length,
+                          isActing: state.isActing,
+                          onPressed: () => _confirmBulkSign(context, state),
+                        ),
+                      ],
+                    ],
+                    if (state.finalized.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.xl),
+                      _SectionHeader(
+                        title: 'Academically finalized',
+                        count: state.finalized.length,
+                      ),
+                      const SizedBox(height: AppSpacing.m),
+                      for (final card in state.finalized)
+                        _ReportCardTile(
+                          card: card,
+                          selected: false,
+                          onSelectedChanged: null,
+                          onTap: () => _openPreview(context, card),
+                        ),
+                    ],
                   ],
-                ],
-                if (state.finalized.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.xl),
-                  _SectionHeader(
-                    title: 'Academically finalized',
-                    count: state.finalized.length,
-                  ),
-                  const SizedBox(height: AppSpacing.m),
-                  for (final card in state.finalized)
-                    _ReportCardTile(
-                      card: card,
-                      selected: false,
-                      onSelectedChanged: null,
-                      onTap: () => _openPreview(context, card),
-                    ),
-                ],
-              ],
-            );
-          },
-        ),
+                );
+              },
+            ),
       ),
     );
   }
@@ -233,7 +237,10 @@ class _ReportCardTile extends StatelessWidget {
       onTap: onTap,
       leading: onSelectedChanged == null
           ? const Icon(Icons.description_outlined)
-          : Checkbox(value: selected, onChanged: (v) => onSelectedChanged!(v ?? false)),
+          : Checkbox(
+              value: selected,
+              onChanged: (v) => onSelectedChanged!(v ?? false),
+            ),
       title: Text(card.studentName, style: AppTypography.titleSmall),
       subtitle: Text(
         card.hasIncompleteSubjects
@@ -246,10 +253,7 @@ class _ReportCardTile extends StatelessWidget {
               : AppColors.textMuted(context),
         ),
       ),
-      trailing: Icon(
-        Icons.chevron_right,
-        color: AppColors.textMuted(context),
-      ),
+      trailing: Icon(Icons.chevron_right, color: AppColors.textMuted(context)),
     ),
   );
 }

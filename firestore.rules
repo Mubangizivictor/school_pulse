@@ -875,7 +875,18 @@ service cloud.firestore {
     // Bursar-controlled financial release, a later phase; until that rule
     // exists, only staff may read a report card at all.
     match /schools/{schoolId}/reportCards/{id} {
-      allow read: if isStaff() && isSameSchool(schoolId);
+      // Staff read every report at their school, at every workflow stage -
+      // unsigned/draft included, since a Class Teacher/Dean/Headteacher/
+      // admin must be able to open a report before it is ever finalized.
+      // Parent/Student read only when every one of these holds: the report
+      // is academically finalized, the Bursar has released it, and the
+      // requester is actually linked to that student in this same school -
+      // never on schoolId/studentId alone, since either could be spoofed by
+      // a caller who is not otherwise authorized.
+      allow read: if (isStaff() && isSameSchool(schoolId)) ||
+        (resource.data.isFinalized == true &&
+         resource.data.financialAccessStatus == 'released' &&
+         (isParentOf(resource.data.studentId) || isMe(resource.data.studentId)));
       allow write: if false;
       match /auditLog/{entryId} {
         allow read: if isStaff() && isSameSchool(schoolId);
@@ -896,10 +907,17 @@ service cloud.firestore {
     // QR verification lookup - public, read-only, and must never contain
     // PII: only a report/verification reference, checked against
     // reportCards server-side by the verification screen.
+    // Verification lookup docs are minted only by generateReportCardPdf
+    // (Admin SDK, not subject to these rules) with a random verificationCode
+    // as both the doc id and a queryable field. No client - staff included -
+    // may write here directly: doing so would let anyone forge a "verified,
+    // finalized, current" result for a report that was never actually
+    // signed. Public get() is safe because the doc contains no marks,
+    // comments, fee data or PDF URL - only the safe verification summary.
     match /schools/{schoolId}/reportVerifications/{code} {
       allow get: if true;
       allow list: if false;
-      allow write: if isStaff() && isSameSchool(schoolId);
+      allow write: if false;
     }
 
     // Security Operations & Gate Management - gates, student/staff

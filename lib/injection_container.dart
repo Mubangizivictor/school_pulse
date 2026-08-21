@@ -10,6 +10,8 @@ import 'package:school_pulse/features/relationships/domain/usecases/reallocate_r
 import 'package:school_pulse/features/relationships/domain/usecases/record_enrolment_change.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/update_people_policy.dart';
 import 'package:school_pulse/features/parent_access/domain/services/parent_module_resolver.dart';
+import 'package:school_pulse/features/parent/data/parent_report_card_remote_data_source.dart';
+import 'package:school_pulse/features/parent/presentation/bloc/report_card/parent_report_card_bloc.dart';
 import 'package:school_pulse/features/admin/data/repositories/role_permission_override_repository_impl.dart';
 import 'package:school_pulse/features/admin/domain/usecases/get_role_permission_overrides.dart';
 import 'package:school_pulse/features/admin/domain/usecases/save_role_permission_override.dart';
@@ -243,6 +245,8 @@ import 'package:school_pulse/features/discipline/presentation/bloc/discipline_bl
 import 'package:school_pulse/features/finance/domain/repositories/finance_repository.dart';
 import 'package:school_pulse/features/finance/domain/services/bursar_student_projection_service.dart';
 import 'package:school_pulse/features/finance/data/repositories/finance_repository_impl.dart';
+import 'package:school_pulse/features/finance/data/datasources/bursar_report_release_remote_data_source.dart';
+import 'package:school_pulse/features/finance/presentation/bloc/report_release/bursar_report_release_bloc.dart';
 import 'package:school_pulse/features/finance/data/datasources/finance_remote_data_source.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
 
@@ -339,6 +343,7 @@ import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_l
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_remote_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_local_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_remote_data_source.dart';
+import 'package:school_pulse/features/teacher/data/datasources/report_cards_remote_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_resource_local_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_resource_local_data_source_factory.dart';
 import 'package:school_pulse/features/teacher/data/datasources/subject_resource_local_data_source.dart';
@@ -400,6 +405,7 @@ import 'package:school_pulse/features/teacher/presentation/bloc/class_announceme
 import 'package:school_pulse/features/teacher/presentation/bloc/class_performance/class_performance_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_performance/student_assessment_results_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_reports/class_reports_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/report_card_preview/report_card_preview_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_tasks/class_tasks_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_work/class_work_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_resources/class_resource_bloc.dart';
@@ -1004,19 +1010,17 @@ Future<void> init() async {
     ),
   );
 
-  sl.registerFactory(
-    () => DeanReportQueueBloc(dataSource: sl()),
-  );
+  sl.registerFactory(() => DeanReportQueueBloc(dataSource: sl()));
   sl.registerLazySingleton(
     () => DeanReportQueueRemoteDataSource(firestore: sl(), functions: sl()),
   );
 
-  sl.registerFactory(
-    () => HeadteacherReportQueueBloc(dataSource: sl()),
-  );
+  sl.registerFactory(() => HeadteacherReportQueueBloc(dataSource: sl()));
   sl.registerLazySingleton(
-    () =>
-        HeadteacherReportQueueRemoteDataSource(firestore: sl(), functions: sl()),
+    () => HeadteacherReportQueueRemoteDataSource(
+      firestore: sl(),
+      functions: sl(),
+    ),
   );
 
   // Director
@@ -1061,6 +1065,11 @@ Future<void> init() async {
 
   sl.registerLazySingleton<FinanceRepository>(
     () => FinanceRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  sl.registerFactory(() => BursarReportReleaseBloc(dataSource: sl()));
+  sl.registerLazySingleton(
+    () => BursarReportReleaseRemoteDataSource(firestore: sl(), functions: sl()),
   );
 
   sl.registerLazySingleton(
@@ -1616,6 +1625,7 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(() => ClassReportsBloc(reportRepository: sl()));
+  sl.registerFactory(() => ReportCardPreviewBloc(reportRepository: sl()));
 
   sl.registerLazySingleton<ClassReportRepository>(
     () => ClassReportRepositoryImpl(
@@ -1625,7 +1635,12 @@ Future<void> init() async {
       auditService: sl(),
       networkInfo: sl(),
       functions: sl(),
+      reportCardsDataSource: sl(),
     ),
+  );
+
+  sl.registerLazySingleton(
+    () => ReportCardsRemoteDataSource(firestore: sl(), functions: sl()),
   );
 
   sl.registerLazySingleton(() => ClassTasksBloc(taskRepository: sl()));
@@ -1954,6 +1969,11 @@ Future<void> init() async {
   // it needs the signed-in parent's userId and the app-wide
   // SelectedStudentBloc instance, neither of which sl() can supply.
   sl.registerLazySingleton(() => const ParentModuleResolver());
+
+  sl.registerFactory(() => ParentReportCardBloc(dataSource: sl()));
+  sl.registerLazySingleton(
+    () => ParentReportCardRemoteDataSource(firestore: sl(), functions: sl()),
+  );
 
   // Features - Structure
   sl.registerFactory(() => StructureBloc(repository: sl()));

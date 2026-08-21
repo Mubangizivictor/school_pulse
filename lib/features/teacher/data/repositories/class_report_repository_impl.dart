@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dartz/dartz.dart';
 
@@ -14,6 +16,7 @@ import '../../domain/repositories/class_student_repository.dart';
 import '../../domain/services/class_teacher_assignment_service.dart';
 import '../../domain/services/subject_audit_service.dart';
 import '../datasources/class_teacher_remote_data_source.dart';
+import '../datasources/report_cards_remote_data_source.dart';
 
 class ClassReportRepositoryImpl implements ClassReportRepository {
   final ClassTeacherRemoteDataSource remoteDataSource;
@@ -22,6 +25,7 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
   final SubjectAuditService auditService;
   final NetworkInfo networkInfo;
   final FirebaseFunctions functions;
+  final ReportCardsRemoteDataSource reportCardsDataSource;
 
   ClassReportRepositoryImpl({
     required this.remoteDataSource,
@@ -30,6 +34,7 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
     required this.auditService,
     required this.networkInfo,
     required this.functions,
+    required this.reportCardsDataSource,
   });
 
   /// The Report Card Engine's Cloud Functions run in their default region
@@ -439,6 +444,66 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
       return const Left(
         ServerFailure('Could not submit these reports to the Dean.'),
       );
+    }
+  }
+
+  @override
+  Future<Either<Failure, CanonicalReportCard>> getReportCard({
+    required ActiveResponsibilityContext context,
+    required String reportCardId,
+  }) async {
+    try {
+      final card = await reportCardsDataSource.getReportCard(
+        schoolId: context.schoolId,
+        reportCardId: reportCardId,
+      );
+      if (card == null) {
+        return const Left(ServerFailure('This report could not be found.'));
+      }
+      return Right(card);
+    } catch (_) {
+      return const Left(ServerFailure('Could not load this report.'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<int>>> previewReportCardPdf({
+    required String reportCardId,
+  }) async {
+    try {
+      final callable = functions.httpsCallable('previewReportCardPdf');
+      final result = await callable.call(<String, dynamic>{
+        'reportCardId': reportCardId,
+      });
+      final data = Map<String, dynamic>.from(result.data as Map);
+      final base64Pdf = data['base64Pdf'] as String;
+      return Right(base64Decode(base64Pdf));
+    } on FirebaseFunctionsException catch (e) {
+      return Left(_mapError(e));
+    } catch (_) {
+      return const Left(
+        ServerFailure('Could not render this report as a PDF.'),
+      );
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> getOfficialReportCardPdfUrl({
+    required String reportCardId,
+  }) async {
+    try {
+      final generate = functions.httpsCallable('generateReportCardPdf');
+      await generate.call(<String, dynamic>{'reportCardId': reportCardId});
+      final download = functions.httpsCallable('getReportCardPdfDownloadUrl');
+      final result = await download.call(<String, dynamic>{
+        'reportCardId': reportCardId,
+      });
+      final data = Map<String, dynamic>.from(result.data as Map);
+      return Right(data['url'] as String);
+    } on FirebaseFunctionsException catch (e) {
+      return Left(_mapError(e));
+    } catch (_) {
+      return const Left(ServerFailure('Could not get this report\'s PDF.'));
     }
   }
 }

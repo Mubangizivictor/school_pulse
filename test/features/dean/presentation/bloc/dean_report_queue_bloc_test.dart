@@ -151,9 +151,12 @@ void main() {
             expectedSourceHash: 'hash1',
           ),
         ).thenAnswer((_) async {});
-        when(
-          () => mockDataSource.submitToHeadteacher(['rc1']),
-        ).thenAnswer((_) async => {'submitted': ['rc1'], 'failed': []});
+        when(() => mockDataSource.submitToHeadteacher(['rc1'])).thenAnswer(
+          (_) async => {
+            'submitted': ['rc1'],
+            'failed': [],
+          },
+        );
         when(
           () => mockDataSource.getReportCardsByStatus(
             schoolId: any(named: 'schoolId'),

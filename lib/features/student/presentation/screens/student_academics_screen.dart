@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -12,7 +13,16 @@ class StudentAcademicsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Academics')),
+      appBar: AppBar(
+        title: const Text('Academics'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.description_outlined),
+            tooltip: 'Report Card',
+            onPressed: () => context.push('/student/academics/report-card'),
+          ),
+        ],
+      ),
       body: BlocBuilder<SelectedStudentBloc, SelectedStudentState>(
         builder: (context, state) {
           if (state is! SelectedStudentLoaded) {

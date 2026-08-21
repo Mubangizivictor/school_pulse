@@ -282,7 +282,7 @@ class ClassReportsBloc extends Bloc<ClassReportsEvent, ClassReportsState> {
       (_) => emit(
         state.copyWith(
           isSaving: false,
-          successMessage: 'Report sent to the academic office.',
+          successMessage: 'Saved and ready for the next step.',
           clearError: true,
         ),
       ),
@@ -318,8 +318,8 @@ class ClassReportsBloc extends Bloc<ClassReportsEvent, ClassReportsState> {
         state.copyWith(
           isSaving: false,
           successMessage:
-              '$count report${count == 1 ? '' : 's'} sent for '
-              'generation.',
+              '$count report card${count == 1 ? '' : 's'} generated and '
+              'ready for your review.',
           clearError: true,
         ),
       ),
@@ -350,9 +350,9 @@ class ClassReportsBloc extends Bloc<ClassReportsEvent, ClassReportsState> {
         final failedCount = outcome.failed.length;
         final message = failedCount == 0
             ? '$submittedCount report${submittedCount == 1 ? '' : 's'} '
-                  'submitted to the Dean.'
-            : '$submittedCount submitted, $failedCount could not be '
-                  'submitted right now.';
+                  'submitted to the Dean of Studies.'
+            : '$submittedCount submitted to the Dean of Studies, '
+                  '$failedCount could not be submitted right now.';
         emit(
           state.copyWith(
             isSaving: false,

@@ -22,10 +22,9 @@ class HeadteacherReportQueueRemoteDataSource {
     required String schoolId,
     required List<AcademicWorkflowStatus> statuses,
   }) async {
-    final query = _reportCards(schoolId).where(
-      'academicStatus',
-      whereIn: statuses.map((s) => s.name).toList(),
-    );
+    final query = _reportCards(
+      schoolId,
+    ).where('academicStatus', whereIn: statuses.map((s) => s.name).toList());
     final snapshot = await query.get();
     return snapshot.docs.map((d) => _fromMap(d.id, d.data())).toList();
   }

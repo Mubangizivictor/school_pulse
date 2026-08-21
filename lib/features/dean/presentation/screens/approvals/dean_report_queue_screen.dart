@@ -230,7 +230,10 @@ class _ReportCardTile extends StatelessWidget {
       onTap: onTap,
       leading: onSelectedChanged == null
           ? const Icon(Icons.description_outlined)
-          : Checkbox(value: selected, onChanged: (v) => onSelectedChanged!(v ?? false)),
+          : Checkbox(
+              value: selected,
+              onChanged: (v) => onSelectedChanged!(v ?? false),
+            ),
       title: Text(card.studentName, style: AppTypography.titleSmall),
       subtitle: Text(
         card.hasIncompleteSubjects
@@ -243,10 +246,7 @@ class _ReportCardTile extends StatelessWidget {
               : AppColors.textMuted(context),
         ),
       ),
-      trailing: Icon(
-        Icons.chevron_right,
-        color: AppColors.textMuted(context),
-      ),
+      trailing: Icon(Icons.chevron_right, color: AppColors.textMuted(context)),
     ),
   );
 }

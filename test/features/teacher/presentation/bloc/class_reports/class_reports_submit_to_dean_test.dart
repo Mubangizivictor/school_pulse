@@ -79,9 +79,8 @@ void main() {
     },
     build: () => bloc,
     seed: () => ClassReportsState(context: _context()),
-    act: (bloc) => bloc.add(
-      const ClassReportCardsSubmittedToDean(['rc1', 'rc2']),
-    ),
+    act: (bloc) =>
+        bloc.add(const ClassReportCardsSubmittedToDean(['rc1', 'rc2'])),
     expect: () => [
       isA<ClassReportsState>().having((s) => s.isSaving, 'isSaving', true),
       isA<ClassReportsState>()
@@ -89,7 +88,9 @@ void main() {
           .having(
             (s) => s.successMessage,
             'successMessage',
-            contains('1 submitted, 1 could not be submitted'),
+            contains(
+              '1 submitted to the Dean of Studies, 1 could not be submitted',
+            ),
           ),
       isA<ClassReportsState>(), // the refresh's loading state
       isA<ClassReportsState>(), // the refresh's loaded state

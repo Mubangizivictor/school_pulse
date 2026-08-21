@@ -9,6 +9,7 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/teacher/domain/entities/class_report_entry.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_reports/class_reports_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
+import 'class_report_card_preview_screen.dart';
 
 /// Class-teacher report queue, styled after the approved reports dashboard.
 /// It reads the assigned roster and report entries only; no academic values
@@ -133,8 +134,7 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
                         const SizedBox(height: 12),
                         _StatusFilters(
                           selected: _status,
-                          onChanged: (value) =>
-                              setState(() => _status = value),
+                          onChanged: (value) => setState(() => _status = value),
                         ),
                         if (state.unapprovedSubjects.isNotEmpty) ...[
                           const SizedBox(height: 12),
@@ -149,9 +149,25 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
                                 (value) => value != null && value.isNotEmpty,
                               )
                               .join(' - '),
-                          onOpen: (entry) => context.push(
-                            '/staff/reports/student/${entry.studentId}',
-                          ),
+                          onOpen: (entry) {
+                            final activeContext = state.context;
+                            if (entry.reportCardId != null &&
+                                activeContext != null) {
+                              // A generated report card exists - open the
+                              // real preview, not the section-editing screen.
+                              context.push(
+                                '/staff/reports/preview',
+                                extra: ClassReportCardPreviewArgs(
+                                  reportCardId: entry.reportCardId!,
+                                  context: activeContext,
+                                ),
+                              );
+                            } else {
+                              context.push(
+                                '/staff/reports/student/${entry.studentId}',
+                              );
+                            }
+                          },
                         ),
                         const SizedBox(height: 20),
                         _CreateButton(
@@ -226,10 +242,7 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
     if (confirmed != true) return;
     bloc.add(
       ClassReportCardsSubmittedToDean(
-        submittable
-            .map((e) => e.reportCardId)
-            .whereType<String>()
-            .toList(),
+        submittable.map((e) => e.reportCardId).whereType<String>().toList(),
       ),
     );
   }
@@ -783,9 +796,7 @@ class _SubmitToDeanButton extends StatelessWidget {
     child: OutlinedButton.icon(
       onPressed: onPressed,
       icon: const Icon(Icons.send_outlined, size: 22),
-      label: Text(
-        'Submit $count report${count == 1 ? '' : 's'} to the Dean',
-      ),
+      label: Text('Submit $count report${count == 1 ? '' : 's'} to the Dean'),
     ),
   );
 }

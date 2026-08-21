@@ -10,8 +10,7 @@ class MockHeadteacherReportQueueRemoteDataSource extends Mock
 
 CanonicalReportCard _card({
   String id = 'rc1',
-  AcademicWorkflowStatus status =
-      AcademicWorkflowStatus.submittedToHeadteacher,
+  AcademicWorkflowStatus status = AcademicWorkflowStatus.submittedToHeadteacher,
 }) => CanonicalReportCard(
   reportCardId: id,
   schoolId: 'schoolA',
@@ -60,8 +59,7 @@ void main() {
         ).thenAnswer((_) async => []);
       },
       build: () => bloc,
-      act: (bloc) =>
-          bloc.add(const HeadteacherReportQueueRequested('schoolA')),
+      act: (bloc) => bloc.add(const HeadteacherReportQueueRequested('schoolA')),
       expect: () => [
         isA<HeadteacherReportQueueState>().having(
           (s) => s.isLoading,

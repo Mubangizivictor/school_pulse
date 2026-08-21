@@ -332,6 +332,7 @@ import 'package:school_pulse/features/teacher/presentation/screens/classes/class
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/reports_dashboard_screen.dart';
 import 'package:school_pulse/features/reports/presentation/screens/central_reports_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/class_report_detail_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/report_making/class_report_card_preview_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/marks/marks_dashboard_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/marks/select_assessment_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/marks/select_component_screen.dart';
@@ -636,6 +637,12 @@ final router = GoRouter(
         GoRoute(
           path: '/student/academics',
           builder: (context, state) => const StudentAcademicsScreen(),
+          routes: [
+            GoRoute(
+              path: 'report-card',
+              builder: (context, state) => const ReportCardScreen(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/student/homework',
@@ -1114,6 +1121,20 @@ final router = GoRouter(
               builder: (context, state) => ClassReportDetailScreen(
                 studentId: state.pathParameters['studentId']!,
               ),
+            ),
+            // The real report-card preview - opened via `extra` since it
+            // needs the full ActiveResponsibilityContext alongside the
+            // report card id, not just a path parameter. See
+            // ReportsDashboardScreen's "View Report" action.
+            GoRoute(
+              path: 'preview',
+              builder: (context, state) {
+                final extra = state.extra as ClassReportCardPreviewArgs;
+                return ClassReportCardPreviewScreen(
+                  reportCardId: extra.reportCardId,
+                  responsibilityContext: extra.context,
+                );
+              },
             ),
             // Catches any stale deep link into the old 12-screen report
             // wizard, since removed - it used sample classes, students and

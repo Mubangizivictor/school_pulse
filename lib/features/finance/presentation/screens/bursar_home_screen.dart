@@ -16,6 +16,7 @@ import 'fee_collection_screen.dart';
 import 'expenditure_screen.dart';
 import 'fee_configuration_screen.dart';
 import 'receipt_verification_result_screen.dart';
+import 'bursar_report_release_screen.dart';
 
 /// Bursar Home tab — mirrors the reference dashboard layout: greeting row
 /// with Messages/Notifications, "Today's Overview" KPI band, Quick Actions,
@@ -209,6 +210,17 @@ class _QuickActions extends StatelessWidget {
                 ),
               ),
             ),
+            QuickActionItem(
+              label: 'Report\nRelease',
+              icon: Icons.lock_open_rounded,
+              color: Colors.indigo,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const BursarReportReleaseScreen(),
+                ),
+              ),
+            ),
           ],
         ),
       ],
@@ -242,7 +254,9 @@ class _RecentTransactions extends StatelessWidget {
             child: Center(child: Text('No recent transactions')),
           )
         else
-          ...transactions.take(4).map((t) => _TransactionRow(t: t, colors: colors)),
+          ...transactions
+              .take(4)
+              .map((t) => _TransactionRow(t: t, colors: colors)),
       ],
     );
   }
@@ -288,7 +302,10 @@ class _TransactionRow extends StatelessWidget {
             children: [
               Text(
                 CurrencyFormatter.ugx(t.amount),
-                style: TextStyle(fontWeight: FontWeight.bold, color: colors.success),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: colors.success,
+                ),
               ),
               Text(
                 DateFormatter.format(t.date),
@@ -377,7 +394,10 @@ class _ApprovalRow extends StatelessWidget {
             children: [
               Text(
                 CurrencyFormatter.ugx(a.amount),
-                style: TextStyle(fontWeight: FontWeight.bold, color: colors.error),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: colors.error,
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

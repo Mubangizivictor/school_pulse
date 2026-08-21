@@ -111,7 +111,6 @@ class RejectAssessmentMarksRequested extends DeanEvent {
   List<Object?> get props => [schoolId, assessmentId, reason];
 }
 
-
 // Performance Analytics
 class PerformanceAnalyticsRequested extends DeanEvent {
   final String type;

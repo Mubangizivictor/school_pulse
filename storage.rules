@@ -111,6 +111,18 @@ service firebase.storage {
       allow update, delete: if false;
     }
 
+    // Official report-card PDFs. No client - staff, parent or student -
+    // ever reads this path directly: every download is mediated by
+    // getReportCardPdfDownloadUrl (a Cloud Function using the Admin SDK,
+    // not subject to these rules), which re-checks academic/financial
+    // access and hands back a short-lived signed URL instead. Writes only
+    // ever happen from generateReportCardPdf, also Admin SDK. Explicit
+    // deny-all here rather than relying on the catch-all at the bottom, so
+    // a future change to that catch-all can never accidentally expose it.
+    match /schools/{schoolId}/reportCards/{reportCardId}/{fileName} {
+      allow read, write: if false;
+    }
+
     match /institutions/{institutionId}/integrations/{allPaths=**} {
       allow read, write: if false;
     }

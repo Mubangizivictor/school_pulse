@@ -27,10 +27,9 @@ class DeanReportQueueRemoteDataSource {
     String? academicYearId,
     String? termId,
   }) async {
-    Query<Map<String, dynamic>> query = _reportCards(schoolId).where(
-      'academicStatus',
-      whereIn: statuses.map((s) => s.name).toList(),
-    );
+    Query<Map<String, dynamic>> query = _reportCards(
+      schoolId,
+    ).where('academicStatus', whereIn: statuses.map((s) => s.name).toList());
     if (classId != null && classId.isNotEmpty) {
       query = query.where('classId', isEqualTo: classId);
     }
@@ -41,9 +40,7 @@ class DeanReportQueueRemoteDataSource {
       query = query.where('termId', isEqualTo: termId);
     }
     final snapshot = await query.get();
-    return snapshot.docs
-        .map((d) => _fromMap(d.id, d.data()))
-        .toList();
+    return snapshot.docs.map((d) => _fromMap(d.id, d.data())).toList();
   }
 
   Future<CanonicalReportCard?> getReportCard({

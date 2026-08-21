@@ -6,6 +6,7 @@ const admin = require("firebase-admin");
 const { requirePlatformOwner, OwnerAuthorizationError } = require("./vendor/owner-auth");
 const { hashPin, verifyPin, assertNotLockedOut, failedAttemptUpdate, clearLockoutUpdate } = require("./vendor/pin-auth");
 const reportCardEngine = require("./report_card_engine");
+const { renderReportCardPdf } = require("./report_card_pdf");
 
 admin.initializeApp();
 const supportAuditFunctions = require("./support_audit")({ admin, onCall, HttpsError });
@@ -3983,6 +3984,403 @@ exports.signReportCardAsHeadteacher = onCall(async (request) => {
 
   return { reportCardId, status: reportCardEngine.ACADEMIC_STATUS.ACADEMICALLY_FINALIZED };
 });
+
+// ---------------------------------------------------------------------------
+// Report Card PDF + QR verification, and Bursar-controlled financial access.
+// ---------------------------------------------------------------------------
+
+const VERIFICATION_ORIGIN = "https://school-pulse-3d95b.web.app/verify-report";
+const BURSAR_ROLES = ["bursar", "director", "schoolAdmin"];
+
+function reportCardVerificationUrl(token) {
+  return `${VERIFICATION_ORIGIN}?token=${encodeURIComponent(token)}`;
+}
+
+/**
+ * Loads the institution's branding fields for the PDF header. Falls back to
+ * empty strings rather than throwing - a school that hasn't finished
+ * configuring its profile must still be able to generate a report.
+ */
+async function loadInstitutionBranding(schoolId) {
+  const doc = await admin
+    .firestore()
+    .collection("schools")
+    .doc(schoolId)
+    .collection("config")
+    .doc("institution_profile")
+    .get();
+  const data = doc.exists ? doc.data() : {};
+  const contactParts = [data.phone, data.email].filter(Boolean);
+  return {
+    schoolName: data.name || data.displayName || "",
+    schoolAddress: [data.address, data.city, data.district].filter(Boolean).join(", "),
+    schoolContacts: contactParts.join(" · "),
+    schoolLogoUrl: data.logoUrl || null,
+  };
+}
+
+/**
+ * Renders and previews a report card as a PDF without persisting anything
+ * official. Available to any authorized staff (Class Teacher of that class,
+ * Dean, Headteacher, or academic admin) at any workflow stage, always
+ * carrying the DRAFT/AWAITING-SIGNATURES watermark until the report is
+ * academically finalized - a client can never be shown a fake "official"
+ * PDF before the real signatures exist.
+ */
+exports.previewReportCardPdf = onCall(async (request) => {
+  const caller = await loadCallerProfile(request.auth);
+  const { reportCardId } = request.data || {};
+  if (!reportCardId) {
+    throw new HttpsError("invalid-argument", "reportCardId is required.");
+  }
+
+  const { data } = await loadReportCardForSchool(caller.schoolId, reportCardId);
+
+  const isAcademicStaff = caller.roles.some((role) =>
+    [...DEAN_ROLES, ...HEADTEACHER_ROLES, "classTeacher", "subjectTeacher"].includes(role)
+  );
+  if (!isAcademicStaff) {
+    throw new HttpsError("permission-denied", "You do not have permission to preview this report.");
+  }
+
+  const branding = await loadInstitutionBranding(caller.schoolId);
+  const pdf = await renderReportCardPdf({
+    ...data,
+    ...branding,
+    isDraftPreview: !data.isFinalized,
+    verificationUrl: data.verificationCode
+      ? reportCardVerificationUrl(data.verificationCode)
+      : reportCardVerificationUrl("preview-not-yet-issued"),
+  });
+
+  return { base64Pdf: pdf.toString("base64") };
+});
+
+/**
+ * Issues the official, immutable PDF for an academically finalized report.
+ * Idempotent: retrying after the PDF already exists returns the existing
+ * pdfUrl/verificationCode rather than re-rendering - a finalized report's
+ * official PDF is never regenerated in place. A correction must go through
+ * the (separate, not-yet-built) new-version workflow, which would carry its
+ * own reportCardId and therefore its own PDF.
+ */
+exports.generateReportCardPdf = onCall(async (request) => {
+  const caller = await loadCallerProfile(request.auth);
+  const { reportCardId } = request.data || {};
+  if (!reportCardId) {
+    throw new HttpsError("invalid-argument", "reportCardId is required.");
+  }
+
+  const isAcademicStaff = caller.roles.some((role) =>
+    [...DEAN_ROLES, ...HEADTEACHER_ROLES, "classTeacher"].includes(role)
+  );
+  if (!isAcademicStaff) {
+    throw new HttpsError("permission-denied", "You do not have permission to generate this report's PDF.");
+  }
+
+  const db = admin.firestore();
+  const ref = db.collection("schools").doc(caller.schoolId).collection("reportCards").doc(reportCardId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Report card not found.");
+  const data = snap.data();
+  if (data.schoolId !== caller.schoolId) {
+    throw new HttpsError("permission-denied", "This report does not belong to your school.");
+  }
+  if (!data.isFinalized) {
+    throw new HttpsError("failed-precondition", "Only an academically finalized report can have an official PDF.");
+  }
+
+  // Already issued for this exact version - never regenerate over it.
+  if (data.pdfUrl && data.pdfGeneratedVersion === data.version) {
+    return { pdfUrl: data.pdfUrl, verificationCode: data.verificationCode };
+  }
+
+  const verificationCode = data.verificationCode || randomBytes(18).toString("base64url");
+  const branding = await loadInstitutionBranding(caller.schoolId);
+  const verificationUrl = reportCardVerificationUrl(verificationCode);
+  const pdf = await renderReportCardPdf({ ...data, ...branding, isDraftPreview: false, verificationUrl });
+
+  const storagePath = `schools/${caller.schoolId}/reportCards/${reportCardId}/${data.version}.pdf`;
+  await admin.storage().bucket().file(storagePath).save(pdf, {
+    resumable: false,
+    contentType: "application/pdf",
+    metadata: { cacheControl: "private, max-age=0" },
+  });
+  const checksum = createHash("sha256").update(pdf).digest("hex");
+
+  // The verification lookup doc - public get() only via the verifyReportCard
+  // HTTP endpoint (Admin SDK; not subject to firestore.rules at all), and
+  // firestore.rules itself still denies list() and any client write on this
+  // subcollection - carries only safe fields, never marks/comments/fee data.
+  // `verificationCode` is stored as a field (in addition to being the doc
+  // id) purely so the endpoint can resolve it via a collectionGroup query
+  // without knowing which school the token belongs to in advance.
+  await db
+    .collection("schools")
+    .doc(caller.schoolId)
+    .collection("reportVerifications")
+    .doc(verificationCode)
+    .set({
+      verificationCode,
+      schoolId: caller.schoolId,
+      schoolNameSnapshot: branding.schoolName,
+      reportCardId,
+      studentDisplayName: (data.studentName || "").split(" ")[0] || "Student",
+      academicYearId: data.academicYearId,
+      termId: data.termId,
+      version: data.version,
+      isFinalized: true,
+      isCurrent: true,
+      checksum,
+      issuedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+  await ref.update({
+    pdfUrl: storagePath,
+    pdfGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+    pdfGeneratedVersion: data.version,
+    pdfChecksum: checksum,
+    verificationCode,
+  });
+
+  await writeAudit(caller.schoolId, {
+    userId: caller.uid,
+    action: "report_card.pdf_generated",
+    entityType: "reportCards",
+    entityId: reportCardId,
+    newValue: { version: data.version, verificationCode },
+  });
+
+  return { pdfUrl: storagePath, verificationCode };
+});
+
+/**
+ * Returns a short-lived signed download URL for an already-generated
+ * official PDF. Never streams the PDF through Storage rules directly (the
+ * bucket path has no client-readable rule at all - see storage.rules) so
+ * every download is gated by this function's own authorization check,
+ * mirroring the same permission model as the report itself.
+ */
+exports.getReportCardPdfDownloadUrl = onCall(async (request) => {
+  const caller = await loadCallerProfile(request.auth);
+  const { reportCardId } = request.data || {};
+  if (!reportCardId) {
+    throw new HttpsError("invalid-argument", "reportCardId is required.");
+  }
+
+  const { data } = await loadReportCardForSchool(caller.schoolId, reportCardId);
+  if (!data.pdfUrl) {
+    throw new HttpsError("failed-precondition", "This report's official PDF has not been generated yet.");
+  }
+
+  const isAcademicStaff = caller.roles.some((role) =>
+    [...DEAN_ROLES, ...HEADTEACHER_ROLES, "classTeacher", "subjectTeacher"].includes(role)
+  );
+
+  if (!isAcademicStaff) {
+    // Parent/Student path: require linked-student + released financial access.
+    if (!caller.roles.includes("parent") && !caller.roles.includes("student")) {
+      throw new HttpsError("permission-denied", "You do not have permission to download this report.");
+    }
+    if (data.financialAccessStatus !== "released") {
+      throw new HttpsError(
+        "permission-denied",
+        "Report not yet released. Please contact the school bursar's office for assistance."
+      );
+    }
+    const linked = await isUserLinkedToStudent(caller.uid, data.studentId, caller.schoolId);
+    if (!linked) {
+      throw new HttpsError("permission-denied", "You are not linked to this learner.");
+    }
+  }
+
+  const [url] = await admin
+    .storage()
+    .bucket()
+    .file(data.pdfUrl)
+    .getSignedUrl({ action: "read", expires: Date.now() + 5 * 60 * 1000 });
+
+  return { url, expiresInSeconds: 300 };
+});
+
+/** Confirms the authenticated caller (parent or student) is actually linked to this student, in this school. */
+async function isUserLinkedToStudent(uid, studentId, schoolId) {
+  const userDoc = await admin.firestore().collection("users").doc(uid).get();
+  const user = userDoc.exists ? userDoc.data() : {};
+  if (user.schoolId !== schoolId) return false;
+  if (Array.isArray(user.studentIds) && user.studentIds.includes(studentId)) return true;
+  // Student's own account: their uid resolves to their own studentId via a
+  // linked field on the user doc (the same convention student-login uses
+  // elsewhere in this codebase).
+  if (user.studentId === studentId) return true;
+  return false;
+}
+
+/**
+ * Bursar-controlled financial access. Held/Released/Revoked is entirely
+ * separate from academicStatus - this function never touches marks, grades,
+ * comments, signatures or any academic field, only financialAccessStatus and
+ * its own audit trail. Requires a reason for every action, individual or
+ * bulk, and only ever acts on academically finalized reports.
+ */
+exports.setReportCardFinancialAccess = onCall(async (request) => {
+  const caller = await loadCallerProfile(request.auth);
+  requireAnyRole(caller, BURSAR_ROLES, "Only the Bursar may control report release.");
+
+  const { reportCardIds, action, reason } = request.data || {};
+  if (!Array.isArray(reportCardIds) || reportCardIds.length === 0) {
+    throw new HttpsError("invalid-argument", "reportCardIds must be a non-empty array.");
+  }
+  if (!["release", "hold", "revoke"].includes(action)) {
+    throw new HttpsError("invalid-argument", "action must be one of release, hold, revoke.");
+  }
+  if (!reason || !reason.trim()) {
+    throw new HttpsError("invalid-argument", "A reason is required for every release-control action.");
+  }
+
+  const statusFor = { release: "released", hold: "held", revoke: "revoked" }[action];
+  const db = admin.firestore();
+  const succeeded = [];
+  const failed = [];
+
+  for (const reportCardId of reportCardIds) {
+    try {
+      const ref = db.collection("schools").doc(caller.schoolId).collection("reportCards").doc(reportCardId);
+      // eslint-disable-next-line no-await-in-loop
+      await db.runTransaction(async (tx) => {
+        const snap = await tx.get(ref);
+        if (!snap.exists) throw new HttpsError("not-found", `Report card ${reportCardId} was not found.`);
+        const data = snap.data();
+        if (data.schoolId !== caller.schoolId) {
+          throw new HttpsError("permission-denied", "This report does not belong to your school.");
+        }
+        if (!data.isFinalized) {
+          throw new HttpsError(
+            "failed-precondition",
+            "Only an academically finalized report may have its financial access changed."
+          );
+        }
+        tx.update(ref, {
+          financialAccessStatus: statusFor,
+          financialAccessUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          financialAccessUpdatedBy: caller.uid,
+          financialAccessReason: reason.trim(),
+        });
+        tx.set(ref.collection("auditLog").doc(), {
+          action: `financial_access.${action}`,
+          actorUid: caller.uid,
+          actorDisplayName: caller.displayName,
+          reason: reason.trim(),
+          reportVersion: data.version,
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+      succeeded.push(reportCardId);
+    } catch (err) {
+      failed.push({ reportCardId, reason: err.message || "unknown_error" });
+    }
+  }
+
+  await writeAudit(caller.schoolId, {
+    userId: caller.uid,
+    action: `report_card.financial_access.${action}`,
+    entityType: "reportCards",
+    entityId: reportCardIds.join(","),
+    newValue: { succeeded: succeeded.length, failed: failed.length, reason },
+  });
+
+  return { succeeded, failed };
+});
+
+/**
+ * Public, read-only report-card verification page. Never serves the PDF or
+ * any private field - only school identity, student first-name-only
+ * identity, academic period, version, finalization status, and whether the
+ * report is current or superseded. Mirrors
+ * public_functions/documents/verification_endpoint.js's pattern: GET-only,
+ * no-store, token-format pre-check before ever touching Firestore.
+ */
+exports.verifyReportCard = onRequest(async (req, res) => {
+  res.set("Cache-Control", "no-store, max-age=0");
+  if (req.method !== "GET") {
+    res.status(405).send("Method not allowed.");
+    return;
+  }
+  const token = String(req.query.token || "");
+  if (!/^[A-Za-z0-9_-]{16,80}$/.test(token)) {
+    res.status(400).send("Invalid verification token.");
+    return;
+  }
+
+  try {
+    // The token is stored as both the document id and a `verificationCode`
+    // field within each school's reportVerifications subcollection (see
+    // generateReportCardPdf) specifically so it can be resolved here via a
+    // collectionGroup query without knowing which school issued it in
+    // advance - a collectionGroup query cannot filter on a bare document id
+    // alone.
+    const tokenQuery = await admin
+      .firestore()
+      .collectionGroup("reportVerifications")
+      .where("verificationCode", "==", token)
+      .limit(1)
+      .get();
+
+    if (tokenQuery.empty) {
+      res.status(404).send(renderVerificationHtml({ found: false }));
+      return;
+    }
+
+    const data = tokenQuery.docs[0].data();
+    res.status(200).send(
+      renderVerificationHtml({
+        found: true,
+        schoolName: data.schoolNameSnapshot || "",
+        studentDisplayName: data.studentDisplayName || "Student",
+        academicYearId: data.academicYearId,
+        termId: data.termId,
+        version: data.version,
+        isFinalized: data.isFinalized,
+        isCurrent: data.isCurrent !== false,
+      })
+    );
+  } catch (err) {
+    console.error("verifyReportCard failed:", err);
+    res.status(503).send(
+      "Verification is temporarily unavailable. Please try again shortly."
+    );
+  }
+});
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+function renderVerificationHtml(result) {
+  if (!result.found) {
+    return `<!doctype html><html><head><meta charset="utf-8"><title>Verification</title></head>
+      <body style="font-family:sans-serif;text-align:center;padding:40px;">
+        <h2>Verification failed</h2>
+        <p>This verification code does not match a known report card.</p>
+      </body></html>`;
+  }
+  const statusLabel = !result.isFinalized
+    ? "Not yet academically finalized"
+    : result.isCurrent
+      ? "Current and authentic"
+      : "Superseded by a corrected version";
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Report Card Verification</title></head>
+    <body style="font-family:sans-serif;text-align:center;padding:40px;">
+      <h2>${escapeHtml(result.schoolName)}</h2>
+      <p><strong>${escapeHtml(result.studentDisplayName)}</strong></p>
+      <p>Academic Year ${escapeHtml(result.academicYearId)} · Term ${escapeHtml(result.termId)} · v${escapeHtml(result.version)}</p>
+      <p style="font-size:20px;font-weight:bold;color:${result.isFinalized && result.isCurrent ? "#16823A" : "#B42318"};">
+        ${escapeHtml(statusLabel)}
+      </p>
+    </body></html>`;
+}
 
 /**
  * Publishes report cards to parents.

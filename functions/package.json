@@ -10,13 +10,16 @@
     "test:report-card-engine": "node report_card_engine.test.js",
     "test:report-card-engine:emulator": "firebase emulators:exec --only firestore --project demo-report-card-engine-test \"node --test test/report_card_engine.emulator.test.cjs\"",
     "test:report-card-workflow:emulator": "firebase emulators:exec --only firestore --project demo-report-card-workflow-test \"node --test test/report_card_approval_workflow.emulator.test.cjs\"",
+    "test:report-card-bursar:emulator": "firebase emulators:exec --only firestore --project demo-report-card-bursar-test \"node --test test/report_card_bursar_release.emulator.test.cjs\"",
     "logs": "firebase functions:log",
     "deploy": "firebase deploy --only functions"
   },
   "dependencies": {
     "firebase-admin": "^12.7.0",
     "firebase-functions": "^5.1.1",
-    "googleapis": "^144.0.0"
+    "googleapis": "^144.0.0",
+    "pdfkit": "^0.19.1",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.1",

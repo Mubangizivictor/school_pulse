@@ -69,4 +69,28 @@ abstract class ClassReportRepository {
     required ActiveResponsibilityContext context,
     required List<String> reportCardIds,
   });
+
+  /// The canonical report-card snapshot for one report id - what the Class
+  /// Teacher's "View Report" action actually opens. Visible at every
+  /// workflow stage, unsigned reports included; the caller is responsible
+  /// for showing the right watermark/status, never for hiding the report.
+  Future<Either<Failure, CanonicalReportCard>> getReportCard({
+    required ActiveResponsibilityContext context,
+    required String reportCardId,
+  });
+
+  /// Requests a rendered PDF preview of the report at its current state -
+  /// carries the DRAFT/AWAITING-SIGNATURES watermark until the report is
+  /// academically finalized. Returns the PDF bytes directly rather than a
+  /// Storage URL, since an unsigned preview is never persisted as if it
+  /// were official.
+  Future<Either<Failure, List<int>>> previewReportCardPdf({
+    required String reportCardId,
+  });
+
+  /// Requests the official, immutable PDF's short-lived signed download URL
+  /// - only valid once the report is academically finalized.
+  Future<Either<Failure, String>> getOfficialReportCardPdfUrl({
+    required String reportCardId,
+  });
 }

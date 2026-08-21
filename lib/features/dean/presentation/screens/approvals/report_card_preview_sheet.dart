@@ -36,9 +36,7 @@ class ReportCardPreviewSheet extends StatelessWidget {
       builder: (context, scrollController) => Container(
         decoration: BoxDecoration(
           color: AppColors.surfaceElevated(context),
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(20),
-          ),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: ListView(
           controller: scrollController,
@@ -192,9 +190,7 @@ class _SubjectRow extends StatelessWidget {
                     '(${subject.grade ?? '-'})'
               : subject.incompleteReason ?? 'Incomplete',
           style: AppTypography.bodyMedium.copyWith(
-            color: subject.isComplete
-                ? null
-                : AppColors.warning(context),
+            color: subject.isComplete ? null : AppColors.warning(context),
           ),
         ),
       ],
@@ -305,9 +301,7 @@ class _Actions extends StatelessWidget {
         title: const Text('Return this report'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Reason (required)',
-          ),
+          decoration: const InputDecoration(labelText: 'Reason (required)'),
           maxLines: 3,
         ),
         actions: [
