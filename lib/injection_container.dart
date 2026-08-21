@@ -218,8 +218,12 @@ import 'package:school_pulse/features/catering/data/datasources/catering_local_d
 import 'package:school_pulse/features/dean/domain/repositories/dean_repository.dart';
 import 'package:school_pulse/features/dean/data/repositories/dean_repository_impl.dart';
 import 'package:school_pulse/features/dean/data/datasources/dean_remote_data_source.dart';
+import 'package:school_pulse/features/dean/data/datasources/dean_report_queue_remote_data_source.dart';
 import 'package:school_pulse/features/dean/domain/usecases/get_dean_stats.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
+import 'package:school_pulse/features/dean/presentation/bloc/report_queue/dean_report_queue_bloc.dart';
+import 'package:school_pulse/features/headteacher/data/datasources/headteacher_report_queue_remote_data_source.dart';
+import 'package:school_pulse/features/headteacher/presentation/bloc/headteacher_report_queue_bloc.dart';
 
 // Director
 import 'package:school_pulse/features/director/presentation/bloc/director_bloc.dart';
@@ -999,6 +1003,21 @@ Future<void> init() async {
     ),
   );
 
+  sl.registerFactory(
+    () => DeanReportQueueBloc(dataSource: sl()),
+  );
+  sl.registerLazySingleton(
+    () => DeanReportQueueRemoteDataSource(firestore: sl(), functions: sl()),
+  );
+
+  sl.registerFactory(
+    () => HeadteacherReportQueueBloc(dataSource: sl()),
+  );
+  sl.registerLazySingleton(
+    () =>
+        HeadteacherReportQueueRemoteDataSource(firestore: sl(), functions: sl()),
+  );
+
   // Director
   sl.registerFactory(() => DirectorBloc());
 
@@ -1599,6 +1618,7 @@ Future<void> init() async {
       assignmentService: sl(),
       auditService: sl(),
       networkInfo: sl(),
+      functions: sl(),
     ),
   );
 

@@ -758,6 +758,7 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       updatedAt: _toDate(data['updatedAt']),
       submittedAt: _toDate(data['submittedAt']),
       roleAssignmentId: data['roleAssignmentId'] as String? ?? '',
+      reportCardId: data['reportCardId'] as String?,
     );
   }
 

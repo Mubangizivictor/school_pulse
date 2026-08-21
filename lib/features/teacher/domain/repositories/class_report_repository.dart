@@ -3,6 +3,7 @@ import 'package:dartz/dartz.dart';
 import 'package:school_pulse/core/error/failures.dart';
 
 import '../entities/active_responsibility_context.dart';
+import '../entities/canonical_report_card.dart';
 import '../entities/class_report_entry.dart';
 
 /// The class teacher's part of the report card, and nothing else.
@@ -54,5 +55,18 @@ abstract class ClassReportRepository {
   Future<Either<Failure, int>> generateReports({
     required ActiveResponsibilityContext context,
     required List<ClassReportEntry> entries,
+  });
+
+  /// Submits one or more generated report cards to the Dean for review.
+  ///
+  /// This is the academic-submission step, distinct from [submitEntry]
+  /// (which only hands the class teacher's own sections to the academic
+  /// office pre-generation). The server re-validates readiness and the
+  /// current source hash for every report before moving it - a report that
+  /// has drifted stale is reported back as a per-item failure, never
+  /// silently skipped or force-submitted.
+  Future<Either<Failure, SubmitReportCardsResult>> submitReportCardsToDean({
+    required ActiveResponsibilityContext context,
+    required List<String> reportCardIds,
   });
 }

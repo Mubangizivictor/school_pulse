@@ -269,6 +269,132 @@ function rankByMetric(learnerMetrics, { descending = true } = {}) {
   return positions;
 }
 
+// ---------------------------------------------------------------------------
+// Academic approval workflow - Class Teacher review -> Dean signature ->
+// Headteacher signature -> academic finalization. This is a *submission*
+// workflow, not a publication one: nothing here ever exposes a report to a
+// Parent/Student. That only happens later, when the Bursar releases a
+// finalized report (a separate financial-access concern entirely).
+// ---------------------------------------------------------------------------
+
+/** The academic approval status a reportCards document carries. */
+const ACADEMIC_STATUS = Object.freeze({
+  DRAFT: "draft",
+  GENERATED: "generated",
+  CLASS_TEACHER_REVIEW: "classTeacherReview",
+  SUBMITTED_TO_DEAN: "submittedToDean",
+  RETURNED_BY_DEAN: "returnedByDean",
+  DEAN_SIGNED: "deanSigned",
+  SUBMITTED_TO_HEADTEACHER: "submittedToHeadteacher",
+  RETURNED_BY_HEADTEACHER: "returnedByHeadteacher",
+  ACADEMICALLY_FINALIZED: "academicallyFinalized",
+  SUPERSEDED: "superseded",
+});
+
+const ACADEMIC_STATUS_VALUES = new Set(Object.values(ACADEMIC_STATUS));
+
+/**
+ * The exact allowed transition graph. Anything not listed here is refused,
+ * whichever actor requests it - this is the single source of truth for
+ * "which statuses can move to which", so a caller cannot special-case its
+ * way around a missing edge.
+ */
+const ALLOWED_TRANSITIONS = Object.freeze({
+  [ACADEMIC_STATUS.GENERATED]: [ACADEMIC_STATUS.CLASS_TEACHER_REVIEW],
+  [ACADEMIC_STATUS.CLASS_TEACHER_REVIEW]: [ACADEMIC_STATUS.SUBMITTED_TO_DEAN],
+  [ACADEMIC_STATUS.RETURNED_BY_DEAN]: [ACADEMIC_STATUS.CLASS_TEACHER_REVIEW],
+  [ACADEMIC_STATUS.SUBMITTED_TO_DEAN]: [
+    ACADEMIC_STATUS.RETURNED_BY_DEAN,
+    ACADEMIC_STATUS.DEAN_SIGNED,
+  ],
+  [ACADEMIC_STATUS.DEAN_SIGNED]: [ACADEMIC_STATUS.SUBMITTED_TO_HEADTEACHER],
+  [ACADEMIC_STATUS.SUBMITTED_TO_HEADTEACHER]: [
+    ACADEMIC_STATUS.RETURNED_BY_HEADTEACHER,
+    ACADEMIC_STATUS.ACADEMICALLY_FINALIZED,
+  ],
+  // Where a Headteacher return lands depends on what actually changed - see
+  // resolveHeadteacherReturnTarget(). Both edges are legal from this status;
+  // which one applies is not a free choice by the caller.
+  [ACADEMIC_STATUS.RETURNED_BY_HEADTEACHER]: [
+    ACADEMIC_STATUS.CLASS_TEACHER_REVIEW,
+    ACADEMIC_STATUS.SUBMITTED_TO_DEAN,
+  ],
+  // A correction (new version) supersedes the original through a distinct
+  // path (startCorrectedReportVersion), never a generic transition on the
+  // finalized document itself.
+  [ACADEMIC_STATUS.ACADEMICALLY_FINALIZED]: [ACADEMIC_STATUS.SUPERSEDED],
+});
+
+function isValidTransition(fromStatus, toStatus) {
+  const allowed = ALLOWED_TRANSITIONS[fromStatus];
+  return Array.isArray(allowed) && allowed.includes(toStatus);
+}
+
+/**
+ * Whether a Headteacher return, which changed the signed snapshot, must
+ * send the report all the way back to the Class Teacher (marks/comments/
+ * calculated content changed) or only back to the Dean for re-review (only
+ * the Headteacher's own non-academic annotation changed, if the school's
+ * policy permits that distinction at all). Defaults safely: any ambiguity,
+ * or any change to academic content, sends it to the Class Teacher.
+ */
+function resolveHeadteacherReturnTarget({ academicContentChanged }) {
+  return academicContentChanged
+    ? ACADEMIC_STATUS.CLASS_TEACHER_REVIEW
+    : ACADEMIC_STATUS.SUBMITTED_TO_DEAN;
+}
+
+/**
+ * One append-only decision record. Every academic-workflow action produces
+ * exactly one of these, pushed onto `approvalHistory` - never rewritten,
+ * never deleted, and never reordered. The actor's display name and role are
+ * snapshotted at the moment of the decision so history reads correctly even
+ * if the person's name or role changes later.
+ */
+function buildApprovalHistoryEntry({
+  action,
+  actorUid,
+  actorRole,
+  actorDisplayName,
+  reason = null,
+  reportVersion,
+  sourceHashReviewed,
+  schoolId,
+  serverTimestamp,
+  signatureRef = null,
+}) {
+  return {
+    action,
+    actorUid,
+    actorRole,
+    actorDisplayName,
+    reason,
+    reportVersion,
+    sourceHashReviewed,
+    schoolId,
+    timestamp: serverTimestamp,
+    signatureRef,
+  };
+}
+
+/**
+ * Idempotency guard: refuses a decision that would duplicate the most
+ * recent history entry for the same actor+action+version - a double-click
+ * or a client retry after a dropped response must not create two decisions
+ * or fire two notifications. Only compares against the *last* entry, since
+ * a genuinely new decision (e.g. Dean signs v1, report is corrected to v2,
+ * Dean signs v2) must still be allowed.
+ */
+function isDuplicateDecision({ approvalHistory, action, actorUid, reportVersion }) {
+  if (!Array.isArray(approvalHistory) || approvalHistory.length === 0) return false;
+  const last = approvalHistory[approvalHistory.length - 1];
+  return (
+    last.action === action &&
+    last.actorUid === actorUid &&
+    last.reportVersion === reportVersion
+  );
+}
+
 module.exports = {
   SCHEMA_VERSION,
   REPORT_ENTRY_READY_STATUSES,
@@ -281,4 +407,11 @@ module.exports = {
   validateGradeBands,
   aggregateSubject,
   rankByMetric,
+  ACADEMIC_STATUS,
+  ACADEMIC_STATUS_VALUES,
+  ALLOWED_TRANSITIONS,
+  isValidTransition,
+  resolveHeadteacherReturnTarget,
+  buildApprovalHistoryEntry,
+  isDuplicateDecision,
 };

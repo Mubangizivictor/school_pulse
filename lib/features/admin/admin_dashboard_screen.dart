@@ -675,6 +675,17 @@ class _PendingApprovalsCard extends StatelessWidget {
                 actionLabel: count > 0 ? 'View all' : null,
                 onActionPressed: () => context.push('/staff/bursar'),
               ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.fact_check_outlined),
+                title: const Text('Report Card Approvals'),
+                subtitle: const Text(
+                  'Review and sign report cards submitted by the Dean',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () =>
+                    context.push('/staff/headteacher/report-approvals'),
+              ),
               if (loading)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: AppSpacing.s),

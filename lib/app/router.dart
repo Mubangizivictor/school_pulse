@@ -216,6 +216,7 @@ import 'package:school_pulse/features/transport/presentation/screens/transport_s
 import 'package:school_pulse/features/discipline/presentation/discipline_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/workload/teacher_workload_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/approvals/dean_approvals_screen.dart';
+import 'package:school_pulse/features/headteacher/presentation/screens/headteacher_report_queue_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/interventions/academic_interventions_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/analytics/performance_analytics_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/curriculum/curriculum_management_screen.dart';
@@ -1646,6 +1647,22 @@ final router = GoRouter(
               builder: (context, state) => const CommunicationScreen(),
             ),
           ],
+        ),
+        GoRoute(
+          path: '/staff/headteacher/report-approvals',
+          redirect: (context, state) {
+            final auth = context.read<AuthBloc>().state;
+            if (auth is! AuthAuthenticated) return '/welcome';
+            const permitted = {
+              UserRole.headTeacher,
+              UserRole.director,
+              UserRole.schoolAdmin,
+            };
+            return auth.user.roles.any(permitted.contains)
+                ? null
+                : UserRoleRouting.dashboardPath(auth.user.role);
+          },
+          builder: (context, state) => const HeadteacherReportQueueScreen(),
         ),
         GoRoute(
           path: '/staff/admin',

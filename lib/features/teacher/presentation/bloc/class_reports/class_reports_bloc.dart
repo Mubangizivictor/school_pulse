@@ -57,6 +57,18 @@ class ClassReportsFeedbackCleared extends ClassReportsEvent {
   const ClassReportsFeedbackCleared();
 }
 
+/// Submits one or more generated report cards to the Dean for academic
+/// review - the academic-submission step, not the financial-publication one
+/// (see the module docstring in functions/report_card_engine.js).
+class ClassReportCardsSubmittedToDean extends ClassReportsEvent {
+  final List<String> reportCardIds;
+
+  const ClassReportCardsSubmittedToDean(this.reportCardIds);
+
+  @override
+  List<Object?> get props => [reportCardIds];
+}
+
 class ClassReportsState extends Equatable {
   final bool isLoading;
   final bool isSaving;
@@ -112,6 +124,19 @@ class ClassReportsState extends Equatable {
     return ClassReportPolicy.missingSections(entry: entry, profile: p);
   }
 
+  /// Entries with a generated canonical report card that has not yet been
+  /// submitted to the Dean - the set the "Submit to Dean" action operates
+  /// on. A generated-but-not-yet-`classTeacherCompleted` entry is excluded:
+  /// generation only produces the snapshot, submission is a distinct,
+  /// deliberate step the teacher takes after reviewing it.
+  List<ClassReportEntry> get submittableToDean => entries
+      .where(
+        (e) =>
+            e.reportCardId != null &&
+            e.status == ReportEntryStatus.classTeacherCompleted,
+      )
+      .toList();
+
   ClassReportsState copyWith({
     bool? isLoading,
     bool? isSaving,
@@ -160,6 +185,7 @@ class ClassReportsBloc extends Bloc<ClassReportsEvent, ClassReportsState> {
     on<ClassReportEntrySaved>(_onSaved);
     on<ClassReportEntrySubmitted>(_onSubmitted);
     on<ClassReportsGenerated>(_onGenerated);
+    on<ClassReportCardsSubmittedToDean>(_onSubmittedToDean);
     on<ClassReportsFeedbackCleared>(_onFeedbackCleared);
   }
 
@@ -297,6 +323,44 @@ class ClassReportsBloc extends Bloc<ClassReportsEvent, ClassReportsState> {
           clearError: true,
         ),
       ),
+    );
+    add(ClassReportsRequested(context));
+  }
+
+  Future<void> _onSubmittedToDean(
+    ClassReportCardsSubmittedToDean event,
+    Emitter<ClassReportsState> emit,
+  ) async {
+    final context = state.context;
+    if (context == null) return;
+
+    emit(state.copyWith(isSaving: true, clearError: true, clearSuccess: true));
+
+    final result = await reportRepository.submitReportCardsToDean(
+      context: context,
+      reportCardIds: event.reportCardIds,
+    );
+
+    result.fold(
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (outcome) {
+        final submittedCount = outcome.submitted.length;
+        final failedCount = outcome.failed.length;
+        final message = failedCount == 0
+            ? '$submittedCount report${submittedCount == 1 ? '' : 's'} '
+                  'submitted to the Dean.'
+            : '$submittedCount submitted, $failedCount could not be '
+                  'submitted right now.';
+        emit(
+          state.copyWith(
+            isSaving: false,
+            successMessage: message,
+            clearError: true,
+          ),
+        );
+      },
     );
     add(ClassReportsRequested(context));
   }

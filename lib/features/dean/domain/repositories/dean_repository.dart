@@ -8,7 +8,6 @@ import '../entities/academic_intervention.dart';
 import '../entities/class_observation.dart';
 import '../entities/homework_record.dart';
 import '../entities/assessment_moderation.dart';
-import '../entities/report_card_approval.dart';
 import '../entities/today_operations.dart';
 
 abstract class DeanRepository {
@@ -56,14 +55,6 @@ abstract class DeanRepository {
     required String assessmentId,
     required String reason,
   });
-
-  // Report Card Approval
-  Future<Either<Failure, void>> approveReportCards(List<String> reportCardIds);
-  Future<Either<Failure, void>> rejectReportCards(
-    List<String> reportCardIds,
-    String reason,
-  );
-  Future<Either<Failure, List<ReportCardApproval>>> getPendingReportApprovals();
 
   // Performance Analytics
   Future<Either<Failure, Map<String, dynamic>>> getPerformanceAnalytics({

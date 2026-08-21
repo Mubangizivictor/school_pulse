@@ -342,6 +342,18 @@ class Permission {
   static const classReportShare = 'class.report.share';
   static const classReportExport = 'class.report.export';
 
+  /// Dean-of-Studies-stage report-card review: return with a reason, or
+  /// sign and forward to the Headteacher. Distinct from [classReportSubmit]
+  /// - a Class Teacher submits their own class's reports, a Dean acts on
+  /// any report reaching their queue.
+  static const classReportApproveDean = 'class.report.approve.dean';
+
+  /// Headteacher-stage report-card review: return with a reason, or sign to
+  /// academically finalize. The terminal academic decision - never confused
+  /// with financial release, which is the Bursar's separate concern.
+  static const classReportApproveHeadteacher =
+      'class.report.approve.headteacher';
+
   static const classTaskManage = 'class.task.manage';
   static const classTaskCollaborate = 'class.task.collaborate';
 

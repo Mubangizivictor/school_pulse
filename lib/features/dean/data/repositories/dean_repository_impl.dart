@@ -9,7 +9,6 @@ import '../../domain/entities/lesson_tracking.dart';
 import '../../domain/entities/teacher_workload.dart';
 import '../../domain/entities/homework_record.dart';
 import '../../domain/entities/assessment_moderation.dart';
-import '../../domain/entities/report_card_approval.dart';
 import '../../domain/entities/today_operations.dart';
 import '../../domain/repositories/dean_repository.dart';
 import '../datasources/dean_remote_data_source.dart';
@@ -130,31 +129,6 @@ class DeanRepositoryImpl implements DeanRepository {
         reason: reason,
       ),
     );
-  }
-
-  @override
-  Future<Either<Failure, void>> approveReportCards(
-    List<String> reportCardIds,
-  ) async {
-    return _callRemote(
-      () => remoteDataSource.approveReportCards(reportCardIds),
-    );
-  }
-
-  @override
-  Future<Either<Failure, void>> rejectReportCards(
-    List<String> reportCardIds,
-    String reason,
-  ) async {
-    return _callRemote(
-      () => remoteDataSource.rejectReportCards(reportCardIds, reason),
-    );
-  }
-
-  @override
-  Future<Either<Failure, List<ReportCardApproval>>>
-  getPendingReportApprovals() async {
-    return _callRemote(() => remoteDataSource.getPendingReportApprovals());
   }
 
   @override

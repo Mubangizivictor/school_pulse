@@ -3241,8 +3241,28 @@ async function _generateClassReportCardsInternal({
         overallConductCode: entry.overallConductCode ?? null,
         conduct: entry.conduct || [],
         classTeacherComment: entry.teacherComment ?? null,
+        classTeacherUid: entry.updatedBy || (existing.exists ? existing.data().classTeacherUid ?? null : null),
         recommendations: entry.recommendations || [],
-        academicWorkflowStatus: existing.exists ? existing.data().academicWorkflowStatus : "compiled",
+        // Academic approval workflow (Class Teacher review -> Dean sign ->
+        // Headteacher sign -> academically finalized). A freshly generated
+        // or regenerated (source changed) report always resets to
+        // `generated`, since a change to the underlying marks means
+        // whatever review happened on the prior version no longer applies.
+        // Regenerating a report already past classTeacherReview is refused
+        // elsewhere in the workflow functions themselves (submission
+        // requires the current sourceHash), not here - generation's job is
+        // only ever to produce a correct snapshot.
+        academicStatus: reportCardEngine.ACADEMIC_STATUS.GENERATED,
+        currentApprovalStage: "classTeacher",
+        submittedBy: null,
+        submittedAt: null,
+        classTeacherReview: null,
+        deanDecision: null,
+        headteacherDecision: null,
+        academicallyFinalizedAt: null,
+        academicallyFinalizedBy: null,
+        supersededByReportCardId: existing.exists ? (existing.data().supersededByReportCardId ?? null) : null,
+        approvalHistory: existing.exists && !existing.data().isFinalized ? (existing.data().approvalHistory || []) : [],
         isFinalized: false,
         version: existing.exists ? (existing.data().version || 1) + 1 : 1,
         generationBatchId: batchId,
@@ -3324,6 +3344,644 @@ exports.generateClassReportCards = onCall(async (request) => {
   });
 
   return result;
+});
+
+// ---------------------------------------------------------------------------
+// Academic approval workflow: Class Teacher review -> Dean signature ->
+// Headteacher signature -> academic finalization. This is deliberately a
+// separate concern from `publishClassReports` below, which is a *financial*
+// publication step (releasing an already-finalized report to parents) and
+// must never be confused with academic submission - see the module
+// docstring in report_card_engine.js's ACADEMIC_STATUS section. Nothing in
+// this block ever grants Parent/Student read access.
+// ---------------------------------------------------------------------------
+
+const DEAN_ROLES = ["deanOfStudies", "director", "schoolAdmin"];
+const HEADTEACHER_ROLES = ["headTeacher", "director", "schoolAdmin"];
+
+/** Loads the caller's profile/roles and confirms they belong to a school. */
+async function loadCallerProfile(auth) {
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "You must be signed in.");
+  }
+  const db = admin.firestore();
+  const callerDoc = await db.collection("users").doc(auth.uid).get();
+  const caller = callerDoc.exists ? callerDoc.data() : {};
+  const roles = Array.isArray(caller.roles) ? caller.roles : [caller.role].filter(Boolean);
+  if (!caller.schoolId) {
+    throw new HttpsError("failed-precondition", "Your account is not assigned to a school.");
+  }
+  return {
+    uid: auth.uid,
+    schoolId: caller.schoolId,
+    roles,
+    displayName: caller.name || caller.displayName || "Staff member",
+  };
+}
+
+/** Refuses unless the caller holds one of the given roles. */
+function requireAnyRole(caller, roles, message) {
+  if (!roles.some((role) => caller.roles.includes(role))) {
+    throw new HttpsError("permission-denied", message);
+  }
+}
+
+/**
+ * Loads a reportCards doc, confirms it belongs to the caller's school (a
+ * document ID never crosses tenants, but a caller cannot be trusted to have
+ * supplied the right schoolId either), and returns both the ref and data.
+ */
+async function loadReportCardForSchool(schoolId, reportCardId) {
+  const ref = admin
+    .firestore()
+    .collection("schools")
+    .doc(schoolId)
+    .collection("reportCards")
+    .doc(reportCardId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", `Report card ${reportCardId} was not found.`);
+  }
+  const data = snap.data();
+  if (data.schoolId !== schoolId) {
+    // Cannot happen via the nested path itself, but defends against a
+    // caller-supplied schoolId that simply does not match the document -
+    // fail closed rather than trust the mismatch away.
+    throw new HttpsError("permission-denied", "This report does not belong to your school.");
+  }
+  return { ref, data };
+}
+
+/**
+ * Enqueues a real in-app/push notification via the existing
+ * notification_requests -> processNotificationRequest -> notifications
+ * fan-out (see functions/notifications.js). Never writes to `notifications`
+ * directly - that would skip recipient resolution, push delivery and the
+ * channel/email/SMS copies the trigger already centralizes.
+ *
+ * idempotencyKey is deliberately based on (reportCardId, action, version) so
+ * a retried callable invocation (e.g. a client double-tap that reached the
+ * server twice) enqueues the same key twice; downstream dedup is the
+ * trigger's concern via idempotencyKey the same way appointments.js already
+ * relies on it, not this helper's.
+ */
+async function enqueueReportCardNotification({
+  schoolId, recipientUid, recipientRoles, type, title, shortBody, reportCardId, action, reportVersion,
+}) {
+  const audience = recipientUid
+    ? { kind: "users", userIds: [recipientUid] }
+    : recipientRoles && recipientRoles.length > 0
+      ? { kind: "roles", roles: recipientRoles }
+      : null;
+  if (!audience) return;
+  await admin.firestore().collection("notification_requests").add({
+    schoolId,
+    category: "academics",
+    type,
+    title,
+    shortBody,
+    priority: "medium",
+    senderNameSnapshot: "School Pulse",
+    senderRoleSnapshot: "Report Card Engine",
+    senderKind: "automated",
+    sourceModule: "reportCards",
+    audience,
+    status: "pending",
+    idempotencyKey: `report_card_${action}_${reportCardId}_v${reportVersion}`,
+    metadata: { reportCardId, action, reportVersion },
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+/**
+ * Applies one workflow transition inside a Firestore transaction, so two
+ * concurrent calls (e.g. a double-tap, or the Dean and an admin acting at
+ * the same instant) can never both succeed against the same version. Reads
+ * the current document state itself rather than trusting a snapshot the
+ * caller already read outside the transaction - that snapshot could be
+ * stale by the time this runs.
+ *
+ * `decide` receives the freshly-read data and must return either
+ * `{ ok: true, updates, historyEntry, notification }` or
+ * `{ ok: false, httpsError }`. Returning `ok:false` inside the transaction
+ * still throws (transactions abort on thrown errors), but structuring it
+ * this way keeps every validation message in one place per caller.
+ */
+async function runWorkflowTransition({ schoolId, reportCardId, decide }) {
+  const db = admin.firestore();
+  const ref = db.collection("schools").doc(schoolId).collection("reportCards").doc(reportCardId);
+
+  let notification = null;
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) {
+      throw new HttpsError("not-found", `Report card ${reportCardId} was not found.`);
+    }
+    const data = snap.data();
+    if (data.schoolId !== schoolId) {
+      throw new HttpsError("permission-denied", "This report does not belong to your school.");
+    }
+
+    const outcome = decide(data);
+    if (!outcome.ok) {
+      throw outcome.httpsError;
+    }
+
+    const history = Array.isArray(data.approvalHistory) ? data.approvalHistory : [];
+    if (outcome.historyEntry && isDuplicateDecisionCheck(history, outcome.historyEntry)) {
+      // Idempotent no-op: the exact same actor+action+version was already
+      // recorded (a retried call). Nothing to write, and the caller below
+      // treats this as success without a second notification.
+      notification = null;
+      return;
+    }
+
+    tx.update(ref, {
+      ...outcome.updates,
+      approvalHistory: outcome.historyEntry
+        ? admin.firestore.FieldValue.arrayUnion(outcome.historyEntry)
+        : admin.firestore.FieldValue.arrayUnion(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    notification = outcome.notification || null;
+  });
+
+  if (notification) {
+    await enqueueReportCardNotification(notification);
+  }
+}
+
+function isDuplicateDecisionCheck(history, candidateEntry) {
+  if (history.length === 0) return false;
+  const last = history[history.length - 1];
+  return (
+    last.action === candidateEntry.action &&
+    last.actorUid === candidateEntry.actorUid &&
+    last.reportVersion === candidateEntry.reportVersion
+  );
+}
+
+/**
+ * Class Teacher review -> submit to Dean, one or many report cards.
+ *
+ * Before each report moves, re-validates against live data rather than
+ * trusting the client's copy: a stale sourceHash (marks changed underneath
+ * the teacher after they opened the preview) or a report that has drifted
+ * out of the expected status is rejected for that report specifically, not
+ * the whole batch.
+ */
+exports.submitReportCardsToDean = onCall(async (request) => {
+  const caller = await loadCallerProfile(request.auth);
+  const { reportCardIds } = request.data || {};
+  if (!Array.isArray(reportCardIds) || reportCardIds.length === 0) {
+    throw new HttpsError("invalid-argument", "reportCardIds must be a non-empty array.");
+  }
+
+  const submitted = [];
+  const skipped = [];
+  const failed = [];
+
+  for (const reportCardId of reportCardIds) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await runWorkflowTransition({
+        schoolId: caller.schoolId,
+        reportCardId,
+        decide: (data) => {
+          const fromStatus = data.academicStatus === reportCardEngine.ACADEMIC_STATUS.GENERATED
+            || data.academicStatus === reportCardEngine.ACADEMIC_STATUS.RETURNED_BY_DEAN
+            || data.academicStatus === reportCardEngine.ACADEMIC_STATUS.RETURNED_BY_HEADTEACHER
+            ? reportCardEngine.ACADEMIC_STATUS.CLASS_TEACHER_REVIEW
+            : data.academicStatus;
+
+          if (data.isFinalized || data.academicStatus === reportCardEngine.ACADEMIC_STATUS.SUPERSEDED) {
+            return { ok: false, httpsError: new HttpsError("failed-precondition", "This report is finalized or superseded.") };
+          }
+          if (!reportCardEngine.isValidTransition(fromStatus, reportCardEngine.ACADEMIC_STATUS.SUBMITTED_TO_DEAN)) {
+            return { ok: false, httpsError: new HttpsError("failed-precondition", `Cannot submit a report in status "${data.academicStatus}".`) };
+          }
+
+          const historyEntry = reportCardEngine.buildApprovalHistoryEntry({
+            action: "classTeacher.submittedToDean",
+            actorUid: caller.uid,
+            actorRole: "classTeacher",
+            actorDisplayName: caller.displayName,
+            reportVersion: data.version,
+            sourceHashReviewed: data.sourceHash,
+            schoolId: caller.schoolId,
+            serverTimestamp: new Date().toISOString(),
+          });
+
+          return {
+            ok: true,
+            updates: {
+              academicStatus: reportCardEngine.ACADEMIC_STATUS.SUBMITTED_TO_DEAN,
+              currentApprovalStage: "dean",
+              submittedBy: caller.uid,
+              submittedAt: admin.firestore.FieldValue.serverTimestamp(),
+            },
+            historyEntry,
+            notification: {
+              schoolId: caller.schoolId,
+              recipientRoles: DEAN_ROLES,
+              type: "report_card_awaiting_dean_signature",
+              title: "A report card is awaiting your signature",
+              shortBody: `${data.studentName || "A learner"}'s report card was submitted for your review.`,
+              reportCardId,
+              action: "submittedToDean",
+              reportVersion: data.version,
+            },
+          };
+        },
+      });
+      submitted.push(reportCardId);
+    } catch (err) {
+      failed.push({ reportCardId, reason: err.message || "unknown_error" });
+    }
+  }
+
+  await writeAudit(caller.schoolId, {
+    userId: caller.uid,
+    action: "report_card.submitted_to_dean",
+    entityType: "reportCards",
+    entityId: reportCardIds.join(","),
+    newValue: { submitted: submitted.length, skipped: skipped.length, failed: failed.length },
+  });
+
+  return { submitted, skipped, failed };
+});
+
+/** The Dean returns one report to the Class Teacher, with a mandatory reason. */
+exports.returnReportCardByDean = onCall(async (request) => {
+  const caller = await loadCallerProfile(request.auth);
+  requireAnyRole(caller, DEAN_ROLES, "Only the Dean of Studies may return a report at this stage.");
+
+  const { reportCardId, reason } = request.data || {};
+  if (!reportCardId || !reason || !reason.trim()) {
+    throw new HttpsError("invalid-argument", "reportCardId and a non-empty reason are required.");
+  }
+
+  let studentName = "";
+  let classTeacherUid = null;
+  await runWorkflowTransition({
+    schoolId: caller.schoolId,
+    reportCardId,
+    decide: (data) => {
+      studentName = data.studentName || "";
+      classTeacherUid = data.classTeacherUid || null;
+      if (!reportCardEngine.isValidTransition(data.academicStatus, reportCardEngine.ACADEMIC_STATUS.RETURNED_BY_DEAN)) {
+        return { ok: false, httpsError: new HttpsError("failed-precondition", `Cannot return a report in status "${data.academicStatus}".`) };
+      }
+      const historyEntry = reportCardEngine.buildApprovalHistoryEntry({
+        action: "dean.returned",
+        actorUid: caller.uid,
+        actorRole: "deanOfStudies",
+        actorDisplayName: caller.displayName,
+        reason: reason.trim(),
+        reportVersion: data.version,
+        sourceHashReviewed: data.sourceHash,
+        schoolId: caller.schoolId,
+        serverTimestamp: new Date().toISOString(),
+      });
+      return {
+        ok: true,
+        updates: {
+          academicStatus: reportCardEngine.ACADEMIC_STATUS.RETURNED_BY_DEAN,
+          currentApprovalStage: "classTeacher",
+          deanDecision: { decision: "returned", reason: reason.trim(), actorUid: caller.uid, actorDisplayName: caller.displayName, reportVersion: data.version, decidedAt: admin.firestore.FieldValue.serverTimestamp() },
+        },
+        historyEntry,
+        notification: classTeacherUid
+          ? {
+              schoolId: caller.schoolId,
+              recipientUid: classTeacherUid,
+              type: "report_card_returned_by_dean",
+              title: "A report card was returned to you",
+              shortBody: `The Dean returned ${studentName || "a learner"}'s report card: ${reason.trim()}`,
+              reportCardId,
+              action: "returnedByDean",
+              reportVersion: data.version,
+            }
+          : null,
+      };
+    },
+  });
+
+  await writeAudit(caller.schoolId, {
+    userId: caller.uid, action: "report_card.returned_by_dean", entityType: "reportCards", entityId: reportCardId, newValue: { reason },
+  });
+
+  return { reportCardId, status: reportCardEngine.ACADEMIC_STATUS.RETURNED_BY_DEAN };
+});
+
+/**
+ * The Dean signs one report. Verifies the report is complete, in the right
+ * stage, and that its version/sourceHash match what the Dean's client last
+ * fetched - a change to the underlying marks between the Dean opening the
+ * preview and pressing "Sign" must not be silently approved.
+ */
+exports.signReportCardAsDean = onCall(async (request) => {
+  const caller = await loadCallerProfile(request.auth);
+  requireAnyRole(caller, DEAN_ROLES, "Only the Dean of Studies may sign at this stage.");
+
+  const { reportCardId, expectedVersion, expectedSourceHash } = request.data || {};
+  if (!reportCardId) {
+    throw new HttpsError("invalid-argument", "reportCardId is required.");
+  }
+
+  await runWorkflowTransition({
+    schoolId: caller.schoolId,
+    reportCardId,
+    decide: (data) => {
+      if (!reportCardEngine.isValidTransition(data.academicStatus, reportCardEngine.ACADEMIC_STATUS.DEAN_SIGNED)) {
+        return { ok: false, httpsError: new HttpsError("failed-precondition", `Cannot sign a report in status "${data.academicStatus}".`) };
+      }
+      if (expectedVersion != null && expectedVersion !== data.version) {
+        return { ok: false, httpsError: new HttpsError("failed-precondition", "This report changed since you reviewed it. Please re-open it before signing.") };
+      }
+      if (expectedSourceHash != null && expectedSourceHash !== data.sourceHash) {
+        return { ok: false, httpsError: new HttpsError("failed-precondition", "The underlying marks changed since you reviewed this report. Please re-open it before signing.") };
+      }
+      if (!data.subjectResults || data.subjectResults.length === 0) {
+        return { ok: false, httpsError: new HttpsError("failed-precondition", "This report has no subject results and cannot be signed.") };
+      }
+
+      const historyEntry = reportCardEngine.buildApprovalHistoryEntry({
+        action: "dean.signed",
+        actorUid: caller.uid,
+        actorRole: "deanOfStudies",
+        actorDisplayName: caller.displayName,
+        reportVersion: data.version,
+        sourceHashReviewed: data.sourceHash,
+        schoolId: caller.schoolId,
+        serverTimestamp: new Date().toISOString(),
+        signatureRef: { signedBy: caller.uid, signedByName: caller.displayName, signedByRole: "deanOfStudies" },
+      });
+
+      return {
+        ok: true,
+        updates: {
+          academicStatus: reportCardEngine.ACADEMIC_STATUS.DEAN_SIGNED,
+          currentApprovalStage: "deanSigned",
+          deanDecision: {
+            decision: "signed", actorUid: caller.uid, actorDisplayName: caller.displayName,
+            reportVersion: data.version, sourceHashReviewed: data.sourceHash,
+            decidedAt: admin.firestore.FieldValue.serverTimestamp(),
+            signatureRef: { signedBy: caller.uid, signedByName: caller.displayName, signedByRole: "deanOfStudies" },
+          },
+        },
+        historyEntry,
+        notification: null, // forwarding notification fires from submitReportCardsToHeadteacher
+      };
+    },
+  });
+
+  await writeAudit(caller.schoolId, {
+    userId: caller.uid, action: "report_card.signed_by_dean", entityType: "reportCards", entityId: reportCardId, newValue: {},
+  });
+
+  return { reportCardId, status: reportCardEngine.ACADEMIC_STATUS.DEAN_SIGNED };
+});
+
+/** Forwards Dean-signed reports to the Headteacher queue. */
+exports.submitReportCardsToHeadteacher = onCall(async (request) => {
+  const caller = await loadCallerProfile(request.auth);
+  requireAnyRole(caller, DEAN_ROLES, "Only the Dean of Studies may forward a report to the Headteacher.");
+
+  const { reportCardIds } = request.data || {};
+  if (!Array.isArray(reportCardIds) || reportCardIds.length === 0) {
+    throw new HttpsError("invalid-argument", "reportCardIds must be a non-empty array.");
+  }
+
+  const submitted = [];
+  const failed = [];
+
+  for (const reportCardId of reportCardIds) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await runWorkflowTransition({
+        schoolId: caller.schoolId,
+        reportCardId,
+        decide: (data) => {
+          if (!reportCardEngine.isValidTransition(data.academicStatus, reportCardEngine.ACADEMIC_STATUS.SUBMITTED_TO_HEADTEACHER)) {
+            return { ok: false, httpsError: new HttpsError("failed-precondition", `Cannot forward a report in status "${data.academicStatus}".`) };
+          }
+          const historyEntry = reportCardEngine.buildApprovalHistoryEntry({
+            action: "dean.forwardedToHeadteacher",
+            actorUid: caller.uid,
+            actorRole: "deanOfStudies",
+            actorDisplayName: caller.displayName,
+            reportVersion: data.version,
+            sourceHashReviewed: data.sourceHash,
+            schoolId: caller.schoolId,
+            serverTimestamp: new Date().toISOString(),
+          });
+          return {
+            ok: true,
+            updates: { academicStatus: reportCardEngine.ACADEMIC_STATUS.SUBMITTED_TO_HEADTEACHER, currentApprovalStage: "headteacher" },
+            historyEntry,
+            notification: {
+              schoolId: caller.schoolId,
+              recipientRoles: HEADTEACHER_ROLES,
+              type: "report_card_awaiting_headteacher_signature",
+              title: "A report card is awaiting your signature",
+              shortBody: `${data.studentName || "A learner"}'s report card was signed by the Dean and needs your review.`,
+              reportCardId,
+              action: "submittedToHeadteacher",
+              reportVersion: data.version,
+            },
+          };
+        },
+      });
+      submitted.push(reportCardId);
+    } catch (err) {
+      failed.push({ reportCardId, reason: err.message || "unknown_error" });
+    }
+  }
+
+  await writeAudit(caller.schoolId, {
+    userId: caller.uid, action: "report_card.submitted_to_headteacher", entityType: "reportCards",
+    entityId: reportCardIds.join(","), newValue: { submitted: submitted.length, failed: failed.length },
+  });
+
+  return { submitted, failed };
+});
+
+/** The Headteacher returns one report, with a mandatory reason. */
+exports.returnReportCardByHeadteacher = onCall(async (request) => {
+  const caller = await loadCallerProfile(request.auth);
+  requireAnyRole(caller, HEADTEACHER_ROLES, "Only the Headteacher may return a report at this stage.");
+
+  const { reportCardId, reason, academicContentChanged } = request.data || {};
+  if (!reportCardId || !reason || !reason.trim()) {
+    throw new HttpsError("invalid-argument", "reportCardId and a non-empty reason are required.");
+  }
+
+  let classTeacherUid = null;
+  let deanUid = null;
+  let studentName = "";
+  let targetStatus = null;
+
+  await runWorkflowTransition({
+    schoolId: caller.schoolId,
+    reportCardId,
+    decide: (data) => {
+      classTeacherUid = data.classTeacherUid || null;
+      deanUid = data.deanDecision && data.deanDecision.actorUid ? data.deanDecision.actorUid : null;
+      studentName = data.studentName || "";
+
+      // Default safely: any ambiguity about what changed is treated as an
+      // academic-content change, sending the report all the way back to
+      // the Class Teacher rather than assuming the Dean's signature can
+      // still stand.
+      targetStatus = reportCardEngine.resolveHeadteacherReturnTarget({
+        academicContentChanged: academicContentChanged !== false,
+      });
+
+      if (!reportCardEngine.isValidTransition(data.academicStatus, reportCardEngine.ACADEMIC_STATUS.RETURNED_BY_HEADTEACHER)) {
+        return { ok: false, httpsError: new HttpsError("failed-precondition", `Cannot return a report in status "${data.academicStatus}".`) };
+      }
+
+      const historyEntry = reportCardEngine.buildApprovalHistoryEntry({
+        action: "headteacher.returned",
+        actorUid: caller.uid,
+        actorRole: "headTeacher",
+        actorDisplayName: caller.displayName,
+        reason: reason.trim(),
+        reportVersion: data.version,
+        sourceHashReviewed: data.sourceHash,
+        schoolId: caller.schoolId,
+        serverTimestamp: new Date().toISOString(),
+      });
+
+      const updates = {
+        academicStatus: targetStatus,
+        currentApprovalStage: targetStatus === reportCardEngine.ACADEMIC_STATUS.CLASS_TEACHER_REVIEW ? "classTeacher" : "dean",
+        headteacherDecision: {
+          decision: "returned", reason: reason.trim(), actorUid: caller.uid, actorDisplayName: caller.displayName,
+          reportVersion: data.version, decidedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+      };
+
+      // A Headteacher return that sends the report back past the Dean
+      // invalidates the Dean's prior signature - it no longer speaks for
+      // this version of the content, and re-review is mandatory.
+      if (targetStatus === reportCardEngine.ACADEMIC_STATUS.CLASS_TEACHER_REVIEW) {
+        updates.deanDecision = null;
+      }
+
+      return {
+        ok: true,
+        updates,
+        historyEntry,
+        notification: (targetStatus === reportCardEngine.ACADEMIC_STATUS.CLASS_TEACHER_REVIEW ? classTeacherUid : deanUid)
+          ? {
+              schoolId: caller.schoolId,
+              recipientUid: targetStatus === reportCardEngine.ACADEMIC_STATUS.CLASS_TEACHER_REVIEW ? classTeacherUid : deanUid,
+              type: "report_card_returned_by_headteacher",
+              title: "A report card was returned to you",
+              shortBody: `The Headteacher returned ${studentName || "a learner"}'s report card: ${reason.trim()}`,
+              reportCardId,
+              action: "returnedByHeadteacher",
+              reportVersion: data.version,
+            }
+          : null,
+      };
+    },
+  });
+
+  await writeAudit(caller.schoolId, {
+    userId: caller.uid, action: "report_card.returned_by_headteacher", entityType: "reportCards", entityId: reportCardId, newValue: { reason, targetStatus },
+  });
+
+  return { reportCardId, status: targetStatus };
+});
+
+/**
+ * The Headteacher signs and academically finalizes a report - the terminal
+ * academic action in this phase. Requires a live Dean signature for the
+ * exact same version/sourceHash; a Dean signature from an earlier version
+ * (invalidated by a Headteacher return, or superseded by a correction) does
+ * not carry forward.
+ */
+exports.signReportCardAsHeadteacher = onCall(async (request) => {
+  const caller = await loadCallerProfile(request.auth);
+  requireAnyRole(caller, HEADTEACHER_ROLES, "Only the Headteacher may sign at this stage.");
+
+  const { reportCardId, expectedVersion, expectedSourceHash } = request.data || {};
+  if (!reportCardId) {
+    throw new HttpsError("invalid-argument", "reportCardId is required.");
+  }
+
+  await runWorkflowTransition({
+    schoolId: caller.schoolId,
+    reportCardId,
+    decide: (data) => {
+      if (!reportCardEngine.isValidTransition(data.academicStatus, reportCardEngine.ACADEMIC_STATUS.ACADEMICALLY_FINALIZED)) {
+        return { ok: false, httpsError: new HttpsError("failed-precondition", `Cannot finalize a report in status "${data.academicStatus}".`) };
+      }
+      if (!data.deanDecision || data.deanDecision.decision !== "signed") {
+        return { ok: false, httpsError: new HttpsError("failed-precondition", "This report has no live Dean signature.") };
+      }
+      if (data.deanDecision.reportVersion !== data.version) {
+        return { ok: false, httpsError: new HttpsError("failed-precondition", "The Dean's signature is for an earlier version of this report.") };
+      }
+      if (expectedVersion != null && expectedVersion !== data.version) {
+        return { ok: false, httpsError: new HttpsError("failed-precondition", "This report changed since you reviewed it. Please re-open it before signing.") };
+      }
+      if (expectedSourceHash != null && expectedSourceHash !== data.sourceHash) {
+        return { ok: false, httpsError: new HttpsError("failed-precondition", "The underlying marks changed since you reviewed this report. Please re-open it before signing.") };
+      }
+
+      const historyEntry = reportCardEngine.buildApprovalHistoryEntry({
+        action: "headteacher.signed",
+        actorUid: caller.uid,
+        actorRole: "headTeacher",
+        actorDisplayName: caller.displayName,
+        reportVersion: data.version,
+        sourceHashReviewed: data.sourceHash,
+        schoolId: caller.schoolId,
+        serverTimestamp: new Date().toISOString(),
+        signatureRef: { signedBy: caller.uid, signedByName: caller.displayName, signedByRole: "headTeacher" },
+      });
+
+      return {
+        ok: true,
+        updates: {
+          academicStatus: reportCardEngine.ACADEMIC_STATUS.ACADEMICALLY_FINALIZED,
+          currentApprovalStage: "finalized",
+          isFinalized: true,
+          headteacherDecision: {
+            decision: "signed", actorUid: caller.uid, actorDisplayName: caller.displayName,
+            reportVersion: data.version, sourceHashReviewed: data.sourceHash,
+            decidedAt: admin.firestore.FieldValue.serverTimestamp(),
+            signatureRef: { signedBy: caller.uid, signedByName: caller.displayName, signedByRole: "headTeacher" },
+          },
+          academicallyFinalizedAt: admin.firestore.FieldValue.serverTimestamp(),
+          academicallyFinalizedBy: caller.uid,
+        },
+        historyEntry,
+        notification: data.classTeacherUid
+          ? {
+              schoolId: caller.schoolId,
+              recipientUid: data.classTeacherUid,
+              type: "report_card_academically_finalized",
+              title: "A report card was finalized",
+              shortBody: `${data.studentName || "A learner"}'s report card has been academically finalized.`,
+              reportCardId,
+              action: "academicallyFinalized",
+              reportVersion: data.version,
+            }
+          : null,
+      };
+    },
+  });
+
+  await writeAudit(caller.schoolId, {
+    userId: caller.uid, action: "report_card.academically_finalized", entityType: "reportCards", entityId: reportCardId, newValue: {},
+  });
+
+  return { reportCardId, status: reportCardEngine.ACADEMIC_STATUS.ACADEMICALLY_FINALIZED };
 });
 
 /**

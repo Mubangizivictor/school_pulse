@@ -8,6 +8,11 @@ const {
   validateGradeBands,
   aggregateSubject,
   rankByMetric,
+  ACADEMIC_STATUS,
+  isValidTransition,
+  resolveHeadteacherReturnTarget,
+  buildApprovalHistoryEntry,
+  isDuplicateDecision,
 } = require("./report_card_engine");
 
 let passed = 0;
@@ -298,6 +303,116 @@ test("changing the grading system version changes the hash even if marks are unc
     classEntry: null,
   });
   assert.notEqual(h1, h2);
+});
+
+console.log("\nisValidTransition() - the academic approval state machine");
+
+const validEdges = [
+  [ACADEMIC_STATUS.GENERATED, ACADEMIC_STATUS.CLASS_TEACHER_REVIEW],
+  [ACADEMIC_STATUS.CLASS_TEACHER_REVIEW, ACADEMIC_STATUS.SUBMITTED_TO_DEAN],
+  [ACADEMIC_STATUS.RETURNED_BY_DEAN, ACADEMIC_STATUS.CLASS_TEACHER_REVIEW],
+  [ACADEMIC_STATUS.SUBMITTED_TO_DEAN, ACADEMIC_STATUS.RETURNED_BY_DEAN],
+  [ACADEMIC_STATUS.SUBMITTED_TO_DEAN, ACADEMIC_STATUS.DEAN_SIGNED],
+  [ACADEMIC_STATUS.DEAN_SIGNED, ACADEMIC_STATUS.SUBMITTED_TO_HEADTEACHER],
+  [ACADEMIC_STATUS.SUBMITTED_TO_HEADTEACHER, ACADEMIC_STATUS.RETURNED_BY_HEADTEACHER],
+  [ACADEMIC_STATUS.SUBMITTED_TO_HEADTEACHER, ACADEMIC_STATUS.ACADEMICALLY_FINALIZED],
+  [ACADEMIC_STATUS.RETURNED_BY_HEADTEACHER, ACADEMIC_STATUS.CLASS_TEACHER_REVIEW],
+  [ACADEMIC_STATUS.RETURNED_BY_HEADTEACHER, ACADEMIC_STATUS.SUBMITTED_TO_DEAN],
+  [ACADEMIC_STATUS.ACADEMICALLY_FINALIZED, ACADEMIC_STATUS.SUPERSEDED],
+];
+for (const [from, to] of validEdges) {
+  test(`${from} -> ${to} is a valid transition`, () => {
+    assert.equal(isValidTransition(from, to), true);
+  });
+}
+
+const invalidEdges = [
+  // Skipping stages entirely.
+  [ACADEMIC_STATUS.GENERATED, ACADEMIC_STATUS.SUBMITTED_TO_DEAN],
+  [ACADEMIC_STATUS.CLASS_TEACHER_REVIEW, ACADEMIC_STATUS.DEAN_SIGNED],
+  [ACADEMIC_STATUS.SUBMITTED_TO_DEAN, ACADEMIC_STATUS.SUBMITTED_TO_HEADTEACHER],
+  [ACADEMIC_STATUS.DEAN_SIGNED, ACADEMIC_STATUS.ACADEMICALLY_FINALIZED],
+  // Going backwards past where a return would land.
+  [ACADEMIC_STATUS.DEAN_SIGNED, ACADEMIC_STATUS.CLASS_TEACHER_REVIEW],
+  [ACADEMIC_STATUS.ACADEMICALLY_FINALIZED, ACADEMIC_STATUS.CLASS_TEACHER_REVIEW],
+  // Mutating a finalized or superseded report directly.
+  [ACADEMIC_STATUS.ACADEMICALLY_FINALIZED, ACADEMIC_STATUS.GENERATED],
+  [ACADEMIC_STATUS.SUPERSEDED, ACADEMIC_STATUS.CLASS_TEACHER_REVIEW],
+  [ACADEMIC_STATUS.SUPERSEDED, ACADEMIC_STATUS.ACADEMICALLY_FINALIZED],
+  // A no-op "transition" to the same status is not a transition.
+  [ACADEMIC_STATUS.SUBMITTED_TO_DEAN, ACADEMIC_STATUS.SUBMITTED_TO_DEAN],
+];
+for (const [from, to] of invalidEdges) {
+  test(`${from} -> ${to} is rejected`, () => {
+    assert.equal(isValidTransition(from, to), false);
+  });
+}
+
+console.log("\nresolveHeadteacherReturnTarget()");
+
+test("academic content changed sends the report all the way back to the Class Teacher", () => {
+  assert.equal(
+    resolveHeadteacherReturnTarget({ academicContentChanged: true }),
+    ACADEMIC_STATUS.CLASS_TEACHER_REVIEW
+  );
+});
+
+test("only non-academic content changed sends the report back to the Dean only", () => {
+  assert.equal(
+    resolveHeadteacherReturnTarget({ academicContentChanged: false }),
+    ACADEMIC_STATUS.SUBMITTED_TO_DEAN
+  );
+});
+
+console.log("\nisDuplicateDecision() - idempotency guard");
+
+test("an empty history is never a duplicate", () => {
+  assert.equal(
+    isDuplicateDecision({ approvalHistory: [], action: "dean.signed", actorUid: "deanA", reportVersion: 1 }),
+    false
+  );
+});
+
+test("the exact same actor+action+version repeated is a duplicate", () => {
+  const history = [
+    buildApprovalHistoryEntry({
+      action: "dean.signed", actorUid: "deanA", actorRole: "deanOfStudies",
+      actorDisplayName: "Dean A", reportVersion: 1, sourceHashReviewed: "abc",
+      schoolId: "schoolA", serverTimestamp: null,
+    }),
+  ];
+  assert.equal(
+    isDuplicateDecision({ approvalHistory: history, action: "dean.signed", actorUid: "deanA", reportVersion: 1 }),
+    true
+  );
+});
+
+test("the same action on a new version after a correction is not a duplicate", () => {
+  const history = [
+    buildApprovalHistoryEntry({
+      action: "dean.signed", actorUid: "deanA", actorRole: "deanOfStudies",
+      actorDisplayName: "Dean A", reportVersion: 1, sourceHashReviewed: "abc",
+      schoolId: "schoolA", serverTimestamp: null,
+    }),
+  ];
+  assert.equal(
+    isDuplicateDecision({ approvalHistory: history, action: "dean.signed", actorUid: "deanA", reportVersion: 2 }),
+    false
+  );
+});
+
+test("a different actor performing the same action is not a duplicate", () => {
+  const history = [
+    buildApprovalHistoryEntry({
+      action: "headteacher.returned", actorUid: "htA", actorRole: "headTeacher",
+      actorDisplayName: "HT A", reportVersion: 1, sourceHashReviewed: "abc",
+      schoolId: "schoolA", serverTimestamp: null,
+    }),
+  ];
+  assert.equal(
+    isDuplicateDecision({ approvalHistory: history, action: "headteacher.returned", actorUid: "htB", reportVersion: 1 }),
+    false
+  );
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

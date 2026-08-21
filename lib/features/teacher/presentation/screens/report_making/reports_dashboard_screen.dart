@@ -160,6 +160,16 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
                             const ClassReportsGenerated(),
                           ),
                         ),
+                        if (state.submittableToDean.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          _SubmitToDeanButton(
+                            count: state.submittableToDean.length,
+                            onPressed: () => _confirmSubmitToDean(
+                              context,
+                              state.submittableToDean,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -181,6 +191,47 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
           entry.studentId.toLowerCase().contains(query);
       return matchesSearch && (_status == null || entry.status == _status);
     }).toList();
+  }
+
+  Future<void> _confirmSubmitToDean(
+    BuildContext context,
+    List<ClassReportEntry> submittable,
+  ) async {
+    final bloc = context.read<ClassReportsBloc>();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Submit to the Dean?'),
+        content: Text(
+          submittable.length == 1
+              ? "${submittable.first.studentName}'s report card will be "
+                    'sent to the Dean of Studies for review. You will '
+                    "not be able to edit it while it's under review."
+              : '${submittable.length} report cards will be sent to the '
+                    'Dean of Studies for review. You will not be able to '
+                    "edit them while they're under review.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    bloc.add(
+      ClassReportCardsSubmittedToDean(
+        submittable
+            .map((e) => e.reportCardId)
+            .whereType<String>()
+            .toList(),
+      ),
+    );
   }
 
   void _showFilters() {
@@ -717,6 +768,24 @@ class _CreateButton extends StatelessWidget {
       onPressed: enabled ? onPressed : null,
       icon: const Icon(Icons.add, size: 27),
       label: const Text('Create New Report for Class'),
+    ),
+  );
+}
+
+class _SubmitToDeanButton extends StatelessWidget {
+  const _SubmitToDeanButton({required this.count, required this.onPressed});
+  final int count;
+  final VoidCallback onPressed;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: double.infinity,
+    height: 52,
+    child: OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: const Icon(Icons.send_outlined, size: 22),
+      label: Text(
+        'Submit $count report${count == 1 ? '' : 's'} to the Dean',
+      ),
     ),
   );
 }

@@ -192,6 +192,12 @@ class ClassReportEntry extends Equatable {
   final DateTime? submittedAt;
   final String roleAssignmentId;
 
+  /// The canonical schools/{schoolId}/reportCards document the Report Card
+  /// Engine wrote for this student/term, once generated. Null until the
+  /// class teacher's "Compile"/"Create New Report" action has actually run
+  /// for this entry.
+  final String? reportCardId;
+
   const ClassReportEntry({
     required this.id,
     required this.schoolId,
@@ -214,6 +220,7 @@ class ClassReportEntry extends Equatable {
     this.updatedAt,
     this.submittedAt,
     this.roleAssignmentId = '',
+    this.reportCardId,
   });
 
   bool get isEditable => status.isTeacherEditable;
@@ -248,6 +255,7 @@ class ClassReportEntry extends Equatable {
     DateTime? updatedAt,
     DateTime? submittedAt,
     String? roleAssignmentId,
+    String? reportCardId,
   }) {
     return ClassReportEntry(
       id: id,
@@ -271,6 +279,7 @@ class ClassReportEntry extends Equatable {
       updatedAt: updatedAt ?? this.updatedAt,
       submittedAt: submittedAt ?? this.submittedAt,
       roleAssignmentId: roleAssignmentId ?? this.roleAssignmentId,
+      reportCardId: reportCardId ?? this.reportCardId,
     );
   }
 
@@ -297,6 +306,7 @@ class ClassReportEntry extends Equatable {
     updatedAt,
     submittedAt,
     roleAssignmentId,
+    reportCardId,
   ];
 }
 
