@@ -11,6 +11,7 @@ import 'package:school_pulse/features/teacher/presentation/bloc/class_announceme
 import 'package:school_pulse/features/teacher/presentation/bloc/class_students/class_students_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/widgets/tab_button.dart';
+import 'package:school_pulse/features/teacher/presentation/widgets/teacher_student_detail_ui.dart';
 
 /// Per-student contact permission check plus the class announcements this
 /// student has received. There is no per-student conversation API yet - a
@@ -50,20 +51,7 @@ class _TeacherStudentCommunicationsScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Communications',
-          style: AppTypography.headlineSmall.copyWith(
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-      ),
+      appBar: const TeacherStudentDetailAppBar(title: 'Communications'),
       body: Column(
         children: [
           _buildTabs(isDark),

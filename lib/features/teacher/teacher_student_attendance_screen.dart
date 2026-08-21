@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/teacher/domain/entities/class_attendance.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_history_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/widgets/teacher_student_detail_ui.dart';
 
 class TeacherStudentAttendanceScreen extends StatefulWidget {
   final String studentId;
@@ -36,20 +36,7 @@ class _TeacherStudentAttendanceScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Attendance',
-          style: AppTypography.headlineSmall.copyWith(
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-      ),
+      appBar: const TeacherStudentDetailAppBar(title: 'Attendance'),
       body:
           BlocBuilder<ClassAttendanceHistoryBloc, ClassAttendanceHistoryState>(
             builder: (context, state) {

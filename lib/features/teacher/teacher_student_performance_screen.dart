@@ -9,6 +9,7 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 
 import 'presentation/bloc/class_performance/class_performance_bloc.dart';
 import 'presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
+import 'presentation/widgets/teacher_student_detail_ui.dart';
 
 class TeacherStudentPerformanceScreen extends StatefulWidget {
   final String studentId;
@@ -36,20 +37,7 @@ class _TeacherStudentPerformanceScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Performance',
-          style: AppTypography.headlineSmall.copyWith(
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-      ),
+      appBar: const TeacherStudentDetailAppBar(title: 'Performance'),
       body: BlocBuilder<ClassPerformanceBloc, ClassPerformanceState>(
         builder: (context, state) {
           if (state.isLoading) {
