@@ -264,6 +264,52 @@ async function seedStudents() {
   return students;
 }
 
+/// Primary 6 has no students from seedStudents (one per class, P1-P5 only) -
+/// give the dual-role demo Class Teacher assignment a real roster instead of
+/// an empty class.
+async function seedPrimary6Students() {
+  const students = [
+    { id: 'demo-p6-s1', name: 'Nabirye Patience', gender: 'female' },
+    { id: 'demo-p6-s2', name: 'Kirabo Daniel', gender: 'male' },
+    { id: 'demo-p6-s3', name: 'Achen Faith', gender: 'female' },
+  ];
+
+  for (let i = 0; i < students.length; i++) {
+    const s = students[i];
+    const studentCode = `KHA/2026/D${String(i + 6).padStart(3, '0')}`;
+    await db.collection('students').doc(s.id).set({
+      id: s.id,
+      schoolId: SCHOOL_ID,
+      name: s.name,
+      className: 'Primary 6',
+      classId: 'Primary 6',
+      studentId: studentCode,
+      studentCode: studentCode,
+      admissionNumber: studentCode,
+      gender: s.gender,
+      dateOfBirth: admin.firestore.Timestamp.fromDate(new Date(2013, 0, 1)),
+      academicYearId: ACADEMIC_YEAR_ID,
+      status: 'active',
+      level: 'primary',
+      isBoarder: false,
+      residency: 'day',
+      hasHealthAlert: false,
+    });
+
+    const uniqueSystemId = `SP-${s.id}`;
+    await db.collection('student_identities').doc(s.id).set({
+      studentId: s.id,
+      uniqueSystemId,
+      schoolStudentId: studentCode,
+      qrCodeData: uniqueSystemId,
+      nfcStatus: 'unassigned',
+    });
+  }
+
+  console.log('Seeded 3 Primary 6 students + identities');
+  return students;
+}
+
 async function seedParents(students) {
   const byId = Object.fromEntries(students.map((s) => [s.id, s]));
   const parents = [
@@ -370,12 +416,16 @@ async function seedSubjectTeacher() {
   const userRecord = await getOrCreateAuthUser(email, name);
   const uid = userRecord.uid;
 
+  // Dual-role demo: same account is also Class Teacher of Primary 6 (see
+  // seedClassTeacherRoleForSubjectTeacher below), so both app-level roles
+  // must be present here for the role switcher / router to reach either
+  // panel without a second account.
   await db.collection('users').doc(uid).set({
     id: uid,
     name,
     email,
     role: 'subjectTeacher',
-    roles: ['subjectTeacher'],
+    roles: ['subjectTeacher', 'classTeacher'],
     schoolId: SCHOOL_ID,
     isActive: true,
     mustChangePassword: false,
@@ -385,7 +435,7 @@ async function seedSubjectTeacher() {
   await db.collection('school_contacts').doc(uid).set({
     name,
     role: 'subjectTeacher',
-    roles: ['subjectTeacher'],
+    roles: ['subjectTeacher', 'classTeacher'],
     schoolId: SCHOOL_ID,
     isActive: true,
   }, { merge: true });
@@ -481,6 +531,87 @@ async function seedSubjectTeacher() {
     });
 
   console.log(`Seeded subject teacher: ${email} (${subjectName} - ${className})`);
+  return uid;
+}
+
+/// Second responsibility for the same subject@gmail.com account: Class
+/// Teacher of Primary 6. Exercises the multi-role principle end-to-end - one
+/// account, one staff profile, two staff_role_assignments - and gives the
+/// role switcher something real to switch between.
+async function seedClassTeacherRoleForSubjectTeacher(uid, p6Students) {
+  const className = 'Primary 6';
+  const classId = classSlug(className);
+  const assignmentId = `demo-class-teacher-${classId}`;
+
+  await db
+    .collection('schools')
+    .doc(SCHOOL_ID)
+    .collection('staff_role_assignments')
+    .doc(assignmentId)
+    .set({
+      schoolId: SCHOOL_ID,
+      campusId: 'main',
+      staffId: uid,
+      userId: uid,
+      roleType: 'classTeacher',
+      academicYearId: ACADEMIC_YEAR_ID,
+      subjectId: null,
+      subjectName: null,
+      classId: className,
+      className,
+      startDate: admin.firestore.Timestamp.fromDate(new Date(2026, 1, 1)),
+      endDate: null,
+      status: 'active',
+      permissionScope: {
+        permissions: CLASS_TEACHER_PERMISSIONS,
+        subjectId: null,
+        classId: className,
+        academicYearId: ACADEMIC_YEAR_ID,
+        termIds: ['2026-t1', '2026-t2', '2026-t3'],
+      },
+      assignedBy: 'seed_primary_demo_node',
+      assignedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+  // A class task and a homework entry so the Primary 6 dashboard/More tabs
+  // show real activity instead of every tile being an empty state.
+  await db
+    .collection('schools')
+    .doc(SCHOOL_ID)
+    .collection('class_tasks')
+    .doc('demo-p6-task-1')
+    .set({
+      schoolId: SCHOOL_ID,
+      classId: className,
+      academicYearId: ACADEMIC_YEAR_ID,
+      title: 'Prepare Term 2 progress reports',
+      description: 'Draft comments for all Primary 6 students ahead of the parents meeting.',
+      status: 'pending',
+      ownerUserId: uid,
+      collaboratorUserIds: [],
+      dueDate: admin.firestore.Timestamp.fromDate(new Date(2026, 5, 10)),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+  await db
+    .collection('schools')
+    .doc(SCHOOL_ID)
+    .collection('class_homework')
+    .doc('demo-p6-homework-1')
+    .set({
+      schoolId: SCHOOL_ID,
+      classId: className,
+      academicYearId: ACADEMIC_YEAR_ID,
+      title: 'Reading comprehension - Chapter 4',
+      description: 'Read chapter 4 and answer the questions on page 32.',
+      status: 'published',
+      roleAssignmentId: assignmentId,
+      assignedByUserId: uid,
+      dueDate: admin.firestore.Timestamp.fromDate(new Date(2026, 4, 30)),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+  console.log(`Added Class Teacher role for subject@gmail.com (${className}), ${p6Students.length} students`);
 }
 
 async function main() {
@@ -491,8 +622,13 @@ async function main() {
   const students = await seedStudents();
   await seedParents(students);
   await seedTeachers();
-  await seedSubjectTeacher();
-  console.log('Done: structure, 5 students, 3 parents, 5 class teachers, 1 subject teacher seeded.');
+  const subjectTeacherUid = await seedSubjectTeacher();
+  const p6Students = await seedPrimary6Students();
+  await seedClassTeacherRoleForSubjectTeacher(subjectTeacherUid, p6Students);
+  console.log(
+    'Done: structure, 8 students, 3 parents, 5 class teachers, ' +
+    '1 dual-role subject+class teacher (Mathematics/P1 + Class Teacher/P6) seeded.'
+  );
 }
 
 main().catch((e) => {
