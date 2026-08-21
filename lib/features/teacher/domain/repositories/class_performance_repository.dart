@@ -22,4 +22,13 @@ abstract class ClassPerformanceRepository {
     required ActiveResponsibilityContext context,
     AttentionThresholds? thresholds,
   });
+
+  /// One student's individual assessment results in one subject, newest
+  /// first - the drill-down behind a subject tile on the Assessments screen.
+  Future<Either<Failure, List<StudentAssessmentResult>>>
+  getStudentAssessmentResults({
+    required ActiveResponsibilityContext context,
+    required String studentId,
+    required String subjectId,
+  });
 }

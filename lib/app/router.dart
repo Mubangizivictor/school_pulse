@@ -315,6 +315,9 @@ import 'package:school_pulse/features/teacher/teacher_student_more_options_scree
 import 'package:school_pulse/features/teacher/teacher_student_health_info_screen.dart';
 import 'package:school_pulse/features/teacher/teacher_student_leave_applications_screen.dart';
 import 'package:school_pulse/features/teacher/teacher_student_communications_screen.dart';
+import 'package:school_pulse/features/teacher/teacher_student_documents_screen.dart';
+import 'package:school_pulse/features/teacher/teacher_student_sibling_info_screen.dart';
+import 'package:school_pulse/features/teacher/teacher_student_notes_screen.dart';
 import 'package:school_pulse/features/teacher/teacher_classes_list_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/classes/class_details_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/classes/class_students_list_screen.dart';
@@ -936,6 +939,7 @@ final router = GoRouter(
                   path: 'assessments',
                   builder: (context, state) => TeacherStudentAssessmentsScreen(
                     studentId: state.pathParameters['id']!,
+                    initialSubjectId: state.uri.queryParameters['subjectId'],
                   ),
                 ),
                 GoRoute(
@@ -969,6 +973,24 @@ final router = GoRouter(
                       TeacherStudentCommunicationsScreen(
                         studentId: state.pathParameters['id']!,
                       ),
+                ),
+                GoRoute(
+                  path: 'documents',
+                  builder: (context, state) => TeacherStudentDocumentsScreen(
+                    studentId: state.pathParameters['id']!,
+                  ),
+                ),
+                GoRoute(
+                  path: 'siblings',
+                  builder: (context, state) => TeacherStudentSiblingInfoScreen(
+                    studentId: state.pathParameters['id']!,
+                  ),
+                ),
+                GoRoute(
+                  path: 'notes',
+                  builder: (context, state) => TeacherStudentNotesScreen(
+                    studentId: state.pathParameters['id']!,
+                  ),
                 ),
               ],
             ),
@@ -1057,8 +1079,10 @@ final router = GoRouter(
                 studentId: state.pathParameters['studentId']!,
               ),
             ),
-            // Old wizard deep links deliberately return to the real queue.
-            // The wizard used sample classes, students and PDF content.
+            // Catches any stale deep link into the old 12-screen report
+            // wizard, since removed - it used sample classes, students and
+            // PDF content and duplicated what ClassReportDetailScreen above
+            // already does against real data.
             GoRoute(
               path: ':legacy',
               redirect: (context, state) => '/staff/reports',

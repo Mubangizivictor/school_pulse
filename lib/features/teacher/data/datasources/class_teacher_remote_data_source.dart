@@ -5,6 +5,7 @@ import '../../domain/entities/class_attendance.dart';
 import '../../domain/entities/class_behaviour.dart';
 import '../../domain/entities/class_dashboard_summary.dart';
 import '../../domain/entities/class_homework.dart';
+import '../../domain/entities/class_performance.dart';
 import '../../domain/entities/class_report_entry.dart';
 import '../../domain/entities/class_task.dart';
 import '../../domain/entities/class_student_summary.dart';
@@ -96,6 +97,17 @@ abstract class ClassTeacherRemoteDataSource {
     required String academicYearId,
     required String termId,
     String? streamId,
+  });
+
+  /// One student's individual approved marks in one subject - the rows
+  /// [getApprovedClassMarks] collapses into a subject average, resolved
+  /// against the assessment each mark belongs to for its display name.
+  Future<List<StudentAssessmentResult>> getStudentAssessmentResults({
+    required String schoolId,
+    required String studentId,
+    required String subjectId,
+    required String academicYearId,
+    required String termId,
   });
 
   /// Announcements posted to this class, newest first.
@@ -260,6 +272,9 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
 
   CollectionReference<Map<String, dynamic>> _announcements(String schoolId) =>
       _school(schoolId).collection('class_announcements');
+
+  CollectionReference<Map<String, dynamic>> _assessments(String schoolId) =>
+      _school(schoolId).collection('subject_assessments');
 
   Query<Map<String, dynamic>> _rosterQuery({
     required String schoolId,
@@ -733,6 +748,76 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
     }
 
     return rows;
+  }
+
+  @override
+  Future<List<StudentAssessmentResult>> getStudentAssessmentResults({
+    required String schoolId,
+    required String studentId,
+    required String subjectId,
+    required String academicYearId,
+    required String termId,
+  }) async {
+    final snapshot = await _school(schoolId)
+        .collection('student_marks')
+        .where('studentId', isEqualTo: studentId)
+        .where('subjectId', isEqualTo: subjectId)
+        .where('academicYearId', isEqualTo: academicYearId)
+        .where('termId', isEqualTo: termId)
+        .where('markStatus', isEqualTo: 'approved')
+        .get();
+
+    if (snapshot.docs.isEmpty) return const [];
+
+    // Assessment titles/dates live on the parent assessment, not the mark -
+    // resolved by id rather than duplicated onto every mark document.
+    final assessmentIds = snapshot.docs
+        .map((d) => d.data()['assessmentId'] as String? ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    final assessmentDocs = await Future.wait(
+      assessmentIds.map((id) => _assessments(schoolId).doc(id).get()),
+    );
+    final assessmentById = {
+      for (final doc in assessmentDocs)
+        if (doc.exists) doc.id: doc.data()!,
+    };
+
+    final results = <StudentAssessmentResult>[];
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final score = (data['score'] as num?)?.toDouble();
+      final maximumMark = (data['maximumMark'] as num?)?.toDouble();
+      if (score == null || maximumMark == null) continue;
+
+      final assessmentId = data['assessmentId'] as String? ?? '';
+      final assessment = assessmentById[assessmentId];
+
+      results.add(
+        StudentAssessmentResult(
+          assessmentId: assessmentId,
+          componentId: data['componentId'] as String? ?? '',
+          assessmentTitle: assessment?['title'] as String? ?? '',
+          componentName:
+              assessment?['assessmentTypeName'] as String? ??
+              data['componentId'] as String? ??
+              '',
+          score: score,
+          maximumMark: maximumMark,
+          assessmentDate: _toDate(assessment?['assessmentDate']),
+        ),
+      );
+    }
+
+    results.sort((a, b) {
+      final aDate = a.assessmentDate;
+      final bDate = b.assessmentDate;
+      if (aDate == null || bDate == null) return 0;
+      return bDate.compareTo(aDate);
+    });
+
+    return results;
   }
 
   @override
