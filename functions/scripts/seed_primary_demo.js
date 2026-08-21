@@ -60,6 +60,36 @@ const CLASS_TEACHER_PERMISSIONS = [
   'class.timetable.view',
 ];
 
+// Scoped Subject Teacher capabilities - Mathematics/Primary 1 only, per the
+// active_responsibility_context.can(...) checks in SubjectResourceRepository
+// and the equivalent subject-scoped repositories. Deliberately excludes
+// every class.* permission: this account must not be able to reach Class
+// Teacher-only capabilities (final reports, competencies, conduct).
+const SUBJECT_TEACHER_PERMISSIONS = [
+  'subject.students.view',
+  'subject.student.historical.view',
+  'subject.lesson.view',
+  'subject.lesson.start',
+  'subject.lesson.complete',
+  'subject.attendance.take',
+  'subject.attendance.edit',
+  'subject.lesson_note.create',
+  'subject.lesson_note.edit',
+  'subject.resource.upload',
+  'subject.resource.share',
+  'subject.assessment.create',
+  'subject.marks.view',
+  'subject.marks.enter',
+  'subject.marks.edit',
+  'subject.marks.submit',
+  'subject.report.view',
+  'subject.report.generate',
+  'subject.analytics.view',
+  'subject.parent.message',
+  'subject.student.message',
+  'subject.timetable.view',
+];
+
 const classSlug = (name) => name.toLowerCase().replace(/ /g, '-');
 const subjectSlug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
@@ -329,6 +359,130 @@ async function seedTeachers() {
   }
 }
 
+async function seedSubjectTeacher() {
+  const email = 'subject@gmail.com';
+  const name = 'Ms. Achieng Patricia';
+  const subjectName = 'Mathematics';
+  const subjectId = subjectSlug(subjectName);
+  const className = 'Primary 1';
+  const classId = classSlug(className);
+
+  const userRecord = await getOrCreateAuthUser(email, name);
+  const uid = userRecord.uid;
+
+  await db.collection('users').doc(uid).set({
+    id: uid,
+    name,
+    email,
+    role: 'subjectTeacher',
+    roles: ['subjectTeacher'],
+    schoolId: SCHOOL_ID,
+    isActive: true,
+    mustChangePassword: false,
+    studentIds: [],
+  }, { merge: true });
+
+  await db.collection('school_contacts').doc(uid).set({
+    name,
+    role: 'subjectTeacher',
+    roles: ['subjectTeacher'],
+    schoolId: SCHOOL_ID,
+    isActive: true,
+  }, { merge: true });
+
+  const assignmentId = `demo-subject-teacher-${subjectId}-${classId}`;
+  await db
+    .collection('schools')
+    .doc(SCHOOL_ID)
+    .collection('staff_role_assignments')
+    .doc(assignmentId)
+    .set({
+      schoolId: SCHOOL_ID,
+      campusId: 'main',
+      staffId: uid,
+      userId: uid,
+      roleType: 'subjectTeacher',
+      academicYearId: ACADEMIC_YEAR_ID,
+      subjectId,
+      subjectName,
+      classId: className,
+      className,
+      startDate: admin.firestore.Timestamp.fromDate(new Date(2026, 1, 1)),
+      endDate: null,
+      status: 'active',
+      permissionScope: {
+        permissions: SUBJECT_TEACHER_PERMISSIONS,
+        subjectId,
+        classId: className,
+        academicYearId: ACADEMIC_YEAR_ID,
+        termIds: ['2026-t1', '2026-t2', '2026-t3'],
+      },
+      assignedBy: 'seed_primary_demo_node',
+      assignedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+  // Enrolls demo-s1 (already in Primary 1 from seedStudents) into this
+  // teacher's Mathematics class, so the subject student list/attendance/marks
+  // screens have something real to show instead of an empty state.
+  await db
+    .collection('schools')
+    .doc(SCHOOL_ID)
+    .collection('subject_enrollments')
+    .doc(`demo-s1_${subjectId}_${ACADEMIC_YEAR_ID}`)
+    .set({
+      schoolId: SCHOOL_ID,
+      campusId: 'main',
+      studentId: 'demo-s1',
+      subjectId,
+      classId: className,
+      streamId: null,
+      academicYearId: ACADEMIC_YEAR_ID,
+      status: 'active',
+      roleAssignmentId: assignmentId,
+      isMandatory: true,
+      enrolledAt: admin.firestore.Timestamp.fromDate(new Date(2026, 1, 1)),
+      enrolledBy: uid,
+    });
+
+  // One sample resource in the new subject_resources collection, so the
+  // Subject Teacher resource backend (SubjectResourceRepositoryImpl) has
+  // something to read on first load rather than an empty area.
+  await db
+    .collection('schools')
+    .doc(SCHOOL_ID)
+    .collection('subject_resources')
+    .doc('demo-subject-resource-1')
+    .set({
+      schoolId: SCHOOL_ID,
+      campusId: 'main',
+      subjectId,
+      classId: className,
+      streamId: null,
+      academicYearId: ACADEMIC_YEAR_ID,
+      termId: '2026-t2',
+      name: 'Multiplication Tables Worksheet.pdf',
+      description: 'Practice worksheet for times tables 1-12.',
+      kind: 'document',
+      origin: 'ownUpload',
+      audience: 'students',
+      storagePath: null,
+      downloadUrl: null,
+      externalUrl: null,
+      sizeBytes: 245000,
+      mimeType: 'application/pdf',
+      folderId: null,
+      sourceResourceId: null,
+      availableOffline: false,
+      uploadedByUserId: uid,
+      uploadedAt: admin.firestore.Timestamp.fromDate(new Date(2026, 4, 26)),
+      roleAssignmentId: assignmentId,
+      downloadCount: 0,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+  console.log(`Seeded subject teacher: ${email} (${subjectName} - ${className})`);
+}
+
 async function main() {
   console.log('Seeding primary-level demo into project school-pulse-3d95b...');
   await seedTenantRoot();
@@ -337,7 +491,8 @@ async function main() {
   const students = await seedStudents();
   await seedParents(students);
   await seedTeachers();
-  console.log('Done: structure, 5 students, 3 parents, 5 teachers seeded.');
+  await seedSubjectTeacher();
+  console.log('Done: structure, 5 students, 3 parents, 5 class teachers, 1 subject teacher seeded.');
 }
 
 main().catch((e) => {
