@@ -16,17 +16,8 @@ import 'package:school_pulse/features/notifications/presentation/bloc/notificati
 import 'package:school_pulse/features/notifications/presentation/bloc/notification_center_event.dart';
 import 'package:school_pulse/features/notifications/presentation/bloc/notification_center_state.dart';
 import 'package:school_pulse/features/notifications/routing/deep_link_router/notification_deep_link_router.dart';
+import 'package:school_pulse/features/notifications/routing/notification_shell_route.dart';
 import 'package:school_pulse/injection_container.dart' as di;
-
-/// Matches the base route [NotificationBellButton] computes for each role,
-/// so list/detail/filter/add navigation stays inside whichever shell
-/// (`/parent`, `/student`, `/staff`) the current user is actually in instead
-/// of always landing in the staff shell.
-String _notificationBasePath(UserRole role) => switch (role) {
-  UserRole.parent => '/parent/notifications',
-  UserRole.student => '/student/notifications',
-  _ => '/staff/notifications',
-};
 
 class NotificationListScreen extends StatelessWidget {
   const NotificationListScreen({super.key});
@@ -58,39 +49,12 @@ class NotificationListScreen extends StatelessWidget {
         ..add(
           NotificationCenterStarted(schoolId: user.schoolId, userId: user.id),
         ),
-      child: _NotificationListView(basePath: _notificationBasePath(user.role)),
+      child: _NotificationListView(
+        basePath: notificationShellBasePath(user.role),
+        canCompose: user.role == UserRole.schoolAdmin,
+      ),
     );
   }
-}
-
-/// Broad filter buckets shown as chips under the search bar. "All" and
-/// "Unread" map onto the bloc's own read-state filter; the rest map onto
-/// notification categories most relevant across roles.
-enum _QuickFilter { all, unread, academic, finance, attendance }
-
-extension on _QuickFilter {
-  String get label => switch (this) {
-    _QuickFilter.all => 'All',
-    _QuickFilter.unread => 'Unread',
-    _QuickFilter.academic => 'Academic',
-    _QuickFilter.finance => 'Finance',
-    _QuickFilter.attendance => 'Attendance',
-  };
-
-  Set<NotificationCategory> get categories => switch (this) {
-    _QuickFilter.academic => const {
-      NotificationCategory.homework,
-      NotificationCategory.results,
-      NotificationCategory.examinations,
-      NotificationCategory.timetable,
-    },
-    _QuickFilter.finance => const {NotificationCategory.finance},
-    _QuickFilter.attendance => const {
-      NotificationCategory.attendance,
-      NotificationCategory.gate,
-    },
-    _ => const {},
-  };
 }
 
 /// Tells the user these rows came from the on-device cache, so stale content
@@ -132,12 +96,14 @@ class _NotificationScaffold extends StatelessWidget {
   final int unreadCount;
   final VoidCallback? onMarkAllRead;
   final String basePath;
+  final bool canCompose;
 
   const _NotificationScaffold({
     required this.body,
     required this.unreadCount,
     required this.onMarkAllRead,
     this.basePath = '/staff/notifications',
+    this.canCompose = false,
   });
 
   @override
@@ -178,7 +144,7 @@ class _NotificationScaffold extends StatelessWidget {
         ],
       ),
       body: body,
-      floatingActionButton: basePath == '/staff/notifications'
+      floatingActionButton: canCompose
           ? FloatingActionButton(
               onPressed: () => context.push('$basePath/add'),
               backgroundColor: AppColors.primary(context),
@@ -191,8 +157,12 @@ class _NotificationScaffold extends StatelessWidget {
 
 class _NotificationListView extends StatefulWidget {
   final String basePath;
+  final bool canCompose;
 
-  const _NotificationListView({required this.basePath});
+  const _NotificationListView({
+    required this.basePath,
+    required this.canCompose,
+  });
 
   @override
   State<_NotificationListView> createState() => _NotificationListViewState();
@@ -200,7 +170,6 @@ class _NotificationListView extends StatefulWidget {
 
 class _NotificationListViewState extends State<_NotificationListView> {
   final _searchController = TextEditingController();
-  _QuickFilter _quickFilter = _QuickFilter.all;
 
   String get _basePath => widget.basePath;
 
@@ -208,17 +177,6 @@ class _NotificationListViewState extends State<_NotificationListView> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  void _applyQuickFilter(_QuickFilter filter) {
-    setState(() => _quickFilter = filter);
-    context.read<NotificationCenterBloc>().add(
-      NotificationCenterFilterChanged(
-        categories: filter.categories.isEmpty ? {} : filter.categories,
-        isRead: filter == _QuickFilter.unread ? false : null,
-        reset: filter == _QuickFilter.all,
-      ),
-    );
   }
 
   @override
@@ -229,13 +187,13 @@ class _NotificationListViewState extends State<_NotificationListView> {
         return _NotificationScaffold(
           unreadCount: state.unreadCount,
           basePath: _basePath,
+          canCompose: widget.canCompose,
           onMarkAllRead: state.unreadCount > 0
               ? () => bloc.add(const NotificationAllMarkedRead())
               : null,
           body: Column(
             children: [
               _buildSearchBar(context),
-              _buildQuickFilters(context),
               if (state.isOffline) const _OfflineBanner(),
               Expanded(
                 child: state.status == NotificationCenterStatus.loading
@@ -259,72 +217,30 @@ class _NotificationListViewState extends State<_NotificationListView> {
         AppSpacing.xl,
         AppSpacing.m,
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) => context.read<NotificationCenterBloc>().add(
-                NotificationCenterSearched(value),
-              ),
-              decoration: InputDecoration(
-                hintText: 'Search notifications',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: AppColors.surfaceContainer(context),
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: AppSpacing.m,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: AppRadius.large,
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: AppRadius.large,
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: AppRadius.large,
-                  borderSide: BorderSide(color: AppColors.primary(context)),
-                ),
-              ),
-            ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) => context.read<NotificationCenterBloc>().add(
+          NotificationCenterSearched(value),
+        ),
+        decoration: InputDecoration(
+          hintText: 'Search notifications',
+          prefixIcon: const Icon(Icons.search),
+          filled: true,
+          fillColor: AppColors.surfaceContainer(context),
+          contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
+          border: OutlineInputBorder(
+            borderRadius: AppRadius.large,
+            borderSide: BorderSide.none,
           ),
-          const SizedBox(width: AppSpacing.m),
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border(context)),
-              borderRadius: AppRadius.large,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.tune),
-              onPressed: () => context.push('$_basePath/filter'),
-            ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: AppRadius.large,
+            borderSide: BorderSide.none,
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickFilters(BuildContext context) {
-    return SizedBox(
-      height: 44,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-        children: _QuickFilter.values
-            .map(
-              (filter) => Padding(
-                padding: const EdgeInsets.only(right: AppSpacing.m),
-                child: ChoiceChip(
-                  label: Text(filter.label),
-                  selected: _quickFilter == filter,
-                  onSelected: (_) => _applyQuickFilter(filter),
-                  showCheckmark: false,
-                ),
-              ),
-            )
-            .toList(),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: AppRadius.large,
+            borderSide: BorderSide(color: AppColors.primary(context)),
+          ),
+        ),
       ),
     );
   }
@@ -349,8 +265,7 @@ class _NotificationListViewState extends State<_NotificationListView> {
             ),
             const SizedBox(height: AppSpacing.m),
             OutlinedButton(
-              onPressed: () =>
-                  bloc.add(const NotificationCenterRefreshed()),
+              onPressed: () => bloc.add(const NotificationCenterRefreshed()),
               child: const Text('Retry'),
             ),
           ],
@@ -491,10 +406,7 @@ class _NotificationListViewState extends State<_NotificationListView> {
         ...todayItems.map(_SectionItem.new),
       ],
       if (earlierItems.isNotEmpty) ...[
-        _SectionHeader(
-          'Earlier',
-          showMarkAllRead: todayItems.isEmpty,
-        ),
+        _SectionHeader('Earlier', showMarkAllRead: todayItems.isEmpty),
         ...earlierItems.map(_SectionItem.new),
       ],
     ];
@@ -649,7 +561,9 @@ class _NotificationTileState extends State<_NotificationTile> {
     if (destination == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(resolution.message ?? 'This item is no longer available.'),
+          content: Text(
+            resolution.message ?? 'This item is no longer available.',
+          ),
         ),
       );
       return;

@@ -1611,18 +1611,15 @@ service cloud.firestore {
     // SDK, because recipient resolution needs reads the sender themselves is
     // deliberately not permitted to make.
     match /notification_requests/{requestId} {
-      allow create: if isStaff()
+      // Composing and broadcasting a notification is a School Admin action
+      // only - every other staff role can read/receive notifications but not
+      // author new ones.
+      allow create: if hasAnyRole(['schoolAdmin'])
         && request.resource.data.schoolId == myUser().schoolId
         // Sender identity is stamped from the caller's own token, so a
         // request cannot be attributed to somebody else.
         && request.resource.data.senderId == request.auth.uid
-        && request.resource.data.status == 'pending'
-        // Emergency alerts are restricted to leadership and security heads.
-        && (
-          request.resource.data.category != 'emergency'
-          || hasAnyRole(['schoolAdmin', 'director', 'headTeacher',
-                         'deputyHead', 'securityHead'])
-        );
+        && request.resource.data.status == 'pending';
 
       // A sender may follow their own request to see delivery counts.
       allow read: if isStaff()

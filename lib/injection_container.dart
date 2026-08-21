@@ -488,6 +488,7 @@ import 'package:school_pulse/app/router.dart' as app_router;
 import 'package:school_pulse/features/notifications/notification_coordinator.dart';
 import 'package:school_pulse/features/notifications/push/handlers/notification_push_handler.dart';
 import 'package:school_pulse/features/notifications/routing/deep_link_router/notification_deep_link_router.dart';
+import 'package:school_pulse/features/notifications/routing/notification_shell_route.dart';
 import 'package:school_pulse/features/notifications/data/notification_image_cache.dart';
 import 'package:school_pulse/features/notifications/domain/services/notification_sender.dart';
 import 'package:school_pulse/features/notifications/local/notification_presenter.dart';
@@ -1404,17 +1405,22 @@ Future<void> init() async {
         // Navigation goes through the deep-link router, which re-checks
         // authentication, tenancy and permission before producing a route -
         // a push payload is never navigated to verbatim.
+        final user = sl<NotificationCoordinator>().user;
         final resolution = await const NotificationDeepLinkRouter().resolve(
           notification: notification,
-          user: sl<NotificationCoordinator>().user,
+          user: user,
         );
         final destination = resolution.destination;
         if (destination != null) {
           app_router.router.push(destination.route, extra: destination.extra);
         } else {
           // Refused: fall back to the notification centre rather than silently
-          // doing nothing on a tap.
-          app_router.router.push('/staff/notifications');
+          // doing nothing on a tap. Stays inside the signed-in user's own
+          // shell rather than always landing in staff.
+          final basePath = user != null
+              ? notificationShellBasePath(user.role)
+              : '/staff/notifications';
+          app_router.router.push(basePath);
         }
       },
     ),

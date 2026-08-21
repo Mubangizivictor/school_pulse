@@ -6,6 +6,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/notifications/data/models/staff_alert.dart';
 import 'package:school_pulse/features/notifications/data/repositories/staff_alerts_repository.dart';
+import 'package:school_pulse/features/notifications/routing/notification_shell_route.dart';
 import 'package:school_pulse/features/student/presentation/bloc/students_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/students_state.dart';
 
@@ -73,11 +74,7 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
         }.toList();
       }
     }
-    final notificationRoute = role == UserRole.parent
-        ? '/parent/notifications'
-        : role == UserRole.student
-        ? '/student/notifications'
-        : '/staff/notifications';
+    final notificationRoute = notificationShellBasePath(role);
 
     final repository = _alerts;
     if (repository == null) {

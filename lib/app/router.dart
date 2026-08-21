@@ -653,6 +653,20 @@ final router = GoRouter(
           path: '/student/notifications',
           builder: (context, state) => const NotificationListScreen(),
           routes: [
+            // Literal-path children must be declared before the `:id`
+            // wildcard below - go_router matches nested routes in
+            // declaration order, so `:id` would otherwise shadow every
+            // named route (e.g. a push to .../filter would match `:id`
+            // with id == 'filter' instead of the filter screen).
+            GoRoute(
+              path: 'filter',
+              builder: (context, state) => const NotificationFilterScreen(),
+            ),
+            GoRoute(
+              path: 'center',
+              builder: (context, state) =>
+                  const NotificationCenterGroupedScreen(),
+            ),
             GoRoute(
               path: ':id',
               builder: (context, state) {
@@ -667,15 +681,6 @@ final router = GoRouter(
                   notificationId: state.pathParameters['id'] ?? '',
                 );
               },
-            ),
-            GoRoute(
-              path: 'filter',
-              builder: (context, state) => const NotificationFilterScreen(),
-            ),
-            GoRoute(
-              path: 'center',
-              builder: (context, state) =>
-                  const NotificationCenterGroupedScreen(),
             ),
           ],
         ),
