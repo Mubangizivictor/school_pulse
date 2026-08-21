@@ -413,7 +413,7 @@ class _Metrics extends StatelessWidget {
           icon: Icons.schedule_rounded,
           value: notStarted,
           label: 'Not Started',
-          color: const Color(0xFF9B62F4),
+          color: AppColors.secondary(context),
         ),
       ],
     ),
