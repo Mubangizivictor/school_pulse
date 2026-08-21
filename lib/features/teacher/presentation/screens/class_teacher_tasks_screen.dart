@@ -383,7 +383,7 @@ class _ClassTeacherTasksScreenState extends State<ClassTeacherTasksScreen> {
       case 'Homework':
         return AppColors.information(context);
       case 'Meetings':
-        return Colors.purple;
+        return AppColors.secondary(context);
       default:
         return AppColors.primary(context);
     }

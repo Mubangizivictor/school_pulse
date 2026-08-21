@@ -52,7 +52,7 @@ class _TeacherLeaveRequestsScreenState extends State<TeacherLeaveRequestsScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildMyRequests(),
+                _buildMyRequests(context),
                 const Center(child: Text('All Requests')),
               ],
             ),
@@ -62,7 +62,7 @@ class _TeacherLeaveRequestsScreenState extends State<TeacherLeaveRequestsScreen>
     );
   }
 
-  Widget _buildMyRequests() {
+  Widget _buildMyRequests(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -70,19 +70,19 @@ class _TeacherLeaveRequestsScreenState extends State<TeacherLeaveRequestsScreen>
           type: 'Annual Leave',
           dates: '20 May 2024 - 23 May 2024',
           status: 'Pending',
-          statusColor: Colors.orange,
+          statusColor: AppColors.warning(context),
         ),
         _LeaveRequestCard(
           type: 'Sick Leave',
           dates: '5 May 2024 - 8 May 2024',
           status: 'Approved',
-          statusColor: Colors.green,
+          statusColor: AppColors.success(context),
         ),
         _LeaveRequestCard(
           type: 'Personal Leave',
           dates: '28 Apr 2024 - 28 Apr 2024',
           status: 'Denied',
-          statusColor: Colors.red,
+          statusColor: AppColors.danger(context),
         ),
       ],
     );

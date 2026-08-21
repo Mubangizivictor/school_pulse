@@ -133,7 +133,7 @@ class ResourceDetailsScreen extends StatelessWidget {
                 _ActionButton(
                   icon: Icons.file_download_outlined,
                   label: 'Save Offline',
-                  color: Colors.green,
+                  color: AppColors.success(context),
                   onTap: resource.isFolder || resource.isLink
                       ? null
                       : () => context.read<ClassResourceBloc>().add(
@@ -152,7 +152,7 @@ class ResourceDetailsScreen extends StatelessWidget {
                 _ActionButton(
                   icon: Icons.delete_outline,
                   label: 'Remove',
-                  color: Colors.red,
+                  color: AppColors.danger(context),
                   onTap: () => _confirmRemove(context, resource),
                 ),
               ],
@@ -197,8 +197,8 @@ class ResourceDetailsScreen extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title: const Text('Remove', style: TextStyle(color: Colors.red)),
+              leading: Icon(Icons.delete_outline, color: AppColors.danger(context)),
+              title: Text('Remove', style: TextStyle(color: AppColors.danger(context))),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _confirmRemove(context, resource);

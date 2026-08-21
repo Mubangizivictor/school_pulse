@@ -81,12 +81,12 @@ class _OfflineResourcesScreenState extends State<OfflineResourcesScreen> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: Colors.green.withValues(alpha: 0.1),
+                                color: AppColors.success(context).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.insert_drive_file,
-                                color: Colors.green,
+                                color: AppColors.success(context),
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -111,9 +111,9 @@ class _OfflineResourcesScreenState extends State<OfflineResourcesScreen> {
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.delete_outline,
-                                color: Colors.redAccent,
+                                color: AppColors.danger(context),
                               ),
                               tooltip: 'Remove offline copy',
                               onPressed: () => context

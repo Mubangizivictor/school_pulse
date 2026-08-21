@@ -97,7 +97,7 @@ class _ResourceCategoriesScreenState extends State<ResourceCategoriesScreen> {
                     icon: Icons.more_horiz_outlined,
                     label: 'Others',
                     count: counts[ClassResourceKind.other] ?? 0,
-                    color: Colors.grey,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     kind: ClassResourceKind.other,
                   ),
                 ].where(

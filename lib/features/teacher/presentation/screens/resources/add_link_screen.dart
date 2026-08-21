@@ -93,7 +93,7 @@ class _AddLinkScreenState extends State<AddLinkScreen> {
                         padding: const EdgeInsets.only(bottom: AppSpacing.l),
                         child: Text(
                           state.errorMessage!,
-                          style: const TextStyle(color: Colors.red),
+                          style: TextStyle(color: AppColors.danger(context)),
                         ),
                       ),
                     PrimaryButton(

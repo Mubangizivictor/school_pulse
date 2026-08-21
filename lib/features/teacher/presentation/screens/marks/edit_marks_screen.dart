@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/teacher/domain/entities/subject_assessment.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
 
@@ -176,7 +177,7 @@ class _EditMarksScreenState extends State<EditMarksScreen> {
                     padding: const EdgeInsets.only(top: 16),
                     child: Text(
                       state.errorMessage!,
-                      style: const TextStyle(color: Colors.red),
+                      style: TextStyle(color: AppColors.danger(context)),
                     ),
                   ),
                 const Spacer(),

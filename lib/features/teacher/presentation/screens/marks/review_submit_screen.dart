@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/teacher/domain/entities/subject_assessment.dart';
 import 'package:school_pulse/features/teacher/domain/policies/marks_entry_policy.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
@@ -21,7 +22,7 @@ class ReviewSubmitScreen extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.successMessage!),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.success(context),
             ),
           );
           context.go('/staff/marks');
@@ -119,7 +120,7 @@ class ReviewSubmitScreen extends StatelessWidget {
                         theme,
                         'Marks Pending',
                         '${review?.pending ?? 0}',
-                        valueColor: Colors.orange,
+                        valueColor: AppColors.warning(context),
                       ),
                       _buildSummaryRow(
                         theme,
@@ -160,22 +161,22 @@ class ReviewSubmitScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.1),
+                            color: AppColors.danger(context).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Colors.red.withValues(alpha: 0.3),
+                              color: AppColors.danger(context).withValues(alpha: 0.3),
                             ),
                           ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                              Icon(Icons.error_outline, color: AppColors.danger(context), size: 20),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   _refusalMessage(review!.refusal!),
-                                  style: const TextStyle(
-                                    color: Colors.red,
+                                  style: TextStyle(
+                                    color: AppColors.danger(context),
                                     fontSize: 12,
                                   ),
                                 ),

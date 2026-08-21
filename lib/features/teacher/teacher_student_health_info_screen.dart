@@ -26,7 +26,7 @@ class TeacherStudentHealthInfoScreen extends StatelessWidget {
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back,
-            color: isDark ? Colors.white : Colors.black,
+            color: AppColors.textPrimary(context),
           ),
           onPressed: () => context.pop(),
         ),

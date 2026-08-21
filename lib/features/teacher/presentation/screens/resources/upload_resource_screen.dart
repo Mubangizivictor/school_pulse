@@ -136,7 +136,7 @@ class _UploadResourceScreenState extends State<UploadResourceScreen> {
                         padding: const EdgeInsets.only(bottom: AppSpacing.l),
                         child: Text(
                           state.errorMessage!,
-                          style: const TextStyle(color: Colors.red),
+                          style: TextStyle(color: AppColors.danger(context)),
                         ),
                       ),
                     PrimaryButton(

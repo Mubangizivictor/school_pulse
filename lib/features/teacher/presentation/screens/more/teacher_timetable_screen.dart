@@ -163,9 +163,7 @@ class _TeacherTimetableViewState extends State<_TeacherTimetableView>
                   ),
                   labelStyle: TextStyle(
                     color: isSelected
-                        ? (Theme.of(context).brightness == Brightness.dark
-                              ? Colors.black
-                              : Colors.white)
+                        ? Theme.of(context).colorScheme.onPrimary
                         : AppColors.textSecondary(context),
                     fontWeight: FontWeight.bold,
                     fontSize: 12,

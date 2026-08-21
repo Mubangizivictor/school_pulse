@@ -279,6 +279,6 @@ class _ClassResourcesScreenState extends State<ClassResourcesScreen> {
     ClassResourceKind.video => (Icons.videocam, Colors.purple),
     ClassResourceKind.link => (Icons.link, Colors.blue),
     ClassResourceKind.folder => (Icons.folder, Colors.amber),
-    ClassResourceKind.other => (Icons.insert_drive_file, Colors.grey),
+    ClassResourceKind.other => (Icons.insert_drive_file, AppColors.textMutedLight),
   };
 }
