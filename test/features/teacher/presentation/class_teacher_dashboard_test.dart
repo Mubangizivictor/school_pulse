@@ -11,6 +11,9 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_event.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
 import 'package:school_pulse/features/teacher/dashboard_screen.dart';
 import 'package:school_pulse/features/teacher/domain/entities/active_responsibility_context.dart';
 import 'package:school_pulse/features/teacher/domain/entities/class_dashboard_summary.dart';
@@ -31,6 +34,12 @@ class _MockContextBloc
 class _MockDashboardBloc
     extends MockBloc<ClassTeacherDashboardEvent, ClassTeacherDashboardState>
     implements ClassTeacherDashboardBloc {}
+
+/// The shared staff dashboard header watches BrandingBloc for the school
+/// badge; without it the header cannot lay out and the whole dashboard
+/// overflows.
+class _MockBrandingBloc extends MockBloc<BrandingEvent, BrandingState>
+    implements BrandingBloc {}
 
 const _user = UserEntity(
   id: 'user1',
@@ -93,11 +102,14 @@ void main() {
   late _MockAuthBloc authBloc;
   late _MockContextBloc contextBloc;
   late _MockDashboardBloc dashboardBloc;
+  late _MockBrandingBloc brandingBloc;
 
   setUp(() {
     authBloc = _MockAuthBloc();
     contextBloc = _MockContextBloc();
     dashboardBloc = _MockDashboardBloc();
+    brandingBloc = _MockBrandingBloc();
+    when(() => brandingBloc.state).thenReturn(const BrandingLoaded(null));
     when(() => authBloc.state).thenReturn(const AuthAuthenticated(_user));
   });
 
@@ -125,6 +137,7 @@ void main() {
             BlocProvider<AuthBloc>.value(value: authBloc),
             BlocProvider<ClassTeacherContextBloc>.value(value: contextBloc),
             BlocProvider<ClassTeacherDashboardBloc>.value(value: dashboardBloc),
+            BlocProvider<BrandingBloc>.value(value: brandingBloc),
           ],
           child: MaterialApp.router(
             theme: AppTheme.light(),
@@ -158,7 +171,11 @@ void main() {
         ),
       );
 
-      expect(find.text('P5 East • Kabale Campus'), findsOneWidget);
+      // The header identifies the responsibility and the school; the class
+      // itself is named by the responsibility switcher rather than being
+      // concatenated into the header subtitle as it once was.
+      expect(find.text('Class Teacher'), findsOneWidget);
+      expect(find.text('Kabale Campus'), findsOneWidget);
       // The hardcoded stand-in the panel used to ship with must be gone.
       expect(find.textContaining('Grade 10A'), findsNothing);
       expect(find.textContaining('North Campus'), findsNothing);
