@@ -49,23 +49,18 @@ class _TeacherStudentCommunicationsScreenState
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: AppColors.textPrimary(context),
-          ),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
           onPressed: () => context.pop(),
         ),
         title: Text(
           'Communications',
           style: AppTypography.headlineSmall.copyWith(
-            color: isDark
-                ? AppColors.textPrimaryDark
-                : AppColors.textPrimaryLight,
+            color: AppColors.textPrimary(context),
           ),
         ),
       ),
@@ -91,9 +86,7 @@ class _TeacherStudentCommunicationsScreenState
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.royalBlue,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.l,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppSpacing.m),
                     ),
@@ -156,9 +149,7 @@ class _TeacherStudentCommunicationsScreenState
                   Text(
                     announcement.title,
                     style: AppTypography.titleSmall.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
+                      color: AppColors.textPrimary(context),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -235,9 +226,9 @@ class _TeacherStudentCommunicationsScreenState
     if (!context.mounted) return;
 
     allowed.fold(
-      (failure) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(failure.message)),
-      ),
+      (failure) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failure.message))),
       (_) {
         context.push('/staff/messages');
         ScaffoldMessenger.of(context).showSnackBar(

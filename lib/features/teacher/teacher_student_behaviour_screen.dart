@@ -49,18 +49,19 @@ class _TeacherStudentBehaviourScreenState
         final student = state.students
             .where((s) => s.studentId == widget.studentId)
             .firstOrNull;
-        final records = state.behaviourRecords
-            .where((r) => r.studentId == widget.studentId)
-            .where(
-              (r) =>
-                  _filter == null ||
-                  state.categoryFor(r.categoryCode)?.valence == _filter,
-            )
-            .toList()
-          ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+        final records =
+            state.behaviourRecords
+                .where((r) => r.studentId == widget.studentId)
+                .where(
+                  (r) =>
+                      _filter == null ||
+                      state.categoryFor(r.categoryCode)?.valence == _filter,
+                )
+                .toList()
+              ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
 
         return Scaffold(
-          backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+          backgroundColor: AppColors.background(context),
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
@@ -74,9 +75,7 @@ class _TeacherStudentBehaviourScreenState
             title: Text(
               'Behaviour',
               style: AppTypography.headlineSmall.copyWith(
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimaryLight,
+                color: AppColors.textPrimary(context),
               ),
             ),
           ),
@@ -132,9 +131,7 @@ class _TeacherStudentBehaviourScreenState
                               vertical: AppSpacing.l,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                AppSpacing.m,
-                              ),
+                              borderRadius: BorderRadius.circular(AppSpacing.m),
                             ),
                           ),
                         ),
@@ -170,8 +167,7 @@ class _TeacherStudentBehaviourScreenState
               label: 'Positive',
               isSelected: _filter == BehaviourValence.positive,
               isDark: isDark,
-              onTap: () =>
-                  setState(() => _filter = BehaviourValence.positive),
+              onTap: () => setState(() => _filter = BehaviourValence.positive),
             ),
           ),
           Expanded(
@@ -202,7 +198,9 @@ class _TeacherStudentBehaviourScreenState
       isScrollControlled: true,
       backgroundColor: AppColors.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.xl)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.xl),
+        ),
       ),
       builder: (sheetContext) => BlocProvider.value(
         value: bloc,
@@ -308,9 +306,7 @@ class _BehaviourTile extends StatelessWidget {
                 Text(
                   record.note,
                   style: AppTypography.titleMedium.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
+                    color: AppColors.textPrimary(context),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -346,8 +342,18 @@ class _BehaviourTile extends StatelessWidget {
 
   static String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
