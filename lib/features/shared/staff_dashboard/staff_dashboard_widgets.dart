@@ -45,131 +45,134 @@ class StaffDashboardHeader extends StatelessWidget {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),
-          child: Row(
-            children: [
-              Builder(
-                builder: (context) {
-                  final brandingState = context.watch<BrandingBloc>().state;
-                  final branding = brandingState is BrandingLoaded
-                      ? brandingState.branding
-                      : null;
-                  return SchoolBadge(
-                    badgeUrl: branding?.badgeUrl ?? branding?.logoUrl,
-                    size: 56,
-                  );
-                },
-              ),
-              const SizedBox(width: AppSpacing.l),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Builder(
-                      builder: (context) {
-                        final authState = context.watch<AuthBloc>().state;
-                        final roles = authState is AuthAuthenticated
-                            ? authState.user.roles
-                            : const <UserRole>[];
-                        final canSwitchRoles = roles.length > 1;
-                        return InkWell(
-                          onTap: !canSwitchRoles
-                              ? null
-                              : onSwitchTap ??
-                                    () => RoleSwitcherSheet.show(context),
-                          borderRadius: BorderRadius.circular(6),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  roleLabel,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.w800,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface,
+          child: SizedBox(
+            height: 56,
+            child: Row(
+              children: [
+                Builder(
+                  builder: (context) {
+                    final brandingState = context.watch<BrandingBloc>().state;
+                    final branding = brandingState is BrandingLoaded
+                        ? brandingState.branding
+                        : null;
+                    return SchoolBadge(
+                      badgeUrl: branding?.badgeUrl ?? branding?.logoUrl,
+                      size: 56,
+                    );
+                  },
+                ),
+                const SizedBox(width: AppSpacing.l),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Builder(
+                        builder: (context) {
+                          final authState = context.watch<AuthBloc>().state;
+                          final roles = authState is AuthAuthenticated
+                              ? authState.user.roles
+                              : const <UserRole>[];
+                          final canSwitchRoles = roles.length > 1;
+                          return InkWell(
+                            onTap: !canSwitchRoles
+                                ? null
+                                : onSwitchTap ??
+                                      () => RoleSwitcherSheet.show(context),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    roleLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.w800,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              if (canSwitchRoles) ...[
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.unfold_more_rounded,
-                                  size: 18,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
+                                if (canSwitchRoles) ...[
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.unfold_more_rounded,
+                                    size: 18,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                                ],
                               ],
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                    BlocBuilder<AuthBloc, AuthState>(
-                      builder: (context, state) {
-                        final schoolName = (state is AuthAuthenticated)
-                            ? (state.user.schoolName ?? 'School Pulse')
-                            : 'School Pulse';
-                        return Text(
-                          schoolName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.05),
-                  borderRadius: AppRadius.large,
-                  border: Border.all(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.08),
+                            ),
+                          );
+                        },
+                      ),
+                      BlocBuilder<AuthBloc, AuthState>(
+                        builder: (context, state) {
+                          final schoolName = (state is AuthAuthenticated)
+                              ? (state.user.schoolName ?? 'School Pulse')
+                              : 'School Pulse';
+                          return Text(
+                            schoolName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
-                child: IconButton(
-                  iconSize: 20,
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.chat_bubble_outline),
-                  tooltip: 'Messages',
-                  onPressed: () => context.push('/staff/messages'),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s),
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.05),
-                  borderRadius: AppRadius.large,
-                  border: Border.all(
+                Container(
+                  decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.08),
+                    ).colorScheme.onSurface.withValues(alpha: 0.05),
+                    borderRadius: AppRadius.large,
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  child: IconButton(
+                    iconSize: 20,
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.chat_bubble_outline),
+                    tooltip: 'Messages',
+                    onPressed: () => context.push('/staff/messages'),
                   ),
                 ),
-                child: const SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: NotificationBellButton(),
+                const SizedBox(width: AppSpacing.s),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.05),
+                    borderRadius: AppRadius.large,
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  child: const SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: NotificationBellButton(),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

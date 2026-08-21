@@ -11,6 +11,9 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_event.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
 import 'package:school_pulse/features/teacher/domain/entities/active_responsibility_context.dart';
 import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
@@ -29,6 +32,9 @@ class _MockContextBloc
 class _MockDashboardBloc
     extends MockBloc<SubjectTeacherDashboardEvent, SubjectTeacherDashboardState>
     implements SubjectTeacherDashboardBloc {}
+
+class _MockBrandingBloc extends MockBloc<BrandingEvent, BrandingState>
+    implements BrandingBloc {}
 
 const _user = UserEntity(
   id: 'user1',
@@ -73,12 +79,15 @@ void main() {
   late _MockAuthBloc authBloc;
   late _MockContextBloc contextBloc;
   late _MockDashboardBloc dashboardBloc;
+  late _MockBrandingBloc brandingBloc;
 
   setUp(() {
     authBloc = _MockAuthBloc();
     contextBloc = _MockContextBloc();
     dashboardBloc = _MockDashboardBloc();
+    brandingBloc = _MockBrandingBloc();
     when(() => authBloc.state).thenReturn(AuthAuthenticated(_user));
+    when(() => brandingBloc.state).thenReturn(BrandingInitial());
   });
 
   Future<void> pump(
@@ -107,6 +116,7 @@ void main() {
             BlocProvider<SubjectTeacherDashboardBloc>.value(
               value: dashboardBloc,
             ),
+            BlocProvider<BrandingBloc>.value(value: brandingBloc),
           ],
           child: MaterialApp.router(
             theme: AppTheme.light(),
