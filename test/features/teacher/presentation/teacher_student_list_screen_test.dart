@@ -145,7 +145,7 @@ void main() {
 
       // Chrome that must stay visible without the user scrolling for it.
       expect(find.text('Total Students'), findsOneWidget);
-      expect(find.text('Students List'), findsOneWidget);
+      expect(find.text('Students List'), findsNothing);
       expect(find.text('Quick Filters'), findsOneWidget);
       expect(find.text('Student Number 0'), findsOneWidget);
       expect(tester.takeException(), isNull);

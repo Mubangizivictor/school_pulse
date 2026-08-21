@@ -52,7 +52,6 @@ class _ClassTeacherStudentListScreen extends StatefulWidget {
 class _ClassTeacherStudentListScreenState
     extends State<_ClassTeacherStudentListScreen> {
   final TextEditingController _searchController = TextEditingController();
-  bool _sortAscending = true;
 
   @override
   void initState() {
@@ -174,8 +173,6 @@ class _ClassTeacherStudentListScreenState
                             _buildStatsCard(context, state),
                             const SizedBox(height: AppSpacing.l),
                             _buildSearchField(context),
-                            const SizedBox(height: AppSpacing.m),
-                            _buildListHeader(context),
                             const SizedBox(height: AppSpacing.m),
                             _buildQuickFilters(context, state),
                             const SizedBox(height: AppSpacing.m),
@@ -329,32 +326,6 @@ class _ClassTeacherStudentListScreenState
     );
   }
 
-  Widget _buildListHeader(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Students List',
-          style: AppTypography.titleMedium.copyWith(
-            color: AppColors.textPrimary(context),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        TextButton.icon(
-          onPressed: () => setState(() => _sortAscending = !_sortAscending),
-          icon: Icon(Icons.sort, size: 18, color: AppColors.primary(context)),
-          label: Text(
-            _sortAscending ? 'A-Z' : 'Z-A',
-            style: AppTypography.labelMedium.copyWith(
-              color: AppColors.primary(context),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildStudentsList(BuildContext context, ClassStudentsState state) {
     if (state.students.isEmpty && state.errorMessage != null) {
       return _buildEmptyState(
@@ -375,11 +346,7 @@ class _ClassTeacherStudentListScreenState
     }
 
     final students = List<ClassStudentSummary>.from(state.visibleStudents)
-      ..sort(
-        (a, b) => _sortAscending
-            ? a.name.compareTo(b.name)
-            : b.name.compareTo(a.name),
-      );
+      ..sort((a, b) => a.name.compareTo(b.name));
 
     if (students.isEmpty) {
       return _buildEmptyState(
@@ -552,51 +519,64 @@ class _ClassTeacherStudentListScreenState
 
   Widget _buildQuickFilters(BuildContext context, ClassStudentsState state) {
     return PulseCard(
-      padding: const EdgeInsets.all(AppSpacing.l),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Quick Filters',
-            style: AppTypography.titleMedium.copyWith(
-              color: AppColors.textPrimary(context),
-              fontWeight: FontWeight.bold,
+      // Match the roster-card footprint while keeping filters in one compact row.
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.s,
+      ),
+      child: SizedBox(
+        height: 64,
+        child: Row(
+          children: [
+            Text(
+              'Quick Filters',
+              style: AppTypography.titleMedium.copyWith(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.m),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildFilterChip(context, 'All', ClassRosterFilter.all, state),
-                _buildFilterChip(
-                  context,
-                  'Present',
-                  ClassRosterFilter.present,
-                  state,
+            const SizedBox(width: AppSpacing.m),
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildFilterChip(
+                      context,
+                      'All',
+                      ClassRosterFilter.all,
+                      state,
+                    ),
+                    _buildFilterChip(
+                      context,
+                      'Present',
+                      ClassRosterFilter.present,
+                      state,
+                    ),
+                    _buildFilterChip(
+                      context,
+                      'Absent',
+                      ClassRosterFilter.absent,
+                      state,
+                    ),
+                    _buildFilterChip(
+                      context,
+                      'Late',
+                      ClassRosterFilter.late,
+                      state,
+                    ),
+                    _buildFilterChip(
+                      context,
+                      'No Data',
+                      ClassRosterFilter.noData,
+                      state,
+                    ),
+                  ],
                 ),
-                _buildFilterChip(
-                  context,
-                  'Absent',
-                  ClassRosterFilter.absent,
-                  state,
-                ),
-                _buildFilterChip(
-                  context,
-                  'Late',
-                  ClassRosterFilter.late,
-                  state,
-                ),
-                _buildFilterChip(
-                  context,
-                  'No Data',
-                  ClassRosterFilter.noData,
-                  state,
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
