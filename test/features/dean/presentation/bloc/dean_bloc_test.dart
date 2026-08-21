@@ -141,11 +141,19 @@ void main() {
         'should emit [DeanLoading, DeanOperationSuccess] when assessment marks approved',
         build: () {
           when(
-            () => mockRepository.approveAssessmentMarks(any()),
+            () => mockRepository.approveAssessmentMarks(
+              schoolId: any(named: 'schoolId'),
+              assessmentId: any(named: 'assessmentId'),
+            ),
           ).thenAnswer((_) async => const Right(null));
           return bloc;
         },
-        act: (bloc) => bloc.add(const ApproveAssessmentMarksRequested('a1')),
+        act: (bloc) => bloc.add(
+          const ApproveAssessmentMarksRequested(
+            schoolId: 'school1',
+            assessmentId: 'a1',
+          ),
+        ),
         expect: () => [
           DeanLoading(),
           const DeanOperationSuccess('Assessment marks approved'),

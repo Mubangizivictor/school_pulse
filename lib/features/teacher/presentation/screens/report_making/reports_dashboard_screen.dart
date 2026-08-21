@@ -23,7 +23,6 @@ class ReportsDashboardScreen extends StatefulWidget {
 class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
   final _search = TextEditingController();
   ReportEntryStatus? _status;
-  int _tab = 0;
 
   @override
   void initState() {
@@ -116,15 +115,7 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  _Header(
-                    onAnalytics: _showReadOnlyNotice,
-                    onFilter: _showFilters,
-                  ),
-                  _Tabs(
-                    selected: _tab,
-                    allCount: state.entries.length,
-                    onSelected: (value) => setState(() => _tab = value),
-                  ),
+                  const _Header(),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
                     child: Column(
@@ -136,20 +127,15 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
                           notStarted: notStarted,
                         ),
                         const SizedBox(height: 24),
-                        _Controls(
-                          termLabel: termLabel,
-                          search: _search,
-                          onTermTap: _showTermNotice,
-                          onFilterTap: _showFilters,
+                        _TermLabel(termLabel: termLabel),
+                        const SizedBox(height: 10),
+                        _Controls(search: _search, onFilterTap: _showFilters),
+                        const SizedBox(height: 12),
+                        _StatusFilters(
+                          selected: _status,
+                          onChanged: (value) =>
+                              setState(() => _status = value),
                         ),
-                        if (_tab == 1) ...[
-                          const SizedBox(height: 12),
-                          _StatusFilters(
-                            selected: _status,
-                            onChanged: (value) =>
-                                setState(() => _status = value),
-                          ),
-                        ],
                         if (state.unapprovedSubjects.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           _WaitingNotice(subjects: state.unapprovedSubjects),
@@ -197,20 +183,6 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
     }).toList();
   }
 
-  void _showReadOnlyNotice() => ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text(
-        'Academic analytics remain available in Class Performance.',
-      ),
-    ),
-  );
-
-  void _showTermNotice() => ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Reports are scoped to your active academic term.'),
-    ),
-  );
-
   void _showFilters() {
     showModalBottomSheet<void>(
       context: context,
@@ -250,126 +222,54 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onAnalytics, required this.onFilter});
-  final VoidCallback onAnalytics;
-  final VoidCallback onFilter;
+  const _Header();
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(24, 24, 20, 22),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'REPORTS DASHBOARD',
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.textMuted(context),
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.4,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Manage Class Reports',
-                style: AppTypography.headlineSmall.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
+        Text(
+          'REPORTS DASHBOARD',
+          style: AppTypography.labelMedium.copyWith(
+            color: AppColors.textMuted(context),
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.4,
           ),
         ),
-        IconButton(
-          tooltip: 'Report analytics',
-          onPressed: onAnalytics,
-          icon: const Icon(Icons.bar_chart_rounded, size: 28),
-        ),
-        IconButton(
-          tooltip: 'Filter reports',
-          onPressed: onFilter,
-          icon: const Icon(Icons.settings_outlined, size: 28),
+        const SizedBox(height: 4),
+        Text(
+          'Manage Class Reports',
+          style: AppTypography.headlineSmall.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ],
     ),
   );
 }
 
-class _Tabs extends StatelessWidget {
-  const _Tabs({
-    required this.selected,
-    required this.allCount,
-    required this.onSelected,
-  });
-  final int selected;
-  final int allCount;
-  final ValueChanged<int> onSelected;
+class _TermLabel extends StatelessWidget {
+  const _TermLabel({required this.termLabel});
+  final String termLabel;
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      border: Border(bottom: BorderSide(color: AppColors.border(context))),
-    ),
-    child: Row(
-      children: [
-        _Tab(
-          label: 'All Students ($allCount)',
-          selected: selected == 0,
-          onTap: () => onSelected(0),
-        ),
-        _Tab(
-          label: 'By Status',
-          selected: selected == 1,
-          onTap: () => onSelected(1),
-        ),
-        _Tab(
-          label: 'By Term',
-          selected: selected == 2,
-          onTap: () => onSelected(2),
-        ),
-      ],
-    ),
-  );
-}
-
-class _Tab extends StatelessWidget {
-  const _Tab({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              width: 3,
-              color: selected ? AppColors.primary(context) : Colors.transparent,
-            ),
-          ),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTypography.titleSmall.copyWith(
-            color: selected
-                ? AppColors.primary(context)
-                : AppColors.textSecondary(context),
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          ),
+  Widget build(BuildContext context) => Row(
+    children: [
+      Icon(
+        Icons.calendar_month_outlined,
+        size: 18,
+        color: AppColors.textSecondary(context),
+      ),
+      const SizedBox(width: 6),
+      Text(
+        termLabel,
+        style: AppTypography.labelMedium.copyWith(
+          color: AppColors.textSecondary(context),
+          fontWeight: FontWeight.w700,
         ),
       ),
-    ),
+    ],
   );
 }
 
@@ -459,33 +359,13 @@ class _Metric extends StatelessWidget {
 }
 
 class _Controls extends StatelessWidget {
-  const _Controls({
-    required this.termLabel,
-    required this.search,
-    required this.onTermTap,
-    required this.onFilterTap,
-  });
-  final String termLabel;
+  const _Controls({required this.search, required this.onFilterTap});
   final TextEditingController search;
-  final VoidCallback onTermTap, onFilterTap;
+  final VoidCallback onFilterTap;
   @override
   Widget build(BuildContext context) => Row(
     children: [
       Expanded(
-        flex: 5,
-        child: OutlinedButton.icon(
-          onPressed: onTermTap,
-          icon: const Icon(Icons.calendar_month_outlined),
-          label: Text(termLabel, maxLines: 1, overflow: TextOverflow.ellipsis),
-          style: OutlinedButton.styleFrom(
-            alignment: Alignment.centerLeft,
-            minimumSize: const Size.fromHeight(54),
-          ),
-        ),
-      ),
-      const SizedBox(width: 12),
-      Expanded(
-        flex: 5,
         child: TextField(
           controller: search,
           decoration: InputDecoration(

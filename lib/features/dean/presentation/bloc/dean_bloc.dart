@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../domain/entities/assessment_moderation.dart';
 import '../../domain/repositories/dean_repository.dart';
 import 'dean_event.dart';
 import 'dean_state.dart';
@@ -198,11 +199,15 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
     Emitter<DeanState> emit,
   ) async {
     emit(DeanLoading());
-    final result = await repository.getPendingModerationAssessments();
-    result.fold(
-      (failure) => emit(DeanError(failure.message)),
-      (assessments) => emit(PendingModerationAssessmentsLoaded(assessments)),
+    final result = await repository.getAssessmentsOverview(
+      schoolId: event.schoolId,
     );
+    result.fold((failure) => emit(DeanError(failure.message)), (assessments) {
+      final pending = assessments
+          .where((a) => a.status == ModerationStatus.pending)
+          .toList();
+      emit(PendingModerationAssessmentsLoaded(pending));
+    });
   }
 
   Future<void> _onApproveAssessmentMarksRequested(
@@ -210,7 +215,10 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
     Emitter<DeanState> emit,
   ) async {
     emit(DeanLoading());
-    final result = await repository.approveAssessmentMarks(event.assessmentId);
+    final result = await repository.approveAssessmentMarks(
+      schoolId: event.schoolId,
+      assessmentId: event.assessmentId,
+    );
     result.fold(
       (failure) => emit(DeanError(failure.message)),
       (_) => emit(const DeanOperationSuccess('Assessment marks approved')),
@@ -223,8 +231,9 @@ class DeanBloc extends Bloc<DeanEvent, DeanState> {
   ) async {
     emit(DeanLoading());
     final result = await repository.rejectAssessmentMarks(
-      event.assessmentId,
-      event.reason,
+      schoolId: event.schoolId,
+      assessmentId: event.assessmentId,
+      reason: event.reason,
     );
     result.fold(
       (failure) => emit(DeanError(failure.message)),

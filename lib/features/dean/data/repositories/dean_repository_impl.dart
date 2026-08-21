@@ -105,29 +105,30 @@ class DeanRepositoryImpl implements DeanRepository {
   }
 
   @override
-  Future<Either<Failure, void>> approveAssessmentMarks(
-    String assessmentId,
-  ) async {
+  Future<Either<Failure, void>> approveAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+  }) async {
     return _callRemote(
-      () => remoteDataSource.approveAssessmentMarks(assessmentId),
+      () => remoteDataSource.approveAssessmentMarks(
+        schoolId: schoolId,
+        assessmentId: assessmentId,
+      ),
     );
   }
 
   @override
-  Future<Either<Failure, void>> rejectAssessmentMarks(
-    String assessmentId,
-    String reason,
-  ) async {
+  Future<Either<Failure, void>> rejectAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+    required String reason,
+  }) async {
     return _callRemote(
-      () => remoteDataSource.rejectAssessmentMarks(assessmentId, reason),
-    );
-  }
-
-  @override
-  Future<Either<Failure, List<AssessmentModeration>>>
-  getPendingModerationAssessments() async {
-    return _callRemote(
-      () => remoteDataSource.getPendingModerationAssessments(),
+      () => remoteDataSource.rejectAssessmentMarks(
+        schoolId: schoolId,
+        assessmentId: assessmentId,
+        reason: reason,
+      ),
     );
   }
 

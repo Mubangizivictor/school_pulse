@@ -5,6 +5,7 @@ const { randomBytes, randomUUID, createHash } = require("crypto");
 const admin = require("firebase-admin");
 const { requirePlatformOwner, OwnerAuthorizationError } = require("./vendor/owner-auth");
 const { hashPin, verifyPin, assertNotLockedOut, failedAttemptUpdate, clearLockoutUpdate } = require("./vendor/pin-auth");
+const reportCardEngine = require("./report_card_engine");
 
 admin.initializeApp();
 const supportAuditFunctions = require("./support_audit")({ admin, onCall, HttpsError });
@@ -2869,6 +2870,463 @@ async function writeAudit(schoolId, entry) {
 }
 
 /**
+ * Authorizes a report-card generation/publication call from either the
+ * academic office (ACADEMIC_ADMIN_ROLES, unconditional) or a Class Teacher
+ * holding a live `staff_role_assignments` row that actually covers this
+ * class/year and grants `class.report.generate` - the same two conditions
+ * firestore.rules' holdsAssignment()/grantsPermission() enforce for the
+ * client-side class_report_entries write path. Re-checked here because the
+ * Admin SDK bypasses those rules entirely.
+ */
+async function requireClassReportGenerationAccess(auth, { classId, academicYearId }) {
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "You must be signed in.");
+  }
+  const db = admin.firestore();
+  const callerDoc = await db.collection("users").doc(auth.uid).get();
+  const caller = callerDoc.exists ? callerDoc.data() : {};
+  const callerRoles = Array.isArray(caller.roles)
+    ? caller.roles
+    : [caller.role].filter(Boolean);
+  if (!caller.schoolId) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Your account is not assigned to a school."
+    );
+  }
+  if (callerRoles.some((role) => ACADEMIC_ADMIN_ROLES.includes(role))) {
+    return { uid: auth.uid, schoolId: caller.schoolId, roles: callerRoles };
+  }
+
+  // Not academic office - must hold a live, matching class-teacher assignment.
+  const assignments = await db
+    .collection("schools")
+    .doc(caller.schoolId)
+    .collection("staff_role_assignments")
+    .where("userId", "==", auth.uid)
+    .where("classId", "==", classId)
+    .where("academicYearId", "==", academicYearId)
+    .where("status", "==", "active")
+    .limit(1)
+    .get();
+
+  const authorized = assignments.docs.some((doc) => {
+    const permissions = doc.data()?.permissionScope?.permissions;
+    return Array.isArray(permissions) && permissions.includes("class.report.generate");
+  });
+
+  if (!authorized) {
+    throw new HttpsError(
+      "permission-denied",
+      "You do not hold the class.report.generate permission for this class."
+    );
+  }
+  return { uid: auth.uid, schoolId: caller.schoolId, roles: callerRoles };
+}
+
+/**
+ * Loads the school's applicable grading system + bands, following the same
+ * resolution the (dead) client-side pipeline used: the school's single
+ * active default. See lib/features/teacher/data/datasources/
+ * teacher_remote_data_source.dart's _resolveDefaultGradingSystem - this is
+ * intentionally the same behaviour, not a new richer one, so a school does
+ * not see two different grading resolutions depending on which code path
+ * happened to run.
+ */
+async function loadDefaultGradingSystem(schoolId) {
+  const db = admin.firestore();
+  const systemSnap = await db
+    .collection("structure_grading_systems")
+    .where("schoolId", "==", schoolId)
+    .where("isActive", "==", true)
+    .where("isDefault", "==", true)
+    .limit(1)
+    .get();
+  if (systemSnap.empty) return { gradingSystem: null, gradeBands: [] };
+
+  const doc = systemSnap.docs[0];
+  const data = doc.data();
+  const gradingSystem = {
+    id: doc.id,
+    schoolId: data.schoolId,
+    name: data.name || "",
+    isActive: data.isActive !== false,
+    isDefault: data.isDefault === true,
+    version: data.version || 1,
+    decimalPlaces: data.decimalPlaces ?? 2,
+    passingScore: data.passingScore ?? null,
+    passingGradeCode: data.passingGradeCode ?? null,
+  };
+
+  const bandsSnap = await db
+    .collection("grade_bands")
+    .where("schoolId", "==", schoolId)
+    .where("gradingSystemId", "==", gradingSystem.id)
+    .get();
+  const gradeBands = bandsSnap.docs.map((b) => {
+    const band = b.data();
+    return {
+      id: b.id,
+      schoolId: band.schoolId,
+      gradingSystemId: band.gradingSystemId,
+      grade: band.grade || "",
+      label: band.label || "",
+      minScore: (band.minScore ?? 0),
+      maxScore: (band.maxScore ?? 0),
+      order: band.order ?? 0,
+      remarks: band.remarks || "",
+      gradePoint: band.gradePoint ?? null,
+      isPassing: band.isPassing !== false,
+      hasNumericBoundary: band.hasNumericBoundary !== false,
+    };
+  });
+
+  return { gradingSystem, gradeBands };
+}
+
+/**
+ * The Report Card Engine: reads every approved subject_assessments/
+ * student_marks row for one class/year/term, resolves grades from the
+ * school's active grading configuration, aggregates each learner's totals
+ * and (if enabled) class position, and writes one immutable snapshot per
+ * learner under schools/{schoolId}/reportCards/{reportCardId}.
+ *
+ * Idempotent: a repeat call with unchanged source data resolves to the same
+ * sourceHash as the existing non-finalized snapshot and is a no-op (counted
+ * as "unchanged"). A changed hash before finalization replaces the working
+ * snapshot in place, bumping `version`. A finalized (isFinalized: true)
+ * snapshot is never touched - a correction must go through a distinct
+ * supersession path, which is out of scope for this phase.
+ */
+async function _generateClassReportCardsInternal({
+  schoolId,
+  classId,
+  streamId,
+  academicYearId,
+  termId,
+  studentIds,
+  actorUid,
+}) {
+  const db = admin.firestore();
+  const school = db.collection("schools").doc(schoolId);
+  const batchId = db.collection("_ids").doc().id;
+
+  const { gradingSystem, gradeBands } = await loadDefaultGradingSystem(schoolId);
+  const bandErrors = reportCardEngine.validateGradeBands(gradeBands);
+  if (gradingSystem && bandErrors.length > 0) {
+    return {
+      created: [],
+      unchanged: [],
+      skipped: [],
+      failed: [],
+      configurationErrors: bandErrors,
+      batchId,
+    };
+  }
+
+  // class_report_entries is the Class Teacher's own worklist - it names
+  // which learners are in scope and carries their comments/conduct/
+  // attendance-verification, but owns none of the grading itself (see
+  // ClassReportEntry's doc comment in class_report_entry.dart).
+  let entriesQuery = school
+    .collection("class_report_entries")
+    .where("classId", "==", classId)
+    .where("academicYearId", "==", academicYearId)
+    .where("termId", "==", termId);
+  const entriesSnap = await entriesQuery.get();
+
+  const entries = entriesSnap.docs
+    .map((d) => ({ id: d.id, ref: d.ref, ...d.data() }))
+    .filter((e) => !Array.isArray(studentIds) || studentIds.length === 0 || studentIds.includes(e.studentId));
+
+  if (entries.length === 0) {
+    return { created: [], unchanged: [], skipped: [], failed: [], configurationErrors: [], batchId };
+  }
+
+  // Only assessments the Dean has actually approved (or published/locked
+  // downstream of approval) contribute - draft/submitted/returned marks
+  // must never leak into a generated report, whatever their score.
+  let assessmentsQuery = school
+    .collection("subject_assessments")
+    .where("classId", "==", classId)
+    .where("academicYearId", "==", academicYearId)
+    .where("termId", "==", termId);
+  if (streamId) {
+    // Assessments are not always stream-scoped; a class-wide assessment
+    // (no streamId on the doc) still applies to every stream in the class.
+  }
+  const assessmentsSnap = await assessmentsQuery.get();
+  const approvedAssessments = assessmentsSnap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((a) => reportCardEngine.APPROVED_MARK_STATUSES.has(a.status) || a.status === "approved");
+  const approvedAssessmentIds = new Set(approvedAssessments.map((a) => a.id));
+  const componentBySubjectAssessment = new Map();
+  for (const assessment of approvedAssessments) {
+    const components = Array.isArray(assessment.components) && assessment.components.length > 0
+      ? assessment.components
+      : [{ id: assessment.id, name: assessment.title || "", maximumMark: assessment.maximumMark || 100, weight: 100 }];
+    for (const component of components) {
+      componentBySubjectAssessment.set(`${assessment.id}_${component.id}`, {
+        subjectId: assessment.subjectId,
+        componentName: component.name,
+        maximumMark: component.maximumMark,
+        weight: component.weight,
+      });
+    }
+  }
+
+  let marksQuery = school
+    .collection("student_marks")
+    .where("classId", "==", classId)
+    .where("academicYearId", "==", academicYearId)
+    .where("termId", "==", termId);
+  const marksSnap = await marksQuery.get();
+
+  // Grouped studentId -> subjectId -> [markRow], restricted to marks whose
+  // markStatus is settled AND whose parent assessment was actually approved
+  // - both gates matter: a mark can be locally 'approved' on a stale copy
+  // of an assessment that was later returned, and the assessment id is the
+  // one Dean-approval actually acts on.
+  const marksByStudentSubject = new Map();
+  for (const doc of marksSnap.docs) {
+    const mark = doc.data();
+    if (!reportCardEngine.APPROVED_MARK_STATUSES.has(mark.markStatus)) continue;
+    if (!approvedAssessmentIds.has(mark.assessmentId)) continue;
+    const componentMeta = componentBySubjectAssessment.get(`${mark.assessmentId}_${mark.componentId}`);
+    if (!componentMeta) continue;
+
+    const key = `${mark.studentId}::${componentMeta.subjectId}`;
+    const row = {
+      assessmentId: mark.assessmentId,
+      componentId: mark.componentId,
+      componentName: componentMeta.componentName,
+      subjectId: componentMeta.subjectId,
+      score: mark.score ?? null,
+      entryStatus: mark.entryStatus || (typeof mark.score === "number" ? "scored" : "notEntered"),
+      maximumMark: componentMeta.maximumMark,
+      weight: componentMeta.weight,
+      markStatus: mark.markStatus,
+      updatedAtMillis: mark.updatedAt && mark.updatedAt.toMillis ? mark.updatedAt.toMillis() : null,
+    };
+    if (!marksByStudentSubject.has(key)) marksByStudentSubject.set(key, []);
+    marksByStudentSubject.get(key).push(row);
+  }
+
+  // Every subject the class was actually assessed in this term (from
+  // approved assessments), not just the subjects a given learner happens to
+  // have a mark row for - a learner missing a subject entirely (e.g. never
+  // entered at all, as opposed to entered-and-absent) must still show that
+  // subject as incomplete, not have it silently vanish from their report.
+  const classSubjectIds = new Set(approvedAssessments.map((a) => a.subjectId));
+
+  // One aggregate per learner, so ranking can run across the whole class
+  // before any document is written - position must never be computed one
+  // learner at a time, or a later learner's write could invalidate an
+  // earlier one's already-written position.
+  const learnerAggregates = entries.map((entry) => {
+    const subjects = [...classSubjectIds].sort().map((subjectId) => {
+      const rows = marksByStudentSubject.get(`${entry.studentId}::${subjectId}`) || [];
+      return reportCardEngine.aggregateSubject({ subjectId, rows, gradingSystem, gradeBands });
+    });
+
+    const completeSubjects = subjects.filter((s) => s.isComplete);
+    const isEligibleForRanking = subjects.length > 0 && completeSubjects.length === subjects.length;
+    const totalScore = completeSubjects.reduce((sum, s) => sum + (s.average || 0), 0);
+    const overallAverage = completeSubjects.length > 0 ? totalScore / completeSubjects.length : null;
+    const overallGrade = overallAverage === null
+      ? null
+      : reportCardEngine.resolveGrade({ score: overallAverage, gradingSystem, gradeBands });
+    const aggregatePoints = completeSubjects.every((s) => s.gradePoint !== null && s.gradePoint !== undefined)
+      && completeSubjects.length > 0
+      ? completeSubjects.reduce((sum, s) => sum + s.gradePoint, 0)
+      : null;
+
+    const allMarkRows = [...marksByStudentSubject.entries()]
+      .filter(([key]) => key.startsWith(`${entry.studentId}::`))
+      .flatMap(([, rows]) => rows);
+
+    return {
+      entry,
+      subjects,
+      hasAnyMarks: allMarkRows.length > 0,
+      isEligibleForRanking,
+      overallAverage,
+      overallTotal: totalScore,
+      overallGrade: overallGrade ? overallGrade.gradeCode : null,
+      overallGradeLabel: overallGrade ? overallGrade.gradeLabel : null,
+      isOverallPassing: overallGrade ? overallGrade.isPassing : null,
+      aggregatePoints,
+      sourceHash: reportCardEngine.sourceHash({ markRows: allMarkRows, gradingSystem, gradeBands, classEntry: entry }),
+    };
+  });
+
+  // Ranking is a school-configurable preference; without an explicit signal
+  // that a school wants positions off, computing them is harmless (a report
+  // template that doesn't render position simply doesn't show the field),
+  // but only students with every subject complete are ranked at all - an
+  // incomplete learner is not comparable to a complete one.
+  const rankable = learnerAggregates.filter((a) => a.isEligibleForRanking && a.overallAverage !== null);
+  const positions = reportCardEngine.rankByMetric(
+    rankable.map((a) => ({ studentId: a.entry.studentId, metric: a.overallAverage }))
+  );
+
+  const created = [];
+  const unchanged = [];
+  const skipped = [];
+  const failed = [];
+
+  const chunks = [];
+  for (let i = 0; i < learnerAggregates.length; i += 400) chunks.push(learnerAggregates.slice(i, i + 400));
+
+  for (const chunk of chunks) {
+    const batch = db.batch();
+    let hasWrites = false;
+
+    for (const aggregate of chunk) {
+      const { entry } = aggregate;
+      if (!aggregate.hasAnyMarks) {
+        skipped.push({ studentId: entry.studentId, reason: "no_approved_marks" });
+        continue;
+      }
+
+      const id = reportCardEngine.reportCardId({
+        schoolId,
+        studentId: entry.studentId,
+        academicYearId,
+        termId,
+      });
+      const ref = school.collection("reportCards").doc(id);
+      // eslint-disable-next-line no-await-in-loop
+      const existing = await ref.get();
+
+      if (existing.exists) {
+        const existingData = existing.data();
+        if (existingData.isFinalized) {
+          // A finalized report is immutable. A source change after
+          // finalization is a correction, not a regeneration, and
+          // corrections are out of scope for this phase - surface it as a
+          // clear skip rather than silently doing nothing or throwing.
+          skipped.push({ studentId: entry.studentId, reason: "already_finalized" });
+          continue;
+        }
+        if (existingData.sourceHash === aggregate.sourceHash) {
+          unchanged.push({ studentId: entry.studentId, reportCardId: id });
+          continue;
+        }
+      }
+
+      const position = positions.get(entry.studentId) ?? null;
+      const snapshot = {
+        schemaVersion: reportCardEngine.SCHEMA_VERSION,
+        reportCardId: id,
+        schoolId,
+        studentId: entry.studentId,
+        studentName: entry.studentName || "",
+        academicYearId,
+        termId,
+        classId,
+        streamId: entry.streamId ?? streamId ?? null,
+        gradingSystemId: gradingSystem ? gradingSystem.id : null,
+        gradingSystemVersion: gradingSystem ? gradingSystem.version : null,
+        subjectResults: aggregate.subjects,
+        totalScore: aggregate.overallTotal,
+        average: aggregate.overallAverage,
+        overallGrade: aggregate.overallGrade,
+        overallGradeLabel: aggregate.overallGradeLabel,
+        isOverallPassing: aggregate.isOverallPassing,
+        aggregatePoints: aggregate.aggregatePoints,
+        position,
+        isRanked: position !== null,
+        attendanceVerified: entry.attendanceVerified ?? false,
+        overallConductCode: entry.overallConductCode ?? null,
+        conduct: entry.conduct || [],
+        classTeacherComment: entry.teacherComment ?? null,
+        recommendations: entry.recommendations || [],
+        academicWorkflowStatus: existing.exists ? existing.data().academicWorkflowStatus : "compiled",
+        isFinalized: false,
+        version: existing.exists ? (existing.data().version || 1) + 1 : 1,
+        generationBatchId: batchId,
+        sourceRecordIds: {
+          classReportEntryId: entry.id,
+          assessmentIds: [...new Set(aggregate.subjects.flatMap((s) => s.componentResults.map((c) => c.assessmentId)))],
+        },
+        sourceHash: aggregate.sourceHash,
+        supersedesReportCardId: existing.exists ? (existing.data().supersedesReportCardId ?? null) : null,
+        generatedBy: actorUid,
+        generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: existing.exists ? existing.data().createdAt : admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      batch.set(ref, snapshot, { merge: false });
+      batch.update(entry.ref, {
+        reportCardId: id,
+        reportCardGenerationStatus: "generated",
+        reportCardGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      hasWrites = true;
+      created.push({ studentId: entry.studentId, reportCardId: id, version: snapshot.version });
+    }
+
+    if (hasWrites) {
+      // eslint-disable-next-line no-await-in-loop
+      await batch.commit();
+    }
+  }
+
+  return { created, unchanged, skipped, failed, configurationErrors: [], batchId };
+}
+
+/**
+ * Generates canonical report-card snapshots for a class - the Class
+ * Teacher's "Compile" action (ClassReportsGenerated). Authorization allows
+ * either the academic office or the Class Teacher who actually holds this
+ * class, matching the two real callers; a client-supplied total or grade
+ * never reaches the snapshot, since every number here is recomputed from
+ * `student_marks` and the school's grading configuration.
+ */
+exports.generateClassReportCards = onCall(async (request) => {
+  const { classId, streamId, academicYearId, termId, studentIds } = request.data || {};
+  if (!classId || !academicYearId || !termId) {
+    throw new HttpsError(
+      "invalid-argument",
+      "classId, academicYearId and termId are required."
+    );
+  }
+
+  const caller = await requireClassReportGenerationAccess(request.auth, { classId, academicYearId });
+
+  const result = await _generateClassReportCardsInternal({
+    schoolId: caller.schoolId,
+    classId,
+    streamId: streamId || null,
+    academicYearId,
+    termId,
+    studentIds,
+    actorUid: caller.uid,
+  });
+
+  await writeAudit(caller.schoolId, {
+    userId: caller.uid,
+    action: "report_card.generated",
+    entityType: "reportCards",
+    entityId: classId,
+    academicYearId,
+    termId,
+    classId,
+    newValue: {
+      created: result.created.length,
+      unchanged: result.unchanged.length,
+      skipped: result.skipped.length,
+      failed: result.failed.length,
+      batchId: result.batchId,
+    },
+  });
+
+  return result;
+});
+
+/**
  * Publishes report cards to parents.
  *
  * Kept server-side because publication is the moment a report becomes a
@@ -2893,6 +3351,20 @@ exports.publishClassReports = onCall(async (request) => {
 
   const db = admin.firestore();
   const school = db.collection("schools").doc(caller.schoolId);
+
+  // Ensures every learner being published has a reportCards snapshot that
+  // reflects the current approved marks, whether or not the Class Teacher's
+  // own Compile action already ran. Idempotent - a snapshot already
+  // matching the current source hash is left untouched.
+  const generation = await _generateClassReportCardsInternal({
+    schoolId: caller.schoolId,
+    classId,
+    streamId: null,
+    academicYearId,
+    termId,
+    studentIds,
+    actorUid: caller.uid,
+  });
 
   // Finance's hold list, read here rather than trusted from the caller.
   const policyDoc = await school.collection("configs").doc("reportReleasePolicy").get();
@@ -2949,7 +3421,12 @@ exports.publishClassReports = onCall(async (request) => {
     academicYearId,
     termId,
     classId,
-    newValue: { publishedCount: published.length, skipped },
+    newValue: {
+      publishedCount: published.length,
+      skipped,
+      reportCardsGenerated: generation.created.length,
+      reportCardsUnchanged: generation.unchanged.length,
+    },
   });
 
   if (published.length > 0) {
@@ -2960,7 +3437,7 @@ exports.publishClassReports = onCall(async (request) => {
     }).catch((err) => console.error("report_available email fan-out failed", classId, err));
   }
 
-  return { published: published.length, skipped };
+  return { published: published.length, skipped, reportCardGeneration: generation };
 });
 
 /** One idempotency key per (student, term, recipient) - never per report content, so a duplicate publish event can't double-email. */
@@ -3296,7 +3773,12 @@ exports.requestDataOperation = onCall(async (request) => {
   return { jobId: job.id, correlationId, status: base.status };
 });
 
-exports.__test__ = { reportAvailableEventId, chunkIds, notifyParentsOfPublishedReports, isDelegationValid, validatePolicyStages, STAFF_ROLES, ADMIN_ROLES };
+exports.__test__ = {
+  reportAvailableEventId, chunkIds, notifyParentsOfPublishedReports, isDelegationValid, validatePolicyStages, STAFF_ROLES, ADMIN_ROLES,
+  generateClassReportCardsInternal: _generateClassReportCardsInternal,
+  requireClassReportGenerationAccess,
+  loadDefaultGradingSystem,
+};
 
 // Support and audit are isolated in their own module so source business
 // modules only need to emit their existing events, never duplicate tickets.

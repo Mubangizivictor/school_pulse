@@ -1592,7 +1592,14 @@ class ThemeSwitchTile extends StatelessWidget {
         ThemeMode.dark => Icons.dark_mode_rounded,
         ThemeMode.system => Icons.brightness_auto_rounded,
       }, color: Theme.of(context).colorScheme.primary),
-      title: const Text('App Theme'),
+      title: Text(
+        'App Theme',
+        style: TextStyle(
+          color: AppColors.textPrimary(context),
+          fontWeight: FontWeight.w600,
+          fontSize: 15,
+        ),
+      ),
       trailing: Text(
         switch (themeProvider.themeMode) {
           ThemeMode.light => 'Light',
@@ -1674,7 +1681,13 @@ class ThemeSwitchTile extends StatelessWidget {
         icon,
         color: isSelected ? colors.onPrimaryContainer : colors.onSurfaceVariant,
       ),
-      title: Text(label),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? colors.onPrimaryContainer : AppColors.textPrimary(context),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       trailing: isSelected
           ? Icon(Icons.check, color: colors.onPrimaryContainer)
           : null,

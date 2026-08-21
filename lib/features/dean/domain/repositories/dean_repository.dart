@@ -47,13 +47,15 @@ abstract class DeanRepository {
   });
 
   // Assessment & Marks QA
-  Future<Either<Failure, void>> approveAssessmentMarks(String assessmentId);
-  Future<Either<Failure, void>> rejectAssessmentMarks(
-    String assessmentId,
-    String reason,
-  );
-  Future<Either<Failure, List<AssessmentModeration>>>
-  getPendingModerationAssessments();
+  Future<Either<Failure, void>> approveAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+  });
+  Future<Either<Failure, void>> rejectAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+    required String reason,
+  });
 
   // Report Card Approval
   Future<Either<Failure, void>> approveReportCards(List<String> reportCardIds);

@@ -7,6 +7,8 @@
   "main": "index.js",
   "scripts": {
     "test:rules": "firebase emulators:exec --only firestore --project demo-school-pulse-rules-test \"node --test test/firestore.rules.test.cjs\"",
+    "test:report-card-engine": "node report_card_engine.test.js",
+    "test:report-card-engine:emulator": "firebase emulators:exec --only firestore --project demo-report-card-engine-test \"node --test test/report_card_engine.emulator.test.cjs\"",
     "logs": "firebase functions:log",
     "deploy": "firebase deploy --only functions"
   },

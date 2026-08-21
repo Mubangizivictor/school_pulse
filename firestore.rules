@@ -864,14 +864,22 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
+    // Canonical, immutable report-card snapshots. Every field here - totals,
+    // grades, positions, isFinalized - is computed by the Report Card Engine
+    // (a Cloud Function using the Admin SDK, which is not subject to these
+    // rules) from approved student_marks and the school's grading
+    // configuration. No client, however privileged, may create or edit one
+    // directly: a staff member with write access here could forge a grade
+    // or flip isFinalized without ever touching a real mark. Parent/Student
+    // read access is intentionally NOT granted yet - it is gated on
+    // Bursar-controlled financial release, a later phase; until that rule
+    // exists, only staff may read a report card at all.
     match /schools/{schoolId}/reportCards/{id} {
-      allow read: if (isStaff() && isSameSchool(schoolId)) ||
-        isParentOf(resource.data.studentId) || isMe(resource.data.studentId);
-      allow write: if isStaff() && isSameSchool(schoolId) && schoolCanWrite(schoolId);
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow write: if false;
       match /auditLog/{entryId} {
         allow read: if isStaff() && isSameSchool(schoolId);
-        allow create: if isStaff() && isSameSchool(schoolId) && schoolCanWrite(schoolId);
-        allow update, delete: if false;
+        allow create, update, delete: if false;
       }
     }
     match /schools/{schoolId}/reportTemplates/{id} {

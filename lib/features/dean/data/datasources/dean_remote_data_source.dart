@@ -46,9 +46,15 @@ abstract class DeanRemoteDataSource {
   );
   Future<List<Curriculum>> getCurricula();
   Future<void> updateCurriculum(Curriculum curriculum);
-  Future<void> approveAssessmentMarks(String assessmentId);
-  Future<void> rejectAssessmentMarks(String assessmentId, String reason);
-  Future<List<AssessmentModeration>> getPendingModerationAssessments();
+  Future<void> approveAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+  });
+  Future<void> rejectAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+    required String reason,
+  });
   Future<void> approveReportCards(List<String> reportCardIds);
   Future<void> rejectReportCards(List<String> reportCardIds, String reason);
   Future<List<ReportCardApproval>> getPendingReportApprovals();
@@ -507,42 +513,82 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   }
 
   @override
-  Future<void> approveAssessmentMarks(String assessmentId) async {}
+  Future<void> approveAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+  }) async {
+    await _setAssessmentMarksStatus(
+      schoolId: schoolId,
+      assessmentId: assessmentId,
+      assessmentStatus: 'approved',
+      markStatus: 'approved',
+    );
+  }
 
   @override
-  Future<void> rejectAssessmentMarks(
-    String assessmentId,
-    String reason,
-  ) async {}
+  Future<void> rejectAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+    required String reason,
+  }) async {
+    await _setAssessmentMarksStatus(
+      schoolId: schoolId,
+      assessmentId: assessmentId,
+      assessmentStatus: 'returned',
+      markStatus: 'returned',
+      rejectionReason: reason,
+    );
+  }
 
-  @override
-  Future<List<AssessmentModeration>> getPendingModerationAssessments() async {
-    return [
-      AssessmentModeration(
-        id: "am1",
-        assessmentId: "as1",
-        title: "Mid-Term Algebra Test",
-        className: "Year 10A",
-        subjectName: "Mathematics",
-        teacherName: "John Doe",
-        submissionCount: 28,
-        totalStudents: 30,
-        averageScore: 72.5,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      AssessmentModeration(
-        id: "am2",
-        assessmentId: "as2",
-        title: "Weekly Physics Quiz",
-        className: "S.4 Science",
-        subjectName: "Physics",
-        teacherName: "Jane Smith",
-        submissionCount: 45,
-        totalStudents: 45,
-        averageScore: 68.2,
-        createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-      ),
-    ];
+  /// Moves an assessment's moderation status and every one of its marks in
+  /// lockstep. The class teacher's report engine reads `student_marks` by
+  /// `markStatus` alone (it has no notion of `subject_assessments`), while
+  /// the QA screens read `subject_assessments.status` - so a decision here
+  /// that only touched one collection would leave the other showing stale
+  /// information.
+  Future<void> _setAssessmentMarksStatus({
+    required String schoolId,
+    required String assessmentId,
+    required String assessmentStatus,
+    required String markStatus,
+    String? rejectionReason,
+  }) async {
+    final assessmentRef = _assessments(schoolId).doc(assessmentId);
+    final marksSnapshot = await _marks(
+      schoolId,
+    ).where('assessmentId', isEqualTo: assessmentId).get();
+
+    // A batch caps at 500 writes; one per mark document plus the assessment
+    // itself is comfortably within that for a single assessment's cohort,
+    // but chunk defensively rather than assume a class size ceiling.
+    const chunkSize = 400;
+    final markDocs = marksSnapshot.docs;
+
+    for (var offset = 0; offset < markDocs.length; offset += chunkSize) {
+      final batch = firestore.batch();
+      if (offset == 0) {
+        batch.update(assessmentRef, {
+          'status': assessmentStatus,
+          if (rejectionReason != null) 'rejectionReason': rejectionReason,
+        });
+      }
+      for (final doc in markDocs.skip(offset).take(chunkSize)) {
+        batch.update(doc.reference, {
+          'markStatus': markStatus,
+          if (rejectionReason != null) 'returnReason': rejectionReason,
+        });
+      }
+      await batch.commit();
+    }
+
+    if (markDocs.isEmpty) {
+      // No marks yet is still a valid moderation decision on the assessment
+      // itself (e.g. rejecting before any submissions exist).
+      await assessmentRef.update({
+        'status': assessmentStatus,
+        if (rejectionReason != null) 'rejectionReason': rejectionReason,
+      });
+    }
   }
 
   @override
