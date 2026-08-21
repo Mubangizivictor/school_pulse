@@ -134,6 +134,11 @@ class SubjectTeacherDashboardState extends Equatable {
   ];
 }
 
+/// Deliberately not unified with [ClassTeacherDashboardBloc] - see that
+/// class's doc comment. The independent per-branch failure folding below
+/// (a lessons failure must not blank out a student count that already
+/// loaded) is the reason a shared fetch-strategy base was rejected in favor
+/// of the small duplication left between the two blocs.
 class SubjectTeacherDashboardBloc
     extends Bloc<SubjectTeacherDashboardEvent, SubjectTeacherDashboardState> {
   final SubjectStudentRepository studentRepository;

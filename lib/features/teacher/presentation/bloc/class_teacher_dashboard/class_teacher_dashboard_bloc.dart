@@ -117,6 +117,14 @@ class ClassTeacherDashboardState extends Equatable {
   ];
 }
 
+/// Deliberately not unified with [SubjectTeacherDashboardBloc] despite the
+/// similar shape (stale-response guard on `roleAssignmentId`, near-identical
+/// `_messageFor`): this bloc makes a single repository call producing one
+/// rich summary, while the subject dashboard fans out two independent
+/// repository calls and folds their failures separately. A shared base would
+/// have to either force a fan-out shape on this bloc or hide a
+/// single-vs-fan-out branch inside the base - both worse than the small
+/// amount of duplication left as-is.
 class ClassTeacherDashboardBloc
     extends Bloc<ClassTeacherDashboardEvent, ClassTeacherDashboardState> {
   final ClassDashboardRepository dashboardRepository;
