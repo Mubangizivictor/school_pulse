@@ -13,6 +13,7 @@ import 'package:school_pulse/features/attendance_hub/domain/repositories/sheets_
 import 'package:school_pulse/features/attendance_hub/domain/services/attendance_participant_resolver.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 class AttendanceMethodScreen extends StatefulWidget {
@@ -537,10 +538,25 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
             icon: Icons.assignment_turned_in_rounded,
             badgeIcon: Icons.shield_rounded,
             badgeLabel: 'Full Control',
-            onTap: () => context.push(
-              '/staff/attendance/manual',
-              extra: _selectedCategory,
-            ),
+            // A Class Teacher's manual attendance is their own daily class
+            // register (TeacherAttendanceScreen/ClassAttendanceBloc), not the
+            // generic multi-category manual screen this hub otherwise opens -
+            // matrons, patrons and admins have no such register, so the
+            // detour is scoped to only when that responsibility is active.
+            onTap: () {
+              final classActive = context
+                  .read<ClassTeacherContextBloc>()
+                  .state
+                  .active;
+              if (classActive != null) {
+                context.push('/staff/roll-call');
+                return;
+              }
+              context.push(
+                '/staff/attendance/manual',
+                extra: _selectedCategory,
+              );
+            },
           ),
 
           // History Card
@@ -551,7 +567,21 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
             icon: Icons.history_rounded,
             badgeIcon: Icons.bar_chart_rounded,
             badgeLabel: 'History & Reports',
-            onTap: () => context.push('/staff/attendance/history'),
+            // Mirrors the Manual Attendance card above: a Class Teacher's
+            // history is their own class register's
+            // (TeacherAttendanceHistoryScreen/ClassAttendanceHistoryBloc),
+            // not the generic multi-category history this hub otherwise opens.
+            onTap: () {
+              final classActive = context
+                  .read<ClassTeacherContextBloc>()
+                  .state
+                  .active;
+              if (classActive != null) {
+                context.push('/staff/roll-call/history');
+                return;
+              }
+              context.push('/staff/attendance/history');
+            },
           ),
 
           // Google Sheets Card
