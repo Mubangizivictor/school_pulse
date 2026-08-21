@@ -547,7 +547,7 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       'termId': entry.termId,
       'studentId': entry.studentId,
       'studentName': entry.studentName,
-      'status': entry.status.name,
+      'status': entry.status.storageId,
       'competencies': entry.competencies
           .map(
             (c) => {

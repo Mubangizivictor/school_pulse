@@ -167,7 +167,18 @@ class ClassReportsBloc extends Bloc<ClassReportsEvent, ClassReportsState> {
     ClassReportsRequested event,
     Emitter<ClassReportsState> emit,
   ) async {
-    emit(ClassReportsState(isLoading: true, context: event.context));
+    // A refresh can be triggered while a report detail route is open. Keep
+    // the loaded profile and entries until the replacement snapshot arrives;
+    // otherwise the detail screen briefly sees an empty list and treats its
+    // report as deleted.
+    emit(
+      state.copyWith(
+        isLoading: true,
+        context: event.context,
+        clearError: true,
+        clearSuccess: true,
+      ),
+    );
 
     final profile = await reportRepository.getProfile(context: event.context);
     final entries = await reportRepository.getEntries(context: event.context);

@@ -38,6 +38,20 @@ enum ReportEntryStatus {
 }
 
 extension ReportEntryStatusDisplay on ReportEntryStatus {
+  /// Stable persisted value used by Firestore and its security rules.
+  /// Dart enum names are camelCase while the database contract is snake_case.
+  String get storageId => switch (this) {
+    ReportEntryStatus.draft => 'draft',
+    ReportEntryStatus.inProgress => 'in_progress',
+    ReportEntryStatus.submittedForReview => 'submitted_for_review',
+    ReportEntryStatus.returnedForCorrection => 'returned_for_correction',
+    ReportEntryStatus.classTeacherCompleted => 'class_teacher_completed',
+    ReportEntryStatus.academicOfficeApproved => 'academic_office_approved',
+    ReportEntryStatus.leadershipApproved => 'leadership_approved',
+    ReportEntryStatus.published => 'published',
+    ReportEntryStatus.archived => 'archived',
+  };
+
   String get label => switch (this) {
     ReportEntryStatus.draft => 'Draft',
     ReportEntryStatus.inProgress => 'In progress',

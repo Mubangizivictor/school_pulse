@@ -20,6 +20,46 @@ const SCHOOL_ID = 'school-pulse-academy';
 const ACADEMIC_YEAR_ID = '2026';
 const DEFAULT_PASSWORD = 'Test@123';
 
+// Keep the demo Class Teacher role usable end-to-end. These are the same
+// scoped capabilities granted by the in-app demo seeder, not administrator
+// permissions, so the account can only work with its assigned class.
+const CLASS_TEACHER_PERMISSIONS = [
+  'class.students.view',
+  'class.student.profile.view',
+  'class.student.historical.view',
+  'class.student.note.write',
+  'class.attendance.take',
+  'class.attendance.edit',
+  'class.attendance.view',
+  'class.homework.create',
+  'class.homework.publish',
+  'class.homework.edit',
+  'class.behaviour.record',
+  'class.behaviour.view',
+  'class.achievement.record',
+  'class.health_alert.view',
+  'class.leave.view',
+  'class.parent.message',
+  'class.announcement.create',
+  'class.announcement.publish',
+  'class.performance.view',
+  'class.intervention_note.write',
+  'class.report.entry',
+  'class.report.competency.entry',
+  'class.report.conduct.entry',
+  'class.report.comment.write',
+  'class.report.recommendation.write',
+  'class.report.submit',
+  'class.report.generate',
+  'class.report.share',
+  'class.report.export',
+  'class.task.manage',
+  'class.task.collaborate',
+  'class.resource.upload',
+  'class.resource.share',
+  'class.timetable.view',
+];
+
 const classSlug = (name) => name.toLowerCase().replace(/ /g, '-');
 const subjectSlug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
@@ -275,11 +315,11 @@ async function seedTeachers() {
         endDate: null,
         status: 'active',
         permissionScope: {
-          permissions: [],
+          permissions: CLASS_TEACHER_PERMISSIONS,
           subjectId: null,
           classId: t.assignedClass,
           academicYearId: ACADEMIC_YEAR_ID,
-          termIds: [],
+          termIds: ['2026-t1', '2026-t2', '2026-t3'],
         },
         assignedBy: 'seed_primary_demo_node',
         assignedAt: admin.firestore.FieldValue.serverTimestamp(),
