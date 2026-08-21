@@ -91,7 +91,13 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
       },
       builder: (context, contextState) {
         return TeacherScaffold(
-          appBar: staffDashboardAppBar(context, roleLabel: 'Subject Teacher'),
+          appBar: staffDashboardAppBar(
+            context,
+            roleLabel: 'Subject Teacher',
+            onSwitchTap: contextState.isSwitching
+                ? null
+                : () => _openSwitcher(contextState),
+          ),
           body: RefreshIndicator(
             onRefresh: () async => _refreshData(),
             child: CustomScrollView(

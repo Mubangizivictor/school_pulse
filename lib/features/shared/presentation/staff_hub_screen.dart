@@ -6,6 +6,9 @@ import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
+import 'package:school_pulse/features/teacher/domain/services/active_responsibility_service.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 /// Landing screen for a staff member holding more than one role (e.g. a
 /// class teacher who is also a subject teacher and the discipline head).
@@ -41,8 +44,7 @@ class StaffHubScreen extends StatelessWidget {
                   (role) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: AppCard(
-                      onTap: () =>
-                          context.push(UserRoleRouting.dashboardPath(role)),
+                      onTap: () => _openRole(context, role, user),
                       child: ListTile(
                         leading: CircleAvatar(
                           backgroundColor: Theme.of(
@@ -60,6 +62,55 @@ class StaffHubScreen extends StatelessWidget {
               ],
             ),
     );
+  }
+
+  /// Class Teacher and Subject Teacher share one `/staff/dashboard` route
+  /// (see UserRoleRouting.dashboardPath) - `StaffPanelHost` decides which
+  /// dashboard to render from `ActiveResponsibilityService.current`, not from
+  /// the route. A bare `context.push` here would navigate without ever
+  /// telling that service which responsibility was chosen, so the panel
+  /// would keep showing whatever was already active - the previous role's
+  /// nav bar, tabs and data, silently wrong for the role the teacher just
+  /// tapped. Switch the active responsibility first for those two roles;
+  /// every other role has its own dedicated route/shell and no shared
+  /// context to desync.
+  Future<void> _openRole(
+    BuildContext context,
+    UserRole role,
+    UserEntity? user,
+  ) async {
+    if (user == null) return;
+
+    if (role == UserRole.classTeacher || role == UserRole.subjectTeacher) {
+      final wanted = role == UserRole.classTeacher
+          ? StaffResponsibilityType.classTeacher
+          : StaffResponsibilityType.subjectTeacher;
+
+      final service = di.sl<ActiveResponsibilityService>();
+      final resolution = await service.resolve(
+        schoolId: user.schoolId,
+        userId: user.id,
+      );
+
+      final matchingAssignment = resolution.fold(
+        (_) => null,
+        (r) => r.available
+            .where((a) => a.roleType == wanted)
+            .cast<StaffRoleAssignment?>()
+            .firstWhere((a) => true, orElse: () => null),
+      );
+
+      if (matchingAssignment != null) {
+        await service.switchTo(
+          assignmentId: matchingAssignment.id,
+          schoolId: user.schoolId,
+          userId: user.id,
+        );
+      }
+    }
+
+    if (!context.mounted) return;
+    context.push(UserRoleRouting.dashboardPath(role));
   }
 
   Widget? _subtitleForRole(UserRole role, UserEntity? user) {

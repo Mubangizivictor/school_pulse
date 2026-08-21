@@ -241,9 +241,7 @@ void main() {
       expect(find.text('English Literature'), findsNothing);
     });
 
-    testWidgets('explains an empty timetable instead of showing a blank card', (
-      tester,
-    ) async {
+    testWidgets('hides an empty timetable section completely', (tester) async {
       await pump(
         tester,
         contextState: ClassTeacherContextState(active: _activeContext),
@@ -252,9 +250,11 @@ void main() {
         ),
       );
 
+      expect(find.text("Today's Schedule"), findsNothing);
+      expect(find.text('View All'), findsNothing);
       expect(
         find.text('No lessons scheduled for your class today.'),
-        findsOneWidget,
+        findsNothing,
       );
     });
   });
@@ -284,7 +284,7 @@ void main() {
       expect(find.text('Register submitted for P5 East.'), findsOneWidget);
     });
 
-    testWidgets('explains an empty feed', (tester) async {
+    testWidgets('hides an empty activity section completely', (tester) async {
       await pump(
         tester,
         contextState: ClassTeacherContextState(active: _activeContext),
@@ -293,9 +293,11 @@ void main() {
         ),
       );
 
+      expect(find.text('Recent Activities'), findsNothing);
+      expect(find.text('View All'), findsNothing);
       expect(
         find.text('Nothing has happened in your class yet.'),
-        findsOneWidget,
+        findsNothing,
       );
     });
   });

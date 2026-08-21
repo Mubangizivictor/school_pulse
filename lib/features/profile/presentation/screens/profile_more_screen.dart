@@ -219,6 +219,15 @@ class ProfileMoreScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainer(context),
+                borderRadius: AppRadius.large,
+                border: Border.all(color: AppColors.border(context)),
+              ),
+              child: const ThemeSwitchTile(),
+            ),
+            const SizedBox(height: 10),
             AppCard(
               padding: EdgeInsets.zero,
               child: InkWell(

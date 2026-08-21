@@ -2474,6 +2474,349 @@ const studentViewFunctions = require("./student_view");
 exports.getStudentView = studentViewFunctions.getStudentView;
 
 // ---------------------------------------------------------------------------
+// Class Teacher student-care hand-offs
+//
+// A class teacher can raise a concern, but must never write a clinical record
+// or approve a student's absence.  These callable functions create a small,
+// auditable hand-off record and let the notification service fan it out to the
+// people who own the next decision.
+// ---------------------------------------------------------------------------
+
+const STUDENT_CARE_ADMIN_ROLES = [
+  "director", "headTeacher", "deputyHead", "deanOfStudies", "schoolAdmin",
+];
+
+function rolesOf(profile = {}) {
+  return Array.from(new Set([
+    profile.role,
+    ...(Array.isArray(profile.roles) ? profile.roles : []),
+  ].filter(Boolean)));
+}
+
+async function requireClassTeacherForStudent(auth, studentId) {
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "You must be signed in.");
+  }
+  if (!studentId || typeof studentId !== "string") {
+    throw new HttpsError("invalid-argument", "studentId is required.");
+  }
+
+  const firestore = admin.firestore();
+  const [callerDoc, studentDoc] = await Promise.all([
+    firestore.collection("users").doc(auth.uid).get(),
+    firestore.collection("students").doc(studentId).get(),
+  ]);
+  if (!callerDoc.exists || !studentDoc.exists) {
+    throw new HttpsError("not-found", "The staff member or student was not found.");
+  }
+
+  const caller = callerDoc.data();
+  const student = studentDoc.data();
+  const roles = rolesOf(caller);
+  if (!caller.schoolId || caller.schoolId !== student.schoolId) {
+    throw new HttpsError("permission-denied", "This student belongs to another school.");
+  }
+
+  const isAdmin = roles.some((role) => STUDENT_CARE_ADMIN_ROLES.includes(role));
+  let isAssignedTeacher = roles.includes("classTeacher") &&
+    caller.assignedClass && caller.assignedClass === student.className;
+
+  // Newer accounts may hold more than one class responsibility.  Preserve
+  // that scope here while supporting existing flat assignedClass accounts.
+  if (!isAssignedTeacher && roles.includes("classTeacher")) {
+    const assignments = await firestore
+      .collection("schools")
+      .doc(caller.schoolId)
+      .collection("staff_role_assignments")
+      .where("schoolId", "==", caller.schoolId)
+      .where("staffId", "==", auth.uid)
+      .where("roleType", "==", "classTeacher")
+      .get();
+    isAssignedTeacher = assignments.docs.some((doc) => {
+      const assignment = doc.data();
+      return assignment.status === "active" && assignment.className === student.className;
+    });
+  }
+  if (!isAdmin && !isAssignedTeacher) {
+    throw new HttpsError(
+      "permission-denied",
+      "You are not assigned as this student's class teacher."
+    );
+  }
+
+  return { caller, student, roles };
+}
+
+async function queueStudentCareNotification({
+  schoolId, senderId, sender, audience, category, type, title, body,
+  studentId, studentName, sourceEntityId, priority = "high",
+}) {
+  await admin.firestore().collection("notification_requests").add({
+    schoolId,
+    senderId,
+    senderNameSnapshot: sender.name || "Class Teacher",
+    senderRoleSnapshot: "Class Teacher",
+    senderKind: "human",
+    audience,
+    category,
+    type,
+    title,
+    shortBody: body,
+    fullBody: body,
+    sourceModule: "class_teacher",
+    sourceEntityId,
+    relatedStudentId: studentId,
+    relatedStudentName: studentName,
+    priority,
+    persistence: "permanent",
+    requiresAcknowledgment: priority === "urgent",
+    status: "pending",
+    idempotencyKey: `${sourceEntityId}-${category}`,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+exports.referStudentToNurse = onCall(async (request) => {
+  const { studentId, concern, urgency = "standard" } = request.data || {};
+  const cleanConcern = typeof concern === "string" ? concern.trim() : "";
+  if (cleanConcern.length < 5 || cleanConcern.length > 2000) {
+    throw new HttpsError("invalid-argument", "Enter a health concern between 5 and 2,000 characters.");
+  }
+  if (!["standard", "urgent"].includes(urgency)) {
+    throw new HttpsError("invalid-argument", "urgency must be standard or urgent.");
+  }
+  const { caller, student } = await requireClassTeacherForStudent(request.auth, studentId);
+  const firestore = admin.firestore();
+  const referral = firestore.collection("student_health_referrals").doc();
+  const studentName = student.fullName || student.name || "Student";
+  await referral.set({
+    schoolId: caller.schoolId,
+    studentId,
+    studentName,
+    className: student.className || null,
+    concern: cleanConcern,
+    urgency,
+    status: "awaiting_nurse_review",
+    referredBy: request.auth.uid,
+    referredByName: caller.name || "Class Teacher",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  await queueStudentCareNotification({
+    schoolId: caller.schoolId,
+    senderId: request.auth.uid,
+    sender: caller,
+    audience: { kind: "anyOf", definitions: [
+      { kind: "roles", roles: ["nurse"] },
+      { kind: "roles", roles: STUDENT_CARE_ADMIN_ROLES },
+    ] },
+    category: "medical",
+    type: "nurseAlert",
+    title: `${urgency === "urgent" ? "Urgent " : ""}student health referral`,
+    body: `${studentName} has been referred by the class teacher.`,
+    studentId,
+    studentName,
+    sourceEntityId: referral.id,
+    priority: urgency === "urgent" ? "urgent" : "high",
+  });
+  return { referralId: referral.id, status: "awaiting_nurse_review" };
+});
+
+exports.submitClassTeacherLeaveApplication = onCall(async (request) => {
+  const { studentId, reason, destination, departureDate, expectedReturnDate } = request.data || {};
+  const cleanReason = typeof reason === "string" ? reason.trim() : "";
+  const cleanDestination = typeof destination === "string" ? destination.trim() : "";
+  const departure = new Date(departureDate);
+  const expectedReturn = new Date(expectedReturnDate);
+  if (cleanReason.length < 5 || cleanReason.length > 1000 || !cleanDestination) {
+    throw new HttpsError("invalid-argument", "Reason and destination are required.");
+  }
+  if (Number.isNaN(departure.getTime()) || Number.isNaN(expectedReturn.getTime()) || expectedReturn < departure) {
+    throw new HttpsError("invalid-argument", "Enter valid leave and return dates.");
+  }
+  const { caller, student } = await requireClassTeacherForStudent(request.auth, studentId);
+  const firestore = admin.firestore();
+  // Reuse the boarding leave queue that the Patron/Matron already works from;
+  // this makes a class-teacher request actionable in their existing module.
+  const leave = firestore.collection("boarding_leave_requests").doc();
+  const studentName = student.fullName || student.name || "Student";
+  const gender = String(student.gender || "").toLowerCase();
+  const isFemale = gender === "female" || gender === "f";
+  const patronRole = isFemale ? "boardingMatron" : "boardingPatron";
+  await leave.set({
+    schoolId: caller.schoolId,
+    studentId,
+    studentName,
+    className: student.className || null,
+    reason: cleanReason,
+    destination: cleanDestination,
+    departureDate: admin.firestore.Timestamp.fromDate(departure),
+    expectedReturnDate: admin.firestore.Timestamp.fromDate(expectedReturn),
+    dormitoryId: student.dormitoryId || "",
+    gender: isFemale ? "Female" : "Male",
+    status: "Pending",
+    source: "class_teacher",
+    patronRole,
+    requestedBy: request.auth.uid,
+    requestedByName: caller.name || "Class Teacher",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  await queueStudentCareNotification({
+    schoolId: caller.schoolId,
+    senderId: request.auth.uid,
+    sender: caller,
+    audience: { kind: "anyOf", definitions: [
+      { kind: "roles", roles: [patronRole] },
+      { kind: "roles", roles: ["nurse"] },
+      { kind: "roles", roles: STUDENT_CARE_ADMIN_ROLES },
+    ] },
+    category: "hostel",
+    type: "hostelNotice",
+    title: "Student leave application awaiting review",
+    body: `${studentName}'s leave application needs patron review. The nurse and school leadership have been informed.`,
+    studentId,
+    studentName,
+    sourceEntityId: leave.id,
+  });
+  return { leaveApplicationId: leave.id, status: "awaiting_patron_review" };
+});
+
+/** Read-only, scoped projection for the Class Teacher's More menu. */
+exports.getClassTeacherStudentMoreData = onCall(async (request) => {
+  const { studentId, section } = request.data || {};
+  const allowedSections = ["contact", "documents", "siblings", "notes", "timeline"];
+  if (!allowedSections.includes(section)) {
+    throw new HttpsError("invalid-argument", "Unknown More Options section.");
+  }
+  const { caller, student } = await requireClassTeacherForStudent(request.auth, studentId);
+  const firestore = admin.firestore();
+  const timestamp = (value) => value && typeof value.toDate === "function"
+    ? value.toDate().toISOString() : null;
+  if (section === "contact") {
+    return { contacts: (student.emergencyContacts || []).map((contact) => ({
+      name: contact.name || "Guardian", relationship: contact.relationship || "Guardian",
+      phoneNumber: contact.phoneNumber || null, email: contact.email || null,
+    })) };
+  }
+  if (section === "documents") {
+    return { documents: Object.entries(student.documents || {}).map(([type, url]) => ({ type, url })) };
+  }
+  if (section === "siblings") {
+    const parentIds = Array.isArray(student.parentIds) ? student.parentIds.filter(Boolean) : [];
+    if (parentIds.length === 0) return { siblings: [] };
+    const siblings = await firestore.collection("students")
+      .where("schoolId", "==", caller.schoolId)
+      .where("parentIds", "array-contains-any", parentIds.slice(0, 30)).get();
+    return { siblings: siblings.docs.filter((doc) => doc.id !== studentId).map((doc) => {
+      const data = doc.data();
+      return { studentId: doc.id, name: data.name || data.fullName || "Student", className: data.className || "", status: data.status || "active" };
+    }) };
+  }
+  const notes = await firestore.collection("class_teacher_student_notes")
+    .where("schoolId", "==", caller.schoolId).where("studentId", "==", studentId).get();
+  const noteRows = notes.docs.map((doc) => {
+    const data = doc.data();
+    return { id: doc.id, text: data.text, createdByName: data.createdByName || "Class Teacher", createdAt: timestamp(data.createdAt), type: "note" };
+  });
+  if (section === "notes") return { notes: noteRows.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))) };
+  const [referrals, leaves] = await Promise.all([
+    firestore.collection("student_health_referrals").where("schoolId", "==", caller.schoolId).where("studentId", "==", studentId).get(),
+    firestore.collection("boarding_leave_requests").where("schoolId", "==", caller.schoolId).where("studentId", "==", studentId).get(),
+  ]);
+  const timeline = [
+    ...noteRows,
+    ...referrals.docs.map((doc) => { const data = doc.data(); return { id: doc.id, type: "health_referral", title: "Health referral", detail: data.status || "awaiting nurse review", createdAt: timestamp(data.createdAt) }; }),
+    ...leaves.docs.map((doc) => { const data = doc.data(); return { id: doc.id, type: "leave", title: "Leave application", detail: data.status || "awaiting patron review", createdAt: timestamp(data.createdAt) }; }),
+  ].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return { timeline };
+});
+
+exports.addClassTeacherStudentNote = onCall(async (request) => {
+  const { studentId, text } = request.data || {};
+  const cleanText = typeof text === "string" ? text.trim() : "";
+  if (cleanText.length < 2 || cleanText.length > 2000) {
+    throw new HttpsError("invalid-argument", "A note must be between 2 and 2,000 characters.");
+  }
+  const { caller, student } = await requireClassTeacherForStudent(request.auth, studentId);
+  const note = admin.firestore().collection("class_teacher_student_notes").doc();
+  await note.set({
+    schoolId: caller.schoolId, studentId, studentName: student.name || student.fullName || "Student",
+    text: cleanText, createdBy: request.auth.uid, createdByName: caller.name || "Class Teacher",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return { noteId: note.id };
+});
+
+/**
+ * Records a class-teacher observation in the canonical class behaviour
+ * collection.  The client cannot decide scope or attribution: both come from
+ * the authenticated teacher and the student's current placement.
+ */
+exports.recordClassTeacherBehaviour = onCall(async (request) => {
+  const { studentId, categoryCode, note, recommendation, followUpRequired = false } = request.data || {};
+  const cleanNote = typeof note === "string" ? note.trim() : "";
+  const cleanCategory = typeof categoryCode === "string" ? categoryCode.trim() : "";
+  const cleanRecommendation = typeof recommendation === "string" ? recommendation.trim() : "";
+  if (!cleanCategory || cleanCategory.length > 100 || cleanNote.length < 5 || cleanNote.length > 2000) {
+    throw new HttpsError("invalid-argument", "Select a category and enter a behaviour note between 5 and 2,000 characters.");
+  }
+  const { caller, student } = await requireClassTeacherForStudent(request.auth, studentId);
+  if (!student.classId || !student.academicYearId) {
+    throw new HttpsError("failed-precondition", "This student does not have an active class placement.");
+  }
+  const firestore = admin.firestore();
+  const record = firestore.collection("schools").doc(caller.schoolId)
+    .collection("class_behaviour_records").doc();
+  const concernCodes = new Set(["lateness", "disruption", "incomplete_work"]);
+  const isConcern = concernCodes.has(cleanCategory) || followUpRequired;
+  await record.set({
+    schoolId: caller.schoolId,
+    campusId: student.campusId || caller.campusId || "",
+    classId: student.classId,
+    className: student.className || "",
+    streamId: student.streamId || null,
+    academicYearId: student.academicYearId,
+    termId: student.termId || "",
+    studentId,
+    studentName: student.name || student.fullName || "Student",
+    category: cleanCategory,
+    note: cleanNote,
+    recommendation: cleanRecommendation || null,
+    followUpRequired: followUpRequired === true,
+    followUpClosed: false,
+    followUpNote: null,
+    disciplineCaseId: null,
+    disciplineStatus: null,
+    recordedBy: request.auth.uid,
+    recordedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedBy: request.auth.uid,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    // Flat assignment accounts do not have a stable assignment id. This is
+    // an audit field only; authorization happened above.
+    roleAssignmentId: "server-validated",
+  });
+  if (isConcern && followUpRequired === true) {
+    await queueStudentCareNotification({
+      schoolId: caller.schoolId,
+      senderId: request.auth.uid,
+      sender: caller,
+      audience: { kind: "anyOf", definitions: [
+        { kind: "roles", roles: ["guidanceDiscipline"] },
+        { kind: "roles", roles: STUDENT_CARE_ADMIN_ROLES },
+      ] },
+      category: "discipline",
+      type: "disciplineCase",
+      title: "Student behaviour follow-up required",
+      body: `${student.name || student.fullName || "A student"} has a class-teacher follow-up record.`,
+      studentId,
+      studentName: student.name || student.fullName || "Student",
+      sourceEntityId: record.id,
+    });
+  }
+  return { recordId: record.id };
+});
+
+// ---------------------------------------------------------------------------
 // Class Teacher panel - the three actions that must not be a client write.
 //
 // Each of these decides something a teacher would otherwise be deciding about

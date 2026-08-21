@@ -45,12 +45,12 @@ class TeacherStudentMoreOptionsScreen extends StatelessWidget {
           _OptionTile(
             icon: Icons.description_outlined,
             label: 'Documents',
-            onTap: () => _showComingSoon(context, 'Student documents'),
+            onTap: () => context.push('/staff/students/$studentId/documents'),
           ),
           _OptionTile(
             icon: Icons.people_outline,
             label: 'Sibling Information',
-            onTap: () => _showComingSoon(context, 'Sibling information'),
+            onTap: () => context.push('/staff/students/$studentId/siblings'),
           ),
           _OptionTile(
             icon: Icons.exit_to_app_outlined,
@@ -61,7 +61,7 @@ class TeacherStudentMoreOptionsScreen extends StatelessWidget {
           _OptionTile(
             icon: Icons.note_alt_outlined,
             label: 'Notes',
-            onTap: () => _showComingSoon(context, 'Private student notes'),
+            onTap: () => context.push('/staff/students/$studentId/notes'),
           ),
           _OptionTile(
             icon: Icons.chat_bubble_outline,
@@ -77,12 +77,6 @@ class TeacherStudentMoreOptionsScreen extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text('$feature is not available yet.')));
   }
 }
 

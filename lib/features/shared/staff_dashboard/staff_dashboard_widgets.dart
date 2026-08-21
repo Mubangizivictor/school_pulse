@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -19,9 +18,20 @@ import 'package:school_pulse/features/notifications/presentation/notification_be
 /// name, theme toggle, and notification bell. Matches the Dean of Studies
 /// dashboard pattern exactly so every staff role gets the same top section.
 class StaffDashboardHeader extends StatelessWidget {
-  const StaffDashboardHeader({super.key, required this.roleLabel});
+  const StaffDashboardHeader({
+    super.key,
+    required this.roleLabel,
+    this.onSwitchTap,
+  });
 
   final String roleLabel;
+
+  /// Overrides the default RoleSwitcherSheet (which only lists role types,
+  /// e.g. "Class Teacher"/"Subject Teacher") with a caller-supplied action -
+  /// used by the teacher dashboards to open ResponsibilitySwitcherSheet
+  /// instead, which lists the specific assignment (e.g. which class, for a
+  /// teacher holding more than one Subject Teacher assignment).
+  final VoidCallback? onSwitchTap;
 
   @override
   Widget build(BuildContext context) {
@@ -63,9 +73,10 @@ class StaffDashboardHeader extends StatelessWidget {
                             : const <UserRole>[];
                         final canSwitchRoles = roles.length > 1;
                         return InkWell(
-                          onTap: canSwitchRoles
-                              ? () => RoleSwitcherSheet.show(context)
-                              : null,
+                          onTap: !canSwitchRoles
+                              ? null
+                              : onSwitchTap ??
+                                    () => RoleSwitcherSheet.show(context),
                           borderRadius: BorderRadius.circular(6),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -132,36 +143,8 @@ class StaffDashboardHeader extends StatelessWidget {
                   ),
                 ),
                 child: IconButton(
-                  icon: Icon(
-                    Theme.of(context).brightness == Brightness.dark
-                        ? Icons.wb_sunny_outlined
-                        : Icons.nightlight_round_outlined,
-                  ),
-                  tooltip: 'Toggle theme',
-                  onPressed: () {
-                    final provider = context.read<ThemeProvider>();
-                    provider.setThemeMode(
-                      Theme.of(context).brightness == Brightness.dark
-                          ? ThemeMode.light
-                          : ThemeMode.dark,
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s),
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.05),
-                  borderRadius: AppRadius.large,
-                  border: Border.all(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.08),
-                  ),
-                ),
-                child: IconButton(
+                  iconSize: 20,
+                  visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.chat_bubble_outline),
                   tooltip: 'Messages',
                   onPressed: () => context.push('/staff/messages'),
@@ -180,7 +163,11 @@ class StaffDashboardHeader extends StatelessWidget {
                     ).colorScheme.onSurface.withValues(alpha: 0.08),
                   ),
                 ),
-                child: const NotificationBellButton(),
+                child: const SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: NotificationBellButton(),
+                ),
               ),
             ],
           ),
@@ -538,6 +525,7 @@ PreferredSizeWidget staffDashboardAppBar(
   BuildContext context, {
   required String roleLabel,
   List<Widget>? actions,
+  VoidCallback? onSwitchTap,
 }) {
   return AppBar(
     automaticallyImplyLeading: false,
@@ -546,7 +534,7 @@ PreferredSizeWidget staffDashboardAppBar(
     scrolledUnderElevation: 3,
     titleSpacing: 0,
     toolbarHeight: kToolbarHeight + 16,
-    title: StaffDashboardHeader(roleLabel: roleLabel),
+    title: StaffDashboardHeader(roleLabel: roleLabel, onSwitchTap: onSwitchTap),
     actions: actions,
   );
 }

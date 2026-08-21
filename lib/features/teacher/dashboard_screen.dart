@@ -48,9 +48,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     );
   }
 
-  Future<void> _openResponsibilitySwitcher(
-    ClassTeacherContextState state,
-  ) async {
+  Future<void> _openResponsibilitySwitcher() async {
+    final state = context.read<ClassTeacherContextBloc>().state;
     final chosen = await ResponsibilitySwitcherSheet.show(
       context,
       subjectAssignments: state.subjectAssignments,
@@ -67,22 +66,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       appBar: staffDashboardAppBar(
         context,
         roleLabel: 'Class Teacher',
-        actions: [
-          BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
-            buildWhen: (previous, current) =>
-                previous.available != current.available ||
-                previous.active?.roleAssignmentId !=
-                    current.active?.roleAssignmentId,
-            builder: (context, state) {
-              if (state.available.length < 2) return const SizedBox.shrink();
-              return IconButton(
-                tooltip: 'Switch active role',
-                icon: const Icon(Icons.swap_horiz_rounded),
-                onPressed: () => _openResponsibilitySwitcher(state),
-              );
-            },
-          ),
-        ],
+        onSwitchTap: _openResponsibilitySwitcher,
       ),
       body: BlocConsumer<ClassTeacherContextBloc, ClassTeacherContextState>(
         listenWhen: (previous, current) =>
@@ -194,14 +178,19 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                     // 2. Quick Actions
                     const SizedBox(height: 10),
                     _buildQuickActions(context),
-                    const SizedBox(height: AppSpacing.x3l),
 
-                    // 3. Today's Schedule
-                    _buildSchedule(context, state),
-                    const SizedBox(height: AppSpacing.x3l),
-
-                    // 4. Recent Activities
-                    _buildRecentActivities(context, state),
+                    // Show each content section only when it has something to
+                    // show. An empty timetable/feed does not need a heading,
+                    // a View All action, or an empty-state card on the home
+                    // dashboard.
+                    if (state.todaysSchedule.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.x3l),
+                      _buildSchedule(context, state),
+                    ],
+                    if (state.recentActivities.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.x3l),
+                      _buildRecentActivities(context, state),
+                    ],
                     const SizedBox(height: AppSpacing.x6l),
                   ],
                 ),
@@ -288,7 +277,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         subtitle: share(state.presentPercentage),
         icon: Icons.how_to_reg_outlined,
         color: AppColors.success(context),
-        onTap: () => context.push('/staff/roll-call'),
+        onTap: () => context.push('/staff/attendance'),
       ),
       StaffKpiData(
         title: 'Absent Today',
@@ -296,7 +285,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         subtitle: share(state.absentPercentage),
         icon: Icons.person_off_outlined,
         color: AppColors.danger(context),
-        onTap: () => context.push('/staff/roll-call'),
+        onTap: () => context.push('/staff/attendance'),
       ),
       StaffKpiData(
         title: 'Assignments',
@@ -317,7 +306,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           label: 'Roll Call',
           icon: Icons.how_to_reg,
           color: AppColors.success(context),
-          onTap: () => context.push('/staff/roll-call'),
+          onTap: () => context.push('/staff/attendance'),
         ),
         BoardingQuickAction(
           label: 'Submit Marks',
@@ -351,28 +340,23 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         const SizedBox(height: AppSpacing.l),
         AppCard(
           padding: const EdgeInsets.all(AppSpacing.xl),
-          child: schedule.isEmpty
-              ? _EmptyRow(
-                  icon: Icons.event_available_outlined,
-                  message: 'No lessons scheduled for your class today.',
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (var i = 0; i < schedule.length; i++) ...[
-                      if (i > 0) const Divider(height: AppSpacing.x4l),
-                      _ScheduleItem(
-                        time: _timeRange(schedule[i]),
-                        subject: schedule[i].subjectName.isEmpty
-                            ? schedule[i].title
-                            : schedule[i].subjectName,
-                        classRoom: _lessonSubtitle(schedule[i]),
-                        status: schedule[i].status.label,
-                        statusColor: _statusColor(context, schedule[i].status),
-                      ),
-                    ],
-                  ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < schedule.length; i++) ...[
+                if (i > 0) const Divider(height: AppSpacing.x4l),
+                _ScheduleItem(
+                  time: _timeRange(schedule[i]),
+                  subject: schedule[i].subjectName.isEmpty
+                      ? schedule[i].title
+                      : schedule[i].subjectName,
+                  classRoom: _lessonSubtitle(schedule[i]),
+                  status: schedule[i].status.label,
+                  statusColor: _statusColor(context, schedule[i].status),
                 ),
+              ],
+            ],
+          ),
         ),
       ],
     );
@@ -420,19 +404,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           onViewAll: () => context.push('/staff/activities'),
         ),
         const SizedBox(height: AppSpacing.l),
-        if (activities.isEmpty)
-          AppCard(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: _EmptyRow(
-              icon: Icons.history_outlined,
-              message: 'Nothing has happened in your class yet.',
-            ),
-          )
-        else
-          for (var i = 0; i < activities.length && i < 5; i++) ...[
-            if (i > 0) const SizedBox(height: AppSpacing.l),
-            _ActivityCard(activity: activities[i]),
-          ],
+        for (var i = 0; i < activities.length && i < 5; i++) ...[
+          if (i > 0) const SizedBox(height: AppSpacing.l),
+          _ActivityCard(activity: activities[i]),
+        ],
       ],
     );
   }
@@ -505,40 +480,6 @@ class _ActivityCard extends StatelessWidget {
   }
 }
 
-/// The in-card empty line used where the approved layout keeps its card but
-/// has nothing to put in it. Same typography as the rows it replaces.
-class _EmptyRow extends StatelessWidget {
-  final IconData icon;
-  final String message;
-
-  const _EmptyRow({required this.icon, required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        _DashboardGlassIcon(
-          icon: icon,
-          color: AppColors.textMuted(context),
-          size: 40,
-          iconSize: 20,
-        ),
-        const SizedBox(width: AppSpacing.l),
-        Expanded(
-          child: Text(
-            message,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary(context),
-              fontSize: 12.5,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 /// The Class Teacher dashboard uses this same translucent surface for every
 /// informational icon, keeping icons visible over both light and dark cards.
 class _DashboardGlassIcon extends StatelessWidget {
@@ -561,11 +502,9 @@ class _DashboardGlassIcon extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+        color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(size * 0.3),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
-        ),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Icon(icon, size: iconSize, color: color),
     );
