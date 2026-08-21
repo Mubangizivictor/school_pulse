@@ -650,6 +650,36 @@ final router = GoRouter(
           builder: (context, state) => const StudentLibraryScreen(),
         ),
         GoRoute(
+          path: '/student/notifications',
+          builder: (context, state) => const NotificationListScreen(),
+          routes: [
+            GoRoute(
+              path: ':id',
+              builder: (context, state) {
+                // The list passes the notification as `extra` so the details
+                // screen paints immediately. A push tapped from the system
+                // tray has no `extra`, so that path loads by id instead.
+                final notification = state.extra;
+                if (notification is NotificationItem) {
+                  return NotificationDetailsScreen(notification: notification);
+                }
+                return NotificationDetailsLoaderScreen(
+                  notificationId: state.pathParameters['id'] ?? '',
+                );
+              },
+            ),
+            GoRoute(
+              path: 'filter',
+              builder: (context, state) => const NotificationFilterScreen(),
+            ),
+            GoRoute(
+              path: 'center',
+              builder: (context, state) =>
+                  const NotificationCenterGroupedScreen(),
+            ),
+          ],
+        ),
+        GoRoute(
           path: '/student/more',
           builder: (context, state) => const StudentMoreScreen(),
         ),

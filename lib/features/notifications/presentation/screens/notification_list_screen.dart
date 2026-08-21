@@ -7,6 +7,7 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/notifications/domain/entities/notification_category_config.dart';
@@ -16,6 +17,16 @@ import 'package:school_pulse/features/notifications/presentation/bloc/notificati
 import 'package:school_pulse/features/notifications/presentation/bloc/notification_center_state.dart';
 import 'package:school_pulse/features/notifications/routing/deep_link_router/notification_deep_link_router.dart';
 import 'package:school_pulse/injection_container.dart' as di;
+
+/// Matches the base route [NotificationBellButton] computes for each role,
+/// so list/detail/filter/add navigation stays inside whichever shell
+/// (`/parent`, `/student`, `/staff`) the current user is actually in instead
+/// of always landing in the staff shell.
+String _notificationBasePath(UserRole role) => switch (role) {
+  UserRole.parent => '/parent/notifications',
+  UserRole.student => '/student/notifications',
+  _ => '/staff/notifications',
+};
 
 class NotificationListScreen extends StatelessWidget {
   const NotificationListScreen({super.key});
@@ -47,7 +58,7 @@ class NotificationListScreen extends StatelessWidget {
         ..add(
           NotificationCenterStarted(schoolId: user.schoolId, userId: user.id),
         ),
-      child: const _NotificationListView(),
+      child: _NotificationListView(basePath: _notificationBasePath(user.role)),
     );
   }
 }
@@ -120,11 +131,13 @@ class _NotificationScaffold extends StatelessWidget {
   final Widget body;
   final int unreadCount;
   final VoidCallback? onMarkAllRead;
+  final String basePath;
 
   const _NotificationScaffold({
     required this.body,
     required this.unreadCount,
     required this.onMarkAllRead,
+    this.basePath = '/staff/notifications',
   });
 
   @override
@@ -160,22 +173,26 @@ class _NotificationScaffold extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.more_vert),
-            onPressed: () => context.push('/staff/notifications/center'),
+            onPressed: () => context.push('$basePath/center'),
           ),
         ],
       ),
       body: body,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/staff/notifications/add'),
-        backgroundColor: AppColors.primary(context),
-        child: const Icon(Icons.add, color: AppColors.pureWhite),
-      ),
+      floatingActionButton: basePath == '/staff/notifications'
+          ? FloatingActionButton(
+              onPressed: () => context.push('$basePath/add'),
+              backgroundColor: AppColors.primary(context),
+              child: const Icon(Icons.add, color: AppColors.pureWhite),
+            )
+          : null,
     );
   }
 }
 
 class _NotificationListView extends StatefulWidget {
-  const _NotificationListView();
+  final String basePath;
+
+  const _NotificationListView({required this.basePath});
 
   @override
   State<_NotificationListView> createState() => _NotificationListViewState();
@@ -184,6 +201,8 @@ class _NotificationListView extends StatefulWidget {
 class _NotificationListViewState extends State<_NotificationListView> {
   final _searchController = TextEditingController();
   _QuickFilter _quickFilter = _QuickFilter.all;
+
+  String get _basePath => widget.basePath;
 
   @override
   void dispose() {
@@ -209,6 +228,7 @@ class _NotificationListViewState extends State<_NotificationListView> {
         final bloc = context.read<NotificationCenterBloc>();
         return _NotificationScaffold(
           unreadCount: state.unreadCount,
+          basePath: _basePath,
           onMarkAllRead: state.unreadCount > 0
               ? () => bloc.add(const NotificationAllMarkedRead())
               : null,
@@ -278,7 +298,7 @@ class _NotificationListViewState extends State<_NotificationListView> {
             ),
             child: IconButton(
               icon: const Icon(Icons.tune),
-              onPressed: () => context.push('/staff/notifications/filter'),
+              onPressed: () => context.push('$_basePath/filter'),
             ),
           ),
         ],
@@ -434,6 +454,7 @@ class _NotificationListViewState extends State<_NotificationListView> {
 
             return _NotificationTile(
               notification: (entry as _SectionItem).notification,
+              basePath: _basePath,
             );
           },
         ),
@@ -497,8 +518,9 @@ class _SectionItem extends _SectionEntry {
 
 class _NotificationTile extends StatefulWidget {
   final NotificationItem notification;
+  final String basePath;
 
-  const _NotificationTile({required this.notification});
+  const _NotificationTile({required this.notification, required this.basePath});
 
   @override
   State<_NotificationTile> createState() => _NotificationTileState();
@@ -521,7 +543,7 @@ class _NotificationTileState extends State<_NotificationTile> {
           NotificationOpened(notification.id),
         );
         context.push(
-          '/staff/notifications/${notification.id}',
+          '${widget.basePath}/${notification.id}',
           extra: notification,
         );
       },
