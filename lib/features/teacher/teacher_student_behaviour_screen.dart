@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/teacher/domain/entities/class_behaviour.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_work/class_work_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/widgets/teacher_student_detail_ui.dart';
 
 class TeacherStudentBehaviourScreen extends StatefulWidget {
   final String studentId;
@@ -49,37 +49,20 @@ class _TeacherStudentBehaviourScreenState
         final student = state.students
             .where((s) => s.studentId == widget.studentId)
             .firstOrNull;
-        final records = state.behaviourRecords
-            .where((r) => r.studentId == widget.studentId)
-            .where(
-              (r) =>
-                  _filter == null ||
-                  state.categoryFor(r.categoryCode)?.valence == _filter,
-            )
-            .toList()
-          ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+        final records =
+            state.behaviourRecords
+                .where((r) => r.studentId == widget.studentId)
+                .where(
+                  (r) =>
+                      _filter == null ||
+                      state.categoryFor(r.categoryCode)?.valence == _filter,
+                )
+                .toList()
+              ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
 
         return Scaffold(
-          backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            leading: IconButton(
-              icon: Icon(
-                Icons.arrow_back,
-                color: AppColors.textPrimary(context),
-              ),
-              onPressed: () => context.pop(),
-            ),
-            title: Text(
-              'Behaviour',
-              style: AppTypography.headlineSmall.copyWith(
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimaryLight,
-              ),
-            ),
-          ),
+          backgroundColor: AppColors.background(context),
+          appBar: const TeacherStudentDetailAppBar(title: 'Behaviour'),
           body: state.isLoading
               ? const Center(child: CircularProgressIndicator())
               : Column(
@@ -132,9 +115,7 @@ class _TeacherStudentBehaviourScreenState
                               vertical: AppSpacing.l,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                AppSpacing.m,
-                              ),
+                              borderRadius: BorderRadius.circular(AppSpacing.m),
                             ),
                           ),
                         ),
@@ -170,8 +151,7 @@ class _TeacherStudentBehaviourScreenState
               label: 'Positive',
               isSelected: _filter == BehaviourValence.positive,
               isDark: isDark,
-              onTap: () =>
-                  setState(() => _filter = BehaviourValence.positive),
+              onTap: () => setState(() => _filter = BehaviourValence.positive),
             ),
           ),
           Expanded(
@@ -202,7 +182,9 @@ class _TeacherStudentBehaviourScreenState
       isScrollControlled: true,
       backgroundColor: AppColors.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.xl)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.xl),
+        ),
       ),
       builder: (sheetContext) => BlocProvider.value(
         value: bloc,
@@ -308,9 +290,7 @@ class _BehaviourTile extends StatelessWidget {
                 Text(
                   record.note,
                   style: AppTypography.titleMedium.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
+                    color: AppColors.textPrimary(context),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -346,8 +326,18 @@ class _BehaviourTile extends StatelessWidget {
 
   static String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }

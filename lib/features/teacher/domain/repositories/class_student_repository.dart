@@ -4,6 +4,7 @@ import 'package:school_pulse/core/error/failures.dart';
 
 import '../entities/active_responsibility_context.dart';
 import '../entities/class_student_summary.dart';
+import '../entities/student_leave_application.dart';
 
 /// Which students a Class Teacher may see, and nothing wider.
 ///
@@ -33,6 +34,17 @@ abstract class ClassStudentRepository {
   /// open panel, so the register a teacher is about to mark is the current one.
   Stream<List<ClassStudentSummary>> watchClassStudents({
     required ActiveResponsibilityContext context,
+  });
+
+  /// One student's leave applications, newest first, refused unless they are
+  /// on this teacher's roster.
+  ///
+  /// Reads the boarding leave queue rather than a class-teacher copy of it,
+  /// so the status a teacher sees is the one the patron is acting on.
+  Future<Either<Failure, List<StudentLeaveApplication>>>
+  getStudentLeaveApplications({
+    required ActiveResponsibilityContext context,
+    required String studentId,
   });
 
   /// Drops the cached roster on logout or school switch, so no student of one

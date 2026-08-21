@@ -35,9 +35,7 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark
-        ? AppColors.textPrimaryDark
-        : AppColors.textPrimaryLight;
+    final primaryColor = AppColors.textPrimary(context);
 
     return BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
       builder: (context, contextState) {
@@ -56,7 +54,7 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
               ].where((e) => e.isNotEmpty).join(' • ');
 
         return Scaffold(
-          backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+          backgroundColor: AppColors.background(context),
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
@@ -156,9 +154,7 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
                             Text(
                               'Needs your attention',
                               style: AppTypography.titleMedium.copyWith(
-                                color: isDark
-                                    ? AppColors.textPrimaryDark
-                                    : AppColors.textPrimaryLight,
+                                color: AppColors.textPrimary(context),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -278,9 +274,7 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
                   Text(
                     flagged.student.studentName,
                     style: AppTypography.bodyMedium.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
+                      color: AppColors.textPrimary(context),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -303,9 +297,7 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
                   ? '—'
                   : '${flagged.student.average!.toStringAsFixed(0)}%',
               style: AppTypography.bodyMedium.copyWith(
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimaryLight,
+                color: AppColors.textPrimary(context),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -353,9 +345,7 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
                 subject.subjectName,
                 overflow: TextOverflow.ellipsis,
                 style: AppTypography.bodyMedium.copyWith(
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
+                  color: AppColors.textPrimary(context),
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -365,9 +355,7 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
                 Text(
                   average == null ? '—' : '${average.toStringAsFixed(0)}%',
                   style: AppTypography.bodyMedium.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
+                    color: AppColors.textPrimary(context),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -394,9 +382,7 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
                     '${subject.studentsWithMarks}/${subject.studentsExpected}',
                     style: AppTypography.labelSmall.copyWith(
                       color: subject.isComplete
-                          ? (isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimaryLight)
+                          ? (AppColors.textPrimary(context))
                           : AppColors.goldenYellow,
                       fontWeight: FontWeight.bold,
                     ),

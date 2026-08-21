@@ -53,15 +53,12 @@ class _ClassTimetableViewState extends State<_ClassTimetableView> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark
-        ? AppColors.textPrimaryDark
-        : AppColors.textPrimaryLight;
+    final primaryColor = AppColors.textPrimary(context);
     final className =
-        context.watch<ClassTeacherContextBloc>().state.active?.className ??
-        '';
+        context.watch<ClassTeacherContextBloc>().state.active?.className ?? '';
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -125,10 +122,10 @@ class _ClassTimetableViewState extends State<_ClassTimetableView> {
 
           final days = state.days.isEmpty
               ? _weekdays.take(6).toList()
-              : (List<String>.from(state.days)
-                  ..sort((a, b) => _weekdays.indexOf(a).compareTo(
-                    _weekdays.indexOf(b),
-                  )));
+              : (List<String>.from(state.days)..sort(
+                  (a, b) =>
+                      _weekdays.indexOf(a).compareTo(_weekdays.indexOf(b)),
+                ));
           final selected = _selectedDay ?? days.first;
           final entries = state.entriesFor(selected);
 
@@ -140,9 +137,7 @@ class _ClassTimetableViewState extends State<_ClassTimetableView> {
                     ? Center(
                         child: Text(
                           'No lessons scheduled for $selected.',
-                          style: TextStyle(
-                            color: Theme.of(context).hintColor,
-                          ),
+                          style: TextStyle(color: Theme.of(context).hintColor),
                         ),
                       )
                     : ListView.separated(
@@ -242,9 +237,7 @@ class _ClassTimetableViewState extends State<_ClassTimetableView> {
                       ? entry.lesson.subjectName
                       : entry.slot.name,
                   style: AppTypography.titleMedium.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
+                    color: AppColors.textPrimary(context),
                     fontWeight: FontWeight.bold,
                   ),
                 ),

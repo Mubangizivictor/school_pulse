@@ -31,9 +31,7 @@ class _ClassResourcesScreenState extends State<ClassResourcesScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark
-        ? AppColors.textPrimaryDark
-        : AppColors.textPrimaryLight;
+    final primaryColor = AppColors.textPrimary(context);
 
     return BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
       builder: (context, contextState) {
@@ -46,7 +44,7 @@ class _ClassResourcesScreenState extends State<ClassResourcesScreen> {
               ].where((e) => e != null && e.isNotEmpty).join(' ');
 
         return Scaffold(
-          backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+          backgroundColor: AppColors.background(context),
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
@@ -151,9 +149,8 @@ class _ClassResourcesScreenState extends State<ClassResourcesScreen> {
                                 context,
                                 folder,
                                 isDark,
-                                onTap: () => context.push(
-                                  '/staff/resources/folders',
-                                ),
+                                onTap: () =>
+                                    context.push('/staff/resources/folders'),
                               ),
                             const SizedBox(height: AppSpacing.xl),
                           ],
@@ -194,9 +191,7 @@ class _ClassResourcesScreenState extends State<ClassResourcesScreen> {
           Text(
             title,
             style: AppTypography.titleMedium.copyWith(
-              color: isDark
-                  ? AppColors.textPrimaryDark
-                  : AppColors.textPrimaryLight,
+              color: AppColors.textPrimary(context),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -235,9 +230,7 @@ class _ClassResourcesScreenState extends State<ClassResourcesScreen> {
                   Text(
                     resource.name,
                     style: AppTypography.bodyMedium.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
+                      color: AppColors.textPrimary(context),
                       fontWeight: FontWeight.bold,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -279,6 +272,9 @@ class _ClassResourcesScreenState extends State<ClassResourcesScreen> {
     ClassResourceKind.video => (Icons.videocam, Colors.purple),
     ClassResourceKind.link => (Icons.link, Colors.blue),
     ClassResourceKind.folder => (Icons.folder, Colors.amber),
-    ClassResourceKind.other => (Icons.insert_drive_file, AppColors.textMutedLight),
+    ClassResourceKind.other => (
+      Icons.insert_drive_file,
+      AppColors.textMutedLight,
+    ),
   };
 }

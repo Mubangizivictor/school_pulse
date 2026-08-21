@@ -12,12 +12,10 @@ class ClassMoreOptionsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark
-        ? AppColors.textPrimaryDark
-        : AppColors.textPrimaryLight;
+    final primaryColor = AppColors.textPrimary(context);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -159,9 +157,7 @@ class ClassMoreOptionsScreen extends StatelessWidget {
               child: Text(
                 label,
                 style: AppTypography.titleMedium.copyWith(
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
+                  color: AppColors.textPrimary(context),
                   fontWeight: FontWeight.w500,
                 ),
               ),

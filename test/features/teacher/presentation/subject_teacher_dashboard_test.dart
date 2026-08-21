@@ -33,6 +33,9 @@ class _MockDashboardBloc
     extends MockBloc<SubjectTeacherDashboardEvent, SubjectTeacherDashboardState>
     implements SubjectTeacherDashboardBloc {}
 
+/// The shared staff dashboard header watches BrandingBloc for the school
+/// badge; without it the header cannot lay out and the whole dashboard
+/// overflows.
 class _MockBrandingBloc extends MockBloc<BrandingEvent, BrandingState>
     implements BrandingBloc {}
 
@@ -86,8 +89,8 @@ void main() {
     contextBloc = _MockContextBloc();
     dashboardBloc = _MockDashboardBloc();
     brandingBloc = _MockBrandingBloc();
+    when(() => brandingBloc.state).thenReturn(const BrandingLoaded(null));
     when(() => authBloc.state).thenReturn(AuthAuthenticated(_user));
-    when(() => brandingBloc.state).thenReturn(BrandingInitial());
   });
 
   Future<void> pump(

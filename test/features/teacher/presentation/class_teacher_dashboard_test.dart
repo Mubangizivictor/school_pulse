@@ -35,6 +35,9 @@ class _MockDashboardBloc
     extends MockBloc<ClassTeacherDashboardEvent, ClassTeacherDashboardState>
     implements ClassTeacherDashboardBloc {}
 
+/// The shared staff dashboard header watches BrandingBloc for the school
+/// badge; without it the header cannot lay out and the whole dashboard
+/// overflows.
 class _MockBrandingBloc extends MockBloc<BrandingEvent, BrandingState>
     implements BrandingBloc {}
 
@@ -106,8 +109,8 @@ void main() {
     contextBloc = _MockContextBloc();
     dashboardBloc = _MockDashboardBloc();
     brandingBloc = _MockBrandingBloc();
+    when(() => brandingBloc.state).thenReturn(const BrandingLoaded(null));
     when(() => authBloc.state).thenReturn(const AuthAuthenticated(_user));
-    when(() => brandingBloc.state).thenReturn(BrandingInitial());
   });
 
   Future<void> pump(
@@ -168,6 +171,11 @@ void main() {
         ),
       );
 
+      // The header identifies the responsibility and the school; the class
+      // itself is named by the responsibility switcher rather than being
+      // concatenated into the header subtitle as it once was.
+      expect(find.text('Class Teacher'), findsOneWidget);
+      expect(find.text('Kabale Campus'), findsOneWidget);
       // The hardcoded stand-in the panel used to ship with must be gone.
       expect(find.textContaining('Grade 10A'), findsNothing);
       expect(find.textContaining('North Campus'), findsNothing);

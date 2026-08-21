@@ -10,6 +10,7 @@ import '../../domain/entities/class_report_entry.dart';
 import '../../domain/entities/class_task.dart';
 import '../../domain/entities/class_student_summary.dart';
 import '../../domain/entities/lesson.dart';
+import '../../domain/entities/student_leave_application.dart';
 
 /// The Class Teacher panel's reads and writes against Firestore.
 ///
@@ -45,6 +46,16 @@ abstract class ClassTeacherRemoteDataSource {
     required String classId,
     required String academicYearId,
     String? streamId,
+  });
+
+  /// One student's leave applications, newest departure first.
+  ///
+  /// Reads the boarding leave queue the Patron/Matron module owns rather than
+  /// keeping a second copy: a class teacher raising leave and a patron
+  /// approving it are looking at the same row.
+  Future<List<StudentLeaveApplication>> getStudentLeaveApplications({
+    required String schoolId,
+    required String studentId,
   });
 
   /// Today's class register as the Attendance engine holds it. Null when no
@@ -381,6 +392,54 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
     }
 
     return _studentFromDoc(doc.id, schoolId, classId, academicYearId, data);
+  }
+
+  @override
+  Future<List<StudentLeaveApplication>> getStudentLeaveApplications({
+    required String schoolId,
+    required String studentId,
+  }) async {
+    final snapshot = await firestore
+        .collection('boarding_leave_requests')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('studentId', isEqualTo: studentId)
+        .get();
+
+    final applications = snapshot.docs.map((doc) {
+      final data = doc.data();
+      return StudentLeaveApplication(
+        id: doc.id,
+        studentId: data['studentId'] as String? ?? studentId,
+        studentName: data['studentName'] as String? ?? 'Student',
+        reason: data['reason'] as String? ?? '',
+        destination: data['destination'] as String?,
+        departureDate: _dateFrom(data['departureDate']) ?? DateTime.now(),
+        expectedReturnDate:
+            _dateFrom(data['expectedReturnDate']) ??
+            _dateFrom(data['departureDate']) ??
+            DateTime.now(),
+        actualReturnDate: _dateFrom(data['actualReturnDate']),
+        status: StudentLeaveStatus.fromRaw(data['status'] as String?),
+        approvedByName:
+            data['approvedByName'] as String? ?? data['approvedBy'] as String?,
+        raisedByClassTeacher: data['source'] == 'class_teacher',
+        requestedByName: data['requestedByName'] as String?,
+        createdAt: _dateFrom(data['createdAt']),
+      );
+    }).toList();
+
+    // Newest departure first. Sorted here rather than in the query so the
+    // read needs no composite index beyond the schoolId/studentId equality
+    // pair, and so a row with a malformed date still appears.
+    applications.sort((a, b) => b.departureDate.compareTo(a.departureDate));
+    return applications;
+  }
+
+  DateTime? _dateFrom(Object? value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   @override
