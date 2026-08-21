@@ -16,6 +16,7 @@ import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_dashboard/subject_teacher_dashboard_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/widgets/class_label.dart';
 import 'package:school_pulse/features/teacher/presentation/widgets/responsibility_switcher_sheet.dart';
+import 'package:school_pulse/features/teacher/presentation/widgets/teacher_ui.dart';
 
 class SubjectTeacherDashboard extends StatefulWidget {
   const SubjectTeacherDashboard({super.key});
@@ -58,7 +59,6 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final authState = context.watch<AuthBloc>().state;
 
     if (authState is! AuthAuthenticated) {
@@ -90,8 +90,7 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
         }
       },
       builder: (context, contextState) {
-        return Scaffold(
-          backgroundColor: theme.scaffoldBackgroundColor,
+        return TeacherScaffold(
           appBar: staffDashboardAppBar(context, roleLabel: 'Subject Teacher'),
           body: RefreshIndicator(
             onRefresh: () async => _refreshData(),

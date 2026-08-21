@@ -20,6 +20,7 @@ import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_event.dart';
 import 'package:school_pulse/features/teacher/presentation/routing/class_activity_navigation.dart';
 import 'package:school_pulse/features/teacher/presentation/widgets/responsibility_switcher_sheet.dart';
+import 'package:school_pulse/features/teacher/presentation/widgets/teacher_ui.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
   const TeacherDashboardScreen({super.key});
@@ -62,8 +63,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
+    return TeacherScaffold(
       appBar: staffDashboardAppBar(
         context,
         roleLabel: 'Class Teacher',

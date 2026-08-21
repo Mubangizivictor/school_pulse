@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 
 class TabButton extends StatelessWidget {
   final String label;
   final bool isSelected;
+
+  /// Kept for source compatibility with approved screens. The active theme,
+  /// rather than this value, owns the colours.
   final bool isDark;
 
   const TabButton({
@@ -17,21 +19,18 @@ class TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        color: isSelected
-            ? (isDark ? AppColors.bgDark : Colors.white)
-            : Colors.transparent,
+        color: isSelected ? scheme.surface : Colors.transparent,
         borderRadius: BorderRadius.circular(AppSpacing.s),
       ),
       child: Center(
         child: Text(
           label,
           style: AppTypography.labelMedium.copyWith(
-            color: isSelected
-                ? AppColors.royalBlue
-                : (isDark ? AppColors.textMutedDark : AppColors.textMutedLight),
+            color: isSelected ? scheme.primary : scheme.onSurfaceVariant,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),

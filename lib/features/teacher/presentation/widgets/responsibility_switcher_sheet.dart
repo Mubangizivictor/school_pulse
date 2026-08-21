@@ -38,7 +38,6 @@ class ResponsibilitySwitcherSheet extends StatelessWidget {
   }) {
     return showModalBottomSheet<String>(
       context: context,
-      backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => ResponsibilitySwitcherSheet(
         subjectAssignments: subjectAssignments,
