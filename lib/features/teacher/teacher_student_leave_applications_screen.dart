@@ -118,7 +118,10 @@ class _TeacherStudentLeaveApplicationsScreenState
     }
 
     if (_errorMessage != null) {
-      return _ErrorState(message: _errorMessage!, onRetry: _load);
+      return TeacherStudentDetailErrorState(
+        message: _errorMessage!,
+        onRetry: _load,
+      );
     }
 
     if (_applications.isEmpty) {
@@ -606,42 +609,6 @@ class _DetailRow extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 40,
-              color: AppColors.textMuted(context),
-            ),
-            const SizedBox(height: AppSpacing.l),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textMuted(context),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.l),
-            OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
-          ],
-        ),
       ),
     );
   }

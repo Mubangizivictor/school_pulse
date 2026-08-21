@@ -83,6 +83,47 @@ class TeacherStudentDetailEmptyState extends StatelessWidget {
   );
 }
 
+/// Failure state with a retry, for student-detail screens that load from a
+/// repository. Distinct from [TeacherStudentDetailEmptyState]: empty means
+/// the read succeeded and there was nothing there, this means it failed.
+class TeacherStudentDetailErrorState extends StatelessWidget {
+  const TeacherStudentDetailErrorState({
+    super.key,
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 40,
+            color: AppColors.textMuted(context),
+          ),
+          const SizedBox(height: AppSpacing.l),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textMuted(context),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.l),
+          OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
+        ],
+      ),
+    ),
+  );
+}
+
 /// The bordered, rounded row tile used throughout student-detail screens
 /// (More Options list, Documents list) for a tappable icon + label row.
 class TeacherStudentDetailTile extends StatelessWidget {
