@@ -12,6 +12,8 @@ import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignm
 import 'package:school_pulse/features/teacher/presentation/bloc/class_students/class_students_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_state.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_state.dart';
 import 'package:school_pulse/features/teacher/teacher_student_list_screen.dart';
 
 class _FakeAuthBloc extends Cubit<AuthState> implements AuthBloc {
@@ -24,6 +26,18 @@ class _FakeAuthBloc extends Cubit<AuthState> implements AuthBloc {
 class _FakeClassTeacherContextBloc extends Cubit<ClassTeacherContextState>
     implements ClassTeacherContextBloc {
   _FakeClassTeacherContextBloc(super.initialState);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Always inactive: this screen's role branch reads it to decide whether to
+/// show the Subject Teacher roster instead, and these tests are exercising
+/// the Class Teacher path.
+class _FakeSubjectTeacherContextBloc extends Cubit<SubjectTeacherContextState>
+    implements SubjectTeacherContextBloc {
+  _FakeSubjectTeacherContextBloc()
+    : super(const SubjectTeacherContextState());
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -102,6 +116,9 @@ Widget _harness({
         create: (_) => _FakeClassTeacherContextBloc(
           ClassTeacherContextState(active: _context()),
         ),
+      ),
+      BlocProvider<SubjectTeacherContextBloc>(
+        create: (_) => _FakeSubjectTeacherContextBloc(),
       ),
       BlocProvider<ClassStudentsBloc>(
         create: (_) => _FakeClassStudentsBloc(studentsState),
@@ -236,6 +253,9 @@ void main() {
             create: (_) => _FakeClassTeacherContextBloc(
               ClassTeacherContextState(active: _context()),
             ),
+          ),
+          BlocProvider<SubjectTeacherContextBloc>(
+            create: (_) => _FakeSubjectTeacherContextBloc(),
           ),
           BlocProvider<ClassStudentsBloc>(create: (_) => bloc),
         ],

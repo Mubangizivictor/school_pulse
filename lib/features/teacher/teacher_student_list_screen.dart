@@ -14,15 +14,22 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/student/presentation/screens/admin_students_list_screen.dart';
 import 'package:school_pulse/features/teacher/domain/entities/class_student_summary.dart';
 import 'package:school_pulse/features/teacher/domain/entities/lesson_attendance.dart';
+import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_students/class_students_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_state.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/subject_teacher_student_list_screen.dart';
 
 /// Role-aware student entry point.
 ///
 /// School leadership is bounced to the rebuilt admin Students module
-/// (AdminStudentsListScreen, which provides its own StudentsBloc). A class
-/// teacher keeps the scoped class roster below.
+/// (AdminStudentsListScreen, which provides its own StudentsBloc). Which
+/// teacher roster is shown - class or subject - follows the active
+/// responsibility, exactly like StaffPanelHost picks the dashboard: reading
+/// `user.role` here would show the Class Teacher roster to a Subject
+/// Teacher whose account also happens to hold a Class Teacher assignment,
+/// which is the one thing this screen must never do.
 class TeacherStudentListScreen extends StatelessWidget {
   const TeacherStudentListScreen({super.key});
 
@@ -33,9 +40,17 @@ class TeacherStudentListScreen extends StatelessWidget {
         auth.user.roles.any(UserRoleDisplay.adminConsoleRoles.contains)) {
       // Rebuilt admin Students module lives under /staff/admin/students -
       // this route stays only as the legacy entry point shared with the
-      // class-teacher roster below, so an admin landing here is bounced
-      // straight to the real screen instead of the retired directory.
+      // teacher rosters below, so an admin landing here is bounced straight
+      // to the real screen instead of the retired directory.
       return const AdminStudentsListScreen();
+    }
+
+    final subjectActive = context
+        .watch<SubjectTeacherContextBloc>()
+        .state
+        .active;
+    if (subjectActive?.roleType == StaffResponsibilityType.subjectTeacher) {
+      return const SubjectTeacherStudentListScreen();
     }
     return const _ClassTeacherStudentListScreen();
   }

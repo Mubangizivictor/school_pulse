@@ -41,6 +41,7 @@ import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dar
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_history_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_students/class_students_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_students/subject_students_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_announcements/class_announcements_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_performance/class_performance_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_reports/class_reports_bloc.dart';
@@ -197,6 +198,7 @@ class SchoolPulseApp extends StatelessWidget {
         // responsibility as the others.
         BlocProvider(create: (_) => di.sl<SubjectTeacherContextBloc>()),
         BlocProvider(create: (_) => di.sl<SubjectTeacherDashboardBloc>()),
+        BlocProvider(create: (_) => di.sl<SubjectStudentsBloc>()),
         // Same reasoning for the Class Teacher panel: Home, Students,
         // Reports, Tasks and More are separate routes that must all read the
         // same active class.

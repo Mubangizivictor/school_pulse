@@ -391,6 +391,7 @@ import 'package:school_pulse/features/teacher/presentation/bloc/teacher_timetabl
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_history_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_students/class_students_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_students/subject_students_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_announcements/class_announcements_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_performance/class_performance_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_performance/student_assessment_results_bloc.dart';
@@ -1764,6 +1765,8 @@ Future<void> init() async {
       networkInfo: sl(),
     ),
   );
+
+  sl.registerLazySingleton(() => SubjectStudentsBloc(studentRepository: sl()));
 
   // Everywhere else constructs this directly; the audit service takes it as a
   // dependency so tests can supply a fixed device id.
