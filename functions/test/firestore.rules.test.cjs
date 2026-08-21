@@ -613,6 +613,72 @@ describe('SaaS owner / platform layer', () => {
   });
 });
 
+describe('reportCards: canonical snapshots are server-write-only', () => {
+  async function seedReportCard() {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), 'schools/schoolA/reportCards/rc1'),
+        {
+          schoolId: 'schoolA', studentId: 'studentA', classId: 'p7',
+          academicYearId: '2026', termId: 't2', average: 79, version: 1,
+          isFinalized: false,
+        },
+      );
+    });
+  }
+
+  test('staff of the same school may read a report card', async () => {
+    await seedReportCard();
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/reportCards/rc1')));
+  });
+
+  test('no client - not even the academic office - may create a report card directly', async () => {
+    await assertFails(setDoc(
+      doc(dbFor('adminA'), 'schools/schoolA/reportCards/clientForged'),
+      {
+        schoolId: 'schoolA', studentId: 'studentA', classId: 'p7',
+        academicYearId: '2026', termId: 't2', average: 100, version: 1,
+      },
+    ));
+  });
+
+  test('no client may edit an existing report card - not the average, not isFinalized', async () => {
+    await seedReportCard();
+    await assertFails(updateDoc(
+      doc(dbFor('adminA'), 'schools/schoolA/reportCards/rc1'),
+      { average: 100 },
+    ));
+    await assertFails(updateDoc(
+      doc(dbFor('adminA'), 'schools/schoolA/reportCards/rc1'),
+      { isFinalized: true },
+    ));
+  });
+
+  test('no client may delete a report card', async () => {
+    await seedReportCard();
+    await assertFails(deleteDoc(doc(dbFor('adminA'), 'schools/schoolA/reportCards/rc1')));
+  });
+
+  test('another school never reaches this collection', async () => {
+    await seedReportCard();
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools/schoolA/reportCards/rc1')));
+  });
+
+  test('a parent or student has no read path yet - that opens only with Bursar-controlled release, a later phase', async () => {
+    await seedReportCard();
+    await assertFails(getDoc(doc(dbFor('parentA'), 'schools/schoolA/reportCards/rc1')));
+    await assertFails(getDoc(doc(dbFor('studentUserA'), 'schools/schoolA/reportCards/rc1')));
+  });
+
+  test('the auditLog subcollection is staff-readable but client-immutable, same as every other audit trail', async () => {
+    await seedReportCard();
+    await assertFails(setDoc(
+      doc(dbFor('adminA'), 'schools/schoolA/reportCards/rc1/auditLog/forged'),
+      { action: 'report_card.generated' },
+    ));
+  });
+});
+
 describe('schools/{schoolId} read isolation', () => {
   test('a staff member can read their own school document', async () => {
     await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools', 'schoolA')));
