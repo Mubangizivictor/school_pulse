@@ -214,13 +214,20 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
   void _showFilters() {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+        child: DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: .72,
+          minChildSize: .4,
+          maxChildSize: .9,
+          builder: (context, scrollController) => ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.all(16),
             children: [
-              Text('Filter reports', style: AppTypography.titleMedium),
+              Center(
+                child: Text('Filter reports', style: AppTypography.titleMedium),
+              ),
               const SizedBox(height: 8),
               for (final item in <ReportEntryStatus?>[
                 null,
