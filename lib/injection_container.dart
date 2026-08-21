@@ -337,6 +337,8 @@ import 'package:school_pulse/features/teacher/data/datasources/class_teacher_loc
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_remote_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_resource_local_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_resource_local_data_source_factory.dart';
+import 'package:school_pulse/features/teacher/data/datasources/subject_resource_local_data_source.dart';
+import 'package:school_pulse/features/teacher/data/datasources/subject_resource_local_data_source_factory.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_local_data_source_factory.dart';
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_local_data_source_factory.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_attendance_repository_impl.dart';
@@ -344,6 +346,7 @@ import 'package:school_pulse/features/teacher/data/repositories/class_communicat
 import 'package:school_pulse/features/teacher/data/repositories/class_performance_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_report_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_resource_repository_impl.dart';
+import 'package:school_pulse/features/teacher/data/repositories/subject_resource_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_task_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_work_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_dashboard_repository_impl.dart';
@@ -366,6 +369,7 @@ import 'package:school_pulse/features/teacher/domain/repositories/class_communic
 import 'package:school_pulse/features/teacher/domain/repositories/class_performance_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_report_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_resource_repository.dart';
+import 'package:school_pulse/features/teacher/domain/repositories/subject_resource_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_task_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_work_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_dashboard_repository.dart';
@@ -1625,6 +1629,21 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(() => ClassResourceBloc(repository: sl()));
+
+  sl.registerLazySingleton<SubjectResourceLocalDataSource>(
+    () =>
+        createSubjectResourceLocalDataSource(isar: kIsWeb ? null : sl<Isar>()),
+  );
+
+  sl.registerLazySingleton<SubjectResourceRepository>(
+    () => SubjectResourceRepositoryImpl(
+      firestore: sl(),
+      storage: sl(),
+      localDataSource: sl(),
+      auditService: sl(),
+      networkInfo: sl(),
+    ),
+  );
 
   sl.registerLazySingleton<ClassAttendanceRepository>(
     () => ClassAttendanceRepositoryImpl(

@@ -2602,5 +2602,36 @@ service cloud.firestore {
                               'class.resource.delete')
         ));
     }
+
+    match /schools/{schoolId}/subject_resources/{resourceId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+
+      allow create: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          holdsAssignment(schoolId, request.resource.data.roleAssignmentId,
+                          request.resource.data.subjectId,
+                          request.resource.data.classId,
+                          request.resource.data.academicYearId)
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'subject.resource.upload')
+        ));
+
+      allow update: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          resource.data.uploadedByUserId == request.auth.uid
+          && grantsPermission(schoolId, request.resource.data.roleAssignmentId,
+                              'subject.resource.upload')
+        ));
+
+      // Mirrors class_resources: detaching from a subject's area is an
+      // update; removing the stored original is the owner's or an admin's,
+      // never a side effect of tidying one subject's folder.
+      allow delete: if isSameSchool(schoolId)
+        && (schoolAcademicAdmin() || (
+          resource.data.uploadedByUserId == request.auth.uid
+          && grantsPermission(schoolId, resource.data.roleAssignmentId,
+                              'subject.resource.upload')
+        ));
+    }
   }
 }

@@ -25,6 +25,7 @@ import 'package:school_pulse/features/notifications/data/models/notification_isa
 import 'package:school_pulse/features/notifications/data/models/notification_token_isar.dart';
 import 'package:school_pulse/features/messages/data/models/pending_message_isar.dart';
 import 'package:school_pulse/features/teacher/data/models/class_teacher_isar_models.dart';
+import 'package:school_pulse/features/teacher/data/models/subject_resource_isar_models.dart';
 import 'package:school_pulse/features/teacher/data/models/subject_teacher_isar_models.dart';
 import 'package:school_pulse/features/shared/boarding/data/models/boarding_attendance_isar.dart';
 
@@ -86,6 +87,7 @@ Future<Isar> open() async {
     ClassAnnouncementIsarSchema,
     ClassPerformanceCacheIsarSchema,
     ClassResourceIsarSchema,
+    SubjectResourceIsarSchema,
     AttendanceTypeDefIsarSchema,
     CampusIsarSchema,
     HouseIsarSchema,
