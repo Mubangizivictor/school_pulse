@@ -322,18 +322,20 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
       appBar: staffDashboardAppBar(context, roleLabel: 'Students'),
+      // Add Student registers directly (no application/review step) - that
+      // flow is reserved for applicants coming through the public website,
+      // reachable from AdmissionsListScreen's own "New Application" action.
+      // An admin using this button knows the student already, so they go
+      // straight through DirectStudentRegistrationScreen into the
+      // Enrollment Setup Wizard in one continuous action.
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final admissionBloc = context.read<AdmissionBloc>();
-          final created = await context.push<bool>(
-            '/staff/admin/admissions/new',
+          final registered = await context.push<bool>(
+            '/staff/admin/admissions/register',
             extra: widget.schoolId,
           );
-          // The "New Admissions" counter above reads this same AdmissionBloc
-          // via BlocBuilder but was only ever loaded once on screen entry -
-          // without this, a submitted application wouldn't show up in the
-          // counter until the whole dashboard was torn down and rebuilt.
-          if (created == true) {
+          if (registered == true) {
             admissionBloc.add(LoadApplicationsRequested(widget.schoolId));
           }
         },

@@ -139,6 +139,7 @@ import 'package:school_pulse/features/student/presentation/screens/admin_student
 import 'package:school_pulse/features/student/presentation/screens/student_portal_codes_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/identity_and_cards_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/new_application_screen.dart';
+import 'package:school_pulse/features/student/presentation/screens/direct_student_registration_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/profile_more_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/personal_information_screen.dart';
@@ -2161,6 +2162,12 @@ final router = GoRouter(
                   path: 'new',
                   builder: (context, state) =>
                       NewApplicationScreen(schoolId: state.extra as String),
+                ),
+                GoRoute(
+                  path: 'register',
+                  builder: (context, state) => DirectStudentRegistrationScreen(
+                    schoolId: state.extra as String,
+                  ),
                 ),
                 GoRoute(
                   path: 'review',
