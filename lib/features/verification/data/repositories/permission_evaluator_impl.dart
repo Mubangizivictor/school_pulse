@@ -13,7 +13,11 @@ import 'package:school_pulse/features/verification/domain/repositories/permissio
 // computed before role-permission overrides existed) is never mistaken for
 // fresh - it must be recomputed at least once to pick up any override.
 const _permissionCacheTtl = Duration(hours: 12);
-const _permissionCatalogVersion = 2;
+// Bumped: _admissionsPermissions gained the 9 enrollment.* permissions
+// (RolePermissionDefaults) that admin-tier roles were silently missing -
+// this forces every cached OperatorPermissionSnapshot to recompute rather
+// than keep serving the stale pre-fix permission set until its TTL expires.
+const _permissionCatalogVersion = 3;
 
 class PermissionEvaluatorImpl implements PermissionEvaluator {
   final VerificationLocalDataSource localDataSource;
