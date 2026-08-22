@@ -21,6 +21,18 @@ abstract class RelationshipRepository {
     bool isLegalGuardian,
     bool isPrimaryGuardian,
     required String createdBy,
+    // Additive optional access flags - default to the entity's own
+    // defaults so every existing caller (ParentLinkingService et al.)
+    // keeps behaving exactly as before. Added for the Enrollment Setup
+    // Wizard's Parent/Guardian step, which needs to set these at
+    // creation time rather than only via a later edit.
+    bool? financialAccess,
+    bool? academicAccess,
+    bool? attendanceAccess,
+    bool? medicalAccess,
+    bool? emergencyContactAccess,
+    bool? pickupAuthorized,
+    bool? communicationPermission,
   });
 
   /// Supersedes [relationshipId] (sets status: superseded, requires
