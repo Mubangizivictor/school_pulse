@@ -319,7 +319,15 @@ class _IdCardPreview extends StatelessWidget {
             .firstOrNull
             ?.name ??
         '';
-    final scheme = Theme.of(context).colorScheme;
+    final brandPrimary =
+        _brandColor(branding?.primaryColor) ??
+        _brandColor(profile.colors.firstOrNull) ??
+        const Color(0xFF123B66);
+    final brandAccent =
+        _brandColor(branding?.secondaryColor) ??
+        (profile.colors.length > 1 ? _brandColor(profile.colors[1]) : null) ??
+        const Color(0xFFC9942E);
+    final cardInk = Color.lerp(brandPrimary, Colors.black, .62)!;
 
     return Center(
       child: ConstrainedBox(
@@ -331,147 +339,159 @@ class _IdCardPreview extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    scheme.primaryContainer,
-                    scheme.surfaceContainerHigh,
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                color: Colors.white,
+                border: Border.symmetric(
+                  horizontal: BorderSide(color: brandPrimary, width: 8),
                 ),
               ),
               padding: const EdgeInsets.all(18),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (profile.logoUrl.isNotEmpty ||
-                          branding?.logoUrl?.isNotEmpty == true) ...[
-                        CircleAvatar(
-                          radius: 17,
-                          backgroundImage: NetworkImage(
-                            profile.logoUrl.isNotEmpty
-                                ? profile.logoUrl
-                                : branding!.logoUrl!,
+              child: DefaultTextStyle.merge(
+                style: TextStyle(color: cardInk),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (profile.logoUrl.isNotEmpty ||
+                            branding?.logoUrl?.isNotEmpty == true) ...[
+                          CircleAvatar(
+                            radius: 17,
+                            backgroundImage: NetworkImage(
+                              profile.logoUrl.isNotEmpty
+                                  ? profile.logoUrl
+                                  : branding!.logoUrl!,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                        ],
+                        Flexible(
+                          child: Text(
+                            schoolName.toUpperCase(),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: brandPrimary,
+                                ),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                      ],
-                      Flexible(
-                        child: Text(
-                          schoolName.toUpperCase(),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: scheme.primary,
-                              ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (profile.motto.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        profile.motto,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  const SizedBox(height: 14),
-                  if (showFront) ...[
-                    CircleAvatar(
-                      radius: 42,
-                      backgroundImage: student.photoUrl?.isNotEmpty == true
-                          ? NetworkImage(student.photoUrl!)
-                          : null,
-                      child: student.photoUrl?.isNotEmpty == true
-                          ? null
-                          : const Icon(Icons.person, size: 44),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      student.name.toUpperCase(),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      [
-                        className,
-                        stream,
-                      ].where((item) => item.isNotEmpty).join(' • '),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    _PreviewRow('Student Code', student.studentCode),
-                    _PreviewRow('Admission No.', student.admissionNumber),
-                    if (year.isNotEmpty) _PreviewRow('Academic Year', year),
-                    const Spacer(),
-                    Text(
-                      'Official student identity card',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ] else ...[
-                    Text(
-                      'Scan to verify student',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    if (identity.qrCodeData.isNotEmpty)
-                      QrImageView(
-                        data: identity.qrCodeData,
-                        version: QrVersions.auto,
-                        size: 164,
-                      )
-                    else
-                      const Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Icon(Icons.qr_code_2_outlined, size: 96),
-                      ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'Keep this card with you. It is non-transferable and remains the property of $schoolName.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    const Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        Chip(label: Text('IDENTITY VERIFIED')),
-                        Chip(label: Text('AUTHORIZED ACCESS')),
-                        Chip(label: Text('NON-TRANSFERABLE')),
                       ],
                     ),
-                    if (profile.phone.isNotEmpty || profile.email.isNotEmpty)
+                    if (profile.motto.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          [
-                            profile.phone,
-                            profile.email,
-                          ].where((item) => item.isNotEmpty).join(' • '),
+                          profile.motto,
                           textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: cardInk.withValues(alpha: .72)),
                         ),
                       ),
-                    const Spacer(),
+                    const SizedBox(height: 14),
+                    if (showFront) ...[
+                      CircleAvatar(
+                        radius: 42,
+                        backgroundColor: brandPrimary.withValues(alpha: .12),
+                        backgroundImage: student.photoUrl?.isNotEmpty == true
+                            ? NetworkImage(student.photoUrl!)
+                            : null,
+                        child: student.photoUrl?.isNotEmpty == true
+                            ? null
+                            : const Icon(Icons.person, size: 44),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        student.name.toUpperCase(),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: cardInk,
+                            ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        [
+                          className,
+                          stream,
+                        ].where((item) => item.isNotEmpty).join(' • '),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      _PreviewRow('Student Code', student.studentCode),
+                      _PreviewRow('Admission No.', student.admissionNumber),
+                      if (year.isNotEmpty) _PreviewRow('Academic Year', year),
+                      const Spacer(),
+                      Text(
+                        'Official student identity card',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: cardInk.withValues(alpha: .65),
+                        ),
+                      ),
+                    ] else ...[
+                      Text(
+                        'Scan to verify student',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      if (identity.qrCodeData.isNotEmpty)
+                        QrImageView(
+                          data: identity.qrCodeData,
+                          version: QrVersions.auto,
+                          size: 164,
+                        )
+                      else
+                        const Padding(
+                          padding: EdgeInsets.all(32),
+                          child: Icon(Icons.qr_code_2_outlined, size: 96),
+                        ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Keep this card with you. It is non-transferable and remains the property of $schoolName.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          Chip(
+                            label: Text('IDENTITY VERIFIED'),
+                            side: BorderSide(color: brandAccent),
+                          ),
+                          Chip(
+                            label: Text('AUTHORIZED ACCESS'),
+                            side: BorderSide(color: brandAccent),
+                          ),
+                          Chip(
+                            label: Text('NON-TRANSFERABLE'),
+                            side: BorderSide(color: brandAccent),
+                          ),
+                        ],
+                      ),
+                      if (profile.phone.isNotEmpty || profile.email.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(
+                            [
+                              profile.phone,
+                              profile.email,
+                            ].where((item) => item.isNotEmpty).join(' • '),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      const Spacer(),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -506,6 +526,17 @@ class _PreviewRow extends StatelessWidget {
       ],
     ),
   );
+}
+
+Color? _brandColor(String? value) {
+  if (value == null || value.isEmpty) return null;
+  final normalized = value.replaceFirst('#', '');
+  if (normalized.length != 6) return null;
+  try {
+    return Color(int.parse('FF$normalized', radix: 16));
+  } on FormatException {
+    return null;
+  }
 }
 
 class _CardActionIcon extends StatelessWidget {
