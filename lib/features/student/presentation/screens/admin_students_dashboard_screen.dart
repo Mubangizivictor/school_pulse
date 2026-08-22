@@ -15,6 +15,7 @@ import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../structure/domain/entities/structure_entities.dart';
 import '../../../structure/presentation/bloc/structure_bloc.dart';
 import '../../../structure/presentation/bloc/structure_state.dart';
+import '../../domain/entities/admission_application.dart';
 import '../../domain/entities/student.dart';
 import '../../domain/entities/student_enums.dart';
 import '../bloc/admission_bloc.dart';
@@ -23,6 +24,7 @@ import '../bloc/admission_state.dart';
 import '../bloc/students_bloc.dart';
 import '../bloc/students_event.dart';
 import '../bloc/students_state.dart';
+import 'admissions_list_screen.dart' show admissionStatusLabel;
 
 /// Admin Students Dashboard + List, merged onto one screen: a search bar
 /// (name/class/code/admission no./parent name - all matched client-side
@@ -112,6 +114,37 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
       if (_classFilter != null && s.classId != _classFilter) return false;
       if (_genderFilter != null && s.gender != _genderFilter) return false;
       return true;
+    }).toList();
+  }
+
+  // Applicant/Pending Admission are Student.status values that no Student
+  // document ever actually carries - admitStudent() only creates the
+  // Student record once an application is approved and admitted, so a
+  // person still at those two stages exists solely as an
+  // AdmissionApplication. Filtering the (always-empty-for-these-statuses)
+  // Student list therefore showed "No students match" even when
+  // applications were genuinely pending - this reads from the same
+  // AdmissionBloc the "New Admissions" counter already uses instead, so
+  // the chip and the counter agree.
+  bool get _showsApplications =>
+      _statusFilter == StudentStatus.applicant ||
+      _statusFilter == StudentStatus.pendingAdmission;
+
+  List<AdmissionApplication> _applyApplicationFilters(
+    List<AdmissionApplication> applications,
+  ) {
+    final q = _query.trim().toLowerCase();
+    final wantsReview = _statusFilter == StudentStatus.pendingAdmission;
+    return applications.where((a) {
+      final isReviewStage =
+          a.status == AdmissionStatus.review ||
+          a.status == AdmissionStatus.approved;
+      final isApplicantStage = a.status == AdmissionStatus.application;
+      if (wantsReview ? !isReviewStage : !isApplicantStage) return false;
+      if (q.isEmpty) return true;
+      return a.studentName.toLowerCase().contains(q) ||
+          a.applicantParentName.toLowerCase().contains(q) ||
+          a.applicantParentPhone.toLowerCase().contains(q);
     }).toList();
   }
 
@@ -475,13 +508,28 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                             ],
                           ),
                           const SizedBox(height: AppSpacing.l),
-                          Text(
-                            '${filtered.length} Students',
-                            style: AppTypography.labelLarge.copyWith(
-                              color: isDark
-                                  ? AppColors.textSecondaryDark
-                                  : AppColors.textSecondaryLight,
-                            ),
+                          BlocBuilder<AdmissionBloc, AdmissionState>(
+                            builder: (context, admissionState) {
+                              final count = _showsApplications
+                                  ? _applyApplicationFilters(
+                                      admissionState
+                                              is AdmissionApplicationsLoaded
+                                          ? admissionState.applications
+                                          : const <AdmissionApplication>[],
+                                    ).length
+                                  : filtered.length;
+                              final label = _showsApplications
+                                  ? '$count Applications'
+                                  : '$count Students';
+                              return Text(
+                                label,
+                                style: AppTypography.labelLarge.copyWith(
+                                  color: isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight,
+                                ),
+                              );
+                            },
                           ),
                           const SizedBox(height: AppSpacing.l),
                         ],
@@ -490,101 +538,158 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                     Expanded(
                       child: isLoading
                           ? const Center(child: CircularProgressIndicator())
-                          : ResponsiveBuilder(
-                              builder: (context, layout) {
-                                if (layout == ResponsiveLayout.desktop) {
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.xl,
-                                    ),
-                                    child: SingleChildScrollView(
-                                      child: PulseTable<Student>(
-                                        items: filtered,
-                                        emptyMessage:
-                                            'No students match the current filters',
-                                        columns: [
-                                          PulseTableColumn<Student>(
-                                            title: 'Name',
-                                            cellBuilder: (s) => InkWell(
-                                              onTap: () => context.push(
-                                                '/staff/admin/students/${s.id}',
-                                              ),
-                                              child: Text(
-                                                s.name,
-                                                style: AppTypography.bodyMedium
-                                                    .copyWith(
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: AppColors.primary(
-                                                        context,
-                                                      ),
-                                                    ),
-                                              ),
+                          : BlocBuilder<AdmissionBloc, AdmissionState>(
+                              builder: (context, admissionState) {
+                                final applications = _showsApplications
+                                    ? _applyApplicationFilters(
+                                        admissionState
+                                                is AdmissionApplicationsLoaded
+                                            ? admissionState.applications
+                                            : const <AdmissionApplication>[],
+                                      )
+                                    : const <AdmissionApplication>[];
+
+                                if (_showsApplications) {
+                                  if (applications.isEmpty) {
+                                    return Center(
+                                      child: Text(
+                                        _statusFilter ==
+                                                StudentStatus.pendingAdmission
+                                            ? 'No pending admissions'
+                                            : 'No applicants match the current filters',
+                                        style: AppTypography.bodyMedium
+                                            .copyWith(
+                                              color: isDark
+                                                  ? AppColors.textMutedDark
+                                                  : AppColors.textMutedLight,
                                             ),
-                                          ),
-                                          PulseTableColumn<Student>(
-                                            title: 'Class',
-                                            cellBuilder: (s) =>
-                                                Text(classLabel(s.classId)),
-                                          ),
-                                          PulseTableColumn<Student>(
-                                            title: 'Status',
-                                            cellBuilder: (s) => _StatusPill(
-                                              label: _statusLabel(s.status),
-                                              color: _statusColor(
-                                                context,
-                                                s.status,
-                                              ),
-                                            ),
-                                          ),
-                                          PulseTableColumn<Student>(
-                                            title: 'Admission No.',
-                                            cellBuilder: (s) =>
-                                                Text(s.admissionNumber),
-                                          ),
-                                        ],
                                       ),
+                                    );
+                                  }
+                                  return ListView.separated(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      AppSpacing.xl,
+                                      0,
+                                      AppSpacing.xl,
+                                      AppSpacing.x6l,
                                     ),
+                                    itemCount: applications.length,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(height: AppSpacing.m),
+                                    itemBuilder: (context, index) {
+                                      final a = applications[index];
+                                      return _ApplicationRow(
+                                        application: a,
+                                        initials: _initials(a.studentName),
+                                        onTap: () => context.push(
+                                          '/staff/admin/admissions/review',
+                                          extra: a,
+                                        ),
+                                      );
+                                    },
                                   );
                                 }
 
-                                if (filtered.isEmpty) {
-                                  return Center(
-                                    child: Text(
-                                      'No students match the current filters',
-                                      style: AppTypography.bodyMedium.copyWith(
-                                        color: isDark
-                                            ? AppColors.textMutedDark
-                                            : AppColors.textMutedLight,
-                                      ),
-                                    ),
-                                  );
-                                }
+                                return ResponsiveBuilder(
+                                  builder: (context, layout) {
+                                    if (layout == ResponsiveLayout.desktop) {
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: AppSpacing.xl,
+                                        ),
+                                        child: SingleChildScrollView(
+                                          child: PulseTable<Student>(
+                                            items: filtered,
+                                            emptyMessage:
+                                                'No students match the current filters',
+                                            columns: [
+                                              PulseTableColumn<Student>(
+                                                title: 'Name',
+                                                cellBuilder: (s) => InkWell(
+                                                  onTap: () => context.push(
+                                                    '/staff/admin/students/${s.id}',
+                                                  ),
+                                                  child: Text(
+                                                    s.name,
+                                                    style: AppTypography
+                                                        .bodyMedium
+                                                        .copyWith(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color:
+                                                              AppColors.primary(
+                                                                context,
+                                                              ),
+                                                        ),
+                                                  ),
+                                                ),
+                                              ),
+                                              PulseTableColumn<Student>(
+                                                title: 'Class',
+                                                cellBuilder: (s) =>
+                                                    Text(classLabel(s.classId)),
+                                              ),
+                                              PulseTableColumn<Student>(
+                                                title: 'Status',
+                                                cellBuilder: (s) => _StatusPill(
+                                                  label: _statusLabel(s.status),
+                                                  color: _statusColor(
+                                                    context,
+                                                    s.status,
+                                                  ),
+                                                ),
+                                              ),
+                                              PulseTableColumn<Student>(
+                                                title: 'Admission No.',
+                                                cellBuilder: (s) =>
+                                                    Text(s.admissionNumber),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    }
 
-                                return ListView.separated(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    AppSpacing.xl,
-                                    0,
-                                    AppSpacing.xl,
-                                    AppSpacing.x6l,
-                                  ),
-                                  itemCount: filtered.length,
-                                  separatorBuilder: (_, _) =>
-                                      const SizedBox(height: AppSpacing.m),
-                                  itemBuilder: (context, index) {
-                                    final s = filtered[index];
-                                    return _StudentRow(
-                                      student: s,
-                                      classLabel: classLabel(s.classId),
-                                      statusLabel: _statusLabel(s.status),
-                                      statusColor: _statusColor(
-                                        context,
-                                        s.status,
+                                    if (filtered.isEmpty) {
+                                      return Center(
+                                        child: Text(
+                                          'No students match the current filters',
+                                          style: AppTypography.bodyMedium
+                                              .copyWith(
+                                                color: isDark
+                                                    ? AppColors.textMutedDark
+                                                    : AppColors.textMutedLight,
+                                              ),
+                                        ),
+                                      );
+                                    }
+
+                                    return ListView.separated(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        AppSpacing.xl,
+                                        0,
+                                        AppSpacing.xl,
+                                        AppSpacing.x6l,
                                       ),
-                                      initials: _initials(s.name),
-                                      onTap: () => context.push(
-                                        '/staff/admin/students/${s.id}',
-                                      ),
+                                      itemCount: filtered.length,
+                                      separatorBuilder: (_, _) =>
+                                          const SizedBox(height: AppSpacing.m),
+                                      itemBuilder: (context, index) {
+                                        final s = filtered[index];
+                                        return _StudentRow(
+                                          student: s,
+                                          classLabel: classLabel(s.classId),
+                                          statusLabel: _statusLabel(s.status),
+                                          statusColor: _statusColor(
+                                            context,
+                                            s.status,
+                                          ),
+                                          initials: _initials(s.name),
+                                          onTap: () => context.push(
+                                            '/staff/admin/students/${s.id}',
+                                          ),
+                                        );
+                                      },
                                     );
                                   },
                                 );
@@ -734,6 +839,86 @@ class _StudentRow extends StatelessWidget {
               ),
             ),
             _StatusPill(label: statusLabel, color: statusColor),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Same card layout as _StudentRow so an Applicant/Pending Admission chip
+// doesn't look like a different feature - it's the same list, just backed
+// by AdmissionApplication instead of Student for these two statuses.
+class _ApplicationRow extends StatelessWidget {
+  final AdmissionApplication application;
+  final String initials;
+  final VoidCallback onTap;
+
+  const _ApplicationRow({
+    required this.application,
+    required this.initials,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadius.medium,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.l),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+          borderRadius: AppRadius.medium,
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.primarySoft(context),
+              child: Text(
+                initials,
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.primary(context),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.l),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    application.studentName,
+                    style: AppTypography.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  Text(
+                    application.applicantParentName.isNotEmpty
+                        ? application.applicantParentName
+                        : 'No parent/guardian on file',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _StatusPill(
+              label: admissionStatusLabel(application.status),
+              color: AppColors.warning(context),
+            ),
           ],
         ),
       ),
