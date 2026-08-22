@@ -11,7 +11,6 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_state.dart';
-import 'package:school_pulse/features/structure/presentation/screens/timetables/timetables_list_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
 import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
@@ -51,7 +50,31 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Student Profile')),
+    appBar: AppBar(
+      title: const Text('Student Profile'),
+      actions: [
+        FutureBuilder<Either<Failure, Student>>(
+          future: _future,
+          builder: (context, snapshot) {
+            final student = snapshot.data?.fold((_) => null, (value) => value);
+            return IconButton(
+              tooltip: 'View student ID card',
+              icon: const Icon(Icons.badge_outlined),
+              onPressed: student == null
+                  ? null
+                  : () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BlocProvider(
+                          create: (_) => di.sl<StudentIdentityBloc>(),
+                          child: StudentIdCardScreen(student: student),
+                        ),
+                      ),
+                    ),
+            );
+          },
+        ),
+      ],
+    ),
     body: FutureBuilder<Either<Failure, Student>>(
       future: _future,
       builder: (context, snapshot) {
@@ -135,10 +158,7 @@ class _ProfileState extends State<_Profile>
         child: TabBarView(
           controller: _tabs,
           children: [
-            _Overview(
-              student: widget.student,
-              guardians: () => _tabs.animateTo(1),
-            ),
+            _Overview(student: widget.student),
             _Guardians(student: widget.student),
             _Academic(student: widget.student),
             _More(
@@ -275,21 +295,9 @@ class _HeaderLine extends StatelessWidget {
 
 class _Overview extends StatelessWidget {
   final Student student;
-  final VoidCallback guardians;
-  const _Overview({required this.student, required this.guardians});
+  const _Overview({required this.student});
   @override
-  Widget build(BuildContext context) => _Scroll([
-    _InfoCard(student),
-    const SizedBox(height: 22),
-    Text(
-      'Quick Actions',
-      style: Theme.of(
-        context,
-      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-    ),
-    const SizedBox(height: 12),
-    _QuickActions(student, guardians),
-  ]);
+  Widget build(BuildContext context) => _Scroll([_InfoCard(student)]);
 }
 
 class _InfoCard extends StatelessWidget {
@@ -403,71 +411,6 @@ class _InfoRow extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 )
               : StatusBadge(label: value, color: badge!),
-        ),
-      ],
-    ),
-  );
-}
-
-class _QuickActions extends StatelessWidget {
-  final Student student;
-  final VoidCallback guardians;
-  const _QuickActions(this.student, this.guardians);
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, c) => GridView.count(
-      crossAxisCount: c.maxWidth < 430 ? 2 : 4,
-      childAspectRatio: c.maxWidth < 430 ? 1.8 : .9,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      children: [
-        _Quick(
-          'View ID\nCard',
-          Icons.badge_outlined,
-          () => _idCard(context, student),
-        ),
-        _Quick(
-          'View QR\nCode',
-          Icons.qr_code_rounded,
-          () => _identity(context, student),
-        ),
-        _Quick('View\nGuardians', Icons.groups_2_outlined, guardians),
-        _Quick(
-          'View\nTimetable',
-          Icons.calendar_month_outlined,
-          () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const TimetablesListScreen()),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _Quick extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final VoidCallback onTap;
-  const _Quick(this.title, this.icon, this.onTap);
-  @override
-  Widget build(BuildContext context) => AppCard(
-    onTap: onTap,
-    padding: const EdgeInsets.all(12),
-    color: Theme.of(context).colorScheme.primaryContainer.withValues(
-      alpha: Theme.of(context).brightness == Brightness.dark ? .25 : .55,
-    ),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, size: 27, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(height: 9),
-        Text(
-          title,
-          maxLines: 2,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ],
     ),
@@ -858,14 +801,6 @@ void _identity(BuildContext context, Student s) => Navigator.of(context).push(
     builder: (_) => BlocProvider(
       create: (_) => di.sl<StudentIdentityBloc>(),
       child: IdentityAndCardsScreen(student: s),
-    ),
-  ),
-);
-void _idCard(BuildContext context, Student s) => Navigator.of(context).push(
-  MaterialPageRoute(
-    builder: (_) => BlocProvider(
-      create: (_) => di.sl<StudentIdentityBloc>(),
-      child: StudentIdCardScreen(student: s),
     ),
   ),
 );

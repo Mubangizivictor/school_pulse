@@ -33,7 +33,12 @@ class ParentEngagementScreen extends StatelessWidget {
           final stats = state.stats;
 
           return ListView(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.l, AppSpacing.xl, AppSpacing.x3l),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.l,
+              AppSpacing.xl,
+              AppSpacing.x3l,
+            ),
             children: [
               AppCard(
                 child: Column(

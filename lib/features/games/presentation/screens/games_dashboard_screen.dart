@@ -77,9 +77,7 @@ class _GamesDashboardScreenState extends State<GamesDashboardScreen> {
                               : state.houses
                                     .reduce(
                                       (a, b) =>
-                                          a.totalPoints > b.totalPoints
-                                          ? a
-                                          : b,
+                                          a.totalPoints > b.totalPoints ? a : b,
                                     )
                                     .name,
                           subtitle: 'Top points',

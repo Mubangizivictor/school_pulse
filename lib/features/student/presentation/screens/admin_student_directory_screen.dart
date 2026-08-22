@@ -155,7 +155,9 @@ class _AdminStudentDirectoryScreenState
                     message: state.students.isEmpty
                         ? 'Use Enroll student to start the admission workflow.'
                         : 'Change the search or status filter.',
-                    actionLabel: state.students.isEmpty ? 'Open admissions' : null,
+                    actionLabel: state.students.isEmpty
+                        ? 'Open admissions'
+                        : null,
                     onAction: state.students.isEmpty
                         ? () => context.push('/staff/admin/admissions')
                         : null,
@@ -172,9 +174,8 @@ class _AdminStudentDirectoryScreenState
                                 structure,
                                 student.streamId,
                               ),
-                              onTap: () => context.push(
-                                '/staff/students/${student.id}',
-                              ),
+                              onTap: () =>
+                                  context.push('/staff/students/${student.id}'),
                               onIdentityCards: () => context.push(
                                 '/staff/admin/student-id-card',
                                 extra: student,
@@ -201,7 +202,9 @@ class _AdminStudentDirectoryScreenState
           student.admissionNumber.toLowerCase().contains(q) ||
           student.studentCode.toLowerCase().contains(q);
     }).toList();
-    visible.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    visible.sort(
+      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+    );
     return visible;
   }
 
@@ -313,7 +316,9 @@ class _StudentCard extends StatelessWidget {
 
   static String _statusLabel(StudentStatus status) {
     final value = status.name;
-    return value.isEmpty ? '' : '${value[0].toUpperCase()}${value.substring(1)}';
+    return value.isEmpty
+        ? ''
+        : '${value[0].toUpperCase()}${value.substring(1)}';
   }
 }
 

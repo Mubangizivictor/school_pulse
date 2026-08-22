@@ -40,7 +40,12 @@ class _AcademicOverviewScreenState extends State<AcademicOverviewScreen> {
           final semantic = Theme.of(context).extension<SemanticColors>()!;
 
           return ListView(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.l, AppSpacing.xl, AppSpacing.x3l),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.l,
+              AppSpacing.xl,
+              AppSpacing.x3l,
+            ),
             children: [
               SegmentedTabControl(
                 labels: const ['Overview', 'Subjects', 'Classes'],
@@ -91,7 +96,9 @@ class _AcademicOverviewScreenState extends State<AcademicOverviewScreen> {
                         )
                       : Column(
                           children: stats.topClasses
-                              .map((c) => _ClassRow(c: c, color: semantic.success))
+                              .map(
+                                (c) => _ClassRow(c: c, color: semantic.success),
+                              )
                               .toList(),
                         ),
                 ),
@@ -106,7 +113,9 @@ class _AcademicOverviewScreenState extends State<AcademicOverviewScreen> {
                         )
                       : Column(
                           children: stats.weakClasses
-                              .map((c) => _ClassRow(c: c, color: semantic.error))
+                              .map(
+                                (c) => _ClassRow(c: c, color: semantic.error),
+                              )
                               .toList(),
                         ),
                 ),
@@ -116,7 +125,8 @@ class _AcademicOverviewScreenState extends State<AcademicOverviewScreen> {
                 const EmptyState(
                   icon: Icons.menu_book_outlined,
                   title: 'Subject breakdown not available yet',
-                  message: 'Per-subject averages will appear here once tracked.',
+                  message:
+                      'Per-subject averages will appear here once tracked.',
                 ),
               ] else ...[
                 // TODO: Wire to a real per-class listing beyond the
@@ -125,7 +135,8 @@ class _AcademicOverviewScreenState extends State<AcademicOverviewScreen> {
                 const EmptyState(
                   icon: Icons.class_outlined,
                   title: 'Full class listing not available yet',
-                  message: 'A complete class-by-class breakdown will appear here.',
+                  message:
+                      'A complete class-by-class breakdown will appear here.',
                 ),
               ],
             ],
@@ -144,7 +155,10 @@ class _ClassRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListTile(
     contentPadding: EdgeInsets.zero,
-    title: Text(c.className, style: const TextStyle(fontWeight: FontWeight.w500)),
+    title: Text(
+      c.className,
+      style: const TextStyle(fontWeight: FontWeight.w500),
+    ),
     trailing: Row(
       mainAxisSize: MainAxisSize.min,
       children: [

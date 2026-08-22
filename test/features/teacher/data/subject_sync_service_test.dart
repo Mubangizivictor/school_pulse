@@ -443,31 +443,25 @@ void main() {
     verify(() => local.deleteOperation('attendance_task1')).called(1);
   });
 
-  test(
-    'replays a queued task delete against the remote store',
-    () async {
-      queueContains([
-        _queued(
-          type: OfflineOperationType.classTaskDelete,
-          entityId: 'task1',
-        ),
-      ]);
-      when(
-        () => classRemote.deleteTask(
-          schoolId: any(named: 'schoolId'),
-          taskId: any(named: 'taskId'),
-        ),
-      ).thenAnswer((_) async {});
+  test('replays a queued task delete against the remote store', () async {
+    queueContains([
+      _queued(type: OfflineOperationType.classTaskDelete, entityId: 'task1'),
+    ]);
+    when(
+      () => classRemote.deleteTask(
+        schoolId: any(named: 'schoolId'),
+        taskId: any(named: 'taskId'),
+      ),
+    ).thenAnswer((_) async {});
 
-      final result = await service.drain();
+    final result = await service.drain();
 
-      expect(result.synced, 1);
-      verify(
-        () => classRemote.deleteTask(schoolId: 'school1', taskId: 'task1'),
-      ).called(1);
-      verify(() => local.deleteOperation('attendance_task1')).called(1);
-    },
-  );
+    expect(result.synced, 1);
+    verify(
+      () => classRemote.deleteTask(schoolId: 'school1', taskId: 'task1'),
+    ).called(1);
+    verify(() => local.deleteOperation('attendance_task1')).called(1);
+  });
 
   test(
     'replays a queued homework save instead of silently discarding it',
@@ -505,7 +499,10 @@ void main() {
     'replays a queued behaviour record instead of silently discarding it',
     () async {
       queueContains([
-        _queued(type: OfflineOperationType.classBehaviourRecord, entityId: 'b1'),
+        _queued(
+          type: OfflineOperationType.classBehaviourRecord,
+          entityId: 'b1',
+        ),
       ]);
       when(
         () => classLocal.getBehaviourRecord('b1'),
@@ -534,9 +531,7 @@ void main() {
       when(
         () => classLocal.getAnnouncement('ann1'),
       ).thenAnswer((_) async => _announcement());
-      when(
-        () => classRemote.saveAnnouncement(any()),
-      ).thenAnswer((_) async {});
+      when(() => classRemote.saveAnnouncement(any())).thenAnswer((_) async {});
 
       final result = await service.drain();
 
@@ -546,35 +541,31 @@ void main() {
     },
   );
 
-  test(
-    'refuses to overwrite a class register the office has locked',
-    () async {
-      queueContains([
-        _queued(
-          type: OfflineOperationType.classAttendanceDraft,
-          entityId: 'sess1',
-        ),
-      ]);
-      when(
-        () => classLocal.getAttendanceDraft(
-          'sess1',
-          schoolId: any(named: 'schoolId'),
-        ),
-      ).thenAnswer((_) async => _classSession());
-      when(
-        () => classRemote.getAttendanceSession(
-          schoolId: any(named: 'schoolId'),
-          sessionId: any(named: 'sessionId'),
-        ),
-      ).thenAnswer(
-        (_) async =>
-            _classSession(status: ClassAttendanceSessionStatus.locked),
-      );
+  test('refuses to overwrite a class register the office has locked', () async {
+    queueContains([
+      _queued(
+        type: OfflineOperationType.classAttendanceDraft,
+        entityId: 'sess1',
+      ),
+    ]);
+    when(
+      () => classLocal.getAttendanceDraft(
+        'sess1',
+        schoolId: any(named: 'schoolId'),
+      ),
+    ).thenAnswer((_) async => _classSession());
+    when(
+      () => classRemote.getAttendanceSession(
+        schoolId: any(named: 'schoolId'),
+        sessionId: any(named: 'sessionId'),
+      ),
+    ).thenAnswer(
+      (_) async => _classSession(status: ClassAttendanceSessionStatus.locked),
+    );
 
-      final result = await service.drain();
+    final result = await service.drain();
 
-      expect(result.conflicted, 1);
-      verifyNever(() => classRemote.saveAttendanceSession(any()));
-    },
-  );
+    expect(result.conflicted, 1);
+    verifyNever(() => classRemote.saveAttendanceSession(any()));
+  });
 }

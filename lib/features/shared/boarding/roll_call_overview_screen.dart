@@ -43,8 +43,7 @@ class RollCallOverviewScreen extends StatelessWidget {
   final List<RollCallDormitory> dormitories;
   final List<RollCallAttendanceRecord> attendanceRecords;
   final bool isLoading;
-  final void Function(String dormitoryId, String dormitoryName)
-  onStartRollCall;
+  final void Function(String dormitoryId, String dormitoryName) onStartRollCall;
   final String title;
 
   const RollCallOverviewScreen({
@@ -74,9 +73,7 @@ class RollCallOverviewScreen extends StatelessWidget {
         .where((r) => r.status.toLowerCase() == 'late')
         .length;
     final totalCount = attendanceRecords.length;
-    final presentPercent = totalCount == 0
-        ? 0.0
-        : presentCount / totalCount;
+    final presentPercent = totalCount == 0 ? 0.0 : presentCount / totalCount;
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),
@@ -219,14 +216,15 @@ class _DateHeader extends StatelessWidget {
       children: [
         IconButton(
           icon: const Icon(Icons.chevron_left),
-          onPressed: () => onDateChanged(
-            selectedDate.subtract(const Duration(days: 1)),
-          ),
+          onPressed: () =>
+              onDateChanged(selectedDate.subtract(const Duration(days: 1))),
         ),
         Column(
           children: [
             Text(
-              _isToday ? 'Today' : '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+              _isToday
+                  ? 'Today'
+                  : '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
@@ -242,9 +240,10 @@ class _DateHeader extends StatelessWidget {
         ),
         IconButton(
           icon: const Icon(Icons.chevron_right),
-          onPressed: selectedDate.isBefore(
-            DateTime.now().subtract(const Duration(days: 1)),
-          )
+          onPressed:
+              selectedDate.isBefore(
+                DateTime.now().subtract(const Duration(days: 1)),
+              )
               ? () => onDateChanged(selectedDate.add(const Duration(days: 1)))
               : null,
         ),

@@ -66,7 +66,10 @@ class _AttendanceSettingsScreenState extends State<AttendanceSettingsScreen> {
   }
 
   Future<void> _pickReminderTime() async {
-    final picked = await showTimePicker(context: context, initialTime: _reminderTime);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _reminderTime,
+    );
     if (picked == null) return;
     setState(() => _reminderTime = picked);
     await _prefs?.setInt(_keyReminderTime, picked.hour * 60 + picked.minute);
@@ -122,7 +125,9 @@ class _AttendanceSettingsScreenState extends State<AttendanceSettingsScreen> {
                         value: _reminderEnabled,
                         onChanged: _setReminderEnabled,
                         title: const Text('Daily reminder'),
-                        subtitle: const Text('Get nudged if attendance is not taken'),
+                        subtitle: const Text(
+                          'Get nudged if attendance is not taken',
+                        ),
                       ),
                       if (_reminderEnabled) ...[
                         const Divider(height: 1, indent: 16, endIndent: 16),
@@ -157,7 +162,10 @@ class _AttendanceSettingsScreenState extends State<AttendanceSettingsScreen> {
       value: method,
       groupValue: _method,
       onChanged: (m) => _setMethod(m!),
-      secondary: Icon(icon, color: selected ? AppColors.primary(context) : null),
+      secondary: Icon(
+        icon,
+        color: selected ? AppColors.primary(context) : null,
+      ),
       title: Text(title),
       subtitle: Text(subtitle),
     );

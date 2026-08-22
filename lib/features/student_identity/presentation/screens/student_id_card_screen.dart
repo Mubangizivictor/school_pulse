@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
@@ -539,11 +540,13 @@ class _MetallicStudentIdBack extends StatelessWidget {
     required this.schoolName,
     required this.logoUrl,
     required this.contact,
+    required this.qrCodeData,
   });
 
   final String schoolName;
   final String? logoUrl;
   final String contact;
+  final String qrCodeData;
 
   @override
   Widget build(BuildContext context) => _MetallicCardFrame(
@@ -575,48 +578,48 @@ class _MetallicStudentIdBack extends StatelessWidget {
             height: 1,
             color: const Color(0xFFD4AF37).withValues(alpha: .35),
           ),
+          const SizedBox(height: 14),
+          const Text(
+            'Scan to Verify Student',
+            style: TextStyle(
+              color: Color(0xFFF0D98C),
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 12),
           Container(
-            width: double.infinity,
-            margin: const EdgeInsets.only(top: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFF071017).withValues(alpha: .56),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white12),
+              border: const Border.fromBorderSide(
+                BorderSide(color: Color(0xFFD4AF37), width: 1.6),
+              ),
             ),
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.workspace_premium_outlined,
-                  color: Color(0xFFF0D98C),
-                  size: 34,
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'This card is the property of',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                Text(
-                  schoolName,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
+            child: qrCodeData.isNotEmpty
+                ? QrImageView(
+                    data: qrCodeData,
+                    size: 140,
+                    backgroundColor: Colors.white,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: Color(0xFF0B1B3A),
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Color(0xFF0B1B3A),
+                    ),
+                  )
+                : const SizedBox(
+                    width: 140,
+                    height: 140,
+                    child: Icon(
+                      Icons.qr_code_2_outlined,
+                      size: 96,
+                      color: Color(0xFF0B1B3A),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'If found, please return to the school office.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white54, fontSize: 11),
-                ),
-              ],
-            ),
           ),
           const SizedBox(height: 14),
           Text(
@@ -626,21 +629,22 @@ class _MetallicStudentIdBack extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: Colors.white70,
-              fontSize: 11,
-              height: 1.3,
+              fontSize: 10.5,
+              height: 1.4,
             ),
           ),
           const Spacer(),
           const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _MetallicStatusPill(
-                icon: Icons.verified_outlined,
-                text: 'IDENTITY\nVERIFIED',
+                icon: Icons.check_circle_outline,
+                text: 'Identity\nVerified',
               ),
+              SizedBox(width: 10),
               _MetallicStatusPill(
-                icon: Icons.key_outlined,
-                text: 'AUTHORIZED\nACCESS',
+                icon: Icons.vpn_key_outlined,
+                text: 'Authorized\nAccess',
               ),
             ],
           ),
@@ -650,14 +654,14 @@ class _MetallicStudentIdBack extends StatelessWidget {
               contact,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white54, fontSize: 9),
+              style: const TextStyle(color: Colors.white54, fontSize: 10),
             ),
           const SizedBox(height: 8),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 9),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(999),
               gradient: _metallicGoldGradient,
             ),
             child: const Text(
@@ -666,8 +670,8 @@ class _MetallicStudentIdBack extends StatelessWidget {
               style: TextStyle(
                 color: Color(0xFF0D1B24),
                 fontWeight: FontWeight.w900,
-                fontSize: 10,
-                letterSpacing: .8,
+                fontSize: 11.5,
+                letterSpacing: .5,
               ),
             ),
           ),

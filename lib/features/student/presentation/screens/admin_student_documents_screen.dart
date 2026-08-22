@@ -84,7 +84,10 @@ class _AdminStudentDocumentsScreenState
 
   Future<void> _delete(String type) async {
     setState(() => _busyTypes.add(type));
-    final result = await _repository.deleteStudentDocument(widget.student.id, type);
+    final result = await _repository.deleteStudentDocument(
+      widget.student.id,
+      type,
+    );
     if (!mounted) return;
     setState(() => _busyTypes.remove(type));
 
@@ -110,9 +113,9 @@ class _AdminStudentDocumentsScreenState
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open document.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Could not open document.')));
     }
   }
 
@@ -147,7 +150,10 @@ class _AdminStudentDocumentsScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      Text(
+                        label,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
                       const SizedBox(height: 2),
                       Text(
                         isUploaded ? 'Uploaded' : 'Not uploaded',

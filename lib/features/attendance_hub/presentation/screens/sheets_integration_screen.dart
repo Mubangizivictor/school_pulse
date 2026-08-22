@@ -64,7 +64,9 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _connect() async {
@@ -207,7 +209,8 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final needsReauth = _integration.connectionStatus == SheetsConnectionStatus.needsAttention;
+    final needsReauth =
+        _integration.connectionStatus == SheetsConnectionStatus.needsAttention;
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
@@ -227,15 +230,22 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
                       color: AppColors.warning(context).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: AppColors.warning(context).withValues(alpha: 0.4),
+                        color: AppColors.warning(
+                          context,
+                        ).withValues(alpha: 0.4),
                       ),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.warning_amber_rounded, color: AppColors.warning(context)),
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: AppColors.warning(context),
+                        ),
                         const SizedBox(width: AppSpacing.s),
                         const Expanded(
-                          child: Text('Google Sheets connection needs to be renewed.'),
+                          child: Text(
+                            'Google Sheets connection needs to be renewed.',
+                          ),
                         ),
                         TextButton(
                           onPressed: _connecting ? null : _connect,
@@ -263,12 +273,18 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
                                   : AppColors.textMuted(context),
                             ),
                             const SizedBox(width: AppSpacing.s),
-                            Text(_integration.linked ? 'Connected' : 'Not Connected'),
+                            Text(
+                              _integration.linked
+                                  ? 'Connected'
+                                  : 'Not Connected',
+                            ),
                           ],
                         ),
                         if (_integration.linked) ...[
                           const SizedBox(height: AppSpacing.m),
-                          if (_integration.connectedAccountEmail.isNotEmpty) ...[
+                          if (_integration
+                              .connectedAccountEmail
+                              .isNotEmpty) ...[
                             Text(
                               'Connected Account',
                               style: TextStyle(

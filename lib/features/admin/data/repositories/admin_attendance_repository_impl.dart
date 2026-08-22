@@ -100,9 +100,9 @@ class AdminAttendanceRepositoryImpl implements AdminAttendanceRepository {
   /// Firestore reads for one dashboard stat.
   List<DateTime> _schoolDaysInRange(
     DateTime start,
-    DateTime end,
-    {required int cap}
-  ) {
+    DateTime end, {
+    required int cap,
+  }) {
     final schoolDays = <DateTime>[];
     var cursor = DateTime(start.year, start.month, start.day);
     final last = DateTime(end.year, end.month, end.day);

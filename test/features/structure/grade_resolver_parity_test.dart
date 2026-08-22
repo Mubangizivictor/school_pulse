@@ -98,7 +98,11 @@ void main() {
     test('a score with no configured grading system is unresolved', () {
       final result = resolver.resolveScore(
         score: 55,
-        system: const GradingSystemDef(id: 'none', schoolId: 'schoolA', name: 'x'),
+        system: const GradingSystemDef(
+          id: 'none',
+          schoolId: 'schoolA',
+          name: 'x',
+        ),
         ranges: const [],
       );
       expect(result.gradeCode, isNull);

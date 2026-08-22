@@ -71,18 +71,18 @@ class TeachingAssignment extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        schoolId,
-        staffId,
-        academicYearId,
-        responsibilityType,
-        departmentId,
-        classId,
-        streamId,
-        subjectId,
-        startDate,
-        endDate,
-        isPrimary,
-        isActive,
-      ];
+    id,
+    schoolId,
+    staffId,
+    academicYearId,
+    responsibilityType,
+    departmentId,
+    classId,
+    streamId,
+    subjectId,
+    startDate,
+    endDate,
+    isPrimary,
+    isActive,
+  ];
 }

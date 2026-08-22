@@ -373,7 +373,10 @@ class _ClassCard extends StatelessWidget {
                       '${(schoolClass.capacity - allocatedCapacity).clamp(0, schoolClass.capacity)} seats unallocated',
                   ].join(' • '),
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -397,8 +400,7 @@ class _SetupLevelsFirstHint extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
       children: [
         AppCard(
-          onTap: () =>
-              context.push('/staff/admin/structure/academics/levels'),
+          onTap: () => context.push('/staff/admin/structure/academics/levels'),
           showShadow: false,
           color: Colors.orange.withValues(alpha: 0.08),
           borderColor: Colors.orange.withValues(alpha: 0.35),
@@ -523,7 +525,10 @@ class _StreamsTab extends StatelessWidget {
               _StreamCard(
                 stream: stream,
                 parentClassName:
-                    state.classes.where((c) => c.id == classId).firstOrNull?.name ??
+                    state.classes
+                        .where((c) => c.id == classId)
+                        .firstOrNull
+                        ?.name ??
                     '',
                 onTap: () => _openStreamForm(
                   context,
@@ -611,7 +616,10 @@ class _StreamCard extends StatelessWidget {
                     if (stream.capacity > 0) 'Capacity ${stream.capacity}',
                   ].join(' • '),
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -638,7 +646,10 @@ class _CreateClassFirstHint extends StatelessWidget {
           children: [
             Text(
               'Create a class first',
-              style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 6),
             Text(

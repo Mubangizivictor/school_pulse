@@ -18,8 +18,7 @@ class OfflineResourcesScreen extends StatefulWidget {
   const OfflineResourcesScreen({super.key});
 
   @override
-  State<OfflineResourcesScreen> createState() =>
-      _OfflineResourcesScreenState();
+  State<OfflineResourcesScreen> createState() => _OfflineResourcesScreenState();
 }
 
 class _OfflineResourcesScreenState extends State<OfflineResourcesScreen> {
@@ -81,7 +80,9 @@ class _OfflineResourcesScreenState extends State<OfflineResourcesScreen> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: AppColors.success(context).withValues(alpha: 0.1),
+                                color: AppColors.success(
+                                  context,
+                                ).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(

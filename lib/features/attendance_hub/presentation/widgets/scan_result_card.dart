@@ -101,7 +101,9 @@ class _ScanResultCardState extends State<ScanResultCard> {
                     children: [
                       CircleAvatar(
                         radius: 42,
-                        backgroundImage: showPhoto ? NetworkImage(photoUrl) : null,
+                        backgroundImage: showPhoto
+                            ? NetworkImage(photoUrl)
+                            : null,
                         onBackgroundImageError: showPhoto
                             ? (_, _) {
                                 if (mounted) {

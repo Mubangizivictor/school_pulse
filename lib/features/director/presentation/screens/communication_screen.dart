@@ -22,7 +22,12 @@ class CommunicationScreen extends StatelessWidget {
       drawer: const DirectorDrawer(),
       appBar: AppBar(title: const Text('Communication')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.l, AppSpacing.xl, AppSpacing.x3l),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.l,
+          AppSpacing.xl,
+          AppSpacing.x3l,
+        ),
         children: [
           _ActionTile(
             icon: Icons.campaign_outlined,
@@ -30,7 +35,9 @@ class CommunicationScreen extends StatelessWidget {
             title: 'Send Announcement',
             subtitle: 'To entire school community',
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AnnouncementEditorScreen()),
+              MaterialPageRoute(
+                builder: (_) => const AnnouncementEditorScreen(),
+              ),
             ),
           ),
           _ActionTile(
@@ -55,7 +62,9 @@ class CommunicationScreen extends StatelessWidget {
             title: 'Message Templates',
             subtitle: 'Quick message templates',
             onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Message templates are coming soon.')),
+              const SnackBar(
+                content: Text('Message templates are coming soon.'),
+              ),
             ),
           ),
         ],

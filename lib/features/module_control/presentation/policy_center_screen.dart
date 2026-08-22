@@ -92,7 +92,8 @@ class _PolicyCenterScreenState extends State<PolicyCenterScreen> {
                 child: TextField(
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.search),
-                    hintText: 'Search policies (attendance, parents, security…)',
+                    hintText:
+                        'Search policies (attendance, parents, security…)',
                     border: OutlineInputBorder(),
                   ),
                   onChanged: (value) => setState(() => _query = value),

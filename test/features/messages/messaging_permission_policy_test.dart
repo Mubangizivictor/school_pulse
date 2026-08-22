@@ -25,7 +25,11 @@ UserEntity _user({
 void main() {
   group('MessagingPermissionPolicy.canStartConversation', () {
     test('refuses cross-school messaging', () {
-      final actor = _user(id: 'a', schoolId: 's1', roles: [UserRole.subjectTeacher]);
+      final actor = _user(
+        id: 'a',
+        schoolId: 's1',
+        roles: [UserRole.subjectTeacher],
+      );
       final target = _user(id: 'b', schoolId: 's2', roles: [UserRole.parent]);
 
       final decision = MessagingPermissionPolicy.canStartConversation(
@@ -39,7 +43,11 @@ void main() {
     });
 
     test('refuses when target is inactive', () {
-      final actor = _user(id: 'a', schoolId: 's1', roles: [UserRole.schoolAdmin]);
+      final actor = _user(
+        id: 'a',
+        schoolId: 's1',
+        roles: [UserRole.schoolAdmin],
+      );
       final target = _user(
         id: 'b',
         schoolId: 's1',
@@ -59,7 +67,11 @@ void main() {
 
     test('allows staff to message staff in the same school', () {
       final actor = _user(id: 'a', schoolId: 's1', roles: [UserRole.bursar]);
-      final target = _user(id: 'b', schoolId: 's1', roles: [UserRole.schoolAdmin]);
+      final target = _user(
+        id: 'b',
+        schoolId: 's1',
+        roles: [UserRole.schoolAdmin],
+      );
 
       final decision = MessagingPermissionPolicy.canStartConversation(
         actor: actor,
@@ -86,7 +98,11 @@ void main() {
 
     test('refuses student-to-teacher by default', () {
       final actor = _user(id: 'a', schoolId: 's1', roles: [UserRole.student]);
-      final target = _user(id: 'b', schoolId: 's1', roles: [UserRole.subjectTeacher]);
+      final target = _user(
+        id: 'b',
+        schoolId: 's1',
+        roles: [UserRole.subjectTeacher],
+      );
 
       final decision = MessagingPermissionPolicy.canStartConversation(
         actor: actor,
@@ -147,7 +163,11 @@ void main() {
 
     test('refuses parent messaging a student directly', () {
       final actor = _user(id: 'par1', schoolId: 's1', roles: [UserRole.parent]);
-      final target = _user(id: 'stu1', schoolId: 's1', roles: [UserRole.student]);
+      final target = _user(
+        id: 'stu1',
+        schoolId: 's1',
+        roles: [UserRole.student],
+      );
 
       final decision = MessagingPermissionPolicy.canStartConversation(
         actor: actor,
@@ -168,7 +188,11 @@ void main() {
         schoolId: 's1',
         roles: [UserRole.classTeacher, UserRole.boardingPatron],
       );
-      final target = _user(id: 'stu1', schoolId: 's1', roles: [UserRole.student]);
+      final target = _user(
+        id: 'stu1',
+        schoolId: 's1',
+        roles: [UserRole.student],
+      );
 
       final decision = MessagingPermissionPolicy.canStartConversation(
         actor: actor,

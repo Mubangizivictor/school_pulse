@@ -77,8 +77,18 @@ class _NurseHomeScreenState extends State<NurseHomeScreen> {
                     final urgent = state.todayEmergencies.length;
                     final today = DateTime.now();
                     const months = [
-                      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+                      'Jan',
+                      'Feb',
+                      'Mar',
+                      'Apr',
+                      'May',
+                      'Jun',
+                      'Jul',
+                      'Aug',
+                      'Sep',
+                      'Oct',
+                      'Nov',
+                      'Dec',
                     ];
                     final periodLabel =
                         '${months[today.month - 1]} ${today.day}, ${today.year}';
@@ -101,52 +111,54 @@ class _NurseHomeScreenState extends State<NurseHomeScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                          StaffHeroSummaryCard(
-                            greetingNameFallback: 'Nurse',
-                            periodLabel: periodLabel,
-                            kpis: [
-                              StaffKpiData(
-                                title: 'In Clinic',
-                                valueText: '$inClinic',
-                                subtitle: 'Students',
-                                icon: Icons.groups_outlined,
-                                color: AppColors.information(context),
-                              ),
-                              StaffKpiData(
-                                title: 'Visits Today',
-                                valueText: '${state.todayVisits.length}',
-                                subtitle: 'Logged',
-                                icon: Icons.monitor_heart_outlined,
-                                color: AppColors.success(context),
-                              ),
-                              StaffKpiData(
-                                title: 'Urgent',
-                                valueText: '$urgent',
-                                subtitle: 'Needs attention',
-                                icon: Icons.warning_amber_rounded,
-                                color: AppColors.danger(context),
-                              ),
-                              StaffKpiData(
-                                title: 'Low Stock',
-                                valueText: '${state.lowStockItems.length}',
-                                subtitle: 'Items',
-                                icon: Icons.inventory_2_outlined,
-                                color: AppColors.warning(context),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          _PrimaryActions(schoolId: schoolId),
-                          const SizedBox(height: 24),
-                          const _SectionLabel('Quick actions'),
-                          const SizedBox(height: 12),
-                          _QuickActions(schoolId: schoolId),
-                          const SizedBox(height: 24),
-                          const _SectionLabel('Needs attention'),
-                          const SizedBox(height: 12),
-                          _NeedsAttentionList(state: state),
-                          const SizedBox(height: 24),
-                          _FollowUpsSection(state: state),
+                                  StaffHeroSummaryCard(
+                                    greetingNameFallback: 'Nurse',
+                                    periodLabel: periodLabel,
+                                    kpis: [
+                                      StaffKpiData(
+                                        title: 'In Clinic',
+                                        valueText: '$inClinic',
+                                        subtitle: 'Students',
+                                        icon: Icons.groups_outlined,
+                                        color: AppColors.information(context),
+                                      ),
+                                      StaffKpiData(
+                                        title: 'Visits Today',
+                                        valueText:
+                                            '${state.todayVisits.length}',
+                                        subtitle: 'Logged',
+                                        icon: Icons.monitor_heart_outlined,
+                                        color: AppColors.success(context),
+                                      ),
+                                      StaffKpiData(
+                                        title: 'Urgent',
+                                        valueText: '$urgent',
+                                        subtitle: 'Needs attention',
+                                        icon: Icons.warning_amber_rounded,
+                                        color: AppColors.danger(context),
+                                      ),
+                                      StaffKpiData(
+                                        title: 'Low Stock',
+                                        valueText:
+                                            '${state.lowStockItems.length}',
+                                        subtitle: 'Items',
+                                        icon: Icons.inventory_2_outlined,
+                                        color: AppColors.warning(context),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _PrimaryActions(schoolId: schoolId),
+                                  const SizedBox(height: 24),
+                                  const _SectionLabel('Quick actions'),
+                                  const SizedBox(height: 12),
+                                  _QuickActions(schoolId: schoolId),
+                                  const SizedBox(height: 24),
+                                  const _SectionLabel('Needs attention'),
+                                  const SizedBox(height: 12),
+                                  _NeedsAttentionList(state: state),
+                                  const SizedBox(height: 24),
+                                  _FollowUpsSection(state: state),
                                 ],
                               ),
                             ),
@@ -200,9 +212,17 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_outlined, color: Colors.white54, size: 40),
+            const Icon(
+              Icons.cloud_off_outlined,
+              color: Colors.white54,
+              size: 40,
+            ),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70),
+            ),
             const SizedBox(height: 16),
             FilledButton(onPressed: onRetry, child: const Text('Retry')),
           ],
@@ -226,7 +246,9 @@ class _PrimaryActions extends StatelessWidget {
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFFF6A00),
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
             onPressed: () => context.push('/staff/nurse/visits/new', extra: ''),
             icon: const Icon(Icons.add_circle_outline),
@@ -240,7 +262,9 @@ class _PrimaryActions extends StatelessWidget {
               foregroundColor: Colors.white,
               side: const BorderSide(color: Color(0xFF3B82F6)),
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
             onPressed: () => context.push('/staff/nurse/lookup'),
             icon: const Icon(Icons.qr_code_scanner, size: 20),
@@ -275,18 +299,38 @@ class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = [
-      _QuickActionData('Medication', Icons.medication_outlined, const Color(0xFF3B82F6), () {
-        context.push('/staff/nurse/inventory');
-      }),
-      _QuickActionData('Sick bay', Icons.bed_outlined, const Color(0xFF10B981), () {
-        context.push('/staff/nurse/records');
-      }),
-      _QuickActionData('Send home', Icons.home_outlined, const Color(0xFF8B5CF6), () {
-        context.push('/staff/nurse/visits/new', extra: '');
-      }),
-      _QuickActionData('Emergency', Icons.emergency_outlined, const Color(0xFFEF4444), () {
-        context.push('/staff/nurse/records');
-      }),
+      _QuickActionData(
+        'Medication',
+        Icons.medication_outlined,
+        const Color(0xFF3B82F6),
+        () {
+          context.push('/staff/nurse/inventory');
+        },
+      ),
+      _QuickActionData(
+        'Sick bay',
+        Icons.bed_outlined,
+        const Color(0xFF10B981),
+        () {
+          context.push('/staff/nurse/records');
+        },
+      ),
+      _QuickActionData(
+        'Send home',
+        Icons.home_outlined,
+        const Color(0xFF8B5CF6),
+        () {
+          context.push('/staff/nurse/visits/new', extra: '');
+        },
+      ),
+      _QuickActionData(
+        'Emergency',
+        Icons.emergency_outlined,
+        const Color(0xFFEF4444),
+        () {
+          context.push('/staff/nurse/records');
+        },
+      ),
     ];
 
     return Row(
@@ -355,7 +399,8 @@ class _NeedsAttentionList extends StatelessWidget {
         _AttentionRow(
           icon: Icons.inventory_2_outlined,
           color: const Color(0xFFF59E0B),
-          title: '$lowStockCount low-stock item${lowStockCount == 1 ? '' : 's'}',
+          title:
+              '$lowStockCount low-stock item${lowStockCount == 1 ? '' : 's'}',
           actionLabel: 'Review',
           onTap: () => context.push('/staff/nurse/inventory'),
         ),
@@ -386,7 +431,12 @@ class _NeedsAttentionList extends StatelessWidget {
           for (var i = 0; i < items.length; i++) ...[
             items[i],
             if (i != items.length - 1)
-              const Divider(height: 1, color: Colors.white10, indent: 16, endIndent: 16),
+              const Divider(
+                height: 1,
+                color: Colors.white10,
+                indent: 16,
+                endIndent: 16,
+              ),
           ],
         ],
       ),
@@ -414,10 +464,16 @@ class _AttentionRow extends StatelessWidget {
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          shape: BoxShape.circle,
+        ),
         child: Icon(icon, color: color, size: 18),
       ),
-      title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14)),
+      title: Text(
+        title,
+        style: const TextStyle(color: Colors.white, fontSize: 14),
+      ),
       trailing: TextButton(
         onPressed: onTap,
         child: Row(
@@ -438,7 +494,9 @@ class _FollowUpsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final upcoming = state.todayVisits.where((v) => v.followUpRequired).toList();
+    final upcoming = state.todayVisits
+        .where((v) => v.followUpRequired)
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -478,7 +536,12 @@ class _FollowUpsSection extends StatelessWidget {
                 for (var i = 0; i < upcoming.length && i < 5; i++) ...[
                   _FollowUpRow(visit: upcoming[i]),
                   if (i != upcoming.length - 1 && i != 4)
-                    const Divider(height: 1, color: Colors.white10, indent: 16, endIndent: 16),
+                    const Divider(
+                      height: 1,
+                      color: Colors.white10,
+                      indent: 16,
+                      endIndent: 16,
+                    ),
                 ],
               ],
             ),
@@ -504,12 +567,22 @@ class _FollowUpRow extends StatelessWidget {
           color: const Color(0xFF10B981).withValues(alpha: 0.15),
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.schedule_outlined, color: Color(0xFF10B981), size: 18),
+        child: const Icon(
+          Icons.schedule_outlined,
+          color: Color(0xFF10B981),
+          size: 18,
+        ),
       ),
-      title: Text(label, style: const TextStyle(color: Color(0xFF10B981), fontSize: 12)),
+      title: Text(
+        label,
+        style: const TextStyle(color: Color(0xFF10B981), fontSize: 12),
+      ),
       subtitle: Text(
         visit.reason,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       trailing: const Icon(Icons.chevron_right, color: Colors.white38),
       onTap: () => context.push('/staff/nurse/profile/${visit.studentId}'),

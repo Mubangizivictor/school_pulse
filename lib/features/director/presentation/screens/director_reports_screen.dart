@@ -14,7 +14,12 @@ class DirectorReportsScreen extends StatelessWidget {
       drawer: const DirectorDrawer(),
       appBar: AppBar(title: const Text('Strategic Reports')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.l, AppSpacing.xl, AppSpacing.x3l),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.l,
+          AppSpacing.xl,
+          AppSpacing.x3l,
+        ),
         children: [
           _buildReportSection(context, 'Financial Reports', [
             _ReportItem(
@@ -158,7 +163,8 @@ class DirectorReportsScreen extends StatelessWidget {
                 // TODO: Wire to real per-subject averages once the director
                 // module exposes subject-level academic data.
                 (context, stats) => const ReportNotTrackedNote(
-                  message: 'Per-subject performance comparison is not tracked yet.',
+                  message:
+                      'Per-subject performance comparison is not tracked yet.',
                 ),
               ),
             ),
@@ -293,7 +299,10 @@ class DirectorReportsScreen extends StatelessWidget {
         backgroundColor: item.color.withValues(alpha: 0.12),
         child: Icon(item.icon, color: item.color, size: 20),
       ),
-      title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(
+        item.title,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
       trailing: Icon(
         Icons.chevron_right_rounded,
         color: Theme.of(context).colorScheme.onSurfaceVariant,

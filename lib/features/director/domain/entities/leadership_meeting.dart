@@ -113,7 +113,9 @@ class LeadershipMeeting extends Equatable {
       participants: List<String>.from(map['participants'] ?? const []),
       decisions: List<String>.from(map['decisions'] ?? const []),
       actions: ((map['actions'] as List?) ?? const [])
-          .map((a) => MeetingAction.fromMap(Map<String, dynamic>.from(a as Map)))
+          .map(
+            (a) => MeetingAction.fromMap(Map<String, dynamic>.from(a as Map)),
+          )
           .toList(),
       scheduledAt: date(map['scheduledAt']),
       createdAt: date(map['createdAt']),

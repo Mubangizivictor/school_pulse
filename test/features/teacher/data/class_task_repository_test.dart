@@ -120,10 +120,12 @@ void main() {
     result.fold((_) => fail('expected cached tasks'), (tasks) {
       expect(tasks, hasLength(1));
     });
-    verifyNever(() => remote.getTasks(
-      schoolId: any(named: 'schoolId'),
-      ownerUserId: any(named: 'ownerUserId'),
-    ));
+    verifyNever(
+      () => remote.getTasks(
+        schoolId: any(named: 'schoolId'),
+        ownerUserId: any(named: 'ownerUserId'),
+      ),
+    );
   });
 
   test('getTasks caches the remote result once online', () async {
@@ -146,11 +148,7 @@ void main() {
 
     expect(result.isRight(), isTrue);
     verify(
-      () => local.cacheTasks(
-        any(),
-        schoolId: 'school1',
-        ownerUserId: 'user1',
-      ),
+      () => local.cacheTasks(any(), schoolId: 'school1', ownerUserId: 'user1'),
     ).called(1);
   });
 

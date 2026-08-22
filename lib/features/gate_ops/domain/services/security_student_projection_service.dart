@@ -26,10 +26,7 @@ class SecurityStudentProjectionService {
     required String schoolId,
     required UserEntity operatorUser,
   }) async {
-    final allowed = await _can(
-      Permission.securityIdentityVerify,
-      operatorUser,
-    );
+    final allowed = await _can(Permission.securityIdentityVerify, operatorUser);
     if (!allowed) {
       return const Left(
         PermissionDeniedFailure(

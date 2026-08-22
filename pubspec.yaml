@@ -114,7 +114,6 @@ flutter:
   generate: true
 
   assets:
-    - assets/animations/
     - assets/loading_icon/loading_icon.png
     - assets/logos/
     - assets/launcher_icons/

@@ -44,11 +44,9 @@ class NominatimAddressService {
         final address = r['address'] as Map<String, dynamic>? ?? {};
         return AddressSuggestion(
           displayName: r['display_name'] as String? ?? '',
-          region:
-              address['state'] as String? ?? address['region'] as String?,
+          region: address['state'] as String? ?? address['region'] as String?,
           county:
-              address['county'] as String? ??
-              address['district'] as String?,
+              address['county'] as String? ?? address['district'] as String?,
           country: address['country'] as String?,
         );
       }).toList();

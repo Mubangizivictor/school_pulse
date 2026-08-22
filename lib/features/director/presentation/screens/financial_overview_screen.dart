@@ -33,7 +33,12 @@ class FinancialOverviewScreen extends StatelessWidget {
           final semantic = Theme.of(context).extension<SemanticColors>()!;
 
           return ListView(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.l, AppSpacing.xl, AppSpacing.x3l),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.l,
+              AppSpacing.xl,
+              AppSpacing.x3l,
+            ),
             children: [
               AppCard(
                 color: semantic.success.withValues(alpha: 0.08),
@@ -55,8 +60,14 @@ class FinancialOverviewScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.l),
-                    _MoneyRow(label: 'Expected Fees', value: stats.expectedFees),
-                    _MoneyRow(label: 'Collected Fees', value: stats.collectedFees),
+                    _MoneyRow(
+                      label: 'Expected Fees',
+                      value: stats.expectedFees,
+                    ),
+                    _MoneyRow(
+                      label: 'Collected Fees',
+                      value: stats.collectedFees,
+                    ),
                     _MoneyRow(
                       label: 'Outstanding Fees',
                       value: stats.outstandingFees,
@@ -79,9 +90,8 @@ class FinancialOverviewScreen extends StatelessWidget {
                   children: [
                     Text(
                       stats.yearRevenue.toStringAsFixed(0),
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.w900),
                     ),
                     Text(
                       'Total revenue this year',
@@ -116,9 +126,8 @@ class FinancialOverviewScreen extends StatelessWidget {
                   children: [
                     Text(
                       stats.totalExpenditure.toStringAsFixed(0),
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.w900),
                     ),
                     Text(
                       'Total expenditure this year',

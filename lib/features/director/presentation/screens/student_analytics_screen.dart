@@ -37,7 +37,12 @@ class _StudentAnalyticsScreenState extends State<StudentAnalyticsScreen> {
           final stats = state.stats;
 
           return ListView(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.l, AppSpacing.xl, AppSpacing.x3l),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.l,
+              AppSpacing.xl,
+              AppSpacing.x3l,
+            ),
             children: [
               SegmentedTabControl(
                 labels: const ['Enrollment', 'Performance', 'Discipline'],
@@ -51,7 +56,10 @@ class _StudentAnalyticsScreenState extends State<StudentAnalyticsScreen> {
                 AppCard(
                   child: Column(
                     children: [
-                      _StatRow(label: 'Total Students', value: '${stats.totalStudents}'),
+                      _StatRow(
+                        label: 'Total Students',
+                        value: '${stats.totalStudents}',
+                      ),
                       const Divider(),
                       // TODO: Wire New Admissions / Withdrawals / Transfers
                       // once the director module exposes admissions data

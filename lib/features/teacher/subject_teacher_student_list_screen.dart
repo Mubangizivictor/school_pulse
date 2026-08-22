@@ -333,7 +333,8 @@ class _SubjectTeacherStudentListScreenState
       itemCount: students.length,
       separatorBuilder: (context, index) =>
           const SizedBox(height: AppSpacing.m),
-      itemBuilder: (context, index) => _buildStudentItem(context, students[index]),
+      itemBuilder: (context, index) =>
+          _buildStudentItem(context, students[index]),
     );
   }
 
@@ -396,7 +397,10 @@ class _SubjectTeacherStudentListScreenState
     );
   }
 
-  Widget _buildStudentItem(BuildContext context, SubjectStudentSummary student) {
+  Widget _buildStudentItem(
+    BuildContext context,
+    SubjectStudentSummary student,
+  ) {
     final rate = student.attendanceRate;
     final statusColor = rate == null
         ? AppColors.textMuted(context)
@@ -405,7 +409,9 @@ class _SubjectTeacherStudentListScreenState
         : rate >= 50
         ? AppColors.warning(context)
         : AppColors.danger(context);
-    final statusLabel = rate == null ? 'No data' : '${rate.toStringAsFixed(0)}%';
+    final statusLabel = rate == null
+        ? 'No data'
+        : '${rate.toStringAsFixed(0)}%';
 
     return PulseCard(
       padding: const EdgeInsets.all(AppSpacing.m),
@@ -508,7 +514,12 @@ class _SubjectTeacherStudentListScreenState
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _buildFilterChip(context, 'All', SubjectRosterFilter.all, state),
+                    _buildFilterChip(
+                      context,
+                      'All',
+                      SubjectRosterFilter.all,
+                      state,
+                    ),
                     _buildFilterChip(
                       context,
                       'No Marks',
@@ -541,8 +552,9 @@ class _SubjectTeacherStudentListScreenState
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.m),
       child: GestureDetector(
-        onTap: () =>
-            context.read<SubjectStudentsBloc>().add(SubjectStudentsFiltered(filter)),
+        onTap: () => context.read<SubjectStudentsBloc>().add(
+          SubjectStudentsFiltered(filter),
+        ),
         child: Container(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.l,
@@ -581,7 +593,9 @@ class _SubjectTeacherStudentListScreenState
       context: context,
       backgroundColor: AppColors.surfaceElevated(context),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.xl)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.xl),
+        ),
       ),
       builder: (sheetContext) {
         SubjectRosterFilter filter = currentState.filter;
@@ -615,8 +629,9 @@ class _SubjectTeacherStudentListScreenState
                       ChoiceChip(
                         label: const Text('All'),
                         selected: filter == SubjectRosterFilter.all,
-                        onSelected: (_) =>
-                            setSheetState(() => filter = SubjectRosterFilter.all),
+                        onSelected: (_) => setSheetState(
+                          () => filter = SubjectRosterFilter.all,
+                        ),
                       ),
                       ChoiceChip(
                         label: const Text('No Marks'),

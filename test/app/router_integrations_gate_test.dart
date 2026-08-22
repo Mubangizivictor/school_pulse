@@ -33,7 +33,8 @@ void main() {
       expect(
         redirectIndex - routeIndex < 200,
         isTrue,
-        reason: 'the redirect guard must belong to the integrations route itself',
+        reason:
+            'the redirect guard must belong to the integrations route itself',
       );
 
       final windowEnd = (redirectIndex + 1000).clamp(0, source.length);

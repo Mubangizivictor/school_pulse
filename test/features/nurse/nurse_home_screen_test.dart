@@ -217,9 +217,6 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(
-      find.textContaining('not assigned to a school'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('not assigned to a school'), findsOneWidget);
   });
 }

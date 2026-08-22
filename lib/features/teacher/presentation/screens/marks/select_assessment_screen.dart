@@ -17,8 +17,7 @@ class SelectAssessmentScreen extends StatefulWidget {
   const SelectAssessmentScreen({super.key});
 
   @override
-  State<SelectAssessmentScreen> createState() =>
-      _SelectAssessmentScreenState();
+  State<SelectAssessmentScreen> createState() => _SelectAssessmentScreenState();
 }
 
 class _SelectAssessmentScreenState extends State<SelectAssessmentScreen> {
@@ -116,9 +115,7 @@ class _SelectAssessmentScreenState extends State<SelectAssessmentScreen> {
 
                 final visible = state.assessments.where((a) {
                   if (_termFilter == 'All') return true;
-                  final term = terms
-                      .where((t) => t.id == a.termId)
-                      .firstOrNull;
+                  final term = terms.where((t) => t.id == a.termId).firstOrNull;
                   return term?.name == _termFilter;
                 }).toList();
 
@@ -151,12 +148,7 @@ class _SelectAssessmentScreenState extends State<SelectAssessmentScreen> {
                               ),
                             )
                           : ListView(
-                              padding: const EdgeInsets.fromLTRB(
-                                16,
-                                8,
-                                16,
-                                16,
-                              ),
+                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                               children: [
                                 Text(
                                   'Assessments',
@@ -257,9 +249,7 @@ class _SelectAssessmentScreenState extends State<SelectAssessmentScreen> {
                 border: isSelected
                     ? null
                     : Border.all(
-                        color: AppColors.border(context).withValues(
-                          alpha: 0.6,
-                        ),
+                        color: AppColors.border(context).withValues(alpha: 0.6),
                       ),
               ),
               child: Text(
@@ -614,8 +604,18 @@ class _SelectAssessmentScreenState extends State<SelectAssessmentScreen> {
 
   static String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }

@@ -22,26 +22,32 @@ void main() {
     expect(preferences.departments, StructureUseChoice.undecided);
   });
 
-  test('opening Structure does not overwrite an existing setup version', () async {
-    final firestore = FakeFirebaseFirestore();
-    await firestore.collection('structure_setup_preferences').doc('school-a').set({
-      'schoolId': 'school-a',
-      'setupVersion': 1,
-      'departments': 'enabled',
-    });
-    final repository = StructureSetupRepositoryImpl(
-      firestore: firestore,
-      schoolIdOverride: 'school-a',
-    );
+  test(
+    'opening Structure does not overwrite an existing setup version',
+    () async {
+      final firestore = FakeFirebaseFirestore();
+      await firestore
+          .collection('structure_setup_preferences')
+          .doc('school-a')
+          .set({
+            'schoolId': 'school-a',
+            'setupVersion': 1,
+            'departments': 'enabled',
+          });
+      final repository = StructureSetupRepositoryImpl(
+        firestore: firestore,
+        schoolIdOverride: 'school-a',
+      );
 
-    final preferences = await repository.watchPreferences().first;
-    final document = await firestore
-        .collection('structure_setup_preferences')
-        .doc('school-a')
-        .get();
+      final preferences = await repository.watchPreferences().first;
+      final document = await firestore
+          .collection('structure_setup_preferences')
+          .doc('school-a')
+          .get();
 
-    expect(document.data()?['setupVersion'], 1);
-    expect(preferences.setupVersion, 1);
-    expect(preferences.departments, StructureUseChoice.enabled);
-  });
+      expect(document.data()?['setupVersion'], 1);
+      expect(preferences.setupVersion, 1);
+      expect(preferences.departments, StructureUseChoice.enabled);
+    },
+  );
 }

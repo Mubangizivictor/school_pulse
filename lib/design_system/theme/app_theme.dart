@@ -1,372 +1,249 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
-import 'app_typography.dart';
-import 'app_spacing.dart';
 import 'app_radius.dart';
+import 'app_typography.dart';
 import 'package:school_pulse/design_system/app_theme.dart' show SemanticColors;
 
+/// Authoritative black-and-white Material theme for every School Pulse role.
 class AppTheme {
   AppTheme._();
 
-  static ThemeData light({Color? primary, Color? secondary}) {
-    final effectivePrimary = primary ?? AppColors.royalBlue;
-    final effectiveSecondary = secondary ?? AppColors.brightOrange;
+  static ThemeData light({Color? primary, Color? secondary}) =>
+      _build(Brightness.light);
+  static ThemeData dark({Color? primary, Color? secondary}) =>
+      _build(Brightness.dark);
 
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: effectivePrimary,
-      primary: effectivePrimary,
-      onPrimary: _bestForeground(effectivePrimary),
-      secondary: effectiveSecondary,
-      onSecondary: _bestForeground(effectiveSecondary),
-      surface: AppColors.surfaceLight,
-      onSurface: AppColors.textPrimaryLight,
-      surfaceContainerHighest: AppColors.borderLight,
-      onSurfaceVariant: AppColors.textSecondaryLight,
-      error: AppColors.deepOrange,
-      onError: AppColors.pureWhite,
-      outline: AppColors.borderLight,
-      brightness: Brightness.light,
+  static ThemeData _build(Brightness brightness) {
+    final dark = brightness == Brightness.dark;
+    final background = dark ? AppColors.black : AppColors.white;
+    final foreground = dark ? AppColors.white : AppColors.black;
+    final scheme = ColorScheme(
+      brightness: brightness,
+      primary: foreground,
+      onPrimary: background,
+      secondary: foreground,
+      onSecondary: background,
+      error: foreground,
+      onError: background,
+      surface: background,
+      onSurface: foreground,
+      surfaceContainerHighest: background,
+      onSurfaceVariant: foreground,
+      outline: foreground,
+      outlineVariant: foreground,
+      shadow: Colors.transparent,
+      scrim: Colors.transparent,
+      inverseSurface: foreground,
+      onInverseSurface: background,
+      inversePrimary: background,
+      primaryContainer: foreground,
+      onPrimaryContainer: background,
+      secondaryContainer: foreground,
+      onSecondaryContainer: background,
+      tertiary: foreground,
+      onTertiary: background,
+      tertiaryContainer: foreground,
+      onTertiaryContainer: background,
     );
-
-    return _buildTheme(colorScheme, effectivePrimary);
-  }
-
-  static ThemeData dark({Color? primary, Color? secondary}) {
-    final effectivePrimary = primary ?? AppColors.electricBlue;
-    final effectiveSecondary = secondary ?? AppColors.goldenYellow;
-
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: effectivePrimary,
-      primary: effectivePrimary,
-      onPrimary: _bestForeground(effectivePrimary),
-      secondary: effectiveSecondary,
-      onSecondary: _bestForeground(effectiveSecondary),
-      surface: AppColors.surfaceDark,
-      surfaceDim: AppColors.bgDark,
-      surfaceBright: AppColors.elevatedSurfaceDark,
-      surfaceContainerLowest: AppColors.bgDark,
-      surfaceContainerLow: AppColors.surfaceDark,
-      surfaceContainer: AppColors.elevatedSurfaceDark,
-      surfaceContainerHigh: const Color(0xFF123469),
-      onSurface: AppColors.textPrimaryDark,
-      surfaceContainerHighest: AppColors.borderDark,
-      onSurfaceVariant: AppColors.textSecondaryDark,
-      error: AppColors.deepOrange,
-      onError: AppColors.pureWhite,
-      outline: AppColors.borderDark,
-      brightness: Brightness.dark,
-    );
-
-    return _buildTheme(colorScheme, effectivePrimary);
-  }
-
-  static ThemeData _buildTheme(ColorScheme colorScheme, Color primaryColor) {
-    final isDark = colorScheme.brightness == Brightness.dark;
-
+    final text = _textTheme(foreground);
+    final outline = BorderSide(color: foreground);
+    final shape = RoundedRectangleBorder(borderRadius: AppRadius.medium);
     return ThemeData(
       useMaterial3: true,
-      colorScheme: colorScheme,
-      scaffoldBackgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-      textTheme: _buildTextTheme(colorScheme),
-      // Legacy screens built against the older design system (pre-dating
-      // this AppTheme) still read semantic status colors via
-      // Theme.of(context).extension<SemanticColors>()! - keep providing it
-      // so those screens don't null-check-crash under the new theme.
-      extensions: [isDark ? SemanticColors.dark : SemanticColors.light],
-
+      brightness: brightness,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: background,
+      canvasColor: background,
+      disabledColor: foreground,
+      shadowColor: Colors.transparent,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      hoverColor: Colors.transparent,
+      focusColor: Colors.transparent,
+      textTheme: text,
+      extensions: [dark ? SemanticColors.dark : SemanticColors.light],
       appBarTheme: AppBarTheme(
-        backgroundColor: isDark
-            ? AppColors.surfaceDark
-            : AppColors.surfaceLight,
-        foregroundColor: isDark
-            ? AppColors.textPrimaryDark
-            : AppColors.textPrimaryLight,
+        backgroundColor: background,
+        foregroundColor: foreground,
         elevation: 0,
-        centerTitle: false,
+        scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: AppTypography.titleLarge.copyWith(
-          color: isDark
-              ? AppColors.textPrimaryDark
-              : AppColors.textPrimaryLight,
-        ),
-        iconTheme: IconThemeData(
-          color: isDark
-              ? AppColors.textPrimaryDark
-              : AppColors.textPrimaryLight,
-          size: 24,
-        ),
+        titleTextStyle: text.titleLarge,
+        iconTheme: IconThemeData(color: foreground),
       ),
-
       cardTheme: CardThemeData(
+        color: background,
         elevation: 0,
-        color: isDark ? AppColors.elevatedSurfaceDark : AppColors.surfaceLight,
+        shadowColor: Colors.transparent,
+        margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.large,
-          side: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-            width: 1,
-          ),
-        ),
-        margin: EdgeInsets.zero,
-      ),
-
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          foregroundColor: AppColors.pureWhite,
-          elevation: 0,
-          minimumSize: const Size(0, 52),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x3l),
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-          textStyle: AppTypography.labelLarge.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          side: outline,
         ),
       ),
-
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: primaryColor,
-          side: BorderSide(color: primaryColor, width: 1.5),
-          minimumSize: const Size(0, 52),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x3l),
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-          textStyle: AppTypography.labelLarge.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
-
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: primaryColor,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.small),
-          textStyle: AppTypography.labelLarge.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-
+      dividerTheme: DividerThemeData(color: foreground, thickness: 1, space: 1),
+      iconTheme: IconThemeData(color: foreground),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? AppColors.surfaceDark : AppColors.pureWhite,
-        contentPadding: const EdgeInsets.all(AppSpacing.xl),
+        fillColor: background,
+        labelStyle: TextStyle(color: foreground),
+        hintStyle: TextStyle(color: foreground),
+        prefixIconColor: foreground,
+        suffixIconColor: foreground,
         border: OutlineInputBorder(
           borderRadius: AppRadius.medium,
-          borderSide: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-          ),
+          borderSide: outline,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: AppRadius.medium,
-          borderSide: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-          ),
+          borderSide: outline,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadius.medium,
-          borderSide: BorderSide(color: primaryColor, width: 2),
+          borderSide: BorderSide(color: foreground, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadius.medium,
-          borderSide: const BorderSide(color: AppColors.deepOrange),
-        ),
-        labelStyle: AppTypography.bodyMedium.copyWith(
-          color: isDark
-              ? AppColors.textSecondaryDark
-              : AppColors.textSecondaryLight,
-        ),
-        hintStyle: AppTypography.bodyMedium.copyWith(
-          color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-        ),
-        prefixIconColor: isDark
-            ? AppColors.textSecondaryDark
-            : AppColors.textSecondaryLight,
-        suffixIconColor: isDark
-            ? AppColors.textSecondaryDark
-            : AppColors.textSecondaryLight,
-      ),
-
-      dividerTheme: DividerThemeData(
-        thickness: 1,
-        space: 1,
-        color: isDark ? AppColors.borderDark : AppColors.borderLight,
-      ),
-
-      // Keep every module toggle on the same visual language: a clean blue
-      // active track with a white thumb, and a solid navy/slate inactive
-      // track. Material's default outline makes these look too busy against
-      // the bordered settings cards used throughout the app.
-      switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? AppColors.pureWhite
-              : (isDark ? AppColors.textSecondaryDark : AppColors.pureWhite),
-        ),
-        trackColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? primaryColor
-              : (isDark ? const Color(0xFF1D3D73) : AppColors.disabledLight),
-        ),
-        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
-      ),
-
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: isDark
-            ? AppColors.surfaceDark
-            : AppColors.surfaceLight,
-        selectedItemColor: primaryColor,
-        unselectedItemColor: isDark
-            ? AppColors.textMutedDark
-            : AppColors.textMutedLight,
-        selectedLabelStyle: AppTypography.labelSmall.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: AppTypography.labelSmall,
-        type: BottomNavigationBarType.fixed,
-        elevation: 8,
-      ),
-
-      navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: isDark
-            ? AppColors.surfaceDark
-            : AppColors.surfaceLight,
-        selectedIconTheme: IconThemeData(color: primaryColor),
-        unselectedIconTheme: IconThemeData(
-          color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
-        ),
-        selectedLabelTextStyle: AppTypography.labelSmall.copyWith(
-          color: primaryColor,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelTextStyle: AppTypography.labelSmall.copyWith(
-          color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+          borderSide: BorderSide(color: foreground, width: 2),
         ),
       ),
-
-      drawerTheme: DrawerThemeData(
-        backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-        elevation: 0,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-      ),
-
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.brightOrange,
-        foregroundColor: AppColors.pureWhite,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.large),
-        elevation: 4,
-      ),
-
-      snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: isDark
-            ? AppColors.elevatedSurfaceDark
-            : AppColors.deepNavy,
-        contentTextStyle: AppTypography.bodyMedium.copyWith(
-          color: AppColors.pureWhite,
-        ),
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-      ),
-
-      chipTheme: ChipThemeData(
-        backgroundColor: isDark
-            ? AppColors.elevatedSurfaceDark
-            : AppColors.bgLight,
-        disabledColor: isDark
-            ? AppColors.disabledDark
-            : AppColors.disabledLight,
-        selectedColor: primaryColor,
-        secondarySelectedColor: primaryColor,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.m,
-          vertical: AppSpacing.s,
-        ),
-        labelStyle: AppTypography.labelMedium,
-        secondaryLabelStyle: AppTypography.labelMedium.copyWith(
-          color: AppColors.pureWhite,
-        ),
-        brightness: isDark ? Brightness.dark : Brightness.light,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.small),
-        side: BorderSide(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
-        ),
-      ),
-
-      dialogTheme: DialogThemeData(
-        backgroundColor: isDark
-            ? AppColors.surfaceDark
-            : AppColors.surfaceLight,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.extraLarge),
-        titleTextStyle: AppTypography.titleLarge,
-        contentTextStyle: AppTypography.bodyMedium,
-      ),
-
-      bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: isDark
-            ? AppColors.surfaceDark
-            : AppColors.surfaceLight,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppRadius.xl),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: foreground,
+          foregroundColor: background,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: shape,
+          minimumSize: const Size(0, 48),
+          textStyle: AppTypography.labelLarge.copyWith(
+            fontWeight: FontWeight.w700,
           ),
         ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: foreground,
+          side: outline,
+          shape: shape,
+          minimumSize: const Size(0, 48),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: foreground, shape: shape),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: foreground,
+        foregroundColor: background,
         elevation: 0,
+        focusElevation: 0,
+        hoverElevation: 0,
+        highlightElevation: 0,
+        shape: shape,
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: background,
+        disabledColor: background,
+        selectedColor: foreground,
+        secondarySelectedColor: foreground,
+        labelStyle: TextStyle(color: foreground),
+        secondaryLabelStyle: TextStyle(color: background),
+        side: outline,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.small),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStatePropertyAll(background),
+        trackColor: WidgetStatePropertyAll(foreground),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStatePropertyAll(foreground),
+        checkColor: WidgetStatePropertyAll(background),
+        side: outline,
+      ),
+      radioTheme: RadioThemeData(fillColor: WidgetStatePropertyAll(foreground)),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: background,
+        selectedItemColor: foreground,
+        unselectedItemColor: foreground,
+        elevation: 0,
+        type: BottomNavigationBarType.fixed,
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: background,
+        selectedIconTheme: IconThemeData(color: background),
+        selectedLabelTextStyle: TextStyle(color: background),
+        unselectedIconTheme: IconThemeData(color: foreground),
+        unselectedLabelTextStyle: TextStyle(color: foreground),
+        indicatorColor: foreground,
+      ),
+      drawerTheme: DrawerThemeData(
+        backgroundColor: background,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: background,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.large,
+          side: outline,
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: background,
+        elevation: 0,
+        modalElevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.large,
+          side: outline,
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: foreground,
+        actionTextColor: background,
+        contentTextStyle: TextStyle(color: background),
+        behavior: SnackBarBehavior.floating,
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: background,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(side: outline),
+      ),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: foreground,
+          border: Border.all(color: foreground),
+        ),
+        textStyle: TextStyle(color: background),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: foreground,
+        linearTrackColor: background,
+        circularTrackColor: background,
       ),
     );
   }
 
-  /// Maintains readable labels when a school provides a light or dark custom
-  /// brand color. Comparing both candidates is more reliable than assuming
-  /// all school primary colors are dark enough for white text.
-  static Color _bestForeground(Color background) {
-    final whiteContrast = _contrastRatio(background, AppColors.pureWhite);
-    final navyContrast = _contrastRatio(background, AppColors.midnightNavy);
-    return whiteContrast >= navyContrast
-        ? AppColors.pureWhite
-        : AppColors.midnightNavy;
-  }
-
-  static double _contrastRatio(Color first, Color second) {
-    final firstLuminance = first.computeLuminance();
-    final secondLuminance = second.computeLuminance();
-    final lighter = firstLuminance > secondLuminance
-        ? firstLuminance
-        : secondLuminance;
-    final darker = firstLuminance > secondLuminance
-        ? secondLuminance
-        : firstLuminance;
-    return (lighter + 0.05) / (darker + 0.05);
-  }
-
-  static TextTheme _buildTextTheme(ColorScheme colorScheme) {
-    final isDark = colorScheme.brightness == Brightness.dark;
-    final primaryColor = isDark
-        ? AppColors.textPrimaryDark
-        : AppColors.textPrimaryLight;
-    final secondaryColor = isDark
-        ? AppColors.textSecondaryDark
-        : AppColors.textSecondaryLight;
-
-    return TextTheme(
-      displayLarge: AppTypography.displayLarge.copyWith(color: primaryColor),
-      displayMedium: AppTypography.displayMedium.copyWith(color: primaryColor),
-      displaySmall: AppTypography.displaySmall.copyWith(color: primaryColor),
-      headlineLarge: AppTypography.headlineLarge.copyWith(color: primaryColor),
-      headlineMedium: AppTypography.headlineMedium.copyWith(
-        color: primaryColor,
-      ),
-      headlineSmall: AppTypography.headlineSmall.copyWith(color: primaryColor),
-      titleLarge: AppTypography.titleLarge.copyWith(color: primaryColor),
-      titleMedium: AppTypography.titleMedium.copyWith(color: primaryColor),
-      titleSmall: AppTypography.titleSmall.copyWith(color: primaryColor),
-      bodyLarge: AppTypography.bodyLarge.copyWith(color: secondaryColor),
-      bodyMedium: AppTypography.bodyMedium.copyWith(color: secondaryColor),
-      bodySmall: AppTypography.bodySmall.copyWith(color: secondaryColor),
-      labelLarge: AppTypography.labelLarge.copyWith(color: secondaryColor),
-      labelMedium: AppTypography.labelMedium.copyWith(color: secondaryColor),
-      labelSmall: AppTypography.labelSmall.copyWith(color: secondaryColor),
-    );
-  }
+  static TextTheme _textTheme(Color foreground) => TextTheme(
+    displayLarge: AppTypography.displayLarge.copyWith(color: foreground),
+    displayMedium: AppTypography.displayMedium.copyWith(color: foreground),
+    displaySmall: AppTypography.displaySmall.copyWith(color: foreground),
+    headlineLarge: AppTypography.headlineLarge.copyWith(color: foreground),
+    headlineMedium: AppTypography.headlineMedium.copyWith(color: foreground),
+    headlineSmall: AppTypography.headlineSmall.copyWith(color: foreground),
+    titleLarge: AppTypography.titleLarge.copyWith(color: foreground),
+    titleMedium: AppTypography.titleMedium.copyWith(color: foreground),
+    titleSmall: AppTypography.titleSmall.copyWith(color: foreground),
+    bodyLarge: AppTypography.bodyLarge.copyWith(color: foreground),
+    bodyMedium: AppTypography.bodyMedium.copyWith(color: foreground),
+    bodySmall: AppTypography.bodySmall.copyWith(color: foreground),
+    labelLarge: AppTypography.labelLarge.copyWith(color: foreground),
+    labelMedium: AppTypography.labelMedium.copyWith(color: foreground),
+    labelSmall: AppTypography.labelSmall.copyWith(color: foreground),
+  );
 }

@@ -278,7 +278,10 @@ class StudentMarksDetailScreen extends StatelessWidget {
         children: [
           Text(
             component.name,
-            style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14),
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 14,
+            ),
           ),
           Text(
             scoreLabel,

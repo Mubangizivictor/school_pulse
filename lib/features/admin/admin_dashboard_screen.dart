@@ -71,7 +71,8 @@ class AdminDashboardScreen extends StatelessWidget {
                                   : [
                                       StaffKpiData(
                                         title: 'Students',
-                                        valueText: '${stats.totalStudentsCount}',
+                                        valueText:
+                                            '${stats.totalStudentsCount}',
                                         subtitle: stats.isHistoricalTerm
                                             ? 'Active now (current)'
                                             : 'Active students',
@@ -216,7 +217,10 @@ class _TermPickerSheet extends StatelessWidget {
                         '${_formatDate(term.startDate)} - ${_formatDate(term.endDate)}',
                       ),
                       trailing: term.isCurrent
-                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          ? Icon(
+                              Icons.check_circle,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            )
                           : null,
                       onTap: () {
                         Navigator.of(context).pop();
@@ -243,14 +247,12 @@ class _QuickAccessItem {
   final String id;
   final String label;
   final IconData icon;
-  final Color color;
   final String route;
 
   const _QuickAccessItem({
     required this.id,
     required this.label,
     required this.icon,
-    required this.color,
     required this.route,
   });
 }
@@ -260,112 +262,96 @@ final Map<String, _QuickAccessItem> _quickAccessCatalog = {
     id: 'students',
     label: 'Students',
     icon: Icons.school_rounded,
-    color: Colors.blueAccent,
     route: '/staff/admin/students',
   ),
   'staff': const _QuickAccessItem(
     id: 'staff',
     label: 'Staff',
     icon: Icons.badge_rounded,
-    color: Colors.indigo,
     route: '/staff/admin/users',
   ),
   'attendance': const _QuickAccessItem(
     id: 'attendance',
     label: 'Attendance',
     icon: Icons.fact_check_rounded,
-    color: Colors.teal,
     route: '/staff/attendance',
   ),
   'classes': const _QuickAccessItem(
     id: 'classes',
     label: 'Classes',
     icon: Icons.class_rounded,
-    color: Colors.deepPurple,
     route: '/staff/classes',
   ),
   'exams': const _QuickAccessItem(
     id: 'exams',
     label: 'Exams & Marks',
     icon: Icons.assignment_rounded,
-    color: Colors.cyan,
     route: '/staff/exams',
   ),
   'finance': const _QuickAccessItem(
     id: 'finance',
     label: 'Finance',
     icon: Icons.account_balance_wallet_rounded,
-    color: Colors.green,
     route: '/staff/bursar',
   ),
   'transport': const _QuickAccessItem(
     id: 'transport',
     label: 'Transport',
     icon: Icons.directions_bus_rounded,
-    color: Colors.amber,
     route: '/staff/transport',
   ),
   'library': const _QuickAccessItem(
     id: 'library',
     label: 'Library',
     icon: Icons.local_library_rounded,
-    color: Colors.orange,
     route: '/staff/librarian',
   ),
   'announcements': const _QuickAccessItem(
     id: 'announcements',
     label: 'Announcements',
     icon: Icons.campaign_rounded,
-    color: Colors.redAccent,
     route: '/staff/more/announcements',
   ),
   'communication': const _QuickAccessItem(
     id: 'communication',
     label: 'Communication',
     icon: Icons.chat_bubble_rounded,
-    color: Colors.blue,
     route: '/staff/messages',
   ),
   'reports': const _QuickAccessItem(
     id: 'reports',
     label: 'Reports',
     icon: Icons.bar_chart_rounded,
-    color: Colors.teal,
     route: '/staff/admin/reports',
   ),
   'calendar': const _QuickAccessItem(
     id: 'calendar',
     label: 'Calendar',
     icon: Icons.calendar_month_rounded,
-    color: Colors.indigoAccent,
     route: '/staff/calendar',
   ),
   'security': const _QuickAccessItem(
     id: 'security',
     label: 'Security',
     icon: Icons.shield_rounded,
-    color: Colors.deepOrange,
     route: '/staff/admin/security',
   ),
   'institution_health': const _QuickAccessItem(
     id: 'institution_health',
     label: 'Institution Health',
     icon: Icons.health_and_safety_rounded,
-    color: Colors.purple,
     route: '/staff/admin/institution-health',
   ),
   'data_management': const _QuickAccessItem(
     id: 'data_management',
     label: 'Data Management',
     icon: Icons.storage_rounded,
-    color: Colors.blueGrey,
     route: '/staff/admin/data-management',
   ),
   'communication_center': const _QuickAccessItem(
     id: 'communication_center',
     label: 'Communication Center',
     icon: Icons.campaign_rounded,
-    color: Colors.teal,
     route: '/staff/admin/communication-center',
   ),
 };
@@ -444,6 +430,7 @@ class _QuickAccessTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return AppCard(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.s,
@@ -454,14 +441,7 @@ class _QuickAccessTile extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: item.color.withValues(alpha: 0.12),
-              borderRadius: AppRadius.medium,
-            ),
-            child: Icon(item.icon, color: item.color, size: 16),
-          ),
+          Icon(item.icon, color: scheme.primary, size: 20),
           const SizedBox(width: AppSpacing.s),
           Expanded(
             child: Text(
@@ -472,7 +452,7 @@ class _QuickAccessTile extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: scheme.onSurface,
               ),
             ),
           ),
@@ -589,7 +569,7 @@ class _QuickAccessEditSheetState extends State<_QuickAccessEditSheet> {
                       final isCore = QuickAccessPrefs.coreIds.contains(id);
                       return ListTile(
                         key: ValueKey('visible_$id'),
-                        leading: Icon(item.icon, color: item.color),
+                        leading: Icon(item.icon),
                         title: Text(item.label),
                         trailing: isCore
                             ? const Icon(Icons.lock_outline_rounded, size: 18)
@@ -743,7 +723,7 @@ class _PendingApprovalsCard extends StatelessWidget {
                       Expanded(
                         child: _ApprovalStat(
                           icon: Icons.receipt_long_rounded,
-                          color: Colors.orange,
+                          color: Theme.of(context).colorScheme.onSurface,
                           label: 'Expense\nRequests',
                           count: count,
                           onTap: () => context.push('/staff/bursar'),
@@ -788,10 +768,15 @@ class _ApprovalStat extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: Theme.of(context).colorScheme.surface,
+              border: Border.all(color: Theme.of(context).colorScheme.outline),
               borderRadius: AppRadius.medium,
             ),
-            child: Icon(icon, color: color, size: 18),
+            child: Icon(
+              icon,
+              color: Theme.of(context).colorScheme.onSurface,
+              size: 18,
+            ),
           ),
           const SizedBox(height: AppSpacing.s),
           Text(
@@ -879,16 +864,6 @@ class _ActivityRow extends StatelessWidget {
 
   const _ActivityRow({required this.log});
 
-  Color _color(BuildContext context) {
-    try {
-      final hex = log.colorHex.replaceFirst('#', '');
-      final value = int.parse(hex.length == 6 ? 'FF$hex' : hex, radix: 16);
-      return Color(value);
-    } catch (_) {
-      return Theme.of(context).colorScheme.primary;
-    }
-  }
-
   IconData get _icon {
     switch (log.iconName) {
       case 'person_add':
@@ -919,7 +894,6 @@ class _ActivityRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _color(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
       child: Row(
@@ -928,10 +902,15 @@ class _ActivityRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: Theme.of(context).colorScheme.surface,
+              border: Border.all(color: Theme.of(context).colorScheme.outline),
               borderRadius: AppRadius.medium,
             ),
-            child: Icon(_icon, color: color, size: 16),
+            child: Icon(
+              _icon,
+              color: Theme.of(context).colorScheme.onSurface,
+              size: 16,
+            ),
           ),
           const SizedBox(width: AppSpacing.l),
           Expanded(

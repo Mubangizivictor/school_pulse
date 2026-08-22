@@ -51,10 +51,8 @@ class _RecentActivityScreenState extends State<RecentActivityScreen> {
               for (final resource in recent)
                 _ActivityItem(
                   resource: resource,
-                  onTap: () => context.push(
-                    '/staff/resources/details',
-                    extra: resource,
-                  ),
+                  onTap: () =>
+                      context.push('/staff/resources/details', extra: resource),
                 ),
             ],
           );

@@ -422,7 +422,10 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                           ? () => _confirmDelete(message)
                           : null,
                       onPin: () => context.read<ConversationBloc>().add(
-                        ConversationMessagePinnedSet(message, !message.isPinned),
+                        ConversationMessagePinnedSet(
+                          message,
+                          !message.isPinned,
+                        ),
                       ),
                       onReact: (emoji) => context.read<ConversationBloc>().add(
                         ConversationMessageReacted(message.id, emoji),

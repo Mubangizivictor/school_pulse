@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart' as file_picker;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -38,6 +39,14 @@ class InstitutionTabState extends State<InstitutionTab> {
     return formState.confirmDiscardIfDirty(context);
   }
 
+  /// Saves unsaved, valid edits in place. Returns false when the form is
+  /// dirty but fails validation, so the caller can keep the admin here.
+  Future<bool> saveIfDirty() async {
+    final formState = _formKey.currentState;
+    if (formState == null) return true;
+    return formState.saveIfDirty();
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<StructureBloc, StructureState>(
@@ -48,17 +57,141 @@ class InstitutionTabState extends State<InstitutionTab> {
 }
 
 const _ugandaDistricts = [
-  'Kampala',
-  'Wakiso',
-  'Mukono',
-  'Jinja',
-  'Mbarara',
+  'Abim',
+  'Adjumani',
+  'Agago',
+  'Alebtong',
+  'Amolatar',
+  'Amudat',
+  'Amuria',
+  'Amuru',
+  'Apac',
+  'Arua',
+  'Budaka',
+  'Bududa',
+  'Bugiri',
+  'Bugweri',
+  'Buikwe',
+  'Bukedea',
+  'Bukomansimbi',
+  'Bukwo',
+  'Bulambuli',
+  'Buliisa',
+  'Bundibugyo',
+  'Bunyangabu',
+  'Bushenyi',
+  'Busia',
+  'Butaleja',
+  'Butambala',
+  'Butebo',
+  'Buvuma',
+  'Buyende',
+  'Gomba',
   'Gulu',
-  'Mbale',
-  'Masaka',
-  'Fort Portal',
+  'Hoima',
+  'Ibanda',
+  'Iganga',
+  'Isingiro',
+  'Jinja',
+  'Kaabong',
+  'Kabale',
+  'Kabarole',
+  'Kaberamaido',
+  'Kagadi',
+  'Kakumiro',
+  'Kalaki',
+  'Kalangala',
+  'Kaliro',
+  'Kalungu',
+  'Kampala',
+  'Kamuli',
+  'Kamwenge',
+  'Kanungu',
+  'Kapchorwa',
+  'Kapelebyong',
+  'Karenga',
+  'Kasanda',
+  'Kasese',
+  'Katakwi',
+  'Kayunga',
+  'Kazo',
+  'Kibaale',
+  'Kibale',
+  'Kiboga',
+  'Kibuku',
+  'Kikuube',
+  'Kiruhura',
+  'Kiryandongo',
+  'Kisoro',
+  'Kitagwenda',
+  'Kitgum',
+  'Koboko',
+  'Kole',
+  'Kotido',
+  'Kumi',
+  'Kwania',
+  'Kween',
+  'Kyankwanzi',
+  'Kyegegwa',
+  'Kyenjojo',
+  'Kyotera',
+  'Lamwo',
   'Lira',
-  'Other district',
+  'Luuka',
+  'Luweero',
+  'Lwengo',
+  'Lyantonde',
+  'Madi-Okollo',
+  'Manafwa',
+  'Maracha',
+  'Masaka',
+  'Masindi',
+  'Mayuge',
+  'Mbale',
+  'Mbarara',
+  'Mitooma',
+  'Mityana',
+  'Moroto',
+  'Moyo',
+  'Mpigi',
+  'Mubende',
+  'Mukono',
+  'Nabilatuk',
+  'Nakapiripirit',
+  'Nakaseke',
+  'Nakasongola',
+  'Namayingo',
+  'Namisindwa',
+  'Namutumba',
+  'Napak',
+  'Nebbi',
+  'Ngora',
+  'Ntoroko',
+  'Ntungamo',
+  'Nwoya',
+  'Obongi',
+  'Omoro',
+  'Otuke',
+  'Oyam',
+  'Pader',
+  'Pakwach',
+  'Pallisa',
+  'Rakai',
+  'Rubanda',
+  'Rubirizi',
+  'Rukiga',
+  'Rukungiri',
+  'Rwampara',
+  'Sembabule',
+  'Serere',
+  'Sheema',
+  'Sironko',
+  'Soroti',
+  'Terego',
+  'Tororo',
+  'Wakiso',
+  'Yumbe',
+  'Zombo',
 ];
 
 class _InstitutionForm extends StatefulWidget {
@@ -98,11 +231,12 @@ class _InstitutionFormState extends State<_InstitutionForm> {
   late final TextEditingController _phone;
   late final TextEditingController _email;
   late final TextEditingController _website;
-  late String _timeZone;
-  late String _currency;
-  late String _language;
-  late String _dateFormat;
-  late String _timeFormat;
+
+  static const _timeZone = 'Africa/Kampala';
+  static const _currency = 'UGX';
+  static const _language = 'English';
+  static const _dateFormat = 'dd/MM/yyyy';
+  static const _timeFormat = '24-hour';
 
   bool _isSaving = false;
   bool _isDirty = false;
@@ -162,11 +296,6 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     _phone = TextEditingController(text: p.phone);
     _email = TextEditingController(text: p.email);
     _website = TextEditingController(text: p.website);
-    _timeZone = p.timeZone.isEmpty ? 'Africa/Kampala' : p.timeZone;
-    _currency = p.currency.isEmpty ? 'UGX' : p.currency;
-    _language = p.language.isEmpty ? 'English' : p.language;
-    _dateFormat = p.dateFormat.isEmpty ? 'dd/MM/yyyy' : p.dateFormat;
-    _timeFormat = p.timeFormat.isEmpty ? '24-hour' : p.timeFormat;
 
     _textControllers = [
       _name,
@@ -230,11 +359,6 @@ class _InstitutionFormState extends State<_InstitutionForm> {
       _schoolCategory = p.schoolCategory;
       _country = p.country.isEmpty ? 'Uganda' : p.country;
       _district = p.district;
-      _timeZone = p.timeZone.isEmpty ? 'Africa/Kampala' : p.timeZone;
-      _currency = p.currency.isEmpty ? 'UGX' : p.currency;
-      _language = p.language.isEmpty ? 'English' : p.language;
-      _dateFormat = p.dateFormat.isEmpty ? 'dd/MM/yyyy' : p.dateFormat;
-      _timeFormat = p.timeFormat.isEmpty ? '24-hour' : p.timeFormat;
     });
   }
 
@@ -349,6 +473,16 @@ class _InstitutionFormState extends State<_InstitutionForm> {
         const SnackBar(content: Text('Could not save. Try again.')),
       );
     }
+  }
+
+  /// Saves in place when the form has unsaved, valid edits. Returns false
+  /// (and leaves validation errors visible) when the form is dirty but
+  /// invalid, so the caller can keep the admin on this step.
+  Future<bool> saveIfDirty() async {
+    if (!_isDirty) return true;
+    if (!_formKey.currentState!.validate()) return false;
+    await _save();
+    return true;
   }
 
   Future<bool> confirmDiscardIfDirty(BuildContext context) async {
@@ -570,9 +704,13 @@ class _InstitutionFormState extends State<_InstitutionForm> {
       final message = e.code == 'unauthorized'
           ? 'You do not have permission to upload this ${isLogo ? 'logo' : 'badge'}.'
           : 'Could not upload the ${isLogo ? 'logo' : 'badge'} (${e.code}). Try again.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (e, stack) {
-      debugPrint('Branding upload failed (${isLogo ? 'logo' : 'badge'}): $e\n$stack');
+      debugPrint(
+        'Branding upload failed (${isLogo ? 'logo' : 'badge'}): $e\n$stack',
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -631,6 +769,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     final scheme = Theme.of(context).colorScheme;
     return Form(
       key: _formKey,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isNarrow = constraints.maxWidth < 360;
@@ -717,12 +856,12 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                 children: [
                   _TwoCol(
                     isNarrow: isNarrow,
-                    left: _dropdown(
+                    left: _multiSelectField(
                       label: 'School Type',
-                      value: _schoolType,
                       values: _schoolTypes,
-                      onChanged: (v) => setState(() {
-                        _schoolType = v;
+                      selected: _schoolTypeSelections,
+                      onChanged: (selections) => setState(() {
+                        _schoolType = selections.join(', ');
                         _isDirty = true;
                       }),
                     ),
@@ -747,14 +886,54 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                   _field(
                     controller: _registrationNumber,
                     label: 'Registration Number',
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[0-9A-Za-z/\-]'),
+                      ),
+                    ],
+                    validator: (value) {
+                      final v = value?.trim() ?? '';
+                      if (v.isEmpty) return null;
+                      return RegExp(
+                            r'^[0-9A-Za-z]+([/\-][0-9A-Za-z]+)*$',
+                          ).hasMatch(v)
+                          ? null
+                          : 'Use letters, numbers, "/" or "-" only (e.g. PSS/R/39)';
+                    },
                   ),
                   _field(
                     controller: _ministryRegistrationNumber,
                     label: 'Ministry Registration',
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[0-9A-Za-z/\-]'),
+                      ),
+                    ],
+                    validator: (value) {
+                      final v = value?.trim() ?? '';
+                      if (v.isEmpty) return null;
+                      return RegExp(
+                            r'^[0-9A-Za-z]+([/\-][0-9A-Za-z]+)*$',
+                          ).hasMatch(v)
+                          ? null
+                          : 'Use letters, numbers, "/" or "-" only';
+                    },
                   ),
                   _field(
                     controller: _taxNumber,
-                    label: 'Tax Number (optional)',
+                    label: 'TIN – Tax Identification Number (optional)',
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
+                    validator: (value) {
+                      final v = value?.trim() ?? '';
+                      if (v.isEmpty) return null;
+                      return RegExp(r'^\d{10}$').hasMatch(v)
+                          ? null
+                          : 'TIN must be exactly 10 digits';
+                    },
                   ),
                 ],
               ),
@@ -786,7 +965,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                         _isDirty = true;
                       }),
                     ),
-                    right: _dropdown(
+                    right: _searchableDropdown(
                       label: 'District',
                       value: _district,
                       values: _ugandaDistricts,
@@ -872,6 +1051,15 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                         controller: _website,
                         label: 'Website',
                         keyboardType: TextInputType.url,
+                        validator: (value) {
+                          final v = value?.trim() ?? '';
+                          if (v.isEmpty) return null;
+                          return RegExp(
+                                r'^(https?:\/\/)?([\w-]+\.)+[a-zA-Z]{2,}(\/\S*)?$',
+                              ).hasMatch(v)
+                              ? null
+                              : 'Enter a valid website (e.g. www.school.ac.ug)';
+                        },
                       );
                       if (threeCol) {
                         return Row(
@@ -898,115 +1086,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              _SectionCard(
-                icon: Icons.public_outlined,
-                color: Colors.orange,
-                title: 'Regional Settings',
-                children: [
-                  LayoutBuilder(
-                    builder: (context, c) {
-                      final items = [
-                        _dropdown(
-                          label: 'Time Zone',
-                          value: _timeZone,
-                          values: const ['Africa/Kampala'],
-                          onChanged: (v) => setState(() {
-                            _timeZone = v;
-                            _isDirty = true;
-                          }),
-                        ),
-                        _dropdown(
-                          label: 'Currency',
-                          value: _currency,
-                          values: const ['UGX'],
-                          onChanged: (v) => setState(() {
-                            _currency = v;
-                            _isDirty = true;
-                          }),
-                        ),
-                        _dropdown(
-                          label: 'Language',
-                          value: _language,
-                          values: const ['English'],
-                          onChanged: (v) => setState(() {
-                            _language = v;
-                            _isDirty = true;
-                          }),
-                        ),
-                        _dropdown(
-                          label: 'Date Format',
-                          value: _dateFormat,
-                          values: const ['dd/MM/yyyy', 'MM/dd/yyyy'],
-                          onChanged: (v) => setState(() {
-                            _dateFormat = v;
-                            _isDirty = true;
-                          }),
-                        ),
-                        _dropdown(
-                          label: 'Time Format',
-                          value: _timeFormat,
-                          values: const ['24-hour', '12-hour'],
-                          onChanged: (v) => setState(() {
-                            _timeFormat = v;
-                            _isDirty = true;
-                          }),
-                        ),
-                      ];
-                      final wide = c.maxWidth >= 640;
-                      if (!wide) {
-                        return Column(
-                          children: [
-                            for (int i = 0; i < items.length; i++) ...[
-                              if (i > 0) const SizedBox(height: 12),
-                              items[i],
-                            ],
-                          ],
-                        );
-                      }
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (int i = 0; i < items.length; i++) ...[
-                            if (i > 0) const SizedBox(width: 10),
-                            Expanded(child: items[i]),
-                          ],
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _isSaving ? null : _save,
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: _isSaving
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.save_outlined, size: 18),
-                  label: Text(
-                    _isSaving ? 'Saving…' : 'Save Institution',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-              ),
+              const SizedBox(height: 8),
             ],
           );
         },
@@ -1044,19 +1124,260 @@ class _InstitutionFormState extends State<_InstitutionForm> {
   }
 
   Widget _colorField(TextEditingController controller, String label) {
-    return _field(
-      controller: controller,
-      label: label,
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'#[0-9a-fA-F]{0,6}')),
-      ],
-      validator: (value) {
-        final color = value?.trim() ?? '';
-        if (color.isEmpty) return null;
-        return RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(color)
-            ? null
-            : 'Use a 6-digit hex colour';
+    Color? parseHex(String value) {
+      final hex = value.trim();
+      if (!RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(hex)) return null;
+      return Color(int.parse('FF${hex.substring(1)}', radix: 16));
+    }
+
+    return StatefulBuilder(
+      builder: (context, setFieldState) {
+        return TextFormField(
+          controller: controller,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'#[0-9a-fA-F]{0,6}')),
+          ],
+          validator: (value) {
+            final color = value?.trim() ?? '';
+            if (color.isEmpty) return null;
+            return RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(color)
+                ? null
+                : 'Use a 6-digit hex colour';
+          },
+          onChanged: (_) => setFieldState(() {}),
+          style: const TextStyle(fontSize: 14),
+          decoration: InputDecoration(
+            labelText: label,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+            suffixIcon: Padding(
+              padding: const EdgeInsets.all(6),
+              child: GestureDetector(
+                onTap: () async {
+                  final initial = parseHex(controller.text) ?? Colors.blue;
+                  final picked = await showDialog<Color>(
+                    context: context,
+                    builder: (dialogContext) {
+                      var current = initial;
+                      return AlertDialog(
+                        title: Text(label),
+                        content: SingleChildScrollView(
+                          child: ColorPicker(
+                            pickerColor: current,
+                            onColorChanged: (c) => current = c,
+                            enableAlpha: false,
+                            labelTypes: const [ColorLabelType.hex],
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(dialogContext).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () =>
+                                Navigator.of(dialogContext).pop(current),
+                            child: const Text('Select'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                  if (picked != null) {
+                    final hex =
+                        '#${picked.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+                    controller.text = hex;
+                    setFieldState(() {});
+                  }
+                },
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: parseHex(controller.text) ?? Colors.transparent,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
       },
+    );
+  }
+
+  List<String> get _schoolTypeSelections => _schoolType
+      .split(',')
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
+
+  Widget _multiSelectField({
+    required String label,
+    required List<String> values,
+    required List<String> selected,
+    required ValueChanged<List<String>> onChanged,
+  }) {
+    final displayText = selected.isEmpty ? '' : selected.join(', ');
+    return InkWell(
+      onTap: () async {
+        var working = List<String>.from(selected);
+        final result = await showDialog<List<String>>(
+          context: context,
+          builder: (dialogContext) {
+            return StatefulBuilder(
+              builder: (context, setDialogState) {
+                return AlertDialog(
+                  title: Text(label),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: values.map((option) {
+                        final checked = working.contains(option);
+                        return CheckboxListTile(
+                          title: Text(option),
+                          value: checked,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          onChanged: (v) => setDialogState(() {
+                            if (v == true) {
+                              working.add(option);
+                            } else {
+                              working.remove(option);
+                            }
+                          }),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(working),
+                      child: const Text('Done'),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+        if (result != null) onChanged(result);
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 12,
+          ),
+          suffixIcon: const Icon(Icons.arrow_drop_down),
+        ),
+        child: Text(
+          displayText.isEmpty ? ' ' : displayText,
+          style: const TextStyle(fontSize: 14),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+
+  Widget _searchableDropdown({
+    required String label,
+    required String value,
+    required List<String> values,
+    required ValueChanged<String> onChanged,
+  }) {
+    return InkWell(
+      onTap: () async {
+        final result = await showDialog<String>(
+          context: context,
+          builder: (dialogContext) {
+            var query = '';
+            return StatefulBuilder(
+              builder: (context, setDialogState) {
+                final filtered = query.isEmpty
+                    ? values
+                    : values
+                          .where(
+                            (v) =>
+                                v.toLowerCase().contains(query.toLowerCase()),
+                          )
+                          .toList();
+                return AlertDialog(
+                  title: Text('Select $label'),
+                  content: SizedBox(
+                    width: double.maxFinite,
+                    height: 400,
+                    child: Column(
+                      children: [
+                        TextField(
+                          autofocus: true,
+                          decoration: const InputDecoration(
+                            prefixIcon: Icon(Icons.search),
+                            hintText: 'Search',
+                            isDense: true,
+                          ),
+                          onChanged: (v) => setDialogState(() => query = v),
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: filtered.isEmpty
+                              ? const Center(child: Text('No matches'))
+                              : ListView.builder(
+                                  itemCount: filtered.length,
+                                  itemBuilder: (context, index) {
+                                    final item = filtered[index];
+                                    return ListTile(
+                                      title: Text(item),
+                                      selected: item == value,
+                                      onTap: () =>
+                                          Navigator.of(dialogContext).pop(item),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+        if (result != null) onChanged(result);
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 12,
+          ),
+          suffixIcon: const Icon(Icons.arrow_drop_down),
+        ),
+        child: Text(
+          value.isEmpty ? ' ' : value,
+          style: const TextStyle(fontSize: 14),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
     );
   }
 

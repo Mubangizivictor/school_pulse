@@ -101,9 +101,7 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
         // navigate away, with no visible error.
         final authBloc = context.read<AuthBloc>();
         authBloc.add(AuthCheckRequested());
-        await authBloc.stream.firstWhere(
-          (state) => state is! AuthLoading,
-        );
+        await authBloc.stream.firstWhere((state) => state is! AuthLoading);
         if (!mounted) return;
         setState(() => _isLoading = false);
         _routeToDashboard();

@@ -155,15 +155,15 @@ class _StudentHeader extends StatelessWidget {
                 children: [
                   Text(
                     student.name,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   Text(
                     '${student.studentId} · ${student.className}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -194,7 +194,11 @@ class _EmptyState extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            Icon(Icons.vpn_key_off_outlined, size: 40, color: scheme.onSurfaceVariant),
+            Icon(
+              Icons.vpn_key_off_outlined,
+              size: 40,
+              color: scheme.onSurfaceVariant,
+            ),
             const SizedBox(height: 12),
             const Text(
               'Portal access not yet provisioned',
@@ -281,13 +285,17 @@ class _AccessCodeDetails extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Reason for disabling access',
-                    style: Theme.of(
-                      sheetContext,
-                    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(sheetContext).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w800),
                   ),
                 ),
               ),
-              for (final reason in const ['Lost device', 'Left school', 'Suspicious activity', 'Other'])
+              for (final reason in const [
+                'Lost device',
+                'Left school',
+                'Suspicious activity',
+                'Other',
+              ])
                 ListTile(
                   title: Text(reason),
                   onTap: () => Navigator.pop(sheetContext, reason),
@@ -324,10 +332,11 @@ class _AccessCodeDetails extends StatelessWidget {
                   Expanded(
                     child: Text(
                       accessCode.code,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 2,
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 2,
+                          ),
                     ),
                   ),
                   IconButton(
@@ -359,7 +368,11 @@ class _AccessCodeDetails extends StatelessWidget {
                   for (var i = 0; i < 4; i++)
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
-                      child: Icon(Icons.circle, size: 12, color: scheme.onSurfaceVariant),
+                      child: Icon(
+                        Icons.circle,
+                        size: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                 ],
               ),
@@ -389,8 +402,9 @@ class _AccessCodeDetails extends StatelessWidget {
                 children: [
                   Chip(
                     label: Text(accessCode.isActive ? 'ACTIVE' : 'DISABLED'),
-                    backgroundColor: (accessCode.isActive ? Colors.green : Colors.red)
-                        .withValues(alpha: 0.12),
+                    backgroundColor:
+                        (accessCode.isActive ? Colors.green : Colors.red)
+                            .withValues(alpha: 0.12),
                     labelStyle: TextStyle(
                       color: accessCode.isActive ? Colors.green : Colors.red,
                       fontWeight: FontWeight.w600,
@@ -403,13 +417,14 @@ class _AccessCodeDetails extends StatelessWidget {
                   ),
                 ],
               ),
-              if (!accessCode.isActive && accessCode.deactivationReason != null) ...[
+              if (!accessCode.isActive &&
+                  accessCode.deactivationReason != null) ...[
                 const SizedBox(height: 4),
                 Text(
                   'Reason: ${accessCode.deactivationReason}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
               const SizedBox(height: 8),

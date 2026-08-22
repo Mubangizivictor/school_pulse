@@ -97,7 +97,10 @@ class _UploadResourceScreenState extends State<UploadResourceScreen> {
               ),
               const SizedBox(height: AppSpacing.x3l),
 
-              const Text('Details', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Details',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: AppSpacing.l),
               TextField(
                 controller: _titleController,

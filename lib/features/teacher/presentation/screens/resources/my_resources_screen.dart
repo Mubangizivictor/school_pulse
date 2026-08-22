@@ -85,8 +85,7 @@ class _MyResourcesScreenState extends State<MyResourcesScreen> {
                 _FilterChip(
                   label: 'Links',
                   isSelected: _filter == ClassResourceKind.link,
-                  onTap: () =>
-                      setState(() => _filter = ClassResourceKind.link),
+                  onTap: () => setState(() => _filter = ClassResourceKind.link),
                 ),
               ],
             ),
@@ -99,11 +98,15 @@ class _MyResourcesScreenState extends State<MyResourcesScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final items = state.files.where((r) {
-                  if (_filter != null && r.kind != _filter) return false;
-                  if (_query.isEmpty) return true;
-                  return r.name.toLowerCase().contains(_query.toLowerCase());
-                }).toList()..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
+                final items =
+                    state.files.where((r) {
+                        if (_filter != null && r.kind != _filter) return false;
+                        if (_query.isEmpty) return true;
+                        return r.name.toLowerCase().contains(
+                          _query.toLowerCase(),
+                        );
+                      }).toList()
+                      ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
 
                 if (items.isEmpty) {
                   return Center(
@@ -142,7 +145,8 @@ class _MyResourcesScreenState extends State<MyResourcesScreen> {
         child: Wrap(
           children: [
             for (final kind in ClassResourceKind.values)
-              if (kind != ClassResourceKind.folder && kind != ClassResourceKind.other)
+              if (kind != ClassResourceKind.folder &&
+                  kind != ClassResourceKind.other)
                 ListTile(
                   title: Text(kind.name),
                   onTap: () {
@@ -253,8 +257,18 @@ class _ResourceItem extends StatelessWidget {
 
   static String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }

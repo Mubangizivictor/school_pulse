@@ -131,10 +131,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
       from: startOfToday,
       to: endOfToday,
     );
-    final records = recordsResult.fold(
-      (_) => <AttendanceRecord>[],
-      (r) => r,
-    );
+    final records = recordsResult.fold((_) => <AttendanceRecord>[], (r) => r);
 
     if (!mounted) return;
     setState(() {
@@ -427,178 +424,182 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-          // Dropdown Section Card - only shown when there's an actual
-          // choice to make (multiple authorised domains); a single-domain
-          // operator was already auto-selected in _loadAccess.
-          if (domains.length > 1)
-            InkWell(
-              onTap: _showTypeSelector,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceElevated(context),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border(context)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary(context).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.people_alt_rounded,
-                        color: AppColors.primary(context),
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Attendance for',
-                        style: TextStyle(
-                          color: AppColors.textPrimary(context),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // The Dropdown Button UI
-                    Container(
+                // Dropdown Section Card - only shown when there's an actual
+                // choice to make (multiple authorised domains); a single-domain
+                // operator was already auto-selected in _loadAccess.
+                if (domains.length > 1)
+                  InkWell(
+                    onTap: _showTypeSelector,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
+                        horizontal: 12,
+                        vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceContainerHigh(context),
-                        borderRadius: BorderRadius.circular(8),
+                        color: AppColors.surfaceElevated(context),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: AppColors.border(context)),
                       ),
                       child: Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            selectedLabel,
-                            style: TextStyle(
-                              color: AppColors.textPrimary(context),
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary(
+                                context,
+                              ).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              Icons.people_alt_rounded,
+                              color: AppColors.primary(context),
+                              size: 18,
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: AppColors.textMuted(context),
-                            size: 18,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Attendance for',
+                              style: TextStyle(
+                                color: AppColors.textPrimary(context),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // The Dropdown Button UI
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceContainerHigh(context),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: AppColors.border(context),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  selectedLabel,
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary(context),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  color: AppColors.textMuted(context),
+                                  size: 18,
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ],
+                  ),
+
+                const SizedBox(height: 10),
+
+                // NFC Card
+                _MethodCard(
+                  title: 'NFC Scan',
+                  subtitle: 'Mark attendance using NFC card',
+                  accentColor: const Color(0xFF11A85B),
+                  icon: Icons.sensors_rounded,
+                  badgeIcon: Icons.shield_rounded,
+                  badgeLabel: 'Fast & Secure',
+                  onTap: () => context.push('/staff/attendance/nfc'),
                 ),
-              ),
-            ),
 
-          const SizedBox(height: 10),
+                // QR Code Card
+                _MethodCard(
+                  title: 'QR Code Scanner',
+                  subtitle: 'Scan student QR code',
+                  accentColor: const Color(0xFF103ECF),
+                  icon: Icons.qr_code_2_rounded,
+                  badgeIcon: Icons.shield_rounded,
+                  badgeLabel: 'Quick & Easy',
+                  onTap: () => context.push('/staff/attendance/qr'),
+                ),
 
-          // NFC Card
-          _MethodCard(
-            title: 'NFC Scan',
-            subtitle: 'Mark attendance using NFC card',
-            accentColor: const Color(0xFF11A85B),
-            icon: Icons.sensors_rounded,
-            badgeIcon: Icons.shield_rounded,
-            badgeLabel: 'Fast & Secure',
-            onTap: () => context.push('/staff/attendance/nfc'),
-          ),
+                // Manual Card
+                _MethodCard(
+                  title: 'Manual Attendance',
+                  subtitle: 'Mark attendance manually',
+                  accentColor: const Color(0xFFFFB400),
+                  icon: Icons.assignment_turned_in_rounded,
+                  badgeIcon: Icons.shield_rounded,
+                  badgeLabel: 'Full Control',
+                  // A Class Teacher's manual attendance is their own daily class
+                  // register (TeacherAttendanceScreen/ClassAttendanceBloc), not the
+                  // generic multi-category manual screen this hub otherwise opens -
+                  // matrons, patrons and admins have no such register, so the
+                  // detour is scoped to only when that responsibility is active.
+                  onTap: () {
+                    final classActive = context
+                        .read<ClassTeacherContextBloc>()
+                        .state
+                        .active;
+                    if (classActive != null) {
+                      context.push('/staff/roll-call');
+                      return;
+                    }
+                    context.push(
+                      '/staff/attendance/manual',
+                      extra: _selectedCategory,
+                    );
+                  },
+                ),
 
-          // QR Code Card
-          _MethodCard(
-            title: 'QR Code Scanner',
-            subtitle: 'Scan student QR code',
-            accentColor: const Color(0xFF103ECF),
-            icon: Icons.qr_code_2_rounded,
-            badgeIcon: Icons.shield_rounded,
-            badgeLabel: 'Quick & Easy',
-            onTap: () => context.push('/staff/attendance/qr'),
-          ),
+                // History Card
+                _MethodCard(
+                  title: 'Previous Attendances',
+                  subtitle: 'View and manage past records',
+                  accentColor: const Color(0xFF7C4DFF),
+                  icon: Icons.history_rounded,
+                  badgeIcon: Icons.bar_chart_rounded,
+                  badgeLabel: 'History & Reports',
+                  // Mirrors the Manual Attendance card above: a Class Teacher's
+                  // history is their own class register's
+                  // (TeacherAttendanceHistoryScreen/ClassAttendanceHistoryBloc),
+                  // not the generic multi-category history this hub otherwise opens.
+                  onTap: () {
+                    final classActive = context
+                        .read<ClassTeacherContextBloc>()
+                        .state
+                        .active;
+                    if (classActive != null) {
+                      context.push('/staff/roll-call/history');
+                      return;
+                    }
+                    context.push('/staff/attendance/history');
+                  },
+                ),
 
-          // Manual Card
-          _MethodCard(
-            title: 'Manual Attendance',
-            subtitle: 'Mark attendance manually',
-            accentColor: const Color(0xFFFFB400),
-            icon: Icons.assignment_turned_in_rounded,
-            badgeIcon: Icons.shield_rounded,
-            badgeLabel: 'Full Control',
-            // A Class Teacher's manual attendance is their own daily class
-            // register (TeacherAttendanceScreen/ClassAttendanceBloc), not the
-            // generic multi-category manual screen this hub otherwise opens -
-            // matrons, patrons and admins have no such register, so the
-            // detour is scoped to only when that responsibility is active.
-            onTap: () {
-              final classActive = context
-                  .read<ClassTeacherContextBloc>()
-                  .state
-                  .active;
-              if (classActive != null) {
-                context.push('/staff/roll-call');
-                return;
-              }
-              context.push(
-                '/staff/attendance/manual',
-                extra: _selectedCategory,
-              );
-            },
-          ),
+                // Google Sheets Card
+                _IntegrationCard(
+                  title: 'Google Sheets',
+                  subtitle: 'Sync attendance to Google Sheets',
+                  linked: _sheetsLinked,
+                  badgeIcon: Icons.cloud_rounded,
+                  badgeLabel: 'Sync & Export',
+                  onTap: () async {
+                    await context.push('/staff/attendance/sheets');
+                    _loadSheetsStatus();
+                  },
+                ),
 
-          // History Card
-          _MethodCard(
-            title: 'Previous Attendances',
-            subtitle: 'View and manage past records',
-            accentColor: const Color(0xFF7C4DFF),
-            icon: Icons.history_rounded,
-            badgeIcon: Icons.bar_chart_rounded,
-            badgeLabel: 'History & Reports',
-            // Mirrors the Manual Attendance card above: a Class Teacher's
-            // history is their own class register's
-            // (TeacherAttendanceHistoryScreen/ClassAttendanceHistoryBloc),
-            // not the generic multi-category history this hub otherwise opens.
-            onTap: () {
-              final classActive = context
-                  .read<ClassTeacherContextBloc>()
-                  .state
-                  .active;
-              if (classActive != null) {
-                context.push('/staff/roll-call/history');
-                return;
-              }
-              context.push('/staff/attendance/history');
-            },
-          ),
-
-          // Google Sheets Card
-          _IntegrationCard(
-            title: 'Google Sheets',
-            subtitle: 'Sync attendance to Google Sheets',
-            linked: _sheetsLinked,
-            badgeIcon: Icons.cloud_rounded,
-            badgeLabel: 'Sync & Export',
-            onTap: () async {
-              await context.push('/staff/attendance/sheets');
-              _loadSheetsStatus();
-            },
-          ),
-
-          const SizedBox(height: 8),
-          _buildSummaryCard(context),
+                const SizedBox(height: 8),
+                _buildSummaryCard(context),
               ],
             ),
           ),
@@ -756,7 +757,11 @@ class _MethodCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  _Badge(icon: badgeIcon, label: badgeLabel, color: accentColor),
+                  _Badge(
+                    icon: badgeIcon,
+                    label: badgeLabel,
+                    color: accentColor,
+                  ),
                 ],
               ),
             ),

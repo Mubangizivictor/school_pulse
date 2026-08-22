@@ -26,7 +26,12 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
       drawer: const DirectorDrawer(),
       appBar: AppBar(title: const Text('Incidents')),
       body: Padding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.l, AppSpacing.xl, AppSpacing.x3l),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.l,
+          AppSpacing.xl,
+          AppSpacing.x3l,
+        ),
         child: Column(
           children: [
             SegmentedTabControl(

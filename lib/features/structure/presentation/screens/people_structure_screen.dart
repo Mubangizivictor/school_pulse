@@ -21,8 +21,13 @@ const _validator = StructureIntegrityValidator();
 /// layer to keep in sync with it.
 class PeopleStructureScreen extends StatelessWidget {
   final String section;
+  final bool showAppBar;
 
-  const PeopleStructureScreen({super.key, this.section = 'departments'});
+  const PeopleStructureScreen({
+    super.key,
+    this.section = 'departments',
+    this.showAppBar = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,13 +35,16 @@ class PeopleStructureScreen extends StatelessWidget {
         GoRouterState.of(context).uri.queryParameters['section'] ?? section;
     final normalized = requested == 'roles' ? 'roles' : 'departments';
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          normalized == 'roles'
-              ? 'Staff Roles & Responsibilities'
-              : 'Departments',
-        ),
-      ),
+      appBar: showAppBar
+          ? AppBar(
+              title: Text(
+                normalized == 'roles'
+                    ? 'Staff Roles & Responsibilities'
+                    : 'Departments',
+              ),
+            )
+          : null,
+      backgroundColor: showAppBar ? null : Colors.transparent,
       body: BlocBuilder<StructureBloc, StructureState>(
         builder: (context, state) => normalized == 'roles'
             ? _roles(context, state)
@@ -51,74 +59,117 @@ class PeopleStructureScreen extends StatelessWidget {
   Widget _departments(BuildContext context, StructureState state) {
     final bloc = context.read<StructureBloc>();
     final schoolId = _schoolId(context);
-    return _SectionPage(
-      intro:
-          'Define departments now. A Head of Department is assigned later, so Department creation never depends on a teacher or staff record.',
-      primaryLabel: 'Add Department',
-      onPrimary: () => showDepartmentFormDialog(
+    final scheme = Theme.of(context).colorScheme;
+
+    void onAdd() => showDepartmentFormDialog(
+      context,
+      schoolId: schoolId,
+      onSave: (value) => _dispatchIfValid(
         context,
-        schoolId: schoolId,
-        onSave: (value) => _dispatchIfValid(
-          context,
-          _validator.validateDepartment(value, state.departments),
-          () => bloc.add(SaveDepartmentRequested(value)),
-        ),
+        _validator.validateDepartment(value, state.departments),
+        () => bloc.add(SaveDepartmentRequested(value)),
       ),
-      child: state.departments.isEmpty
-          ? const StructureEmptyHint('No departments configured yet.')
-          : ListView.separated(
-              padding: EdgeInsets.zero,
-              itemCount: state.departments.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (_, index) {
-                final department = state.departments[index];
-                final subjectCount = state.subjects
-                    .where(
-                      (subject) =>
-                          subject.departmentId == department.id &&
-                          subject.isActive,
-                    )
-                    .length;
-                return AppCard(
-                  child: ListTile(
-                    title: Text(
-                      department.name,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        decoration: department.isActive
-                            ? null
-                            : TextDecoration.lineThrough,
-                      ),
-                    ),
-                    subtitle: Text(
-                      [
-                        if (department.code.trim().isNotEmpty)
-                          department.code.trim(),
-                        '$subjectCount active subject${subjectCount == 1 ? '' : 's'}',
-                        if (department.headOfDepartmentStaffId.isEmpty)
-                          'HOD assigned later',
-                      ].join(' • '),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.edit_outlined),
-                      onPressed: () => showDepartmentFormDialog(
-                        context,
-                        schoolId: schoolId,
-                        existing: department,
-                        onSave: (value) => _dispatchIfValid(
-                          context,
-                          _validator.validateDepartment(
-                            value,
-                            state.departments,
-                          ),
-                          () => bloc.add(SaveDepartmentRequested(value)),
-                        ),
-                      ),
+    );
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Organize staff and subjects by department.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      height: 1.4,
                     ),
                   ),
-                );
-              },
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: onAdd,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add department'),
+                ),
+              ],
             ),
+            const SizedBox(height: 20),
+            if (state.departments.isEmpty)
+              _DepartmentsEmptyState(onAdd: onAdd)
+            else
+              Expanded(
+                child: ListView.separated(
+                  padding: EdgeInsets.zero,
+                  itemCount: state.departments.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (_, index) {
+                    final department = state.departments[index];
+                    final subjectCount = state.subjects
+                        .where(
+                          (subject) =>
+                              subject.departmentId == department.id &&
+                              subject.isActive,
+                        )
+                        .length;
+                    return AppCard(
+                      child: ListTile(
+                        leading: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: scheme.primary,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.account_balance_outlined,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                        title: Text(
+                          department.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            decoration: department.isActive
+                                ? null
+                                : TextDecoration.lineThrough,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '$subjectCount subject${subjectCount == 1 ? '' : 's'} • '
+                          '${department.headOfDepartmentStaffId.isEmpty ? 'HOD not assigned' : 'HOD assigned'}',
+                        ),
+                        trailing: PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert),
+                          onSelected: (_) => showDepartmentFormDialog(
+                            context,
+                            schoolId: schoolId,
+                            existing: department,
+                            onSave: (value) => _dispatchIfValid(
+                              context,
+                              _validator.validateDepartment(
+                                value,
+                                state.departments,
+                              ),
+                              () => bloc.add(SaveDepartmentRequested(value)),
+                            ),
+                          ),
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Edit')),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -191,6 +242,46 @@ class PeopleStructureScreen extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _DepartmentsEmptyState extends StatelessWidget {
+  final VoidCallback onAdd;
+
+  const _DepartmentsEmptyState({required this.onAdd});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AppCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+        child: Column(
+          children: [
+            Icon(
+              Icons.account_balance_outlined,
+              size: 56,
+              color: scheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No departments added',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Add your first department to continue.',
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
       ),
     );
   }

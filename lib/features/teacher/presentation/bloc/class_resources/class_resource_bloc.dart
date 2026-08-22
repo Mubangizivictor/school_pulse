@@ -142,8 +142,7 @@ class ClassResourceState extends Equatable {
   List<ClassResource> get folders =>
       resources.where((r) => r.isFolder).toList();
 
-  List<ClassResource> get files =>
-      resources.where((r) => !r.isFolder).toList();
+  List<ClassResource> get files => resources.where((r) => !r.isFolder).toList();
 
   List<ClassResource> get recentFirst =>
       [...resources]..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));

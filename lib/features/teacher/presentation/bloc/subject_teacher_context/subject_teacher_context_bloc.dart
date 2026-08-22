@@ -214,7 +214,11 @@ class SubjectTeacherContextBloc
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(errorMessage: messageFor(failure, offlineNoun: 'responsibilities'))),
+      (failure) => emit(
+        state.copyWith(
+          errorMessage: messageFor(failure, offlineNoun: 'responsibilities'),
+        ),
+      ),
       (resolution) {
         if (!resolution.hasActive) {
           emit(

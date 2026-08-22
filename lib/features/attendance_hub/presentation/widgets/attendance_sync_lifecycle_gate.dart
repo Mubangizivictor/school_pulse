@@ -72,9 +72,7 @@ class _AttendanceSyncLifecycleGateState
   // immediate for a teacher waiting on DONE, without the overhead of a
   // platform connectivity-stream dependency this project doesn't have yet.
   void _startConnectivityPoll() {
-    _connectivityPoll = Timer.periodic(const Duration(seconds: 15), (
-      _,
-    ) async {
+    _connectivityPoll = Timer.periodic(const Duration(seconds: 15), (_) async {
       final connected = await di.sl<NetworkInfo>().isConnected;
       if (connected && !_wasConnected) {
         _triggerSync();

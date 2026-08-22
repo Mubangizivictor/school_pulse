@@ -24,6 +24,7 @@ class LibraryDashboardScreen extends StatefulWidget {
   @override
   State<LibraryDashboardScreen> createState() => _LibraryDashboardScreenState();
 }
+
 class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
   String _searchQuery = '';
 
@@ -135,8 +136,9 @@ class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
                     IconButton(
                       icon: const Icon(Icons.settings_outlined),
                       style: IconButton.styleFrom(
-                        backgroundColor:
-                            Theme.of(context).colorScheme.surfaceContainer,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainer,
                       ),
                       onPressed: () => _showPolicySettings(context),
                     ),

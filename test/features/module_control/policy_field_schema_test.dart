@@ -8,14 +8,23 @@ void main() {
       final fields = PolicyFieldSchema.forType(type);
       expect(fields, isNotEmpty, reason: '$type has no fields');
       final keys = fields.map((f) => f.key).toList();
-      expect(keys.toSet(), hasLength(keys.length), reason: '$type has duplicate keys');
+      expect(
+        keys.toSet(),
+        hasLength(keys.length),
+        reason: '$type has duplicate keys',
+      );
     }
   });
 
-  test('emergency alerts default to enabled and cannot be silently defaulted off', () {
-    final defaults = PolicyFieldSchema.defaults(InstitutionPolicyType.notifications);
-    expect(defaults['emergencyAlerts'], true);
-  });
+  test(
+    'emergency alerts default to enabled and cannot be silently defaulted off',
+    () {
+      final defaults = PolicyFieldSchema.defaults(
+        InstitutionPolicyType.notifications,
+      );
+      expect(defaults['emergencyAlerts'], true);
+    },
+  );
 
   test('defaults map matches every field key', () {
     for (final type in InstitutionPolicyType.values) {

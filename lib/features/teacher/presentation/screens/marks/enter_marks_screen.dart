@@ -233,11 +233,14 @@ class _EnterMarksScreenState extends State<EnterMarksScreen> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      controller: TextEditingController(
-                        text: entry?.score?.toStringAsFixed(0) ?? '',
-                      )..selection = TextSelection.collapsed(
-                          offset: entry?.score?.toStringAsFixed(0).length ?? 0,
-                        ),
+                      controller:
+                          TextEditingController(
+                              text: entry?.score?.toStringAsFixed(0) ?? '',
+                            )
+                            ..selection = TextSelection.collapsed(
+                              offset:
+                                  entry?.score?.toStringAsFixed(0).length ?? 0,
+                            ),
                       style: TextStyle(
                         color: AppColors.textPrimary(context),
                         fontWeight: FontWeight.bold,
@@ -320,7 +323,8 @@ class _EnterMarksScreenState extends State<EnterMarksScreen> {
             child: OutlinedButton(
               onPressed: state.isSaving
                   ? null
-                  : () => context.read<MarksBloc>().add(const MarksDraftSaved()),
+                  : () =>
+                        context.read<MarksBloc>().add(const MarksDraftSaved()),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: AppColors.border(context)),
                 padding: const EdgeInsets.symmetric(vertical: 16),

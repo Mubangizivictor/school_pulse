@@ -15,7 +15,8 @@ import '../../domain/entities/class_resource.dart';
 import '../../domain/entities/staff_role_assignment.dart' show AssignmentStatus;
 import '../../domain/entities/subject_resource.dart';
 import '../../domain/policies/class_resource_policy.dart';
-import '../../domain/repositories/class_resource_repository.dart' show StorageUsage;
+import '../../domain/repositories/class_resource_repository.dart'
+    show StorageUsage;
 import '../../domain/repositories/subject_resource_repository.dart';
 import '../../domain/services/subject_audit_service.dart';
 import '../datasources/subject_resource_local_data_source.dart';
@@ -57,7 +58,9 @@ class SubjectResourceRepositoryImpl implements SubjectResourceRepository {
     String permission,
   ) {
     if (context.assignmentStatus != AssignmentStatus.active) {
-      return const Left(AssignmentInvalidFailure('This responsibility is no longer active.'));
+      return const Left(
+        AssignmentInvalidFailure('This responsibility is no longer active.'),
+      );
     }
     if (!context.can(
       permission,
@@ -86,7 +89,9 @@ class SubjectResourceRepositoryImpl implements SubjectResourceRepository {
         classId == null ||
         classId.isEmpty) {
       return const Left(
-        ValidationFailure('This responsibility is not tied to a subject and class.'),
+        ValidationFailure(
+          'This responsibility is not tied to a subject and class.',
+        ),
       );
     }
 
@@ -395,7 +400,9 @@ class SubjectResourceRepositoryImpl implements SubjectResourceRepository {
     if (resource.classId != context.classId ||
         resource.subjectId != context.subjectId) {
       return const Left(
-        PermissionDeniedFailure('That resource belongs to another subject or class.'),
+        PermissionDeniedFailure(
+          'That resource belongs to another subject or class.',
+        ),
       );
     }
     if (resource.origin == ClassResourceOrigin.ownUpload &&

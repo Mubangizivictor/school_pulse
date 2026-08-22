@@ -157,7 +157,10 @@ class StaffIdCardService {
           pw.SizedBox(height: 4),
           pw.Text(
             roleLabel,
-            style: const pw.TextStyle(fontSize: 11, color: PdfColors.blueGrey700),
+            style: const pw.TextStyle(
+              fontSize: 11,
+              color: PdfColors.blueGrey700,
+            ),
           ),
           pw.Spacer(),
           _buildCardRow('Staff Code:', staffCode),
@@ -167,7 +170,10 @@ class StaffIdCardService {
     );
   }
 
-  pw.Widget _buildBack({required String schoolName, required Uint8List qrBytes}) {
+  pw.Widget _buildBack({
+    required String schoolName,
+    required Uint8List qrBytes,
+  }) {
     return _cardShell(
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.center,

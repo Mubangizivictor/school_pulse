@@ -14,8 +14,7 @@ class HealthLocalDataSourceWeb implements HealthLocalDataSource {
   Future<void> cacheClinicVisit(ClinicVisit visit) async {}
 
   @override
-  Future<List<ClinicVisit>> getPendingClinicVisits(String schoolId) async =>
-      [];
+  Future<List<ClinicVisit>> getPendingClinicVisits(String schoolId) async => [];
 
   @override
   Future<void> markClinicVisitSynced(String visitId) async {}

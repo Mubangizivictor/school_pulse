@@ -16,9 +16,11 @@ class StaffDocumentsUploader {
   final FirebaseStorage storage;
   final FirebaseFirestore firestore;
 
-  StaffDocumentsUploader({FirebaseStorage? storage, FirebaseFirestore? firestore})
-    : storage = storage ?? FirebaseStorage.instance,
-      firestore = firestore ?? FirebaseFirestore.instance;
+  StaffDocumentsUploader({
+    FirebaseStorage? storage,
+    FirebaseFirestore? firestore,
+  }) : storage = storage ?? FirebaseStorage.instance,
+       firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Returns the filenames of any documents that failed to upload, so the
   /// caller can show a non-blocking warning. Successful uploads are also

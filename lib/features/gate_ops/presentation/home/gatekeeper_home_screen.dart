@@ -81,7 +81,9 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
                               child: FilledButton.icon(
                                 onPressed: () =>
                                     _showCheckInSheet(auth.user, gates),
-                                icon: const Icon(Icons.person_add_alt_1_rounded),
+                                icon: const Icon(
+                                  Icons.person_add_alt_1_rounded,
+                                ),
                                 label: const Text('Check in a visitor'),
                                 style: FilledButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(
@@ -422,7 +424,9 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
     final inside = visitors
         .where((visitor) => visitor.status == VisitorStatus.checkedIn)
         .length;
-    final today = visitors.where((visitor) => _isToday(visitor.arrivalTime)).length;
+    final today = visitors
+        .where((visitor) => _isToday(visitor.arrivalTime))
+        .length;
     final overdue = visitors
         .where(
           (visitor) =>
@@ -475,7 +479,6 @@ enum _VisitorFilter {
   const _VisitorFilter(this.label);
   final String label;
 }
-
 
 class _VisitorTile extends StatelessWidget {
   const _VisitorTile({required this.visitor, this.onCheckOut});

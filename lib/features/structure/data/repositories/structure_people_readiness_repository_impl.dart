@@ -18,16 +18,18 @@ class StructurePeopleReadinessRepositoryImpl
         .where('schoolId', isEqualTo: schoolId)
         .snapshots()
         .map((snapshot) {
-      final staff = snapshot.docs
-          .map((doc) => UserModel.fromJson({...doc.data(), 'id': doc.id}))
-          .where(
-            (user) =>
-                !user.roles.contains(UserRole.parent) &&
-                !user.roles.contains(UserRole.student),
-          )
-          .toList(growable: false);
-      staff.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      return staff;
-    });
+          final staff = snapshot.docs
+              .map((doc) => UserModel.fromJson({...doc.data(), 'id': doc.id}))
+              .where(
+                (user) =>
+                    !user.roles.contains(UserRole.parent) &&
+                    !user.roles.contains(UserRole.student),
+              )
+              .toList(growable: false);
+          staff.sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+          );
+          return staff;
+        });
   }
 }

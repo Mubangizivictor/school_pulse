@@ -55,7 +55,7 @@ void main() {
     );
   });
 
-  Widget buildSubject() {
+  Widget buildSubject({GlobalKey<InstitutionTabState>? tabKey}) {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>.value(value: authBloc),
@@ -63,7 +63,7 @@ void main() {
       ],
       child: MaterialApp(
         theme: AppTheme.dark(),
-        home: const Scaffold(body: InstitutionTab()),
+        home: Scaffold(body: InstitutionTab(key: tabKey)),
       ),
     );
   }
@@ -84,10 +84,14 @@ void main() {
       expect(find.text('Registration'), findsOneWidget);
       expect(find.text('Location'), findsOneWidget);
       expect(find.text('Contact'), findsOneWidget);
-      expect(find.text('Regional Settings'), findsOneWidget);
+      // Regional Settings (time zone/currency/language/date format) is no
+      // longer editable per-school: Uganda schools share one fixed locale,
+      // so the section and its own Save button were removed - saving now
+      // happens only via the wizard's shared Save & Continue.
+      expect(find.text('Regional Settings'), findsNothing);
       expect(
         find.widgetWithText(FilledButton, 'Save Institution'),
-        findsOneWidget,
+        findsNothing,
       );
 
       expect(find.text('Riverside Academy'), findsOneWidget);
@@ -105,15 +109,21 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(buildSubject());
+      final tabKey = GlobalKey<InstitutionTabState>();
+      await tester.pumpWidget(buildSubject(tabKey: tabKey));
 
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Institution Name'),
         'New Name',
       );
-      await tester.tap(find.widgetWithText(FilledButton, 'Save Institution'));
+      await tester.pump();
+
+      // Save is no longer triggered by a button inside the form - the
+      // wizard's shared Save & Continue calls this exposed API instead.
+      final saved = await tabKey.currentState!.saveIfDirty();
       await tester.pumpAndSettle();
 
+      expect(saved, isTrue);
       final captured = verify(
         () => structureBloc.add(
           captureAny(that: isA<UpdateInstitutionProfileRequested>()),

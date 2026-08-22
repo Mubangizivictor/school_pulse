@@ -53,7 +53,9 @@ class _EditMarksScreenState extends State<EditMarksScreen> {
           return Scaffold(
             backgroundColor: theme.scaffoldBackgroundColor,
             appBar: AppBar(title: const Text('Edit Mark')),
-            body: const Center(child: Text('This mark is no longer available.')),
+            body: const Center(
+              child: Text('This mark is no longer available.'),
+            ),
           );
         }
 
@@ -123,7 +125,10 @@ class _EditMarksScreenState extends State<EditMarksScreen> {
                 const SizedBox(height: 32),
                 Text(
                   'Mark (out of ${component.maximumMark.toStringAsFixed(0)})',
-                  style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 14),
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Container(
@@ -136,9 +141,7 @@ class _EditMarksScreenState extends State<EditMarksScreen> {
                   child: TextField(
                     controller: _markController,
                     style: TextStyle(color: theme.colorScheme.onSurface),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                    ),
+                    decoration: const InputDecoration(border: InputBorder.none),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -147,7 +150,10 @@ class _EditMarksScreenState extends State<EditMarksScreen> {
                 const SizedBox(height: 24),
                 Text(
                   'Reason for change *',
-                  style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 14),
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Container(

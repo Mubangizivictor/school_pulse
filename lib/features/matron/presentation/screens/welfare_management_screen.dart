@@ -451,8 +451,9 @@ class _WelfareLogTab extends StatelessWidget {
                     children: [
                       Text(
                         DateFormat('MMM d, yyyy').format(record.date),
-                        style: Theme.of(context).textTheme.labelSmall
-                            ?.copyWith(color: Theme.of(context).colorScheme.outline),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
                       ),
                       Text(
                         'By: ${record.recordedBy}',

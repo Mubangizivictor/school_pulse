@@ -184,9 +184,8 @@ class _GridTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: AppRadius.large,
-      onTap: () => Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: item.builder)),
+      onTap: () =>
+          Navigator.of(context).push(MaterialPageRoute(builder: item.builder)),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.s),
         decoration: BoxDecoration(
@@ -226,9 +225,8 @@ class _MoreRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: item.builder)),
+      onTap: () =>
+          Navigator.of(context).push(MaterialPageRoute(builder: item.builder)),
       borderRadius: AppRadius.large,
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.s),
@@ -255,10 +253,16 @@ class _MoreRow extends StatelessWidget {
             Expanded(
               child: Text(
                 item.label,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary(context)),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textSecondary(context),
+            ),
           ],
         ),
       ),

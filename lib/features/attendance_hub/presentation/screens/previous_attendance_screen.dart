@@ -54,7 +54,8 @@ class _SessionGroup {
       records.where((r) => r.status == AttendanceStatus.present).length;
   int get absent =>
       records.where((r) => r.status == AttendanceStatus.absent).length;
-  int get late => records.where((r) => r.status == AttendanceStatus.late).length;
+  int get late =>
+      records.where((r) => r.status == AttendanceStatus.late).length;
   int get total => records.length;
 }
 
@@ -169,7 +170,9 @@ class _PreviousAttendanceScreenState extends State<PreviousAttendanceScreen> {
     final query = _searchController.text.trim().toLowerCase();
     return sessions.where((s) {
       if (_selectedStatus.status != null) {
-        final hasStatus = s.records.any((r) => r.status == _selectedStatus.status);
+        final hasStatus = s.records.any(
+          (r) => r.status == _selectedStatus.status,
+        );
         if (!hasStatus) return false;
       }
       if (query.isEmpty) return true;

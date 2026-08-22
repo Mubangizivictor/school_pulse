@@ -20,7 +20,9 @@ void main() {
   test(
     'redirect callback rejects a superAdmin-authenticated session found on /staff/login or any /staff/* route',
     () {
-      final redirectStart = source.indexOf('redirect: (context, state) async {');
+      final redirectStart = source.indexOf(
+        'redirect: (context, state) async {',
+      );
       expect(redirectStart, isNot(-1));
 
       final staffGuardIndex = source.indexOf(
@@ -42,7 +44,8 @@ void main() {
       expect(
         startsWithStaffIndex,
         isNot(-1),
-        reason: 'router must also guard every other /staff/* route, not just /staff/login',
+        reason:
+            'router must also guard every other /staff/* route, not just /staff/login',
       );
 
       // Confirm both conditions live inside one guard block that checks
@@ -51,7 +54,10 @@ void main() {
       // source around the guard for the expected condition and return.
       final windowStart = redirectStart;
       final windowEnd = staffGuardIndex + 400;
-      final window = source.substring(windowStart, windowEnd.clamp(0, source.length));
+      final window = source.substring(
+        windowStart,
+        windowEnd.clamp(0, source.length),
+      );
 
       expect(
         window.contains('authState is AuthAuthenticated'),
@@ -61,7 +67,8 @@ void main() {
       expect(
         window.contains('authState.user.role == UserRole.superAdmin'),
         isTrue,
-        reason: 'the /staff guard must specifically target superAdmin (the seeded owner role)',
+        reason:
+            'the /staff guard must specifically target superAdmin (the seeded owner role)',
       );
       expect(
         window.contains("return '/school-bootstrap'"),
@@ -77,7 +84,9 @@ void main() {
   test(
     'the /staff superAdmin guard runs before the Super Admin route protection block, so it always evaluates',
     () {
-      final staffGuardIndex = source.indexOf("state.uri.path == '/staff/login'");
+      final staffGuardIndex = source.indexOf(
+        "state.uri.path == '/staff/login'",
+      );
       final superAdminGuardIndex = source.indexOf(
         "state.uri.path.startsWith('/super-admin')",
       );

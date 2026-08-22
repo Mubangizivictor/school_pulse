@@ -96,12 +96,14 @@ void main() {
         academicYearId: any(named: 'academicYearId'),
       ),
     ).thenAnswer((invocation) => Right(invocation.positionalArguments[0]));
-    when(() => local.cacheResources(
-      any(),
-      schoolId: any(named: 'schoolId'),
-      classId: any(named: 'classId'),
-      academicYearId: any(named: 'academicYearId'),
-    )).thenAnswer((_) async {});
+    when(
+      () => local.cacheResources(
+        any(),
+        schoolId: any(named: 'schoolId'),
+        classId: any(named: 'classId'),
+        academicYearId: any(named: 'academicYearId'),
+      ),
+    ).thenAnswer((_) async {});
     when(() => local.saveResourceLocal(any())).thenAnswer((_) async {});
   });
 

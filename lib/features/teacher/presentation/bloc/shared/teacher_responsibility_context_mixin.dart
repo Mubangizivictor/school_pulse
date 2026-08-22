@@ -24,8 +24,7 @@ import '../../../domain/services/active_responsibility_service.dart';
 /// values, class-only `handOffTo`/`hasCurrentTerm`, subject-only derived
 /// assignment lists) that forcing one shape on both would leak into the
 /// approved UI.
-mixin TeacherResponsibilityContextMixin<TEvent, TState>
-    on BlocBase<TState> {
+mixin TeacherResponsibilityContextMixin<TEvent, TState> on BlocBase<TState> {
   ActiveResponsibilityService get responsibilityService;
   StaffAssignmentRepository get assignmentRepository;
 

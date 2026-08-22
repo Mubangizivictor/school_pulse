@@ -338,7 +338,9 @@ class _MoreHeader extends StatelessWidget {
         const SizedBox(width: AppSpacing.s),
         Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.05),
             borderRadius: AppRadius.large,
             border: Border.all(
               color: Theme.of(
@@ -351,7 +353,9 @@ class _MoreHeader extends StatelessWidget {
         const SizedBox(width: AppSpacing.s),
         Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.05),
             borderRadius: AppRadius.large,
             border: Border.all(
               color: Theme.of(

@@ -4,10 +4,16 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/teacher/domain/entities/active_responsibility_context.dart';
 import 'package:school_pulse/features/teacher/domain/entities/subject_assessment.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_state.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_state.dart';
 
+/// Marks entry serves both responsibilities: a Subject Teacher's own subject,
+/// and a Class Teacher entering marks for any subject taught in their class.
+/// Whichever context bloc actually holds an active responsibility right now
+/// is the one this screen uses - never both, and never a mix of their data.
 class MarksDashboardScreen extends StatefulWidget {
   const MarksDashboardScreen({super.key});
 
@@ -19,162 +25,399 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    final active = context.read<SubjectTeacherContextBloc>().state.active;
+    final active = _activeContext();
     if (active != null) {
       context.read<MarksBloc>().add(MarksRequested(active));
     }
   }
 
+  ActiveResponsibilityContext? _activeContext() {
+    final subjectActive = context
+        .read<SubjectTeacherContextBloc>()
+        .state
+        .active;
+    if (subjectActive != null) return subjectActive;
+    return context.read<ClassTeacherContextBloc>().state.active;
+  }
+
   void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature coming soon')),
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$feature coming soon')));
+  }
+
+  Future<void> _openCreateAssessmentDialog() async {
+    final titleController = TextEditingController();
+    final maxMarkController = TextEditingController(text: '100');
+    String assessmentType = 'Test';
+    const types = ['Test', 'Exam', 'Assignment', 'Practical', 'Project'];
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Create Assessment'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: titleController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  hintText: 'e.g. Term 2 Mid-term Test',
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: assessmentType,
+                decoration: const InputDecoration(labelText: 'Type'),
+                items: types
+                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setDialogState(() => assessmentType = value);
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: maxMarkController,
+                keyboardType: const TextInputType.numberWithOptions(),
+                decoration: const InputDecoration(labelText: 'Maximum mark'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Create'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != true || !mounted) return;
+
+    final maximumMark = double.tryParse(maxMarkController.text.trim());
+    if (titleController.text.trim().isEmpty || maximumMark == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter a title and a valid maximum mark.'),
+        ),
+      );
+      return;
+    }
+
+    context.read<MarksBloc>().add(
+      MarksAssessmentCreated(
+        title: titleController.text.trim(),
+        assessmentType: assessmentType,
+        maximumMark: maximumMark,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<SubjectTeacherContextBloc, SubjectTeacherContextState>(
-      builder: (context, contextState) {
-        final active = contextState.active;
+      builder: (context, subjectContextState) {
+        return BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
+          builder: (context, classContextState) {
+            final active =
+                subjectContextState.active ?? classContextState.active;
 
-        return Scaffold(
-          backgroundColor: AppColors.background(context),
-          body: SafeArea(
-            child: active == null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Text(
-                        'You are not currently assigned to teach a subject, '
-                        'so there are no marks to enter.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textMuted(context)),
-                      ),
-                    ),
-                  )
-                : BlocBuilder<MarksBloc, MarksState>(
-                    builder: (context, state) {
-                      if (state.isLoading) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      return Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                            child: _buildHeader(context, active),
-                          ),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 14),
-                                  _buildStatsCard(context, active, state),
-                                  const SizedBox(height: 18),
-                                  Text(
-                                    'Quick Actions',
-                                    style: TextStyle(
-                                      color: AppColors.textPrimary(context),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  _buildQuickActions(context),
-                                  const SizedBox(height: 18),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Assessments',
-                                        style: TextStyle(
-                                          color: AppColors.textPrimary(
-                                            context,
-                                          ),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      TextButton(
-                                        style: TextButton.styleFrom(
-                                          minimumSize: Size.zero,
-                                          padding: EdgeInsets.zero,
-                                          tapTargetSize:
-                                              MaterialTapTargetSize.shrinkWrap,
-                                        ),
-                                        onPressed: () =>
-                                            context.push('/staff/marks/history'),
-                                        child: Text(
-                                          'View All',
-                                          style: TextStyle(
-                                            color: AppColors.primary(context),
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _buildAssessmentsSection(
-                                    context,
-                                    state.assessments,
-                                  ),
-                                  const SizedBox(height: 18),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Recent Activity',
-                                        style: TextStyle(
-                                          color: AppColors.textPrimary(
-                                            context,
-                                          ),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      TextButton(
-                                        style: TextButton.styleFrom(
-                                          minimumSize: Size.zero,
-                                          padding: EdgeInsets.zero,
-                                          tapTargetSize:
-                                              MaterialTapTargetSize.shrinkWrap,
-                                        ),
-                                        onPressed: () {},
-                                        child: Text(
-                                          'View All',
-                                          style: TextStyle(
-                                            color: AppColors.primary(context),
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _buildRecentActivityCard(context),
-                                  const SizedBox(height: 24),
-                                ],
-                              ),
+            return Scaffold(
+              backgroundColor: AppColors.background(context),
+              body: SafeArea(
+                child: active == null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Text(
+                            'You are not currently assigned to a subject or '
+                            'class, so there are no marks to enter.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.textMuted(context),
                             ),
                           ),
-                        ],
-                      );
-                    },
-                  ),
-          ),
+                        ),
+                      )
+                    : BlocListener<MarksBloc, MarksState>(
+                        listenWhen: (previous, current) =>
+                            previous.errorMessage != current.errorMessage ||
+                            previous.successMessage != current.successMessage,
+                        listener: (context, state) {
+                          final message =
+                              state.errorMessage ?? state.successMessage;
+                          if (message == null) return;
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(message)));
+                          context.read<MarksBloc>().add(
+                            const MarksFeedbackCleared(),
+                          );
+                        },
+                        child: BlocBuilder<MarksBloc, MarksState>(
+                          builder: (context, state) {
+                            if (state.isLoading) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+
+                            if (state.needsSubjectSelection) {
+                              return _buildSubjectPicker(
+                                context,
+                                active,
+                                state,
+                              );
+                            }
+
+                            return Column(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    12,
+                                    16,
+                                    0,
+                                  ),
+                                  child: _buildHeader(
+                                    context,
+                                    active,
+                                    subjectNameOverride:
+                                        state.selectedSubject?.name,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: SingleChildScrollView(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 14),
+                                        _buildStatsCard(context, active, state),
+                                        const SizedBox(height: 18),
+                                        Text(
+                                          'Quick Actions',
+                                          style: TextStyle(
+                                            color: AppColors.textPrimary(
+                                              context,
+                                            ),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        _buildQuickActions(context),
+                                        const SizedBox(height: 18),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Assessments',
+                                              style: TextStyle(
+                                                color: AppColors.textPrimary(
+                                                  context,
+                                                ),
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            TextButton(
+                                              style: TextButton.styleFrom(
+                                                minimumSize: Size.zero,
+                                                padding: EdgeInsets.zero,
+                                                tapTargetSize:
+                                                    MaterialTapTargetSize
+                                                        .shrinkWrap,
+                                              ),
+                                              onPressed: () => context.push(
+                                                '/staff/marks/history',
+                                              ),
+                                              child: Text(
+                                                'View All',
+                                                style: TextStyle(
+                                                  color: AppColors.primary(
+                                                    context,
+                                                  ),
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        _buildAssessmentsSection(
+                                          context,
+                                          state.assessments,
+                                        ),
+                                        const SizedBox(height: 18),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Recent Activity',
+                                              style: TextStyle(
+                                                color: AppColors.textPrimary(
+                                                  context,
+                                                ),
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            TextButton(
+                                              style: TextButton.styleFrom(
+                                                minimumSize: Size.zero,
+                                                padding: EdgeInsets.zero,
+                                                tapTargetSize:
+                                                    MaterialTapTargetSize
+                                                        .shrinkWrap,
+                                              ),
+                                              onPressed: () {},
+                                              child: Text(
+                                                'View All',
+                                                style: TextStyle(
+                                                  color: AppColors.primary(
+                                                    context,
+                                                  ),
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        _buildRecentActivityCard(context),
+                                        const SizedBox(height: 24),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildHeader(BuildContext context, ActiveResponsibilityContext active) {
+  /// Only reached for a Class Teacher, whose context names no subject of its
+  /// own - marks for another teacher's subject need to say which subject
+  /// before anything else on this screen can mean anything.
+  Widget _buildSubjectPicker(
+    BuildContext context,
+    ActiveResponsibilityContext active,
+    MarksState state,
+  ) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: _buildHeader(context, active),
+        ),
+        Expanded(
+          child: state.classSubjects.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Text(
+                      'No subjects are set up for ${active.className ?? 'this class'} yet.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.textMuted(context)),
+                    ),
+                  ),
+                )
+              : ListView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  children: [
+                    Text(
+                      'Which subject are you entering marks for?',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    for (final subject in state.classSubjects)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => context.read<MarksBloc>().add(
+                            MarksSubjectSelected(subject),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 14,
+                              horizontal: 16,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceElevated(context),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppColors.border(
+                                  context,
+                                ).withValues(alpha: 0.5),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    subject.name,
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary(context),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.chevron_right,
+                                  color: AppColors.textMuted(context),
+                                  size: 20,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeader(
+    BuildContext context,
+    ActiveResponsibilityContext active, {
+    String? subjectNameOverride,
+  }) {
     return Row(
       children: [
         IconButton(
@@ -203,7 +446,7 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                active.subjectName ?? 'Subject',
+                subjectNameOverride ?? active.subjectName ?? 'Subject',
                 style: TextStyle(
                   color: AppColors.textPrimary(context),
                   fontSize: 16,
@@ -527,7 +770,7 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => _showComingSoon('Create assessment'),
+                onPressed: _openCreateAssessmentDialog,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary(context),
                   foregroundColor: Colors.white,

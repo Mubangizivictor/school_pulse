@@ -126,7 +126,8 @@ class AdministeredMedicationIsar {
       medicationName: medicationName,
       dosage: dosage,
       quantity: quantity,
-      timeAdministered: timeAdministered ?? DateTime.fromMillisecondsSinceEpoch(0),
+      timeAdministered:
+          timeAdministered ?? DateTime.fromMillisecondsSinceEpoch(0),
       administeredBy: administeredBy,
       notes: notes,
     );

@@ -36,8 +36,7 @@ class _FakeClassTeacherContextBloc extends Cubit<ClassTeacherContextState>
 /// the Class Teacher path.
 class _FakeSubjectTeacherContextBloc extends Cubit<SubjectTeacherContextState>
     implements SubjectTeacherContextBloc {
-  _FakeSubjectTeacherContextBloc()
-    : super(const SubjectTeacherContextState());
+  _FakeSubjectTeacherContextBloc() : super(const SubjectTeacherContextState());
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

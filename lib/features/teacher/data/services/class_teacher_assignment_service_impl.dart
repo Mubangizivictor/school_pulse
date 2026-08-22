@@ -31,20 +31,25 @@ class ClassTeacherAssignmentServiceImpl
       forceRefresh: forceRefresh,
     );
 
-    return result.map((assignments) {
-      final classRows = assignments
-          .where((a) => a.roleType == StaffResponsibilityType.classTeacher)
-          .where((a) => a.isCurrentlyValid())
-          .toList();
-      if (classRows.isEmpty) return null;
+    return result.map(resolveActiveAssignmentFrom);
+  }
 
-      // The default rule allows exactly one. When a school has granted the
-      // override there may legitimately be two, and the most recently
-      // assigned one wins as the panel's default - the teacher can still
-      // switch to the other through the responsibility switcher.
-      classRows.sort((a, b) => b.assignedAt.compareTo(a.assignedAt));
-      return classRows.first;
-    });
+  @override
+  StaffRoleAssignment? resolveActiveAssignmentFrom(
+    List<StaffRoleAssignment> assignments,
+  ) {
+    final classRows = assignments
+        .where((a) => a.roleType == StaffResponsibilityType.classTeacher)
+        .where((a) => a.isCurrentlyValid())
+        .toList();
+    if (classRows.isEmpty) return null;
+
+    // The default rule allows exactly one. When a school has granted the
+    // override there may legitimately be two, and the most recently
+    // assigned one wins as the panel's default - the teacher can still
+    // switch to the other through the responsibility switcher.
+    classRows.sort((a, b) => b.assignedAt.compareTo(a.assignedAt));
+    return classRows.first;
   }
 
   @override

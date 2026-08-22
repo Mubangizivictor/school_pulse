@@ -106,7 +106,9 @@ class _AddLinkScreenState extends State<AddLinkScreen> {
                               if (name.isEmpty || url.isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Title and URL are required.'),
+                                    content: Text(
+                                      'Title and URL are required.',
+                                    ),
                                   ),
                                 );
                                 return;

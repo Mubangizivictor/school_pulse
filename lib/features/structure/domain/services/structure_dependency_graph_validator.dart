@@ -18,7 +18,9 @@ class StructureDependencyGraphValidator {
     for (final step in steps) {
       for (final prerequisite in step.prerequisites) {
         if (!byId.containsKey(prerequisite)) {
-          errors.add('${step.id.name} references unknown prerequisite ${prerequisite.name}.');
+          errors.add(
+            '${step.id.name} references unknown prerequisite ${prerequisite.name}.',
+          );
           continue;
         }
         if ((order[prerequisite] ?? -1) >= (order[step.id] ?? 0)) {
@@ -39,7 +41,8 @@ class StructureDependencyGraphValidator {
       final step = byId[id];
       if (step != null) {
         for (final prerequisite in step.prerequisites) {
-          if (byId.containsKey(prerequisite) && visit(prerequisite)) return true;
+          if (byId.containsKey(prerequisite) && visit(prerequisite))
+            return true;
         }
       }
       visiting.remove(id);
@@ -49,7 +52,9 @@ class StructureDependencyGraphValidator {
 
     for (final step in steps) {
       if (visit(step.id)) {
-        errors.add('The Structure setup dependency graph contains a cycle involving ${step.id.name}.');
+        errors.add(
+          'The Structure setup dependency graph contains a cycle involving ${step.id.name}.',
+        );
         break;
       }
     }

@@ -27,10 +27,7 @@ abstract class SubjectResourceLocalDataSource {
 
   Future<String?> getLocalFilePath(String resourceId);
 
-  Future<String> downloadForOffline(
-    SubjectResource resource,
-    List<int> bytes,
-  );
+  Future<String> downloadForOffline(SubjectResource resource, List<int> bytes);
 
   Future<void> removeDownload(String resourceId);
 

@@ -13,18 +13,15 @@ import 'step_2_periods.dart';
 import 'step_3_schedule.dart';
 import 'step_4_review.dart';
 
-const List<String> _kStepLabels = [
-  'Basic Info',
-  'Periods',
-  'Schedule',
-  'Review',
-];
+const List<String> _kStepLabels = ['Details', 'Periods', 'Schedule', 'Review'];
 
 /// Structure -> Timetables -> Create Timetable: a 4-step wizard that
 /// produces one draft [Timetable] envelope. Lesson assignment itself
 /// happens afterwards in the Timetable Builder, not in this flow.
 class CreateTimetableScreen extends StatefulWidget {
-  const CreateTimetableScreen({super.key});
+  const CreateTimetableScreen({super.key, this.initialClassId});
+
+  final String? initialClassId;
 
   @override
   State<CreateTimetableScreen> createState() => _CreateTimetableScreenState();
@@ -32,7 +29,8 @@ class CreateTimetableScreen extends StatefulWidget {
 
 class _CreateTimetableScreenState extends State<CreateTimetableScreen> {
   int _step = 0;
-  final _draft = CreateTimetableDraft();
+  late final _draft = CreateTimetableDraft()
+    ..classId = widget.initialClassId ?? '';
 
   void _next() {
     if (_step < 3) setState(() => _step++);
@@ -113,64 +111,44 @@ class _StepIndicator extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-      child: Row(
-        children: List.generate(_kStepLabels.length * 2 - 1, (i) {
-          if (i.isOdd) {
-            final leftStepDone = (i - 1) ~/ 2 < currentStep;
-            return Expanded(
-              child: Container(
-                height: 2,
-                color: leftStepDone
-                    ? colors.primary
-                    : colors.outline.withValues(alpha: .3),
-              ),
-            );
-          }
-          final index = i ~/ 2;
-          final isDone = index < currentStep;
-          final isCurrent = index == currentStep;
-          return Column(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${currentStep + 1} of ${_kStepLabels.length}',
+            style: TextStyle(
+              color: colors.primary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: (currentStep + 1) / _kStepLabels.length,
+              minHeight: 3,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
             children: [
-              Container(
-                width: 26,
-                height: 26,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isDone || isCurrent
-                      ? colors.primary
-                      : colors.surfaceContainer,
-                  border: Border.all(
-                    color: isDone || isCurrent
+              for (var i = 0; i < _kStepLabels.length; i++) ...[
+                if (i > 0) const SizedBox(width: 16),
+                Text(
+                  _kStepLabels[i],
+                  style: TextStyle(
+                    fontWeight: i == currentStep
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                    color: i == currentStep
                         ? colors.primary
-                        : colors.outline.withValues(alpha: .3),
+                        : colors.onSurfaceVariant,
                   ),
                 ),
-                child: isDone
-                    ? Icon(Icons.check, size: 15, color: colors.onPrimary)
-                    : Text(
-                        '${index + 1}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isCurrent
-                              ? colors.onPrimary
-                              : colors.onSurfaceVariant,
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _kStepLabels[index],
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
-                  color: isCurrent ? colors.primary : colors.onSurfaceVariant,
-                ),
-              ),
+              ],
             ],
-          );
-        }),
+          ),
+        ],
       ),
     );
   }

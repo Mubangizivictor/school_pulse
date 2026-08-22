@@ -50,28 +50,27 @@ void main() {
     expect(find.text('Aiden Mwangi'), findsNothing);
   });
 
-  testWidgets(
-    'a boarder with no attendance record yet counts as Present',
-    (tester) async {
-      await tester.pumpWidget(
-        _wrap(
-          DormStudentRosterScreen(
-            dormitoryName: 'Sunrise House',
-            students: students,
-            isLoading: false,
-            onStudentTap: (_) {},
-          ),
+  testWidgets('a boarder with no attendance record yet counts as Present', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        DormStudentRosterScreen(
+          dormitoryName: 'Sunrise House',
+          students: students,
+          isLoading: false,
+          onStudentTap: (_) {},
         ),
-      );
+      ),
+    );
 
-      await tester.tap(find.text('Present'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Present'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Aiden Mwangi'), findsOneWidget);
-      expect(find.text('Caleb Nsubuga'), findsOneWidget);
-      expect(find.text('Brian Ochieng'), findsNothing);
-    },
-  );
+    expect(find.text('Aiden Mwangi'), findsOneWidget);
+    expect(find.text('Caleb Nsubuga'), findsOneWidget);
+    expect(find.text('Brian Ochieng'), findsNothing);
+  });
 
   testWidgets('tapping a row fires onStudentTap with the student id', (
     tester,

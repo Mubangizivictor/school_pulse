@@ -133,7 +133,9 @@ class UsersOverviewView extends StatelessWidget {
 
   Widget _buildStats(BuildContext context) {
     return FutureBuilder(
-      future: di.sl<GetAdminDashboardStats>()(const AdminDashboardStatsParams()),
+      future: di.sl<GetAdminDashboardStats>()(
+        const AdminDashboardStatsParams(),
+      ),
       builder: (context, snapshot) {
         final stats = snapshot.data?.getOrElse(
           () => const AdminDashboardStats(

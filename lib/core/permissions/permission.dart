@@ -613,6 +613,15 @@ class Permission {
     ('Class Teacher Panel', classResourceDelete),
     ('Class Teacher Panel', classTimetableView),
     ('Class Teacher Panel', classTeacherMultiAssignOverride),
+    // A Class Teacher may be granted marks entry for their own class across
+    // every subject, not only one they personally teach as a Subject
+    // Teacher - the same permission strings the Subject Teacher Panel uses,
+    // scoped by this assignment's classId rather than a subjectId.
+    ('Class Teacher Panel', subjectAssessmentCreate),
+    ('Class Teacher Panel', subjectMarksView),
+    ('Class Teacher Panel', subjectMarksEnter),
+    ('Class Teacher Panel', subjectMarksEdit),
+    ('Class Teacher Panel', subjectMarksSubmit),
 
     ('School Calendar', calendarManage),
     ('Announcements', announcementManage),

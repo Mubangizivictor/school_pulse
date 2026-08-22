@@ -82,7 +82,7 @@ void main() {
 
         await pumpSetup(tester, theme: entry.theme);
         expect(tester.takeException(), isNull, reason: 'initial step');
-        expect(find.text('Structure Setup'), findsAtLeastNWidgets(1));
+        expect(find.text('Institution Settings'), findsAtLeastNWidgets(1));
 
         // Step through every wizard step backed purely by StructureBloc
         // state (Institution through Subjects) via Save & Continue,

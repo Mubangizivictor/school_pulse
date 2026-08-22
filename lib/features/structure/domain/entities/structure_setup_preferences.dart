@@ -74,15 +74,15 @@ class StructureSetupPreferences extends Equatable {
 
   @override
   List<Object?> get props => [
-        departments,
-        streams,
-        rooms,
-        houses,
-        clubs,
-        boarding,
-        transport,
-        onboardingCompleted,
-        setupVersion,
-        lastStepId,
-      ];
+    departments,
+    streams,
+    rooms,
+    houses,
+    clubs,
+    boarding,
+    transport,
+    onboardingCompleted,
+    setupVersion,
+    lastStepId,
+  ];
 }

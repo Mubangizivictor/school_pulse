@@ -89,10 +89,7 @@ void main() {
       var tapped = false;
       await tester.pumpWidget(
         _wrap(
-          StudentListRow(
-            name: 'Brian Ochieng',
-            onTap: () => tapped = true,
-          ),
+          StudentListRow(name: 'Brian Ochieng', onTap: () => tapped = true),
         ),
       );
       await tester.tap(find.text('Brian Ochieng'));

@@ -67,38 +67,39 @@ class IdentityResolverImpl implements IdentityResolver {
     String? schoolId,
   }) async {
     final result = await studentIdentityRepository.getStudentByUniqueId(code);
-    return result.fold(
-      Left.new,
-      (student) {
+    return result.fold(Left.new, (student) {
+      debugPrint(
+        '[SchoolPulse:NFC] student lookup=${student == null ? 'missing' : 'found'}',
+      );
+      if (student == null) {
         debugPrint(
-          '[SchoolPulse:NFC] student lookup=${student == null ? 'missing' : 'found'}',
+          '[SchoolPulse:NFC] final resolution=failed reason=unknown_credential',
         );
-        if (student == null) {
-          debugPrint('[SchoolPulse:NFC] final resolution=failed reason=unknown_credential');
-          return const Right(
-            UnresolvedResolvedIdentity(reason: 'unknown_credential'),
-          );
-        }
-        if (schoolId != null && student.schoolId != schoolId) {
-          debugPrint('[SchoolPulse:NFC] final resolution=failed reason=school_mismatch');
-          return const Right(
-            UnresolvedResolvedIdentity(reason: 'unknown_credential'),
-          );
-        }
-        debugPrint('[SchoolPulse:NFC] student=${student.name}');
-        debugPrint('[SchoolPulse:NFC] class=${student.classId}');
-        debugPrint('[SchoolPulse:NFC] final resolution=success');
-        return Right(
-          StudentResolvedIdentity(
-            id: student.id,
-            name: student.name,
-            studentCode: student.studentCode,
-            classId: student.classId,
-            photoUrl: student.photoUrl,
-          ),
+        return const Right(
+          UnresolvedResolvedIdentity(reason: 'unknown_credential'),
         );
-      },
-    );
+      }
+      if (schoolId != null && student.schoolId != schoolId) {
+        debugPrint(
+          '[SchoolPulse:NFC] final resolution=failed reason=school_mismatch',
+        );
+        return const Right(
+          UnresolvedResolvedIdentity(reason: 'unknown_credential'),
+        );
+      }
+      debugPrint('[SchoolPulse:NFC] student=${student.name}');
+      debugPrint('[SchoolPulse:NFC] class=${student.classId}');
+      debugPrint('[SchoolPulse:NFC] final resolution=success');
+      return Right(
+        StudentResolvedIdentity(
+          id: student.id,
+          name: student.name,
+          studentCode: student.studentCode,
+          classId: student.classId,
+          photoUrl: student.photoUrl,
+        ),
+      );
+    });
   }
 
   Future<Either<Failure, ResolvedIdentity>> _resolveQr(
@@ -205,7 +206,9 @@ class IdentityResolverImpl implements IdentityResolver {
 
     final revoked = await localDataSource.findRevocation(cardUid, schoolId);
     if (revoked != null) {
-      debugPrint('[SchoolPulse:NFC] final resolution=failed reason=revoked_credential');
+      debugPrint(
+        '[SchoolPulse:NFC] final resolution=failed reason=revoked_credential',
+      );
       return const Right(
         UnresolvedResolvedIdentity(reason: 'revoked_credential'),
       );
@@ -216,33 +219,44 @@ class IdentityResolverImpl implements IdentityResolver {
       schoolId,
       expectedType: 'nfc',
     );
-    return resolved.fold((failure) {
-      debugPrint('[SchoolPulse:NFC] final resolution=failed reason=${failure.runtimeType}');
-      return Left(failure);
-    }, (cached) {
-      debugPrint(
-        '[SchoolPulse:NFC] remote credential=${cached == null ? 'missing' : 'found'}',
-      );
-      if (cached == null) {
-        debugPrint('[SchoolPulse:NFC] final resolution=failed reason=unknown_credential');
-        return const Right(
-          UnresolvedResolvedIdentity(reason: 'unknown_credential'),
+    return resolved.fold(
+      (failure) {
+        debugPrint(
+          '[SchoolPulse:NFC] final resolution=failed reason=${failure.runtimeType}',
         );
-      }
-      debugPrint('[SchoolPulse:NFC] credential type=${cached.credentialType}');
-      debugPrint('[SchoolPulse:NFC] identity type=${cached.identityType}');
-      debugPrint('[SchoolPulse:NFC] identity id=${cached.identityId}');
-      if (cached.status != 'active') {
-        debugPrint('[SchoolPulse:NFC] final resolution=failed reason=revoked_credential');
-        return const Right(
-          UnresolvedResolvedIdentity(reason: 'revoked_credential'),
+        return Left(failure);
+      },
+      (cached) {
+        debugPrint(
+          '[SchoolPulse:NFC] remote credential=${cached == null ? 'missing' : 'found'}',
         );
-      }
-      if (cached.identityType == 'student') {
-        return _resolveStudentCode(cached.identityId, schoolId: schoolId);
-      }
-      return _resolveStaffId(cached.identityId, context);
-    });
+        if (cached == null) {
+          debugPrint(
+            '[SchoolPulse:NFC] final resolution=failed reason=unknown_credential',
+          );
+          return const Right(
+            UnresolvedResolvedIdentity(reason: 'unknown_credential'),
+          );
+        }
+        debugPrint(
+          '[SchoolPulse:NFC] credential type=${cached.credentialType}',
+        );
+        debugPrint('[SchoolPulse:NFC] identity type=${cached.identityType}');
+        debugPrint('[SchoolPulse:NFC] identity id=${cached.identityId}');
+        if (cached.status != 'active') {
+          debugPrint(
+            '[SchoolPulse:NFC] final resolution=failed reason=revoked_credential',
+          );
+          return const Right(
+            UnresolvedResolvedIdentity(reason: 'revoked_credential'),
+          );
+        }
+        if (cached.identityType == 'student') {
+          return _resolveStudentCode(cached.identityId, schoolId: schoolId);
+        }
+        return _resolveStaffId(cached.identityId, context);
+      },
+    );
   }
 
   Future<Either<Failure, CachedCredential?>> _resolveCredential(

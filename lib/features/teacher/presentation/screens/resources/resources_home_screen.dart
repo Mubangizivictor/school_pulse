@@ -42,7 +42,9 @@ class _ResourcesHomeScreenState extends State<ResourcesHomeScreen> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -233,27 +235,24 @@ class _ResourcesHomeScreenState extends State<ResourcesHomeScreen> {
                           label: 'Videos',
                           icon: Icons.play_circle_outline_rounded,
                           isSelected: _filter == ClassResourceKind.video,
-                          onTap: () => setState(
-                            () => _filter = ClassResourceKind.video,
-                          ),
+                          onTap: () =>
+                              setState(() => _filter = ClassResourceKind.video),
                         ),
                         const SizedBox(width: AppSpacing.m),
                         _FilterChip(
                           label: 'Images',
                           icon: Icons.image_outlined,
                           isSelected: _filter == ClassResourceKind.image,
-                          onTap: () => setState(
-                            () => _filter = ClassResourceKind.image,
-                          ),
+                          onTap: () =>
+                              setState(() => _filter = ClassResourceKind.image),
                         ),
                         const SizedBox(width: AppSpacing.m),
                         _FilterChip(
                           label: 'Links',
                           icon: Icons.link_rounded,
                           isSelected: _filter == ClassResourceKind.link,
-                          onTap: () => setState(
-                            () => _filter = ClassResourceKind.link,
-                          ),
+                          onTap: () =>
+                              setState(() => _filter = ClassResourceKind.link),
                         ),
                       ],
                     ),
@@ -280,10 +279,8 @@ class _ResourcesHomeScreenState extends State<ResourcesHomeScreen> {
                     for (final r in recent)
                       _RecentResourceCard(
                         resource: r,
-                        onTap: () => context.push(
-                          '/staff/resources/details',
-                          extra: r,
-                        ),
+                        onTap: () =>
+                            context.push('/staff/resources/details', extra: r),
                       ),
                 ],
               ),
@@ -589,10 +586,7 @@ class _RecentResourceCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: Theme.of(context).hintColor,
-          ),
+          Icon(Icons.chevron_right_rounded, color: Theme.of(context).hintColor),
         ],
       ),
     );

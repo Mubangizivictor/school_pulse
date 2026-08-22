@@ -76,24 +76,18 @@ void main() {
       expect(result.errorMessage, contains('cannot be reduced below 50'));
     });
 
-    test(
-      'after deactivating Blue, allocated capacity becomes 20 and class '
-      'capacity 40 may save',
-      () {
-        final blueInactive = stream(id: 'blue', capacity: 30, isActive: false);
-        final red = stream(id: 'red', capacity: 20);
-        expect(
-          service.activeStreamCapacity([blueInactive, red], 'class-1'),
-          20,
-        );
-        final result = service.validateClassCapacityChange(
-          candidate: baseClass,
-          newCapacity: 40,
-          streams: [blueInactive, red],
-        );
-        expect(result.isValid, isTrue);
-      },
-    );
+    test('after deactivating Blue, allocated capacity becomes 20 and class '
+        'capacity 40 may save', () {
+      final blueInactive = stream(id: 'blue', capacity: 30, isActive: false);
+      final red = stream(id: 'red', capacity: 20);
+      expect(service.activeStreamCapacity([blueInactive, red], 'class-1'), 20);
+      final result = service.validateClassCapacityChange(
+        candidate: baseClass,
+        newCapacity: 40,
+        streams: [blueInactive, red],
+      );
+      expect(result.isValid, isTrue);
+    });
   });
 
   group('capacity edge cases', () {

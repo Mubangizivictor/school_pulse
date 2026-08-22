@@ -27,6 +27,11 @@ class _Step1BasicInfoState extends State<Step1BasicInfo> {
     _descriptionController = TextEditingController(
       text: widget.draft.description,
     );
+    if (widget.draft.classId.isNotEmpty && widget.draft.name.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _autofillName(context.read<StructureBloc>().state);
+      });
+    }
   }
 
   @override
@@ -71,13 +76,15 @@ class _Step1BasicInfoState extends State<Step1BasicInfo> {
     return ListView(
       padding: EdgeInsets.all(AppSpacing.xl),
       children: [
-        const Text(
-          'Basic Information',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Text(
+          'Choose where this timetable applies.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: AppSpacing.l),
         _Dropdown<String>(
-          label: 'Academic Year',
+          label: 'Academic year',
           required: true,
           value: widget.draft.academicYearId.isEmpty
               ? null
@@ -131,7 +138,7 @@ class _Step1BasicInfoState extends State<Step1BasicInfo> {
         ],
         const SizedBox(height: AppSpacing.m),
         PulseTextField(
-          label: 'Timetable Name',
+          label: 'Timetable name',
           isRequired: true,
           controller: _nameController,
           onChanged: (v) => widget.draft.name = v,
@@ -146,11 +153,13 @@ class _Step1BasicInfoState extends State<Step1BasicInfo> {
         const SizedBox(height: AppSpacing.xl),
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton(
+          child: FilledButton.icon(
             onPressed: widget.draft.isBasicInfoComplete ? widget.onNext : null,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('Next'),
+            label: const Text('Continue'),
+            icon: const Icon(Icons.arrow_forward, size: 18),
+            iconAlignment: IconAlignment.end,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
             ),
           ),
         ),

@@ -1,7 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -15,18 +14,16 @@ class Skeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Shimmer.fromColors(
-      baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
-      highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
-      child: Container(
-        height: height,
-        width: width,
-        decoration: BoxDecoration(
-          color: isDark ? Colors.grey[850] : Colors.white,
-          borderRadius: BorderRadius.circular(borderRadius),
-        ),
+    final scheme = Theme.of(context).colorScheme;
+    final foreground = scheme.onSurface;
+    final background = scheme.surface;
+    return Container(
+      height: height,
+      width: width,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: foreground, width: 2),
       ),
     );
   }
@@ -83,7 +80,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
 
     return GestureDetector(
       onTapDown: widget.onTap != null ? (_) => _controller.reverse() : null,
@@ -95,29 +92,14 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
         child: Container(
           margin: widget.margin,
           decoration: BoxDecoration(
-            color:
-                widget.color ??
-                (isDark ? Theme.of(context).colorScheme.surface : Colors.white),
+            color: widget.color ?? scheme.surface,
             borderRadius: BorderRadius.circular(16),
             border: widget.showBorder
                 ? Border.all(
-                    color:
-                        widget.borderColor ??
-                        Theme.of(context).colorScheme.outlineVariant.withValues(
-                          alpha: isDark ? 0.7 : 0.8,
-                        ),
+                    color: widget.borderColor ?? scheme.outlineVariant,
                     width: 1,
                   )
                 : null,
-            boxShadow: (widget.showShadow && !isDark)
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : [],
           ),
           clipBehavior: Clip.antiAlias,
           // A Material ancestor here (rather than relying on whatever
@@ -152,28 +134,25 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: isDark ? 0.15 : 0.08),
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withValues(alpha: isDark ? 0.3 : 0.2),
-          width: 1,
-        ),
+        border: Border.all(color: scheme.outline, width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 12, color: color),
+            Icon(icon, size: 12, color: scheme.onSurface),
             const SizedBox(width: 4),
           ],
           Text(
             label.toUpperCase(),
             style: TextStyle(
-              color: isDark ? Color.lerp(color, Colors.white, 0.4) : color,
+              color: scheme.onSurface,
               fontSize: 10,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.5,
@@ -203,20 +182,20 @@ class AlertBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: isDark ? 0.14 : 0.08),
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: color, width: 4)),
+        border: Border.all(color: scheme.outline, width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 20),
+            Icon(icon, color: scheme.onSurface, size: 20),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -225,7 +204,7 @@ class AlertBanner extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      color: color,
+                      color: scheme.onSurface,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
@@ -233,19 +212,14 @@ class AlertBanner extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     message,
-                    style: TextStyle(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.85),
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: scheme.onSurface, fontSize: 13),
                   ),
                 ],
               ),
             ),
             if (onDismiss != null)
               IconButton(
-                icon: Icon(Icons.close, color: color, size: 18),
+                icon: Icon(Icons.close, color: scheme.onSurface, size: 18),
                 onPressed: onDismiss,
                 visualDensity: VisualDensity.compact,
               ),
@@ -396,11 +370,14 @@ class OfflineIndicator extends StatelessWidget {
     if (!isOffline) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
-      color: Colors.grey[800],
+      color: Theme.of(context).colorScheme.inverseSurface,
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
       child: Text(
         'Offline — showing data from ${lastSynced.hour}:${lastSynced.minute.toString().padLeft(2, '0')}',
-        style: const TextStyle(color: Colors.white, fontSize: 12),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onInverseSurface,
+          fontSize: 12,
+        ),
         textAlign: TextAlign.center,
       ),
     );
@@ -1292,11 +1269,17 @@ class LabeledProgressRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
               ),
               Text(
                 pctText,
-                style: TextStyle(fontWeight: FontWeight.w800, color: activeColor),
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: activeColor,
+                ),
               ),
             ],
           ),
@@ -1548,7 +1531,9 @@ class SegmentedTabControl extends StatelessWidget {
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
-                    color: i == selectedIndex ? colors.primary : Colors.transparent,
+                    color: i == selectedIndex
+                        ? colors.primary
+                        : Colors.transparent,
                     borderRadius: BorderRadius.circular(9),
                   ),
                   alignment: Alignment.center,
@@ -1684,7 +1669,9 @@ class ThemeSwitchTile extends StatelessWidget {
       title: Text(
         label,
         style: TextStyle(
-          color: isSelected ? colors.onPrimaryContainer : AppColors.textPrimary(context),
+          color: isSelected
+              ? colors.onPrimaryContainer
+              : AppColors.textPrimary(context),
           fontWeight: FontWeight.w600,
         ),
       ),

@@ -5,7 +5,10 @@ import 'package:school_pulse/features/school_calendar/domain/entities/calendar_e
 import 'package:school_pulse/features/school_calendar/domain/entities/calendar_event_type.dart';
 import 'package:school_pulse/features/school_calendar/presentation/widgets/month_calendar_grid.dart';
 
-CalendarEvent _event(DateTime day, {CalendarEventType type = CalendarEventType.event}) {
+CalendarEvent _event(
+  DateTime day, {
+  CalendarEventType type = CalendarEventType.event,
+}) {
   return CalendarEvent(
     id: '1',
     schoolId: 'school-1',
@@ -45,9 +48,7 @@ void main() {
     expect(find.text('1'), findsOneWidget);
   });
 
-  testWidgets('day tap with event triggers onDayTap callback', (
-    tester,
-  ) async {
+  testWidgets('day tap with event triggers onDayTap callback', (tester) async {
     DateTime? tapped;
     final events = [_event(DateTime(2026, 8, 10))];
     await tester.pumpWidget(

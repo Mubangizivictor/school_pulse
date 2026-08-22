@@ -40,7 +40,12 @@ class _FinanceAnalyticsScreenState extends State<FinanceAnalyticsScreen> {
           final semantic = Theme.of(context).extension<SemanticColors>()!;
 
           return ListView(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.l, AppSpacing.xl, AppSpacing.x3l),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.l,
+              AppSpacing.xl,
+              AppSpacing.x3l,
+            ),
             children: [
               SegmentedTabControl(
                 labels: const ['Revenue', 'Expenses', 'Budget'],

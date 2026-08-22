@@ -1,33 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/theme/app_spacing.dart';
-import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import '../../../domain/entities/structure_entities.dart';
 import '../../../domain/entities/timetable.dart';
 import '../../bloc/structure_bloc.dart';
-import '../../bloc/structure_state.dart';
 import '../../bloc/timetable_bloc.dart';
 import '../../bloc/timetable_event.dart';
 import '../../bloc/timetable_state.dart';
-import '../../widgets/structure_empty_hint.dart';
 import '../../widgets/structure_ui_kit.dart';
 import 'create_timetable_flow/create_timetable_screen.dart';
 
-/// Structure -> Timetable -> Class Timetables: one card per class/stream
-/// timetable, the entry point for the create wizard and the builder.
+/// Structure -> Timetable -> Class Timetables: one card per class, showing
+/// whether a timetable already exists for it, and the entry point for the
+/// create wizard and the builder.
 class TimetablesListScreen extends StatefulWidget {
-  const TimetablesListScreen({super.key});
+  const TimetablesListScreen({super.key, this.showAppBar = true});
+
+  final bool showAppBar;
 
   @override
   State<TimetablesListScreen> createState() => _TimetablesListScreenState();
 }
 
 class _TimetablesListScreenState extends State<TimetablesListScreen> {
-  String _search = '';
-  String _filter = 'All';
-
   @override
   void initState() {
     super.initState();
@@ -38,269 +36,261 @@ class _TimetablesListScreenState extends State<TimetablesListScreen> {
     );
   }
 
+  void _onCreate(BuildContext context, {String? classId}) {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => CreateTimetableScreen(initialClassId: classId),
+          ),
+        )
+        .then((createdId) {
+          if (createdId is String && context.mounted) {
+            context.push('/staff/admin/structure/timetables/$createdId');
+          }
+        });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: const AdminAppBar(title: 'Timetables'),
+      appBar: widget.showAppBar
+          ? AppBar(title: const Text('Class timetables'))
+          : null,
+      backgroundColor: widget.showAppBar ? null : Colors.transparent,
       body: BlocBuilder<TimetableBloc, TimetableState>(
         builder: (context, state) {
           if (state.isLoadingList && state.timetables.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
+          final scheme = Theme.of(context).colorScheme;
           final structureState = context.watch<StructureBloc>().state;
-          final filtered = _applyFilters(state.timetables, structureState);
+          final activeClasses = structureState.classes
+              .where((c) => c.isActive)
+              .toList();
 
-          return ListView(
-            padding: EdgeInsets.all(AppSpacing.xl),
-            children: [
-              Text(
-                'Manage class timetables, periods and school schedule settings.',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.l),
-              _SummaryRow(
-                classesCount: structureState.classes.length,
-                timetablesCount: state.timetables.length,
-                activeCount: state.timetables
-                    .where((t) => t.status == TimetableStatus.active)
-                    .length,
-              ),
-              const SizedBox(height: AppSpacing.l),
-              StructureSearchBar(
-                hint: 'Search classes, streams...',
-                onChanged: (v) => setState(() => _search = v),
-              ),
-              const SizedBox(height: AppSpacing.m),
-              StructureFilterChips(
-                filters: const ['All', 'Active', 'Draft', 'Archived'],
-                selectedFilter: _filter,
-                onSelected: (f) => setState(() => _filter = f),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              StructureSectionHeader(
-                title: 'Timetables',
-                actionLabel: 'Create Timetable',
-                onAction: () => Navigator.of(context)
-                    .push(
-                      MaterialPageRoute(
-                        builder: (_) => const CreateTimetableScreen(),
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Create a timetable after periods, rooms and teacher assignments are ready.',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                                height: 1.4,
+                              ),
+                        ),
                       ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: activeClasses.isEmpty
+                            ? null
+                            : () => _onCreate(context),
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Create timetable'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  if (activeClasses.isEmpty)
+                    _TimetablesEmptyState(
+                      message:
+                          'Add at least one class before creating a timetable.',
                     )
-                    .then((createdId) {
-                      if (createdId is String && context.mounted) {
-                        context.push(
-                          '/staff/admin/structure/timetables/$createdId',
-                        );
-                      }
-                    }),
+                  else
+                    Expanded(
+                      child: ListView(
+                        padding: EdgeInsets.zero,
+                        children: [
+                          for (final schoolClass in activeClasses)
+                            Builder(
+                              builder: (context) {
+                                final timetable = state.timetables
+                                    .where((t) => t.classId == schoolClass.id)
+                                    .firstOrNull;
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: _ClassTimetableCard(
+                                    schoolClass: schoolClass,
+                                    timetable: timetable,
+                                    onTap: timetable == null
+                                        ? () => _onCreate(
+                                            context,
+                                            classId: schoolClass.id,
+                                          )
+                                        : () => context.push(
+                                            '/staff/admin/structure/timetables/${timetable.id}',
+                                          ),
+                                    onCreate: () => _onCreate(
+                                      context,
+                                      classId: schoolClass.id,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          if (state.timetables.isEmpty)
+                            _TimetablesEmptyState(
+                              message:
+                                  'Create the first weekly timetable for ${activeClasses.first.name}.',
+                            ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
-              if (filtered.isEmpty)
-                const StructureEmptyHint(
-                  'No timetable created for this class yet.',
-                ),
-              ...filtered.map(
-                (t) => _TimetableCard(
-                  timetable: t,
-                  onTap: () =>
-                      context.push('/staff/admin/structure/timetables/${t.id}'),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.x4l),
-            ],
+            ),
           );
         },
       ),
     );
   }
-
-  List<Timetable> _applyFilters(
-    List<Timetable> timetables,
-    StructureState structureState,
-  ) {
-    return timetables.where((t) {
-      if (_filter != 'All' && t.status.label != _filter) return false;
-      if (_search.isEmpty) return true;
-      final className = structureState.classes
-          .where((c) => c.id == t.classId)
-          .map((c) => c.name)
-          .firstOrNull;
-      final streamName = structureState.streams
-          .where((s) => s.id == t.streamId)
-          .map((s) => s.name)
-          .firstOrNull;
-      final haystack = [
-        t.name,
-        className ?? '',
-        streamName ?? '',
-      ].join(' ').toLowerCase();
-      return haystack.contains(_search.toLowerCase());
-    }).toList();
-  }
 }
 
-class _SummaryRow extends StatelessWidget {
-  final int classesCount;
-  final int timetablesCount;
-  final int activeCount;
+class _ClassTimetableCard extends StatelessWidget {
+  final SchoolClass schoolClass;
+  final Timetable? timetable;
+  final VoidCallback onTap;
+  final VoidCallback onCreate;
 
-  const _SummaryRow({
-    required this.classesCount,
-    required this.timetablesCount,
-    required this.activeCount,
+  const _ClassTimetableCard({
+    required this.schoolClass,
+    required this.timetable,
+    required this.onTap,
+    required this.onCreate,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _SummaryTile(label: 'Classes', value: '$classesCount'),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _SummaryTile(label: 'Timetables', value: '$timetablesCount'),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _SummaryTile(label: 'Active', value: '$activeCount'),
-        ),
-      ],
-    );
-  }
-}
-
-class _SummaryTile extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _SummaryTile({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outline.withValues(alpha: .18)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TimetableCard extends StatelessWidget {
-  final Timetable timetable;
-  final VoidCallback onTap;
-
-  const _TimetableCard({required this.timetable, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final structureState = context.watch<StructureBloc>().state;
-    final className = structureState.classes
-        .where((c) => c.id == timetable.classId)
-        .map((c) => c.name)
-        .firstOrNull;
-    final streamName = structureState.streams
-        .where((s) => s.id == timetable.streamId)
-        .map((s) => s.name)
-        .firstOrNull;
-    final label = [
-      className ?? timetable.name,
-      if (streamName != null) streamName,
-    ].join(' - ');
-    final academicYear = structureState.academicYears
-        .where((y) => y.id == timetable.academicYearId)
-        .map((y) => y.name)
-        .firstOrNull;
+    final streamName = timetable == null
+        ? null
+        : structureState.streams
+              .where((s) => s.id == timetable!.streamId)
+              .map((s) => s.name)
+              .firstOrNull;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 9),
-      child: Material(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Theme.of(
-                  context,
-                ).colorScheme.outline.withValues(alpha: .18),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: .10),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const Icon(
-                    Icons.calendar_view_week_outlined,
-                    color: Colors.blue,
-                    size: 19,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        academicYear ?? '',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                StructureStatusBadge(
-                  label: timetable.status.label,
-                  isActive: timetable.status == TimetableStatus.active,
-                ),
-                const SizedBox(width: 6),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ],
-            ),
+    return AppCard(
+      child: ListTile(
+        onTap: onTap,
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: scheme.primary,
+            borderRadius: BorderRadius.circular(10),
           ),
+          child: const Icon(
+            Icons.event_seat_outlined,
+            color: Colors.white,
+            size: 22,
+          ),
+        ),
+        title: Text(
+          schoolClass.name,
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              timetable == null
+                  ? 'No timetable created'
+                  : [
+                      if (streamName != null) streamName,
+                      timetable!.status.label,
+                    ].join(' • '),
+            ),
+            const SizedBox(height: 8),
+            if (timetable == null)
+              OutlinedButton.icon(
+                onPressed: onCreate,
+                icon: Icon(
+                  Icons.check_circle_outline,
+                  size: 16,
+                  color: scheme.primary,
+                ),
+                label: const Text('Ready to schedule'),
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                ),
+              )
+            else
+              StructureStatusBadge(
+                label: timetable!.status.label,
+                isActive: timetable!.status == TimetableStatus.active,
+              ),
+          ],
+        ),
+        trailing: timetable == null
+            ? PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (_) => onCreate(),
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: 'create',
+                    child: Text('Create timetable'),
+                  ),
+                ],
+              )
+            : const Icon(Icons.chevron_right_rounded),
+      ),
+    );
+  }
+}
+
+class _TimetablesEmptyState extends StatelessWidget {
+  final String message;
+
+  const _TimetablesEmptyState({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AppCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+        child: Column(
+          children: [
+            Icon(
+              Icons.calendar_today_outlined,
+              size: 56,
+              color: scheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No timetable yet',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+extension _FirstOrNullExtension<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }

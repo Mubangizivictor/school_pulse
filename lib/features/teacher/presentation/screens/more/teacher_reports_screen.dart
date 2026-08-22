@@ -77,10 +77,15 @@ class _TeacherReportsScreenState extends State<TeacherReportsScreen> {
                 ListTile(
                   title: Text(
                     'All statuses',
-                    style: TextStyle(color: AppColors.textPrimary(sheetContext)),
+                    style: TextStyle(
+                      color: AppColors.textPrimary(sheetContext),
+                    ),
                   ),
                   trailing: _statusFilter == null
-                      ? Icon(Icons.check, color: AppColors.primary(sheetContext))
+                      ? Icon(
+                          Icons.check,
+                          color: AppColors.primary(sheetContext),
+                        )
                       : null,
                   onTap: () => Navigator.pop(sheetContext, null),
                 ),
@@ -303,8 +308,7 @@ class _TeacherReportsScreenState extends State<TeacherReportsScreen> {
             ),
           ),
           TextButton(
-            onPressed: () =>
-                setState(() => _showAllReports = !_showAllReports),
+            onPressed: () => setState(() => _showAllReports = !_showAllReports),
             child: Text(_showAllReports ? 'Show Less' : 'View All'),
           ),
         ],
@@ -427,9 +431,7 @@ class _TeacherReportsScreenState extends State<TeacherReportsScreen> {
 
         // The reference shows four rows without scrolling; the full list
         // remains reachable via "View All".
-        final visible = _showAllReports
-            ? filtered
-            : filtered.take(4).toList();
+        final visible = _showAllReports ? filtered : filtered.take(4).toList();
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -457,10 +459,7 @@ class _TeacherReportsScreenState extends State<TeacherReportsScreen> {
         ),
         child: Row(
           children: [
-            Icon(
-              Icons.info_outline,
-              color: AppColors.information(context),
-            ),
+            Icon(Icons.info_outline, color: AppColors.information(context)),
             const SizedBox(width: AppSpacing.l),
             Expanded(
               child: Column(
@@ -555,7 +554,8 @@ class _TeacherReportsScreenState extends State<TeacherReportsScreen> {
                         color: AppColors.primary(sheetContext),
                       ),
                       title: Text(email),
-                      onTap: () => launchUrl(Uri(scheme: 'mailto', path: email)),
+                      onTap: () =>
+                          launchUrl(Uri(scheme: 'mailto', path: email)),
                     ),
                   if (phone != null && phone.isNotEmpty)
                     ListTile(

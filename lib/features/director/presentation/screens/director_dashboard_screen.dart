@@ -122,7 +122,8 @@ class DirectorDashboardScreen extends StatelessWidget {
             SectionHeader(
               title: 'School Performance Index',
               actionLabel: 'View Details',
-              onActionPressed: () => context.push('/staff/director/performance'),
+              onActionPressed: () =>
+                  context.push('/staff/director/performance'),
             ),
             const SizedBox(height: AppSpacing.m),
             AppCard(
@@ -144,29 +145,44 @@ class DirectorDashboardScreen extends StatelessWidget {
                       children: [
                         LabeledProgressRow(
                           label: 'Academic',
-                          percent: (stats.overallSchoolAverage / 100).clamp(0, 1),
-                          trailingText: '${stats.overallSchoolAverage.round()}%',
+                          percent: (stats.overallSchoolAverage / 100).clamp(
+                            0,
+                            1,
+                          ),
+                          trailingText:
+                              '${stats.overallSchoolAverage.round()}%',
                           color: Colors.blue,
                           padding: const EdgeInsets.symmetric(vertical: 4),
                         ),
                         LabeledProgressRow(
                           label: 'Financial',
-                          percent: (stats.collectionPercentage / 100).clamp(0, 1),
-                          trailingText: '${stats.collectionPercentage.round()}%',
+                          percent: (stats.collectionPercentage / 100).clamp(
+                            0,
+                            1,
+                          ),
+                          trailingText:
+                              '${stats.collectionPercentage.round()}%',
                           color: Colors.green,
                           padding: const EdgeInsets.symmetric(vertical: 4),
                         ),
                         LabeledProgressRow(
                           label: 'Operational',
-                          percent: (stats.staffAttendanceRate / 100).clamp(0, 1),
+                          percent: (stats.staffAttendanceRate / 100).clamp(
+                            0,
+                            1,
+                          ),
                           trailingText: '${stats.staffAttendanceRate.round()}%',
                           color: Colors.orange,
                           padding: const EdgeInsets.symmetric(vertical: 4),
                         ),
                         LabeledProgressRow(
                           label: 'Engagement',
-                          percent: (stats.parentPortalUsageRate / 100).clamp(0, 1),
-                          trailingText: '${stats.parentPortalUsageRate.round()}%',
+                          percent: (stats.parentPortalUsageRate / 100).clamp(
+                            0,
+                            1,
+                          ),
+                          trailingText:
+                              '${stats.parentPortalUsageRate.round()}%',
                           color: Colors.purple,
                           padding: const EdgeInsets.symmetric(vertical: 4),
                         ),

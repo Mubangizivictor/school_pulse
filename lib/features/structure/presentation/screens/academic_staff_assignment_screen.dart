@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:uuid/uuid.dart';
 import '../../data/repositories/curriculum_assignment_repository_impl.dart';
@@ -210,8 +211,10 @@ class _AcademicStaffAssignmentScreenState
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setSheetState) {
+          final scheme = Theme.of(context).colorScheme;
           final classes = structure.classes
               .where((item) => item.isActive)
               .toList(growable: false);
@@ -258,37 +261,48 @@ class _AcademicStaffAssignmentScreenState
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          existing == null
+                              ? 'Assign responsibility'
+                              : 'Edit responsibility',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        style: IconButton.styleFrom(
+                          backgroundColor: scheme.surfaceContainerHighest,
+                          shape: const CircleBorder(),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
                   Text(
-                    existing == null
-                        ? 'Assign Academic Responsibility'
-                        : 'Edit Academic Responsibility',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
+                    'One staff account can hold multiple responsibilities.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'The same staff account can receive several responsibilities. Subject Teacher, Class Teacher and HOD are assignments, not separate logins.',
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<TeachingResponsibilityType>(
-                    key: ValueKey('responsibility-${responsibility.name}'),
-                    initialValue: responsibility,
-                    decoration: const InputDecoration(
-                      labelText: 'Responsibility *',
-                    ),
-                    items: TeachingResponsibilityType.values
+                  const SizedBox(height: 18),
+                  SegmentedButton<TeachingResponsibilityType>(
+                    segments: TeachingResponsibilityType.values
                         .map(
-                          (item) => DropdownMenuItem(
+                          (item) => ButtonSegment(
                             value: item,
-                            child: Text(_responsibilityLabel(item)),
+                            label: Text(_responsibilityLabel(item)),
                           ),
                         )
                         .toList(),
-                    onChanged: (value) {
-                      if (value == null) return;
+                    selected: {responsibility},
+                    onSelectionChanged: (selection) {
                       setSheetState(() {
-                        responsibility = value;
+                        responsibility = selection.first;
                         departmentId = '';
                         classId = '';
                         streamId = '';
@@ -296,11 +310,13 @@ class _AcademicStaffAssignmentScreenState
                       });
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 18),
                   DropdownButtonFormField<String>(
                     key: ValueKey('staff-$staffId'),
                     initialValue: staffId,
-                    decoration: const InputDecoration(labelText: 'Staff *'),
+                    decoration: const InputDecoration(
+                      labelText: 'Staff member',
+                    ),
                     items: staff
                         .map(
                           (item) => DropdownMenuItem(
@@ -313,12 +329,12 @@ class _AcademicStaffAssignmentScreenState
                   ),
                   if (responsibility ==
                       TeachingResponsibilityType.headOfDepartment) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 18),
                     DropdownButtonFormField<String>(
                       key: ValueKey('department-$departmentId'),
                       initialValue: departmentId.isEmpty ? null : departmentId,
                       decoration: const InputDecoration(
-                        labelText: 'Department *',
+                        labelText: 'Department',
                       ),
                       items: departments
                           .map(
@@ -331,18 +347,20 @@ class _AcademicStaffAssignmentScreenState
                       onChanged: (value) => departmentId = value ?? '',
                     ),
                     if (departments.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
                         child: Text(
                           'No active departments exist. Configure departments first or do not assign an HOD.',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
                         ),
                       ),
                   ] else ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 18),
                     DropdownButtonFormField<String>(
                       key: ValueKey('class-$classId'),
                       initialValue: classId.isEmpty ? null : classId,
-                      decoration: const InputDecoration(labelText: 'Class *'),
+                      decoration: const InputDecoration(labelText: 'Class'),
                       items: classes
                           .map(
                             (item) => DropdownMenuItem(
@@ -360,7 +378,7 @@ class _AcademicStaffAssignmentScreenState
                       },
                     ),
                     if (streams.isNotEmpty) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 18),
                       DropdownButtonFormField<String>(
                         key: ValueKey('stream-$classId-$streamId'),
                         initialValue: streamId,
@@ -385,13 +403,11 @@ class _AcademicStaffAssignmentScreenState
                     ],
                     if (responsibility ==
                         TeachingResponsibilityType.subjectTeacher) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 18),
                       DropdownButtonFormField<String>(
                         key: ValueKey('subject-$classId-$streamId-$subjectId'),
                         initialValue: subjectId.isEmpty ? null : subjectId,
-                        decoration: const InputDecoration(
-                          labelText: 'Subject *',
-                        ),
+                        decoration: const InputDecoration(labelText: 'Subject'),
                         items: subjects
                             .map(
                               (item) => DropdownMenuItem(
@@ -403,10 +419,12 @@ class _AcademicStaffAssignmentScreenState
                         onChanged: (value) => subjectId = value ?? '',
                       ),
                       if (classId.isNotEmpty && subjects.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 8),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
                           child: Text(
                             'No curriculum subject is allocated to this class/stream yet. Complete Curriculum / Subject Allocation first.',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
                           ),
                         ),
                     ],
@@ -445,7 +463,7 @@ class _AcademicStaffAssignmentScreenState
                           }
                         }
                       },
-                      child: const Text('Save Assignment'),
+                      child: const Text('Save assignment'),
                     ),
                   ),
                 ],
@@ -477,6 +495,7 @@ class _AssignmentList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final staffById = {for (final item in staff) item.id: item};
     final classesById = {for (final item in structure.classes) item.id: item};
     final streamsById = {for (final item in structure.streams) item.id: item};
@@ -485,98 +504,220 @@ class _AssignmentList extends StatelessWidget {
       for (final item in structure.departments) item.id: item,
     };
 
-    return Stack(
-      children: [
-        Column(
+    String groupLabel(TeachingResponsibilityType type) => switch (type) {
+      TeachingResponsibilityType.subjectTeacher => 'TEACHING STAFF',
+      TeachingResponsibilityType.classTeacher => 'CLASS TEACHERS',
+      TeachingResponsibilityType.headOfDepartment => 'HEADS OF DEPARTMENT',
+    };
+
+    final byGroup = <String, List<TeachingAssignment>>{};
+    for (final item in assignments) {
+      byGroup
+          .putIfAbsent(groupLabel(item.responsibilityType), () => [])
+          .add(item);
+    }
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                'Assign real staff only after the academic structure exists. A person can be a Subject Teacher for many classes while also being a Class Teacher, HOD, Patron, Bursar or another system role.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  height: 1.4,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    assignments.isEmpty
+                        ? 'Assign teaching and leadership responsibilities to existing staff.'
+                        : 'Teaching and leadership responsibilities for existing staff.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: onAdd,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Assign responsibility'),
+                ),
+              ],
             ),
-            Expanded(
-              child: assignments.isEmpty
-                  ? const _Message(
-                      title: 'No academic responsibilities assigned',
-                      body:
-                          'Assign Subject Teachers, Class Teachers and Heads of Department without creating duplicate staff accounts.',
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                      itemCount: assignments.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final assignment = assignments[index];
-                        return Card(
-                          child: ListTile(
-                            title: Text(
-                              staffById[assignment.staffId]?.name ??
-                                  'Missing staff account',
-                              style: const TextStyle(
+            const SizedBox(height: 20),
+            if (assignments.isEmpty)
+              _AssignmentsEmptyState(onAdd: onAdd)
+            else
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    for (final entry in byGroup.entries) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          entry.key,
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: scheme.onSurfaceVariant,
                                 fontWeight: FontWeight.w700,
+                                letterSpacing: 0.6,
+                              ),
+                        ),
+                      ),
+                      for (final assignment in entry.value)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: AppCard(
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: scheme.primary,
+                                child: Text(
+                                  _initials(
+                                    staffById[assignment.staffId]?.name ?? '?',
+                                  ),
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                              title: Text(
+                                staffById[assignment.staffId]?.name ??
+                                    'Missing staff account',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _responsibilityLabel(
+                                      assignment.responsibilityType,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    children: [
+                                      if (assignment.departmentId.isNotEmpty)
+                                        _tagChip(
+                                          context,
+                                          departmentsById[assignment
+                                                      .departmentId]
+                                                  ?.name ??
+                                              'Missing department',
+                                        ),
+                                      if (assignment.classId.isNotEmpty)
+                                        _tagChip(
+                                          context,
+                                          classesById[assignment.classId]
+                                                  ?.name ??
+                                              'Missing class',
+                                        ),
+                                      if (assignment.streamId.isNotEmpty)
+                                        _tagChip(
+                                          context,
+                                          streamsById[assignment.streamId]
+                                                  ?.name ??
+                                              'Missing stream',
+                                        ),
+                                      if (assignment.subjectId.isNotEmpty)
+                                        _tagChip(
+                                          context,
+                                          subjectsById[assignment.subjectId]
+                                                  ?.name ??
+                                              'Missing subject',
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              trailing: PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert),
+                                onSelected: (action) {
+                                  if (action == 'edit') {
+                                    onEdit(assignment);
+                                  } else {
+                                    onEnd(assignment);
+                                  }
+                                },
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                    value: 'edit',
+                                    child: Text('Edit'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'end',
+                                    child: Text('End assignment'),
+                                  ),
+                                ],
                               ),
                             ),
-                            subtitle: Text(
-                              [
-                                _responsibilityLabel(
-                                  assignment.responsibilityType,
-                                ),
-                                if (assignment.departmentId.isNotEmpty)
-                                  departmentsById[assignment.departmentId]
-                                          ?.name ??
-                                      'Missing department',
-                                if (assignment.classId.isNotEmpty)
-                                  classesById[assignment.classId]?.name ??
-                                      'Missing class',
-                                if (assignment.streamId.isNotEmpty)
-                                  streamsById[assignment.streamId]?.name ??
-                                      'Missing stream',
-                                if (assignment.subjectId.isNotEmpty)
-                                  subjectsById[assignment.subjectId]?.name ??
-                                      'Missing subject',
-                              ].join(' • '),
-                            ),
-                            trailing: PopupMenuButton<String>(
-                              onSelected: (action) {
-                                if (action == 'edit') {
-                                  onEdit(assignment);
-                                } else {
-                                  onEnd(assignment);
-                                }
-                              },
-                              itemBuilder: (_) => const [
-                                PopupMenuItem(
-                                  value: 'edit',
-                                  child: Text('Edit'),
-                                ),
-                                PopupMenuItem(
-                                  value: 'end',
-                                  child: Text('End assignment'),
-                                ),
-                              ],
-                            ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      const SizedBox(height: 8),
+                    ],
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _tagChip(BuildContext context, String label) {
+    final scheme = Theme.of(context).colorScheme;
+    return Chip(
+      label: Text(label, style: TextStyle(color: scheme.onSecondaryContainer)),
+      visualDensity: VisualDensity.compact,
+      backgroundColor: scheme.secondaryContainer,
+      side: BorderSide.none,
+    );
+  }
+
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts.first.isEmpty) return '?';
+    final first = parts.first[0];
+    final last = parts.length > 1 ? parts.last[0] : '';
+    return (first + last).toUpperCase();
+  }
+}
+
+class _AssignmentsEmptyState extends StatelessWidget {
+  final VoidCallback onAdd;
+
+  const _AssignmentsEmptyState({required this.onAdd});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AppCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+        child: Column(
+          children: [
+            Icon(Icons.badge_outlined, size: 56, color: scheme.primary),
+            const SizedBox(height: 16),
+            Text(
+              'No assignments yet',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Assign a staff member to a class, subject or department.',
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
         ),
-        Positioned(
-          right: 16,
-          bottom: 16,
-          child: FloatingActionButton.extended(
-            onPressed: onAdd,
-            icon: const Icon(Icons.add),
-            label: const Text('Assign Responsibility'),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

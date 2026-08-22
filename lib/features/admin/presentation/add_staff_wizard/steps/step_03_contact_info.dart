@@ -19,7 +19,10 @@ String? _validatePhone(String? v, {required bool required}) {
   final value = v?.trim() ?? '';
   if (value.isEmpty) return required ? 'Required' : null;
   final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
-  if (digitsOnly.length < 7 || !_phoneDigitsPattern.hasMatch(value.replaceAll(RegExp(r'[\s()\-]'), ''))) {
+  if (digitsOnly.length < 7 ||
+      !_phoneDigitsPattern.hasMatch(
+        value.replaceAll(RegExp(r'[\s()\-]'), ''),
+      )) {
     return 'Enter a valid phone number';
   }
   return null;
@@ -115,7 +118,9 @@ class _Step03ContactInfoState extends State<Step03ContactInfo> {
             TextFormField(
               controller: _phone,
               keyboardType: TextInputType.phone,
-              inputFormatters: [FilteringTextInputFormatter.allow(_phoneCharPattern)],
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(_phoneCharPattern),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Phone Number *',
                 prefixIcon: Icon(Icons.phone_outlined),
@@ -126,7 +131,9 @@ class _Step03ContactInfoState extends State<Step03ContactInfo> {
             TextFormField(
               controller: _altPhone,
               keyboardType: TextInputType.phone,
-              inputFormatters: [FilteringTextInputFormatter.allow(_phoneCharPattern)],
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(_phoneCharPattern),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Alternative Phone',
                 prefixIcon: Icon(Icons.phone_outlined),
@@ -138,7 +145,9 @@ class _Step03ContactInfoState extends State<Step03ContactInfo> {
             const SizedBox(height: 14),
             TextFormField(
               controller: _nationality,
-              inputFormatters: [FilteringTextInputFormatter.allow(_nameCharPattern)],
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(_nameCharPattern),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Nationality',
                 prefixIcon: Icon(Icons.flag_outlined),
@@ -171,8 +180,7 @@ class _AddressAutocompleteField extends StatefulWidget {
       _AddressAutocompleteFieldState();
 }
 
-class _AddressAutocompleteFieldState
-    extends State<_AddressAutocompleteField> {
+class _AddressAutocompleteFieldState extends State<_AddressAutocompleteField> {
   final _service = NominatimAddressService();
   Timer? _debounce;
   List<AddressSuggestion> _suggestions = const [];

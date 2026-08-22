@@ -12,8 +12,7 @@ class IntegrationWebhooksScreen extends StatefulWidget {
       _IntegrationWebhooksScreenState();
 }
 
-class _IntegrationWebhooksScreenState
-    extends State<IntegrationWebhooksScreen> {
+class _IntegrationWebhooksScreenState extends State<IntegrationWebhooksScreen> {
   final _service = IntegrationCenterService();
   List<Map<String, dynamic>> _webhooks = const [];
   bool _loading = true;

@@ -86,8 +86,7 @@ class _DeanDashboardScreenState extends State<DeanDashboardScreen> {
                               : [
                                   StaffKpiData(
                                     title: 'Lessons Today',
-                                    valueText:
-                                        '${stats.lessonsConductedToday}',
+                                    valueText: '${stats.lessonsConductedToday}',
                                     subtitle:
                                         '${stats.lessonsConductedToday} completed',
                                     icon: Icons.menu_book_rounded,

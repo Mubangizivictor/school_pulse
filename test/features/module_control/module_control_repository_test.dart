@@ -33,58 +33,67 @@ void main() {
       );
     });
 
-    test('enabling an entitled module increments version and writes audit', () async {
-      await firestore
-          .collection('schools')
-          .doc('s1')
-          .collection('module_configuration')
-          .doc('attendance')
-          .set({'entitled': true, 'enabled': false, 'configurationVersion': 1});
-      await repository.setModuleEnabled(
-        schoolId: 's1',
-        moduleKey: 'attendance',
-        enabled: true,
-        actorId: 'admin1',
-        reason: 'term start',
-      );
-      final doc = await firestore
-          .collection('schools')
-          .doc('s1')
-          .collection('module_configuration')
-          .doc('attendance')
-          .get();
-      expect(doc.data()!['enabled'], true);
-      expect(doc.data()!['configurationVersion'], 2);
-      expect(doc.data()!['updatedBy'], 'admin1');
+    test(
+      'enabling an entitled module increments version and writes audit',
+      () async {
+        await firestore
+            .collection('schools')
+            .doc('s1')
+            .collection('module_configuration')
+            .doc('attendance')
+            .set({
+              'entitled': true,
+              'enabled': false,
+              'configurationVersion': 1,
+            });
+        await repository.setModuleEnabled(
+          schoolId: 's1',
+          moduleKey: 'attendance',
+          enabled: true,
+          actorId: 'admin1',
+          reason: 'term start',
+        );
+        final doc = await firestore
+            .collection('schools')
+            .doc('s1')
+            .collection('module_configuration')
+            .doc('attendance')
+            .get();
+        expect(doc.data()!['enabled'], true);
+        expect(doc.data()!['configurationVersion'], 2);
+        expect(doc.data()!['updatedBy'], 'admin1');
 
-      final audit = await firestore
-          .collection('schools')
-          .doc('s1')
-          .collection('module_policy_audit')
-          .get();
-      expect(audit.docs, hasLength(1));
-      expect(audit.docs.single.data()['action'], 'module_enabled');
-    });
+        final audit = await firestore
+            .collection('schools')
+            .doc('s1')
+            .collection('module_policy_audit')
+            .get();
+        expect(audit.docs, hasLength(1));
+        expect(audit.docs.single.data()['action'], 'module_enabled');
+      },
+    );
   });
 
   group('policy versioning', () {
-    InstitutionPolicy policy({int version = 0, PolicyStatus status = PolicyStatus.active}) =>
-        InstitutionPolicy(
-          id: 'p1',
-          institutionId: 's1',
-          name: 'Attendance Policy',
-          createdBy: 'admin1',
-          updatedBy: 'admin1',
-          changeReason: 'initial',
-          type: InstitutionPolicyType.attendance,
-          scope: const PolicyScope(),
-          configuration: const {'lateThresholdMinutes': 15},
-          status: status,
-          version: version,
-          effectiveFrom: DateTime(2026, 1, 1),
-          createdAt: DateTime(2026, 1, 1),
-          updatedAt: DateTime(2026, 1, 1),
-        );
+    InstitutionPolicy policy({
+      int version = 0,
+      PolicyStatus status = PolicyStatus.active,
+    }) => InstitutionPolicy(
+      id: 'p1',
+      institutionId: 's1',
+      name: 'Attendance Policy',
+      createdBy: 'admin1',
+      updatedBy: 'admin1',
+      changeReason: 'initial',
+      type: InstitutionPolicyType.attendance,
+      scope: const PolicyScope(),
+      configuration: const {'lateThresholdMinutes': 15},
+      status: status,
+      version: version,
+      effectiveFrom: DateTime(2026, 1, 1),
+      createdAt: DateTime(2026, 1, 1),
+      updatedAt: DateTime(2026, 1, 1),
+    );
 
     test('first save creates version 1 and an audit entry', () async {
       await repository.savePolicy(policy());
@@ -111,25 +120,31 @@ void main() {
       expect(audit.docs, hasLength(1));
     });
 
-    test('subsequent saves append a new version without deleting history', () async {
-      await repository.savePolicy(policy());
-      await repository.savePolicy(policy(version: 1), previousVersion: policy(version: 1));
-      final versions = await firestore
-          .collection('schools')
-          .doc('s1')
-          .collection('institution_policies')
-          .doc('p1')
-          .collection('versions')
-          .get();
-      expect(versions.docs, hasLength(2));
-      final doc = await firestore
-          .collection('schools')
-          .doc('s1')
-          .collection('institution_policies')
-          .doc('p1')
-          .get();
-      expect(doc.data()!['version'], 2);
-    });
+    test(
+      'subsequent saves append a new version without deleting history',
+      () async {
+        await repository.savePolicy(policy());
+        await repository.savePolicy(
+          policy(version: 1),
+          previousVersion: policy(version: 1),
+        );
+        final versions = await firestore
+            .collection('schools')
+            .doc('s1')
+            .collection('institution_policies')
+            .doc('p1')
+            .collection('versions')
+            .get();
+        expect(versions.docs, hasLength(2));
+        final doc = await firestore
+            .collection('schools')
+            .doc('s1')
+            .collection('institution_policies')
+            .doc('p1')
+            .get();
+        expect(doc.data()!['version'], 2);
+      },
+    );
   });
 
   group('watchPolicies / watchModules', () {

@@ -48,7 +48,9 @@ class _NurseMoreScreenState extends State<NurseMoreScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
-    final schoolId = authState is AuthAuthenticated ? authState.user.schoolId : '';
+    final schoolId = authState is AuthAuthenticated
+        ? authState.user.schoolId
+        : '';
     final uid = authState is AuthAuthenticated ? authState.user.id : '';
 
     return Scaffold(
@@ -57,7 +59,11 @@ class _NurseMoreScreenState extends State<NurseMoreScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
           children: [
-            _Header(name: authState is AuthAuthenticated ? authState.user.name : 'Nurse'),
+            _Header(
+              name: authState is AuthAuthenticated
+                  ? authState.user.name
+                  : 'Nurse',
+            ),
             const SizedBox(height: 20),
             const _SectionHeader('Care services'),
             _MoreSection(
@@ -173,7 +179,10 @@ class _NurseMoreScreenState extends State<NurseMoreScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Logout', style: TextStyle(color: Color(0xFFEF4444))),
+            child: const Text(
+              'Logout',
+              style: TextStyle(color: Color(0xFFEF4444)),
+            ),
           ),
         ],
       ),
@@ -209,7 +218,10 @@ class _Header extends StatelessWidget {
               const SizedBox(height: 4),
               const Text(
                 'Clinic services and administration',
-                style: TextStyle(color: _NurseMoreScreenState._muted, fontSize: 13),
+                style: TextStyle(
+                  color: _NurseMoreScreenState._muted,
+                  fontSize: 13,
+                ),
               ),
             ],
           ),
@@ -217,7 +229,11 @@ class _Header extends StatelessWidget {
         const CircleAvatar(
           radius: 26,
           backgroundColor: Color(0xFF1E293B),
-          child: Icon(Icons.local_hospital_rounded, color: Color(0xFFFF6A00), size: 26),
+          child: Icon(
+            Icons.local_hospital_rounded,
+            color: Color(0xFFFF6A00),
+            size: 26,
+          ),
         ),
       ],
     );
@@ -279,7 +295,12 @@ class _MoreSection extends StatelessWidget {
           for (var i = 0; i < rows.length; i++) ...[
             _MoreRow(data: rows[i]),
             if (i != rows.length - 1)
-              const Divider(height: 1, color: Colors.white10, indent: 16, endIndent: 16),
+              const Divider(
+                height: 1,
+                color: Colors.white10,
+                indent: 16,
+                endIndent: 16,
+              ),
           ],
         ],
       ),
@@ -305,18 +326,27 @@ class _MoreRow extends StatelessWidget {
       ),
       title: Text(
         data.title,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       subtitle: Text(
         data.subtitle,
-        style: const TextStyle(color: _NurseMoreScreenState._muted, fontSize: 12.5),
+        style: const TextStyle(
+          color: _NurseMoreScreenState._muted,
+          fontSize: 12.5,
+        ),
       ),
       trailing: data.badge != null
           ? Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFF6A00),
                     borderRadius: BorderRadius.circular(12),

@@ -47,11 +47,10 @@ class ModuleControlRepository {
           .collection('schools')
           .doc(schoolId)
           .collection('institution_policies');
-  CollectionReference<Map<String, dynamic>> _audit(String schoolId) =>
-      firestore
-          .collection('schools')
-          .doc(schoolId)
-          .collection('module_policy_audit');
+  CollectionReference<Map<String, dynamic>> _audit(String schoolId) => firestore
+      .collection('schools')
+      .doc(schoolId)
+      .collection('module_policy_audit');
   Stream<Map<String, ModuleConfiguration>> watchModules(String schoolId) =>
       _modules(schoolId).snapshots().map(
         (snap) => {
@@ -145,11 +144,11 @@ class ModuleControlRepository {
   Stream<List<Map<String, dynamic>>> watchAudit(
     String schoolId, {
     int limit = 100,
-  }) => _audit(
-    schoolId,
-  ).orderBy('timestamp', descending: true).limit(limit).snapshots().map(
-    (snap) => snap.docs.map((d) => {'id': d.id, ...d.data()}).toList(),
-  );
+  }) => _audit(schoolId)
+      .orderBy('timestamp', descending: true)
+      .limit(limit)
+      .snapshots()
+      .map((snap) => snap.docs.map((d) => {'id': d.id, ...d.data()}).toList());
 
   Stream<List<InstitutionPolicy>> watchPolicyVersions(
     String schoolId,
@@ -159,7 +158,9 @@ class ModuleControlRepository {
       .collection('versions')
       .orderBy('version', descending: true)
       .snapshots()
-      .map((snap) => snap.docs.map((d) => _policy(policyId, d.data())).toList());
+      .map(
+        (snap) => snap.docs.map((d) => _policy(policyId, d.data())).toList(),
+      );
 
   InstitutionPolicy _policy(String id, Map<String, dynamic> d) =>
       InstitutionPolicy(

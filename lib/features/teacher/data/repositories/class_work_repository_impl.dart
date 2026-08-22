@@ -172,7 +172,10 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
         academicYearId: homework.academicYearId,
       );
       if (fresh.isLeft()) {
-        return fresh.fold(Left.new, (_) => const Left(PermissionDeniedFailure()));
+        return fresh.fold(
+          Left.new,
+          (_) => const Left(PermissionDeniedFailure()),
+        );
       }
     } else if (!context.can(Permission.classHomeworkPublish)) {
       return const Left(PermissionDeniedFailure());
@@ -404,7 +407,10 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
         academicYearId: record.academicYearId,
       );
       if (fresh.isLeft()) {
-        return fresh.fold(Left.new, (_) => const Left(PermissionDeniedFailure()));
+        return fresh.fold(
+          Left.new,
+          (_) => const Left(PermissionDeniedFailure()),
+        );
       }
     } else if (!context.can(permission)) {
       return const Left(PermissionDeniedFailure());

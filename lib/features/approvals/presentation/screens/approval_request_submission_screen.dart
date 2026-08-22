@@ -191,7 +191,10 @@ class _ApprovalRequestSubmissionScreenState
                 Text(
                   'Identifies which record and workflow this request applies to. '
                   'Requests raised from another screen fill these in automatically.',
-                  style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).hintColor,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 AppCard(
@@ -199,12 +202,16 @@ class _ApprovalRequestSubmissionScreenState
                     children: [
                       TextField(
                         controller: _moduleKey,
-                        decoration: const InputDecoration(labelText: 'Module key'),
+                        decoration: const InputDecoration(
+                          labelText: 'Module key',
+                        ),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: _requestType,
-                        decoration: const InputDecoration(labelText: 'Request type'),
+                        decoration: const InputDecoration(
+                          labelText: 'Request type',
+                        ),
                       ),
                       const SizedBox(height: 12),
                       TextField(
@@ -234,7 +241,10 @@ class _ApprovalRequestSubmissionScreenState
                       initialValue: _priority,
                       decoration: const InputDecoration(labelText: 'Priority'),
                       items: ApprovalPriority.values
-                          .map((p) => DropdownMenuItem(value: p, child: Text(p.name)))
+                          .map(
+                            (p) =>
+                                DropdownMenuItem(value: p, child: Text(p.name)),
+                          )
                           .toList(),
                       onChanged: (v) => setState(
                         () => _priority = v ?? ApprovalPriority.normal,
@@ -243,9 +253,14 @@ class _ApprovalRequestSubmissionScreenState
                     const SizedBox(height: 12),
                     DropdownButtonFormField<ApprovalSensitivity>(
                       initialValue: _sensitivity,
-                      decoration: const InputDecoration(labelText: 'Sensitivity'),
+                      decoration: const InputDecoration(
+                        labelText: 'Sensitivity',
+                      ),
                       items: ApprovalSensitivity.values
-                          .map((s) => DropdownMenuItem(value: s, child: Text(s.name)))
+                          .map(
+                            (s) =>
+                                DropdownMenuItem(value: s, child: Text(s.name)),
+                          )
                           .toList(),
                       onChanged: (v) => setState(
                         () => _sensitivity = v ?? ApprovalSensitivity.normal,
@@ -268,7 +283,9 @@ class _ApprovalRequestSubmissionScreenState
                               child: Text(
                                 'No active approval policy exists for this module/request type yet. '
                                 'An approvals admin must create one before this can be submitted.',
-                                style: TextStyle(color: Theme.of(context).hintColor),
+                                style: TextStyle(
+                                  color: Theme.of(context).hintColor,
+                                ),
                               ),
                             ),
                           ],

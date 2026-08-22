@@ -126,68 +126,58 @@ class ClassTeacherContextBloc
       return;
     }
 
-    final activeResult = await assignmentService.resolveActiveAssignment(
-      schoolId: schoolId,
-      userId: userId,
-      forceRefresh: forceRefresh,
+    // Resolved locally from the list already fetched above - `_load` just
+    // paid for one Firestore round trip for every assignment on the
+    // profile, so finding the active Class Teacher row among them is a pure
+    // filter/sort, not a second query.
+    final assignment = assignmentService.resolveActiveAssignmentFrom(
+      allAssignments,
     );
 
-    await activeResult.fold(
-      (failure) async => emit(
+    if (assignment == null) {
+      // No *valid* class row. Distinguish "never had one" from "had one
+      // that an admin suspended or that ran out", because the teacher's
+      // next step differs and the approved UI says so.
+      emit(
+        state.copyWith(
+          isLoading: false,
+          available: allAssignments,
+          unavailableReason: _explainMissingClass(allAssignments),
+          hasCurrentTerm: period.hasTerm,
+          clearActive: true,
+        ),
+      );
+      return;
+    }
+
+    // Route the selection through the shared service so the Subject
+    // Teacher panel and this one never disagree about what is active.
+    final switched = await responsibilityService.switchTo(
+      assignmentId: assignment.id,
+      schoolId: schoolId,
+      userId: userId,
+    );
+
+    switched.fold(
+      (failure) => emit(
         state.copyWith(
           isLoading: false,
           available: allAssignments,
           errorMessage: messageFor(failure, offlineNoun: 'class'),
           unavailableReason: ClassContextUnavailableReason.loadFailed,
+          clearActive: true,
         ),
       ),
-      (assignment) async {
-        if (assignment == null) {
-          // No *valid* class row. Distinguish "never had one" from "had one
-          // that an admin suspended or that ran out", because the teacher's
-          // next step differs and the approved UI says so.
-          emit(
-            state.copyWith(
-              isLoading: false,
-              available: allAssignments,
-              unavailableReason: _explainMissingClass(allAssignments),
-              hasCurrentTerm: period.hasTerm,
-              clearActive: true,
-            ),
-          );
-          return;
-        }
-
-        // Route the selection through the shared service so the Subject
-        // Teacher panel and this one never disagree about what is active.
-        final switched = await responsibilityService.switchTo(
-          assignmentId: assignment.id,
-          schoolId: schoolId,
-          userId: userId,
-        );
-
-        switched.fold(
-          (failure) => emit(
-            state.copyWith(
-              isLoading: false,
-              available: allAssignments,
-              errorMessage: messageFor(failure, offlineNoun: 'class'),
-              unavailableReason: ClassContextUnavailableReason.loadFailed,
-              clearActive: true,
-            ),
-          ),
-          (context) => emit(
-            state.copyWith(
-              isLoading: false,
-              active: context,
-              available: allAssignments,
-              hasCurrentTerm: period.hasTerm,
-              clearUnavailable: true,
-              clearError: true,
-            ),
-          ),
-        );
-      },
+      (context) => emit(
+        state.copyWith(
+          isLoading: false,
+          active: context,
+          available: allAssignments,
+          hasCurrentTerm: period.hasTerm,
+          clearUnavailable: true,
+          clearError: true,
+        ),
+      ),
     );
   }
 

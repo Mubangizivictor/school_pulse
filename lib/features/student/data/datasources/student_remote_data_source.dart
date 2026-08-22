@@ -590,9 +590,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   }
 
   @override
-  Future<StudentAccessCodeModel?> getStudentAccessCode(
-    String studentId,
-  ) async {
+  Future<StudentAccessCodeModel?> getStudentAccessCode(String studentId) async {
     final snapshot = await firestore
         .collection('student_access_codes')
         .where('studentId', isEqualTo: studentId)

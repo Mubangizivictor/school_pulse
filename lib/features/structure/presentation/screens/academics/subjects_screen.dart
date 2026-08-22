@@ -31,8 +31,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
   _Order _order = _Order.nameAsc;
   @override
   Widget build(BuildContext context) {
-    final user =
-        (context.watch<AuthBloc>().state as AuthAuthenticated).user;
+    final user = (context.watch<AuthBloc>().state as AuthAuthenticated).user;
     final schoolId = user.schoolId;
     return BlocBuilder<StructureBloc, StructureState>(
       builder: (context, state) {

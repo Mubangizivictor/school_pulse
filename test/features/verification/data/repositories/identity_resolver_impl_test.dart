@@ -388,45 +388,42 @@ void main() {
       },
     );
 
-    test(
-      'resolves correctly when updatedAt is a Firestore Timestamp (what '
-      'Cloud Functions actually write via serverTimestamp()), not an ISO '
-      'string - a bare DateTime.tryParse(x as String) would throw here '
-      'and silently turn a valid card into unknown_credential',
-      () async {
-        when(
-          () => localDataSource.findRevocation('UID-TS', 'school-1'),
-        ).thenAnswer((_) async => null);
-        when(
-          () => localDataSource.findCredential('UID-TS', 'school-1'),
-        ).thenAnswer((_) async => null);
-        await firestore
-            .collection('schools')
-            .doc('school-1')
-            .collection('credentials')
-            .doc('UID-TS')
-            .set({
-              'credentialValue': 'UID-TS',
-              'credentialType': 'nfc',
-              'identityId': 'SP-0001',
-              'identityType': 'student',
-              'schoolId': 'school-1',
-              'status': 'active',
-              'updatedAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
-            });
-        when(
-          () => studentIdentityRepository.getStudentByUniqueId('SP-0001'),
-        ).thenAnswer((_) async => Right(student));
+    test('resolves correctly when updatedAt is a Firestore Timestamp (what '
+        'Cloud Functions actually write via serverTimestamp()), not an ISO '
+        'string - a bare DateTime.tryParse(x as String) would throw here '
+        'and silently turn a valid card into unknown_credential', () async {
+      when(
+        () => localDataSource.findRevocation('UID-TS', 'school-1'),
+      ).thenAnswer((_) async => null);
+      when(
+        () => localDataSource.findCredential('UID-TS', 'school-1'),
+      ).thenAnswer((_) async => null);
+      await firestore
+          .collection('schools')
+          .doc('school-1')
+          .collection('credentials')
+          .doc('UID-TS')
+          .set({
+            'credentialValue': 'UID-TS',
+            'credentialType': 'nfc',
+            'identityId': 'SP-0001',
+            'identityType': 'student',
+            'schoolId': 'school-1',
+            'status': 'active',
+            'updatedAt': Timestamp.fromDate(DateTime(2026, 1, 1)),
+          });
+      when(
+        () => studentIdentityRepository.getStudentByUniqueId('SP-0001'),
+      ).thenAnswer((_) async => Right(student));
 
-        final result = await resolver.resolve(
-          NfcScanCredential(cardUid: 'UID-TS', scannedAt: DateTime.now()),
-          context,
-        );
+      final result = await resolver.resolve(
+        NfcScanCredential(cardUid: 'UID-TS', scannedAt: DateTime.now()),
+        context,
+      );
 
-        final identity = result.getOrElse(() => throw Exception());
-        expect(identity, isA<StudentResolvedIdentity>());
-      },
-    );
+      final identity = result.getOrElse(() => throw Exception());
+      expect(identity, isA<StudentResolvedIdentity>());
+    });
 
     test(
       'falls back to Firestore and denies when the card was revoked on a different device',

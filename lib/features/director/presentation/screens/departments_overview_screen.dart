@@ -44,8 +44,9 @@ class DepartmentsOverviewScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Departments')),
       body: BlocBuilder<StructureBloc, StructureState>(
         builder: (context, state) {
-          final departments = state.departments.where((d) => d.isActive).toList()
-            ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+          final departments =
+              state.departments.where((d) => d.isActive).toList()
+                ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
           if (departments.isEmpty) {
             return const EmptyState(
               icon: Icons.corporate_fare_outlined,
@@ -54,7 +55,12 @@ class DepartmentsOverviewScreen extends StatelessWidget {
             );
           }
           return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.l, AppSpacing.xl, AppSpacing.x3l),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.l,
+              AppSpacing.xl,
+              AppSpacing.x3l,
+            ),
             itemCount: departments.length,
             separatorBuilder: (_, __) => const SizedBox(height: 4),
             itemBuilder: (_, i) {
@@ -67,8 +73,13 @@ class DepartmentsOverviewScreen extends StatelessWidget {
                     backgroundColor: color.withValues(alpha: 0.12),
                     child: Icon(icon, color: color, size: 20),
                   ),
-                  title: Text(dept.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: dept.description.isNotEmpty ? Text(dept.description) : null,
+                  title: Text(
+                    dept.name,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: dept.description.isNotEmpty
+                      ? Text(dept.description)
+                      : null,
                   trailing: const Icon(Icons.chevron_right),
                 ),
               );

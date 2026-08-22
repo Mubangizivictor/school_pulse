@@ -28,7 +28,11 @@ void main() {
     final implClassStart = source.indexOf(
       'class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {',
     );
-    expect(implClassStart, isNot(-1), reason: 'AuthRemoteDataSourceImpl must exist');
+    expect(
+      implClassStart,
+      isNot(-1),
+      reason: 'AuthRemoteDataSourceImpl must exist',
+    );
     implSource = source.substring(implClassStart);
   });
 
@@ -38,10 +42,7 @@ void main() {
       final source = implSource;
       final loginStart = source.indexOf('Future<UserModel> loginWithEmail(');
       expect(loginStart, isNot(-1), reason: 'loginWithEmail must exist');
-      final nextMethod = source.indexOf(
-        '\n  @override',
-        loginStart + 1,
-      );
+      final nextMethod = source.indexOf('\n  @override', loginStart + 1);
       final body = source.substring(loginStart, nextMethod);
 
       final rejectIndex = body.indexOf('_rejectIfOwner(');
@@ -74,7 +75,10 @@ void main() {
       final start = source.indexOf('Future<void> _rejectIfOwner(');
       expect(start, isNot(-1));
       final nextMethod = source.indexOf('\n  ', start + 40);
-      final body = source.substring(start, nextMethod == -1 ? source.length : nextMethod + 400);
+      final body = source.substring(
+        start,
+        nextMethod == -1 ? source.length : nextMethod + 400,
+      );
 
       expect(
         body.contains("httpsCallable('assertNotPlatformOwner')"),

@@ -49,9 +49,7 @@ class _HealthSyncLifecycleGateState extends State<HealthSyncLifecycleGate>
   }
 
   void _startConnectivityPoll() {
-    _connectivityPoll = Timer.periodic(const Duration(seconds: 15), (
-      _,
-    ) async {
+    _connectivityPoll = Timer.periodic(const Duration(seconds: 15), (_) async {
       final connected = await di.sl<NetworkInfo>().isConnected;
       if (connected && !_wasConnected) {
         _triggerSync();

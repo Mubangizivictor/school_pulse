@@ -26,10 +26,13 @@ void main() {
       expect(restored.kind, NotificationAudienceKind.school);
     });
 
-    test('null map defaults to school-wide audience (fail-open to visible, not silent)', () {
-      final restored = NotificationAudience.fromMap(null);
-      expect(restored.kind, NotificationAudienceKind.school);
-    });
+    test(
+      'null map defaults to school-wide audience (fail-open to visible, not silent)',
+      () {
+        final restored = NotificationAudience.fromMap(null);
+        expect(restored.kind, NotificationAudienceKind.school);
+      },
+    );
   });
 
   group('CalendarEventType', () {
@@ -38,10 +41,7 @@ void main() {
       expect(CalendarEventType.values, contains(CalendarEventType.schoolDay));
       expect(CalendarEventType.values, contains(CalendarEventType.holiday));
       expect(CalendarEventType.values, contains(CalendarEventType.breakDay));
-      expect(
-        CalendarEventType.values,
-        contains(CalendarEventType.examination),
-      );
+      expect(CalendarEventType.values, contains(CalendarEventType.examination));
       expect(CalendarEventType.values, contains(CalendarEventType.event));
       expect(
         CalendarEventType.values,

@@ -137,9 +137,9 @@ class _StaffIdCardScreenState extends State<StaffIdCardScreen> {
       await idCardService.printIdCard(pdfData);
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to print ID card: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to print ID card: $error')),
+      );
     }
   }
 }
@@ -467,7 +467,9 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Your session is not ready. Sign in again and retry.'),
+              content: Text(
+                'Your session is not ready. Sign in again and retry.',
+              ),
             ),
           );
         }
@@ -477,7 +479,10 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
       if (mounted) {
         setState(() => _scanning = true);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(promptMessage), duration: const Duration(seconds: 4)),
+          SnackBar(
+            content: Text(promptMessage),
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
 
@@ -488,7 +493,8 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
           }
         },
         onError: (Object error, StackTrace stackTrace) {
-          if (!completer.isCompleted) completer.completeError(error, stackTrace);
+          if (!completer.isCompleted)
+            completer.completeError(error, stackTrace);
         },
       );
 
@@ -530,9 +536,9 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
       return uid;
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not start NFC scan: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not start NFC scan: $error')),
+        );
       }
       return null;
     } finally {
@@ -552,7 +558,8 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
         children: [
           for (final reason in const ['Lost', 'Stolen', 'Damaged', 'Other'])
             SimpleDialogOption(
-              onPressed: () => Navigator.pop(dialogContext, reason.toLowerCase()),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, reason.toLowerCase()),
               child: Text(reason),
             ),
         ],
@@ -659,7 +666,9 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
                   onPressed: _assign,
                   icon: const Icon(Icons.nfc),
                   label: Text(
-                    status == 'revoked' ? 'Assign Replacement Card' : 'Assign Card',
+                    status == 'revoked'
+                        ? 'Assign Replacement Card'
+                        : 'Assign Card',
                   ),
                 ),
               if (status == 'active' && widget.assignedCardUid != null) ...[

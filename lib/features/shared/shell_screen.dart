@@ -52,7 +52,8 @@ class StaffShell extends StatelessWidget {
     final bloc = listen
         ? context.watch<SubjectTeacherContextBloc>()
         : context.read<SubjectTeacherContextBloc>();
-    return bloc.state.active?.roleType == StaffResponsibilityType.subjectTeacher;
+    return bloc.state.active?.roleType ==
+        StaffResponsibilityType.subjectTeacher;
   }
 
   static const List<UserRole> _boardingRoles = [
@@ -124,8 +125,7 @@ class StaffShell extends StatelessWidget {
 
     if (_isAdmin(context)) {
       if (location.contains('/staff/admin/structure')) return 1;
-      if (location.startsWith('/staff/messages')) return 3;
-      if (isMoreSubRoute(location)) return 4;
+      if (isMoreSubRoute(location)) return 2;
       if (location.startsWith('/staff/admin')) return 0;
       return 0;
     }
@@ -211,12 +211,6 @@ class StaffShell extends StatelessWidget {
           context.go('/staff/admin/structure');
           break;
         case 2:
-          AdminQuickAddSheet.show(context);
-          break;
-        case 3:
-          context.go('/staff/messages');
-          break;
-        case 4:
           context.go('/staff/more');
           break;
       }
@@ -418,16 +412,6 @@ class StaffShell extends StatelessWidget {
         label: 'Structure',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.add_circle_rounded, size: 24),
-        selectedIcon: Icon(Icons.add_circle_rounded, size: 24),
-        label: 'Add',
-      ),
-      const NavigationDestination(
-        icon: MessagesNavIcon(icon: Icons.chat_bubble_outline_rounded),
-        selectedIcon: MessagesNavIcon(icon: Icons.chat_bubble_rounded),
-        label: 'Messages',
-      ),
-      const NavigationDestination(
         icon: Icon(Icons.grid_view_outlined, size: 24),
         selectedIcon: Icon(Icons.grid_view_rounded, size: 24),
         label: 'More',
@@ -563,13 +547,6 @@ class StaffShell extends StatelessWidget {
                 border: Border(
                   right: BorderSide(color: AppColors.border(context), width: 1),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadow(context),
-                    blurRadius: 20,
-                    offset: const Offset(5, 0),
-                  ),
-                ],
               ),
               child: Column(
                 children: [
@@ -699,8 +676,7 @@ class StaffShell extends StatelessWidget {
                     final index = destinations.indexOf(d);
                     final isSelected =
                         index == _calculateSelectedIndex(context);
-                    final isRaisedAddAction =
-                        (isAdmin || isDirector) && d.label == 'Add';
+                    final isRaisedAddAction = isDirector && d.label == 'Add';
                     if (isRaisedAddAction) {
                       return NavigationDestination(
                         icon: Container(
@@ -711,7 +687,7 @@ class StaffShell extends StatelessWidget {
                           ),
                           child: const Icon(
                             Icons.add_rounded,
-                            color: Colors.white,
+                            color: Colors.black,
                             size: 22,
                           ),
                         ),
@@ -734,7 +710,28 @@ class StaffShell extends StatelessWidget {
                             size: 24,
                           );
                     return NavigationDestination(
-                      icon: themedIcon,
+                      icon: isSelected
+                          ? Container(
+                              width: 36,
+                              height: 30,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary(context),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: rawIcon is MessagesNavIcon
+                                  ? Icon(
+                                      rawIcon.icon,
+                                      color: AppColors.background(context),
+                                      size: 21,
+                                    )
+                                  : Icon(
+                                      (rawIcon as Icon).icon,
+                                      color: AppColors.background(context),
+                                      size: 21,
+                                    ),
+                            )
+                          : themedIcon,
                       label: d.label,
                     );
                   }).toList(),
@@ -768,7 +765,7 @@ class _SupportModeBanner extends StatelessWidget {
             .clamp(0, 999);
 
         return Material(
-          color: AppColors.warning(context).withValues(alpha: 0.15),
+          color: AppColors.background(context),
           child: SafeArea(
             bottom: false,
             child: Padding(
@@ -826,10 +823,15 @@ class _LogoutButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
         child: TextButton.icon(
           onPressed: onPressed,
-          icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
+          icon: Icon(
+            Icons.logout_rounded,
+            color: AppColors.textPrimary(context),
+          ),
           label: Text(
             'Logout',
-            style: AppTypography.labelLarge.copyWith(color: Color(0xFFEF4444)),
+            style: AppTypography.labelLarge.copyWith(
+              color: AppColors.textPrimary(context),
+            ),
           ),
           style: TextButton.styleFrom(
             alignment: Alignment.centerLeft,
@@ -840,7 +842,7 @@ class _LogoutButton extends StatelessWidget {
     }
 
     return IconButton(
-      icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
+      icon: Icon(Icons.logout_rounded, color: AppColors.textPrimary(context)),
       onPressed: onPressed,
       tooltip: 'Logout',
     );

@@ -139,7 +139,10 @@ class _Header extends StatelessWidget {
               const SizedBox(height: 4),
               const Text(
                 'Find and manage student care records',
-                style: TextStyle(color: _NurseRecordsHubScreenState._muted, fontSize: 13),
+                style: TextStyle(
+                  color: _NurseRecordsHubScreenState._muted,
+                  fontSize: 13,
+                ),
               ),
             ],
           ),
@@ -210,7 +213,10 @@ class _SearchAndFilterRow extends StatelessWidget {
             children: [
               Icon(Icons.tune, color: Colors.white70, size: 18),
               SizedBox(width: 6),
-              Text('All records', style: TextStyle(color: Colors.white, fontSize: 13)),
+              Text(
+                'All records',
+                style: TextStyle(color: Colors.white, fontSize: 13),
+              ),
               Icon(Icons.expand_more, color: Colors.white70, size: 18),
             ],
           ),
@@ -375,7 +381,12 @@ class _RecordsList extends StatelessWidget {
           for (var i = 0; i < records.length; i++) ...[
             _RecordEntry(data: records[i]),
             if (i != records.length - 1)
-              const Divider(height: 1, color: Colors.white10, indent: 16, endIndent: 16),
+              const Divider(
+                height: 1,
+                color: Colors.white10,
+                indent: 16,
+                endIndent: 16,
+              ),
           ],
         ],
       ),
@@ -416,11 +427,17 @@ class _RecordEntry extends StatelessWidget {
       ),
       title: Text(
         data.title,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       subtitle: Text(
         data.subtitle,
-        style: const TextStyle(color: _NurseRecordsHubScreenState._muted, fontSize: 12.5),
+        style: const TextStyle(
+          color: _NurseRecordsHubScreenState._muted,
+          fontSize: 12.5,
+        ),
       ),
       trailing: const Icon(Icons.chevron_right, color: Colors.white38),
     );
@@ -476,7 +493,12 @@ class _RecentActivityList extends StatelessWidget {
               className: studentClass(recent[i].studentId),
             ),
             if (i != recent.length - 1)
-              const Divider(height: 1, color: Colors.white10, indent: 16, endIndent: 16),
+              const Divider(
+                height: 1,
+                color: Colors.white10,
+                indent: 16,
+                endIndent: 16,
+              ),
           ],
         ],
       ),
@@ -488,7 +510,11 @@ class _ActivityRow extends StatelessWidget {
   final ClinicVisit visit;
   final String name;
   final String className;
-  const _ActivityRow({required this.visit, required this.name, required this.className});
+  const _ActivityRow({
+    required this.visit,
+    required this.name,
+    required this.className,
+  });
 
   static const _avatarColors = [
     Color(0xFF3B82F6),
@@ -519,21 +545,40 @@ class _ActivityRow extends StatelessWidget {
         backgroundColor: color.withValues(alpha: 0.2),
         child: Text(
           initials.isEmpty ? '?' : initials,
-          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13),
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
         ),
       ),
-      title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+      title: Text(
+        name,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       subtitle: Text(
         subtitle,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(color: _NurseRecordsHubScreenState._muted, fontSize: 12),
+        style: const TextStyle(
+          color: _NurseRecordsHubScreenState._muted,
+          fontSize: 12,
+        ),
       ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(time, style: const TextStyle(color: _NurseRecordsHubScreenState._muted, fontSize: 11)),
+          Text(
+            time,
+            style: const TextStyle(
+              color: _NurseRecordsHubScreenState._muted,
+              fontSize: 11,
+            ),
+          ),
           const Icon(Icons.chevron_right, color: Colors.white38, size: 18),
         ],
       ),

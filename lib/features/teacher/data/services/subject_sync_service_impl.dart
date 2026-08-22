@@ -218,7 +218,9 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
     return _ReplayOutcome.done;
   }
 
-  Future<_ReplayOutcome> _replayClassTaskSave(OfflineOperation operation) async {
+  Future<_ReplayOutcome> _replayClassTaskSave(
+    OfflineOperation operation,
+  ) async {
     // As with attendance, the queue holds only the task id - the task
     // itself is read back from the device so the replay pushes the newest
     // local state, not a snapshot taken when the operation was queued.
@@ -241,7 +243,9 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
     return _ReplayOutcome.done;
   }
 
-  Future<_ReplayOutcome> _replayClassHomework(OfflineOperation operation) async {
+  Future<_ReplayOutcome> _replayClassHomework(
+    OfflineOperation operation,
+  ) async {
     // Save/publish/cancel all end up as the same saved document - the queue
     // holds only the id, so the replay reads the newest local row and pushes
     // it whole, regardless of which of the three calls created the entry.
@@ -254,7 +258,9 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
     return _ReplayOutcome.done;
   }
 
-  Future<_ReplayOutcome> _replayClassBehaviour(OfflineOperation operation) async {
+  Future<_ReplayOutcome> _replayClassBehaviour(
+    OfflineOperation operation,
+  ) async {
     final record = await classLocalDataSource.getBehaviourRecord(
       operation.entityId,
     );
@@ -289,7 +295,9 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
       // backs off so the same transient error isn't replayed next poll.
       nextRetryAt: nextRetryCount >= OfflineOperation.maxRetries
           ? null
-          : DateTime.now().add(OfflineOperation.backoffFor(operation.retryCount)),
+          : DateTime.now().add(
+              OfflineOperation.backoffFor(operation.retryCount),
+            ),
     );
   }
 

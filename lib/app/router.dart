@@ -1997,12 +1997,7 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'assessment',
-                  builder: (context, state) {
-                    final tab =
-                        int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
-                        0;
-                    return AssessmentGradingScreen(initialTab: tab);
-                  },
+                  builder: (context, state) => const AssessmentGradingScreen(),
                 ),
                 GoRoute(
                   path: 'campus',

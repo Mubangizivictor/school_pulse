@@ -169,7 +169,10 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
         academicYearId: announcement.academicYearId,
       );
       if (fresh.isLeft()) {
-        return fresh.fold(Left.new, (_) => const Left(PermissionDeniedFailure()));
+        return fresh.fold(
+          Left.new,
+          (_) => const Left(PermissionDeniedFailure()),
+        );
       }
     } else if (!context.can(Permission.classAnnouncementPublish)) {
       return const Left(PermissionDeniedFailure());

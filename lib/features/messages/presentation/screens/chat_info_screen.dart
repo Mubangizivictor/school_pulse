@@ -245,7 +245,10 @@ class _ChatInfoView extends StatelessWidget {
             'Archive',
             conversation.isArchived ? 'Archived' : 'Not archived',
             onTap: () => context.messagingBloc.add(
-              ConversationArchivedSet(conversation.id, !conversation.isArchived),
+              ConversationArchivedSet(
+                conversation.id,
+                !conversation.isArchived,
+              ),
             ),
           ),
           if (isGroup)

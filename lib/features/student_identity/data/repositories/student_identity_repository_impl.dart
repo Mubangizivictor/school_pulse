@@ -72,7 +72,10 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
       );
       final returned = StudentIdentityModel.fromFirestore(identityData);
 
-      final studentDoc = await firestore.collection('students').doc(studentId).get();
+      final studentDoc = await firestore
+          .collection('students')
+          .doc(studentId)
+          .get();
       if (!studentDoc.exists) {
         return Left(
           ServerFailure('Student record not found while preparing identity.'),
@@ -152,9 +155,7 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     StudentIdentity identity,
   ) async {
     try {
-      final callable = functions.httpsCallable(
-        'regenerateStudentQrCredential',
-      );
+      final callable = functions.httpsCallable('regenerateStudentQrCredential');
       final result = await callable.call<Map<String, dynamic>>({
         'studentId': identity.studentId,
       });
@@ -219,23 +220,20 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
           studentId: student.id,
           schoolPrefix: _schoolPrefix(student, student.studentCode),
         );
-        await identityResult.fold(
-          (_) async {},
-          (identity) async {
-            final model = identity is StudentIdentityModel
-                ? identity
-                : StudentIdentityModel(
-                    studentId: identity.studentId,
-                    schoolId: student.schoolId,
-                    uniqueSystemId: identity.uniqueSystemId,
-                    schoolStudentId: identity.schoolStudentId,
-                    qrCodeData: identity.qrCodeData,
-                    nfcStatus: identity.nfcStatus,
-                  );
-            await localCache.save(student: student, identity: model);
-            await _cacheQrCredential(model);
-          },
-        );
+        await identityResult.fold((_) async {}, (identity) async {
+          final model = identity is StudentIdentityModel
+              ? identity
+              : StudentIdentityModel(
+                  studentId: identity.studentId,
+                  schoolId: student.schoolId,
+                  uniqueSystemId: identity.uniqueSystemId,
+                  schoolStudentId: identity.schoolStudentId,
+                  qrCodeData: identity.qrCodeData,
+                  nfcStatus: identity.nfcStatus,
+                );
+          await localCache.save(student: student, identity: model);
+          await _cacheQrCredential(model);
+        });
       }
       return const Right(null);
     } catch (e) {
@@ -249,7 +247,10 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   ) async {
     try {
       // New canonical path: NFC/QR credentials carry Student.id directly.
-      final direct = await firestore.collection('students').doc(reference).get();
+      final direct = await firestore
+          .collection('students')
+          .doc(reference)
+          .get();
       if (direct.exists) {
         return Right(StudentModel.fromMap(direct.data()!, direct.id));
       }
@@ -267,7 +268,10 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
       if (identityDoc.docs.isEmpty) return const Right(null);
 
       final studentId = identityDoc.docs.first.data()['studentId'];
-      final studentDoc = await firestore.collection('students').doc(studentId).get();
+      final studentDoc = await firestore
+          .collection('students')
+          .doc(studentId)
+          .get();
       if (!studentDoc.exists) return const Right(null);
       return Right(StudentModel.fromMap(studentDoc.data()!, studentDoc.id));
     } catch (e) {

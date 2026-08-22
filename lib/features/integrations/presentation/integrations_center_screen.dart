@@ -74,8 +74,7 @@ class _IntegrationsCenterScreenState extends State<IntegrationsCenterScreen> {
         title: const Text('Integrations Center'),
         actions: [
           IconButton(
-            onPressed: () =>
-                context.push('/staff/admin/integrations/health'),
+            onPressed: () => context.push('/staff/admin/integrations/health'),
             icon: const Icon(Icons.monitor_heart_outlined),
             tooltip: 'Integration health dashboard',
           ),

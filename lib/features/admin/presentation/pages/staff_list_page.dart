@@ -141,8 +141,7 @@ class _StaffListPageState extends State<StaffListPage> {
                   _StatusChip(
                     label: 'Active',
                     selected: _status == _StatusFilter.active,
-                    onTap: () =>
-                        setState(() => _status = _StatusFilter.active),
+                    onTap: () => setState(() => _status = _StatusFilter.active),
                   ),
                   const SizedBox(width: 8),
                   _StatusChip(
@@ -173,8 +172,7 @@ class _StaffListPageState extends State<StaffListPage> {
                       return _buildEmptyState(
                         context,
                         title: 'No staff yet',
-                        message:
-                            'Add your first staff member to get started.',
+                        message: 'Add your first staff member to get started.',
                         showAddAction: true,
                       );
                     }
@@ -197,9 +195,8 @@ class _StaffListPageState extends State<StaffListPage> {
                             context,
                             staff.departmentId,
                           ),
-                          onTap: () => context.push(
-                            '/staff/admin/users/${staff.id}',
-                          ),
+                          onTap: () =>
+                              context.push('/staff/admin/users/${staff.id}'),
                         );
                       },
                     );

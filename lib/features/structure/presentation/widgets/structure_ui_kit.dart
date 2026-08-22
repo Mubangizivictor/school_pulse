@@ -375,15 +375,20 @@ class StructureSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: SectionHeader(
         title: title,
-        trailing: FilledButton.tonalIcon(
+        trailing: OutlinedButton.icon(
           onPressed: onAction,
           icon: const Icon(Icons.add, size: 18),
           label: Text(actionLabel),
-          style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+          style: OutlinedButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            foregroundColor: scheme.primary,
+            side: BorderSide(color: scheme.primary),
+          ),
         ),
       ),
     );

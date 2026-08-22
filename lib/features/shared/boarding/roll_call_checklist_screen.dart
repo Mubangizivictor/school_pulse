@@ -99,75 +99,73 @@ class _RollCallChecklistScreenState extends State<RollCallChecklistScreen> {
 
     final absentCount = widget.students
         .where(
-          (s) => (_marks[s.id] ?? AttendanceQuickStatus.present) ==
+          (s) =>
+              (_marks[s.id] ?? AttendanceQuickStatus.present) ==
               AttendanceQuickStatus.absent,
         )
         .length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.dormitoryName} · ${widget.type}'),
-      ),
+      appBar: AppBar(title: Text('${widget.dormitoryName} · ${widget.type}')),
       body: Column(
         children: [
           Expanded(
             child: widget.isLoading
                 ? const _ChecklistSkeleton()
                 : widget.students.isEmpty
-                    ? const EmptyState(
-                        icon: Icons.people_outline,
-                        title: 'No Boarders Found',
-                        message: 'This dormitory has no allocated students.',
-                      )
-                    : ListView(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.l,
+                ? const EmptyState(
+                    icon: Icons.people_outline,
+                    title: 'No Boarders Found',
+                    message: 'This dormitory has no allocated students.',
+                  )
+                : ListView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.l,
+                    ),
+                    children: [
+                      const SizedBox(height: AppSpacing.m),
+                      if (absentCount > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.m),
+                          child: AlertBanner(
+                            title: 'Absentees Detected',
+                            message:
+                                '$absentCount marked absent — will alert parents on save.',
+                            color: semanticColors.error,
+                            icon: Icons.warning_amber_rounded,
+                          ),
                         ),
-                        children: [
-                          const SizedBox(height: AppSpacing.m),
-                          if (absentCount > 0)
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: AppSpacing.m,
-                              ),
-                              child: AlertBanner(
-                                title: 'Absentees Detected',
-                                message:
-                                    '$absentCount marked absent — will alert parents on save.',
-                                color: semanticColors.error,
-                                icon: Icons.warning_amber_rounded,
-                              ),
-                            ),
-                          AppSearchField(
-                            hintText: 'Search boarders...',
-                            onChanged: (value) =>
-                                setState(() => _searchQuery = value),
-                          ),
-                          const SizedBox(height: AppSpacing.m),
-                          Text(
-                            '${filteredStudents.length} Students',
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: AppSpacing.s),
-                          for (final student in filteredStudents)
-                            StudentListRow(
-                              name: student.name,
-                              photoUrl: student.photoUrl,
-                              bedLabel: student.bedNumber != null
-                                  ? 'Bed: ${student.bedNumber}'
-                                  : null,
-                              classLabel: student.studentClass,
-                              trailing: AttendanceStatusToggle(
-                                selected: _marks[student.id] ??
-                                    AttendanceQuickStatus.present,
-                                onChanged: (status) => setState(
-                                  () => _marks[student.id] = status,
-                                ),
-                              ),
-                            ),
-                        ],
+                      AppSearchField(
+                        hintText: 'Search boarders...',
+                        onChanged: (value) =>
+                            setState(() => _searchQuery = value),
                       ),
+                      const SizedBox(height: AppSpacing.m),
+                      Text(
+                        '${filteredStudents.length} Students',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.s),
+                      for (final student in filteredStudents)
+                        StudentListRow(
+                          name: student.name,
+                          photoUrl: student.photoUrl,
+                          bedLabel: student.bedNumber != null
+                              ? 'Bed: ${student.bedNumber}'
+                              : null,
+                          classLabel: student.studentClass,
+                          trailing: AttendanceStatusToggle(
+                            selected:
+                                _marks[student.id] ??
+                                AttendanceQuickStatus.present,
+                            onChanged: (status) =>
+                                setState(() => _marks[student.id] = status),
+                          ),
+                        ),
+                    ],
+                  ),
           ),
           _buildBottomBar(),
         ],
@@ -191,10 +189,10 @@ class _RollCallChecklistScreenState extends State<RollCallChecklistScreen> {
                 onPressed: widget.students.isEmpty
                     ? null
                     : () => setState(() {
-                          for (final s in widget.students) {
-                            _marks[s.id] = AttendanceQuickStatus.present;
-                          }
-                        }),
+                        for (final s in widget.students) {
+                          _marks[s.id] = AttendanceQuickStatus.present;
+                        }
+                      }),
                 icon: const Icon(Icons.done_all, size: 18),
                 label: const Text('Mark All Present'),
               ),

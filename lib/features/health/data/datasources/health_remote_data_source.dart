@@ -17,9 +17,7 @@ abstract class HealthRemoteDataSource {
     StudentHealthProfileModel profile,
     String schoolId,
   );
-  Future<List<StudentHealthProfileModel>> getAllHealthProfiles(
-    String schoolId,
-  );
+  Future<List<StudentHealthProfileModel>> getAllHealthProfiles(String schoolId);
 
   Future<List<ClinicVisitModel>> getClinicVisits({
     required String schoolId,

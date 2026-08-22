@@ -20,7 +20,9 @@ class StructureTenantResolver {
 
     final uid = (auth ?? FirebaseAuth.instance).currentUser?.uid;
     if (uid == null || uid.isEmpty) {
-      throw StateError('An authenticated user is required for School Structure.');
+      throw StateError(
+        'An authenticated user is required for School Structure.',
+      );
     }
 
     final doc = await firestore.collection('users').doc(uid).get();

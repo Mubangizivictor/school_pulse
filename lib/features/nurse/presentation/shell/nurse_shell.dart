@@ -35,20 +35,12 @@ class _NurseShellState extends State<NurseShell> {
       ),
       NavigationDestination(
         icon: const Icon(Icons.assignment_outlined, size: 24),
-        selectedIcon: Icon(
-          Icons.assignment_rounded,
-          size: 24,
-          color: primary,
-        ),
+        selectedIcon: Icon(Icons.assignment_rounded, size: 24, color: primary),
         label: 'Records',
       ),
       NavigationDestination(
         icon: const Icon(Icons.chat_bubble_outline_rounded, size: 24),
-        selectedIcon: Icon(
-          Icons.chat_bubble_rounded,
-          size: 24,
-          color: primary,
-        ),
+        selectedIcon: Icon(Icons.chat_bubble_rounded, size: 24, color: primary),
         label: 'Messages',
       ),
       NavigationDestination(

@@ -39,11 +39,15 @@ class TeachingAssignmentRepositoryImpl implements TeachingAssignmentRepository {
       throw StateError('Staff member and academic year are required.');
     }
 
-    final staffDoc =
-        await firestore.collection('users').doc(assignment.staffId).get();
+    final staffDoc = await firestore
+        .collection('users')
+        .doc(assignment.staffId)
+        .get();
     final staffData = staffDoc.data();
     if (!staffDoc.exists || staffData?['schoolId']?.toString() != schoolId) {
-      throw StateError('The selected staff member does not belong to this school.');
+      throw StateError(
+        'The selected staff member does not belong to this school.',
+      );
     }
     if (staffData?['isActive'] == false) {
       throw StateError('The selected staff account is inactive.');
@@ -183,7 +187,8 @@ class TeachingAssignmentRepositoryImpl implements TeachingAssignmentRepository {
   }
 
   TeachingAssignment _fromMap(String id, Map<String, dynamic> map) {
-    final typeName = map['responsibilityType']?.toString() ??
+    final typeName =
+        map['responsibilityType']?.toString() ??
         TeachingResponsibilityType.subjectTeacher.name;
     final type = TeachingResponsibilityType.values.firstWhere(
       (item) => item.name == typeName,

@@ -34,8 +34,7 @@ class IdentityAndCardsScreen extends StatefulWidget {
   const IdentityAndCardsScreen({super.key, required this.student});
 
   @override
-  State<IdentityAndCardsScreen> createState() =>
-      _IdentityAndCardsScreenState();
+  State<IdentityAndCardsScreen> createState() => _IdentityAndCardsScreenState();
 }
 
 class _IdentityAndCardsScreenState extends State<IdentityAndCardsScreen> {
@@ -43,7 +42,10 @@ class _IdentityAndCardsScreenState extends State<IdentityAndCardsScreen> {
   void initState() {
     super.initState();
     context.read<StudentIdentityBloc>().add(
-      LoadStudentIdentityEvent(widget.student.id, schoolId: widget.student.schoolId),
+      LoadStudentIdentityEvent(
+        widget.student.id,
+        schoolId: widget.student.schoolId,
+      ),
     );
   }
 
@@ -64,7 +66,8 @@ class _IdentityAndCardsScreenState extends State<IdentityAndCardsScreen> {
           }
         },
         builder: (context, state) {
-          if (state is StudentIdentityLoading || state is StudentIdentityInitial) {
+          if (state is StudentIdentityLoading ||
+              state is StudentIdentityInitial) {
             return const Center(child: SchoolPulseLoader());
           }
 
@@ -98,13 +101,17 @@ class _IdentityAndCardsScreenState extends State<IdentityAndCardsScreen> {
             return ResponsiveBuilder(
               builder: (context, layout) {
                 final isDesktop = layout == ResponsiveLayout.desktop;
-                final idCardSection = _IdCardPreviewSection(student: widget.student);
+                final idCardSection = _IdCardPreviewSection(
+                  student: widget.student,
+                );
                 final nfcSection = _NfcManagementSection(
                   student: widget.student,
                   identity: state.identity,
                   assignedCardUid: state.assignedCardUid,
                 );
-                final qrSection = _QrCredentialSection(identity: state.identity);
+                final qrSection = _QrCredentialSection(
+                  identity: state.identity,
+                );
 
                 if (isDesktop) {
                   return Center(
@@ -233,9 +240,9 @@ class _IdCardPreviewSection extends StatelessWidget {
                     ),
                     Text(
                       '${student.studentId} · ${student.className}',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -354,7 +361,9 @@ class _NfcManagementSectionState extends State<_NfcManagementSection> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Your session is not ready. Sign in again and retry.'),
+              content: Text(
+                'Your session is not ready. Sign in again and retry.',
+              ),
             ),
           );
         }
@@ -364,7 +373,10 @@ class _NfcManagementSectionState extends State<_NfcManagementSection> {
       if (mounted) {
         setState(() => _scanning = true);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(promptMessage), duration: const Duration(seconds: 4)),
+          SnackBar(
+            content: Text(promptMessage),
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
 
@@ -375,7 +387,8 @@ class _NfcManagementSectionState extends State<_NfcManagementSection> {
           }
         },
         onError: (Object error, StackTrace stackTrace) {
-          if (!completer.isCompleted) completer.completeError(error, stackTrace);
+          if (!completer.isCompleted)
+            completer.completeError(error, stackTrace);
         },
       );
 
@@ -416,9 +429,9 @@ class _NfcManagementSectionState extends State<_NfcManagementSection> {
       return uid;
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not start NFC scan: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not start NFC scan: $error')),
+        );
       }
       return null;
     } finally {
@@ -488,9 +501,9 @@ class _NfcManagementSectionState extends State<_NfcManagementSection> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Reason',
-                  style: Theme.of(
-                    sheetContext,
-                  ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),
@@ -589,16 +602,19 @@ class _NfcManagementSectionState extends State<_NfcManagementSection> {
               Chip(
                 label: Text(status.toUpperCase()),
                 backgroundColor: statusColor.withValues(alpha: 0.12),
-                labelStyle: TextStyle(color: statusColor, fontWeight: FontWeight.w600),
+                labelStyle: TextStyle(
+                  color: statusColor,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(width: 12),
               if (widget.assignedCardUid != null)
                 Expanded(
                   child: Text(
                     'Card UID: ${widget.assignedCardUid}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -617,7 +633,9 @@ class _NfcManagementSectionState extends State<_NfcManagementSection> {
                     onPressed: _assign,
                     icon: const Icon(Icons.nfc),
                     label: Text(
-                      status == 'revoked' ? 'Assign Replacement Card' : 'Assign Card',
+                      status == 'revoked'
+                          ? 'Assign Replacement Card'
+                          : 'Assign Card',
                     ),
                   ),
                 if (status == 'active' && widget.assignedCardUid != null) ...[
@@ -630,7 +648,9 @@ class _NfcManagementSectionState extends State<_NfcManagementSection> {
                     onPressed: _revoke,
                     icon: const Icon(Icons.block),
                     label: const Text('Revoke Card'),
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
                   ),
                 ],
                 if (status == 'revoked' && widget.assignedCardUid != null)

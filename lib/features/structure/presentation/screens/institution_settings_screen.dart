@@ -12,24 +12,31 @@ class InstitutionSettingsScreen extends StatelessWidget {
     this.wizardStep,
     this.wizardTotal,
     this.wizardStepId = 'institution-info',
+    this.tabKey,
+    this.showAppBar = true,
   });
 
   final int? wizardStep;
   final int? wizardTotal;
   final String wizardStepId;
+  final GlobalKey<InstitutionTabState>? tabKey;
+  final bool showAppBar;
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AdminAppBar(
-      title: 'Institution Settings',
-      bottom: wizardStep == null || wizardTotal == null
-          ? null
-          : StructureWizardBanner(
-              stepId: wizardStepId,
-              stepNumber: wizardStep!,
-              totalSteps: wizardTotal!,
-            ),
-    ),
-    body: const InstitutionTab(),
+    appBar: showAppBar
+        ? AdminAppBar(
+            title: 'Institution Settings',
+            bottom: wizardStep == null || wizardTotal == null
+                ? null
+                : StructureWizardBanner(
+                    stepId: wizardStepId,
+                    stepNumber: wizardStep!,
+                    totalSteps: wizardTotal!,
+                  ),
+          )
+        : null,
+    backgroundColor: showAppBar ? null : Colors.transparent,
+    body: InstitutionTab(key: tabKey),
   );
 }

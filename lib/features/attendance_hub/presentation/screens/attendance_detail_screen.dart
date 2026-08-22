@@ -49,7 +49,11 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
   Future<void> _exportToSheets() async {
     if (_sheetsConnected != true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Connect Google Sheets first, from the Attendance home screen.')),
+        const SnackBar(
+          content: Text(
+            'Connect Google Sheets first, from the Attendance home screen.',
+          ),
+        ),
       );
       return;
     }
@@ -61,14 +65,17 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
     if (!mounted) return;
     setState(() => _exporting = false);
     result.fold(
-      (failure) => ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(failure.message))),
+      (failure) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failure.message))),
       (exportResult) {
         final message = exportResult.recordCount == 0
             ? 'All ${exportResult.alreadyExportedCount} records were already synced'
             : 'Exported ${exportResult.recordCount} records'
-                '${exportResult.alreadyExportedCount > 0 ? ' (${exportResult.alreadyExportedCount} already synced)' : ''}';
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+                  '${exportResult.alreadyExportedCount > 0 ? ' (${exportResult.alreadyExportedCount} already synced)' : ''}';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       },
     );
   }

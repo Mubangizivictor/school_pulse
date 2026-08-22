@@ -21,7 +21,9 @@ class _StrategicGoalsScreenState extends State<StrategicGoalsScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthBloc>().state;
     if (auth is! AuthAuthenticated) {
-      return const Scaffold(body: Center(child: Text('Sign in to view goals.')));
+      return const Scaffold(
+        body: Center(child: Text('Sign in to view goals.')),
+      );
     }
     final schoolId = auth.user.schoolId;
     return Scaffold(
@@ -40,14 +42,18 @@ class _StrategicGoalsScreenState extends State<StrategicGoalsScreen> {
         stream: _repository.watchGoals(schoolId),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Could not load goals: ${snapshot.error}'));
+            return Center(
+              child: Text('Could not load goals: ${snapshot.error}'),
+            );
           }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
           final goals = snapshot.data!;
           if (goals.isEmpty) {
-            return const Center(child: Text('No strategic goals yet. Tap + to add one.'));
+            return const Center(
+              child: Text('No strategic goals yet. Tap + to add one.'),
+            );
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),
@@ -56,7 +62,8 @@ class _StrategicGoalsScreenState extends State<StrategicGoalsScreen> {
             itemBuilder: (_, i) => _GoalCard(
               goal: goals[i],
               onTap: () => _openGoalEditor(context, schoolId, goal: goals[i]),
-              onUpdateProgress: () => _openProgressEditor(context, schoolId, goals[i]),
+              onUpdateProgress: () =>
+                  _openProgressEditor(context, schoolId, goals[i]),
               onDelete: () => _repository.deleteGoal(schoolId, goals[i].goalId),
             ),
           );
@@ -72,12 +79,15 @@ class _StrategicGoalsScreenState extends State<StrategicGoalsScreen> {
   }) async {
     final titleController = TextEditingController(text: goal?.title);
     final descController = TextEditingController(text: goal?.description);
-    final deptController = TextEditingController(text: goal?.responsibleDepartment);
+    final deptController = TextEditingController(
+      text: goal?.responsibleDepartment,
+    );
     final targetController = TextEditingController(
       text: goal?.targetValue.toString() ?? '',
     );
     final unitController = TextEditingController(text: goal?.unit ?? '%');
-    DateTime deadline = goal?.deadline ?? DateTime.now().add(const Duration(days: 90));
+    DateTime deadline =
+        goal?.deadline ?? DateTime.now().add(const Duration(days: 90));
 
     final saved = await showDialog<bool>(
       context: context,
@@ -99,7 +109,9 @@ class _StrategicGoalsScreenState extends State<StrategicGoalsScreen> {
                 ),
                 TextField(
                   controller: deptController,
-                  decoration: const InputDecoration(labelText: 'Responsible department'),
+                  decoration: const InputDecoration(
+                    labelText: 'Responsible department',
+                  ),
                 ),
                 Row(
                   children: [
@@ -107,7 +119,9 @@ class _StrategicGoalsScreenState extends State<StrategicGoalsScreen> {
                       child: TextField(
                         controller: targetController,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Target value'),
+                        decoration: const InputDecoration(
+                          labelText: 'Target value',
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -130,7 +144,9 @@ class _StrategicGoalsScreenState extends State<StrategicGoalsScreen> {
                       context: ctx,
                       initialDate: deadline,
                       firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+                      lastDate: DateTime.now().add(
+                        const Duration(days: 365 * 3),
+                      ),
                     );
                     if (picked != null) setState(() => deadline = picked);
                   },
@@ -182,7 +198,9 @@ class _StrategicGoalsScreenState extends State<StrategicGoalsScreen> {
     String schoolId,
     StrategicGoal goal,
   ) async {
-    final valueController = TextEditingController(text: goal.currentValue.toString());
+    final valueController = TextEditingController(
+      text: goal.currentValue.toString(),
+    );
     var status = goal.status;
 
     final saved = await showDialog<bool>(
@@ -196,7 +214,9 @@ class _StrategicGoalsScreenState extends State<StrategicGoalsScreen> {
               TextField(
                 controller: valueController,
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: 'Current value (${goal.unit})'),
+                decoration: InputDecoration(
+                  labelText: 'Current value (${goal.unit})',
+                ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<GoalStatus>(
@@ -227,7 +247,8 @@ class _StrategicGoalsScreenState extends State<StrategicGoalsScreen> {
     await _repository.updateGoalProgress(
       schoolId,
       goal.goalId,
-      currentValue: double.tryParse(valueController.text.trim()) ?? goal.currentValue,
+      currentValue:
+          double.tryParse(valueController.text.trim()) ?? goal.currentValue,
       status: status,
     );
   }
@@ -271,7 +292,10 @@ class _GoalCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   goal.title,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               Container(
@@ -282,14 +306,21 @@ class _GoalCard extends StatelessWidget {
                 ),
                 child: Text(
                   goal.status.name.toUpperCase(),
-                  style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
           if (goal.description.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(goal.description, style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              goal.description,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ],
           const SizedBox(height: 12),
           LinearProgressIndicator(
@@ -304,7 +335,10 @@ class _GoalCard extends StatelessWidget {
             children: [
               Text(
                 '${goal.currentValue.toStringAsFixed(0)} / ${goal.targetValue.toStringAsFixed(0)} ${goal.unit}',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
               ),
               Text(
                 'Due ${DateFormat.yMMMd().format(goal.deadline)}',
@@ -316,14 +350,20 @@ class _GoalCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               goal.responsibleDepartment,
-              style: TextStyle(color: Theme.of(context).hintColor, fontSize: 11),
+              style: TextStyle(
+                color: Theme.of(context).hintColor,
+                fontSize: 11,
+              ),
             ),
           ],
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextButton(onPressed: onUpdateProgress, child: const Text('Update progress')),
+              TextButton(
+                onPressed: onUpdateProgress,
+                child: const Text('Update progress'),
+              ),
               IconButton(
                 icon: const Icon(Icons.delete_outline, size: 20),
                 onPressed: onDelete,

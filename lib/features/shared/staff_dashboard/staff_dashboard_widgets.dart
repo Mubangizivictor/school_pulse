@@ -22,6 +22,7 @@ class StaffDashboardHeader extends StatelessWidget {
     super.key,
     required this.roleLabel,
     this.onSwitchTap,
+    this.showHeaderActions = true,
   });
 
   final String roleLabel;
@@ -32,6 +33,7 @@ class StaffDashboardHeader extends StatelessWidget {
   /// instead, which lists the specific assignment (e.g. which class, for a
   /// teacher holding more than one Subject Teacher assignment).
   final VoidCallback? onSwitchTap;
+  final bool showHeaderActions;
 
   @override
   Widget build(BuildContext context) {
@@ -132,17 +134,19 @@ class StaffDashboardHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-                _DashboardHeaderAction(
-                  child: IconButton(
-                    iconSize: 20,
-                    padding: EdgeInsets.zero,
-                    icon: const Icon(Icons.chat_bubble_outline),
-                    tooltip: 'Messages',
-                    onPressed: () => context.push('/staff/messages'),
+                if (showHeaderActions) ...[
+                  _DashboardHeaderAction(
+                    child: IconButton(
+                      iconSize: 20,
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      tooltip: 'Messages',
+                      onPressed: () => context.push('/staff/messages'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.s),
-                const _DashboardHeaderAction(child: NotificationBellButton()),
+                  const SizedBox(width: AppSpacing.s),
+                  const _DashboardHeaderAction(child: NotificationBellButton()),
+                ],
               ],
             ),
           ),
@@ -154,7 +158,7 @@ class StaffDashboardHeader extends StatelessWidget {
 
 /// A fixed, shared shell for the dashboard message and notification actions.
 /// The bell provides its own badge while this widget provides the identical
-/// 56px touch target and visual container used by the message action.
+/// Compact shared shell for the dashboard message and notification actions.
 class _DashboardHeaderAction extends StatelessWidget {
   final Widget child;
 
@@ -164,16 +168,16 @@ class _DashboardHeaderAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return SizedBox(
-      width: 56,
-      height: 56,
+      width: 42,
+      height: 42,
       child: Material(
         color: colors.surfaceContainer,
         shape: RoundedRectangleBorder(
-          borderRadius: AppRadius.large,
+          borderRadius: AppRadius.medium,
           side: BorderSide(color: colors.outlineVariant),
         ),
         clipBehavior: Clip.antiAlias,
-        child: Center(child: SizedBox(width: 48, height: 48, child: child)),
+        child: Center(child: SizedBox(width: 40, height: 40, child: child)),
       ),
     );
   }
@@ -202,7 +206,7 @@ class StaffKpiData {
   });
 }
 
-/// Shared gradient hero card: greeting + term/date pill + 2x2 KPI grid.
+/// Shared high-contrast hero card: greeting + term/date pill + 2x2 KPI grid.
 /// Pass exactly 4 [StaffKpiData] items (or null to show the loading
 /// skeleton) — everything else (layout, gradient, pill, tile styling) is
 /// identical across every staff role.
@@ -240,7 +244,10 @@ class StaffHeroSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    // Compact timeline-style hierarchy: black surfaces, white type, and a
+    // crisp dividing rule rather than dim grey cards.
+    final heroBackground = Colors.black;
+    final heroForeground = Colors.white;
     final authState = context.watch<AuthBloc>().state;
     final fullName = authState is AuthAuthenticated ? authState.user.name : '';
     final firstName = fullName.trim().isEmpty
@@ -252,18 +259,8 @@ class StaffHeroSummaryCard extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.l),
       decoration: BoxDecoration(
         borderRadius: AppRadius.extraLarge,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [scheme.primary, scheme.secondary],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.primary.withValues(alpha: 0.25),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: heroBackground,
+        border: Border.all(color: heroForeground, width: 2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,7 +273,7 @@ class StaffHeroSummaryCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: scheme.onPrimary,
+                    color: heroForeground,
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
@@ -292,7 +289,7 @@ class StaffHeroSummaryCard extends StatelessWidget {
                     vertical: AppSpacing.s,
                   ),
                   decoration: BoxDecoration(
-                    color: scheme.onPrimary.withValues(alpha: 0.16),
+                    color: heroForeground,
                     borderRadius: AppRadius.full,
                   ),
                   child: Row(
@@ -301,13 +298,13 @@ class StaffHeroSummaryCard extends StatelessWidget {
                       Icon(
                         Icons.calendar_today_rounded,
                         size: 14,
-                        color: scheme.onPrimary,
+                        color: heroBackground,
                       ),
                       const SizedBox(width: AppSpacing.s),
                       Text(
                         periodLabel ?? 'This Term',
                         style: TextStyle(
-                          color: scheme.onPrimary,
+                          color: heroBackground,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
@@ -317,7 +314,7 @@ class StaffHeroSummaryCard extends StatelessWidget {
                         Icon(
                           Icons.unfold_more_rounded,
                           size: 14,
-                          color: scheme.onPrimary.withValues(alpha: 0.85),
+                          color: heroBackground,
                         ),
                       ],
                     ],
@@ -407,8 +404,10 @@ class _StaffKpiTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tileBackground = Colors.black;
+    final tileForeground = Colors.white;
     return Material(
-      color: Theme.of(context).colorScheme.surface,
+      color: tileBackground,
       borderRadius: AppRadius.large,
       child: InkWell(
         onTap: data.onTap,
@@ -416,6 +415,10 @@ class _StaffKpiTile extends StatelessWidget {
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(AppSpacing.m),
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.large,
+            border: Border.all(color: tileForeground),
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -423,15 +426,11 @@ class _StaffKpiTile extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: useGlassIconContainers
-                      ? Colors.white.withValues(alpha: 0.12)
-                      : data.color.withValues(alpha: 0.15),
+                  color: tileForeground,
                   borderRadius: AppRadius.medium,
-                  border: useGlassIconContainers
-                      ? Border.all(color: Colors.white.withValues(alpha: 0.24))
-                      : null,
+                  border: Border.all(color: tileForeground),
                 ),
-                child: Icon(data.icon, color: data.color, size: 24),
+                child: Icon(data.icon, color: tileBackground, size: 24),
               ),
               const SizedBox(width: AppSpacing.s),
               Expanded(
@@ -446,7 +445,7 @@ class _StaffKpiTile extends StatelessWidget {
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: tileForeground,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -461,7 +460,7 @@ class _StaffKpiTile extends StatelessWidget {
                           fontSize: 20,
                           letterSpacing: -0.5,
                           height: 1.1,
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: tileForeground,
                         ),
                       ),
                     ),
@@ -470,17 +469,14 @@ class _StaffKpiTile extends StatelessWidget {
                       data.subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                      style: TextStyle(fontSize: 11, color: tileForeground),
                     ),
                   ],
                 ),
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: tileForeground,
                 size: 20,
               ),
             ],
@@ -528,6 +524,7 @@ PreferredSizeWidget staffDashboardAppBar(
   required String roleLabel,
   List<Widget>? actions,
   VoidCallback? onSwitchTap,
+  bool showHeaderActions = true,
 }) {
   return AppBar(
     automaticallyImplyLeading: false,
@@ -536,7 +533,11 @@ PreferredSizeWidget staffDashboardAppBar(
     scrolledUnderElevation: 3,
     titleSpacing: 0,
     toolbarHeight: kToolbarHeight + 16,
-    title: StaffDashboardHeader(roleLabel: roleLabel, onSwitchTap: onSwitchTap),
+    title: StaffDashboardHeader(
+      roleLabel: roleLabel,
+      onSwitchTap: onSwitchTap,
+      showHeaderActions: showHeaderActions,
+    ),
     actions: actions,
   );
 }

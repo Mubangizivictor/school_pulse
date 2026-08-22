@@ -29,18 +29,20 @@ class StructurePeopleReadinessCubit
     required this.repository,
     required this.schoolId,
   }) : super(const StructurePeopleReadinessState()) {
-    _subscription = repository.watchSchoolStaff(schoolId).listen(
-      (staff) => emit(
-        StructurePeopleReadinessState(staff: staff, isLoading: false),
-      ),
-      onError: (Object error, StackTrace stackTrace) => emit(
-        StructurePeopleReadinessState(
-          staff: state.staff,
-          isLoading: false,
-          errorMessage: error.toString(),
-        ),
-      ),
-    );
+    _subscription = repository
+        .watchSchoolStaff(schoolId)
+        .listen(
+          (staff) => emit(
+            StructurePeopleReadinessState(staff: staff, isLoading: false),
+          ),
+          onError: (Object error, StackTrace stackTrace) => emit(
+            StructurePeopleReadinessState(
+              staff: state.staff,
+              isLoading: false,
+              errorMessage: error.toString(),
+            ),
+          ),
+        );
   }
 
   @override

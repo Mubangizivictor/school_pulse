@@ -11,9 +11,14 @@ import 'package:school_pulse/features/director/domain/entities/director_dashboar
 /// so each report definition only supplies its content, not boilerplate.
 class ReportDetailScreen extends StatelessWidget {
   final String title;
-  final Widget Function(BuildContext context, DirectorDashboardStats stats) builder;
+  final Widget Function(BuildContext context, DirectorDashboardStats stats)
+  builder;
 
-  const ReportDetailScreen({super.key, required this.title, required this.builder});
+  const ReportDetailScreen({
+    super.key,
+    required this.title,
+    required this.builder,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +70,12 @@ class ReportNotTrackedNote extends StatelessWidget {
       children: [
         Icon(Icons.info_outline, color: Theme.of(context).hintColor, size: 20),
         const SizedBox(width: 10),
-        Expanded(child: Text(message, style: TextStyle(color: Theme.of(context).hintColor))),
+        Expanded(
+          child: Text(
+            message,
+            style: TextStyle(color: Theme.of(context).hintColor),
+          ),
+        ),
       ],
     ),
   );

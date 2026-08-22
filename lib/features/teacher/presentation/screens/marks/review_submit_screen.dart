@@ -29,9 +29,9 @@ class ReviewSubmitScreen extends StatelessWidget {
           return;
         }
         if (state.errorMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.errorMessage!)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
         }
       },
       builder: (context, state) {
@@ -51,7 +51,8 @@ class ReviewSubmitScreen extends StatelessWidget {
         final named = [
           for (final entry in entries)
             (
-              name: state.students
+              name:
+                  state.students
                       .where((s) => s.studentId == entry.studentId)
                       .firstOrNull
                       ?.name ??
@@ -161,16 +162,24 @@ class ReviewSubmitScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.danger(context).withValues(alpha: 0.1),
+                            color: AppColors.danger(
+                              context,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: AppColors.danger(context).withValues(alpha: 0.3),
+                              color: AppColors.danger(
+                                context,
+                              ).withValues(alpha: 0.3),
                             ),
                           ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(Icons.error_outline, color: AppColors.danger(context), size: 20),
+                              Icon(
+                                Icons.error_outline,
+                                color: AppColors.danger(context),
+                                size: 20,
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
@@ -310,12 +319,18 @@ class ReviewSubmitScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Text('$rank.', style: TextStyle(color: theme.hintColor, fontSize: 12)),
+          Text(
+            '$rank.',
+            style: TextStyle(color: theme.hintColor, fontSize: 12),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               name,
-              style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 14),
+              style: TextStyle(
+                color: theme.colorScheme.onSurface,
+                fontSize: 14,
+              ),
             ),
           ),
           Text(

@@ -21,7 +21,14 @@ import '../widgets/structure_ui_kit.dart';
 /// Timetable/Attendance/Communication tab bar that exposed future setup before
 /// its prerequisites existed.
 class OperationsConfigScreen extends StatelessWidget {
-  const OperationsConfigScreen({super.key});
+  const OperationsConfigScreen({
+    super.key,
+    this.showAppBar = true,
+    this.timetableSectionKey,
+  });
+
+  final bool showAppBar;
+  final GlobalKey<TimetableSectionState>? timetableSectionKey;
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +49,8 @@ class OperationsConfigScreen extends StatelessWidget {
         (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
 
     return Scaffold(
-      appBar: AppBar(title: Text(_title(section))),
+      appBar: showAppBar ? AppBar(title: Text(_title(section))) : null,
+      backgroundColor: showAppBar ? null : Colors.transparent,
       body: BlocBuilder<StructureBloc, StructureState>(
         builder: (context, state) => switch (section) {
           'attendance' => _AttendanceSection(state: state, schoolId: schoolId),
@@ -57,6 +65,7 @@ class OperationsConfigScreen extends StatelessWidget {
           'custom' => _CustomFieldsSection(state: state, schoolId: schoolId),
           'fees' => _FeeCategoriesSection(state: state, schoolId: schoolId),
           _ => _TimetableSection(
+            key: timetableSectionKey,
             config: state.timetableConfig,
             schoolId: schoolId,
           ),
@@ -71,20 +80,24 @@ class OperationsConfigScreen extends StatelessWidget {
     'documents' => 'Document Templates',
     'custom' => 'Custom Fields',
     'fees' => 'Finance Foundation',
-    _ => 'School Day & Periods',
+    _ => 'School day & periods',
   };
 }
 
 class _TimetableSection extends StatefulWidget {
   final TimetableConfig config;
   final String schoolId;
-  const _TimetableSection({required this.config, required this.schoolId});
+  const _TimetableSection({
+    super.key,
+    required this.config,
+    required this.schoolId,
+  });
 
   @override
-  State<_TimetableSection> createState() => _TimetableSectionState();
+  State<_TimetableSection> createState() => TimetableSectionState();
 }
 
-class _TimetableSectionState extends State<_TimetableSection> {
+class TimetableSectionState extends State<_TimetableSection> {
   static const _weekDays = <String>[
     'Monday',
     'Tuesday',
@@ -99,31 +112,39 @@ class _TimetableSectionState extends State<_TimetableSection> {
   late TextEditingController _periodsPerDay;
   late String _startTime;
   late String _endTime;
+  bool _isDirty = false;
+  bool _isConfigured = false;
 
   @override
   void initState() {
     super.initState();
     _readConfig(widget.config);
+    _isConfigured = _isValid(showError: false);
   }
 
   @override
   void didUpdateWidget(covariant _TimetableSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.config != widget.config) {
+    if (!_isDirty && oldWidget.config != widget.config) {
       _periodsPerDay.text = widget.config.periodsPerDay.toString();
       _teachingDays = widget.config.teachingDays.toSet();
       _startTime = widget.config.schoolStartTime;
       _endTime = widget.config.schoolEndTime;
+      _isConfigured = _isValid(showError: false);
     }
   }
 
   void _readConfig(TimetableConfig config) {
     _teachingDays = config.teachingDays.toSet();
     _periodsPerDay = TextEditingController(
-      text: config.periodsPerDay.toString(),
+      text: config.periodsPerDay == 0 ? '' : config.periodsPerDay.toString(),
     );
     _startTime = config.schoolStartTime;
     _endTime = config.schoolEndTime;
+  }
+
+  void _markDirty() {
+    if (!_isDirty) setState(() => _isDirty = true);
   }
 
   @override
@@ -152,7 +173,45 @@ class _TimetableSectionState extends State<_TimetableSection> {
     return TimeOfDay(hour: hour, minute: minute);
   }
 
-  void _save(BuildContext context) {
+  String? _validationError() {
+    if (_teachingDays.isEmpty) {
+      return 'Select at least one teaching day.';
+    }
+    final start = _parseTime(_startTime);
+    final end = _parseTime(_endTime);
+    if (start == null || end == null) {
+      return 'Set both the start and end time.';
+    }
+    final startMinutes = start.hour * 60 + start.minute;
+    final endMinutes = end.hour * 60 + end.minute;
+    if (endMinutes <= startMinutes) {
+      return 'End time must be after the start time.';
+    }
+    final periods = int.tryParse(_periodsPerDay.text);
+    if (periods == null || periods <= 0) {
+      return 'Enter at least one period per day.';
+    }
+    return null;
+  }
+
+  bool _isValid({required bool showError}) {
+    final error = _validationError();
+    if (error != null) {
+      if (showError && mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(error)));
+      }
+      return false;
+    }
+    return true;
+  }
+
+  /// Persists the school week if it has unsaved, valid edits. Returns false
+  /// (leaving the admin on this step) when dirty but invalid.
+  Future<bool> saveIfDirty() async {
+    if (!_isDirty) return true;
+    if (!_isValid(showError: true)) return false;
     final teaching = _weekDays
         .where((day) => _teachingDays.contains(day))
         .toList(growable: false);
@@ -169,18 +228,26 @@ class _TimetableSectionState extends State<_TimetableSection> {
     context.read<StructureBloc>().add(
       UpdateTimetableConfigRequested(updated, widget.schoolId),
     );
+    setState(() {
+      _isDirty = false;
+      _isConfigured = true;
+    });
+    return true;
   }
 
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<StructureBloc>();
+    final scheme = Theme.of(context).colorScheme;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Text(
-          'Define the school day before building class timetables. Every school controls its own days, times, lesson lengths, breaks, lunch, prep and custom slots.',
+          _isConfigured
+              ? 'Review the teaching week before configuring period times.'
+              : 'Set teaching days, school hours and the number of periods.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            color: scheme.onSurfaceVariant,
             height: 1.4,
           ),
         ),
@@ -189,81 +256,202 @@ class _TimetableSectionState extends State<_TimetableSection> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Teaching days',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              Text(
+                'School week',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              Text(
+                'Teaching days',
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: _weekDays.map((day) {
                   final selected = _teachingDays.contains(day);
-                  return FilterChip(
+                  return ChoiceChip(
                     label: Text(day.substring(0, 3)),
                     selected: selected,
-                    onSelected: (value) => setState(() {
-                      if (value) {
-                        _teachingDays.add(day);
-                      } else {
-                        _teachingDays.remove(day);
-                      }
-                    }),
+                    showCheckmark: false,
+                    labelStyle: TextStyle(
+                      color: selected ? scheme.onPrimary : scheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    backgroundColor: scheme.surface,
+                    selectedColor: scheme.primary,
+                    side: BorderSide(color: scheme.outlineVariant),
+                    onSelected: (value) {
+                      _markDirty();
+                      setState(() {
+                        if (value) {
+                          _teachingDays.add(day);
+                        } else {
+                          _teachingDays.remove(day);
+                        }
+                      });
+                    },
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: _TimeButton(
-                      label: 'School starts',
-                      value: _startTime,
-                      onTap: () async {
-                        final value = await _pickTime(context, _startTime);
-                        if (value != null && mounted) {
-                          setState(() => _startTime = value);
-                        }
-                      },
+              const SizedBox(height: 20),
+              if (_isConfigured && !_isDirty) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: _TimeSummary(
+                        label: 'Starts',
+                        value: _formatTime12h(_startTime),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _TimeButton(
-                      label: 'School ends',
-                      value: _endTime,
-                      onTap: () async {
-                        final value = await _pickTime(context, _endTime);
-                        if (value != null && mounted) {
-                          setState(() => _endTime = value);
-                        }
-                      },
+                    SizedBox(
+                      height: 40,
+                      child: VerticalDivider(color: scheme.outlineVariant),
                     ),
+                    Expanded(
+                      child: _TimeSummary(
+                        label: 'Ends',
+                        value: _formatTime12h(_endTime),
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 28),
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: scheme.primary),
+                      ),
+                      child: Icon(
+                        Icons.calendar_today_outlined,
+                        size: 18,
+                        color: scheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _periodsPerDay.text,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                          ),
+                        ),
+                        Text(
+                          'periods per day',
+                          style: TextStyle(color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ] else ...[
+                Text(
+                  'Starts',
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _TimeButton(
+                        label: null,
+                        value: _startTime,
+                        onTap: () async {
+                          final value = await _pickTime(context, _startTime);
+                          if (value != null && mounted) {
+                            _markDirty();
+                            setState(() => _startTime = value);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _TimeButton(
+                        label: null,
+                        value: _endTime,
+                        onTap: () async {
+                          final value = await _pickTime(context, _endTime);
+                          if (value != null && mounted) {
+                            _markDirty();
+                            setState(() => _endTime = value);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Starts',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Ends',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Periods per day',
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 8),
+                _PeriodsStepper(
+                  controller: _periodsPerDay,
+                  onChanged: (value) {
+                    _markDirty();
+                    setState(() => _periodsPerDay.text = value.toString());
+                  },
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Individual period times are configured next.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _periodsPerDay,
-                decoration: const InputDecoration(
-                  labelText: 'Teaching periods per normal day',
-                  helperText:
-                      'Each period can still use its own start/end time.',
                 ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => _save(context),
-                  icon: const Icon(Icons.save_outlined),
-                  label: const Text('Save School Day'),
-                ),
-              ),
+              ],
             ],
           ),
         ),
+        if (_isConfigured && !_isDirty) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: scheme.outlineVariant),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle_outline, color: scheme.primary),
+                const SizedBox(width: 10),
+                Text(
+                  'School week configured',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         StructureSectionHeader(
           title: 'Periods, Breaks, Lunch, Prep & Activities',
@@ -330,16 +518,100 @@ class _TimetableSectionState extends State<_TimetableSection> {
   }
 }
 
-class _TimeButton extends StatelessWidget {
+/// Formats "HH:mm" (24-hour) as "h:mm AM/PM"; returns the input unchanged if
+/// it isn't a valid HH:mm string.
+String _formatTime12h(String raw) {
+  final parts = raw.split(':');
+  if (parts.length != 2) return raw;
+  final hour = int.tryParse(parts[0]);
+  final minute = int.tryParse(parts[1]);
+  if (hour == null || minute == null) return raw;
+  final period = hour >= 12 ? 'PM' : 'AM';
+  final displayHour = hour % 12 == 0 ? 12 : hour % 12;
+  return '$displayHour:${minute.toString().padLeft(2, '0')} $period';
+}
+
+class _TimeSummary extends StatelessWidget {
   final String label;
+  final String value;
+
+  const _TimeSummary({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: scheme.primary),
+          ),
+          child: Icon(Icons.schedule_outlined, size: 18, color: scheme.primary),
+        ),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: TextStyle(color: scheme.onSurfaceVariant)),
+            Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _PeriodsStepper extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<int> onChanged;
+
+  const _PeriodsStepper({required this.controller, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final value = int.tryParse(controller.text) ?? 0;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.remove_circle_outline),
+            onPressed: value <= 0 ? null : () => onChanged(value - 1),
+          ),
+          Expanded(
+            child: Text(
+              '$value',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            onPressed: () => onChanged(value + 1),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimeButton extends StatelessWidget {
+  final String? label;
   final String value;
   final VoidCallback onTap;
 
-  const _TimeButton({
-    required this.label,
-    required this.value,
-    required this.onTap,
-  });
+  const _TimeButton({this.label, required this.value, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -350,7 +622,11 @@ class _TimeButton extends StatelessWidget {
         decoration: InputDecoration(labelText: label),
         child: Row(
           children: [
-            Expanded(child: Text(value.isEmpty ? 'Select' : value)),
+            Expanded(
+              child: Text(
+                value.isEmpty ? 'Select time' : _formatTime12h(value),
+              ),
+            ),
             const Icon(Icons.schedule_outlined, size: 18),
           ],
         ),

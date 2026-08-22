@@ -41,7 +41,7 @@ class StructureSetupCubit extends Cubit<StructureSetupCubitState> {
   StreamSubscription<StructureSetupPreferences>? _subscription;
 
   StructureSetupCubit({required this.repository})
-      : super(const StructureSetupCubitState()) {
+    : super(const StructureSetupCubitState()) {
     _subscription = repository.watchPreferences().listen(
       (preferences) => emit(
         state.copyWith(
@@ -51,10 +51,7 @@ class StructureSetupCubit extends Cubit<StructureSetupCubitState> {
         ),
       ),
       onError: (Object error, StackTrace stackTrace) => emit(
-        state.copyWith(
-          isLoading: false,
-          errorMessage: error.toString(),
-        ),
+        state.copyWith(isLoading: false, errorMessage: error.toString()),
       ),
     );
   }
@@ -84,11 +81,11 @@ class StructureSetupCubit extends Cubit<StructureSetupCubitState> {
       _save(state.preferences.copyWith(lastStepId: stepId));
 
   Future<void> markOnboardingCompleted() => _save(
-        state.preferences.copyWith(
-          onboardingCompleted: true,
-          setupVersion: StructureSetupPreferences.currentSetupVersion,
-        ),
-      );
+    state.preferences.copyWith(
+      onboardingCompleted: true,
+      setupVersion: StructureSetupPreferences.currentSetupVersion,
+    ),
+  );
 
   Future<void> reopenOnboarding() =>
       _save(state.preferences.copyWith(onboardingCompleted: false));
@@ -100,7 +97,9 @@ class StructureSetupCubit extends Cubit<StructureSetupCubitState> {
       await repository.savePreferences(next);
       // The live listener remains authoritative. This optimistic emission
       // keeps the survey responsive while Firestore confirms the write.
-      emit(state.copyWith(preferences: next, isSaving: false, clearError: true));
+      emit(
+        state.copyWith(preferences: next, isSaving: false, clearError: true),
+      );
     } catch (error) {
       emit(state.copyWith(isSaving: false, errorMessage: error.toString()));
       rethrow;

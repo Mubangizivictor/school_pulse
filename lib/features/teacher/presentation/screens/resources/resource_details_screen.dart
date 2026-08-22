@@ -19,7 +19,9 @@ class ResourceDetailsScreen extends StatelessWidget {
       return Scaffold(
         backgroundColor: AppColors.background(context),
         appBar: AppBar(title: const Text('Resource Details')),
-        body: const Center(child: Text('This resource is no longer available.')),
+        body: const Center(
+          child: Text('This resource is no longer available.'),
+        ),
       );
     }
 
@@ -144,10 +146,8 @@ class ResourceDetailsScreen extends StatelessWidget {
                   icon: Icons.share_outlined,
                   label: 'Share',
                   color: Colors.orange,
-                  onTap: () => context.push(
-                    '/staff/resources/share',
-                    extra: resource,
-                  ),
+                  onTap: () =>
+                      context.push('/staff/resources/share', extra: resource),
                 ),
                 _ActionButton(
                   icon: Icons.delete_outline,
@@ -172,11 +172,12 @@ class ResourceDetailsScreen extends StatelessWidget {
       return;
     }
     final uri = Uri.tryParse(url);
-    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    if (uri == null ||
+        !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Could not open this resource.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open this resource.')),
+        );
       }
     }
   }
@@ -197,8 +198,14 @@ class ResourceDetailsScreen extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: Icon(Icons.delete_outline, color: AppColors.danger(context)),
-              title: Text('Remove', style: TextStyle(color: AppColors.danger(context))),
+              leading: Icon(
+                Icons.delete_outline,
+                color: AppColors.danger(context),
+              ),
+              title: Text(
+                'Remove',
+                style: TextStyle(color: AppColors.danger(context)),
+              ),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _confirmRemove(context, resource);
@@ -244,8 +251,18 @@ class ResourceDetailsScreen extends StatelessWidget {
 
   static String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }

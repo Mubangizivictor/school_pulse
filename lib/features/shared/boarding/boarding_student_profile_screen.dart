@@ -312,7 +312,9 @@ class _VerticalDivider extends StatelessWidget {
     return Container(
       width: 1,
       height: 36,
-      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+      color: Theme.of(
+        context,
+      ).colorScheme.outlineVariant.withValues(alpha: 0.5),
     );
   }
 }

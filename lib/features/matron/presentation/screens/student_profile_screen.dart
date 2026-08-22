@@ -53,9 +53,7 @@ class _MatronStudentProfileScreenState
     if (!mounted) return;
     result.fold((_) => setState(() => _loadingStudent = false), (students) {
       setState(() {
-        _student = students
-            .where((s) => s.id == widget.studentId)
-            .firstOrNull;
+        _student = students.where((s) => s.id == widget.studentId).firstOrNull;
         _loadingStudent = false;
       });
     });
@@ -84,9 +82,7 @@ class _MatronStudentProfileScreenState
         TodaysAttendanceRow attendance = const TodaysAttendanceRow();
         if (state is AttendanceLoaded) {
           String? statusFor(String type) => state.attendance
-              .where(
-                (a) => a.studentId == widget.studentId && a.type == type,
-              )
+              .where((a) => a.studentId == widget.studentId && a.type == type)
               .firstOrNull
               ?.status;
           attendance = TodaysAttendanceRow(

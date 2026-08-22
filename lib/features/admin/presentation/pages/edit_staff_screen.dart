@@ -30,7 +30,9 @@ String? _validatePhone(String? v, {required bool required}) {
   if (value.isEmpty) return required ? 'Required' : null;
   final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
   if (digitsOnly.length < 7 ||
-      !_phoneDigitsPattern.hasMatch(value.replaceAll(RegExp(r'[\s()\-]'), ''))) {
+      !_phoneDigitsPattern.hasMatch(
+        value.replaceAll(RegExp(r'[\s()\-]'), ''),
+      )) {
     return 'Enter a valid phone number';
   }
   return null;
@@ -135,16 +137,13 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
           });
       if (!mounted) return;
       setState(() {
-        _documents = [
-          ..._documents.where((d) => d.type != type.name),
-          newRef,
-        ];
+        _documents = [..._documents.where((d) => d.type != type.name), newRef];
       });
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to upload ${file.name}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to upload ${file.name}')));
     } finally {
       if (mounted) setState(() => _uploadingType = null);
     }
@@ -152,13 +151,15 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
 
   Future<void> _viewDocument(StaffDocumentRef doc) async {
     try {
-      final url = await FirebaseStorage.instance.ref(doc.storagePath).getDownloadURL();
+      final url = await FirebaseStorage.instance
+          .ref(doc.storagePath)
+          .getDownloadURL();
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open document')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Could not open document')));
     }
   }
 
@@ -190,9 +191,9 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
         SnackBar(content: Text('Failed to save changes: ${failure.message}')),
       ),
       (_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Staff profile updated')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Staff profile updated')));
         Navigator.of(context).pop(true);
       },
     );
@@ -253,8 +254,9 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Required';
-                      if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                          .hasMatch(v.trim())) {
+                      if (!RegExp(
+                        r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                      ).hasMatch(v.trim())) {
                         return 'Enter a valid email';
                       }
                       return null;
@@ -341,15 +343,17 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
                   ),
                   const SizedBox(height: 14),
                   StreamBuilder<List<Department>>(
-                    stream:
-                        _structureRepository.watchDepartments(widget.user.schoolId),
+                    stream: _structureRepository.watchDepartments(
+                      widget.user.schoolId,
+                    ),
                     builder: (context, snapshot) {
                       final departments =
                           (snapshot.data ?? const [])
                               .where((d) => d.isActive)
                               .toList()
                             ..sort((a, b) => a.name.compareTo(b.name));
-                      final value = departments.any((d) => d.id == _departmentId)
+                      final value =
+                          departments.any((d) => d.id == _departmentId)
                           ? _departmentId
                           : null;
                       return DropdownButtonFormField<String>(
@@ -372,13 +376,14 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
                   ),
                   const SizedBox(height: 14),
                   StreamBuilder<List<StaffDesignation>>(
-                    stream:
-                        _structureRepository.watchDesignations(widget.user.schoolId),
+                    stream: _structureRepository.watchDesignations(
+                      widget.user.schoolId,
+                    ),
                     builder: (context, snapshot) {
-                      final designations =
-                          (snapshot.data ?? const []).toList()
-                            ..sort((a, b) => a.name.compareTo(b.name));
-                      final value = designations.any((d) => d.id == _designationId)
+                      final designations = (snapshot.data ?? const []).toList()
+                        ..sort((a, b) => a.name.compareTo(b.name));
+                      final value =
+                          designations.any((d) => d.id == _designationId)
                           ? _designationId
                           : null;
                       return DropdownButtonFormField<String>(
@@ -401,7 +406,9 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
                   ),
                   const SizedBox(height: 14),
                   StreamBuilder<List<Campus>>(
-                    stream: _structureRepository.watchCampuses(widget.user.schoolId),
+                    stream: _structureRepository.watchCampuses(
+                      widget.user.schoolId,
+                    ),
                     builder: (context, snapshot) {
                       final campuses =
                           (snapshot.data ?? const [])
@@ -460,8 +467,9 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
             ),
             const SizedBox(height: 8),
             ...StaffDocumentType.values.map((type) {
-              final existing =
-                  _documents.where((d) => d.type == type.name).lastOrNull;
+              final existing = _documents
+                  .where((d) => d.type == type.name)
+                  .lastOrNull;
               final uploading = _uploadingType == type;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),

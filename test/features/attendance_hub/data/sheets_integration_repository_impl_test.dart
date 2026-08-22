@@ -32,19 +32,24 @@ void main() {
     when(() => functions.httpsCallable(any())).thenReturn(callable);
   });
 
-  test('startConnect returns the authUrl from startGoogleSheetsOAuth', () async {
-    final result = _MockResult();
-    when(() => result.data).thenReturn({'authUrl': 'https://accounts.google.com/o/oauth2/auth'});
-    when(() => callable.call()).thenAnswer((_) async => result);
+  test(
+    'startConnect returns the authUrl from startGoogleSheetsOAuth',
+    () async {
+      final result = _MockResult();
+      when(
+        () => result.data,
+      ).thenReturn({'authUrl': 'https://accounts.google.com/o/oauth2/auth'});
+      when(() => callable.call()).thenAnswer((_) async => result);
 
-    final either = await repository.startConnect(schoolId);
+      final either = await repository.startConnect(schoolId);
 
-    expect(either.isRight(), isTrue);
-    either.fold((_) => fail('expected Right'), (url) {
-      expect(url, 'https://accounts.google.com/o/oauth2/auth');
-    });
-    verify(() => functions.httpsCallable('startGoogleSheetsOAuth')).called(1);
-  });
+      expect(either.isRight(), isTrue);
+      either.fold((_) => fail('expected Right'), (url) {
+        expect(url, 'https://accounts.google.com/o/oauth2/auth');
+      });
+      verify(() => functions.httpsCallable('startGoogleSheetsOAuth')).called(1);
+    },
+  );
 
   test(
     'a needs_reauth backend error maps to the friendly renewal message, not the raw error',
@@ -70,52 +75,64 @@ void main() {
     },
   );
 
-  test('a not_connected backend error maps to a friendly connect-first message', () async {
-    when(() => callable.call(any())).thenThrow(
-      FirebaseFunctionsException(
-        message: 'no token doc',
-        code: 'failed-precondition',
-        details: {'reason': 'not_connected'},
-      ),
-    );
+  test(
+    'a not_connected backend error maps to a friendly connect-first message',
+    () async {
+      when(() => callable.call(any())).thenThrow(
+        FirebaseFunctionsException(
+          message: 'no token doc',
+          code: 'failed-precondition',
+          details: {'reason': 'not_connected'},
+        ),
+      );
 
-    final either = await repository.resync(schoolId);
+      final either = await repository.resync(schoolId);
 
-    expect(either.isLeft(), isTrue);
-    either.fold(
-      (failure) => expect(failure.message, 'Connect Google Sheets first.'),
-      (_) => fail('expected Left'),
-    );
-  });
+      expect(either.isLeft(), isTrue);
+      either.fold(
+        (failure) => expect(failure.message, 'Connect Google Sheets first.'),
+        (_) => fail('expected Left'),
+      );
+    },
+  );
 
-  test('a temporary backend failure never claims attendance itself failed', () async {
-    when(() => callable.call(any())).thenThrow(
-      FirebaseFunctionsException(
-        message: 'quota exceeded',
-        code: 'internal',
-        details: {'reason': 'temporary'},
-      ),
-    );
+  test(
+    'a temporary backend failure never claims attendance itself failed',
+    () async {
+      when(() => callable.call(any())).thenThrow(
+        FirebaseFunctionsException(
+          message: 'quota exceeded',
+          code: 'internal',
+          details: {'reason': 'temporary'},
+        ),
+      );
 
-    final either = await repository.exportSession(schoolId, ['rec1']);
+      final either = await repository.exportSession(schoolId, ['rec1']);
 
-    expect(either.isLeft(), isTrue);
-    either.fold(
-      (failure) => expect(
-        failure.message,
-        'Attendance is saved. Google Sheets will sync automatically when available.',
-      ),
-      (_) => fail('expected Left'),
-    );
-  });
+      expect(either.isLeft(), isTrue);
+      either.fold(
+        (failure) => expect(
+          failure.message,
+          'Attendance is saved. Google Sheets will sync automatically when available.',
+        ),
+        (_) => fail('expected Left'),
+      );
+    },
+  );
 
-  test('updateAutoSync writes only the preference field via the data source', () async {
-    when(() => remoteDataSource.updatePreferences(schoolId, autoSync: true))
-        .thenAnswer((_) async {});
+  test(
+    'updateAutoSync writes only the preference field via the data source',
+    () async {
+      when(
+        () => remoteDataSource.updatePreferences(schoolId, autoSync: true),
+      ).thenAnswer((_) async {});
 
-    final either = await repository.updateAutoSync(schoolId, true);
+      final either = await repository.updateAutoSync(schoolId, true);
 
-    expect(either.isRight(), isTrue);
-    verify(() => remoteDataSource.updatePreferences(schoolId, autoSync: true)).called(1);
-  });
+      expect(either.isRight(), isTrue);
+      verify(
+        () => remoteDataSource.updatePreferences(schoolId, autoSync: true),
+      ).called(1);
+    },
+  );
 }

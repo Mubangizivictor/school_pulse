@@ -64,9 +64,7 @@ void main() {
         available: [_classAssignment()],
       ),
     );
-    when(
-      () => performanceBloc.state,
-    ).thenReturn(const ClassPerformanceState());
+    when(() => performanceBloc.state).thenReturn(const ClassPerformanceState());
 
     // The screen resolves its own blocs from GetIt in initState rather than
     // via BlocProvider.of, matching how the router wires it in production.

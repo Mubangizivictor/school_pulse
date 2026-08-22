@@ -40,9 +40,8 @@ class ClassResourceLocalDataSourceWeb implements ClassResourceLocalDataSource {
   Future<String> downloadForOffline(
     ClassResource resource,
     List<int> bytes,
-  ) async => throw UnsupportedError(
-    'Offline downloads are not available on web.',
-  );
+  ) async =>
+      throw UnsupportedError('Offline downloads are not available on web.');
 
   @override
   Future<void> removeDownload(String resourceId) async {}

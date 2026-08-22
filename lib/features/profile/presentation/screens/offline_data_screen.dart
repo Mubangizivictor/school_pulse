@@ -63,7 +63,9 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final failed = _pending.where((o) => o.status == OfflineSyncStatus.failed).length;
+    final failed = _pending
+        .where((o) => o.status == OfflineSyncStatus.failed)
+        .length;
     final waiting = _pending.length - failed;
 
     return Scaffold(
@@ -80,7 +82,9 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
                     child: Row(
                       children: [
                         Icon(
-                          _isOnline ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
+                          _isOnline
+                              ? Icons.cloud_done_outlined
+                              : Icons.cloud_off_outlined,
                           color: _isOnline
                               ? AppColors.successGreen
                               : AppColors.deepOrange,
@@ -120,7 +124,9 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
                     label: 'Sync Now',
                     icon: Icons.sync,
                     isLoading: _syncing,
-                    onPressed: _isOnline && _pending.isNotEmpty ? _syncNow : null,
+                    onPressed: _isOnline && _pending.isNotEmpty
+                        ? _syncNow
+                        : null,
                   ),
                   if (_pending.isNotEmpty) ...[
                     const SizedBox(height: 24),
@@ -199,7 +205,10 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: AppColors.textSecondary(context))),
+          Text(
+            label,
+            style: TextStyle(color: AppColors.textSecondary(context)),
+          ),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),

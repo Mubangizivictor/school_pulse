@@ -12,7 +12,8 @@ import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_co
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_state.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/resources/resources_home_screen.dart';
 
-class _MockClassResourceBloc extends MockBloc<ClassResourceEvent, ClassResourceState>
+class _MockClassResourceBloc
+    extends MockBloc<ClassResourceEvent, ClassResourceState>
     implements ClassResourceBloc {}
 
 class _MockClassTeacherContextBloc
@@ -55,8 +56,9 @@ void main() {
   setUp(() {
     resourceBloc = _MockClassResourceBloc();
     contextBloc = _MockClassTeacherContextBloc();
-    when(() => contextBloc.state)
-        .thenReturn(ClassTeacherContextState(active: activeContext));
+    when(
+      () => contextBloc.state,
+    ).thenReturn(ClassTeacherContextState(active: activeContext));
   });
 
   Widget buildSubject() {

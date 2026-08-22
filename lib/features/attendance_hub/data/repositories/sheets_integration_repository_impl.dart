@@ -56,7 +56,9 @@ class SheetsIntegrationRepositoryImpl implements SheetsIntegrationRepository {
       final result = await callable.call();
       final authUrl = (result.data as Map)['authUrl'] as String?;
       if (authUrl == null || authUrl.isEmpty) {
-        return Left(ServerFailure('Could not start the Google Sheets connection.'));
+        return Left(
+          ServerFailure('Could not start the Google Sheets connection.'),
+        );
       }
       return Right(authUrl);
     } catch (e) {
@@ -76,7 +78,10 @@ class SheetsIntegrationRepositoryImpl implements SheetsIntegrationRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateAutoSync(String schoolId, bool autoSync) async {
+  Future<Either<Failure, void>> updateAutoSync(
+    String schoolId,
+    bool autoSync,
+  ) async {
     try {
       await remoteDataSource.updatePreferences(schoolId, autoSync: autoSync);
       return const Right(null);
@@ -148,7 +153,9 @@ class SheetsIntegrationRepositoryImpl implements SheetsIntegrationRepository {
     List<String> recordIds,
   ) async {
     try {
-      final callable = functions.httpsCallable('exportAttendanceSessionToSheets');
+      final callable = functions.httpsCallable(
+        'exportAttendanceSessionToSheets',
+      );
       final result = await callable.call({'recordIds': recordIds});
       final data = Map<String, dynamic>.from(result.data as Map);
       return Right(

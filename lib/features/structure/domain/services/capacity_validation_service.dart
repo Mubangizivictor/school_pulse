@@ -32,9 +32,7 @@ class CapacityValidationService {
     return streams
         .where(
           (s) =>
-              s.classId == classId &&
-              s.isActive &&
-              s.id != excludingStreamId,
+              s.classId == classId && s.isActive && s.id != excludingStreamId,
         )
         .fold(0, (sum, s) => sum + s.capacity);
   }

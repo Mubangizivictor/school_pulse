@@ -1750,7 +1750,11 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(
-    () => MarksBloc(marksRepository: sl(), studentRepository: sl()),
+    () => MarksBloc(
+      marksRepository: sl(),
+      studentRepository: sl(),
+      classStudentRepository: sl(),
+    ),
   );
 
   sl.registerLazySingleton<LessonRepository>(

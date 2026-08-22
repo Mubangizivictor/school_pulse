@@ -75,7 +75,9 @@ class NfcCredentialReaderAdapter implements CredentialReaderAdapter {
           debugPrint('[SchoolPulse:NFC] Core NFC discovered a tag');
           final uid = _extractUid(tag);
           if (uid == null) {
-            debugPrint('[SchoolPulse:NFC] tag discovered but no UID adapter matched');
+            debugPrint(
+              '[SchoolPulse:NFC] tag discovered but no UID adapter matched',
+            );
             _sessionActive = false;
             if (!_controller.isClosed) {
               _controller.addError(

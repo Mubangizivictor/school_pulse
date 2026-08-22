@@ -56,14 +56,15 @@ class _PolicyEditorScreenState extends State<PolicyEditorScreen> {
       body: StreamBuilder<List<InstitutionPolicy>>(
         stream: _repository.watchPolicies(widget.schoolId),
         builder: (context, snapshot) {
-          final existing = (snapshot.data ?? const <InstitutionPolicy>[])
-              .where(
-                (p) =>
-                    p.type == widget.policyType &&
-                    p.scope.type == PolicyScopeType.institution,
-              )
-              .toList()
-            ..sort((a, b) => b.version.compareTo(a.version));
+          final existing =
+              (snapshot.data ?? const <InstitutionPolicy>[])
+                  .where(
+                    (p) =>
+                        p.type == widget.policyType &&
+                        p.scope.type == PolicyScopeType.institution,
+                  )
+                  .toList()
+                ..sort((a, b) => b.version.compareTo(a.version));
           final current = existing.isEmpty ? null : existing.first;
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -350,39 +351,38 @@ class _PolicyEditorScreenState extends State<PolicyEditorScreen> {
       builder: (sheetContext) => DraggableScrollableSheet(
         initialChildSize: 0.6,
         expand: false,
-        builder: (context, controller) =>
-            StreamBuilder<List<InstitutionPolicy>>(
-              stream: _repository.watchPolicies(widget.schoolId),
-              builder: (context, snapshot) {
-                final versions =
-                    (snapshot.data ?? const <InstitutionPolicy>[])
-                        .where((p) => p.type == widget.policyType)
-                        .toList()
-                      ..sort((a, b) => b.version.compareTo(a.version));
-                return ListView(
-                  controller: controller,
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Text(
-                      'Change history',
-                      style: Theme.of(context).textTheme.titleMedium,
+        builder: (context, controller) => StreamBuilder<List<InstitutionPolicy>>(
+          stream: _repository.watchPolicies(widget.schoolId),
+          builder: (context, snapshot) {
+            final versions =
+                (snapshot.data ?? const <InstitutionPolicy>[])
+                    .where((p) => p.type == widget.policyType)
+                    .toList()
+                  ..sort((a, b) => b.version.compareTo(a.version));
+            return ListView(
+              controller: controller,
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(
+                  'Change history',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                ...versions.map(
+                  (p) => ListTile(
+                    leading: CircleAvatar(child: Text('v${p.version}')),
+                    title: Text('${p.status.name} · ${p.scope.type.name}'),
+                    subtitle: Text(
+                      '${p.changeReason}\nby ${p.updatedBy} · ${p.updatedAt.toLocal()}',
                     ),
-                    const SizedBox(height: 8),
-                    ...versions.map(
-                      (p) => ListTile(
-                        leading: CircleAvatar(child: Text('v${p.version}')),
-                        title: Text('${p.status.name} · ${p.scope.type.name}'),
-                        subtitle: Text(
-                          '${p.changeReason}\nby ${p.updatedBy} · ${p.updatedAt.toLocal()}',
-                        ),
-                        isThreeLine: true,
-                      ),
-                    ),
-                    if (versions.isEmpty) const Text('No changes recorded yet.'),
-                  ],
-                );
-              },
-            ),
+                    isThreeLine: true,
+                  ),
+                ),
+                if (versions.isEmpty) const Text('No changes recorded yet.'),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

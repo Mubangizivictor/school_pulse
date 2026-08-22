@@ -48,8 +48,11 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
     try {
       switch (category) {
         case AttendanceCategory.students:
-          final classes = await structureRepository.watchClasses(schoolId).first;
-          final visible = access.canViewAllForCategory(AttendanceCategory.students)
+          final classes = await structureRepository
+              .watchClasses(schoolId)
+              .first;
+          final visible =
+              access.canViewAllForCategory(AttendanceCategory.students)
               ? classes.where((c) => c.isActive)
               : classes.where((c) => c.isActive && access.canAccessClass(c.id));
           return Right(
@@ -162,32 +165,29 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
     final allResult = await studentRepository.getAllStudents(
       schoolId: record.schoolId,
     );
-    return allResult.fold<Failure?>(
-      (failure) => failure,
-      (students) {
-        final matches = students.where((s) => s.id == record.personId).toList();
-        if (matches.isEmpty) {
-          return const ValidationFailure(
-            'This student is not in the current school roster.',
-            field: 'student',
-          );
-        }
-        final student = matches.first;
-        if (student.status.name.toLowerCase() != 'active') {
-          return const ValidationFailure(
-            'This student is not active and cannot be marked present.',
-            field: 'student',
-          );
-        }
-        if (student.classId != record.scopeId) {
-          return ValidationFailure(
-            'This student belongs to a different class. Select the student\'s actual class before marking attendance.',
-            field: 'scope',
-          );
-        }
-        return null;
-      },
-    );
+    return allResult.fold<Failure?>((failure) => failure, (students) {
+      final matches = students.where((s) => s.id == record.personId).toList();
+      if (matches.isEmpty) {
+        return const ValidationFailure(
+          'This student is not in the current school roster.',
+          field: 'student',
+        );
+      }
+      final student = matches.first;
+      if (student.status.name.toLowerCase() != 'active') {
+        return const ValidationFailure(
+          'This student is not active and cannot be marked present.',
+          field: 'student',
+        );
+      }
+      if (student.classId != record.scopeId) {
+        return ValidationFailure(
+          'This student belongs to a different class. Select the student\'s actual class before marking attendance.',
+          field: 'scope',
+        );
+      }
+      return null;
+    });
   }
 
   @override

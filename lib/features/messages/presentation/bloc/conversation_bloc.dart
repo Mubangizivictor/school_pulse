@@ -102,9 +102,7 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
         .where((m) => !confirmedIds.contains(m.id))
         .toList()
         .reversed;
-    emit(
-      state.copyWith(messages: [...stillPending, ..._confirmedMessages]),
-    );
+    emit(state.copyWith(messages: [...stillPending, ..._confirmedMessages]));
   }
 
   void _resubscribeMessages() {
@@ -278,7 +276,11 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
   ) async {
     final conversationId = state.conversationId;
     if (conversationId == null) return;
-    await _repository.editMessage(conversationId, event.messageId, event.content);
+    await _repository.editMessage(
+      conversationId,
+      event.messageId,
+      event.content,
+    );
   }
 
   Future<void> _onDeleteRequested(
@@ -311,7 +313,11 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
   ) async {
     final conversationId = state.conversationId;
     if (conversationId == null) return;
-    await _repository.setMessagePinned(conversationId, event.message, event.value);
+    await _repository.setMessagePinned(
+      conversationId,
+      event.message,
+      event.value,
+    );
   }
 
   Future<void> _onReacted(
@@ -321,7 +327,12 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     final user = _user;
     final conversationId = state.conversationId;
     if (user == null || conversationId == null) return;
-    await _repository.react(conversationId, event.messageId, user.id, event.emoji);
+    await _repository.react(
+      conversationId,
+      event.messageId,
+      user.id,
+      event.emoji,
+    );
   }
 
   Future<void> _onPollVoted(
@@ -470,7 +481,10 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     );
   }
 
-  Future<void> _onLeft(ConversationLeft event, Emitter<ConversationState> emit) async {
+  Future<void> _onLeft(
+    ConversationLeft event,
+    Emitter<ConversationState> emit,
+  ) async {
     final user = _user;
     final conversationId = state.conversationId;
     if (user == null || conversationId == null) return;

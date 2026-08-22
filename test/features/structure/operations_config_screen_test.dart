@@ -66,7 +66,7 @@ void main() {
     await tester.pumpWidget(_wrap(const StructureState()));
     await tester.pumpAndSettle();
 
-    expect(find.text('School Day & Periods'), findsOneWidget);
+    expect(find.text('School day & periods'), findsOneWidget);
     expect(find.byType(TabBar), findsNothing);
   });
 
@@ -84,8 +84,8 @@ void main() {
     await tester.pumpWidget(_wrap(state));
     await tester.pumpAndSettle();
 
-    expect(find.text('08:00'), findsOneWidget);
-    expect(find.text('16:00'), findsOneWidget);
+    expect(find.text('8:00 AM'), findsOneWidget);
+    expect(find.text('4:00 PM'), findsOneWidget);
     expect(find.text('8'), findsOneWidget);
   });
 

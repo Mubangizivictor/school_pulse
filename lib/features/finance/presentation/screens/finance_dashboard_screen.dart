@@ -101,8 +101,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
                         ),
                         StaffKpiData(
                           title: 'Fully Paid',
-                          valueText:
-                              '${state.kpis['studentsFullyPaid'] ?? 0}',
+                          valueText: '${state.kpis['studentsFullyPaid'] ?? 0}',
                           subtitle: 'Students',
                           icon: Icons.verified,
                           color: semanticColors.success,
@@ -124,9 +123,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(
-                              Icons.chat_bubble_outline_rounded,
-                            ),
+                            icon: const Icon(Icons.chat_bubble_outline_rounded),
                             onPressed: () => context.push('/staff/messages'),
                             tooltip: 'Messages',
                             style: IconButton.styleFrom(

@@ -141,7 +141,6 @@ class _StorageUsageScreenState extends State<StorageUsageScreen> {
       ),
     );
   }
-
 }
 
 class _StorageItem extends StatelessWidget {

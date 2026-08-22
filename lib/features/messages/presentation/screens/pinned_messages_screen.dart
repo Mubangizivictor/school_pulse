@@ -117,8 +117,8 @@ class PinnedMessagesScreen extends StatelessWidget {
                                 ),
                               ),
                               TextButton(
-                                onPressed: () => context.messages
-                                    .setMessagePinned(
+                                onPressed: () =>
+                                    context.messages.setMessagePinned(
                                       ref.conversationId,
                                       ref.message,
                                       false,

@@ -22,8 +22,9 @@ class MarksQAScreen extends StatelessWidget {
         ? authState.user.schoolId
         : '';
     return BlocProvider(
-      create: (context) => sl<DeanBloc>()
-        ..add(PendingModerationAssessmentsRequested(schoolId: schoolId)),
+      create: (context) =>
+          sl<DeanBloc>()
+            ..add(PendingModerationAssessmentsRequested(schoolId: schoolId)),
       child: Scaffold(
         backgroundColor: AppColors.background(context),
         appBar: AppBar(title: const Text('Marks Quality Assurance')),

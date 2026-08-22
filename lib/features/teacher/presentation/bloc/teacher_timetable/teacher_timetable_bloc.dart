@@ -107,19 +107,14 @@ class TeacherTimetableBloc
     await _yearsSub?.cancel();
     await _configSub?.cancel();
 
-    emit(
-      TeacherTimetableState(isLoading: true, teacherId: event.teacherId),
-    );
+    emit(TeacherTimetableState(isLoading: true, teacherId: event.teacherId));
 
     _configSub = structureRepository
         .watchTimetableConfig(event.schoolId)
-        .listen(
-          (config) {
-            _config = config;
-            _emitEntries(emit);
-          },
-          onError: (_) {},
-        );
+        .listen((config) {
+          _config = config;
+          _emitEntries(emit);
+        }, onError: (_) {});
 
     _yearsSub = structureRepository.watchAcademicYears(event.schoolId).listen(
       (years) async {
@@ -167,7 +162,9 @@ class TeacherTimetableBloc
       config: config,
     );
 
-    emit(state.copyWith(isLoading: false, allEntries: entries, clearError: true));
+    emit(
+      state.copyWith(isLoading: false, allEntries: entries, clearError: true),
+    );
   }
 
   @override

@@ -210,10 +210,7 @@ class StudentIdentityBloc
     });
   }
 
-  Future<String?> _lookupAssignedCard(
-    String studentId,
-    String schoolId,
-  ) async {
+  Future<String?> _lookupAssignedCard(String studentId, String schoolId) async {
     try {
       final result = await nfcCredentialService
           .findAssignedCardForStudent(

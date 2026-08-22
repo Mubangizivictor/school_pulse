@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import '../../domain/entities/campus_entities.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
@@ -18,7 +20,9 @@ import '../widgets/structure_ui_kit.dart';
 /// only the task being configured instead of a tab bar full of unrelated
 /// future setup.
 class CampusFacilitiesScreen extends StatelessWidget {
-  const CampusFacilitiesScreen({super.key});
+  const CampusFacilitiesScreen({super.key, this.showAppBar = true});
+
+  final bool showAppBar;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +43,8 @@ class CampusFacilitiesScreen extends StatelessWidget {
         (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
 
     return Scaffold(
-      appBar: AppBar(title: Text(_sectionTitle(section))),
+      appBar: showAppBar ? AppBar(title: Text(_sectionTitle(section))) : null,
+      backgroundColor: showAppBar ? null : Colors.transparent,
       body: BlocBuilder<StructureBloc, StructureState>(
         builder: (context, state) => switch (section) {
           'houses' => _HousesTab(state: state, schoolId: schoolId),
@@ -189,53 +194,221 @@ class _FacilitiesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<StructureBloc>();
-    return Scaffold(
-      body: state.facilities.isEmpty
-          ? const StructureEmptyHint(
-              'No rooms or learning spaces defined yet. Add classrooms, laboratories, halls, workshops or custom spaces used by this school.',
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: state.facilities.length,
-              itemBuilder: (context, index) {
-                final facility = state.facilities[index];
-                return StructureListRow(
-                  icon: Icons.holiday_village_outlined,
-                  color: Colors.brown,
-                  title: facility.name,
-                  subtitle: [
-                    if (facility.facilityType.isNotEmpty) facility.facilityType,
-                    if (facility.location.isNotEmpty) facility.location,
-                    if (facility.capacity > 0) 'Capacity ${facility.capacity}',
-                  ].join(' - '),
-                  isActive: facility.isActive,
-                  onEdit: () => showFacilityFormDialog(
-                    context,
-                    schoolId: schoolId,
-                    existing: facility,
-                    onSave: (u) => bloc.add(SaveFacilityRequested(u)),
+    final scheme = Theme.of(context).colorScheme;
+
+    void onAdd() => showFacilityFormDialog(
+      context,
+      schoolId: schoolId,
+      campuses: state.campuses,
+      onSave: (f) => bloc.add(SaveFacilityRequested(f)),
+    );
+
+    final campusesById = {for (final c in state.campuses) c.id: c};
+    final byBuilding = <String, List<Facility>>{};
+    for (final facility in state.facilities) {
+      final label = campusesById[facility.campusId]?.name ?? 'Unassigned';
+      byBuilding.putIfAbsent(label, () => []).add(facility);
+    }
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    state.facilities.isEmpty
+                        ? 'Add the physical spaces used for teaching and school operations.'
+                        : 'Physical spaces used for teaching and school operations.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
                   ),
-                  onDelete: () async {
-                    final confirmed = await showDeleteConfirmDialog(
-                      context,
-                      title: 'Delete Facility',
-                      message: 'Delete "${facility.name}"?',
-                    );
-                    if (confirmed == true) {
-                      bloc.add(DeleteFacilityRequested(facility.id));
-                    }
-                  },
-                );
-              },
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: onAdd,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add space'),
+                ),
+              ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showFacilityFormDialog(
-          context,
-          schoolId: schoolId,
-          onSave: (f) => bloc.add(SaveFacilityRequested(f)),
+            const SizedBox(height: 20),
+            if (state.facilities.isEmpty)
+              _FacilitiesEmptyState(onAdd: onAdd)
+            else
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    for (final entry in byBuilding.entries) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          entry.key.toUpperCase(),
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: scheme.primary,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.6,
+                              ),
+                        ),
+                      ),
+                      for (final facility in entry.value)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: AppCard(
+                            child: ListTile(
+                              leading: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: scheme.primary,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  facilityTypeIcon(facility.facilityType),
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                              ),
+                              title: Text(
+                                facility.name,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  decoration: facility.isActive
+                                      ? null
+                                      : TextDecoration.lineThrough,
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(facility.facilityType),
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    children: [
+                                      if (facility.location.isNotEmpty)
+                                        _tagChip(
+                                          context,
+                                          Icons.place_outlined,
+                                          facility.location,
+                                        ),
+                                      if (facility.capacity > 0)
+                                        _tagChip(
+                                          context,
+                                          Icons.people_outline,
+                                          'Capacity ${facility.capacity}',
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              trailing: PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert),
+                                onSelected: (action) async {
+                                  if (action == 'edit') {
+                                    showFacilityFormDialog(
+                                      context,
+                                      schoolId: schoolId,
+                                      existing: facility,
+                                      campuses: state.campuses,
+                                      onSave: (u) =>
+                                          bloc.add(SaveFacilityRequested(u)),
+                                    );
+                                  } else {
+                                    final confirmed =
+                                        await showDeleteConfirmDialog(
+                                          context,
+                                          title: 'Delete Space',
+                                          message: 'Delete "${facility.name}"?',
+                                        );
+                                    if (confirmed == true) {
+                                      bloc.add(
+                                        DeleteFacilityRequested(facility.id),
+                                      );
+                                    }
+                                  }
+                                },
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                    value: 'edit',
+                                    child: Text('Edit'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                    ],
+                  ],
+                ),
+              ),
+          ],
         ),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Space'),
+      ),
+    );
+  }
+
+  Widget _tagChip(BuildContext context, IconData icon, String label) {
+    final scheme = Theme.of(context).colorScheme;
+    return Chip(
+      avatar: Icon(icon, size: 16, color: scheme.onSecondaryContainer),
+      label: Text(label, style: TextStyle(color: scheme.onSecondaryContainer)),
+      visualDensity: VisualDensity.compact,
+      backgroundColor: scheme.secondaryContainer,
+      side: BorderSide.none,
+    );
+  }
+}
+
+class _FacilitiesEmptyState extends StatelessWidget {
+  final VoidCallback onAdd;
+
+  const _FacilitiesEmptyState({required this.onAdd});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AppCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+        child: Column(
+          children: [
+            Icon(
+              Icons.holiday_village_outlined,
+              size: 56,
+              color: scheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No spaces added',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Add classrooms, laboratories, halls or other facilities.',
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
       ),
     );
   }

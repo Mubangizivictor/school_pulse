@@ -817,9 +817,7 @@ class MatronRemoteDataSourceImpl implements MatronRemoteDataSource {
         date: record.date,
         studentId: record.studentId,
       );
-      final docRef = firestore
-          .collection('boarding_attendance')
-          .doc(recordId);
+      final docRef = firestore.collection('boarding_attendance').doc(recordId);
       batch.set(docRef, {
         'schoolId': record.schoolId,
         'studentId': record.studentId,
