@@ -477,6 +477,56 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Enrollment Setup Wizard: scholarship/bursary awards granted during
+    // post-admission enrollment. Bursary approval is a stricter action than
+    // general finance setup (Permission.enrollmentBursaryAssign in the
+    // client), so writes are gated the same way as finance-module writes
+    // (isFinanceStaff/canWriteFinance) rather than general isStaff() -
+    // an admissions user without a finance role must not grant discounts.
+    match /scholarship_awards/{awardId} {
+      allow read: if isSameSchool(resource.data.schoolId) &&
+        (isFinanceStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId));
+      allow create: if canWriteFinance() && isSameSchool(request.resource.data.schoolId);
+      allow update: if canWriteFinance() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        request.resource.data.studentId == resource.data.studentId;
+      allow delete: if false;
+    }
+
+    // Enrollment Setup Wizard: dormitory/room/bed allocation for boarding
+    // students. Staff-only, tenant-scoped like every other student
+    // sub-record; hostelId/roomId/bed are immutable on update so a bed
+    // can't be silently reassigned without creating a new assignment record
+    // (the app's own duplicate-bed check happens client-side before write,
+    // but the record itself staying append-only keeps history intact).
+    match /dormitory_assignments/{assignmentId} {
+      allow read: if isSameSchool(resource.data.schoolId) &&
+        (isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        request.resource.data.studentId == resource.data.studentId &&
+        request.resource.data.hostelId == resource.data.hostelId &&
+        request.resource.data.roomId == resource.data.roomId &&
+        request.resource.data.bed == resource.data.bed;
+      allow delete: if false;
+    }
+
+    // Enrollment Setup Wizard: student <-> club/activity membership.
+    // Optional/self-contained, staff-mediated only (a student/parent
+    // cannot enrol themselves in a club by writing this collection
+    // directly, matching every other enrollment-wizard write).
+    match /student_club_memberships/{membershipId} {
+      allow read: if isSameSchool(resource.data.schoolId) &&
+        (isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        request.resource.data.studentId == resource.data.studentId &&
+        request.resource.data.clubId == resource.data.clubId;
+      allow delete: if false;
+    }
+
     // Phase 4: institution-configurable guardian-linking policy. Doc id is
     // the schoolId itself. Any signed-in same-school user may read it
     // (parents need to know the limit before attempting to add a
