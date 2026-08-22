@@ -311,6 +311,11 @@ exports.backfillStudentIdentities = onCall(async (request) => {
   const requestedSchoolId = request.data?.schoolId;
   const schoolPrefix = (request.data?.schoolPrefix || "SP").toUpperCase().slice(0, 8);
 
+  // Only genuinely-enrolled students are in scope - an applicant or an
+  // in-progress admission has no business being issued a permanent
+  // studentCode/QR identity yet.
+  const enrolledStatuses = new Set(["admitted", "enrollmentInProgress", "enrolled", "active"]);
+
   const schoolsSnap = requestedSchoolId
     ? await db.collection("schools").where(admin.firestore.FieldPath.documentId(), "==", requestedSchoolId).get()
     : await db.collection("schools").get();
@@ -318,6 +323,7 @@ exports.backfillStudentIdentities = onCall(async (request) => {
   const results = [];
   for (const schoolDoc of schoolsSnap.docs) {
     const schoolId = schoolDoc.id;
+    const runId = db.collection("institutions").doc(schoolId).collection("migration_reports").doc().id;
     const studentsSnap = await db.collection("students")
       .where("schoolId", "==", schoolId)
       .get();
@@ -332,8 +338,31 @@ exports.backfillStudentIdentities = onCall(async (request) => {
     let issued = 0;
     let skippedExisting = 0;
     let skippedOther = 0;
+    let skippedNotEnrolled = 0;
+    let missingParentLink = 0;
+    const backfilledStudents = [];
+    const errors = [];
+
     for (const studentDoc of studentsSnap.docs) {
       const studentId = studentDoc.id;
+      const student = studentDoc.data() || {};
+
+      if (!enrolledStatuses.has(student.status)) {
+        skippedNotEnrolled++;
+        continue;
+      }
+
+      // Parent-link gap is reported, never synthesized - there is no safe
+      // way to backfill a real guardian contact from nothing.
+      const relationshipSnap = await db.collection("parent_student_relationships")
+        .where("schoolId", "==", schoolId)
+        .where("studentId", "==", studentId)
+        .limit(1)
+        .get();
+      if (relationshipSnap.empty) {
+        missingParentLink++;
+      }
+
       if (studentIdsWithIdentity.has(studentId)) {
         skippedExisting++;
         continue;
@@ -346,16 +375,42 @@ exports.backfillStudentIdentities = onCall(async (request) => {
           skippedOther++;
         } else if (outcome.created) {
           issued++;
+          backfilledStudents.push({
+            studentId,
+            fieldsBackfilled: ["studentCode", "qrReference", "student_identities"],
+          });
         } else {
           skippedExisting++;
         }
       } catch (error) {
         console.error("BACKFILL_STUDENT_IDENTITY_FAILED", { schoolId, studentId, error: error.message });
         skippedOther++;
+        errors.push({ studentId, message: error.message });
       }
     }
 
-    results.push({ schoolId, studentsScanned: studentsSnap.size, issued, skippedExisting, skippedOther });
+    const report = {
+      runId,
+      schoolId,
+      requestedBy: request.auth?.uid || null,
+      studentsScanned: studentsSnap.size,
+      studentsInScope: studentsSnap.size - skippedNotEnrolled,
+      skippedNotEnrolled,
+      issued,
+      skippedExisting,
+      skippedOther,
+      missingParentLinkFollowUp: missingParentLink,
+      backfilledStudents,
+      errors,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    await db.collection("institutions").doc(schoolId)
+      .collection("migration_reports").doc(runId).set(report);
+
+    results.push({
+      schoolId, runId, studentsScanned: studentsSnap.size, issued, skippedExisting,
+      skippedOther, skippedNotEnrolled, missingParentLinkFollowUp: missingParentLink,
+    });
   }
 
   return { ok: true, schools: results };
