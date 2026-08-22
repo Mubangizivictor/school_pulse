@@ -10,6 +10,7 @@ const { renderReportCardPdf } = require("./report_card_pdf");
 
 admin.initializeApp();
 const supportAuditFunctions = require("./support_audit")({ admin, onCall, HttpsError });
+const enrollmentAuditFunctions = require("./enrollment_audit")({ admin, onCall, HttpsError });
 
 /**
  * Enqueue a templated transactional email for the `public_functions`
@@ -4986,6 +4987,12 @@ exports.addInstitutionSupportAttachment = supportAuditFunctions.addInstitutionSu
 exports.changeInstitutionSupportStatus = supportAuditFunctions.changeInstitutionSupportStatus;
 exports.decideSupportAccess = supportAuditFunctions.decideSupportAccess;
 exports.expireSupportAccess = supportAuditFunctions.expireSupportAccess;
+
+// Admission/Enrollment Setup Wizard audit trail - see
+// functions/enrollment_audit.js. Writes into the same
+// institutions/{schoolId}/audit_events collection as support_audit.js,
+// with the same server-authored actor/timestamp trust model.
+exports.recordEnrollmentAuditEvent = enrollmentAuditFunctions.recordEnrollmentAuditEvent;
 
 // Adapter for legacy module activity. It preserves the legacy source while
 // making a normalized, tenant-scoped row available to the Audit Center.

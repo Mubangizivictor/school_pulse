@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
@@ -369,14 +370,16 @@ class _IdCardPreview extends StatelessWidget {
 
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
+        constraints: const BoxConstraints(maxWidth: 340),
         child: AspectRatio(
-          aspectRatio: .68,
+          aspectRatio: 856 / 540,
           child: showFront
               ? _MetallicStudentIdFront(
                   student: student,
                   schoolName: schoolName,
-                  motto: profile.motto,
+                  motto: profile.motto.isNotEmpty
+                      ? profile.motto
+                      : 'Knowledge  •  Integrity  •  Service',
                   logoUrl: logoUrl,
                   classAndStream: [
                     className,
@@ -396,30 +399,19 @@ class _IdCardPreview extends StatelessWidget {
   }
 }
 
-const _metallicCardBackground = BoxDecoration(
-  borderRadius: BorderRadius.all(Radius.circular(24)),
-  gradient: LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF102330), Color(0xFF0D1B24), Color(0xFF071017)],
-    stops: [0, .5, 1],
-  ),
-  boxShadow: [
-    BoxShadow(color: Colors.black54, blurRadius: 20, offset: Offset(0, 10)),
-  ],
-);
+// ---------------------------------------------------------------------------
+// PALETTE — matches the Victor High School reference design exactly.
+// ---------------------------------------------------------------------------
+const _navy = Color(0xFF0B1B3A);
+const _teal = Color(0xFF12332F);
+const _gold = Color(0xFFD4AF37);
+const _goldBright = Color(0xFFF0D98C);
+const _ivory = Color(0xFFF3F0E6);
 
-const _metallicGoldGradient = LinearGradient(
+const _cardGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [
-    Color(0xFFDFBA6B),
-    Color(0xFF9E7D3B),
-    Color(0xFFFCE7B2),
-    Color(0xFF876527),
-    Color(0xFFE8CA82),
-  ],
-  stops: [0, .25, .5, .75, 1],
+  colors: [_navy, _teal],
 );
 
 class _MetallicStudentIdFront extends StatelessWidget {
@@ -440,100 +432,124 @@ class _MetallicStudentIdFront extends StatelessWidget {
   final String academicYear;
 
   @override
-  Widget build(BuildContext context) => _MetallicCardFrame(
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 16),
-      child: Column(
-        children: [
-          _MetallicCrest(logoUrl: logoUrl, size: 47),
-          const SizedBox(height: 7),
-          Text(
-            schoolName.toUpperCase(),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Color(0xFFF0D98C),
-              fontSize: 17,
-              height: 1,
-              fontWeight: FontWeight.w700,
-              letterSpacing: .6,
-            ),
+  Widget build(BuildContext context) => _CardShell(
+    child: Column(
+      children: [
+        _Crest(logoUrl: logoUrl, size: 48),
+        const SizedBox(height: 8),
+        Text(
+          schoolName.toUpperCase(),
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.playfairDisplay(
+            color: _goldBright,
+            fontSize: 17,
+            height: 1,
+            fontWeight: FontWeight.w700,
+            letterSpacing: .6,
           ),
-          if (motto.isNotEmpty) ...[
-            const SizedBox(height: 3),
-            Text(
-              motto,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white54,
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-          const SizedBox(height: 18),
-          _MetallicAvatar(photoUrl: student.photoUrl),
-          const SizedBox(height: 12),
-          ShaderMask(
-            shaderCallback: (bounds) => _metallicGoldGradient.createShader(
-              Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-            ),
-            child: Text(
-              student.name.toUpperCase(),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                height: 1.05,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.25,
-              ),
-            ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          motto,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.cormorant(
+            color: _ivory.withValues(alpha: .65),
+            fontStyle: FontStyle.italic,
+            fontSize: 12,
           ),
-          if (classAndStream.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              classAndStream,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
-            ),
-          ],
-          const SizedBox(height: 13),
-          Expanded(
-            child: _MetallicDetailPanel(
-              studentCode: student.studentCode,
-              admissionNumber: student.admissionNumber,
-              academicYear: academicYear,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Text(
-                'Official Student Identity Card',
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
+        ),
+        const SizedBox(height: 16),
+        _Avatar(photoUrl: student.photoUrl),
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text(
+                student.name.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.playfairDisplay(
+                  color: _goldBright,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: .5,
                 ),
               ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: _MetallicSealBadge(initials: _initialsOf(schoolName)),
+            ),
+            if (classAndStream.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: _gold.withValues(alpha: .15),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: _gold.withValues(alpha: .5)),
+                ),
+                child: Text(
+                  classAndStream,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: _goldBright,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
-          ),
-        ],
-      ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _DetailRow(
+          icon: Icons.badge_outlined,
+          label: 'Student Code',
+          value: student.studentCode,
+        ),
+        _divider(),
+        _DetailRow(
+          icon: Icons.description_outlined,
+          label: 'Admission No.',
+          value: student.admissionNumber,
+        ),
+        _divider(),
+        _DetailRow(
+          icon: Icons.calendar_today_outlined,
+          label: 'Academic Year',
+          value: academicYear,
+        ),
+        const Spacer(),
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Text(
+              'Official Student Identity Card',
+              style: GoogleFonts.cormorant(
+                color: _ivory.withValues(alpha: .55),
+                fontStyle: FontStyle.italic,
+                fontSize: 12,
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: _SealBadge(initials: _initialsOf(schoolName)),
+            ),
+          ],
+        ),
+      ],
     ),
   );
+
+  static Widget _divider() =>
+      Container(height: 1, color: _ivory.withValues(alpha: .08));
 }
 
 class _MetallicStudentIdBack extends StatelessWidget {
@@ -550,226 +566,241 @@ class _MetallicStudentIdBack extends StatelessWidget {
   final String qrCodeData;
 
   @override
-  Widget build(BuildContext context) => _MetallicCardFrame(
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 16),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _MetallicCrest(logoUrl: logoUrl, size: 28),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  schoolName.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFFF0D98C),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: .3,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Container(
-            height: 1,
-            color: const Color(0xFFD4AF37).withValues(alpha: .35),
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            'Scan to Verify Student',
-            style: TextStyle(
-              color: Color(0xFFF0D98C),
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: const Border.fromBorderSide(
-                BorderSide(color: Color(0xFFD4AF37), width: 1.6),
-              ),
-            ),
-            child: qrCodeData.isNotEmpty
-                ? QrImageView(
-                    data: qrCodeData,
-                    size: 140,
-                    backgroundColor: Colors.white,
-                    eyeStyle: const QrEyeStyle(
-                      eyeShape: QrEyeShape.square,
-                      color: Color(0xFF0B1B3A),
-                    ),
-                    dataModuleStyle: const QrDataModuleStyle(
-                      dataModuleShape: QrDataModuleShape.square,
-                      color: Color(0xFF0B1B3A),
-                    ),
-                  )
-                : const SizedBox(
-                    width: 140,
-                    height: 140,
-                    child: Icon(
-                      Icons.qr_code_2_outlined,
-                      size: 96,
-                      color: Color(0xFF0B1B3A),
-                    ),
-                  ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Keep this card with you. It is non-transferable and remains the property of $schoolName.',
-            textAlign: TextAlign.center,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 10.5,
-              height: 1.4,
-            ),
-          ),
-          const Spacer(),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _MetallicStatusPill(
-                icon: Icons.check_circle_outline,
-                text: 'Identity\nVerified',
-              ),
-              SizedBox(width: 10),
-              _MetallicStatusPill(
-                icon: Icons.vpn_key_outlined,
-                text: 'Authorized\nAccess',
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (contact.isNotEmpty)
-            Text(
-              contact,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white54, fontSize: 10),
-            ),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 9),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              gradient: _metallicGoldGradient,
-            ),
-            child: const Text(
-              'NON-TRANSFERABLE',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF0D1B24),
-                fontWeight: FontWeight.w900,
-                fontSize: 11.5,
-                letterSpacing: .5,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _MetallicCardFrame extends StatelessWidget {
-  const _MetallicCardFrame({required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    decoration: _metallicCardBackground,
-    child: Stack(
-      fit: StackFit.expand,
+  Widget build(BuildContext context) => _CardShell(
+    child: Column(
       children: [
-        const CustomPaint(painter: _CircuitTraceryPainter()),
-        Padding(
-          padding: const EdgeInsets.all(10),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFFD4AF37).withValues(alpha: .55),
-                width: 1.4,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(3),
-              child: CustomPaint(
-                painter: _GradientBorderPainter(
-                  gradient: _metallicGoldGradient,
-                  strokeWidth: 1.25,
-                  radius: 11,
+        Row(
+          children: [
+            _Crest(logoUrl: logoUrl, size: 26),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                schoolName.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.playfairDisplay(
+                  color: _goldBright,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(height: 1, color: _gold.withValues(alpha: .3)),
+        const SizedBox(height: 14),
+        Text(
+          'Scan to Verify Student',
+          style: GoogleFonts.inter(
+            color: _goldBright,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _gold, width: 1.6),
+          ),
+          child: qrCodeData.isNotEmpty
+              ? QrImageView(
+                  data: qrCodeData,
+                  size: 140,
+                  backgroundColor: Colors.white,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: _navy,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: _navy,
+                  ),
+                )
+              : const SizedBox(
+                  width: 140,
+                  height: 140,
+                  child: Icon(
+                    Icons.qr_code_2_outlined,
+                    size: 96,
+                    color: _navy,
+                  ),
+                ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          'Keep this card with you. It is non-transferable and remains the property of $schoolName',
+          textAlign: TextAlign.center,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.inter(
+            color: _ivory.withValues(alpha: .7),
+            fontSize: 10.5,
+            height: 1.4,
+          ),
+        ),
+        const Spacer(),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _StatusPill(
+              icon: Icons.check_circle_outline,
+              label: 'Identity\nVerified',
+            ),
+            const SizedBox(width: 10),
+            _StatusPill(
+              icon: Icons.vpn_key_outlined,
+              label: 'Authorized\nAccess',
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        if (contact.isNotEmpty)
+          Text(
+            contact,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              color: _ivory.withValues(alpha: .6),
+              fontSize: 10,
+            ),
+          ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: const BoxDecoration(
+            color: _gold,
+            borderRadius: BorderRadius.all(Radius.circular(999)),
+          ),
+          child: Text(
+            'NON-TRANSFERABLE',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              color: _navy,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: .5,
             ),
           ),
         ),
-        child,
       ],
     ),
   );
 }
 
-class _CircuitTraceryPainter extends CustomPainter {
-  const _CircuitTraceryPainter();
+// ---------------------------------------------------------------------------
+// SHARED: card shell with gradient + gold double-line frame + circuit tracery
+// ---------------------------------------------------------------------------
+class _CardShell extends StatelessWidget {
+  const _CardShell({required this.child});
+  final Widget child;
 
   @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(20),
+      gradient: _cardGradient,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: .5),
+          blurRadius: 30,
+          offset: const Offset(0, 18),
+        ),
+      ],
+    ),
+    child: Stack(
+      children: [
+        Positioned.fill(child: CustomPaint(painter: _CircuitPainter())),
+        Positioned.fill(
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: _gold.withValues(alpha: .55),
+                  width: 1.4,
+                ),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(3),
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: _gold.withValues(alpha: .25),
+                      width: .8,
+                    ),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
+          child: child,
+        ),
+      ],
+    ),
+  );
+}
+
+class _CircuitPainter extends CustomPainter {
+  @override
   void paint(Canvas canvas, Size size) {
-    final trace = Paint()
-      ..color = const Color(0xFFD4AF37).withValues(alpha: .34)
+    final paint = Paint()
+      ..color = _gold.withValues(alpha: .14)
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
-    final node = Paint()
-      ..color = const Color(0xFFF0D98C).withValues(alpha: .42)
-      ..style = PaintingStyle.fill;
+    final nodePaint = Paint()..color = _gold.withValues(alpha: .16);
 
-    void corner(Offset origin, double x, double y) {
+    void corner(Offset origin, bool flipX, bool flipY) {
+      final sx = flipX ? -1.0 : 1.0;
+      final sy = flipY ? -1.0 : 1.0;
       final path = Path()
-        ..moveTo(origin.dx, origin.dy + 60 * y)
-        ..lineTo(origin.dx, origin.dy + 22 * y)
-        ..lineTo(origin.dx + 22 * x, origin.dy)
-        ..lineTo(origin.dx + 60 * x, origin.dy);
-      canvas.drawPath(path, trace);
-      final branch = Path()
-        ..moveTo(origin.dx + 14 * x, origin.dy + 66 * y)
-        ..lineTo(origin.dx + 34 * x, origin.dy + 46 * y)
-        ..lineTo(origin.dx + 72 * x, origin.dy + 46 * y);
-      canvas.drawPath(branch, trace);
-      for (final point in [
-        Offset(origin.dx + 60 * x, origin.dy),
-        Offset(origin.dx, origin.dy + 60 * y),
-        Offset(origin.dx + 72 * x, origin.dy + 46 * y),
-      ]) {
-        canvas.drawRect(
-          Rect.fromCenter(center: point, width: 4, height: 4),
-          node,
-        );
-      }
+        ..moveTo(origin.dx, origin.dy + 40 * sy)
+        ..lineTo(origin.dx, origin.dy + 12 * sy)
+        ..lineTo(origin.dx + 12 * sx, origin.dy)
+        ..lineTo(origin.dx + 40 * sx, origin.dy);
+      canvas.drawPath(path, paint);
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset(origin.dx + 40 * sx, origin.dy),
+          width: 5,
+          height: 5,
+        ),
+        nodePaint,
+      );
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset(origin.dx, origin.dy + 40 * sy),
+          width: 5,
+          height: 5,
+        ),
+        nodePaint,
+      );
     }
 
-    corner(const Offset(18, 18), 1, 1);
-    corner(Offset(size.width - 18, 18), -1, 1);
-    corner(Offset(18, size.height - 18), 1, -1);
-    corner(Offset(size.width - 18, size.height - 18), -1, -1);
+    corner(const Offset(18, 18), false, false);
+    corner(Offset(size.width - 18, 18), true, false);
+    corner(Offset(18, size.height - 18), false, true);
+    corner(Offset(size.width - 18, size.height - 18), true, true);
   }
 
   @override
-  bool shouldRepaint(covariant _CircuitTraceryPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _MetallicCrest extends StatelessWidget {
-  const _MetallicCrest({required this.logoUrl, required this.size});
+// ---------------------------------------------------------------------------
+// CREST — shield containing a torch, flanked by laurel leaves (line-art gold)
+// ---------------------------------------------------------------------------
+class _Crest extends StatelessWidget {
+  const _Crest({required this.logoUrl, required this.size});
   final String? logoUrl;
   final double size;
 
@@ -778,14 +809,7 @@ class _MetallicCrest extends StatelessWidget {
     width: size,
     height: size,
     child: logoUrl?.isNotEmpty == true
-        ? Container(
-            padding: const EdgeInsets.all(2),
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: _metallicGoldGradient,
-            ),
-            child: ClipOval(child: Image.network(logoUrl!, fit: BoxFit.cover)),
-          )
+        ? ClipOval(child: Image.network(logoUrl!, fit: BoxFit.cover))
         : CustomPaint(painter: _CrestPainter()),
   );
 }
@@ -794,38 +818,41 @@ class _CrestPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final gold = Paint()
-      ..color = const Color(0xFFF0D98C)
+      ..color = _goldBright
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.55
+      ..strokeWidth = 1.6
       ..strokeCap = StrokeCap.round;
-    final w = size.width;
-    final h = size.height;
+
+    final w = size.width, h = size.height;
+
     final shield = Path()
-      ..moveTo(w * .5, h * .06)
-      ..lineTo(w * .81, h * .19)
-      ..lineTo(w * .81, h * .54)
-      ..cubicTo(w * .81, h * .78, w * .65, h * .92, w * .5, h * .98)
-      ..cubicTo(w * .35, h * .92, w * .19, h * .78, w * .19, h * .54)
-      ..lineTo(w * .19, h * .19)
+      ..moveTo(w * 0.5, h * 0.08)
+      ..lineTo(w * 0.82, h * 0.2)
+      ..lineTo(w * 0.82, h * 0.55)
+      ..cubicTo(w * 0.82, h * 0.8, w * 0.65, h * 0.92, w * 0.5, h * 0.98)
+      ..cubicTo(w * 0.35, h * 0.92, w * 0.18, h * 0.8, w * 0.18, h * 0.55)
+      ..lineTo(w * 0.18, h * 0.2)
       ..close();
     canvas.drawPath(shield, gold);
+
     final torch = Path()
-      ..moveTo(w * .5, h * .2)
-      ..quadraticBezierTo(w * .58, h * .3, w * .5, h * .4)
-      ..quadraticBezierTo(w * .42, h * .3, w * .5, h * .2)
-      ..moveTo(w * .5, h * .4)
-      ..lineTo(w * .5, h * .72);
+      ..moveTo(w * 0.5, h * 0.22)
+      ..quadraticBezierTo(w * 0.58, h * 0.3, w * 0.5, h * 0.4)
+      ..quadraticBezierTo(w * 0.42, h * 0.3, w * 0.5, h * 0.22)
+      ..moveTo(w * 0.5, h * 0.4)
+      ..lineTo(w * 0.5, h * 0.75);
     canvas.drawPath(torch, gold);
-    for (final direction in [-1, 1]) {
+
+    for (final side in [-1, 1]) {
       for (var i = 0; i < 3; i++) {
-        final y = h * (.46 + i * .12);
+        final yBase = h * (0.45 + i * 0.13);
         final leaf = Path()
-          ..moveTo(w * .5 + direction * 2, y)
+          ..moveTo(w * 0.5 + side * 2, yBase)
           ..quadraticBezierTo(
-            w * .5 + direction * (13 + i * 2),
-            y + 4,
-            w * .5 + direction * (21 + i * 2),
-            y - 3,
+            w * 0.5 + side * (14 + i * 2),
+            yBase + 4,
+            w * 0.5 + side * (22 + i * 2),
+            yBase - 3,
           );
         canvas.drawPath(leaf, gold);
       }
@@ -833,7 +860,7 @@ class _CrestPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CrestPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 String _initialsOf(String schoolName) {
@@ -846,110 +873,70 @@ String _initialsOf(String schoolName) {
       : (initials.length > 4 ? initials.substring(0, 4) : initials);
 }
 
-class _MetallicSealBadge extends StatelessWidget {
-  const _MetallicSealBadge({required this.initials});
+class _SealBadge extends StatelessWidget {
+  const _SealBadge({required this.initials});
   final String initials;
 
   @override
   Widget build(BuildContext context) => Container(
     width: 34,
     height: 34,
-    decoration: BoxDecoration(
+    decoration: const BoxDecoration(
       shape: BoxShape.circle,
-      gradient: const RadialGradient(
-        colors: [Color(0xFFF0D98C), Color(0xFFD4AF37), Color(0xFF9E7D3B)],
-      ),
-      border: Border.all(color: Colors.white54),
+      gradient: RadialGradient(colors: [Color(0xFFE8E8E8), Color(0xFFAFAFAF)]),
+      border: Border.fromBorderSide(BorderSide(color: Colors.white24)),
     ),
     child: Center(
       child: Text(
         initials,
-        style: const TextStyle(
-          color: Color(0xFF0B1B3A),
-          fontWeight: FontWeight.w800,
+        style: GoogleFonts.playfairDisplay(
+          color: _navy,
           fontSize: 8,
+          fontWeight: FontWeight.w700,
         ),
       ),
     ),
   );
 }
 
-class _MetallicAvatar extends StatelessWidget {
-  const _MetallicAvatar({required this.photoUrl});
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.photoUrl});
   final String? photoUrl;
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(3),
-    decoration: BoxDecoration(
+    width: 118,
+    height: 118,
+    padding: const EdgeInsets.all(4),
+    decoration: const BoxDecoration(
       shape: BoxShape.circle,
-      border: Border.all(color: const Color(0xFFD4AF37), width: 2),
+      border: Border.fromBorderSide(BorderSide(color: _gold, width: 2)),
     ),
     child: Container(
-      padding: const EdgeInsets.all(3),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: _metallicGoldGradient,
+        border: Border.all(color: _gold.withValues(alpha: .4), width: 1),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF25406C), Color(0xFF152A4C)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-      child: CircleAvatar(
-        radius: 47,
-        backgroundColor: const Color(0xFF102330),
-        backgroundImage: photoUrl?.isNotEmpty == true
-            ? NetworkImage(photoUrl!)
-            : null,
+      child: ClipOval(
         child: photoUrl?.isNotEmpty == true
-            ? null
-            : const Icon(Icons.person_rounded, size: 54, color: Colors.white30),
+            ? Image.network(photoUrl!, fit: BoxFit.cover)
+            : const Icon(
+                Icons.person_rounded,
+                size: 54,
+                color: Colors.white30,
+              ),
       ),
     ),
   );
 }
 
-class _MetallicDetailPanel extends StatelessWidget {
-  const _MetallicDetailPanel({
-    required this.studentCode,
-    required this.admissionNumber,
-    required this.academicYear,
-  });
-  final String studentCode;
-  final String admissionNumber;
-  final String academicYear;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-    decoration: BoxDecoration(
-      color: const Color(0xFF192A36).withValues(alpha: .72),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Colors.white12),
-    ),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _MetallicDetailRow(
-          icon: Icons.badge_outlined,
-          label: 'Student Code',
-          value: studentCode,
-        ),
-        const Divider(color: Colors.white12, height: 1),
-        _MetallicDetailRow(
-          icon: Icons.article_outlined,
-          label: 'Admission No.',
-          value: admissionNumber,
-        ),
-        const Divider(color: Colors.white12, height: 1),
-        _MetallicDetailRow(
-          icon: Icons.calendar_month_outlined,
-          label: 'Academic Year',
-          value: academicYear,
-        ),
-      ],
-    ),
-  );
-}
-
-class _MetallicDetailRow extends StatelessWidget {
-  const _MetallicDetailRow({
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({
     required this.icon,
     required this.label,
     required this.value,
@@ -959,62 +946,35 @@ class _MetallicDetailRow extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      const Icon(Icons.circle, size: 0),
-      Icon(icon, color: const Color(0xFFDFBA6B), size: 17),
-      const SizedBox(width: 8),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white54, fontSize: 9),
-            ),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Color(0xFFFCE7B2),
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ],
-  );
-}
-
-class _MetallicStatusPill extends StatelessWidget {
-  const _MetallicStatusPill({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-    decoration: BoxDecoration(
-      color: const Color(0xFF223340),
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: const Color(0xFFDFBA6B).withValues(alpha: .45)),
-    ),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
     child: Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: const Color(0xFFDFBA6B)),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 7,
-            height: 1.05,
-            fontWeight: FontWeight.w800,
+        Icon(icon, size: 16, color: _gold),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  color: _ivory.withValues(alpha: .55),
+                  fontSize: 9.5,
+                  letterSpacing: .4,
+                ),
+              ),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  color: _ivory,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -1022,37 +982,36 @@ class _MetallicStatusPill extends StatelessWidget {
   );
 }
 
-class _GradientBorderPainter extends CustomPainter {
-  const _GradientBorderPainter({
-    required this.gradient,
-    required this.strokeWidth,
-    required this.radius,
-  });
-  final LinearGradient gradient;
-  final double strokeWidth;
-  final double radius;
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final paint = Paint()
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke
-      ..shader = gradient.createShader(rect);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        rect.deflate(strokeWidth / 2),
-        Radius.circular(radius),
-      ),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _GradientBorderPainter oldDelegate) =>
-      oldDelegate.gradient != gradient ||
-      oldDelegate.strokeWidth != strokeWidth ||
-      oldDelegate.radius != radius;
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: _gold.withValues(alpha: .1),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: _gold.withValues(alpha: .5)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 15, color: _goldBright),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            color: _ivory,
+            fontSize: 9.5,
+            fontWeight: FontWeight.w600,
+            height: 1.2,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _CardActionTile extends StatelessWidget {

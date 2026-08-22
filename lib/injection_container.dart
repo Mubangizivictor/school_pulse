@@ -83,7 +83,12 @@ import 'package:school_pulse/features/messages/domain/services/message_outbox_se
 import 'package:school_pulse/features/messages/data/services/message_outbox_service_impl.dart';
 import 'package:school_pulse/features/finance/domain/services/finance_service.dart';
 import 'package:school_pulse/features/student/domain/services/admission_service.dart';
+import 'package:school_pulse/features/student/domain/services/enrollment_audit_service.dart';
 import 'package:school_pulse/features/student/domain/services/document_service.dart';
+import 'package:school_pulse/features/student/domain/enrollment_setup/repositories/enrollment_setup_repository.dart';
+import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft_local_data_source.dart';
+import 'package:school_pulse/features/student/data/enrollment_setup/repositories/enrollment_setup_repository_impl.dart';
+import 'package:school_pulse/features/student/presentation/enrollment_setup/bloc/enrollment_setup_wizard_bloc.dart';
 import 'package:school_pulse/features/student/domain/services/parent_linking_service.dart';
 import 'package:school_pulse/features/student/domain/services/promotion_service.dart';
 import 'package:school_pulse/features/student/domain/services/student_service.dart';
@@ -741,8 +746,49 @@ Future<void> init() async {
 
   sl.registerLazySingleton(() => ParentLinkingService(sl(), sl()));
 
+  // Best-effort audit trail for admission/enrollment events - see
+  // functions/enrollment_audit.js. Registered before AdmissionBloc/
+  // EnrollmentSetupWizardBloc so both can take it as an optional dep.
+  sl.registerLazySingleton(() => EnrollmentAuditService(sl()));
+
   sl.registerFactory(
-    () => AdmissionBloc(admissionService: sl(), permissionEvaluator: sl()),
+    () => AdmissionBloc(
+      admissionService: sl(),
+      permissionEvaluator: sl(),
+      auditService: sl(),
+      notificationSender: sl(),
+    ),
+  );
+
+  // Enrollment Setup Wizard (post-approval placement/finance/boarding/
+  // clubs/parent-link/identity confirmation). Its own repository owns the
+  // new scholarship_awards/dormitory_assignments/student_club_memberships
+  // collections; all other dependencies are existing repos/services
+  // registered above.
+  sl.registerLazySingleton<EnrollmentSetupRepository>(
+    () => EnrollmentSetupRepositoryImpl(firestore: sl()),
+  );
+  // Local (Isar) resume-draft cache for the wizard - null on web, matching
+  // every other Isar-backed local cache's degradation pattern there.
+  sl.registerLazySingleton<EnrollmentSetupDraftLocalDataSource>(
+    () => EnrollmentSetupDraftLocalDataSourceImpl(
+      isar: kIsWeb ? null : sl<Isar>(),
+    ),
+  );
+  sl.registerFactory(
+    () => EnrollmentSetupWizardBloc(
+      studentRepository: sl(),
+      admissionService: sl(),
+      enrollmentSetupRepository: sl(),
+      parentLinkingService: sl(),
+      createRelationship: sl(),
+      identityRepository: sl(),
+      nfcCredentialRepository: sl(),
+      permissionEvaluator: sl(),
+      draftLocalDataSource: sl(),
+      auditService: sl(),
+      notificationSender: sl(),
+    ),
   );
 
   // Features - Student Identity (QR / ID card resolution, used by the

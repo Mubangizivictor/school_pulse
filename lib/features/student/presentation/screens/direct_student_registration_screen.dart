@@ -1,0 +1,446 @@
+import 'dart:async';
+import 'package:dartz/dartz.dart' hide State;
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
+import 'package:school_pulse/injection_container.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
+import '../../domain/entities/admission_application.dart';
+import '../../domain/entities/student_enums.dart';
+import '../../domain/services/admission_service.dart';
+import '../enrollment_setup/screens/enrollment_setup_wizard_screen.dart';
+
+/// Admin-initiated direct registration: skips the submit -> review ->
+/// approve flow entirely (that flow is for applications coming through the
+/// public website / staff-mediated applicant intake, still handled by
+/// NewApplicationScreen -> AdmissionReviewScreen). This screen collects the
+/// same core admission fields, then immediately admits the student and
+/// hands off to the Enrollment Setup Wizard in one continuous action - the
+/// admin never sees an "application" concept at all.
+///
+/// admitStudent() still requires an AdmissionApplication document to exist
+/// (finalizeAdmission reads it by id), so this creates one at
+/// AdmissionStatus.approved - it is a data carrier for this flow, not a
+/// pending-review item, and never appears in the Applicant/Pending
+/// Admission filters since those only show application/review-status
+/// applications (see admin_students_dashboard_screen.dart).
+class DirectStudentRegistrationScreen extends StatefulWidget {
+  final String schoolId;
+  const DirectStudentRegistrationScreen({super.key, required this.schoolId});
+
+  @override
+  State<DirectStudentRegistrationScreen> createState() =>
+      _DirectStudentRegistrationScreenState();
+}
+
+class _DirectStudentRegistrationScreenState
+    extends State<DirectStudentRegistrationScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _studentNameController = TextEditingController();
+  final _parentNameController = TextEditingController();
+  final _parentPhoneController = TextEditingController();
+  final _previousSchoolController = TextEditingController();
+  final _schoolCodeController = TextEditingController();
+  final _structureRepository = sl<StructureRepository>();
+
+  DateTime? _dateOfBirth;
+  Gender _gender = Gender.male;
+  bool _busy = false;
+
+  List<SchoolClass> _classes = [];
+  List<AcademicYear> _academicYears = [];
+  SchoolClass? _selectedClass;
+  AcademicYear? _selectedYear;
+  StreamSubscription<List<SchoolClass>>? _classesSub;
+  StreamSubscription<List<AcademicYear>>? _yearsSub;
+
+  @override
+  void initState() {
+    super.initState();
+    final authState = context.read<AuthBloc>().state;
+    final schoolName = authState is AuthAuthenticated
+        ? authState.user.schoolName
+        : null;
+    _schoolCodeController.text = _prefixFrom(schoolName);
+    _classesSub = _structureRepository.watchClasses(widget.schoolId).listen((
+      classes,
+    ) {
+      setState(() => _classes = classes);
+    });
+    _yearsSub = _structureRepository.watchAcademicYears(widget.schoolId).listen(
+      (years) {
+        setState(() {
+          _academicYears = years;
+          if (_selectedYear == null) {
+            for (final year in years) {
+              if (year.isCurrent) {
+                _selectedYear = year;
+                break;
+              }
+            }
+          }
+        });
+      },
+    );
+  }
+
+  String _prefixFrom(String? schoolName) {
+    if (schoolName == null || schoolName.trim().isEmpty) return 'SCH';
+    final letters = schoolName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .map((w) => w[0])
+        .take(3)
+        .join();
+    return letters.toUpperCase();
+  }
+
+  @override
+  void dispose() {
+    _classesSub?.cancel();
+    _yearsSub?.cancel();
+    _studentNameController.dispose();
+    _parentNameController.dispose();
+    _parentPhoneController.dispose();
+    _previousSchoolController.dispose();
+    _schoolCodeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDateOfBirth() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(now.year - 6),
+      firstDate: DateTime(now.year - 25),
+      lastDate: now,
+    );
+    if (picked != null) setState(() => _dateOfBirth = picked);
+  }
+
+  Future<void> _register() async {
+    final formValid = _formKey.currentState?.validate() ?? false;
+    if (!formValid ||
+        _dateOfBirth == null ||
+        _selectedClass == null ||
+        _selectedYear == null) {
+      if (_dateOfBirth == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a date of birth')),
+        );
+      } else if (_selectedClass == null || _selectedYear == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a class and academic year'),
+          ),
+        );
+      }
+      return;
+    }
+    if (_schoolCodeController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a school code prefix')),
+      );
+      return;
+    }
+
+    setState(() => _busy = true);
+    final admissionService = sl<AdmissionService>();
+
+    final application = AdmissionApplication(
+      id: const Uuid().v4(),
+      schoolId: widget.schoolId,
+      studentName: _studentNameController.text.trim(),
+      dateOfBirth: _dateOfBirth!,
+      gender: _gender,
+      targetClassId: _selectedClass!.id,
+      academicYearId: _selectedYear!.id,
+      previousSchool: _previousSchoolController.text.trim().isEmpty
+          ? null
+          : _previousSchoolController.text.trim(),
+      applicantParentName: _parentNameController.text.trim(),
+      applicantParentPhone: _parentPhoneController.text.trim(),
+      status: AdmissionStatus.approved,
+      appliedAt: DateTime.now(),
+    );
+
+    final createResult = await admissionService.submitApplication(application);
+
+    if (!mounted) return;
+
+    final Either<String, String> admitResult = await createResult.fold(
+      (failure) async => Left(failure.message),
+      (_) async {
+        final result = await admissionService.admitStudent(
+          application.id,
+          application.schoolId,
+          _schoolCodeController.text.trim(),
+          application.academicYearId,
+          application.academicYearId,
+        );
+        return result.fold(
+          (failure) => Left(failure.message),
+          (studentId) => Right(studentId),
+        );
+      },
+    );
+
+    if (!mounted) return;
+    setState(() => _busy = false);
+
+    await admitResult.fold(
+      (message) async {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppColors.danger(context),
+          ),
+        );
+      },
+      (studentId) async {
+        final studentResult = await admissionService.repository.getStudentById(
+          studentId,
+        );
+        final codes = studentResult.fold(
+          (failure) => null,
+          (student) => (
+            uniqueSystemId: student.qrReference ?? '',
+            studentCode: student.studentCode,
+          ),
+        );
+        if (!mounted || codes == null) return;
+
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => EnrollmentSetupWizardScreen(
+              application: application,
+              studentId: studentId,
+              schoolCode: _schoolCodeController.text.trim(),
+              uniqueSystemId: codes.uniqueSystemId,
+              studentCode: codes.studentCode,
+            ),
+          ),
+        );
+        if (mounted) Navigator.of(context).pop(true);
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Register Student')),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(
+              'Registers the student directly and continues straight into '
+              'enrollment setup - no application review step.',
+              style: TextStyle(color: AppColors.textSecondary(context)),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _studentNameController,
+              style: TextStyle(color: AppColors.textPrimary(context)),
+              decoration: InputDecoration(
+                labelText: 'Student full name',
+                labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                border: const OutlineInputBorder(),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: AppColors.primary(context),
+                    width: 2,
+                  ),
+                ),
+              ),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                _dateOfBirth == null
+                    ? 'Select date of birth'
+                    : 'Date of birth: ${DateFormat('dd MMM yyyy').format(_dateOfBirth!)}',
+                style: TextStyle(
+                  color: _dateOfBirth == null
+                      ? AppColors.textSecondary(context)
+                      : AppColors.textPrimary(context),
+                ),
+              ),
+              trailing: Icon(
+                Icons.calendar_today_outlined,
+                color: AppColors.textSecondary(context),
+              ),
+              onTap: _pickDateOfBirth,
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<Gender>(
+              initialValue: _gender,
+              style: TextStyle(color: AppColors.textPrimary(context)),
+              decoration: InputDecoration(
+                labelText: 'Gender',
+                labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                border: const OutlineInputBorder(),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+              ),
+              items: Gender.values
+                  .map((g) => DropdownMenuItem(value: g, child: Text(g.name)))
+                  .toList(),
+              onChanged: (v) => setState(() => _gender = v ?? _gender),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<SchoolClass>(
+              initialValue: _selectedClass,
+              style: TextStyle(color: AppColors.textPrimary(context)),
+              decoration: InputDecoration(
+                labelText: 'Class',
+                labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                border: const OutlineInputBorder(),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+              ),
+              items: _classes
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedClass = v),
+              validator: (v) => v == null ? 'Required' : null,
+              hint: Text(
+                _classes.isEmpty ? 'Loading classes…' : 'Select class',
+                style: TextStyle(color: AppColors.textSecondary(context)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<AcademicYear>(
+              initialValue: _selectedYear,
+              style: TextStyle(color: AppColors.textPrimary(context)),
+              decoration: InputDecoration(
+                labelText: 'Academic year',
+                labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                border: const OutlineInputBorder(),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+              ),
+              items: _academicYears
+                  .map((y) => DropdownMenuItem(value: y, child: Text(y.name)))
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedYear = v),
+              validator: (v) => v == null ? 'Required' : null,
+              hint: Text(
+                _academicYears.isEmpty
+                    ? 'Loading academic years…'
+                    : 'Select year',
+                style: TextStyle(color: AppColors.textSecondary(context)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _previousSchoolController,
+              style: TextStyle(color: AppColors.textPrimary(context)),
+              decoration: InputDecoration(
+                labelText: 'Previous school (optional)',
+                labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                border: const OutlineInputBorder(),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _schoolCodeController,
+              textCapitalization: TextCapitalization.characters,
+              style: TextStyle(color: AppColors.textPrimary(context)),
+              decoration: InputDecoration(
+                labelText: 'School code prefix',
+                helperText:
+                    'Used to build the student\'s human-readable code, e.g. "MH"',
+                labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                border: const OutlineInputBorder(),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Divider(color: AppColors.border(context)),
+            const SizedBox(height: 8),
+            Text(
+              'Parent / Guardian',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppColors.primary(context),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _parentNameController,
+              style: TextStyle(color: AppColors.textPrimary(context)),
+              decoration: InputDecoration(
+                labelText: 'Parent / guardian name',
+                labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                border: const OutlineInputBorder(),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+              ),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _parentPhoneController,
+              keyboardType: TextInputType.phone,
+              style: TextStyle(color: AppColors.textPrimary(context)),
+              decoration: InputDecoration(
+                labelText: 'Parent / guardian phone',
+                labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+                border: const OutlineInputBorder(),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+              ),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+            ),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: _busy ? null : _register,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary(context),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: _busy
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Register & Continue to Enrollment'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

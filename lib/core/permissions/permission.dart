@@ -214,6 +214,23 @@ class Permission {
   static const admissionApplicationReview = 'admission.application.review';
   static const admissionEnroll = 'admission.enroll';
 
+  // Enrollment Setup Wizard (post-approval placement/finance/boarding/
+  // clubs/parent-link/identity confirmation before a student goes active).
+  // Deliberately split from admissionEnroll: that permission gates
+  // triggering the underlying AdmissionService.enrollStudent status
+  // transition, while these gate each wizard step's own side-effecting
+  // write so a role can be trusted with e.g. academic placement without
+  // also being trusted to grant bursaries or link parents.
+  static const enrollmentManage = 'enrollment.manage';
+  static const enrollmentAcademicAssign = 'enrollment.academic_assign';
+  static const enrollmentFinanceSetup = 'enrollment.finance_setup';
+  static const enrollmentBursaryAssign = 'enrollment.bursary_assign';
+  static const enrollmentBoardingAssign = 'enrollment.boarding_assign';
+  static const enrollmentParentLink = 'enrollment.parent_link';
+  static const enrollmentIdentityManage = 'enrollment.identity_manage';
+  static const enrollmentCardGenerate = 'enrollment.card_generate';
+  static const enrollmentActivate = 'enrollment.activate';
+
   // Student data-visibility scoping
   static const studentBasicRead = 'student.basic.read';
   static const studentFullRead = 'student.full.read';
@@ -512,6 +529,16 @@ class Permission {
     ('Admissions', admissionApplicationCreate),
     ('Admissions', admissionApplicationReview),
     ('Admissions', admissionEnroll),
+
+    ('Enrollment Setup Wizard', enrollmentManage),
+    ('Enrollment Setup Wizard', enrollmentAcademicAssign),
+    ('Enrollment Setup Wizard', enrollmentFinanceSetup),
+    ('Enrollment Setup Wizard', enrollmentBursaryAssign),
+    ('Enrollment Setup Wizard', enrollmentBoardingAssign),
+    ('Enrollment Setup Wizard', enrollmentParentLink),
+    ('Enrollment Setup Wizard', enrollmentIdentityManage),
+    ('Enrollment Setup Wizard', enrollmentCardGenerate),
+    ('Enrollment Setup Wizard', enrollmentActivate),
 
     ('Student Data', studentBasicRead),
     ('Student Data', studentFullRead),

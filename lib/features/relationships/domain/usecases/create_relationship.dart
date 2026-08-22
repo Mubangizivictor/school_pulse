@@ -70,6 +70,13 @@ class CreateRelationship
       isLegalGuardian: params.isLegalGuardian,
       isPrimaryGuardian: params.isPrimaryGuardian,
       createdBy: params.createdBy,
+      financialAccess: params.financialAccess,
+      academicAccess: params.academicAccess,
+      attendanceAccess: params.attendanceAccess,
+      medicalAccess: params.medicalAccess,
+      emergencyContactAccess: params.emergencyContactAccess,
+      pickupAuthorized: params.pickupAuthorized,
+      communicationPermission: params.communicationPermission,
     );
   }
 }
@@ -83,6 +90,13 @@ class CreateRelationshipParams extends Equatable {
   final bool isLegalGuardian;
   final bool isPrimaryGuardian;
   final String createdBy;
+  final bool? financialAccess;
+  final bool? academicAccess;
+  final bool? attendanceAccess;
+  final bool? medicalAccess;
+  final bool? emergencyContactAccess;
+  final bool? pickupAuthorized;
+  final bool? communicationPermission;
 
   const CreateRelationshipParams({
     required this.schoolId,
@@ -93,6 +107,13 @@ class CreateRelationshipParams extends Equatable {
     this.isLegalGuardian = false,
     this.isPrimaryGuardian = false,
     required this.createdBy,
+    this.financialAccess,
+    this.academicAccess,
+    this.attendanceAccess,
+    this.medicalAccess,
+    this.emergencyContactAccess,
+    this.pickupAuthorized,
+    this.communicationPermission,
   });
 
   @override
@@ -105,5 +126,12 @@ class CreateRelationshipParams extends Equatable {
     isLegalGuardian,
     isPrimaryGuardian,
     createdBy,
+    financialAccess,
+    academicAccess,
+    attendanceAccess,
+    medicalAccess,
+    emergencyContactAccess,
+    pickupAuthorized,
+    communicationPermission,
   ];
 }

@@ -16,3 +16,4 @@ targets:
             - lib/features/*/data/models/*_isar*.dart
             - lib/features/shared/boarding/data/models/*_isar*.dart
             - lib/features/exams/data/models/isar_assessment_mark.dart
+            - lib/features/student/data/enrollment_setup/models/*_isar*.dart

@@ -367,12 +367,54 @@ service cloud.firestore {
     // role gate on /admissions/new) was non-functional in production.
     // Staff-only throughout since applicants have no users/{uid} account
     // yet at this stage - admission is always staff-mediated today.
+    //
+    // Reviewing/deciding an application (status leaving 'application') and
+    // enrolling one (status becoming 'enrolled'/'admitted') require the
+    // matching Permission.admissionApplicationReview/admissionEnroll grant,
+    // resolved the same role-default-or-override way as
+    // hasAttendancePermission above - this was previously only enforced by
+    // AdmissionBloc client-side, so a Class/Subject Teacher account (or any
+    // other isStaff() role never granted this permission) could approve or
+    // enroll an application by writing this collection directly. Plain
+    // field edits to an application still under review (isStaff() only)
+    // remain unrestricted - only the state-transition edit is gated.
+    function hasEnrollmentPermission(schoolId, permissionId) {
+      return hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead', 'deanOfStudies', 'receptionist', 'hrOfficer']) || (
+        isStaff() && exists(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())) &&
+        permissionId in get(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())).data.permissions
+      );
+    }
+    function isAdmissionStatusChange() {
+      return request.resource.data.status != resource.data.status;
+    }
     match /admission_applications/{applicationId} {
       allow read: if isStaff() && isSameSchool(resource.data.schoolId);
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
-        request.resource.data.schoolId == resource.data.schoolId;
+        request.resource.data.schoolId == resource.data.schoolId && (
+          !isAdmissionStatusChange() ||
+          hasEnrollmentPermission(resource.data.schoolId, 'admission.application.review') ||
+          hasEnrollmentPermission(resource.data.schoolId, 'admission.enroll')
+        );
       allow delete: if false;
+    }
+
+    // Admission-number sequence counter, incremented by
+    // StudentRemoteDataSourceImpl.getNextSequenceNumber inside the
+    // transaction AdmissionService.admitStudent runs before it ever calls
+    // the createStudentWithCapacityCheck callable. This collection had NO
+    // rule coverage at all (Firestore rules don't inherit from a parent
+    // path), so every admit attempt was silently permission-denied at this
+    // first step - the enrollment wizard's "Enroll Student" button never
+    // actually enrolled anyone, in any school, ever. Gated the same as the
+    // admission_applications status-transition edit above, since minting a
+    // sequence number is part of that same permissioned action.
+    match /schools/{schoolId}/counters/{counterId} {
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow write: if isSameSchool(schoolId) && (
+        hasEnrollmentPermission(schoolId, 'admission.enroll') ||
+        hasEnrollmentPermission(schoolId, 'admission.application.review')
+      );
     }
 
     match /students/{studentId} {
@@ -386,11 +428,27 @@ service cloud.firestore {
       // and update now both require same-school, and update additionally
       // locks schoolId so a doc can never be re-parented to another
       // school by editing this field.
+      //
+      // Creating a student doc, or moving it into/through the enrollment
+      // pipeline (enrollmentInProgress/enrolled/admitted/active), is the
+      // same admissionEnroll-gated action AdmissionBloc performs
+      // client-side - matches admission_applications' status-transition
+      // gate above so the two halves of one workflow can't be enforced
+      // inconsistently. Every other students write (attendance, grading,
+      // patron/matron boarding logs, transfers, etc.) stays isStaff()-only,
+      // unchanged.
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
-        schoolCanWrite(request.resource.data.schoolId);
+        schoolCanWrite(request.resource.data.schoolId) && (
+          !(request.resource.data.status in ['enrollmentInProgress', 'enrolled', 'admitted', 'active']) ||
+          hasEnrollmentPermission(request.resource.data.schoolId, 'admission.enroll')
+        );
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
         request.resource.data.schoolId == resource.data.schoolId &&
-        schoolCanWrite(resource.data.schoolId);
+        schoolCanWrite(resource.data.schoolId) && (
+          request.resource.data.status == resource.data.status ||
+          !(request.resource.data.status in ['enrollmentInProgress', 'enrolled', 'admitted', 'active']) ||
+          hasEnrollmentPermission(resource.data.schoolId, 'admission.enroll')
+        );
       allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
@@ -474,6 +532,57 @@ service cloud.firestore {
         request.resource.data.classId == resource.data.classId &&
         request.resource.data.get('streamId', null) == resource.data.get('streamId', null) &&
         request.resource.data.academicYearId == resource.data.academicYearId;
+      allow delete: if false;
+    }
+
+    // Enrollment Setup Wizard: scholarship/bursary awards granted during
+    // post-admission enrollment. Bursary approval is a stricter action than
+    // general finance setup (Permission.enrollmentBursaryAssign in the
+    // client), so writes are gated the same way as finance-module writes
+    // (isFinanceStaff/canWriteFinance) rather than general isStaff() -
+    // an admissions user without a finance role must not grant discounts.
+    match /scholarship_awards/{awardId} {
+      allow read: if isSameSchool(resource.data.schoolId) &&
+        (isFinanceStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId));
+      allow create: if canWriteFinance() && isSameSchool(request.resource.data.schoolId);
+      allow update: if canWriteFinance() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        request.resource.data.studentId == resource.data.studentId;
+      allow delete: if false;
+    }
+
+    // Enrollment Setup Wizard: dormitory/room/bed allocation for boarding
+    // students. Staff-only, tenant-scoped like every other student
+    // sub-record; hostelId/roomId/bed are immutable on update so a bed
+    // can't be silently reassigned without creating a new assignment record
+    // (the app's own duplicate-bed check happens client-side before write,
+    // but the record itself staying append-only keeps history intact).
+    match /dormitory_assignments/{assignmentId} {
+      allow read: if isSameSchool(resource.data.schoolId) &&
+        (isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId));
+      allow create: if isSameSchool(request.resource.data.schoolId) &&
+        hasEnrollmentPermission(request.resource.data.schoolId, 'enrollment.boarding_assign');
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        request.resource.data.studentId == resource.data.studentId &&
+        request.resource.data.hostelId == resource.data.hostelId &&
+        request.resource.data.roomId == resource.data.roomId &&
+        request.resource.data.bed == resource.data.bed;
+      allow delete: if false;
+    }
+
+    // Enrollment Setup Wizard: student <-> club/activity membership.
+    // Optional/self-contained, staff-mediated only (a student/parent
+    // cannot enrol themselves in a club by writing this collection
+    // directly, matching every other enrollment-wizard write).
+    match /student_club_memberships/{membershipId} {
+      allow read: if isSameSchool(resource.data.schoolId) &&
+        (isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        request.resource.data.studentId == resource.data.studentId &&
+        request.resource.data.clubId == resource.data.clubId;
       allow delete: if false;
     }
 

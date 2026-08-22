@@ -130,6 +130,7 @@ import 'package:school_pulse/features/shared/shell_screen.dart';
 import 'package:school_pulse/features/shared/presentation/staff_hub_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/admission_application.dart';
 import 'package:school_pulse/features/student/presentation/screens/admission_review_screen.dart';
+import 'package:school_pulse/features/student/presentation/enrollment_setup/screens/enrollment_setup_wizard_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/admissions_list_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/admin_students_dashboard_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/admin_students_list_screen.dart';
@@ -138,6 +139,7 @@ import 'package:school_pulse/features/student/presentation/screens/admin_student
 import 'package:school_pulse/features/student/presentation/screens/student_portal_codes_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/identity_and_cards_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/new_application_screen.dart';
+import 'package:school_pulse/features/student/presentation/screens/direct_student_registration_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/profile_more_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/personal_information_screen.dart';
@@ -2157,10 +2159,32 @@ final router = GoRouter(
                       NewApplicationScreen(schoolId: state.extra as String),
                 ),
                 GoRoute(
+                  path: 'register',
+                  builder: (context, state) => DirectStudentRegistrationScreen(
+                    schoolId: state.extra as String,
+                  ),
+                ),
+                GoRoute(
                   path: 'review',
                   builder: (context, state) => AdmissionReviewScreen(
                     application: state.extra as AdmissionApplication,
                   ),
+                  routes: [
+                    GoRoute(
+                      path: 'enroll',
+                      builder: (context, state) {
+                        final extra =
+                            state.extra as EnrollmentSetupWizardRouteExtra;
+                        return EnrollmentSetupWizardScreen(
+                          application: extra.application,
+                          studentId: extra.studentId,
+                          schoolCode: extra.schoolCode,
+                          uniqueSystemId: extra.uniqueSystemId,
+                          studentCode: extra.studentCode,
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
