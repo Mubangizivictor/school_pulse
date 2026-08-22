@@ -33,6 +33,11 @@ class Student extends Equatable {
   final String? dormLeadershipDormId;
   final String? dormLeadershipDormName;
 
+  // Day/boarding classification, set during the Enrollment Setup Wizard's
+  // Admission step. Null for students enrolled before this field existed
+  // or where it was never captured.
+  final StudentBoardingType? boardingType;
+
   const Student({
     required this.id,
     required this.schoolId,
@@ -57,6 +62,7 @@ class Student extends Equatable {
     this.dormLeadershipRole,
     this.dormLeadershipDormId,
     this.dormLeadershipDormName,
+    this.boardingType,
   });
 
   factory Student.empty([String id = '']) {
@@ -104,6 +110,7 @@ class Student extends Equatable {
     dormLeadershipRole,
     dormLeadershipDormId,
     dormLeadershipDormName,
+    boardingType,
   ];
 
   Student copyWith({
@@ -118,6 +125,7 @@ class Student extends Equatable {
     List<String>? parentIds,
     Map<String, String>? documents,
     String? campusId,
+    StudentBoardingType? boardingType,
   }) {
     return Student(
       id: id,
@@ -140,6 +148,10 @@ class Student extends Equatable {
       documents: documents ?? this.documents,
       campusId: campusId ?? this.campusId,
       level: level,
+      dormLeadershipRole: dormLeadershipRole,
+      dormLeadershipDormId: dormLeadershipDormId,
+      dormLeadershipDormName: dormLeadershipDormName,
+      boardingType: boardingType ?? this.boardingType,
     );
   }
 }
