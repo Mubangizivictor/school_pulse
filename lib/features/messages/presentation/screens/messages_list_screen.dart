@@ -59,6 +59,13 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final inboxSurface = isDark
+        ? const Color(0xFF10376F)
+        : colors.surfaceContainerHigh;
+    final inboxBorder = isDark
+        ? const Color(0xFF3466A7)
+        : colors.outlineVariant;
     return Scaffold(
       backgroundColor: colors.surface,
       appBar: AppBar(
@@ -99,9 +106,9 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                         vertical: 14,
                       ),
                       decoration: BoxDecoration(
-                        color: colors.surfaceContainerHigh,
+                        color: inboxSurface,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: colors.outlineVariant),
+                        border: Border.all(color: inboxBorder),
                       ),
                       child: Row(
                         children: [
@@ -382,6 +389,8 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
   }
 
   Widget _buildEmptyState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x3l),
@@ -391,10 +400,14 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             Container(
               padding: const EdgeInsets.all(40),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                color: isDark
+                    ? const Color(0xFF0D315F)
+                    : colors.surfaceContainerHigh,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.outlineVariant,
+                  color: isDark
+                      ? const Color(0xFF2D5B98)
+                      : colors.outlineVariant,
                 ),
               ),
               child: Icon(
@@ -460,26 +473,30 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
         label: Text(label),
         selected: isSelected,
         onSelected: (_) => onTap?.call(),
-        selectedColor: Theme.of(context).colorScheme.primary,
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        selectedColor: colors.primary,
+        backgroundColor: isDark
+            ? const Color(0xFF10376F)
+            : colors.surfaceContainerHigh,
         labelStyle: TextStyle(
-          color: isSelected
-              ? Theme.of(context).colorScheme.onPrimary
-              : Theme.of(context).colorScheme.onSurfaceVariant,
+          color: isSelected ? colors.onPrimary : colors.onSurfaceVariant,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
             color: isSelected
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.outlineVariant,
+                ? colors.primary
+                : isDark
+                ? const Color(0xFF3466A7)
+                : colors.outlineVariant,
           ),
         ),
         showCheckmark: false,
