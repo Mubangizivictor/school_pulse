@@ -367,11 +367,35 @@ service cloud.firestore {
     // role gate on /admissions/new) was non-functional in production.
     // Staff-only throughout since applicants have no users/{uid} account
     // yet at this stage - admission is always staff-mediated today.
+    //
+    // Reviewing/deciding an application (status leaving 'application') and
+    // enrolling one (status becoming 'enrolled'/'admitted') require the
+    // matching Permission.admissionApplicationReview/admissionEnroll grant,
+    // resolved the same role-default-or-override way as
+    // hasAttendancePermission above - this was previously only enforced by
+    // AdmissionBloc client-side, so a Class/Subject Teacher account (or any
+    // other isStaff() role never granted this permission) could approve or
+    // enroll an application by writing this collection directly. Plain
+    // field edits to an application still under review (isStaff() only)
+    // remain unrestricted - only the state-transition edit is gated.
+    function hasEnrollmentPermission(schoolId, permissionId) {
+      return hasAnyRole(['schoolAdmin', 'director', 'headTeacher', 'deputyHead', 'deanOfStudies', 'receptionist', 'hrOfficer']) || (
+        isStaff() && exists(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())) &&
+        permissionId in get(/databases/$(database)/documents/schools/$(schoolId)/role_permission_overrides/$(myRole())).data.permissions
+      );
+    }
+    function isAdmissionStatusChange() {
+      return request.resource.data.status != resource.data.status;
+    }
     match /admission_applications/{applicationId} {
       allow read: if isStaff() && isSameSchool(resource.data.schoolId);
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
-        request.resource.data.schoolId == resource.data.schoolId;
+        request.resource.data.schoolId == resource.data.schoolId && (
+          !isAdmissionStatusChange() ||
+          hasEnrollmentPermission(resource.data.schoolId, 'admission.application.review') ||
+          hasEnrollmentPermission(resource.data.schoolId, 'admission.enroll')
+        );
       allow delete: if false;
     }
 
@@ -386,11 +410,27 @@ service cloud.firestore {
       // and update now both require same-school, and update additionally
       // locks schoolId so a doc can never be re-parented to another
       // school by editing this field.
+      //
+      // Creating a student doc, or moving it into/through the enrollment
+      // pipeline (enrollmentInProgress/enrolled/admitted/active), is the
+      // same admissionEnroll-gated action AdmissionBloc performs
+      // client-side - matches admission_applications' status-transition
+      // gate above so the two halves of one workflow can't be enforced
+      // inconsistently. Every other students write (attendance, grading,
+      // patron/matron boarding logs, transfers, etc.) stays isStaff()-only,
+      // unchanged.
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
-        schoolCanWrite(request.resource.data.schoolId);
+        schoolCanWrite(request.resource.data.schoolId) && (
+          !(request.resource.data.status in ['enrollmentInProgress', 'enrolled', 'admitted', 'active']) ||
+          hasEnrollmentPermission(request.resource.data.schoolId, 'admission.enroll')
+        );
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
         request.resource.data.schoolId == resource.data.schoolId &&
-        schoolCanWrite(resource.data.schoolId);
+        schoolCanWrite(resource.data.schoolId) && (
+          request.resource.data.status == resource.data.status ||
+          !(request.resource.data.status in ['enrollmentInProgress', 'enrolled', 'admitted', 'active']) ||
+          hasEnrollmentPermission(resource.data.schoolId, 'admission.enroll')
+        );
       allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
@@ -502,7 +542,8 @@ service cloud.firestore {
     match /dormitory_assignments/{assignmentId} {
       allow read: if isSameSchool(resource.data.schoolId) &&
         (isStaff() || isParentOf(resource.data.studentId) || isMe(resource.data.studentId));
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow create: if isSameSchool(request.resource.data.schoolId) &&
+        hasEnrollmentPermission(request.resource.data.schoolId, 'enrollment.boarding_assign');
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
         request.resource.data.schoolId == resource.data.schoolId &&
         request.resource.data.studentId == resource.data.studentId &&

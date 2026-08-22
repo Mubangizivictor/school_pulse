@@ -2311,12 +2311,12 @@ describe('Enrollment Setup Wizard: scholarship_awards/dormitory_assignments/'
     }));
   });
 
-  test('dormitory_assignments: cross-school read denied, same-school staff '
-    + 'can create, a student cannot write their own assignment', async () => {
-    await assertSucceeds(setDoc(doc(dbFor('matronA'), 'dormitory_assignments/assignA'), {
+  test('dormitory_assignments: cross-school read denied, an admin role can '
+    + 'create, a student cannot write their own assignment', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'dormitory_assignments/assignA'), {
       schoolId: 'schoolA', studentId: 'studentA', hostelId: 'hostel1',
       roomId: 'room1', bed: 'A', assignedAt: new Date().toISOString(),
-      assignedBy: 'matronA',
+      assignedBy: 'adminA',
     }));
     await assertFails(getDoc(doc(dbFor('teacherB'), 'dormitory_assignments/assignA')));
     await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'dormitory_assignments/assignA')));
@@ -2326,6 +2326,28 @@ describe('Enrollment Setup Wizard: scholarship_awards/dormitory_assignments/'
       assignedBy: 'studentUserA',
     }));
   });
+
+  test('dormitory_assignments: enrollment.boarding_assign is required - '
+    + 'a boardingMatron with no permission grant is denied, the same role '
+    + 'succeeds once granted the permission via role_permission_overrides',
+    async () => {
+      await assertFails(setDoc(doc(dbFor('matronA'), 'dormitory_assignments/deniedAssign'), {
+        schoolId: 'schoolA', studentId: 'studentA', hostelId: 'hostel1',
+        roomId: 'room1', bed: 'C', assignedAt: new Date().toISOString(),
+        assignedBy: 'matronA',
+      }));
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(
+          doc(context.firestore(), 'schools/schoolA/role_permission_overrides/boardingMatron'),
+          { permissions: ['enrollment.boarding_assign'] },
+        );
+      });
+      await assertSucceeds(setDoc(doc(dbFor('matronA'), 'dormitory_assignments/grantedAssign'), {
+        schoolId: 'schoolA', studentId: 'studentA', hostelId: 'hostel1',
+        roomId: 'room1', bed: 'D', assignedAt: new Date().toISOString(),
+        assignedBy: 'matronA',
+      }));
+    });
 
   test('student_club_memberships: cross-school read denied, same-school '
     + 'staff can create, a student cannot self-enrol by writing directly',
@@ -2359,4 +2381,42 @@ describe('admission_applications: enrollment-follow-up visibility/role checks '
           where('schoolId', '==', 'schoolA'))),
       );
     });
+
+  test('a Class Teacher cannot approve/reject an admission application - '
+    + 'admission.application.review is required for a status transition, '
+    + 'not granted to classTeacher by default or in this test\'s fixtures',
+    async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'admission_applications/appForTeacherEscalation'), {
+          schoolId: 'schoolA', studentName: 'Test Applicant', status: 'application',
+        });
+      });
+      await assertFails(updateDoc(
+        doc(dbFor('teacherA'), 'admission_applications/appForTeacherEscalation'),
+        { schoolId: 'schoolA', status: 'approved' },
+      ));
+      // A plain field edit that does not change status is still allowed -
+      // only the state-transition write is gated.
+      await assertSucceeds(updateDoc(
+        doc(dbFor('teacherA'), 'admission_applications/appForTeacherEscalation'),
+        { schoolId: 'schoolA', status: 'application', studentName: 'Corrected Name' },
+      ));
+    });
+
+  test('a Class Teacher cannot enroll a student directly by writing '
+    + 'students/{id} with an enrollment-pipeline status - admission.enroll '
+    + 'is required, matching admission_applications\' gate', async () => {
+    await assertFails(setDoc(doc(dbFor('teacherA'), 'students/teacherEnrolledStudent'), {
+      schoolId: 'schoolA', name: 'Escalation Attempt', status: 'enrollmentInProgress',
+    }));
+    // An admin-role account may.
+    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'students/adminEnrolledStudent'), {
+      schoolId: 'schoolA', name: 'Valid Enrollment', status: 'enrollmentInProgress',
+    }));
+    // Writing a students doc for an unrelated, non-enrollment status
+    // (e.g. an already-active student's ordinary field edit) is unaffected.
+    await assertSucceeds(setDoc(doc(dbFor('teacherA'), 'students/ordinaryStudentEdit'), {
+      schoolId: 'schoolA', name: 'Ordinary Student', status: 'suspended',
+    }));
+  });
 });
