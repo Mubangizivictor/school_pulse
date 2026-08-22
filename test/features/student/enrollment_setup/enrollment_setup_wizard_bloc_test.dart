@@ -2,11 +2,12 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
-import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/create_relationship.dart';
+import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft_local_data_source.dart';
+import 'package:school_pulse/features/student/data/enrollment_setup/models/enrollment_setup_draft_isar.dart';
+import 'package:school_pulse/features/student/domain/enrollment_setup/entities/dormitory_assignment.dart';
 import 'package:school_pulse/features/student/domain/enrollment_setup/entities/scholarship_award.dart';
 import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
 import 'package:school_pulse/features/student/domain/enrollment_setup/repositories/enrollment_setup_repository.dart';
@@ -21,6 +22,51 @@ import 'package:school_pulse/features/student/presentation/enrollment_setup/bloc
 import 'package:school_pulse/features/student/presentation/enrollment_setup/bloc/enrollment_setup_wizard_state.dart';
 
 class MockStudentRepository extends Mock implements StudentRepository {}
+
+/// In-memory fake (not a mock) - draft persistence is a stateful round trip
+/// (save then later get/delete), which is simpler to express faithfully as
+/// a fake than to stub call-by-call with mocktail.
+class FakeEnrollmentSetupDraftLocalDataSource
+    implements EnrollmentSetupDraftLocalDataSource {
+  final Map<String, EnrollmentSetupDraftIsar> _store = {};
+  int saveCount = 0;
+
+  String _key(String schoolId, String studentId) => '$schoolId::$studentId';
+
+  @override
+  Future<EnrollmentSetupDraftIsar?> getDraft({
+    required String schoolId,
+    required String studentId,
+  }) async => _store[_key(schoolId, studentId)];
+
+  @override
+  Future<void> saveDraft({
+    required String schoolId,
+    required String studentId,
+    String? applicationId,
+    required int currentStep,
+    required int completedStepsMask,
+    required Map<String, dynamic> stateJson,
+  }) async {
+    saveCount++;
+    _store[_key(schoolId, studentId)] = EnrollmentSetupDraftIsar()
+      ..studentId = studentId
+      ..schoolId = schoolId
+      ..applicationId = applicationId
+      ..currentStep = currentStep
+      ..completedStepsMask = completedStepsMask
+      ..stateJson = '{}'
+      ..updatedAt = DateTime.now();
+  }
+
+  @override
+  Future<void> deleteDraft({
+    required String schoolId,
+    required String studentId,
+  }) async {
+    _store.remove(_key(schoolId, studentId));
+  }
+}
 
 class MockAdmissionService extends Mock implements AdmissionService {}
 
@@ -64,6 +110,18 @@ void main() {
   setUpAll(() {
     registerFallbackValue(FakeCreateRelationshipParams());
     registerFallbackValue(StudentStatus.enrollmentInProgress);
+    registerFallbackValue(
+      DormitoryAssignment(
+        id: 'fallback',
+        studentId: 'student-1',
+        schoolId: 'school-1',
+        hostelId: 'hostel-1',
+        roomId: 'room-1',
+        bed: 'A',
+        assignedAt: DateTime(2026),
+        assignedBy: 'staff-1',
+      ),
+    );
     registerFallbackValue(
       const UserEntity(
         id: 'fallback',
@@ -290,6 +348,378 @@ void main() {
             .having((s) => s.isLoading, 'isLoading', false)
             .having((s) => s.hasScholarshipAward, 'hasScholarshipAward', true),
       ],
+    );
+  });
+
+  group('role-security: non-privileged staff is denied, not silently '
+      'ignored or thrown', () {
+    final classTeacher = const UserEntity(
+      id: 'teacher-1',
+      name: 'Class Teacher',
+      email: 'teacher@school.com',
+      roles: [UserRole.classTeacher],
+      schoolId: 'school-1',
+    );
+
+    blocTest<EnrollmentSetupWizardBloc, EnrollmentSetupWizardState>(
+      'DormitoryAssignmentRequested is denied for an operator lacking '
+      'Permission.enrollmentBoardingAssign - repository is never called',
+      build: () {
+        when(
+          () => permissionEvaluator.can(
+            Permission.enrollmentBoardingAssign,
+            any(),
+          ),
+        ).thenAnswer((_) async => const Right(false));
+        return bloc;
+      },
+      seed: () =>
+          const EnrollmentSetupWizardState(studentId: 's1', schoolId: 'sc1'),
+      act: (bloc) => bloc.add(
+        DormitoryAssignmentRequested(
+          operatorUser: classTeacher,
+          hostelId: 'h1',
+          roomId: 'r1',
+          bed: 'A',
+        ),
+      ),
+      expect: () => [
+        isA<EnrollmentSetupWizardState>().having(
+          (s) => s.error,
+          'error',
+          isNotNull,
+        ),
+      ],
+      verify: (_) {
+        verifyNever(() => enrollmentSetupRepository.assignDormitory(any()));
+      },
+    );
+
+    blocTest<EnrollmentSetupWizardBloc, EnrollmentSetupWizardState>(
+      'ParentLinkRequested is denied for an operator lacking '
+      'Permission.enrollmentParentLink - linking service is never called',
+      build: () {
+        when(
+          () => permissionEvaluator.can(Permission.enrollmentParentLink, any()),
+        ).thenAnswer((_) async => const Right(false));
+        return bloc;
+      },
+      seed: () =>
+          const EnrollmentSetupWizardState(studentId: 's1', schoolId: 'sc1'),
+      act: (bloc) => bloc.add(
+        ParentLinkRequested(
+          operatorUser: classTeacher,
+          phoneNumber: '+256700000000',
+        ),
+      ),
+      expect: () => [
+        isA<EnrollmentSetupWizardState>().having(
+          (s) => s.error,
+          'error',
+          isNotNull,
+        ),
+      ],
+      verify: (_) {
+        verifyNever(
+          () => parentLinkingService.linkStudentToParent(
+            studentId: any(named: 'studentId'),
+            studentName: any(named: 'studentName'),
+            schoolId: any(named: 'schoolId'),
+            phoneNumber: any(named: 'phoneNumber'),
+            parentName: any(named: 'parentName'),
+            createdBy: any(named: 'createdBy'),
+          ),
+        );
+      },
+    );
+
+    blocTest<EnrollmentSetupWizardBloc, EnrollmentSetupWizardState>(
+      'ActivationRequested is denied for an operator lacking '
+      'Permission.enrollmentActivate - enrollStudent is never called',
+      build: () {
+        when(
+          () => permissionEvaluator.can(Permission.enrollmentActivate, any()),
+        ).thenAnswer((_) async => const Right(false));
+        return bloc;
+      },
+      seed: () => const EnrollmentSetupWizardState(
+        studentId: 's1',
+        schoolId: 'sc1',
+        academicYearId: 'y1',
+        classId: 'c1',
+        studentCode: 'SCH0001',
+        parentLinkSkippedFlag: true,
+      ),
+      act: (bloc) => bloc.add(ActivationRequested(classTeacher)),
+      expect: () => [
+        isA<EnrollmentSetupWizardState>().having(
+          (s) => s.error,
+          'error',
+          isNotNull,
+        ),
+      ],
+      verify: (_) {
+        verifyNever(
+          () => admissionService.enrollStudent(
+            any(),
+            schoolId: any(named: 'schoolId'),
+            uniqueSystemId: any(named: 'uniqueSystemId'),
+            studentCode: any(named: 'studentCode'),
+            academicYear: any(named: 'academicYear'),
+            term: any(named: 'term'),
+            feeStructureId: any(named: 'feeStructureId'),
+            totalBilled: any(named: 'totalBilled'),
+          ),
+        );
+      },
+    );
+  });
+
+  group('NfcRegistrationRequested - duplicate assignment prevention', () {
+    blocTest<EnrollmentSetupWizardBloc, EnrollmentSetupWizardState>(
+      'when the student already has an assigned credential, assign() is '
+      'never called again - findAssignedCredential short-circuits',
+      build: () {
+        when(
+          () =>
+              permissionEvaluator.can(Permission.enrollmentCardGenerate, any()),
+        ).thenAnswer((_) async => const Right(true));
+        when(
+          () => nfcCredentialRepository.findAssignedCredential(
+            identityId: any(named: 'identityId'),
+            schoolId: any(named: 'schoolId'),
+          ),
+        ).thenAnswer((_) async => const Right('existing-card-uid'));
+        return bloc;
+      },
+      seed: () =>
+          const EnrollmentSetupWizardState(studentId: 's1', schoolId: 'sc1'),
+      act: (bloc) => bloc.add(
+        NfcRegistrationRequested(
+          operatorUser: operatorUser,
+          credentialValue: 'new-card-uid',
+        ),
+      ),
+      expect: () => [
+        isA<EnrollmentSetupWizardState>().having(
+          (s) => s.isLoading,
+          'isLoading',
+          true,
+        ),
+        isA<EnrollmentSetupWizardState>()
+            .having((s) => s.isLoading, 'isLoading', false)
+            .having((s) => s.nfcRegistered, 'nfcRegistered', true),
+      ],
+      verify: (_) {
+        verifyNever(
+          () => nfcCredentialRepository.assign(
+            credentialValue: any(named: 'credentialValue'),
+            identityId: any(named: 'identityId'),
+            identityType: any(named: 'identityType'),
+            schoolId: any(named: 'schoolId'),
+            studentId: any(named: 'studentId'),
+          ),
+        );
+      },
+    );
+  });
+
+  group('ParentLinkRequested - already-linked parent is idempotent', () {
+    blocTest<EnrollmentSetupWizardBloc, EnrollmentSetupWizardState>(
+      'calling ParentLinkRequested twice for the same student+phone only '
+      'creates one relationship - linkStudentToParent itself owns '
+      'idempotency (verified in parent_linking_service_test.dart); this '
+      'proves the bloc calls it exactly once per dispatch, never twice '
+      'for one dispatch',
+      build: () {
+        when(
+          () => permissionEvaluator.can(Permission.enrollmentParentLink, any()),
+        ).thenAnswer((_) async => const Right(true));
+        when(
+          () => parentLinkingService.linkStudentToParent(
+            studentId: any(named: 'studentId'),
+            studentName: any(named: 'studentName'),
+            schoolId: any(named: 'schoolId'),
+            phoneNumber: any(named: 'phoneNumber'),
+            parentName: any(named: 'parentName'),
+            createdBy: any(named: 'createdBy'),
+          ),
+        ).thenAnswer((_) async => const Right('PAR001'));
+        return bloc;
+      },
+      seed: () =>
+          const EnrollmentSetupWizardState(studentId: 's1', schoolId: 'sc1'),
+      act: (bloc) => bloc.add(
+        ParentLinkRequested(
+          operatorUser: operatorUser,
+          phoneNumber: '+256700000000',
+        ),
+      ),
+      verify: (_) {
+        verify(
+          () => parentLinkingService.linkStudentToParent(
+            studentId: any(named: 'studentId'),
+            studentName: any(named: 'studentName'),
+            schoolId: any(named: 'schoolId'),
+            phoneNumber: any(named: 'phoneNumber'),
+            parentName: any(named: 'parentName'),
+            createdBy: any(named: 'createdBy'),
+          ),
+        ).called(1);
+      },
+    );
+  });
+
+  group('Draft persistence (Isar-backed resume)', () {
+    late FakeEnrollmentSetupDraftLocalDataSource draftDataSource;
+
+    setUp(() {
+      draftDataSource = FakeEnrollmentSetupDraftLocalDataSource();
+      bloc = EnrollmentSetupWizardBloc(
+        studentRepository: studentRepository,
+        admissionService: admissionService,
+        enrollmentSetupRepository: enrollmentSetupRepository,
+        parentLinkingService: parentLinkingService,
+        createRelationship: createRelationship,
+        identityRepository: identityRepository,
+        nfcCredentialRepository: nfcCredentialRepository,
+        permissionEvaluator: permissionEvaluator,
+        draftLocalDataSource: draftDataSource,
+      );
+    });
+
+    blocTest<EnrollmentSetupWizardBloc, EnrollmentSetupWizardState>(
+      'WizardStarted with no existing draft starts fresh at step 0, '
+      'resumedFromDraft is false',
+      build: () => bloc,
+      act: (bloc) => bloc.add(
+        WizardStarted(
+          operatorUser: operatorUser,
+          studentId: 's1',
+          schoolId: 'sc1',
+          schoolCode: 'SCH',
+          uniqueSystemId: 'usid-1',
+          studentCode: 'SCH0001',
+          admissionNumber: 'ADM-0001',
+          academicYearId: 'year-1',
+          classId: 'class-1',
+        ),
+      ),
+      expect: () => [
+        isA<EnrollmentSetupWizardState>().having(
+          (s) => s.isLoading,
+          'isLoading',
+          true,
+        ),
+        isA<EnrollmentSetupWizardState>()
+            .having((s) => s.isLoading, 'isLoading', false)
+            .having((s) => s.resumedFromDraft, 'resumedFromDraft', false)
+            .having((s) => s.currentStep, 'currentStep', 0),
+      ],
+    );
+
+    blocTest<EnrollmentSetupWizardBloc, EnrollmentSetupWizardState>(
+      'WizardNextStep persists a draft that a later WizardStarted for the '
+      'same student+school resumes from, with resumedFromDraft=true and '
+      'the saved currentStep',
+      build: () => bloc,
+      act: (bloc) async {
+        bloc.add(
+          WizardStarted(
+            operatorUser: operatorUser,
+            studentId: 's1',
+            schoolId: 'sc1',
+            schoolCode: 'SCH',
+            uniqueSystemId: 'usid-1',
+            studentCode: 'SCH0001',
+            admissionNumber: 'ADM-0001',
+            academicYearId: 'year-1',
+            classId: 'class-1',
+          ),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(const WizardNextStep());
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        // Fresh bloc instance simulating a killed/reopened app - only the
+        // Isar-backed fake data source carries state across.
+        final resumedBloc = EnrollmentSetupWizardBloc(
+          studentRepository: studentRepository,
+          admissionService: admissionService,
+          enrollmentSetupRepository: enrollmentSetupRepository,
+          parentLinkingService: parentLinkingService,
+          createRelationship: createRelationship,
+          identityRepository: identityRepository,
+          nfcCredentialRepository: nfcCredentialRepository,
+          permissionEvaluator: permissionEvaluator,
+          draftLocalDataSource: draftDataSource,
+        );
+        resumedBloc.add(
+          WizardStarted(
+            operatorUser: operatorUser,
+            studentId: 's1',
+            schoolId: 'sc1',
+            schoolCode: 'SCH',
+            uniqueSystemId: 'usid-1',
+            studentCode: 'SCH0001',
+            admissionNumber: 'ADM-0001',
+            academicYearId: 'year-1',
+            classId: 'class-1',
+          ),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(resumedBloc.state.resumedFromDraft, isTrue);
+        expect(resumedBloc.state.currentStep, 1);
+        await resumedBloc.close();
+      },
+    );
+
+    blocTest<EnrollmentSetupWizardBloc, EnrollmentSetupWizardState>(
+      'a successful ActivationRequested deletes the local draft',
+      build: () {
+        when(
+          () => permissionEvaluator.can(Permission.enrollmentActivate, any()),
+        ).thenAnswer((_) async => const Right(true));
+        when(
+          () => admissionService.enrollStudent(
+            any(),
+            schoolId: any(named: 'schoolId'),
+            uniqueSystemId: any(named: 'uniqueSystemId'),
+            studentCode: any(named: 'studentCode'),
+            academicYear: any(named: 'academicYear'),
+            term: any(named: 'term'),
+            feeStructureId: any(named: 'feeStructureId'),
+            totalBilled: any(named: 'totalBilled'),
+          ),
+        ).thenAnswer((_) async => const Right('s1'));
+        return bloc;
+      },
+      seed: () => const EnrollmentSetupWizardState(
+        studentId: 's1',
+        schoolId: 'sc1',
+        academicYearId: 'y1',
+        classId: 'c1',
+        studentCode: 'SCH0001',
+        parentLinkSkippedFlag: true,
+      ),
+      act: (bloc) async {
+        await draftDataSource.saveDraft(
+          schoolId: 'sc1',
+          studentId: 's1',
+          currentStep: 3,
+          completedStepsMask: 7,
+          stateJson: const {},
+        );
+        bloc.add(ActivationRequested(operatorUser));
+      },
+      wait: const Duration(milliseconds: 20),
+      verify: (_) async {
+        final remaining = await draftDataSource.getDraft(
+          schoolId: 'sc1',
+          studentId: 's1',
+        );
+        expect(remaining, isNull);
+      },
     );
   });
 }
