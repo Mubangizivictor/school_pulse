@@ -2278,3 +2278,85 @@ describe('student identity + credential tenant isolation', () => {
     await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/credentials/isolationTestToken')));
   });
 });
+
+describe('Enrollment Setup Wizard: scholarship_awards/dormitory_assignments/'
+  + 'student_club_memberships tenant isolation and role gating', () => {
+  test('scholarship_awards: cross-school read is denied, same-school finance '
+    + 'staff (bursar) can create, a non-finance staff member cannot create',
+    async () => {
+      await assertSucceeds(setDoc(doc(dbFor('bursarA'), 'scholarship_awards/awardA'), {
+        schoolId: 'schoolA', studentId: 'studentA', type: 'discount',
+        amountOrPercentage: 10, isPercentage: true, approvedBy: 'bursarA',
+        reason: 'sibling discount', createdAt: new Date().toISOString(),
+      }));
+      await assertFails(getDoc(doc(dbFor('bursarB'), 'scholarship_awards/awardA')));
+      await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'scholarship_awards/awardA')));
+
+      // teacherA is staff but not finance staff - canWriteFinance() must
+      // reject this, matching the "stricter than general finance" /
+      // Bursar-only requirement for scholarship awards.
+      await assertFails(setDoc(doc(dbFor('teacherA'), 'scholarship_awards/awardDeniedByTeacher'), {
+        schoolId: 'schoolA', studentId: 'studentA', type: 'discount',
+        amountOrPercentage: 5, isPercentage: true, approvedBy: 'teacherA',
+        reason: 'attempt', createdAt: new Date().toISOString(),
+      }));
+    });
+
+  test('scholarship_awards: a student cannot write their own award '
+    + '(isMe grants read only, never create/update)', async () => {
+    await assertFails(setDoc(doc(dbFor('studentUserA'), 'scholarship_awards/selfAward'), {
+      schoolId: 'schoolA', studentId: 'studentA', type: 'discount',
+      amountOrPercentage: 50, isPercentage: true, approvedBy: 'studentUserA',
+      reason: 'self-granted', createdAt: new Date().toISOString(),
+    }));
+  });
+
+  test('dormitory_assignments: cross-school read denied, same-school staff '
+    + 'can create, a student cannot write their own assignment', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('matronA'), 'dormitory_assignments/assignA'), {
+      schoolId: 'schoolA', studentId: 'studentA', hostelId: 'hostel1',
+      roomId: 'room1', bed: 'A', assignedAt: new Date().toISOString(),
+      assignedBy: 'matronA',
+    }));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'dormitory_assignments/assignA')));
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'dormitory_assignments/assignA')));
+    await assertFails(setDoc(doc(dbFor('studentUserA'), 'dormitory_assignments/selfAssign'), {
+      schoolId: 'schoolA', studentId: 'studentA', hostelId: 'hostel1',
+      roomId: 'room1', bed: 'B', assignedAt: new Date().toISOString(),
+      assignedBy: 'studentUserA',
+    }));
+  });
+
+  test('student_club_memberships: cross-school read denied, same-school '
+    + 'staff can create, a student cannot self-enrol by writing directly',
+    async () => {
+      await assertSucceeds(setDoc(doc(dbFor('teacherA'), 'student_club_memberships/memberA'), {
+        schoolId: 'schoolA', studentId: 'studentA', clubId: 'chessClub',
+        joinedAt: new Date().toISOString(),
+      }));
+      await assertFails(getDoc(doc(dbFor('teacherB'), 'student_club_memberships/memberA')));
+      await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'student_club_memberships/memberA')));
+      await assertFails(setDoc(doc(dbFor('studentUserA'), 'student_club_memberships/selfJoin'), {
+        schoolId: 'schoolA', studentId: 'studentA', clubId: 'debateClub',
+        joinedAt: new Date().toISOString(),
+      }));
+    });
+});
+
+describe('admission_applications: enrollment-follow-up visibility/role checks '
+  + '(parent enumeration, teacher status escalation)', () => {
+  test('a parent account cannot read/list admission_applications at all - '
+    + 'only isStaff() is granted read/create, parents have no clause here',
+    async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'admission_applications/appForParentTest'), {
+          schoolId: 'schoolA', studentName: 'Test Applicant', status: 'submitted',
+        });
+      });
+      await assertFails(getDoc(doc(dbFor('parentA'), 'admission_applications/appForParentTest')));
+      await assertFails(
+        getDocs(query(collection(dbFor('parentA'), 'admission_applications'),
+          where('schoolId', '==', 'schoolA'))),
+      );
+    });
+});
