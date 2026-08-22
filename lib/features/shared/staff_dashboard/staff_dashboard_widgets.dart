@@ -132,49 +132,48 @@ class StaffDashboardHeader extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.05),
-                    borderRadius: AppRadius.large,
-                    border: Border.all(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.08),
-                    ),
-                  ),
+                _DashboardHeaderAction(
                   child: IconButton(
                     iconSize: 20,
-                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
                     icon: const Icon(Icons.chat_bubble_outline),
                     tooltip: 'Messages',
                     onPressed: () => context.push('/staff/messages'),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.s),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.05),
-                    borderRadius: AppRadius.large,
-                    border: Border.all(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.08),
-                    ),
-                  ),
-                  child: const SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: NotificationBellButton(),
-                  ),
-                ),
+                const _DashboardHeaderAction(child: NotificationBellButton()),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A fixed, shared shell for the dashboard message and notification actions.
+/// The bell provides its own badge while this widget provides the identical
+/// 56px touch target and visual container used by the message action.
+class _DashboardHeaderAction extends StatelessWidget {
+  final Widget child;
+
+  const _DashboardHeaderAction({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: 56,
+      height: 56,
+      child: Material(
+        color: colors.surfaceContainer,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.large,
+          side: BorderSide(color: colors.outlineVariant),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Center(child: SizedBox(width: 48, height: 48, child: child)),
       ),
     );
   }
