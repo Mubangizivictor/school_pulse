@@ -2228,8 +2228,11 @@ final router = GoRouter(
                     ),
                     GoRoute(
                       path: 'identity',
-                      builder: (context, state) => IdentityAndCardsScreen(
-                        student: state.extra as Student,
+                      builder: (context, state) => BlocProvider(
+                        create: (_) => di.sl<StudentIdentityBloc>(),
+                        child: IdentityAndCardsScreen(
+                          student: state.extra as Student,
+                        ),
                       ),
                     ),
                     GoRoute(

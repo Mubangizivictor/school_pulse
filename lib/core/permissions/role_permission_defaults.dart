@@ -138,10 +138,29 @@ class RolePermissionDefaults {
   // Head, Dean, Director, Receptionist, HR - the subset of that list that
   // exists as a UserRole today (no dedicated Registrar/Admissions Officer
   // role exists in this codebase yet).
+  // The Enrollment Setup Wizard's 9 granular enrollment.* permissions were
+  // added to Permission (and to the wizard's own permission checks) after
+  // this set was written, and never got added here - every admin-tier role
+  // that inherits _admissionsPermissions (schoolAdmin, director,
+  // headTeacher, deputyHead, deanOfStudies) held none of them, so every
+  // gated wizard action (finance setup, bursary, boarding, parent link,
+  // identity/QR, card generation, activation) silently failed permission
+  // checks for every role, including the school's own admin. Included here
+  // rather than split into a narrower set, since these are all facets of
+  // the same admission/enrollment workflow this set already represents.
   static const Set<String> _admissionsPermissions = {
     Permission.admissionApplicationCreate,
     Permission.admissionApplicationReview,
     Permission.admissionEnroll,
+    Permission.enrollmentManage,
+    Permission.enrollmentAcademicAssign,
+    Permission.enrollmentFinanceSetup,
+    Permission.enrollmentBursaryAssign,
+    Permission.enrollmentBoardingAssign,
+    Permission.enrollmentParentLink,
+    Permission.enrollmentIdentityManage,
+    Permission.enrollmentCardGenerate,
+    Permission.enrollmentActivate,
   };
 
   // Information-projection permissions for the roles whose whole job is
