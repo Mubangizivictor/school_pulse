@@ -1,35 +1,31 @@
+import 'package:dartz/dartz.dart' hide State;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:dartz/dartz.dart' hide State;
+import 'package:share_plus/share_plus.dart';
 
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
-import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
+import 'package:school_pulse/features/structure/presentation/bloc/structure_state.dart';
+import 'package:school_pulse/features/structure/presentation/screens/timetables/timetables_list_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
 import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
-import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
-import 'package:school_pulse/features/structure/presentation/bloc/structure_state.dart';
+import 'package:school_pulse/features/student_identity/presentation/bloc/student_identity_bloc.dart';
+import 'package:school_pulse/features/student_identity/presentation/screens/identity_and_cards_screen.dart';
+import 'package:school_pulse/features/student_identity/presentation/screens/student_id_card_screen.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 import 'admin_student_documents_screen.dart';
 import 'student_portal_codes_screen.dart';
-import 'package:school_pulse/features/student_identity/presentation/screens/identity_and_cards_screen.dart';
 
-/// Admin-facing student profile screen.
-///
-/// Loads a single [Student] by id directly from the [StudentRepository]
-/// (mirrors the lightweight FutureBuilder-based loading approach used by
-/// the student-portal detail screens rather than pulling in a new bloc).
 class AdminStudentProfileScreen extends StatefulWidget {
   final String studentId;
-
   const AdminStudentProfileScreen({super.key, required this.studentId});
-
   @override
   State<AdminStudentProfileScreen> createState() =>
       _AdminStudentProfileScreenState();
@@ -37,457 +33,208 @@ class AdminStudentProfileScreen extends StatefulWidget {
 
 class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
   late Future<Either<Failure, Student>> _future;
-  final StudentRepository _repository = di.sl<StudentRepository>();
-
+  final _repository = di.sl<StudentRepository>();
   @override
   void initState() {
     super.initState();
     _future = _repository.getStudentById(widget.studentId);
   }
 
-  void _reload() {
-    setState(() {
-      _future = _repository.getStudentById(widget.studentId);
-    });
-  }
-
+  void _reload() =>
+      setState(() => _future = _repository.getStudentById(widget.studentId));
   bool _canMutate(BuildContext context) {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) return false;
-    final roleName = authState.user.role.name.toLowerCase();
-    // Light-touch check: hide mutation affordances for portal/student-only
-    // roles. Real enforcement lives in firestore.rules.
-    if (roleName.contains('parent') || roleName.contains('student')) {
-      return false;
-    }
-    return true;
-  }
-
-  void _todoSnackBar(BuildContext context, String action) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('TODO: $action is not wired up yet.')),
-    );
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return false;
+    final role = auth.user.role.name.toLowerCase();
+    return !role.contains('parent') && !role.contains('student');
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Student Profile'),
-        actions: [
-          FutureBuilder<Either<Failure, Student>>(
-            future: _future,
-            builder: (context, snapshot) {
-              final student = snapshot.data?.fold((_) => null, (s) => s);
-              return PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert),
-                onSelected: (value) {
-                  switch (value) {
-                    case 'deactivate':
-                      _todoSnackBar(context, 'Deactivate student');
-                      break;
-                    case 'move_class':
-                      _todoSnackBar(context, 'Move to another class');
-                      break;
-                    case 'export':
-                      _todoSnackBar(context, 'Export record');
-                      break;
-                    case 'documents':
-                      if (student != null) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => AdminStudentDocumentsScreen(
-                              student: student,
-                              canMutate: _canMutate(context),
-                              onDocumentsChanged: _reload,
-                            ),
-                          ),
-                        );
-                      }
-                      break;
-                    case 'identity':
-                      if (student != null) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                IdentityAndCardsScreen(student: student),
-                          ),
-                        );
-                      }
-                      break;
-                    case 'portal':
-                      if (student != null) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                StudentPortalCodesScreen(student: student),
-                          ),
-                        );
-                      }
-                      break;
-                  }
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
-                    value: 'documents',
-                    child: ListTile(
-                      leading: Icon(Icons.folder_outlined),
-                      title: Text('Documents'),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'identity',
-                    child: ListTile(
-                      leading: Icon(Icons.badge_outlined),
-                      title: Text('Identity & Cards'),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'portal',
-                    child: ListTile(
-                      leading: Icon(Icons.lock_outline),
-                      title: Text('Portal Access'),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'deactivate',
-                    child: ListTile(
-                      leading: Icon(Icons.block_outlined),
-                      title: Text('Deactivate'),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'move_class',
-                    child: ListTile(
-                      leading: Icon(Icons.swap_horiz),
-                      title: Text('Move to Another Class'),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'export',
-                    child: ListTile(
-                      leading: Icon(Icons.ios_share_outlined),
-                      title: Text('Export Record'),
-                    ),
-                  ),
-                ],
-              );
-            },
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Student Profile')),
+    body: FutureBuilder<Either<Failure, Student>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final result = snapshot.data;
+        if (result == null) {
+          return const Center(child: Text('Could not load student'));
+        }
+        return result.fold(
+          (failure) => Center(child: Text(failure.message)),
+          (student) => _Profile(
+            student: student,
+            canMutate: _canMutate(context),
+            onChanged: _reload,
           ),
-        ],
-      ),
-      body: FutureBuilder<Either<Failure, Student>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final result = snapshot.data;
-          if (result == null) {
-            return const Center(child: Text('Could not load student'));
-          }
-          return result.fold(
-            (failure) => Center(child: Text(failure.message)),
-            (student) => _ProfileBody(
-              student: student,
-              canMutate: _canMutate(context),
-              onDocumentsChanged: _reload,
-            ),
-          );
-        },
-      ),
-    );
-  }
+        );
+      },
+    ),
+  );
 }
 
-class _ProfileBody extends StatefulWidget {
+class _Profile extends StatefulWidget {
   final Student student;
   final bool canMutate;
-  final VoidCallback onDocumentsChanged;
-
-  const _ProfileBody({
+  final VoidCallback onChanged;
+  const _Profile({
     required this.student,
     required this.canMutate,
-    required this.onDocumentsChanged,
+    required this.onChanged,
   });
-
   @override
-  State<_ProfileBody> createState() => _ProfileBodyState();
+  State<_Profile> createState() => _ProfileState();
 }
 
-class _ProfileBodyState extends State<_ProfileBody>
+class _ProfileState extends State<_Profile>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  static const _tabs = ['Overview', 'Guardian', 'Academic', 'More'];
-
+  late final TabController _tabs;
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabs = TabController(length: 4, vsync: this);
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabs.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
-    return ResponsiveBuilder(
-      builder: (context, layout) {
-        final isDesktop = layout == ResponsiveLayout.desktop;
-        final header = _ProfileHeader(student: widget.student);
-        final tabContent = _TabContent(
-          student: widget.student,
-          canMutate: widget.canMutate,
-          onDocumentsChanged: widget.onDocumentsChanged,
-        );
-
-        if (!isDesktop) {
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: header,
-              ),
-              TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                tabs: _tabs.map((t) => Tab(text: t)).toList(),
-              ),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _OverviewTab(student: widget.student),
-                    _GuardianTab(student: widget.student),
-                    _AcademicTab(student: widget.student),
-                    _MoreTab(
-                      student: widget.student,
-                      canMutate: widget.canMutate,
-                      onDocumentsChanged: widget.onDocumentsChanged,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        }
-
-        // Desktop: wide two-column layout, vertical side nav instead of a
-        // top TabBar.
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 340,
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: header,
-              ),
+  Widget build(BuildContext context) => Column(
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        child: _Header(widget.student),
+      ),
+      DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border.symmetric(
+            horizontal: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant,
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 24, 24, 24),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 180,
-                      child: NavigationRail(
-                        selectedIndex: _tabController.index,
-                        onDestinationSelected: (index) {
-                          setState(() => _tabController.index = index);
-                        },
-                        labelType: NavigationRailLabelType.all,
-                        destinations: const [
-                          NavigationRailDestination(
-                            icon: Icon(Icons.person_outline),
-                            label: Text('Overview'),
-                          ),
-                          NavigationRailDestination(
-                            icon: Icon(Icons.family_restroom_outlined),
-                            label: Text('Guardian'),
-                          ),
-                          NavigationRailDestination(
-                            icon: Icon(Icons.school_outlined),
-                            label: Text('Academic'),
-                          ),
-                          NavigationRailDestination(
-                            icon: Icon(Icons.more_horiz),
-                            label: Text('More'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: AnimatedBuilder(
-                        animation: _tabController,
-                        builder: (context, _) {
-                          return tabContent._forIndex(_tabController.index);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          ),
+        ),
+        child: TabBar(
+          controller: _tabs,
+          indicatorSize: TabBarIndicatorSize.label,
+          dividerColor: Colors.transparent,
+          tabs: const [
+            Tab(icon: Icon(Icons.home_rounded), text: 'Overview'),
+            Tab(icon: Icon(Icons.groups_2_outlined), text: 'Guardian'),
+            Tab(icon: Icon(Icons.menu_book_outlined), text: 'Academic'),
+            Tab(icon: Icon(Icons.grid_view_rounded), text: 'More'),
+          ],
+        ),
+      ),
+      Expanded(
+        child: TabBarView(
+          controller: _tabs,
+          children: [
+            _Overview(
+              student: widget.student,
+              guardians: () => _tabs.animateTo(1),
+            ),
+            _Guardians(student: widget.student),
+            _Academic(student: widget.student),
+            _More(
+              student: widget.student,
+              canMutate: widget.canMutate,
+              onChanged: widget.onChanged,
             ),
           ],
-        );
-      },
-    );
-  }
+        ),
+      ),
+    ],
+  );
 }
 
-class _TabContent {
-  final Student student;
-  final bool canMutate;
-  final VoidCallback onDocumentsChanged;
-
-  const _TabContent({
-    required this.student,
-    required this.canMutate,
-    required this.onDocumentsChanged,
-  });
-
-  Widget _forIndex(int index) {
-    switch (index) {
-      case 0:
-        return _OverviewTab(student: student);
-      case 1:
-        return _GuardianTab(student: student);
-      case 2:
-        return _AcademicTab(student: student);
-      default:
-        return _MoreTab(
-          student: student,
-          canMutate: canMutate,
-          onDocumentsChanged: onDocumentsChanged,
-        );
-    }
-  }
+class _Scroll extends StatelessWidget {
+  final List<Widget> children;
+  const _Scroll(this.children);
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, c) => SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 760),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
-class _ProfileHeader extends StatelessWidget {
+class _Header extends StatelessWidget {
   final Student student;
-
-  const _ProfileHeader({required this.student});
-
-  Color _statusColor(SemanticColors colors, StudentStatus status) {
-    switch (status) {
-      case StudentStatus.active:
-      case StudentStatus.enrolled:
-        return colors.success;
-      case StudentStatus.suspended:
-      case StudentStatus.expelled:
-      case StudentStatus.deceased:
-        return colors.error;
-      case StudentStatus.withdrawn:
-      case StudentStatus.transferredIn:
-      case StudentStatus.transferredOut:
-      case StudentStatus.onLeave:
-      case StudentStatus.deferred:
-        return colors.warning;
-      case StudentStatus.graduated:
-      case StudentStatus.alumni:
-      case StudentStatus.completed:
-      case StudentStatus.applicant:
-      case StudentStatus.pendingAdmission:
-      case StudentStatus.admitted:
-      case StudentStatus.archived:
-        return colors.info;
-    }
-  }
-
-  String _statusLabel(StudentStatus status) {
-    final name = status.name;
-    if (name.isEmpty) return name;
-    // Splits camelCase enum names into a readable label, e.g.
-    // "transferredOut" -> "Transferred Out", "onLeave" -> "On Leave".
-    final spaced = name.replaceAllMapped(
-      RegExp(r'([a-z])([A-Z])'),
-      (m) => '${m.group(1)} ${m.group(2)}',
-    );
-    return '${spaced[0].toUpperCase()}${spaced.substring(1)}';
-  }
-
+  const _Header(this.student);
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<SemanticColors>()!;
     final theme = Theme.of(context);
-
+    final semantic = theme.extension<SemanticColors>()!;
     return AppCard(
+      padding: const EdgeInsets.all(20),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            radius: 32,
+            radius: 42,
             backgroundColor: theme.colorScheme.primaryContainer,
-            backgroundImage: (student.photoUrl != null && student.photoUrl!.isNotEmpty)
+            backgroundImage: student.photoUrl?.isNotEmpty == true
                 ? NetworkImage(student.photoUrl!)
                 : null,
-            child: (student.photoUrl == null || student.photoUrl!.isEmpty)
-                ? Text(
+            child: student.photoUrl?.isNotEmpty == true
+                ? null
+                : Text(
                     _initials(student.name),
-                    style: theme.textTheme.titleLarge?.copyWith(
+                    style: theme.textTheme.headlineMedium?.copyWith(
                       color: theme.colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w800,
                     ),
-                  )
-                : null,
+                  ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        student.name,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    StatusBadge(
-                      label: _statusLabel(student.status),
-                      color: _statusColor(colors, student.status),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
                 Text(
-                  student.studentCode,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                  student.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
+                const SizedBox(height: 8),
+                StatusBadge(
+                  label: _status(student.status),
+                  color: _statusColor(semantic, student.status),
+                ),
+                const SizedBox(height: 10),
+                _HeaderLine(Icons.badge_outlined, student.studentCode),
+                const SizedBox(height: 6),
                 BlocBuilder<StructureBloc, StructureState>(
-                  builder: (context, structure) {
-                    final className = structure.classes
-                        .where((c) => c.id == student.classId)
+                  builder: (context, s) {
+                    final c = s.classes
+                        .where((x) => x.id == student.classId)
                         .firstOrNull
                         ?.name;
-                    final streamName = structure.streams
-                        .where((s) => s.id == student.streamId)
+                    final stream = s.streams
+                        .where((x) => x.id == student.streamId)
                         .firstOrNull
                         ?.name;
-                    final label = [
-                      ?className,
-                      ?streamName,
-                    ].join(' • ');
-                    if (label.isEmpty) return const SizedBox.shrink();
-                    return Text(
-                      label,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                    final label = [c, stream].whereType<String>().join(' • ');
+                    return _HeaderLine(
+                      Icons.school_outlined,
+                      label.isEmpty ? _level(student.level) : label,
                     );
                   },
                 ),
@@ -498,278 +245,672 @@ class _ProfileHeader extends StatelessWidget {
       ),
     );
   }
-
-  String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (parts.isEmpty) return '?';
-    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
-  }
 }
 
-class _InfoRow extends StatelessWidget {
-  final String label;
-  final String value;
+class _HeaderLine extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _HeaderLine(this.icon, this.text);
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Icon(
+        icon,
+        size: 17,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          text,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    ],
+  );
+}
 
-  const _InfoRow({required this.label, required this.value});
+class _Overview extends StatelessWidget {
+  final Student student;
+  final VoidCallback guardians;
+  const _Overview({required this.student, required this.guardians});
+  @override
+  Widget build(BuildContext context) => _Scroll([
+    _InfoCard(student),
+    const SizedBox(height: 22),
+    Text(
+      'Quick Actions',
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+    ),
+    const SizedBox(height: 12),
+    _QuickActions(student, guardians),
+  ]);
+}
 
+class _InfoCard extends StatelessWidget {
+  final Student student;
+  const _InfoCard(this.student);
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
+    final semantic = Theme.of(context).extension<SemanticColors>()!;
+    final rows = <Widget>[
+      _InfoRow(
+        Icons.cake_outlined,
+        'Date of Birth',
+        DateFormat('dd MMM yyyy').format(student.dateOfBirth),
+      ),
+      _InfoRow(Icons.person_outline_rounded, 'Gender', _gender(student.gender)),
+      if (student.previousSchool?.isNotEmpty == true)
+        _InfoRow(
+          Icons.account_balance_outlined,
+          'Previous School',
+          student.previousSchool!,
+        ),
+      _InfoRow(Icons.badge_outlined, 'Admission No.', student.admissionNumber),
+      _InfoRow(Icons.school_outlined, 'Education Level', _level(student.level)),
+      _InfoRow(
+        Icons.verified_outlined,
+        'Status',
+        _status(student.status),
+        badge: _statusColor(semantic, student.status),
+      ),
+      BlocBuilder<StructureBloc, StructureState>(
+        builder: (context, s) => _InfoRow(
+          Icons.calendar_month_outlined,
+          'Academic Year',
+          s.academicYears
+                  .where((x) => x.id == student.academicYearId)
+                  .firstOrNull
+                  ?.name ??
+              '—',
+        ),
+      ),
+    ];
+    return AppCard(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 140,
-            child: Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.school_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Text(
+                'Student Information',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ],
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-            ),
-          ),
+          const SizedBox(height: 12),
+          for (var i = 0; i < rows.length; i++) ...[
+            rows[i],
+            if (i < rows.length - 1) const Divider(height: 1),
+          ],
         ],
       ),
     );
   }
 }
 
-class _OverviewTab extends StatelessWidget {
-  final Student student;
-
-  const _OverviewTab({required this.student});
-
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label, value;
+  final Color? badge;
+  const _InfoRow(this.icon, this.label, this.value, {this.badge});
   @override
-  Widget build(BuildContext context) {
-    final rows = <Widget>[
-      _InfoRow(
-        label: 'Date of Birth',
-        value: DateFormat('dd MMM yyyy').format(student.dateOfBirth),
-      ),
-      _InfoRow(label: 'Gender', value: _genderLabel(student.gender)),
-      if (student.medicalInfo?.bloodGroup != null &&
-          student.medicalInfo!.bloodGroup!.isNotEmpty)
-        _InfoRow(label: 'Blood Group', value: student.medicalInfo!.bloodGroup!),
-      if (student.previousSchool != null && student.previousSchool!.isNotEmpty)
-        _InfoRow(label: 'Previous School', value: student.previousSchool!),
-      _InfoRow(label: 'Admission No.', value: student.admissionNumber),
-      _InfoRow(label: 'Education Level', value: _levelLabel(student.level)),
-    ];
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    child: Row(
       children: [
-        AppCard(child: Column(children: rows)),
+        Icon(
+          icon,
+          size: 20,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: badge == null
+              ? Text(
+                  value,
+                  textAlign: TextAlign.end,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                )
+              : StatusBadge(label: value, color: badge!),
+        ),
       ],
-    );
-  }
-
-  String _genderLabel(Gender gender) {
-    switch (gender) {
-      case Gender.male:
-        return 'Male';
-      case Gender.female:
-        return 'Female';
-      case Gender.other:
-        return 'Other';
-    }
-  }
-
-  String _levelLabel(EducationLevel level) {
-    switch (level) {
-      case EducationLevel.kindergarten:
-        return 'Kindergarten';
-      case EducationLevel.primary:
-        return 'Primary';
-      case EducationLevel.secondary:
-        return 'Secondary';
-      case EducationLevel.vocational:
-        return 'Vocational';
-      case EducationLevel.university:
-        return 'University';
-      case EducationLevel.international:
-        return 'International';
-    }
-  }
+    ),
+  );
 }
 
-class _GuardianTab extends StatelessWidget {
+class _QuickActions extends StatelessWidget {
   final Student student;
-
-  const _GuardianTab({required this.student});
-
+  final VoidCallback guardians;
+  const _QuickActions(this.student, this.guardians);
   @override
-  Widget build(BuildContext context) {
-    if (student.emergencyContacts.isEmpty) {
-      return const EmptyState(
-        icon: Icons.family_restroom_outlined,
-        title: 'No guardians on file',
-        message: 'Emergency contacts for this student will appear here.',
-      );
-    }
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, c) => GridView.count(
+      crossAxisCount: c.maxWidth < 430 ? 2 : 4,
+      childAspectRatio: c.maxWidth < 430 ? 1.8 : .9,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        _Quick(
+          'View ID\nCard',
+          Icons.badge_outlined,
+          () => _idCard(context, student),
+        ),
+        _Quick(
+          'View QR\nCode',
+          Icons.qr_code_rounded,
+          () => _identity(context, student),
+        ),
+        _Quick('View\nGuardians', Icons.groups_2_outlined, guardians),
+        _Quick(
+          'View\nTimetable',
+          Icons.calendar_month_outlined,
+          () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const TimetablesListScreen()),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: student.emergencyContacts.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final contact = student.emergencyContacts[index];
+class _Quick extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+  const _Quick(this.title, this.icon, this.onTap);
+  @override
+  Widget build(BuildContext context) => AppCard(
+    onTap: onTap,
+    padding: const EdgeInsets.all(12),
+    color: Theme.of(context).colorScheme.primaryContainer.withValues(
+      alpha: Theme.of(context).brightness == Brightness.dark ? .25 : .55,
+    ),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 27, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(height: 9),
+        Text(
+          title,
+          maxLines: 2,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ],
+    ),
+  );
+}
+
+class _Guardians extends StatelessWidget {
+  final Student student;
+  const _Guardians({required this.student});
+  @override
+  Widget build(BuildContext context) => _Scroll([
+    if (student.emergencyContacts.isEmpty)
+      const Padding(
+        padding: EdgeInsets.only(top: 64),
+        child: EmptyState(
+          icon: Icons.groups_2_outlined,
+          title: 'No guardians on file',
+          message: 'Emergency contacts for this student will appear here.',
+        ),
+      )
+    else
+      ...student.emergencyContacts.map(
+        (x) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: AppCard(
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+              title: Text(x.name),
+              subtitle: Text(
+                '${x.relationship}\n${x.phoneNumber}${x.email?.isNotEmpty == true ? '\n${x.email}' : ''}',
+              ),
+              isThreeLine: x.email?.isNotEmpty == true,
+            ),
+          ),
+        ),
+      ),
+  ]);
+}
+
+class _Academic extends StatelessWidget {
+  final Student student;
+  const _Academic({required this.student});
+  @override
+  Widget build(BuildContext context) => _Scroll([
+    BlocBuilder<StructureBloc, StructureState>(
+      builder: (context, s) {
+        final c =
+            s.classes.where((x) => x.id == student.classId).firstOrNull?.name ??
+            '—';
+        final stream = s.streams
+            .where((x) => x.id == student.streamId)
+            .firstOrNull
+            ?.name;
+        final y =
+            s.academicYears
+                .where((x) => x.id == student.academicYearId)
+                .firstOrNull
+                ?.name ??
+            '—';
         return AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                contact.name,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                'Academic Placement',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
-              const SizedBox(height: 4),
-              Text(contact.relationship, style: Theme.of(context).textTheme.bodySmall),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.phone_outlined, size: 16),
-                  const SizedBox(width: 6),
-                  Text(contact.phoneNumber),
-                ],
-              ),
-              if (contact.email != null && contact.email!.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.email_outlined, size: 16),
-                    const SizedBox(width: 6),
-                    Text(contact.email!),
-                  ],
-                ),
+              _InfoRow(Icons.class_outlined, 'Class', c),
+              const Divider(height: 1),
+              if (stream != null) ...[
+                _InfoRow(Icons.account_tree_outlined, 'Stream', stream),
+                const Divider(height: 1),
               ],
+              _InfoRow(Icons.calendar_month_outlined, 'Academic Year', y),
             ],
           ),
         );
       },
-    );
-  }
+    ),
+  ]);
 }
 
-class _AcademicTab extends StatelessWidget {
+class _More extends StatelessWidget {
   final Student student;
+  final bool canMutate;
+  final VoidCallback onChanged;
+  const _More({
+    required this.student,
+    required this.canMutate,
+    required this.onChanged,
+  });
+  @override
+  Widget build(BuildContext context) => _Scroll([
+    AppCard(
+      padding: EdgeInsets.zero,
+      child: ListTile(
+        leading: const Icon(Icons.folder_outlined),
+        title: const Text('Documents'),
+        subtitle: const Text('View student documents'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AdminStudentDocumentsScreen(
+              student: student,
+              canMutate: canMutate,
+              onDocumentsChanged: onChanged,
+            ),
+          ),
+        ),
+      ),
+    ),
+  ]);
+}
 
-  const _AcademicTab({required this.student});
-
+class ActionsSheet extends StatelessWidget {
+  final Student student;
+  final bool canMutate;
+  final VoidCallback onChanged;
+  const ActionsSheet({
+    super.key,
+    required this.student,
+    required this.canMutate,
+    required this.onChanged,
+  });
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<StructureBloc, StructureState>(
-      builder: (context, structure) {
-        final className = structure.classes
-            .where((c) => c.id == student.classId)
-            .firstOrNull
-            ?.name ??
-            'Unknown class';
-        final streamName = structure.streams
-            .where((s) => s.id == student.streamId)
-            .firstOrNull
-            ?.name;
-        final year = structure.academicYears
-            .where((y) => y.id == student.academicYearId)
-            .firstOrNull
-            ?.name ??
-            'Unknown year';
-
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            AppCard(
-              child: Column(
-                children: [
-                  _InfoRow(label: 'Class', value: className),
-                  if (streamName != null) _InfoRow(label: 'Stream', value: streamName),
-                  _InfoRow(label: 'Academic Year', value: year),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Deep academic performance data (grades/scores) is served by
-            // AcademicBloc, which is scoped to the currently selected
-            // student in the student portal (see StudentAcademicsScreen).
-            // Reusing it here read-only would require re-keying that
-            // global selection, which is out of scope for this admin
-            // view — so we link out instead of duplicating aggregation
-            // logic.
-            OutlinedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'TODO: link to full academic record view for this student.',
-                    ),
+    final t = Theme.of(context);
+    return SafeArea(
+      top: false,
+      child: Container(
+        margin: const EdgeInsets.only(top: 40),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+        decoration: BoxDecoration(
+          color: t.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: t.colorScheme.outline,
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                );
-              },
-              icon: const Icon(Icons.bar_chart_outlined),
-              label: const Text('View full academic record'),
+                ),
+              ),
+              const SizedBox(height: 26),
+              Text(
+                'More Options',
+                style: t.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 18),
+              _SheetItem(
+                Icons.folder_outlined,
+                'Documents',
+                'View and manage student documents',
+                () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => AdminStudentDocumentsScreen(
+                        student: student,
+                        canMutate: canMutate,
+                        onDocumentsChanged: onChanged,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              _SheetItem(
+                Icons.badge_outlined,
+                'Identity & Cards',
+                'Manage ID, QR code and NFC card',
+                () {
+                  Navigator.pop(context);
+                  _identity(context, student);
+                },
+              ),
+              _SheetItem(
+                Icons.lock_outline_rounded,
+                'Portal Access',
+                'Manage student portal credentials',
+                canMutate
+                    ? () {
+                        Navigator.pop(context);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                StudentPortalCodesScreen(student: student),
+                          ),
+                        );
+                      }
+                    : null,
+              ),
+              _SheetItem(
+                Icons.block_outlined,
+                'Deactivate',
+                'Deactivate or suspend this student',
+                canMutate ? () => _deactivate(context) : null,
+                destructive: true,
+              ),
+              _SheetItem(
+                Icons.swap_horiz_rounded,
+                'Move to Another Class',
+                'Transfer student to another class',
+                canMutate ? () => _move(context) : null,
+              ),
+              _SheetItem(
+                Icons.ios_share_outlined,
+                'Export Record',
+                'Export this student record',
+                () => _export(),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonal(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deactivate(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: const Text('Deactivate student?'),
+        content: Text('${student.name} will be suspended.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(d, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(d, true),
+            child: const Text('Deactivate'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    final result = await di.sl<StudentRepository>().updateStudentStatus(
+      student.id,
+      StudentStatus.suspended,
+    );
+    if (!context.mounted) return;
+    result.fold(
+      (f) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(f.message))),
+      (_) {
+        Navigator.pop(context);
+        onChanged();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Student deactivated.')));
+      },
+    );
+  }
+
+  Future<void> _move(BuildContext context) async {
+    final s = context.read<StructureBloc>().state;
+    String? selected = student.classId;
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (d) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Move to another class'),
+          content: DropdownButtonFormField<String>(
+            initialValue: selected,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Class'),
+            items: s.classes
+                .where((x) => x.isActive)
+                .map(
+                  (x) => DropdownMenuItem(
+                    value: x.id,
+                    child: Text(x.name, overflow: TextOverflow.ellipsis),
+                  ),
+                )
+                .toList(),
+            onChanged: (x) => setState(() => selected = x),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(d),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: selected == null
+                  ? null
+                  : () => Navigator.pop(d, selected),
+              child: const Text('Move student'),
             ),
           ],
+        ),
+      ),
+    );
+    if (choice == null || !context.mounted) return;
+    final auth = context.read<AuthBloc>().state as AuthAuthenticated;
+    final result = await di.sl<StudentRepository>().updateStudent(
+      student.copyWith(classId: choice, streamId: null),
+      recordedBy: auth.user.id,
+    );
+    if (!context.mounted) return;
+    result.fold(
+      (f) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(f.message))),
+      (_) {
+        Navigator.pop(context);
+        onChanged();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Student moved successfully.')),
         );
       },
     );
   }
+
+  Future<void> _export() => Share.share(
+    'Student record\n\nName: ${student.name}\nStudent code: ${student.studentCode}\nAdmission number: ${student.admissionNumber}\nDate of birth: ${DateFormat('dd MMM yyyy').format(student.dateOfBirth)}\nStatus: ${_status(student.status)}',
+  );
 }
 
-class _MoreTab extends StatelessWidget {
-  final Student student;
-  final bool canMutate;
-  final VoidCallback onDocumentsChanged;
-
-  const _MoreTab({
-    required this.student,
-    required this.canMutate,
-    required this.onDocumentsChanged,
+class _SheetItem extends StatelessWidget {
+  final IconData icon;
+  final String title, subtitle;
+  final VoidCallback? onTap;
+  final bool destructive;
+  const _SheetItem(
+    this.icon,
+    this.title,
+    this.subtitle,
+    this.onTap, {
+    this.destructive = false,
   });
-
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    final disabled = onTap == null;
+    final color = destructive
+        ? Theme.of(context).colorScheme.error
+        : Theme.of(context).colorScheme.primary;
+    return Column(
       children: [
-        AppCard(
-          padding: EdgeInsets.zero,
-          child: ListTile(
-            leading: const Icon(Icons.folder_outlined),
-            title: const Text('Documents'),
-            subtitle: const Text('ID card, certificates, forms and letters'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => AdminStudentDocumentsScreen(
-                    student: student,
-                    canMutate: canMutate,
-                    onDocumentsChanged: onDocumentsChanged,
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (student.qrReference != null && student.qrReference!.isNotEmpty)
-          AppCard(
-            child: Column(
-              children: [
-                _InfoRow(label: 'QR Reference', value: student.qrReference!),
-              ],
+        ListTile(
+          enabled: !disabled,
+          contentPadding: const EdgeInsets.symmetric(vertical: 7),
+          onTap: onTap,
+          leading: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .10),
+              borderRadius: BorderRadius.circular(14),
             ),
+            child: Icon(icon, color: color),
           ),
+          title: Text(title),
+          subtitle: Text(
+            disabled ? 'You do not have permission for this action' : subtitle,
+          ),
+          trailing: const Icon(Icons.chevron_right_rounded),
+        ),
+        const Divider(height: 1),
       ],
     );
   }
 }
+
+void _identity(BuildContext context, Student s) => Navigator.of(context).push(
+  MaterialPageRoute(
+    builder: (_) => BlocProvider(
+      create: (_) => di.sl<StudentIdentityBloc>(),
+      child: IdentityAndCardsScreen(student: s),
+    ),
+  ),
+);
+void _idCard(BuildContext context, Student s) => Navigator.of(context).push(
+  MaterialPageRoute(
+    builder: (_) => BlocProvider(
+      create: (_) => di.sl<StudentIdentityBloc>(),
+      child: StudentIdCardScreen(student: s),
+    ),
+  ),
+);
+String _initials(String value) {
+  final p = value
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((x) => x.isNotEmpty)
+      .toList();
+  return p.isEmpty
+      ? '?'
+      : (p.length == 1 ? p.first[0] : '${p.first[0]}${p.last[0]}')
+            .toUpperCase();
+}
+
+String _gender(Gender value) => switch (value) {
+  Gender.male => 'Male',
+  Gender.female => 'Female',
+  Gender.other => 'Other',
+};
+String _level(EducationLevel value) => switch (value) {
+  EducationLevel.kindergarten => 'Kindergarten',
+  EducationLevel.primary => 'Primary',
+  EducationLevel.secondary => 'Secondary',
+  EducationLevel.vocational => 'Vocational',
+  EducationLevel.university => 'University',
+  EducationLevel.international => 'International',
+};
+String _status(StudentStatus value) {
+  final v = value.name.replaceAllMapped(
+    RegExp(r'([a-z])([A-Z])'),
+    (m) => '${m.group(1)} ${m.group(2)}',
+  );
+  return '${v[0].toUpperCase()}${v.substring(1)}';
+}
+
+Color _statusColor(SemanticColors c, StudentStatus s) => switch (s) {
+  StudentStatus.active || StudentStatus.enrolled => c.success,
+  StudentStatus.suspended ||
+  StudentStatus.expelled ||
+  StudentStatus.deceased => c.error,
+  StudentStatus.withdrawn ||
+  StudentStatus.transferredIn ||
+  StudentStatus.transferredOut ||
+  StudentStatus.onLeave ||
+  StudentStatus.deferred => c.warning,
+  _ => c.info,
+};
