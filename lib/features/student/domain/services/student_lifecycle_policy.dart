@@ -19,7 +19,13 @@ class StudentLifecyclePolicy {
       StudentStatus.pendingAdmission =>
         to == StudentStatus.admitted || to == StudentStatus.withdrawn,
       StudentStatus.admitted =>
-        to == StudentStatus.active || to == StudentStatus.withdrawn,
+        to == StudentStatus.enrollmentInProgress ||
+            to == StudentStatus.active ||
+            to == StudentStatus.withdrawn,
+      StudentStatus.enrollmentInProgress =>
+        to == StudentStatus.active ||
+            to == StudentStatus.admitted ||
+            to == StudentStatus.withdrawn,
       StudentStatus.active =>
         to == StudentStatus.suspended ||
             to == StudentStatus.transferredOut ||

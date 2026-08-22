@@ -2,6 +2,7 @@ enum StudentStatus {
   applicant,
   pendingAdmission,
   admitted,
+  enrollmentInProgress,
   enrolled,
   active,
   deferred,

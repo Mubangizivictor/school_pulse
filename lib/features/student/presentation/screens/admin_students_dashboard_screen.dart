@@ -233,6 +233,7 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
       case StudentStatus.applicant:
       case StudentStatus.pendingAdmission:
       case StudentStatus.admitted:
+      case StudentStatus.enrollmentInProgress:
       case StudentStatus.archived:
         return AppColors.primary(context);
     }

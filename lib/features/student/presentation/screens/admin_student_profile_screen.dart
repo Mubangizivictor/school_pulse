@@ -396,6 +396,7 @@ class _ProfileHeader extends StatelessWidget {
       case StudentStatus.applicant:
       case StudentStatus.pendingAdmission:
       case StudentStatus.admitted:
+      case StudentStatus.enrollmentInProgress:
       case StudentStatus.archived:
         return colors.info;
     }
