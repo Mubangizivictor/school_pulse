@@ -30,10 +30,12 @@ class AppColors {
   static const Color disabledLight = Color(0xFFB7C0CF);
 
   // Dark Theme Colors
-  static const Color bgDark = Color(0xFF020716);
-  static const Color surfaceDark = Color(0xFF071229);
-  static const Color elevatedSurfaceDark = Color(0xFF0B1B3B);
-  static const Color borderDark = Color(0xFF1A315B);
+  // A deep navy hierarchy keeps dark mode unmistakably blue while retaining
+  // enough separation between page, card, and elevated-control surfaces.
+  static const Color bgDark = Color(0xFF061631);
+  static const Color surfaceDark = Color(0xFF091C40);
+  static const Color elevatedSurfaceDark = Color(0xFF0E2A5C);
+  static const Color borderDark = Color(0xFF254979);
   static const Color textPrimaryDark = Color(0xFFF7FAFF);
   static const Color textSecondaryDark = Color(0xFFB9C6DC);
   static const Color textMutedDark = Color(0xFF8190AA);
