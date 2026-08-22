@@ -106,10 +106,10 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+      backgroundColor: colors.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -161,6 +161,9 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: MessagingUserBuilder(
+        builder: (context, user) => _buildActionBar(context, user),
+      ),
       body: MessagingUserBuilder(
         builder: (context, user) => Column(
           children: [
@@ -168,6 +171,12 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
               Container(
                 height: 100,
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerLow,
+                  border: Border(
+                    bottom: BorderSide(color: colors.outlineVariant),
+                  ),
+                ),
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
@@ -242,50 +251,82 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
                   },
                 ),
               ),
-              Divider(
-                color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                height: 1,
-              ),
             ],
             Expanded(child: _buildList()),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.m),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _selectedIds.isEmpty || _creating
-                      ? null
-                      : () => _continue(user),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.electricBlue,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppColors.disabled(context),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: _creating
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          widget.isGroupSelection ? 'Continue' : 'Start Chat',
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionBar(BuildContext context, UserEntity user) {
+    // With no contacts, a disabled CTA adds noise and sits against the iOS
+    // gesture area. The empty state offers refresh instead.
+    if (_loading || (_contacts.isEmpty && _selectedIds.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+
+    final colors = Theme.of(context).colorScheme;
+    final enabled = _selectedIds.isNotEmpty && !_creating;
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(
+        AppSpacing.m,
+        AppSpacing.s,
+        AppSpacing.m,
+        AppSpacing.m,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          border: Border(top: BorderSide(color: colors.outlineVariant)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.m),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: enabled ? () => _continue(user) : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colors.primary,
+                foregroundColor: colors.onPrimary,
+                disabledBackgroundColor: colors.surfaceContainerHigh,
+                disabledForegroundColor: colors.onSurfaceVariant,
+                minimumSize: const Size.fromHeight(56),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                elevation: 0,
+              ),
+              child: _creating
+                  ? SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colors.onPrimary,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          widget.isGroupSelection
+                              ? Icons.arrow_forward_rounded
+                              : Icons.chat_bubble_rounded,
+                          size: 19,
+                        ),
+                        const SizedBox(width: AppSpacing.s),
+                        Text(
+                          widget.isGroupSelection ? 'Continue' : 'Start chat',
                           style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                ),
-              ),
+                      ],
+                    ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -308,18 +349,7 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
       );
     }
     if (_contacts.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Text(
-            'No one else in your school has an account yet.',
-            textAlign: TextAlign.center,
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textMuted(context),
-            ),
-          ),
-        ),
-      );
+      return _buildEmptyContactsState();
     }
 
     final filtered = _filtered;
@@ -350,6 +380,59 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
         _buildSectionHeader(showSections ? 'ALL CONTACTS' : 'CONTACTS'),
         ...rest.map(_buildContactTile),
       ],
+    );
+  }
+
+  Widget _buildEmptyContactsState() {
+    final colors = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x3l),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 104,
+              height: 104,
+              decoration: BoxDecoration(
+                color: colors.primaryContainer,
+                shape: BoxShape.circle,
+                border: Border.all(color: colors.outlineVariant),
+              ),
+              child: Icon(
+                widget.isGroupSelection
+                    ? Icons.group_add_outlined
+                    : Icons.person_search_outlined,
+                size: 46,
+                color: colors.primary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Text(
+              'No contacts yet',
+              style: AppTypography.titleLarge.copyWith(
+                color: colors.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s),
+            Text(
+              'No one else in your school has an account yet. Once they join, they will appear here automatically.',
+              textAlign: TextAlign.center,
+              style: AppTypography.bodyMedium.copyWith(
+                color: colors.onSurfaceVariant,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.l),
+            TextButton.icon(
+              onPressed: _load,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Refresh contacts'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -428,64 +511,70 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
-      decoration: BoxDecoration(
+      child: Material(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: isSelected
-            ? Border.all(color: AppColors.electricBlue, width: 1)
-            : null,
-      ),
-      child: ListTile(
-        leading: CircleAvatar(
-          radius: 22,
-          backgroundColor: AppColors.electricBlue.withValues(alpha: 0.1),
-          child: Text(
-            contact.initials,
-            style: const TextStyle(
-              color: AppColors.electricBlue,
-              fontWeight: FontWeight.bold,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isSelected
+              ? const BorderSide(color: AppColors.electricBlue)
+              : BorderSide.none,
+        ),
+        child: ListTile(
+          leading: CircleAvatar(
+            radius: 22,
+            backgroundColor: AppColors.electricBlue.withValues(alpha: 0.1),
+            child: Text(
+              contact.initials,
+              style: const TextStyle(
+                color: AppColors.electricBlue,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-        ),
-        title: Text(
-          contact.name,
-          style: AppTypography.titleSmall.copyWith(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          _roleLabel(contact.role),
-          style: AppTypography.bodySmall.copyWith(
-            color: AppColors.textMuted(context),
-          ),
-        ),
-        trailing: Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: isSelected
-                  ? AppColors.electricBlue
-                  : Colors.grey.withValues(alpha: 0.3),
-              width: 2,
+          title: Text(
+            contact.name,
+            style: AppTypography.titleSmall.copyWith(
+              fontWeight: FontWeight.w600,
             ),
-            color: isSelected ? AppColors.electricBlue : Colors.transparent,
           ),
-          child: isSelected
-              ? const Icon(Icons.check, size: 16, color: Colors.white)
-              : null,
-        ),
-        onTap: () {
-          setState(() {
-            if (isSelected) {
-              _selectedIds.remove(contact.id);
-            } else {
-              if (!widget.isGroupSelection) {
-                _selectedIds.clear();
+          subtitle: Text(
+            _roleLabel(contact.role),
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textMuted(context),
+            ),
+          ),
+          trailing: Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isSelected
+                    ? AppColors.electricBlue
+                    : Colors.grey.withValues(alpha: 0.3),
+                width: 2,
+              ),
+              color: isSelected ? AppColors.electricBlue : Colors.transparent,
+            ),
+            child: isSelected
+                ? const Icon(Icons.check, size: 16, color: Colors.white)
+                : null,
+          ),
+          onTap: () {
+            setState(() {
+              if (isSelected) {
+                _selectedIds.remove(contact.id);
+              } else {
+                if (!widget.isGroupSelection) {
+                  _selectedIds.clear();
+                }
+                _selectedIds.add(contact.id);
               }
-              _selectedIds.add(contact.id);
-            }
-          });
-        },
+            });
+          },
+        ),
       ),
     );
   }
