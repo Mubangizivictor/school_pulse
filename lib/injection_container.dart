@@ -84,6 +84,9 @@ import 'package:school_pulse/features/messages/data/services/message_outbox_serv
 import 'package:school_pulse/features/finance/domain/services/finance_service.dart';
 import 'package:school_pulse/features/student/domain/services/admission_service.dart';
 import 'package:school_pulse/features/student/domain/services/document_service.dart';
+import 'package:school_pulse/features/student/domain/enrollment_setup/repositories/enrollment_setup_repository.dart';
+import 'package:school_pulse/features/student/data/enrollment_setup/repositories/enrollment_setup_repository_impl.dart';
+import 'package:school_pulse/features/student/presentation/enrollment_setup/bloc/enrollment_setup_wizard_bloc.dart';
 import 'package:school_pulse/features/student/domain/services/parent_linking_service.dart';
 import 'package:school_pulse/features/student/domain/services/promotion_service.dart';
 import 'package:school_pulse/features/student/domain/services/student_service.dart';
@@ -743,6 +746,27 @@ Future<void> init() async {
 
   sl.registerFactory(
     () => AdmissionBloc(admissionService: sl(), permissionEvaluator: sl()),
+  );
+
+  // Enrollment Setup Wizard (post-approval placement/finance/boarding/
+  // clubs/parent-link/identity confirmation). Its own repository owns the
+  // new scholarship_awards/dormitory_assignments/student_club_memberships
+  // collections; all other dependencies are existing repos/services
+  // registered above.
+  sl.registerLazySingleton<EnrollmentSetupRepository>(
+    () => EnrollmentSetupRepositoryImpl(firestore: sl()),
+  );
+  sl.registerFactory(
+    () => EnrollmentSetupWizardBloc(
+      studentRepository: sl(),
+      admissionService: sl(),
+      enrollmentSetupRepository: sl(),
+      parentLinkingService: sl(),
+      createRelationship: sl(),
+      identityRepository: sl(),
+      nfcCredentialRepository: sl(),
+      permissionEvaluator: sl(),
+    ),
   );
 
   // Features - Student Identity (QR / ID card resolution, used by the

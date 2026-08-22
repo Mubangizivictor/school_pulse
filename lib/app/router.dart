@@ -130,6 +130,7 @@ import 'package:school_pulse/features/shared/shell_screen.dart';
 import 'package:school_pulse/features/shared/presentation/staff_hub_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/admission_application.dart';
 import 'package:school_pulse/features/student/presentation/screens/admission_review_screen.dart';
+import 'package:school_pulse/features/student/presentation/enrollment_setup/screens/enrollment_setup_wizard_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/admissions_list_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/admin_students_dashboard_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/admin_students_list_screen.dart';
@@ -2166,6 +2167,22 @@ final router = GoRouter(
                   builder: (context, state) => AdmissionReviewScreen(
                     application: state.extra as AdmissionApplication,
                   ),
+                  routes: [
+                    GoRoute(
+                      path: 'enroll',
+                      builder: (context, state) {
+                        final extra =
+                            state.extra as EnrollmentSetupWizardRouteExtra;
+                        return EnrollmentSetupWizardScreen(
+                          application: extra.application,
+                          studentId: extra.studentId,
+                          schoolCode: extra.schoolCode,
+                          uniqueSystemId: extra.uniqueSystemId,
+                          studentCode: extra.studentCode,
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),

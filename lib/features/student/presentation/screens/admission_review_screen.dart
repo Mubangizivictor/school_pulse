@@ -8,10 +8,12 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import '../../domain/entities/admission_application.dart';
 import '../../domain/entities/student_enums.dart';
+import '../../domain/services/admission_service.dart';
 import '../../domain/services/parent_linking_service.dart';
 import '../bloc/admission_bloc.dart';
 import '../bloc/admission_event.dart';
 import '../bloc/admission_state.dart';
+import '../enrollment_setup/screens/enrollment_setup_wizard_screen.dart';
 import 'admissions_list_screen.dart' show admissionStatusLabel;
 
 class AdmissionReviewScreen extends StatelessWidget {
@@ -163,6 +165,16 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
     );
   }
 
+  // Runs Steps 1-3 of admission (mints the admission number + student/QR
+  // codes, sets status to StudentStatus.admitted) directly via
+  // AdmissionService, then hands off to the Enrollment Setup Wizard for
+  // everything the old direct-EnrollStudentRequested flow used to skip
+  // (finance/boarding/clubs/parent-link/identity confirmation) before the
+  // wizard itself calls AdmissionService.enrollStudent to finish the
+  // status transition to active. Deliberately bypasses AdmissionBloc's
+  // EnrollStudentRequested handler - that handler still exists unmodified
+  // for any other caller, but it inlines admit+enroll as one step, which
+  // would activate the student before the wizard ever runs.
   Future<void> _enroll() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
@@ -175,20 +187,54 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
 
     setState(() => _busy = true);
     final application = widget.application;
-    // Financial account setup (term/feeStructureId/totalBilled) is
-    // deliberately left unset here - AdmissionService only initializes
-    // billing when all three are supplied, so enrollment still succeeds
-    // without them; wiring a fee-structure picker into this screen is
-    // follow-up work for the billing/bursar flow.
-    context.read<AdmissionBloc>().add(
-      EnrollStudentRequested(
-        operatorUser: authState.user,
-        applicationId: application.id,
-        schoolId: application.schoolId,
-        schoolCode: schoolCode.trim(),
-        academicYear: application.academicYearId,
-        academicYearId: application.academicYearId,
-      ),
+    final admissionService = sl<AdmissionService>();
+
+    final admitResult = await admissionService.admitStudent(
+      application.id,
+      application.schoolId,
+      schoolCode.trim(),
+      application.academicYearId,
+      application.academicYearId,
+    );
+
+    if (!mounted) return;
+    setState(() => _busy = false);
+
+    await admitResult.fold(
+      (failure) async {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(failure.message),
+            backgroundColor: AppColors.danger(context),
+          ),
+        );
+      },
+      (studentId) async {
+        final studentResult = await admissionService.repository
+            .getStudentById(studentId);
+        final codes = studentResult.fold(
+          (failure) => null,
+          (student) => (
+            uniqueSystemId: student.qrReference ?? '',
+            studentCode: student.studentCode,
+          ),
+        );
+        if (!mounted || codes == null) return;
+
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => EnrollmentSetupWizardScreen(
+              application: application,
+              studentId: studentId,
+              schoolCode: schoolCode.trim(),
+              uniqueSystemId: codes.uniqueSystemId,
+              studentCode: codes.studentCode,
+            ),
+          ),
+        );
+        if (mounted) Navigator.of(context).pop(true);
+      },
     );
   }
 
