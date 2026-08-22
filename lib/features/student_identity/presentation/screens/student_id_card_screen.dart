@@ -319,208 +319,476 @@ class _IdCardPreview extends StatelessWidget {
             .firstOrNull
             ?.name ??
         '';
-    final brandPrimary =
-        _brandColor(branding?.primaryColor) ??
-        _brandColor(profile.colors.firstOrNull) ??
-        const Color(0xFF123B66);
-    final brandAccent =
-        _brandColor(branding?.secondaryColor) ??
-        (profile.colors.length > 1 ? _brandColor(profile.colors[1]) : null) ??
-        const Color(0xFFC9942E);
-    final cardInk = Color.lerp(brandPrimary, Colors.black, .62)!;
+    final logoUrl = profile.logoUrl.isNotEmpty
+        ? profile.logoUrl
+        : branding?.logoUrl;
+    final contact = [
+      profile.phone,
+      profile.email,
+    ].where((item) => item.isNotEmpty).join('  •  ');
 
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 360),
         child: AspectRatio(
           aspectRatio: .68,
-          child: Card(
-            elevation: 4,
-            clipBehavior: Clip.antiAlias,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.symmetric(
-                  horizontal: BorderSide(color: brandPrimary, width: 8),
+          child: showFront
+              ? _MetallicStudentIdFront(
+                  student: student,
+                  schoolName: schoolName,
+                  motto: profile.motto,
+                  logoUrl: logoUrl,
+                  classAndStream: [
+                    className,
+                    stream,
+                  ].where((item) => item.isNotEmpty).join(' • '),
+                  academicYear: year,
+                )
+              : _MetallicStudentIdBack(
+                  schoolName: schoolName,
+                  logoUrl: logoUrl,
+                  contact: contact,
+                  qrCredential: identity.qrCodeData,
                 ),
-              ),
-              padding: const EdgeInsets.all(18),
-              child: DefaultTextStyle.merge(
-                style: TextStyle(color: cardInk),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (profile.logoUrl.isNotEmpty ||
-                            branding?.logoUrl?.isNotEmpty == true) ...[
-                          CircleAvatar(
-                            radius: 17,
-                            backgroundImage: NetworkImage(
-                              profile.logoUrl.isNotEmpty
-                                  ? profile.logoUrl
-                                  : branding!.logoUrl!,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                        ],
-                        Flexible(
-                          child: Text(
-                            schoolName.toUpperCase(),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: brandPrimary,
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (profile.motto.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          profile.motto,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: cardInk.withValues(alpha: .72)),
-                        ),
-                      ),
-                    const SizedBox(height: 14),
-                    if (showFront) ...[
-                      CircleAvatar(
-                        radius: 42,
-                        backgroundColor: brandPrimary.withValues(alpha: .12),
-                        backgroundImage: student.photoUrl?.isNotEmpty == true
-                            ? NetworkImage(student.photoUrl!)
-                            : null,
-                        child: student.photoUrl?.isNotEmpty == true
-                            ? null
-                            : const Icon(Icons.person, size: 44),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        student.name.toUpperCase(),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: cardInk,
-                            ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        [
-                          className,
-                          stream,
-                        ].where((item) => item.isNotEmpty).join(' • '),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      _PreviewRow('Student Code', student.studentCode),
-                      _PreviewRow('Admission No.', student.admissionNumber),
-                      if (year.isNotEmpty) _PreviewRow('Academic Year', year),
-                      const Spacer(),
-                      Text(
-                        'Official student identity card',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: cardInk.withValues(alpha: .65),
-                        ),
-                      ),
-                    ] else ...[
-                      Text(
-                        'Scan to verify student',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      if (identity.qrCodeData.isNotEmpty)
-                        QrImageView(
-                          data: identity.qrCodeData,
-                          version: QrVersions.auto,
-                          size: 164,
-                        )
-                      else
-                        const Padding(
-                          padding: EdgeInsets.all(32),
-                          child: Icon(Icons.qr_code_2_outlined, size: 96),
-                        ),
-                      const SizedBox(height: 14),
-                      Text(
-                        'Keep this card with you. It is non-transferable and remains the property of $schoolName.',
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          Chip(
-                            label: Text('IDENTITY VERIFIED'),
-                            side: BorderSide(color: brandAccent),
-                          ),
-                          Chip(
-                            label: Text('AUTHORIZED ACCESS'),
-                            side: BorderSide(color: brandAccent),
-                          ),
-                          Chip(
-                            label: Text('NON-TRANSFERABLE'),
-                            side: BorderSide(color: brandAccent),
-                          ),
-                        ],
-                      ),
-                      if (profile.phone.isNotEmpty || profile.email.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 12),
-                          child: Text(
-                            [
-                              profile.phone,
-                              profile.email,
-                            ].where((item) => item.isNotEmpty).join(' • '),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      const Spacer(),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
         ),
       ),
     );
   }
 }
 
-class _PreviewRow extends StatelessWidget {
-  const _PreviewRow(this.label, this.value);
+const _metallicCardBackground = BoxDecoration(
+  borderRadius: BorderRadius.all(Radius.circular(24)),
+  gradient: LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF102330), Color(0xFF0D1B24), Color(0xFF071017)],
+    stops: [0, .5, 1],
+  ),
+  boxShadow: [
+    BoxShadow(color: Colors.black54, blurRadius: 20, offset: Offset(0, 10)),
+  ],
+);
+
+const _metallicGoldGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    Color(0xFFDFBA6B),
+    Color(0xFF9E7D3B),
+    Color(0xFFFCE7B2),
+    Color(0xFF876527),
+    Color(0xFFE8CA82),
+  ],
+  stops: [0, .25, .5, .75, 1],
+);
+
+class _MetallicStudentIdFront extends StatelessWidget {
+  const _MetallicStudentIdFront({
+    required this.student,
+    required this.schoolName,
+    required this.motto,
+    required this.logoUrl,
+    required this.classAndStream,
+    required this.academicYear,
+  });
+
+  final Student student;
+  final String schoolName;
+  final String motto;
+  final String? logoUrl;
+  final String classAndStream;
+  final String academicYear;
+
+  @override
+  Widget build(BuildContext context) => _MetallicCardFrame(
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 16),
+      child: Column(
+        children: [
+          _CardBrandHeader(schoolName: schoolName, logoUrl: logoUrl),
+          if (motto.isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Text(
+              motto,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 10,
+                letterSpacing: .4,
+              ),
+            ),
+          ],
+          const SizedBox(height: 18),
+          _MetallicAvatar(photoUrl: student.photoUrl),
+          const SizedBox(height: 12),
+          ShaderMask(
+            shaderCallback: (bounds) => _metallicGoldGradient.createShader(
+              Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+            ),
+            child: Text(
+              student.name.toUpperCase(),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                height: 1.05,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.25,
+              ),
+            ),
+          ),
+          if (classAndStream.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              classAndStream,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+          ],
+          const SizedBox(height: 13),
+          Expanded(
+            child: _MetallicDetailPanel(
+              studentCode: student.studentCode,
+              admissionNumber: student.admissionNumber,
+              academicYear: academicYear,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Official student identity card',
+            style: TextStyle(
+              color: Colors.white54,
+              fontSize: 10,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _MetallicStudentIdBack extends StatelessWidget {
+  const _MetallicStudentIdBack({
+    required this.schoolName,
+    required this.logoUrl,
+    required this.contact,
+    required this.qrCredential,
+  });
+
+  final String schoolName;
+  final String? logoUrl;
+  final String contact;
+  final String qrCredential;
+
+  @override
+  Widget build(BuildContext context) => _MetallicCardFrame(
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 16),
+      child: Column(
+        children: [
+          _CardBrandHeader(schoolName: schoolName, logoUrl: logoUrl),
+          const SizedBox(height: 12),
+          const Text(
+            'Scan to verify student',
+            style: TextStyle(color: Colors.white54, fontSize: 11),
+          ),
+          const SizedBox(height: 15),
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: _metallicGoldGradient,
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: qrCredential.isEmpty
+                  ? const SizedBox(
+                      width: 132,
+                      height: 132,
+                      child: Icon(Icons.qr_code_2_outlined, size: 86),
+                    )
+                  : QrImageView(
+                      data: qrCredential,
+                      version: QrVersions.auto,
+                      size: 132,
+                    ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Keep this card with you. It is non-transferable and remains the property of $schoolName.',
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+              height: 1.3,
+            ),
+          ),
+          const Spacer(),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _MetallicStatusPill(
+                icon: Icons.verified_outlined,
+                text: 'IDENTITY\nVERIFIED',
+              ),
+              _MetallicStatusPill(
+                icon: Icons.key_outlined,
+                text: 'AUTHORIZED\nACCESS',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (contact.isNotEmpty)
+            Text(
+              contact,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white54, fontSize: 9),
+            ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              gradient: _metallicGoldGradient,
+            ),
+            child: const Text(
+              'NON-TRANSFERABLE',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF0D1B24),
+                fontWeight: FontWeight.w900,
+                fontSize: 10,
+                letterSpacing: .8,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _MetallicCardFrame extends StatelessWidget {
+  const _MetallicCardFrame({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: _metallicCardBackground,
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(10),
+          child: CustomPaint(
+            painter: _GradientBorderPainter(
+              gradient: _metallicGoldGradient,
+              strokeWidth: 2,
+              radius: 16,
+            ),
+          ),
+        ),
+        child,
+      ],
+    ),
+  );
+}
+
+class _CardBrandHeader extends StatelessWidget {
+  const _CardBrandHeader({required this.schoolName, required this.logoUrl});
+  final String schoolName;
+  final String? logoUrl;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Container(
+        width: 30,
+        height: 30,
+        padding: const EdgeInsets.all(2),
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: _metallicGoldGradient,
+        ),
+        child: CircleAvatar(
+          backgroundColor: const Color(0xFF102330),
+          backgroundImage: logoUrl?.isNotEmpty == true
+              ? NetworkImage(logoUrl!)
+              : null,
+          child: logoUrl?.isNotEmpty == true
+              ? null
+              : const Icon(Icons.school_rounded, size: 16, color: Colors.white),
+        ),
+      ),
+      const SizedBox(width: 8),
+      Flexible(
+        child: Text(
+          schoolName.toUpperCase(),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Color(0xFFFCE7B2),
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            letterSpacing: .8,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+class _MetallicAvatar extends StatelessWidget {
+  const _MetallicAvatar({required this.photoUrl});
+  final String? photoUrl;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(4),
+    decoration: const BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: _metallicGoldGradient,
+    ),
+    child: CircleAvatar(
+      radius: 51,
+      backgroundColor: const Color(0xFF102330),
+      backgroundImage: photoUrl?.isNotEmpty == true
+          ? NetworkImage(photoUrl!)
+          : null,
+      child: photoUrl?.isNotEmpty == true
+          ? null
+          : const Icon(Icons.person_rounded, size: 58, color: Colors.white30),
+    ),
+  );
+}
+
+class _MetallicDetailPanel extends StatelessWidget {
+  const _MetallicDetailPanel({
+    required this.studentCode,
+    required this.admissionNumber,
+    required this.academicYear,
+  });
+  final String studentCode;
+  final String admissionNumber;
+  final String academicYear;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    decoration: BoxDecoration(
+      color: const Color(0xFF192A36).withValues(alpha: .72),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.white12),
+    ),
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _MetallicDetailRow(
+          icon: Icons.badge_outlined,
+          label: 'Student Code',
+          value: studentCode,
+        ),
+        const Divider(color: Colors.white12, height: 1),
+        _MetallicDetailRow(
+          icon: Icons.article_outlined,
+          label: 'Admission No.',
+          value: admissionNumber,
+        ),
+        const Divider(color: Colors.white12, height: 1),
+        _MetallicDetailRow(
+          icon: Icons.calendar_month_outlined,
+          label: 'Academic Year',
+          value: academicYear,
+        ),
+      ],
+    ),
+  );
+}
+
+class _MetallicDetailRow extends StatelessWidget {
+  const _MetallicDetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+  final IconData icon;
   final String label;
   final String value;
+
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+  Widget build(BuildContext context) => Row(
+    children: [
+      const Icon(Icons.circle, size: 0),
+      Icon(icon, color: const Color(0xFFDFBA6B), size: 17),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white54, fontSize: 9),
+            ),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFFFCE7B2),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+      ),
+    ],
+  );
+}
+
+class _MetallicStatusPill extends StatelessWidget {
+  const _MetallicStatusPill({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+    decoration: BoxDecoration(
+      color: const Color(0xFF223340),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: const Color(0xFFDFBA6B).withValues(alpha: .45)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: const Color(0xFFDFBA6B)),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 7,
+            height: 1.05,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ],
@@ -528,15 +796,37 @@ class _PreviewRow extends StatelessWidget {
   );
 }
 
-Color? _brandColor(String? value) {
-  if (value == null || value.isEmpty) return null;
-  final normalized = value.replaceFirst('#', '');
-  if (normalized.length != 6) return null;
-  try {
-    return Color(int.parse('FF$normalized', radix: 16));
-  } on FormatException {
-    return null;
+class _GradientBorderPainter extends CustomPainter {
+  const _GradientBorderPainter({
+    required this.gradient,
+    required this.strokeWidth,
+    required this.radius,
+  });
+  final LinearGradient gradient;
+  final double strokeWidth;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final paint = Paint()
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..shader = gradient.createShader(rect);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        rect.deflate(strokeWidth / 2),
+        Radius.circular(radius),
+      ),
+      paint,
+    );
   }
+
+  @override
+  bool shouldRepaint(covariant _GradientBorderPainter oldDelegate) =>
+      oldDelegate.gradient != gradient ||
+      oldDelegate.strokeWidth != strokeWidth ||
+      oldDelegate.radius != radius;
 }
 
 class _CardActionIcon extends StatelessWidget {
