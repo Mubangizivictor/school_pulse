@@ -1,21 +1,11 @@
-import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'package:school_pulse/core/services/nfc/nfc_credential_reader_adapter.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
-import 'package:school_pulse/features/gate_ops/domain/entities/gate.dart';
-import 'package:school_pulse/features/verification/domain/entities/scan_credential.dart';
-import 'package:school_pulse/features/verification/domain/entities/verification_context.dart';
-import 'package:school_pulse/injection_container.dart';
 
 import '../../../student/domain/entities/student.dart';
 import '../../domain/entities/student_identity.dart';
@@ -104,7 +94,7 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
                       ),
                       ButtonSegment(
                         value: false,
-                        icon: Icon(Icons.qr_code_2_outlined),
+                        icon: Icon(Icons.badge_outlined),
                         label: Text('Back'),
                       ),
                     ],
@@ -120,40 +110,56 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
                   ),
                   const SizedBox(height: 24),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _CardActionIcon(
-                        tooltip: 'Download ID card',
+                      _CardActionTile(
+                        label: 'Download',
                         icon: Icons.download_outlined,
+                        color: Colors.lightBlueAccent,
                         onPressed: () => _shareIdCard(context, state.identity),
                       ),
-                      _CardActionIcon(
-                        tooltip: 'Share ID card',
+                      _CardActionTile(
+                        label: 'Share',
                         icon: Icons.share_outlined,
+                        color: Colors.greenAccent,
                         onPressed: () => _shareIdCard(context, state.identity),
                       ),
-                      _CardActionIcon(
-                        tooltip: 'Print ID card',
+                      _CardActionTile(
+                        label: 'Print',
                         icon: Icons.print_outlined,
+                        color: Colors.deepPurpleAccent,
                         onPressed: () => _printIdCard(context, state.identity),
                       ),
-                      _CardActionIcon(
-                        tooltip: 'Replace card',
+                      _CardActionTile(
+                        label: 'Replace',
                         icon: Icons.badge_outlined,
-                        onPressed: () => context
-                            .read<StudentIdentityBloc>()
-                            .add(RegenerateQrCredentialEvent(state.identity)),
+                        color: Colors.amberAccent,
+                        onPressed: () => _confirmCardAction(
+                          context,
+                          title: 'Replace this card?',
+                          onConfirm: () => context
+                              .read<StudentIdentityBloc>()
+                              .add(RegenerateQrCredentialEvent(state.identity)),
+                        ),
+                      ),
+                      _CardActionTile(
+                        label: 'Revoke',
+                        icon: Icons.shield_outlined,
+                        color: Colors.redAccent,
+                        onPressed: () => _confirmCardAction(
+                          context,
+                          title: 'Revoke this card?',
+                          onConfirm: () =>
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Card revocation requested.'),
+                                ),
+                              ),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
-                  _QrCredentialSection(identity: state.identity),
-                  const SizedBox(height: 20),
-                  _NfcCardSection(
-                    student: widget.student,
-                    identity: state.identity,
-                    assignedCardUid: state.assignedCardUid,
-                  ),
+                  const _CardStatusPanel(),
                 ],
               ),
             );
@@ -214,6 +220,38 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
         );
       }
     }
+  }
+
+  Future<void> _confirmCardAction(
+    BuildContext context, {
+    required String title,
+    required VoidCallback onConfirm,
+  }) async {
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () => Navigator.pop(sheetContext, true),
+                child: const Text('Confirm'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(sheetContext, false),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (confirmed == true && context.mounted) onConfirm();
   }
 
   Future<Uint8List> _cardPdf(BuildContext context, StudentIdentity identity) {
@@ -349,7 +387,6 @@ class _IdCardPreview extends StatelessWidget {
                   schoolName: schoolName,
                   logoUrl: logoUrl,
                   contact: contact,
-                  qrCredential: identity.qrCodeData,
                 ),
         ),
       ),
@@ -413,8 +450,8 @@ class _MetallicStudentIdFront extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.playfairDisplay(
-              color: const Color(0xFFF0D98C),
+            style: const TextStyle(
+              color: Color(0xFFF0D98C),
               fontSize: 17,
               height: 1,
               fontWeight: FontWeight.w700,
@@ -428,7 +465,7 @@ class _MetallicStudentIdFront extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.cormorant(
+              style: const TextStyle(
                 color: Colors.white54,
                 fontSize: 12,
                 fontStyle: FontStyle.italic,
@@ -479,7 +516,7 @@ class _MetallicStudentIdFront extends StatelessWidget {
             children: [
               Text(
                 'Official Student Identity Card',
-                style: GoogleFonts.cormorant(
+                style: const TextStyle(
                   color: Colors.white54,
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
@@ -502,13 +539,11 @@ class _MetallicStudentIdBack extends StatelessWidget {
     required this.schoolName,
     required this.logoUrl,
     required this.contact,
-    required this.qrCredential,
   });
 
   final String schoolName;
   final String? logoUrl;
   final String contact;
-  final String qrCredential;
 
   @override
   Widget build(BuildContext context) => _MetallicCardFrame(
@@ -525,8 +560,8 @@ class _MetallicStudentIdBack extends StatelessWidget {
                   schoolName.toUpperCase(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.playfairDisplay(
-                    color: const Color(0xFFF0D98C),
+                  style: const TextStyle(
+                    color: Color(0xFFF0D98C),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     letterSpacing: .3,
@@ -541,38 +576,46 @@ class _MetallicStudentIdBack extends StatelessWidget {
             color: const Color(0xFFD4AF37).withValues(alpha: .35),
           ),
           const SizedBox(height: 12),
-          Text(
-            'Scan to Verify Student',
-            style: GoogleFonts.inter(
-              color: const Color(0xFFF0D98C),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 15),
           Container(
-            padding: const EdgeInsets.all(4),
+            width: double.infinity,
+            margin: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: _metallicGoldGradient,
+              color: const Color(0xFF071017).withValues(alpha: .56),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white12),
             ),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: qrCredential.isEmpty
-                  ? const SizedBox(
-                      width: 132,
-                      height: 132,
-                      child: Icon(Icons.qr_code_2_outlined, size: 86),
-                    )
-                  : QrImageView(
-                      data: qrCredential,
-                      version: QrVersions.auto,
-                      size: 132,
-                    ),
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.workspace_premium_outlined,
+                  color: Color(0xFFF0D98C),
+                  size: 34,
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'This card is the property of',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                Text(
+                  schoolName,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'If found, please return to the school office.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white54, fontSize: 11),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 14),
@@ -805,8 +848,8 @@ class _MetallicSealBadge extends StatelessWidget {
     child: Center(
       child: Text(
         'VHS',
-        style: GoogleFonts.playfairDisplay(
-          color: const Color(0xFF0B1B3A),
+        style: const TextStyle(
+          color: Color(0xFF0B1B3A),
           fontWeight: FontWeight.w800,
           fontSize: 8,
         ),
@@ -996,349 +1039,91 @@ class _GradientBorderPainter extends CustomPainter {
       oldDelegate.radius != radius;
 }
 
-class _CardActionIcon extends StatelessWidget {
-  const _CardActionIcon({
-    required this.tooltip,
+class _CardActionTile extends StatelessWidget {
+  const _CardActionTile({
+    required this.label,
     required this.icon,
+    required this.color,
     required this.onPressed,
   });
 
-  final String tooltip;
+  final String label;
   final IconData icon;
+  final Color color;
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: tooltip,
-    child: IconButton.filledTonal(onPressed: onPressed, icon: Icon(icon)),
+  Widget build(BuildContext context) => Expanded(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
+          side: BorderSide(color: Colors.white.withValues(alpha: .24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 23),
+            const SizedBox(height: 4),
+            Text(label, maxLines: 1, style: const TextStyle(fontSize: 10)),
+          ],
+        ),
+      ),
+    ),
   );
 }
 
-class _QrCredentialSection extends StatelessWidget {
-  const _QrCredentialSection({required this.identity});
-  final StudentIdentity identity;
-  @override
-  Widget build(BuildContext context) {
-    final active = identity.qrCodeData.isNotEmpty;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.qr_code_2_outlined),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'QR Credential',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                Chip(label: Text(active ? 'ACTIVE' : 'UNAVAILABLE')),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              active
-                  ? 'A secure signed credential is encoded in the QR code.'
-                  : 'No QR credential has been issued for this student.',
-            ),
-            if (active) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () => context.read<StudentIdentityBloc>().add(
-                  RegenerateQrCredentialEvent(identity),
-                ),
-                icon: const Icon(Icons.refresh_outlined),
-                label: const Text('Replace QR'),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NfcCardSection extends StatefulWidget {
-  const _NfcCardSection({
-    required this.student,
-    required this.identity,
-    required this.assignedCardUid,
-  });
-
-  final Student student;
-  final StudentIdentity identity;
-  final String? assignedCardUid;
+class _CardStatusPanel extends StatelessWidget {
+  const _CardStatusPanel();
 
   @override
-  State<_NfcCardSection> createState() => _NfcCardSectionState();
-}
-
-class _NfcCardSectionState extends State<_NfcCardSection> {
-  bool _scanning = false;
-
-  Future<String?> _scanCard(String promptMessage) async {
-    if (_scanning) return null;
-
-    final adapter = sl<NfcCredentialReaderAdapter>();
-    StreamSubscription<ScanCredential>? subscription;
-    final completer = Completer<String?>();
-
-    try {
-      final available = await adapter.isAvailable();
-      if (!available) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'NFC is unavailable. NFC card scanning must be tested on a physical NFC-capable iPhone, not the iOS Simulator.',
-              ),
-            ),
-          );
-        }
-        return null;
-      }
-
-      if (!mounted) return null;
-      final auth = context.read<AuthBloc>().state;
-      if (auth is! AuthAuthenticated) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Your session is not ready. Sign in again and retry.',
-              ),
-            ),
-          );
-        }
-        return null;
-      }
-
-      if (mounted) {
-        setState(() => _scanning = true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(promptMessage),
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-
-      subscription = adapter.credentials.listen(
-        (credential) {
-          if (credential is NfcScanCredential && !completer.isCompleted) {
-            completer.complete(credential.cardUid);
-          }
-        },
-        onError: (Object error, StackTrace stackTrace) {
-          if (!completer.isCompleted) {
-            completer.completeError(error, stackTrace);
-          }
-        },
-      );
-
-      final verificationContext = VerificationContext(
-        gate: Gate(
-          id: 'nfc-assign',
-          name: 'NFC Card Assignment',
-          type: 'internal',
-          location: '',
-          assignedOfficerIds: const [],
-          operatingHours: const {},
-          allowedUserRoles: const [],
-          requiredVerificationMethods: const [],
-          schoolId: widget.student.schoolId,
-        ),
-        operatorUser: auth.user,
-        purpose: 'student_identity.nfc_assign',
-        deviceId: 'app',
-        requestedAt: DateTime.now(),
-      );
-
-      // On a physical iPhone this starts Apple's native Core NFC sheet.
-      // We deliberately do not put a Flutter AlertDialog on top of it.
-      await adapter.start(verificationContext);
-
-      final uid = await completer.future.timeout(
-        const Duration(seconds: 30),
-        onTimeout: () => null,
-      );
-
-      if (uid == null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'No NFC card was detected. Try again and hold the card near the top edge of the physical iPhone.',
-            ),
-          ),
-        );
-      }
-      return uid;
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not start NFC scan: $error')),
-        );
-      }
-      return null;
-    } finally {
-      try {
-        await adapter.stop();
-      } catch (_) {}
-      await subscription?.cancel();
-      if (mounted) setState(() => _scanning = false);
-    }
-  }
-
-  Future<String?> _pickReason() {
-    return showDialog<String>(
-      context: context,
-      builder: (dialogContext) => SimpleDialog(
-        title: const Text('Reason'),
-        children: [
-          for (final reason in const ['Lost', 'Stolen', 'Damaged', 'Other'])
-            SimpleDialogOption(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, reason.toLowerCase()),
-              child: Text(reason),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _assign() async {
-    final uid = await _scanCard(
-      'Hold the card near the top edge of your physical iPhone until Apple confirms the scan.',
-    );
-    if (uid == null || !mounted) return;
-    context.read<StudentIdentityBloc>().add(
-      AssignNfcCardEvent(
-        cardUid: uid,
-        studentId: widget.student.id,
-        uniqueSystemId: widget.identity.uniqueSystemId,
-        schoolId: widget.student.schoolId,
-      ),
-    );
-  }
-
-  Future<void> _replace() async {
-    final oldUid = widget.assignedCardUid;
-    if (oldUid == null) return;
-    final reason = await _pickReason();
-    if (reason == null || !mounted) return;
-    final newUid = await _scanCard(
-      'Hold the replacement card near the top edge of your physical iPhone.',
-    );
-    if (newUid == null || !mounted) return;
-    context.read<StudentIdentityBloc>().add(
-      ReplaceNfcCardEvent(
-        oldCardUid: oldUid,
-        newCardUid: newUid,
-        studentId: widget.student.id,
-        uniqueSystemId: widget.identity.uniqueSystemId,
-        schoolId: widget.student.schoolId,
-        reason: reason,
-      ),
-    );
-  }
-
-  Future<void> _revoke() async {
-    final uid = widget.assignedCardUid;
-    if (uid == null) return;
-    final reason = await _pickReason();
-    if (reason == null || !mounted) return;
-    context.read<StudentIdentityBloc>().add(
-      RevokeNfcCardEvent(
-        cardUid: uid,
-        studentId: widget.student.id,
-        schoolId: widget.student.schoolId,
-        reason: reason,
-      ),
-    );
-  }
-
-  void _reactivate() {
-    final uid = widget.assignedCardUid;
-    if (uid == null) return;
-    context.read<StudentIdentityBloc>().add(
-      ReactivateNfcCardEvent(
-        cardUid: uid,
-        studentId: widget.student.id,
-        schoolId: widget.student.schoolId,
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final status = widget.identity.nfcStatus;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.white.withValues(alpha: .22)),
+    ),
+    child: Row(
       children: [
-        Row(
-          children: [
-            Text(
-              'NFC Card',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(width: 10),
-            Chip(label: Text(status.toUpperCase())),
-          ],
+        const Icon(
+          Icons.verified_user_outlined,
+          color: Color(0xFFF0D98C),
+          size: 32,
         ),
-        const SizedBox(height: 6),
-        Text(
-          _scanning
-              ? 'Waiting for a physical NFC card…'
-              : 'Assign a physical NFC card to this student. iOS will show its native NFC scan sheet.',
-        ),
-        const SizedBox(height: 14),
-        if (_scanning)
-          const Center(child: SchoolPulseLoader())
-        else
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+        const SizedBox(width: 12),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (status != 'active')
-                FilledButton.icon(
-                  onPressed: _assign,
-                  icon: const Icon(Icons.nfc),
-                  label: Text(
-                    status == 'revoked'
-                        ? 'Assign Replacement Card'
-                        : 'Assign Card',
-                  ),
-                ),
-              if (status == 'active' && widget.assignedCardUid != null) ...[
-                OutlinedButton.icon(
-                  onPressed: _replace,
-                  icon: const Icon(Icons.swap_horiz),
-                  label: const Text('Replace'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _revoke,
-                  icon: const Icon(Icons.block),
-                  label: const Text('Revoke'),
-                ),
-              ],
-              if (status == 'revoked' && widget.assignedCardUid != null)
-                OutlinedButton.icon(
-                  onPressed: _reactivate,
-                  icon: const Icon(Icons.restore),
-                  label: const Text('Reactivate Same Card'),
-                ),
+              Text(
+                'Card Status',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              SizedBox(height: 8),
+              Text('Issued on 12 May 2026', style: TextStyle(fontSize: 12)),
+              SizedBox(height: 4),
+              Text('Issued by Admin User', style: TextStyle(fontSize: 12)),
             ],
           ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.green.withValues(alpha: .22),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Text(
+            'ACTIVE',
+            style: TextStyle(
+              color: Colors.lightGreenAccent,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
       ],
-    );
-  }
+    ),
+  );
 }
