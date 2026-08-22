@@ -388,6 +388,7 @@ class _IdCardPreview extends StatelessWidget {
                   schoolName: schoolName,
                   logoUrl: logoUrl,
                   contact: contact,
+                  qrCodeData: identity.qrCodeData,
                 ),
         ),
       ),
@@ -523,9 +524,9 @@ class _MetallicStudentIdFront extends StatelessWidget {
                   fontStyle: FontStyle.italic,
                 ),
               ),
-              const Align(
+              Align(
                 alignment: Alignment.centerRight,
-                child: _MetallicSealBadge(),
+                child: _MetallicSealBadge(initials: _initialsOf(schoolName)),
               ),
             ],
           ),
@@ -835,8 +836,19 @@ class _CrestPainter extends CustomPainter {
   bool shouldRepaint(covariant _CrestPainter oldDelegate) => false;
 }
 
+String _initialsOf(String schoolName) {
+  final words = schoolName
+      .split(RegExp(r'\s+'))
+      .where((word) => word.isNotEmpty);
+  final initials = words.map((word) => word[0].toUpperCase()).join();
+  return initials.isEmpty
+      ? 'S'
+      : (initials.length > 4 ? initials.substring(0, 4) : initials);
+}
+
 class _MetallicSealBadge extends StatelessWidget {
-  const _MetallicSealBadge();
+  const _MetallicSealBadge({required this.initials});
+  final String initials;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -851,7 +863,7 @@ class _MetallicSealBadge extends StatelessWidget {
     ),
     child: Center(
       child: Text(
-        'VHS',
+        initials,
         style: const TextStyle(
           color: Color(0xFF0B1B3A),
           fontWeight: FontWeight.w800,
