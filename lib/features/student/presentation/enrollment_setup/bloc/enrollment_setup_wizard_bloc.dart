@@ -14,6 +14,8 @@ import 'package:school_pulse/features/student/domain/enrollment_setup/entities/s
 import 'package:school_pulse/features/student/domain/enrollment_setup/repositories/enrollment_setup_repository.dart';
 import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
 import 'package:school_pulse/features/student/domain/services/admission_service.dart';
+import 'package:school_pulse/features/notifications/domain/entities/notification_model.dart';
+import 'package:school_pulse/features/notifications/domain/services/notification_sender.dart';
 import 'package:school_pulse/features/student/domain/services/enrollment_audit_service.dart';
 import 'package:school_pulse/features/student/domain/services/parent_linking_service.dart';
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
@@ -38,6 +40,7 @@ class EnrollmentSetupWizardBloc
   final PermissionEvaluator permissionEvaluator;
   final EnrollmentSetupDraftLocalDataSource? draftLocalDataSource;
   final EnrollmentAuditService? auditService;
+  final NotificationSendService? notificationSender;
 
   /// Bitmask of steps (0..7) whose data has been successfully persisted at
   /// least once. Not part of [EnrollmentSetupWizardState.props] directly -
@@ -56,6 +59,7 @@ class EnrollmentSetupWizardBloc
     required this.permissionEvaluator,
     this.draftLocalDataSource,
     this.auditService,
+    this.notificationSender,
   }) : super(const EnrollmentSetupWizardState()) {
     on<WizardStarted>(_onWizardStarted);
     on<WizardNextStep>(_onNextStep);
@@ -691,6 +695,27 @@ class EnrollmentSetupWizardBloc
       action: 'enrollment_activated',
       studentId: state.studentId,
     );
+
+    // Only notify the parent if one was actually linked during the wizard -
+    // studentParents resolves recipients server-side from
+    // parent_student_relationships, so an unlinked/skipped student simply
+    // reaches nobody rather than erroring.
+    if (state.parentLinked && state.studentId != null) {
+      notificationSender?.send(
+        sender: event.operatorUser,
+        audience: NotificationAudience(
+          kind: NotificationAudienceKind.studentParents,
+          studentIds: [state.studentId!],
+        ),
+        category: NotificationCategory.others,
+        type: NotificationType.custom,
+        title: 'Enrollment complete',
+        body: '${state.studentCode} has been fully enrolled and activated.',
+        sourceModule: 'enrollment',
+        sourceEntityId: state.studentId,
+        relatedStudentId: state.studentId,
+      );
+    }
 
     // Activation succeeded - the wizard's job is done, so the local resume
     // draft is no longer needed. Best-effort: a failure to delete it isn't

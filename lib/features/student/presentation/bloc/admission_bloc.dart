@@ -1,5 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
+import 'package:school_pulse/features/notifications/domain/entities/notification_model.dart';
+import 'package:school_pulse/features/notifications/domain/services/notification_sender.dart';
 import 'package:school_pulse/features/verification/domain/repositories/permission_evaluator.dart';
 import '../../domain/services/admission_service.dart';
 import '../../domain/services/enrollment_audit_service.dart';
@@ -10,11 +12,13 @@ class AdmissionBloc extends Bloc<AdmissionEvent, AdmissionState> {
   final AdmissionService admissionService;
   final PermissionEvaluator permissionEvaluator;
   final EnrollmentAuditService? auditService;
+  final NotificationSendService? notificationSender;
 
   AdmissionBloc({
     required this.admissionService,
     required this.permissionEvaluator,
     this.auditService,
+    this.notificationSender,
   }) : super(AdmissionInitial()) {
     on<LoadApplicationsRequested>(_onLoadApplications);
     on<CheckDuplicatesRequested>(_onCheckDuplicates);
@@ -99,6 +103,26 @@ class AdmissionBloc extends Bloc<AdmissionEvent, AdmissionState> {
         applicationId: event.applicationId,
         reason: event.comments,
       );
+      // No parent user account is resolvable yet at this point - approval
+      // only flips AdmissionApplication.status, the student/parent link
+      // doesn't exist until admitStudent()/the enrollment wizard runs.
+      // Notifying staff (not a synthetic parent recipient) is the safe
+      // minimum here; enrollment_activated notifies the parent once one is
+      // genuinely linked.
+      if (event.approve) {
+        notificationSender?.send(
+          sender: event.operatorUser,
+          audience: const NotificationAudience.allStaff(),
+          category: NotificationCategory.others,
+          type: NotificationType.custom,
+          title: 'Admission approved',
+          body:
+              'An admission application was approved and is ready for '
+              'enrollment setup.',
+          sourceModule: 'admission',
+          sourceEntityId: event.applicationId,
+        );
+      }
       emit(
         AdmissionActionSuccess(
           event.approve ? 'Application approved' : 'Application rejected',

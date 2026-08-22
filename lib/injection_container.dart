@@ -756,6 +756,7 @@ Future<void> init() async {
       admissionService: sl(),
       permissionEvaluator: sl(),
       auditService: sl(),
+      notificationSender: sl(),
     ),
   );
 
@@ -786,6 +787,7 @@ Future<void> init() async {
       permissionEvaluator: sl(),
       draftLocalDataSource: sl(),
       auditService: sl(),
+      notificationSender: sl(),
     ),
   );
 

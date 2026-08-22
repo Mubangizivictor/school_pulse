@@ -36,7 +36,9 @@ class AdminStudentsDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authState = context.read<AuthBloc>().state;
-    final schoolId = authState is AuthAuthenticated ? authState.user.schoolId : '';
+    final schoolId = authState is AuthAuthenticated
+        ? authState.user.schoolId
+        : '';
 
     // StructureBloc is already provided app-wide (see main.dart) and loaded
     // at sign-in - creating a second instance here would duplicate its
@@ -44,10 +46,12 @@ class AdminStudentsDashboardScreen extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (_) => di.sl<StudentsBloc>()..add(LoadSchoolStudents(schoolId)),
+          create: (_) =>
+              di.sl<StudentsBloc>()..add(LoadSchoolStudents(schoolId)),
         ),
         BlocProvider(
-          create: (_) => di.sl<AdmissionBloc>()..add(LoadApplicationsRequested(schoolId)),
+          create: (_) =>
+              di.sl<AdmissionBloc>()..add(LoadApplicationsRequested(schoolId)),
         ),
       ],
       child: _AdminStudentsView(schoolId: schoolId),
@@ -76,16 +80,31 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
     super.dispose();
   }
 
-  List<Student> _applyFilters(List<Student> students) {
+  /// [classLabel] resolves a classId to its display name so "search by
+  /// class" can match the name shown on-screen, not just the raw id -
+  /// same class-name resolution the dashboard already uses for display,
+  /// not a new lookup path.
+  List<Student> _applyFilters(
+    List<Student> students, {
+    required String Function(String classId) classLabel,
+  }) {
     final q = _query.trim().toLowerCase();
     return students.where((s) {
       if (q.isNotEmpty) {
+        // Parent name/phone visibility here matches what this screen
+        // already surfaces via emergencyContacts elsewhere on the card -
+        // no new permission gate invented just for search.
         final matchesParent = s.emergencyContacts.any(
-          (c) => c.name.toLowerCase().contains(q),
+          (c) =>
+              c.name.toLowerCase().contains(q) ||
+              c.phoneNumber.toLowerCase().contains(q),
         );
-        final matches = s.name.toLowerCase().contains(q) ||
+        final matchesClass = classLabel(s.classId).toLowerCase().contains(q);
+        final matches =
+            s.name.toLowerCase().contains(q) ||
             s.studentCode.toLowerCase().contains(q) ||
             s.admissionNumber.toLowerCase().contains(q) ||
+            matchesClass ||
             matchesParent;
         if (!matches) return false;
       }
@@ -109,7 +128,9 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                 left: AppSpacing.xl,
                 right: AppSpacing.xl,
                 top: AppSpacing.xl,
-                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + AppSpacing.xl,
+                bottom:
+                    MediaQuery.of(sheetContext).viewInsets.bottom +
+                    AppSpacing.xl,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -118,14 +139,18 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                   Text(
                     'Filter Students',
                     style: AppTypography.titleMedium.copyWith(
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   Text(
                     'Class',
                     style: AppTypography.labelLarge.copyWith(
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.m),
@@ -136,13 +161,15 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                       ChoiceChip(
                         label: const Text('All'),
                         selected: _classFilter == null,
-                        onSelected: (_) => setSheetState(() => _classFilter = null),
+                        onSelected: (_) =>
+                            setSheetState(() => _classFilter = null),
                       ),
                       for (final c in classes)
                         ChoiceChip(
                           label: Text(c.name),
                           selected: _classFilter == c.id,
-                          onSelected: (_) => setSheetState(() => _classFilter = c.id),
+                          onSelected: (_) =>
+                              setSheetState(() => _classFilter = c.id),
                         ),
                     ],
                   ),
@@ -150,7 +177,9 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                   Text(
                     'Gender',
                     style: AppTypography.labelLarge.copyWith(
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.m),
@@ -160,13 +189,15 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                       ChoiceChip(
                         label: const Text('All'),
                         selected: _genderFilter == null,
-                        onSelected: (_) => setSheetState(() => _genderFilter = null),
+                        onSelected: (_) =>
+                            setSheetState(() => _genderFilter = null),
                       ),
                       for (final g in Gender.values)
                         ChoiceChip(
                           label: Text(_genderLabel(g)),
                           selected: _genderFilter == g,
-                          onSelected: (_) => setSheetState(() => _genderFilter = g),
+                          onSelected: (_) =>
+                              setSheetState(() => _genderFilter = g),
                         ),
                     ],
                   ),
@@ -240,10 +271,15 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
   }
 
   String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
   }
 
   @override
@@ -254,7 +290,20 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
       appBar: staffDashboardAppBar(context, roleLabel: 'Students'),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/staff/admin/admissions/new', extra: widget.schoolId),
+        onPressed: () async {
+          final admissionBloc = context.read<AdmissionBloc>();
+          final created = await context.push<bool>(
+            '/staff/admin/admissions/new',
+            extra: widget.schoolId,
+          );
+          // The "New Admissions" counter above reads this same AdmissionBloc
+          // via BlocBuilder but was only ever loaded once on screen entry -
+          // without this, a submitted application wouldn't show up in the
+          // counter until the whole dashboard was torn down and rebuilt.
+          if (created == true) {
+            admissionBloc.add(LoadApplicationsRequested(widget.schoolId));
+          }
+        },
         icon: const Icon(Icons.person_add_alt_1),
         label: const Text('Add Student'),
       ),
@@ -265,20 +314,34 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
 
             String classLabel(String classId) {
               final match = classes.where((c) => c.id == classId);
-              if (match.isEmpty) return classId.isEmpty ? 'Unassigned' : classId;
+              if (match.isEmpty) {
+                return classId.isEmpty ? 'Unassigned' : classId;
+              }
               return match.first.name;
             }
 
             return BlocBuilder<StudentsBloc, StudentsState>(
               builder: (context, studentsState) {
-                final isLoading = studentsState is StudentsLoading || studentsState is StudentsInitial;
-                final allStudents = studentsState is StudentsLoaded ? studentsState.students : <Student>[];
-                final filtered = _applyFilters(allStudents);
+                final isLoading =
+                    studentsState is StudentsLoading ||
+                    studentsState is StudentsInitial;
+                final allStudents = studentsState is StudentsLoaded
+                    ? studentsState.students
+                    : <Student>[];
+                final filtered = _applyFilters(
+                  allStudents,
+                  classLabel: classLabel,
+                );
 
                 return Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(AppSpacing.xl, AppSpacing.l, AppSpacing.xl, 0),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.xl,
+                        AppSpacing.l,
+                        AppSpacing.xl,
+                        0,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -286,31 +349,52 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                             controller: _searchController,
                             onChanged: (v) => setState(() => _query = v),
                             style: AppTypography.bodyMedium.copyWith(
-                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                              color: isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimaryLight,
                             ),
                             decoration: InputDecoration(
-                              hintText: 'Search name, class, code, admission no. or parent',
+                              hintText:
+                                  'Search name, class, code, admission no. or parent',
                               prefixIcon: const Icon(Icons.search),
                               filled: true,
-                              fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                              fillColor: isDark
+                                  ? AppColors.surfaceDark
+                                  : AppColors.surfaceLight,
                               border: OutlineInputBorder(
                                 borderRadius: AppRadius.medium,
-                                borderSide: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                                borderSide: BorderSide(
+                                  color: isDark
+                                      ? AppColors.borderDark
+                                      : AppColors.borderLight,
+                                ),
                               ),
                             ),
                           ),
                           const SizedBox(height: AppSpacing.l),
                           BlocBuilder<AdmissionBloc, AdmissionState>(
                             builder: (context, admissionState) {
-                              final pendingAdmissions = admissionState is AdmissionApplicationsLoaded
+                              final pendingAdmissions =
+                                  admissionState is AdmissionApplicationsLoaded
                                   ? admissionState.applications
-                                      .where((a) => a.status != AdmissionStatus.rejected)
-                                      .length
+                                        .where(
+                                          (a) =>
+                                              a.status !=
+                                              AdmissionStatus.rejected,
+                                        )
+                                        .length
                                   : 0;
                               final total = allStudents.length;
-                              final active = allStudents.where((s) => s.status == StudentStatus.active).length;
-                              final suspended =
-                                  allStudents.where((s) => s.status == StudentStatus.suspended).length;
+                              final active = allStudents
+                                  .where(
+                                    (s) => s.status == StudentStatus.active,
+                                  )
+                                  .length;
+                              final suspended = allStudents
+                                  .where(
+                                    (s) => s.status == StudentStatus.suspended,
+                                  )
+                                  .length;
                               return StaffHeroSummaryCard(
                                 greetingNameFallback: 'there',
                                 kpis: isLoading
@@ -359,7 +443,9 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                                       _StatusChip(
                                         label: 'All',
                                         selected: _statusFilter == null,
-                                        onTap: () => setState(() => _statusFilter = null),
+                                        onTap: () => setState(
+                                          () => _statusFilter = null,
+                                        ),
                                       ),
                                       const SizedBox(width: AppSpacing.m),
                                       for (final s in StudentStatus.values) ...[
@@ -367,7 +453,8 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                                           label: _statusLabel(s),
                                           selected: _statusFilter == s,
                                           onTap: () => setState(
-                                            () => _statusFilter = _statusFilter == s ? null : s,
+                                            () => _statusFilter =
+                                                _statusFilter == s ? null : s,
                                           ),
                                         ),
                                         const SizedBox(width: AppSpacing.m),
@@ -379,7 +466,9 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                               IconButton(
                                 icon: Icon(
                                   Icons.filter_list,
-                                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.textPrimaryLight,
                                 ),
                                 onPressed: () => _openFilterSheet(classes),
                               ),
@@ -389,7 +478,9 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                           Text(
                             '${filtered.length} Students',
                             style: AppTypography.labelLarge.copyWith(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
                             ),
                           ),
                           const SizedBox(height: AppSpacing.l),
@@ -403,39 +494,53 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                               builder: (context, layout) {
                                 if (layout == ResponsiveLayout.desktop) {
                                   return Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.xl,
+                                    ),
                                     child: SingleChildScrollView(
                                       child: PulseTable<Student>(
                                         items: filtered,
-                                        emptyMessage: 'No students match the current filters',
+                                        emptyMessage:
+                                            'No students match the current filters',
                                         columns: [
                                           PulseTableColumn<Student>(
                                             title: 'Name',
                                             cellBuilder: (s) => InkWell(
-                                              onTap: () => context.push('/staff/admin/students/${s.id}'),
+                                              onTap: () => context.push(
+                                                '/staff/admin/students/${s.id}',
+                                              ),
                                               child: Text(
                                                 s.name,
-                                                style: AppTypography.bodyMedium.copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                  color: AppColors.primary(context),
-                                                ),
+                                                style: AppTypography.bodyMedium
+                                                    .copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: AppColors.primary(
+                                                        context,
+                                                      ),
+                                                    ),
                                               ),
                                             ),
                                           ),
                                           PulseTableColumn<Student>(
                                             title: 'Class',
-                                            cellBuilder: (s) => Text(classLabel(s.classId)),
+                                            cellBuilder: (s) =>
+                                                Text(classLabel(s.classId)),
                                           ),
                                           PulseTableColumn<Student>(
                                             title: 'Status',
                                             cellBuilder: (s) => _StatusPill(
                                               label: _statusLabel(s.status),
-                                              color: _statusColor(context, s.status),
+                                              color: _statusColor(
+                                                context,
+                                                s.status,
+                                              ),
                                             ),
                                           ),
                                           PulseTableColumn<Student>(
                                             title: 'Admission No.',
-                                            cellBuilder: (s) => Text(s.admissionNumber),
+                                            cellBuilder: (s) =>
+                                                Text(s.admissionNumber),
                                           ),
                                         ],
                                       ),
@@ -448,25 +553,38 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                                     child: Text(
                                       'No students match the current filters',
                                       style: AppTypography.bodyMedium.copyWith(
-                                        color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                                        color: isDark
+                                            ? AppColors.textMutedDark
+                                            : AppColors.textMutedLight,
                                       ),
                                     ),
                                   );
                                 }
 
                                 return ListView.separated(
-                                  padding: const EdgeInsets.fromLTRB(AppSpacing.xl, 0, AppSpacing.xl, AppSpacing.x6l),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    AppSpacing.xl,
+                                    0,
+                                    AppSpacing.xl,
+                                    AppSpacing.x6l,
+                                  ),
                                   itemCount: filtered.length,
-                                  separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.m),
+                                  separatorBuilder: (_, _) =>
+                                      const SizedBox(height: AppSpacing.m),
                                   itemBuilder: (context, index) {
                                     final s = filtered[index];
                                     return _StudentRow(
                                       student: s,
                                       classLabel: classLabel(s.classId),
                                       statusLabel: _statusLabel(s.status),
-                                      statusColor: _statusColor(context, s.status),
+                                      statusColor: _statusColor(
+                                        context,
+                                        s.status,
+                                      ),
                                       initials: _initials(s.name),
-                                      onTap: () => context.push('/staff/admin/students/${s.id}'),
+                                      onTap: () => context.push(
+                                        '/staff/admin/students/${s.id}',
+                                      ),
                                     );
                                   },
                                 );
@@ -489,7 +607,11 @@ class _StatusChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _StatusChip({required this.label, required this.selected, required this.onTap});
+  const _StatusChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -499,7 +621,9 @@ class _StatusChip extends StatelessWidget {
       onSelected: (_) => onTap(),
       selectedColor: AppColors.primarySoft(context),
       labelStyle: AppTypography.labelMedium.copyWith(
-        color: selected ? AppColors.primary(context) : AppColors.textSecondary(context),
+        color: selected
+            ? AppColors.primary(context)
+            : AppColors.textSecondary(context),
       ),
     );
   }
@@ -514,14 +638,20 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l, vertical: AppSpacing.xs),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.l,
+        vertical: AppSpacing.xs,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: AppRadius.full,
       ),
       child: Text(
         label,
-        style: AppTypography.labelSmall.copyWith(color: color, fontWeight: FontWeight.w600),
+        style: AppTypography.labelSmall.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -557,19 +687,25 @@ class _StudentRow extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
           borderRadius: AppRadius.medium,
-          border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 22,
               backgroundColor: AppColors.primarySoft(context),
-              backgroundImage: hasPhoto ? NetworkImage(student.photoUrl!) : null,
+              backgroundImage: hasPhoto
+                  ? NetworkImage(student.photoUrl!)
+                  : null,
               child: hasPhoto
                   ? null
                   : Text(
                       initials,
-                      style: AppTypography.labelMedium.copyWith(color: AppColors.primary(context)),
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.primary(context),
+                      ),
                     ),
             ),
             const SizedBox(width: AppSpacing.l),
@@ -581,13 +717,17 @@ class _StudentRow extends StatelessWidget {
                     student.name,
                     style: AppTypography.bodyMedium.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimaryLight,
                     ),
                   ),
                   Text(
                     '$classLabel · ${student.admissionNumber}',
                     style: AppTypography.bodySmall.copyWith(
-                      color: isDark ? AppColors.textMutedDark : AppColors.textMutedLight,
+                      color: isDark
+                          ? AppColors.textMutedDark
+                          : AppColors.textMutedLight,
                     ),
                   ),
                 ],
