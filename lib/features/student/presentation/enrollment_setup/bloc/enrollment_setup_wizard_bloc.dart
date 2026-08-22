@@ -14,6 +14,7 @@ import 'package:school_pulse/features/student/domain/enrollment_setup/entities/s
 import 'package:school_pulse/features/student/domain/enrollment_setup/repositories/enrollment_setup_repository.dart';
 import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
 import 'package:school_pulse/features/student/domain/services/admission_service.dart';
+import 'package:school_pulse/features/student/domain/services/enrollment_audit_service.dart';
 import 'package:school_pulse/features/student/domain/services/parent_linking_service.dart';
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
 import 'package:school_pulse/features/verification/domain/repositories/nfc_credential_repository.dart';
@@ -36,6 +37,7 @@ class EnrollmentSetupWizardBloc
   final NfcCredentialRepository nfcCredentialRepository;
   final PermissionEvaluator permissionEvaluator;
   final EnrollmentSetupDraftLocalDataSource? draftLocalDataSource;
+  final EnrollmentAuditService? auditService;
 
   /// Bitmask of steps (0..7) whose data has been successfully persisted at
   /// least once. Not part of [EnrollmentSetupWizardState.props] directly -
@@ -53,6 +55,7 @@ class EnrollmentSetupWizardBloc
     required this.nfcCredentialRepository,
     required this.permissionEvaluator,
     this.draftLocalDataSource,
+    this.auditService,
   }) : super(const EnrollmentSetupWizardState()) {
     on<WizardStarted>(_onWizardStarted);
     on<WizardNextStep>(_onNextStep);
@@ -364,7 +367,15 @@ class EnrollmentSetupWizardBloc
     result.fold(
       (failure) =>
           emit(state.copyWith(isLoading: false, error: failure.message)),
-      (_) => emit(state.copyWith(isLoading: false, hasScholarshipAward: true)),
+      (_) {
+        auditService?.record(
+          schoolId: state.schoolId,
+          action: 'enrollment_bursary_assigned',
+          studentId: state.studentId,
+          reason: event.reason,
+        );
+        emit(state.copyWith(isLoading: false, hasScholarshipAward: true));
+      },
     );
   }
 
@@ -523,6 +534,12 @@ class EnrollmentSetupWizardBloc
       );
     }
 
+    auditService?.record(
+      schoolId: state.schoolId,
+      action: 'enrollment_parent_linked',
+      studentId: state.studentId,
+    );
+
     emit(
       state.copyWith(
         isLoading: false,
@@ -668,6 +685,12 @@ class EnrollmentSetupWizardBloc
     }
 
     emit(state.copyWith(isActivating: false, activated: true));
+
+    auditService?.record(
+      schoolId: state.schoolId,
+      action: 'enrollment_activated',
+      studentId: state.studentId,
+    );
 
     // Activation succeeded - the wizard's job is done, so the local resume
     // draft is no longer needed. Best-effort: a failure to delete it isn't

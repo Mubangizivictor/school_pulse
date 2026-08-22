@@ -2,16 +2,19 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
 import 'package:school_pulse/features/verification/domain/repositories/permission_evaluator.dart';
 import '../../domain/services/admission_service.dart';
+import '../../domain/services/enrollment_audit_service.dart';
 import 'admission_event.dart';
 import 'admission_state.dart';
 
 class AdmissionBloc extends Bloc<AdmissionEvent, AdmissionState> {
   final AdmissionService admissionService;
   final PermissionEvaluator permissionEvaluator;
+  final EnrollmentAuditService? auditService;
 
   AdmissionBloc({
     required this.admissionService,
     required this.permissionEvaluator,
+    this.auditService,
   }) : super(AdmissionInitial()) {
     on<LoadApplicationsRequested>(_onLoadApplications);
     on<CheckDuplicatesRequested>(_onCheckDuplicates);
@@ -89,14 +92,19 @@ class AdmissionBloc extends Bloc<AdmissionEvent, AdmissionState> {
       approve: event.approve,
       comments: event.comments,
     );
-    result.fold(
-      (failure) => emit(AdmissionError(failure.message)),
-      (_) => emit(
+    result.fold((failure) => emit(AdmissionError(failure.message)), (_) {
+      auditService?.record(
+        schoolId: event.operatorUser.schoolId,
+        action: event.approve ? 'admission_approved' : 'admission_rejected',
+        applicationId: event.applicationId,
+        reason: event.comments,
+      );
+      emit(
         AdmissionActionSuccess(
           event.approve ? 'Application approved' : 'Application rejected',
         ),
-      ),
-    );
+      );
+    });
   }
 
   Future<void> _onEnrollStudent(

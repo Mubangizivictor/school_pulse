@@ -83,6 +83,7 @@ import 'package:school_pulse/features/messages/domain/services/message_outbox_se
 import 'package:school_pulse/features/messages/data/services/message_outbox_service_impl.dart';
 import 'package:school_pulse/features/finance/domain/services/finance_service.dart';
 import 'package:school_pulse/features/student/domain/services/admission_service.dart';
+import 'package:school_pulse/features/student/domain/services/enrollment_audit_service.dart';
 import 'package:school_pulse/features/student/domain/services/document_service.dart';
 import 'package:school_pulse/features/student/domain/enrollment_setup/repositories/enrollment_setup_repository.dart';
 import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft_local_data_source.dart';
@@ -745,8 +746,17 @@ Future<void> init() async {
 
   sl.registerLazySingleton(() => ParentLinkingService(sl(), sl()));
 
+  // Best-effort audit trail for admission/enrollment events - see
+  // functions/enrollment_audit.js. Registered before AdmissionBloc/
+  // EnrollmentSetupWizardBloc so both can take it as an optional dep.
+  sl.registerLazySingleton(() => EnrollmentAuditService(sl()));
+
   sl.registerFactory(
-    () => AdmissionBloc(admissionService: sl(), permissionEvaluator: sl()),
+    () => AdmissionBloc(
+      admissionService: sl(),
+      permissionEvaluator: sl(),
+      auditService: sl(),
+    ),
   );
 
   // Enrollment Setup Wizard (post-approval placement/finance/boarding/
@@ -775,6 +785,7 @@ Future<void> init() async {
       nfcCredentialRepository: sl(),
       permissionEvaluator: sl(),
       draftLocalDataSource: sl(),
+      auditService: sl(),
     ),
   );
 
