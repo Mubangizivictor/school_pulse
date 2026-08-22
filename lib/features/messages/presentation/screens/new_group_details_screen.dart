@@ -54,19 +54,20 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: colors.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: colors.onSurface),
           onPressed: () => context.pop(),
         ),
         title: Text(
           _screenTitle,
           style: AppTypography.titleLarge.copyWith(
-            color: Colors.white,
+            color: colors.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -86,10 +87,10 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                         height: 100,
                         width: 100,
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceDark,
+                          color: colors.surfaceContainerHigh,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1),
+                            color: colors.outlineVariant,
                             width: 1,
                           ),
                           image: _photo != null
