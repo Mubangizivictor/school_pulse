@@ -3,8 +3,6 @@ import 'package:provider/provider.dart';
 
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
-import 'package:school_pulse/injection_container.dart' as di;
 
 import 'add_staff_wizard_controller.dart';
 import 'steps/step_02_personal_info.dart';
@@ -30,8 +28,6 @@ class AddStaffWizardPage extends StatefulWidget {
 
 class _AddStaffWizardPageState extends State<AddStaffWizardPage> {
   late final AddStaffWizardController _controller;
-  late final StructureRepository _structureRepository;
-  String? _currentAcademicYearId;
 
   @override
   void initState() {
@@ -46,14 +42,6 @@ class _AddStaffWizardPageState extends State<AddStaffWizardPage> {
       schoolId: schoolId,
       adminUid: adminUid,
     );
-    _structureRepository = di.sl<StructureRepository>();
-
-    _structureRepository.watchAcademicYears(schoolId).listen((years) {
-      final current = years.where((y) => y.isCurrent).toList();
-      if (current.isNotEmpty && mounted) {
-        setState(() => _currentAcademicYearId = current.first.id);
-      }
-    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final restored = await _controller.restoreDraftIfPresent();
@@ -122,9 +110,7 @@ class _AddStaffWizardPageState extends State<AddStaffWizardPage> {
       case WizardStep.documents:
         return const Step10Documents();
       case WizardStep.reviewConfirm:
-        return Step11ReviewConfirm(
-          currentAcademicYearId: _currentAcademicYearId,
-        );
+        return const Step11ReviewConfirm();
       case WizardStep.success:
         return const Step12Success();
     }

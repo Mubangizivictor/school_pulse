@@ -297,7 +297,35 @@ class AddStaffWizardController extends ChangeNotifier {
       adminRoles.contains(UserRole.headTeacher) ||
       adminRoles.contains(UserRole.schoolAdmin);
 
+  /// Mirrors the Cloud Function's own precondition so an incomplete
+  /// Class/Subject Teacher configuration is caught here, before spending a
+  /// round trip on a request the server would reject anyway. Null means the
+  /// draft is complete enough to submit.
+  String? get assignmentValidationError {
+    if (draft.selectedRoles.contains(UserRole.classTeacher)) {
+      final config = draft.roleConfigs[UserRole.classTeacher];
+      if (config == null ||
+          (config.className == null || config.className!.isEmpty)) {
+        return 'Select a class for the Class Teacher role before continuing.';
+      }
+    }
+    if (draft.selectedRoles.contains(UserRole.subjectTeacher)) {
+      final config = draft.roleConfigs[UserRole.subjectTeacher];
+      if (config == null || config.subjectAssignments.isEmpty) {
+        return 'Add at least one subject and class for the Subject Teacher role before continuing.';
+      }
+    }
+    return null;
+  }
+
   Future<Either<Failure, String>> submit() async {
+    final validationError = assignmentValidationError;
+    if (validationError != null) {
+      submitError = validationError;
+      notifyListeners();
+      return Left(ValidationFailure(validationError));
+    }
+
     submitting = true;
     submitError = null;
     notifyListeners();

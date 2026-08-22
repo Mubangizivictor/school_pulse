@@ -13,8 +13,7 @@ import 'package:school_pulse/features/admin/presentation/add_staff_wizard/widget
 import '../add_staff_wizard_controller.dart';
 
 class Step11ReviewConfirm extends StatelessWidget {
-  final String? currentAcademicYearId;
-  const Step11ReviewConfirm({super.key, this.currentAcademicYearId});
+  const Step11ReviewConfirm({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -181,14 +180,17 @@ class Step11ReviewConfirm extends StatelessWidget {
           documents: controller.draft.documents,
         );
       }
-      if (context.mounted && (photoWarning != null || failedDocuments.isNotEmpty)) {
+      if (context.mounted &&
+          (photoWarning != null || failedDocuments.isNotEmpty)) {
         final parts = [
           if (photoWarning != null) photoWarning,
           if (failedDocuments.isNotEmpty)
             '${failedDocuments.length} document(s) failed to upload',
         ];
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Account created, but ${parts.join(' and ')}.')),
+          SnackBar(
+            content: Text('Account created, but ${parts.join(' and ')}.'),
+          ),
         );
       }
     }
