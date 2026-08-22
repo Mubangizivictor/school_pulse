@@ -72,9 +72,17 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
           ),
         ),
       ),
+      bottomNavigationBar: MessagingUserBuilder(
+        builder: (context, user) => _buildCreateBar(context, user),
+      ),
       body: MessagingUserBuilder(
         builder: (context, user) => SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.l,
+            0,
+            AppSpacing.l,
+            112,
+          ),
           child: Column(
             children: [
               const SizedBox(height: AppSpacing.l),
@@ -138,12 +146,14 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
               ),
               const SizedBox(height: AppSpacing.x3l),
               _buildInputField(
-                label: 'Group Name',
+                context,
+                label: '$_typeLabel Name',
                 hint: 'P7 - Mathematics Parents',
                 controller: _nameController,
               ),
               const SizedBox(height: AppSpacing.l),
               _buildInputField(
+                context,
                 label: 'Description (Optional)',
                 hint:
                     'This group is for all P7 parents to discuss Mathematics updates and homework.',
@@ -151,19 +161,24 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: AppSpacing.xl),
+              _buildSectionLabel(context, 'SETUP'),
+              const SizedBox(height: AppSpacing.s),
               _buildSettingTile(
+                context,
                 Icons.person_add_outlined,
                 'Add Members',
                 '${_members.length} selected',
                 onTap: () => context.pop(),
               ),
               _buildSettingTile(
+                context,
                 Icons.public,
                 'Group Type',
                 _typeLabel,
                 onTap: _pickType,
               ),
               _buildSettingTile(
+                context,
                 Icons.admin_panel_settings_outlined,
                 'Who can send messages?',
                 _policy == MessagePolicy.everyone
@@ -171,41 +186,59 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                     : 'Admins Only',
                 onTap: _pickPolicy,
               ),
-              const SizedBox(height: AppSpacing.x3l),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _canCreate ? () => _create(user) : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.electricBlue,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppColors.disabled(context),
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: _creating
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          _createLabel,
-                          style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCreateBar(BuildContext context, UserEntity user) {
+    final colors = Theme.of(context).colorScheme;
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(
+        AppSpacing.l,
+        AppSpacing.s,
+        AppSpacing.l,
+        AppSpacing.m,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          border: Border(top: BorderSide(color: colors.outlineVariant)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.m),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _canCreate ? () => _create(user) : null,
+              icon: _creating
+                  ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colors.onPrimary,
+                      ),
+                    )
+                  : const Icon(Icons.check_circle_outline_rounded),
+              label: Text(_creating ? 'Creating…' : _createLabel),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colors.primary,
+                foregroundColor: colors.onPrimary,
+                disabledBackgroundColor: colors.surfaceContainerHigh,
+                disabledForegroundColor: colors.onSurfaceVariant,
+                minimumSize: const Size.fromHeight(56),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                textStyle: AppTypography.titleMedium.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: AppSpacing.x3l),
-            ],
+            ),
           ),
         ),
       ),
@@ -262,7 +295,7 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
   void _pickType() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surfaceDark,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -282,7 +315,9 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                       : option == ChatType.broadcast
                       ? 'Broadcast List'
                       : 'Announcement Channel',
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: Theme.of(sheetContext).colorScheme.onSurface,
+                  ),
                 ),
                 subtitle: Text(
                   option == ChatType.group
@@ -290,7 +325,10 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                       : option == ChatType.broadcast
                       ? 'One-way messages to many recipients'
                       : 'An announcement feed only admins post to',
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
                 trailing: _type == option
                     ? const Icon(
@@ -317,7 +355,7 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
   void _pickPolicy() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surfaceDark,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -331,7 +369,9 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                   option == MessagePolicy.everyone
                       ? 'All Members'
                       : 'Admins Only',
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: Theme.of(sheetContext).colorScheme.onSurface,
+                  ),
                 ),
                 trailing: _policy == option
                     ? const Icon(
@@ -401,7 +441,8 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
     context.go('/messages/chat/$conversationId');
   }
 
-  Widget _buildInputField({
+  Widget _buildInputField(
+    BuildContext context, {
     required String label,
     required String hint,
     required TextEditingController controller,
@@ -413,7 +454,7 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
         Text(
           label,
           style: AppTypography.labelMedium.copyWith(
-            color: Colors.white70,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -421,22 +462,24 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
         TextField(
           controller: controller,
           maxLines: maxLines,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+            hintStyle: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             filled: true,
-            fillColor: AppColors.surfaceDark,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerLow,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.outlineVariant,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.outlineVariant,
               ),
             ),
             focusedBorder: OutlineInputBorder(
@@ -450,7 +493,17 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
     );
   }
 
+  Widget _buildSectionLabel(BuildContext context, String label) => Text(
+    label,
+    style: AppTypography.labelMedium.copyWith(
+      color: Theme.of(context).colorScheme.primary,
+      fontWeight: FontWeight.bold,
+      letterSpacing: 1.1,
+    ),
+  );
+
   Widget _buildSettingTile(
+    BuildContext context,
     IconData icon,
     String title,
     String value, {
@@ -459,24 +512,28 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: Theme.of(context).colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: Colors.white70, size: 20),
+          child: Icon(
+            icon,
+            color: Theme.of(context).colorScheme.primary,
+            size: 20,
+          ),
         ),
         title: Text(
           title,
           style: AppTypography.titleSmall.copyWith(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -491,7 +548,11 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right, size: 20, color: Colors.white24),
+            Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ],
         ),
         onTap: onTap,
