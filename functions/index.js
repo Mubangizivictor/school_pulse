@@ -111,11 +111,45 @@ const ROLE_TO_RESPONSIBILITY_TYPE = {
 // (lib/core/permissions/role_permission_defaults.dart) - only the subset
 // needed to stamp a sensible default permissionScope.permissions onto a
 // staff_role_assignments row at creation time. Not a full port: the Dart
-// map is the source of truth for the app's own permission evaluator: this
-// is intentionally narrow.
+// map is the source of truth for the app's own permission evaluator.
+//
+// classTeacher/subjectTeacher list every permission their own panel's
+// repositories actually check (see grep of `Permission: Permission.class*`/
+// `Permission.subject*` call sites under lib/features/teacher/) - every one
+// of these is scoped to the assignment's own classId/subjectId by
+// PermissionScope, never global, so granting the full ordinary-teacher set
+// by default is not a privilege escalation. Deliberately excluded:
+// class.report.approve.dean/headteacher (Dean/Headteacher-only per their
+// own doc comments in permission.dart) and class.teacher.multi_assign.
+// override (admin-only, reason-audited). A school can still narrow or
+// widen either role's grant via role_permission_overrides.
 const RESPONSIBILITY_DEFAULT_PERMISSIONS = {
-  classTeacher: ["class.attendance.take", "class.attendance.view"],
-  subjectTeacher: ["subject.marks.enter", "subject.attendance.take"],
+  classTeacher: [
+    "class.students.view", "class.student.profile.view",
+    "class.attendance.take", "class.attendance.edit", "class.attendance.view",
+    "class.homework.create", "class.homework.publish", "class.homework.edit",
+    "class.behaviour.record", "class.behaviour.view", "class.achievement.record",
+    "class.leave.view",
+    "class.parent.message", "class.announcement.create", "class.announcement.publish",
+    "class.performance.view",
+    "class.report.entry", "class.report.competency.entry", "class.report.conduct.entry",
+    "class.report.comment.write", "class.report.recommendation.write",
+    "class.report.submit", "class.report.generate", "class.report.share", "class.report.export",
+    "class.task.manage", "class.task.collaborate",
+    "class.resource.upload", "class.resource.share",
+    "class.timetable.view",
+  ],
+  subjectTeacher: [
+    "subject.students.view", "subject.student.enroll", "subject.student.remove",
+    "subject.lesson.view", "subject.lesson.start", "subject.lesson.complete",
+    "subject.attendance.take", "subject.attendance.edit",
+    "subject.resource.upload", "subject.resource.share",
+    "subject.assessment.create",
+    "subject.marks.view", "subject.marks.enter", "subject.marks.edit", "subject.marks.submit",
+    "subject.report.view", "subject.report.generate",
+    "subject.parent.message", "subject.student.message", "subject.announcement.send",
+    "subject.timetable.view",
+  ],
   nurse: ["health.student.verify", "health.student.basic.read"],
   bursar: ["finance.student.verify", "finance.student.balance.read"],
   librarian: ["library.member.verify", "library.borrow", "library.return"],
@@ -4942,6 +4976,7 @@ exports.__test__ = {
   generateClassReportCardsInternal: _generateClassReportCardsInternal,
   requireClassReportGenerationAccess,
   loadDefaultGradingSystem,
+  RESPONSIBILITY_DEFAULT_PERMISSIONS,
 };
 
 // Support and audit are isolated in their own module so source business
