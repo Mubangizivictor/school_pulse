@@ -74,7 +74,8 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Student Profile'),
-        actions: [
+        actions: const [],
+        /*
           FutureBuilder<Either<Failure, Student>>(
             future: _future,
             builder: (context, snapshot) {
@@ -175,6 +176,7 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
             },
           ),
         ],
+        */
       ),
       body: FutureBuilder<Either<Failure, Student>>(
         future: _future,
