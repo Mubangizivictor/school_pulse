@@ -131,6 +131,19 @@ class _WizardView extends StatelessWidget {
           builder: (context, state) {
             return Column(
               children: [
+                if (state.resumedFromDraft)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: AlertBanner(
+                      title: 'Enrollment Setup - Resumed',
+                      message:
+                          '${state.completedStepCount} of $kWizardStepCount '
+                          'steps completed. Continuing from where you left '
+                          'off.',
+                      color: AppColors.information(context),
+                      icon: Icons.history,
+                    ),
+                  ),
                 _StepIndicator(state: state, titles: _stepTitles),
                 const Divider(height: 1),
                 Expanded(
@@ -309,10 +322,7 @@ class _AdmissionStepState extends State<_AdmissionStep> {
         const SectionHeader(title: 'Student Type'),
         SegmentedButton<StudentBoardingType>(
           segments: const [
-            ButtonSegment(
-              value: StudentBoardingType.day,
-              label: Text('Day'),
-            ),
+            ButtonSegment(value: StudentBoardingType.day, label: Text('Day')),
             ButtonSegment(
               value: StudentBoardingType.boarding,
               label: Text('Boarding'),
@@ -347,7 +357,10 @@ class _AdmissionStepState extends State<_AdmissionStep> {
           child: Text(k, style: TextStyle(color: AppColors.textMuted(context))),
         ),
         Expanded(
-          child: Text(v, style: TextStyle(color: AppColors.textPrimary(context))),
+          child: Text(
+            v,
+            style: TextStyle(color: AppColors.textPrimary(context)),
+          ),
         ),
       ],
     ),
@@ -374,13 +387,19 @@ class _AcademicPlacementStep extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Class: ${state.classId}',
-                    style: TextStyle(color: AppColors.textPrimary(context))),
+                Text(
+                  'Class: ${state.classId}',
+                  style: TextStyle(color: AppColors.textPrimary(context)),
+                ),
                 if (state.streamId != null)
-                  Text('Stream: ${state.streamId}',
-                      style: TextStyle(color: AppColors.textPrimary(context))),
-                Text('Academic year: ${state.academicYearId}',
-                    style: TextStyle(color: AppColors.textPrimary(context))),
+                  Text(
+                    'Stream: ${state.streamId}',
+                    style: TextStyle(color: AppColors.textPrimary(context)),
+                  ),
+                Text(
+                  'Academic year: ${state.academicYearId}',
+                  style: TextStyle(color: AppColors.textPrimary(context)),
+                ),
               ],
             ),
           ),
@@ -486,14 +505,15 @@ class _FinanceStepState extends State<_FinanceStep> {
     return FutureBuilder(
       future: financeRepo.getFeeStructures(state.schoolId),
       builder: (context, snapshot) {
-        final structures = snapshot.data?.fold((_) => <dynamic>[], (v) => v) ?? [];
+        final structures =
+            snapshot.data?.fold((_) => <dynamic>[], (v) => v) ?? [];
         final filtered = structures.where((s) {
           final dyn = s as dynamic;
           final matchesYear = dyn.academicYear == state.academicYearId;
           final matchesType = state.boardingType == null
               ? true
               : dyn.studentCategory.toString().toLowerCase() ==
-                  state.boardingType!.name.toLowerCase();
+                    state.boardingType!.name.toLowerCase();
           return matchesYear && matchesType;
         }).toList();
 
@@ -744,12 +764,13 @@ class _BoardingHouseStepState extends State<_BoardingHouseStep> {
                                 ),
                               )
                               .toList(),
-                          onChanged: (v) =>
-                              setState(() {
-                                _hostelId = v;
-                                _roomId = null;
-                              }),
-                          decoration: const InputDecoration(labelText: 'Hostel'),
+                          onChanged: (v) => setState(() {
+                            _hostelId = v;
+                            _roomId = null;
+                          }),
+                          decoration: const InputDecoration(
+                            labelText: 'Hostel',
+                          ),
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
@@ -776,7 +797,8 @@ class _BoardingHouseStepState extends State<_BoardingHouseStep> {
                         const SizedBox(height: 12),
                         PrimaryButton(
                           label: 'Assign Bed',
-                          onPressed: _hostelId == null ||
+                          onPressed:
+                              _hostelId == null ||
                                   _roomId == null ||
                                   _bedController.text.trim().isEmpty
                               ? null
@@ -878,18 +900,18 @@ class _ClubsStep extends StatelessWidget {
           children: [
             SecondaryButton(
               label: 'Skip',
-              onPressed: () => context
-                  .read<EnrollmentSetupWizardBloc>()
-                  .add(const ClubMembershipsSaveRequested()),
+              onPressed: () => context.read<EnrollmentSetupWizardBloc>().add(
+                const ClubMembershipsSaveRequested(),
+              ),
             ),
             const SizedBox(width: 12),
             PrimaryButton(
               label: state.clubsSaved ? 'Saved' : 'Save Selections',
               onPressed: state.clubsSaved
                   ? null
-                  : () => context
-                      .read<EnrollmentSetupWizardBloc>()
-                      .add(const ClubMembershipsSaveRequested()),
+                  : () => context.read<EnrollmentSetupWizardBloc>().add(
+                      const ClubMembershipsSaveRequested(),
+                    ),
             ),
           ],
         ),
@@ -984,9 +1006,9 @@ class _ParentStepState extends State<_ParentStep> {
           children: [
             SecondaryButton(
               label: 'Skip',
-              onPressed: () => context
-                  .read<EnrollmentSetupWizardBloc>()
-                  .add(const ParentLinkSkipped()),
+              onPressed: () => context.read<EnrollmentSetupWizardBloc>().add(
+                const ParentLinkSkipped(),
+              ),
             ),
             const SizedBox(width: 12),
             PrimaryButton(
@@ -1053,10 +1075,14 @@ class _IdentityStepState extends State<_IdentityStep> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Student code: ${state.studentCode}',
-                    style: TextStyle(color: AppColors.textPrimary(context))),
-                Text('Admission number: ${state.admissionNumber}',
-                    style: TextStyle(color: AppColors.textPrimary(context))),
+                Text(
+                  'Student code: ${state.studentCode}',
+                  style: TextStyle(color: AppColors.textPrimary(context)),
+                ),
+                Text(
+                  'Admission number: ${state.admissionNumber}',
+                  style: TextStyle(color: AppColors.textPrimary(context)),
+                ),
                 const SizedBox(height: 8),
                 Text(
                   state.identityExists
@@ -1071,7 +1097,10 @@ class _IdentityStepState extends State<_IdentityStep> {
         const SizedBox(height: 20),
         const SectionHeader(title: 'NFC Card'),
         if (state.nfcRegistered)
-          Text('NFC registered.', style: TextStyle(color: AppColors.success(context)))
+          Text(
+            'NFC registered.',
+            style: TextStyle(color: AppColors.success(context)),
+          )
         else if (state.nfcSkipped)
           const Text('NFC registration skipped.')
         else ...[
@@ -1087,9 +1116,9 @@ class _IdentityStepState extends State<_IdentityStep> {
             children: [
               SecondaryButton(
                 label: 'Skip',
-                onPressed: () => context
-                    .read<EnrollmentSetupWizardBloc>()
-                    .add(const NfcRegistrationSkipped()),
+                onPressed: () => context.read<EnrollmentSetupWizardBloc>().add(
+                  const NfcRegistrationSkipped(),
+                ),
               ),
               const SizedBox(width: 12),
               PrimaryButton(
@@ -1130,9 +1159,17 @@ class _ReviewStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'Required'),
-        _checkItem(context, 'Academic year set', state.academicYearId.isNotEmpty),
+        _checkItem(
+          context,
+          'Academic year set',
+          state.academicYearId.isNotEmpty,
+        ),
         _checkItem(context, 'Class assigned', state.classId.isNotEmpty),
-        _checkItem(context, 'Student code issued', state.studentCode.isNotEmpty),
+        _checkItem(
+          context,
+          'Student code issued',
+          state.studentCode.isNotEmpty,
+        ),
         _checkItem(
           context,
           'Parent linked (or explicitly skipped)',

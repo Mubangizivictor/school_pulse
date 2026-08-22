@@ -85,6 +85,7 @@ import 'package:school_pulse/features/finance/domain/services/finance_service.da
 import 'package:school_pulse/features/student/domain/services/admission_service.dart';
 import 'package:school_pulse/features/student/domain/services/document_service.dart';
 import 'package:school_pulse/features/student/domain/enrollment_setup/repositories/enrollment_setup_repository.dart';
+import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft_local_data_source.dart';
 import 'package:school_pulse/features/student/data/enrollment_setup/repositories/enrollment_setup_repository_impl.dart';
 import 'package:school_pulse/features/student/presentation/enrollment_setup/bloc/enrollment_setup_wizard_bloc.dart';
 import 'package:school_pulse/features/student/domain/services/parent_linking_service.dart';
@@ -756,6 +757,13 @@ Future<void> init() async {
   sl.registerLazySingleton<EnrollmentSetupRepository>(
     () => EnrollmentSetupRepositoryImpl(firestore: sl()),
   );
+  // Local (Isar) resume-draft cache for the wizard - null on web, matching
+  // every other Isar-backed local cache's degradation pattern there.
+  sl.registerLazySingleton<EnrollmentSetupDraftLocalDataSource>(
+    () => EnrollmentSetupDraftLocalDataSourceImpl(
+      isar: kIsWeb ? null : sl<Isar>(),
+    ),
+  );
   sl.registerFactory(
     () => EnrollmentSetupWizardBloc(
       studentRepository: sl(),
@@ -766,6 +774,7 @@ Future<void> init() async {
       identityRepository: sl(),
       nfcCredentialRepository: sl(),
       permissionEvaluator: sl(),
+      draftLocalDataSource: sl(),
     ),
   );
 

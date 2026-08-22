@@ -55,6 +55,10 @@ class EnrollmentSetupWizardState extends Equatable {
   final bool nfcRegistered;
   final bool nfcSkipped;
 
+  // Draft resume (Isar-backed, local-only; see EnrollmentSetupDraftIsar).
+  final bool resumedFromDraft;
+  final int completedStepCount;
+
   const EnrollmentSetupWizardState({
     this.currentStep = 0,
     this.isLoading = false,
@@ -90,6 +94,8 @@ class EnrollmentSetupWizardState extends Equatable {
     this.identityExists = false,
     this.nfcRegistered = false,
     this.nfcSkipped = false,
+    this.resumedFromDraft = false,
+    this.completedStepCount = 0,
   });
 
   bool get isLastStep => currentStep == kWizardStepCount - 1;
@@ -140,6 +146,8 @@ class EnrollmentSetupWizardState extends Equatable {
     bool? identityExists,
     bool? nfcRegistered,
     bool? nfcSkipped,
+    bool? resumedFromDraft,
+    int? completedStepCount,
   }) {
     return EnrollmentSetupWizardState(
       currentStep: currentStep ?? this.currentStep,
@@ -177,6 +185,8 @@ class EnrollmentSetupWizardState extends Equatable {
       identityExists: identityExists ?? this.identityExists,
       nfcRegistered: nfcRegistered ?? this.nfcRegistered,
       nfcSkipped: nfcSkipped ?? this.nfcSkipped,
+      resumedFromDraft: resumedFromDraft ?? this.resumedFromDraft,
+      completedStepCount: completedStepCount ?? this.completedStepCount,
     );
   }
 
@@ -216,5 +226,7 @@ class EnrollmentSetupWizardState extends Equatable {
     identityExists,
     nfcRegistered,
     nfcSkipped,
+    resumedFromDraft,
+    completedStepCount,
   ];
 }
