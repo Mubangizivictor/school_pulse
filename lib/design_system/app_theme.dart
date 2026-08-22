@@ -279,20 +279,20 @@ class AppTheme {
 
   static ThemeData dark({Color? primary, Color? secondary}) {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: primary ?? const Color(0xFF1F3864),
-      primary: primary ?? const Color(0xFF8AB4F8),
+      seedColor: primary ?? const Color(0xFF176BFF),
+      primary: primary ?? const Color(0xFF5AA2FF),
       onPrimary: const Color(0xFF003063),
       secondary: secondary ?? const Color(0xFFD4AF52),
       onSecondary: const Color(0xFF382900),
-      surface: const Color(0xFF1C1F23),
+      surface: const Color(0xFF0A1E42),
       onSurface: const Color(0xFFF2F3F5),
-      surfaceContainerLow: const Color(0xFF131416),
-      surfaceContainer: const Color(0xFF23262B),
-      surfaceContainerHigh: const Color(0xFF2D3138),
+      surfaceContainerLow: const Color(0xFF071731),
+      surfaceContainer: const Color(0xFF102958),
+      surfaceContainerHigh: const Color(0xFF16366B),
       error: const Color(0xFFE5605A),
       onSurfaceVariant: const Color(0xFFC4C6CF),
-      outline: const Color(0xFF8E9199),
-      outlineVariant: const Color(0xFF44474E),
+      outline: const Color(0xFF8BA8D2),
+      outlineVariant: const Color(0xFF2B548D),
       brightness: Brightness.dark,
     );
 
@@ -304,10 +304,10 @@ class AppTheme {
       colorScheme: colorScheme,
       textTheme: textTheme,
       extensions: [SemanticColors.dark],
-      scaffoldBackgroundColor: const Color(0xFF0E1012),
+      scaffoldBackgroundColor: const Color(0xFF061630),
 
       appBarTheme: AppBarTheme(
-        backgroundColor: const Color(0xFF1C1F23),
+        backgroundColor: const Color(0xFF0A1E42),
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
         centerTitle: false,
@@ -327,7 +327,7 @@ class AppTheme {
 
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF1C1F23),
+        fillColor: const Color(0xFF0A1E42),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
