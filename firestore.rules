@@ -399,6 +399,24 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Admission-number sequence counter, incremented by
+    // StudentRemoteDataSourceImpl.getNextSequenceNumber inside the
+    // transaction AdmissionService.admitStudent runs before it ever calls
+    // the createStudentWithCapacityCheck callable. This collection had NO
+    // rule coverage at all (Firestore rules don't inherit from a parent
+    // path), so every admit attempt was silently permission-denied at this
+    // first step - the enrollment wizard's "Enroll Student" button never
+    // actually enrolled anyone, in any school, ever. Gated the same as the
+    // admission_applications status-transition edit above, since minting a
+    // sequence number is part of that same permissioned action.
+    match /schools/{schoolId}/counters/{counterId} {
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow write: if isSameSchool(schoolId) && (
+        hasEnrollmentPermission(schoolId, 'admission.enroll') ||
+        hasEnrollmentPermission(schoolId, 'admission.application.review')
+      );
+    }
+
     match /students/{studentId} {
       // Every read is tenant-scoped. A staff member from school A must not
       // be able to fetch a guessed student id from school B.
