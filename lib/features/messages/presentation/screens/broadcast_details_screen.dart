@@ -43,20 +43,21 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: colors.surface,
       appBar: AppBar(
         title: Text(
           'Broadcast Info',
           style: AppTypography.titleLarge.copyWith(
-            color: Colors.white,
+            color: colors.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: colors.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -74,7 +75,9 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
                       ? Text(
                           'Broadcast not found',
                           style: AppTypography.bodyMedium.copyWith(
-                            color: Colors.white60,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         )
                       : const SchoolPulseLoader(),

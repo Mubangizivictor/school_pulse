@@ -58,163 +58,159 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: colors.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
           'Messages',
           style: AppTypography.headlineMedium.copyWith(
-            color: Colors.white,
+            color: colors.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_square, color: Colors.white),
+            icon: Icon(Icons.edit_square, color: colors.onSurface),
             onPressed: () => context.push('/messages/new'),
           ),
         ],
       ),
       body: MessagingUserBuilder(
-        builder: (context, user) =>
-            BlocBuilder<MessagingBloc, MessagingState>(
-              bloc: context.messagingBloc,
-              builder: (context, state) {
-                final conversations = state.conversations;
-                return Column(
-                  children: [
-                    Padding(
+        builder: (context, user) => BlocBuilder<MessagingBloc, MessagingState>(
+          bloc: context.messagingBloc,
+          builder: (context, state) {
+            final conversations = state.conversations;
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: InkWell(
+                    onTap: () => context.push('/messages/search'),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 8,
+                        vertical: 14,
                       ),
-                      child: InkWell(
-                        onTap: () => context.push('/messages/search'),
+                      decoration: BoxDecoration(
+                        color: colors.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceDark,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.1),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.search,
-                                color: Colors.white54,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Search messages',
-                                style: AppTypography.bodyLarge.copyWith(
-                                  color: Colors.white54,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        border: Border.all(color: colors.outlineVariant),
                       ),
-                    ),
-                    SizedBox(
-                      height: 48,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
                         children: [
-                          _FilterChip(
-                            label: 'All',
-                            isSelected: _filter == _InboxFilter.all,
-                            onTap: () =>
-                                setState(() => _filter = _InboxFilter.all),
+                          Icon(
+                            Icons.search,
+                            color: colors.onSurfaceVariant,
+                            size: 22,
                           ),
-                          _FilterChip(
-                            label: 'Unread',
-                            isSelected: _filter == _InboxFilter.unread,
-                            onTap: () =>
-                                setState(() => _filter = _InboxFilter.unread),
-                          ),
-                          _FilterChip(
-                            label: 'Groups',
-                            isSelected: _filter == _InboxFilter.groups,
-                            onTap: () =>
-                                setState(() => _filter = _InboxFilter.groups),
-                          ),
-                          _FilterChip(
-                            label: 'Official',
-                            isSelected: _filter == _InboxFilter.official,
-                            onTap: () => setState(
-                              () => _filter = _InboxFilter.official,
+                          const SizedBox(width: 12),
+                          Text(
+                            'Search messages',
+                            style: AppTypography.bodyLarge.copyWith(
+                              color: colors.onSurfaceVariant,
                             ),
                           ),
-                          _FilterChip(
-                            label: 'Archived',
-                            isSelected: false,
-                            onTap: () => context.push('/messages/archived'),
-                          ),
-                          // Only appears when something is actually waiting,
-                          // so the chip row stays as short as it was for
-                          // most people.
-                          if (_pendingRequests(conversations) > 0)
-                            _FilterChip(
-                              label:
-                                  'Requests (${_pendingRequests(conversations)})',
-                              isSelected: false,
-                              onTap: () => context.push('/messages/requests'),
-                            ),
                         ],
                       ),
                     ),
-                    Expanded(
-                      child: Builder(
-                        builder: (context) {
-                          if (state.conversationsError != null) {
-                            return _buildError(state.conversationsError!);
-                          }
-                          if (conversations == null) {
-                            return const Center(child: SchoolPulseLoader());
-                          }
+                  ),
+                ),
+                SizedBox(
+                  height: 48,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: [
+                      _FilterChip(
+                        label: 'All',
+                        isSelected: _filter == _InboxFilter.all,
+                        onTap: () => setState(() => _filter = _InboxFilter.all),
+                      ),
+                      _FilterChip(
+                        label: 'Unread',
+                        isSelected: _filter == _InboxFilter.unread,
+                        onTap: () =>
+                            setState(() => _filter = _InboxFilter.unread),
+                      ),
+                      _FilterChip(
+                        label: 'Groups',
+                        isSelected: _filter == _InboxFilter.groups,
+                        onTap: () =>
+                            setState(() => _filter = _InboxFilter.groups),
+                      ),
+                      _FilterChip(
+                        label: 'Official',
+                        isSelected: _filter == _InboxFilter.official,
+                        onTap: () =>
+                            setState(() => _filter = _InboxFilter.official),
+                      ),
+                      _FilterChip(
+                        label: 'Archived',
+                        isSelected: false,
+                        onTap: () => context.push('/messages/archived'),
+                      ),
+                      // Only appears when something is actually waiting,
+                      // so the chip row stays as short as it was for
+                      // most people.
+                      if (_pendingRequests(conversations) > 0)
+                        _FilterChip(
+                          label:
+                              'Requests (${_pendingRequests(conversations)})',
+                          isSelected: false,
+                          onTap: () => context.push('/messages/requests'),
+                        ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Builder(
+                    builder: (context) {
+                      if (state.conversationsError != null) {
+                        return _buildError(state.conversationsError!);
+                      }
+                      if (conversations == null) {
+                        return const Center(child: SchoolPulseLoader());
+                      }
 
-                          _reconcileArchived(conversations);
-                          final visible = _applyFilter(conversations);
-                          if (visible.isEmpty) {
-                            return _buildEmptyState();
-                          }
-                          return ListView.builder(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
+                      _reconcileArchived(conversations);
+                      final visible = _applyFilter(conversations);
+                      if (visible.isEmpty) {
+                        return _buildEmptyState();
+                      }
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        itemCount: visible.length,
+                        itemBuilder: (context, index) {
+                          final chat = visible[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: ChatListTile(
+                              chat: chat,
+                              onTap: () =>
+                                  context.push('/messages/chat/${chat.id}'),
+                              onLongPress: () =>
+                                  _showChatActions(context, user, chat),
                             ),
-                            itemCount: visible.length,
-                            itemBuilder: (context, index) {
-                              final chat = visible[index];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: ChatListTile(
-                                  chat: chat,
-                                  onTap: () =>
-                                      context.push('/messages/chat/${chat.id}'),
-                                  onLongPress: () =>
-                                      _showChatActions(context, user, chat),
-                                ),
-                              );
-                            },
                           );
                         },
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -257,7 +253,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surfaceDark,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -270,7 +266,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               child: Text(
                 chat.title,
                 style: AppTypography.titleMedium.copyWith(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -278,11 +274,13 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             ListTile(
               leading: Icon(
                 chat.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                color: Colors.white70,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               title: Text(
                 chat.isPinned ? 'Unpin' : 'Pin to top',
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -296,11 +294,13 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                 chat.isMuted
                     ? Icons.notifications_off
                     : Icons.notifications_none,
-                color: Colors.white70,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               title: Text(
                 chat.isMuted ? 'Unmute' : 'Mute',
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -310,13 +310,15 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 Icons.archive_outlined,
-                color: Colors.white70,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              title: const Text(
+              title: Text(
                 'Archive',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -356,18 +358,22 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             Icon(
               Icons.cloud_off,
               size: 56,
-              color: Colors.white.withValues(alpha: 0.3),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: AppSpacing.m),
             Text(
               'Could not load your messages',
-              style: AppTypography.titleMedium.copyWith(color: Colors.white),
+              style: AppTypography.titleMedium.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: AppSpacing.s),
             Text(
               '$error',
               textAlign: TextAlign.center,
-              style: AppTypography.bodySmall.copyWith(color: Colors.white54),
+              style: AppTypography.bodySmall.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -385,9 +391,11 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             Container(
               padding: const EdgeInsets.all(40),
               decoration: BoxDecoration(
-                color: AppColors.surfaceDark,
+                color: Theme.of(context).colorScheme.surfaceContainerHigh,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
               ),
               child: Icon(
                 Icons.chat_bubble_outline_rounded,
@@ -399,7 +407,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             Text(
               'No Conversations Yet',
               style: AppTypography.headlineSmall.copyWith(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -408,7 +416,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               'Stay connected with teachers, parents, and school staff. Start a new conversation below.',
               textAlign: TextAlign.center,
               style: AppTypography.bodyMedium.copyWith(
-                color: Colors.white60,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 height: 1.5,
               ),
             ),
@@ -458,18 +466,20 @@ class _FilterChip extends StatelessWidget {
         label: Text(label),
         selected: isSelected,
         onSelected: (_) => onTap?.call(),
-        selectedColor: AppColors.electricBlue,
-        backgroundColor: AppColors.surfaceDark,
+        selectedColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
         labelStyle: TextStyle(
-          color: isSelected ? Colors.white : Colors.white60,
+          color: isSelected
+              ? Theme.of(context).colorScheme.onPrimary
+              : Theme.of(context).colorScheme.onSurfaceVariant,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
             color: isSelected
-                ? AppColors.electricBlue
-                : Colors.white.withValues(alpha: 0.05),
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.outlineVariant,
           ),
         ),
         showCheckmark: false,
