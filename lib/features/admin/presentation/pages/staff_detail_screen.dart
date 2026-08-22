@@ -12,6 +12,8 @@ import 'package:school_pulse/features/admin/presentation/pages/staff_id_card_scr
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/assignable_staff_roles.dart';
 import 'package:school_pulse/features/auth/data/models/user_model.dart';
+import 'package:school_pulse/features/auth/domain/usecases/admin_reset_staff_password.dart';
+import 'package:school_pulse/features/auth/domain/usecases/toggle_staff_status.dart';
 import 'package:school_pulse/features/auth/domain/usecases/update_staff_member.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -52,8 +54,10 @@ class _StaffDetailScreenState extends State<StaffDetailScreen>
   }
 
   void _loadUser() {
-    _userFuture =
-        FirebaseFirestore.instance.collection('users').doc(widget.uid).get();
+    _userFuture = FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.uid)
+        .get();
   }
 
   @override
@@ -126,7 +130,10 @@ class _StaffDetailScreenState extends State<StaffDetailScreen>
                 return TabBarView(
                   controller: _tabController,
                   children: [
-                    _ProfileTab(user: user),
+                    _ProfileTab(
+                      user: user,
+                      onChanged: () => setState(_loadUser),
+                    ),
                     _RolesTab(
                       staff: user,
                       onStaffChanged: (_) => setState(_loadUser),
@@ -170,8 +177,9 @@ class _EditStaffAction extends StatelessWidget {
 }
 
 class _ProfileTab extends StatelessWidget {
-  const _ProfileTab({required this.user});
+  const _ProfileTab({required this.user, required this.onChanged});
   final UserModel user;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -271,6 +279,177 @@ class _ProfileTab extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 12),
+          _AccountOnboardingCard(user: user, onChanged: onChanged),
+        ],
+      ),
+    );
+  }
+}
+
+/// Onboarding/account-lifecycle state plus the two admin actions that only
+/// make sense from here: force a password reset (the staff member forgot
+/// their temporary password, or it should be rotated) and
+/// deactivate/reactivate the account. Deliberately excludes "last login" -
+/// nothing in the login path writes that field today, and displaying a
+/// fabricated or perpetually-null value would be worse than omitting it.
+class _AccountOnboardingCard extends StatefulWidget {
+  const _AccountOnboardingCard({required this.user, required this.onChanged});
+  final UserModel user;
+  final VoidCallback onChanged;
+
+  @override
+  State<_AccountOnboardingCard> createState() => _AccountOnboardingCardState();
+}
+
+class _AccountOnboardingCardState extends State<_AccountOnboardingCard> {
+  bool _working = false;
+
+  bool _canManage(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    return authState is AuthAuthenticated &&
+        authState.user.id != widget.user.id &&
+        AddStaffWizardController.canSubmit(authState.user.roles);
+  }
+
+  Future<void> _resetPassword() async {
+    setState(() => _working = true);
+    final result = await di.sl<AdminResetStaffPassword>()(widget.user.id);
+    if (!mounted) return;
+    setState(() => _working = false);
+    result.fold(
+      (failure) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failure.message))),
+      (tempPassword) => showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Password reset'),
+          content: SelectableText(
+            'New temporary password:\n$tempPassword\n\n'
+            'Share this with ${widget.user.name} through a secure channel. '
+            "They'll be asked to set their own password on next login.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _toggleActive() async {
+    final activating = !widget.user.isActive;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(activating ? 'Reactivate staff?' : 'Deactivate staff?'),
+        content: Text(
+          activating
+              ? '${widget.user.name} will regain access to their account.'
+              : '${widget.user.name} will immediately lose access to their '
+                    'account. This can be reversed later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(activating ? 'Reactivate' : 'Deactivate'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _working = true);
+    final result = await di.sl<ToggleStaffStatus>()(widget.user.id, activating);
+    if (!mounted) return;
+    setState(() => _working = false);
+    result.fold(
+      (failure) => ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failure.message))),
+      (_) {
+        widget.onChanged();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              activating
+                  ? 'Staff account reactivated.'
+                  : 'Staff account deactivated.',
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canManage = _canManage(context);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Account & Onboarding',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _InfoRow(
+            icon: Icons.verified_user_outlined,
+            label: 'Onboarding',
+            value: widget.user.mustChangePassword
+                ? 'Pending first login (temporary password not yet changed)'
+                : 'Complete',
+          ),
+          _InfoRow(
+            icon: Icons.lock_reset_outlined,
+            label: 'Password',
+            value: widget.user.mustChangePassword
+                ? 'Temporary - must be changed at next login'
+                : 'Set by staff member',
+          ),
+          if (canManage) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: _working ? null : _resetPassword,
+                  icon: const Icon(Icons.lock_reset_outlined, size: 18),
+                  label: const Text('Reset Password'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _working ? null : _toggleActive,
+                  icon: Icon(
+                    widget.user.isActive
+                        ? Icons.block_outlined
+                        : Icons.check_circle_outline,
+                    size: 18,
+                  ),
+                  label: Text(
+                    widget.user.isActive ? 'Deactivate' : 'Reactivate',
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: widget.user.isActive
+                        ? AppColors.danger(context)
+                        : AppColors.success(context),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -371,9 +550,37 @@ class _RolesTabState extends State<_RolesTab> {
 
           final primary = assignments.where((a) => a.isPrimary).firstOrNull;
 
+          final missingClassTeacher =
+              widget.staff.roles.contains(UserRole.classTeacher) &&
+              !assignments.any(
+                (a) =>
+                    a.roleType == StaffResponsibilityType.classTeacher &&
+                    a.classId != null,
+              );
+          final missingSubjectTeacher =
+              widget.staff.roles.contains(UserRole.subjectTeacher) &&
+              !assignments.any(
+                (a) =>
+                    a.roleType == StaffResponsibilityType.subjectTeacher &&
+                    a.classId != null,
+              );
+
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             children: [
+              if (missingClassTeacher || missingSubjectTeacher) ...[
+                AlertBanner(
+                  title: 'Incomplete role assignment',
+                  message: [
+                    if (missingClassTeacher)
+                      'Class Teacher role has no class assigned.',
+                    if (missingSubjectTeacher)
+                      'Subject Teacher role has no subject/class assigned.',
+                  ].join(' '),
+                  color: AppColors.warning(context),
+                ),
+                const SizedBox(height: 16),
+              ],
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -598,7 +805,10 @@ class _AccountRolesEditorSheetState extends State<_AccountRolesEditorSheet> {
             const SizedBox(height: 4),
             Text(
               'One login can hold several roles - e.g. Deputy Head + Dean of Studies.',
-              style: TextStyle(color: AppColors.textMuted(context), fontSize: 12),
+              style: TextStyle(
+                color: AppColors.textMuted(context),
+                fontSize: 12,
+              ),
             ),
             const SizedBox(height: 16),
             ConstrainedBox(
@@ -651,7 +861,10 @@ class _AccountRolesEditorSheetState extends State<_AccountRolesEditorSheet> {
               const SizedBox(height: 8),
               Text(
                 _error!,
-                style: TextStyle(color: AppColors.danger(context), fontSize: 12),
+                style: TextStyle(
+                  color: AppColors.danger(context),
+                  fontSize: 12,
+                ),
               ),
             ],
             const SizedBox(height: 16),

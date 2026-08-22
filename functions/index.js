@@ -421,9 +421,117 @@ exports.createStaffAccount = onCall(async (request) => {
     );
   }
 
+  // A Class Teacher role is meaningless without exactly one class, and a
+  // Subject Teacher role is meaningless without at least one subject+class
+  // pair - enforce both before touching Auth so a malformed request never
+  // creates a half-usable account.
+  if (roles.includes("classTeacher") && !assignedClass) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Select a class for the Class Teacher role."
+    );
+  }
+  if (
+    roles.includes("subjectTeacher") &&
+    (!Array.isArray(subjects) || subjects.length === 0)
+  ) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Add at least one subject and class for the Subject Teacher role."
+    );
+  }
+
+  const db = admin.firestore();
+
+  // Duplicate-email guard ahead of Auth user creation: auth/email-already-
+  // exists is still handled below as a fallback (e.g. a race, or an Auth
+  // user with no Firestore profile from a prior partial failure), but
+  // checking first gives a clean error for the common case without
+  // spending an Auth write.
+  const existingByEmail = await db
+    .collection("users")
+    .where("schoolId", "==", schoolId)
+    .where("email", "==", email.trim())
+    .limit(1)
+    .get();
+  if (!existingByEmail.empty) {
+    throw new HttpsError("already-exists", "An account with this email already exists.");
+  }
+
+  // The canonical staff_role_assignments row is the only thing the teacher
+  // panel and firestore.rules trust for "what can this account see" - it
+  // must always be written for classTeacher/subjectTeacher, so resolve the
+  // current academic year server-side rather than depending on a client
+  // that may submit before its own async lookup finishes (or omits the
+  // field entirely). A client-supplied academicYearId, if present, is
+  // still honored so admin-selected historical/future years keep working.
+  let resolvedAcademicYearId = academicYearId || null;
+  if (!resolvedAcademicYearId && roles.some((r) => r === "classTeacher" || r === "subjectTeacher")) {
+    const currentYear = await db
+      .collection("academic_years")
+      .where("schoolId", "==", schoolId)
+      .where("isCurrent", "==", true)
+      .limit(1)
+      .get();
+    if (currentYear.empty) {
+      throw new HttpsError(
+        "failed-precondition",
+        "No current academic year is set up for this school. Set one before assigning teaching roles."
+      );
+    }
+    resolvedAcademicYearId = currentYear.docs[0].id;
+  }
+
+  // Class/subject assignments arrive from the wizard as names (the UI only
+  // has names today) - resolve them to the real ids the roster queries and
+  // firestore.rules filter on, rather than perpetuating a name-keyed
+  // shadow model. An unresolvable name fails the whole request: a
+  // dangling className with no matching class would silently produce an
+  // assignment nothing can ever query correctly.
+  let classId = null;
+  if (assignedClass) {
+    const classQuery = await db
+      .collection("classes")
+      .where("schoolId", "==", schoolId)
+      .where("name", "==", assignedClass)
+      .limit(1)
+      .get();
+    if (classQuery.empty) {
+      throw new HttpsError(
+        "invalid-argument",
+        `No class named "${assignedClass}" exists for this school.`
+      );
+    }
+    classId = classQuery.docs[0].id;
+  }
+
+  const teachingSubjects = Array.isArray(subjects) ? subjects : [];
+  const resolvedSubjectAssignments = [];
+  for (const s of teachingSubjects) {
+    const subjName = s && s.subjectName;
+    const clsName = s && s.className;
+    if (!subjName || !clsName) continue;
+    const [subjectQuery, subjectClassQuery] = await Promise.all([
+      db.collection("subjects").where("schoolId", "==", schoolId).where("name", "==", subjName).limit(1).get(),
+      db.collection("classes").where("schoolId", "==", schoolId).where("name", "==", clsName).limit(1).get(),
+    ]);
+    if (subjectQuery.empty) {
+      throw new HttpsError("invalid-argument", `No subject named "${subjName}" exists for this school.`);
+    }
+    if (subjectClassQuery.empty) {
+      throw new HttpsError("invalid-argument", `No class named "${clsName}" exists for this school.`);
+    }
+    resolvedSubjectAssignments.push({
+      subjectId: subjectQuery.docs[0].id,
+      subjectName: subjName,
+      classId: subjectClassQuery.docs[0].id,
+      className: clsName,
+    });
+  }
+
   const temporaryPassword = generateTemporaryPassword();
 
-  const schoolDoc = await admin.firestore().collection("schools").doc(schoolId).get();
+  const schoolDoc = await db.collection("schools").doc(schoolId).get();
   const schoolPrefix = schoolPrefixFrom(schoolDoc.exists ? schoolDoc.data().name : null);
   const staffCode = await generateStaffCode(schoolId, schoolPrefix);
 
@@ -442,7 +550,6 @@ exports.createStaffAccount = onCall(async (request) => {
   }
 
   try {
-    const db = admin.firestore();
     const userData = {
       name: name.trim(),
       email: email.trim(),
@@ -473,83 +580,83 @@ exports.createStaffAccount = onCall(async (request) => {
       isActive: true,
     });
 
-    // Additive: alongside the flat assignedClass/subjects fields above
-    // (kept for backward compatibility - other code may already read
-    // them), write one staff_role_assignments row per responsibility so
-    // the real effective-access resolver (used by the teacher panel and
-    // enforced in firestore.rules) becomes authoritative for NEW hires
-    // going forward. Only written when the caller supplies an
-    // academicYearId - every other assignment-writing path in this file
-    // requires one, and there is no server-side "current year" lookup to
-    // fall back to.
-    if (academicYearId) {
-      const assignmentsRef = db.collection("schools").doc(schoolId).collection("staff_role_assignments");
-      const now = admin.firestore.FieldValue.serverTimestamp();
+    // The canonical staff_role_assignments row is what the teacher panel
+    // and firestore.rules actually trust - always written (never gated on
+    // an optional field) whenever the role requires it, with real
+    // classId/subjectId so downstream roster/rules queries resolve.
+    const assignmentsRef = db.collection("schools").doc(schoolId).collection("staff_role_assignments");
+    const now = admin.firestore.FieldValue.serverTimestamp();
 
-      const teachingSubjects = Array.isArray(subjects) ? subjects : [];
-      if (roles.includes("subjectTeacher") && teachingSubjects.length > 0) {
-        for (const s of teachingSubjects) {
-          batch.set(assignmentsRef.doc(), {
-            schoolId,
-            staffId: userRecord.uid,
-            userId: userRecord.uid,
-            roleType: "subjectTeacher",
-            academicYearId,
-            subjectName: s.subjectName || null,
-            className: s.className || null,
-            startDate: now,
-            status: "active",
-            permissionScope: {
-              permissions: RESPONSIBILITY_DEFAULT_PERMISSIONS.subjectTeacher,
-              termIds: [],
-            },
-            assignedBy: auth.uid,
-            assignedAt: now,
-          });
-        }
-      }
-      if (roles.includes("classTeacher") && assignedClass) {
+    if (roles.includes("subjectTeacher")) {
+      for (const s of resolvedSubjectAssignments) {
         batch.set(assignmentsRef.doc(), {
           schoolId,
           staffId: userRecord.uid,
           userId: userRecord.uid,
-          roleType: "classTeacher",
-          academicYearId,
-          className: assignedClass,
+          roleType: "subjectTeacher",
+          academicYearId: resolvedAcademicYearId,
+          subjectId: s.subjectId,
+          subjectName: s.subjectName,
+          classId: s.classId,
+          className: s.className,
           startDate: now,
           status: "active",
           permissionScope: {
-            permissions: RESPONSIBILITY_DEFAULT_PERMISSIONS.classTeacher,
+            permissions: RESPONSIBILITY_DEFAULT_PERMISSIONS.subjectTeacher,
+            subjectId: s.subjectId,
+            classId: s.classId,
+            academicYearId: resolvedAcademicYearId,
             termIds: [],
           },
           assignedBy: auth.uid,
           assignedAt: now,
         });
       }
-      // Non-teaching responsibilities: one row per role that maps to a
-      // responsibility type, unconstrained by subject/class (nulls in
-      // PermissionScope mean "unconstrained" per its own doc comment).
-      for (const role of roles) {
-        const responsibilityType = ROLE_TO_RESPONSIBILITY_TYPE[role];
-        if (!responsibilityType || responsibilityType === "classTeacher" || responsibilityType === "subjectTeacher") {
-          continue;
-        }
-        batch.set(assignmentsRef.doc(), {
-          schoolId,
-          staffId: userRecord.uid,
-          userId: userRecord.uid,
-          roleType: responsibilityType,
-          academicYearId,
-          startDate: now,
-          status: "active",
-          permissionScope: {
-            permissions: RESPONSIBILITY_DEFAULT_PERMISSIONS[responsibilityType] || [],
-            termIds: [],
-          },
-          assignedBy: auth.uid,
-          assignedAt: now,
-        });
+    }
+    if (roles.includes("classTeacher")) {
+      batch.set(assignmentsRef.doc(), {
+        schoolId,
+        staffId: userRecord.uid,
+        userId: userRecord.uid,
+        roleType: "classTeacher",
+        academicYearId: resolvedAcademicYearId,
+        classId,
+        className: assignedClass,
+        startDate: now,
+        status: "active",
+        permissionScope: {
+          permissions: RESPONSIBILITY_DEFAULT_PERMISSIONS.classTeacher,
+          classId,
+          academicYearId: resolvedAcademicYearId,
+          termIds: [],
+        },
+        assignedBy: auth.uid,
+        assignedAt: now,
+      });
+    }
+    // Non-teaching responsibilities: one row per role that maps to a
+    // responsibility type, unconstrained by subject/class (nulls in
+    // PermissionScope mean "unconstrained" per its own doc comment).
+    for (const role of roles) {
+      const responsibilityType = ROLE_TO_RESPONSIBILITY_TYPE[role];
+      if (!responsibilityType || responsibilityType === "classTeacher" || responsibilityType === "subjectTeacher") {
+        continue;
       }
+      batch.set(assignmentsRef.doc(), {
+        schoolId,
+        staffId: userRecord.uid,
+        userId: userRecord.uid,
+        roleType: responsibilityType,
+        academicYearId: resolvedAcademicYearId,
+        startDate: now,
+        status: "active",
+        permissionScope: {
+          permissions: RESPONSIBILITY_DEFAULT_PERMISSIONS[responsibilityType] || [],
+          termIds: [],
+        },
+        assignedBy: auth.uid,
+        assignedAt: now,
+      });
     }
 
     await batch.commit();
