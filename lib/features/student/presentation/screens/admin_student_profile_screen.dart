@@ -19,6 +19,8 @@ import 'package:school_pulse/injection_container.dart' as di;
 import 'admin_student_documents_screen.dart';
 import 'student_portal_codes_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/identity_and_cards_screen.dart';
+import 'package:school_pulse/features/student_identity/presentation/bloc/student_identity_bloc.dart';
+import 'package:school_pulse/features/student_identity/presentation/screens/student_id_card_screen.dart';
 
 /// Admin-facing student profile screen.
 ///
@@ -74,7 +76,31 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Student Profile'),
-        actions: const [],
+        actions: [
+          FutureBuilder<Either<Failure, Student>>(
+            future: _future,
+            builder: (context, snapshot) {
+              final student = snapshot.data?.fold(
+                (_) => null,
+                (value) => value,
+              );
+              return IconButton(
+                tooltip: 'View student ID card',
+                icon: const Icon(Icons.badge_outlined),
+                onPressed: student == null
+                    ? null
+                    : () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => BlocProvider(
+                            create: (_) => di.sl<StudentIdentityBloc>(),
+                            child: StudentIdCardScreen(student: student),
+                          ),
+                        ),
+                      ),
+              );
+            },
+          ),
+        ],
         /*
           FutureBuilder<Either<Failure, Student>>(
             future: _future,
@@ -250,10 +276,7 @@ class _ProfileBodyState extends State<_ProfileBody>
         if (!isDesktop) {
           return Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: header,
-              ),
+              Padding(padding: const EdgeInsets.all(16), child: header),
               TabBar(
                 controller: _tabController,
                 isScrollable: true,
@@ -285,10 +308,7 @@ class _ProfileBodyState extends State<_ProfileBody>
           children: [
             SizedBox(
               width: 340,
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: header,
-              ),
+              child: Padding(padding: const EdgeInsets.all(24), child: header),
             ),
             Expanded(
               child: Padding(
@@ -428,7 +448,8 @@ class _ProfileHeader extends StatelessWidget {
           CircleAvatar(
             radius: 32,
             backgroundColor: theme.colorScheme.primaryContainer,
-            backgroundImage: (student.photoUrl != null && student.photoUrl!.isNotEmpty)
+            backgroundImage:
+                (student.photoUrl != null && student.photoUrl!.isNotEmpty)
                 ? NetworkImage(student.photoUrl!)
                 : null,
             child: (student.photoUrl == null || student.photoUrl!.isEmpty)
@@ -481,10 +502,7 @@ class _ProfileHeader extends StatelessWidget {
                         .where((s) => s.id == student.streamId)
                         .firstOrNull
                         ?.name;
-                    final label = [
-                      ?className,
-                      ?streamName,
-                    ].join(' • ');
+                    final label = [?className, ?streamName].join(' • ');
                     if (label.isEmpty) return const SizedBox.shrink();
                     return Text(
                       label,
@@ -503,10 +521,15 @@ class _ProfileHeader extends StatelessWidget {
   }
 
   String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
   }
 }
 
@@ -536,7 +559,9 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -569,9 +594,7 @@ class _OverviewTab extends StatelessWidget {
 
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: [
-        AppCard(child: Column(children: rows)),
-      ],
+      children: [AppCard(child: Column(children: rows))],
     );
   }
 
@@ -631,12 +654,15 @@ class _GuardianTab extends StatelessWidget {
             children: [
               Text(
                 contact.name,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
-              Text(contact.relationship, style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                contact.relationship,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -672,19 +698,21 @@ class _AcademicTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<StructureBloc, StructureState>(
       builder: (context, structure) {
-        final className = structure.classes
-            .where((c) => c.id == student.classId)
-            .firstOrNull
-            ?.name ??
+        final className =
+            structure.classes
+                .where((c) => c.id == student.classId)
+                .firstOrNull
+                ?.name ??
             'Unknown class';
         final streamName = structure.streams
             .where((s) => s.id == student.streamId)
             .firstOrNull
             ?.name;
-        final year = structure.academicYears
-            .where((y) => y.id == student.academicYearId)
-            .firstOrNull
-            ?.name ??
+        final year =
+            structure.academicYears
+                .where((y) => y.id == student.academicYearId)
+                .firstOrNull
+                ?.name ??
             'Unknown year';
 
         return ListView(
@@ -694,7 +722,8 @@ class _AcademicTab extends StatelessWidget {
               child: Column(
                 children: [
                   _InfoRow(label: 'Class', value: className),
-                  if (streamName != null) _InfoRow(label: 'Stream', value: streamName),
+                  if (streamName != null)
+                    _InfoRow(label: 'Stream', value: streamName),
                   _InfoRow(label: 'Academic Year', value: year),
                 ],
               ),
