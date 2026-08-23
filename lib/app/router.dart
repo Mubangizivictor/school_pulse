@@ -1884,8 +1884,16 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'academics',
+                  // Only redirects the bare `academics` path itself - a
+                  // redirect on a parent GoRoute in go_router fires for every
+                  // matched location under it, so returning unconditionally
+                  // here was also hijacking every child route below (fee-
+                  // structures, subjects, levels, etc.), bouncing them all
+                  // back to the wizard gate before their own builder ran.
                   redirect: (context, state) =>
-                      '/staff/admin/structure?section=academics',
+                      state.matchedLocation == '/staff/admin/structure/academics'
+                      ? '/staff/admin/structure?section=academics'
+                      : null,
                   routes: [
                     GoRoute(
                       path: 'levels',
