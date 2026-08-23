@@ -356,54 +356,69 @@ class _BasicInfoStepState extends State<_BasicInfoStep> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'Basic Information'),
-        TextField(
-          controller: _nameController,
-          onChanged: (_) => _emit(),
-          decoration: const InputDecoration(
-            labelText: 'Student full name',
-            border: OutlineInputBorder(),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _nameController,
+                onChanged: (_) => _emit(),
+                decoration: const InputDecoration(
+                  labelText: 'Student full name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  _dateOfBirth == null
+                      ? 'Select date of birth'
+                      : 'Date of birth: ${DateFormat('dd MMM yyyy').format(_dateOfBirth!)}'
+                            '${age != null ? ' (age $age)' : ''}',
+                ),
+                trailing: const Icon(Icons.calendar_today_outlined),
+                onTap: _pickDateOfBirth,
+              ),
+              const SizedBox(height: 4),
+              DropdownButtonFormField<Gender>(
+                initialValue: _gender,
+                items: Gender.values
+                    .map((g) => DropdownMenuItem(value: g, child: Text(g.name)))
+                    .toList(),
+                onChanged: (v) {
+                  setState(() => _gender = v ?? _gender);
+                  _emit();
+                },
+                decoration: const InputDecoration(labelText: 'Gender'),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 12),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(
-            _dateOfBirth == null
-                ? 'Select date of birth'
-                : 'Date of birth: ${DateFormat('dd MMM yyyy').format(_dateOfBirth!)}'
-                      '${age != null ? ' (age $age)' : ''}',
-          ),
-          trailing: const Icon(Icons.calendar_today_outlined),
-          onTap: _pickDateOfBirth,
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<Gender>(
-          initialValue: _gender,
-          items: Gender.values
-              .map((g) => DropdownMenuItem(value: g, child: Text(g.name)))
-              .toList(),
-          onChanged: (v) {
-            setState(() => _gender = v ?? _gender);
-            _emit();
-          },
-          decoration: const InputDecoration(labelText: 'Gender'),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _religionController,
-          onChanged: (_) => _emit(),
-          decoration: const InputDecoration(
-            labelText: 'Religion (optional)',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _nationalityController,
-          onChanged: (_) => _emit(),
-          decoration: const InputDecoration(
-            labelText: 'Nationality (optional)',
-            border: OutlineInputBorder(),
+        const SizedBox(height: 16),
+        const SectionHeader(title: 'Background (optional)'),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _religionController,
+                onChanged: (_) => _emit(),
+                decoration: const InputDecoration(
+                  labelText: 'Religion (optional)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _nationalityController,
+                onChanged: (_) => _emit(),
+                decoration: const InputDecoration(
+                  labelText: 'Nationality (optional)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -452,56 +467,70 @@ class _ClassStreamStepState extends State<_ClassStreamStep> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'Class & Stream'),
-        StreamBuilder<List<SchoolClass>>(
-          stream: structureRepo.watchClasses(state.schoolId),
-          builder: (context, classSnap) {
-            final classes = classSnap.data ?? [];
-            return DropdownButtonFormField<String>(
-              initialValue: _classId,
-              items: classes
-                  .map(
-                    (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
-                  )
-                  .toList(),
-              onChanged: (v) {
-                setState(() {
-                  _classId = v;
-                  _streamId = null;
-                });
-                _emit();
-              },
-              decoration: const InputDecoration(labelText: 'Class'),
-              hint: Text(classes.isEmpty ? 'Loading classes…' : 'Select class'),
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-        if (_classId != null)
-          StreamBuilder<List<ClassStream>>(
-            stream: structureRepo.watchStreams(state.schoolId),
-            builder: (context, streamSnap) {
-              final streams = (streamSnap.data ?? [])
-                  .where((s) => s.classId == _classId)
-                  .toList();
-              if (streams.isEmpty) return const SizedBox.shrink();
-              return DropdownButtonFormField<String>(
-                initialValue: _streamId,
-                items: streams
-                    .map(
-                      (s) =>
-                          DropdownMenuItem(value: s.id, child: Text(s.name)),
-                    )
-                    .toList(),
-                onChanged: (v) {
-                  setState(() => _streamId = v);
-                  _emit();
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              StreamBuilder<List<SchoolClass>>(
+                stream: structureRepo.watchClasses(state.schoolId),
+                builder: (context, classSnap) {
+                  final classes = classSnap.data ?? [];
+                  return DropdownButtonFormField<String>(
+                    initialValue: _classId,
+                    items: classes
+                        .map(
+                          (c) =>
+                              DropdownMenuItem(value: c.id, child: Text(c.name)),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      setState(() {
+                        _classId = v;
+                        _streamId = null;
+                      });
+                      _emit();
+                    },
+                    decoration: const InputDecoration(labelText: 'Class'),
+                    hint: Text(
+                      classes.isEmpty ? 'Loading classes…' : 'Select class',
+                    ),
+                  );
                 },
-                decoration: const InputDecoration(
-                  labelText: 'Stream (optional)',
+              ),
+              if (_classId != null)
+                StreamBuilder<List<ClassStream>>(
+                  stream: structureRepo.watchStreams(state.schoolId),
+                  builder: (context, streamSnap) {
+                    final streams = (streamSnap.data ?? [])
+                        .where((s) => s.classId == _classId)
+                        .toList();
+                    if (streams.isEmpty) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _streamId,
+                        items: streams
+                            .map(
+                              (s) => DropdownMenuItem(
+                                value: s.id,
+                                child: Text(s.name),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) {
+                          setState(() => _streamId = v);
+                          _emit();
+                        },
+                        decoration: const InputDecoration(
+                          labelText: 'Stream (optional)',
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+            ],
           ),
+        ),
       ],
     );
   }
@@ -565,10 +594,28 @@ class _GuardiansStepState extends State<_GuardiansStep> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionHeader(title: 'Guardians'),
-          Text(
-            'Linked ${state.parentAccessCodes.length} guardian(s). '
-            'Access codes: ${state.parentAccessCodes.join(', ')}',
-            style: TextStyle(color: AppColors.success(context)),
+          AppCard(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  color: AppColors.success(context),
+                  size: 22,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Linked ${state.parentAccessCodes.length} guardian(s). '
+                    'Access codes: ${state.parentAccessCodes.join(', ')}',
+                    style: TextStyle(
+                      color: AppColors.success(context),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       );
@@ -578,68 +625,88 @@ class _GuardiansStepState extends State<_GuardiansStep> {
       children: [
         const SectionHeader(title: 'Guardians'),
         if (_guardians.isEmpty)
-          const EmptyState(
+          EmptyState(
             icon: Icons.family_restroom_outlined,
             title: 'No guardians added yet',
             message: 'Add at least one parent or guardian to continue.',
+            ctaLabel: 'Add Guardian',
+            onCtaPressed: () => _addOrEditGuardian(),
           )
-        else
+        else ...[
           ..._guardians.asMap().entries.map((entry) {
             final i = entry.key;
             final g = entry.value;
-            return AppCard(
-              child: ListTile(
-                title: Text(g.name),
-                subtitle: Text('${g.relationshipLabel} • ${g.phoneNumber}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined),
-                      onPressed: () => _addOrEditGuardian(index: i),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () {
-                        setState(() => _guardians.removeAt(i));
-                        _emit();
-                      },
-                    ),
-                  ],
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: AppCard(
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    g.name,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: Text('${g.relationshipLabel} • ${g.phoneNumber}'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: () => _addOrEditGuardian(index: i),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () {
+                          setState(() => _guardians.removeAt(i));
+                          _emit();
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
           }),
-        const SizedBox(height: 12),
-        SecondaryButton(
-          label: 'Add Guardian',
-          icon: Icons.person_add_outlined,
-          onPressed: () => _addOrEditGuardian(),
-        ),
+          SecondaryButton(
+            label: 'Add Guardian',
+            icon: Icons.person_add_outlined,
+            onPressed: () => _addOrEditGuardian(),
+          ),
+        ],
         const SizedBox(height: 20),
         const SectionHeader(title: 'Link Existing Sibling (optional)'),
-        TextField(
-          controller: _siblingSearchController,
-          decoration: const InputDecoration(
-            labelText: 'Sibling student code',
-            hintText: 'Enter an existing student\'s code to link as sibling',
-            border: OutlineInputBorder(),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _siblingSearchController,
+                decoration: const InputDecoration(
+                  labelText: 'Sibling student code',
+                  hintText:
+                      'Enter an existing student\'s code to link as sibling',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (v) {
+                  if (v.trim().isEmpty) return;
+                  context.read<EnrollmentSetupWizardBloc>().add(
+                    SiblingLinkRequested(v.trim()),
+                  );
+                },
+              ),
+              if (state.siblingStudentId != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text(
+                    'Linked sibling: ${state.siblingStudentId}',
+                    style: TextStyle(
+                      color: AppColors.success(context),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
           ),
-          onSubmitted: (v) {
-            if (v.trim().isEmpty) return;
-            context.read<EnrollmentSetupWizardBloc>().add(
-              SiblingLinkRequested(v.trim()),
-            );
-          },
         ),
-        if (state.siblingStudentId != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              'Linked sibling: ${state.siblingStudentId}',
-              style: TextStyle(color: AppColors.success(context)),
-            ),
-          ),
         const SizedBox(height: 20),
         PrimaryButton(
           label: 'Link Guardians',
@@ -886,75 +953,98 @@ class _HealthEmergencyStepState extends State<_HealthEmergencyStep> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'Medical Information (optional)'),
-        TextField(
-          controller: _bloodGroupController,
-          onChanged: (_) => _emit(),
-          decoration: const InputDecoration(
-            labelText: 'Blood group',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _allergiesController,
-          onChanged: (_) => _emit(),
-          decoration: const InputDecoration(
-            labelText: 'Allergies (comma separated)',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _chronicController,
-          onChanged: (_) => _emit(),
-          decoration: const InputDecoration(
-            labelText: 'Chronic conditions (comma separated)',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _medicationsController,
-          onChanged: (_) => _emit(),
-          decoration: const InputDecoration(
-            labelText: 'Medications',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _disabilitiesController,
-          onChanged: (_) => _emit(),
-          decoration: const InputDecoration(
-            labelText: 'Disabilities',
-            border: OutlineInputBorder(),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _bloodGroupController,
+                onChanged: (_) => _emit(),
+                decoration: const InputDecoration(
+                  labelText: 'Blood group',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _allergiesController,
+                onChanged: (_) => _emit(),
+                decoration: const InputDecoration(
+                  labelText: 'Allergies (comma separated)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _chronicController,
+                onChanged: (_) => _emit(),
+                decoration: const InputDecoration(
+                  labelText: 'Chronic conditions (comma separated)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _medicationsController,
+                onChanged: (_) => _emit(),
+                decoration: const InputDecoration(
+                  labelText: 'Medications',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _disabilitiesController,
+                onChanged: (_) => _emit(),
+                decoration: const InputDecoration(
+                  labelText: 'Disabilities',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 20),
         const SectionHeader(title: 'Emergency Contacts (optional)'),
-        ..._contacts.asMap().entries.map(
-          (entry) => AppCard(
-            child: ListTile(
-              title: Text(entry.value.name),
-              subtitle: Text(
-                '${entry.value.relationship} • ${entry.value.phoneNumber}',
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete_outline),
-                onPressed: () {
-                  setState(() => _contacts.removeAt(entry.key));
-                  _emit();
-                },
+        if (_contacts.isEmpty)
+          EmptyState(
+            icon: Icons.contact_phone_outlined,
+            title: 'No emergency contacts yet',
+            message: 'Add someone to notify in case of an emergency.',
+            ctaLabel: 'Add Emergency Contact',
+            onCtaPressed: _addContact,
+          )
+        else ...[
+          ..._contacts.asMap().entries.map(
+            (entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: AppCard(
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    entry.value.name,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: Text(
+                    '${entry.value.relationship} • ${entry.value.phoneNumber}',
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () {
+                      setState(() => _contacts.removeAt(entry.key));
+                      _emit();
+                    },
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        SecondaryButton(
-          label: 'Add Emergency Contact',
-          icon: Icons.contact_phone_outlined,
-          onPressed: _addContact,
-        ),
+          SecondaryButton(
+            label: 'Add Emergency Contact',
+            icon: Icons.contact_phone_outlined,
+            onPressed: _addContact,
+          ),
+        ],
       ],
     );
   }
@@ -1074,38 +1164,40 @@ class _TransportStepState extends State<_TransportStep> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'Transport (optional)'),
-        StreamBuilder<List<TransportRoute>>(
-          stream: structureRepo.watchTransportRoutes(widget.state.schoolId),
-          builder: (context, snap) {
-            final routes = (snap.data ?? [])
-                .where((r) => r.isActive)
-                .toList();
-            final currentValue =
-                routes.any((r) => r.name == _selectedRouteName)
-                ? _selectedRouteName
-                : null;
-            return DropdownButtonFormField<String?>(
-              initialValue: currentValue,
-              decoration: const InputDecoration(
-                labelText: 'Bus route',
-                hintText: 'Select a route (optional)',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('No transport'),
+        AppCard(
+          child: StreamBuilder<List<TransportRoute>>(
+            stream: structureRepo.watchTransportRoutes(widget.state.schoolId),
+            builder: (context, snap) {
+              final routes = (snap.data ?? [])
+                  .where((r) => r.isActive)
+                  .toList();
+              final currentValue =
+                  routes.any((r) => r.name == _selectedRouteName)
+                  ? _selectedRouteName
+                  : null;
+              return DropdownButtonFormField<String?>(
+                initialValue: currentValue,
+                decoration: const InputDecoration(
+                  labelText: 'Bus route',
+                  hintText: 'Select a route (optional)',
+                  border: OutlineInputBorder(),
                 ),
-                ...routes.map(
-                  (r) => DropdownMenuItem<String?>(
-                    value: r.name,
-                    child: Text(r.name),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('No transport'),
                   ),
-                ),
-              ],
-              onChanged: _emit,
-            );
-          },
+                  ...routes.map(
+                    (r) => DropdownMenuItem<String?>(
+                      value: r.name,
+                      child: Text(r.name),
+                    ),
+                  ),
+                ],
+                onChanged: _emit,
+              );
+            },
+          ),
         ),
       ],
     );
@@ -1218,33 +1310,45 @@ class _AdmissionStepState extends State<_AdmissionStep> {
         ),
         const SizedBox(height: 16),
         const SectionHeader(title: 'Student Type'),
-        SegmentedButton<StudentBoardingType>(
-          segments: const [
-            ButtonSegment(value: StudentBoardingType.day, label: Text('Day')),
-            ButtonSegment(
-              value: StudentBoardingType.boarding,
-              label: Text('Boarding'),
-            ),
-          ],
-          selected: {_boardingType},
-          onSelectionChanged: (selection) {
-            setState(() => _boardingType = selection.first);
-            _emit();
-          },
-        ),
-        const SizedBox(height: 16),
-        const SectionHeader(title: 'Joining Status'),
-        DropdownButtonFormField<String>(
-          initialValue: _joiningStatus,
-          items: _joiningStatusOptions
-              .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-              .toList(),
-          onChanged: (v) {
-            if (v == null) return;
-            setState(() => _joiningStatus = v);
-            _emit();
-          },
-          decoration: const InputDecoration(labelText: 'Joining status'),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<StudentBoardingType>(
+                  segments: const [
+                    ButtonSegment(
+                      value: StudentBoardingType.day,
+                      label: Text('Day'),
+                    ),
+                    ButtonSegment(
+                      value: StudentBoardingType.boarding,
+                      label: Text('Boarding'),
+                    ),
+                  ],
+                  selected: {_boardingType},
+                  onSelectionChanged: (selection) {
+                    setState(() => _boardingType = selection.first);
+                    _emit();
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _joiningStatus,
+                items: _joiningStatusOptions
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (v) {
+                  if (v == null) return;
+                  setState(() => _joiningStatus = v);
+                  _emit();
+                },
+                decoration: const InputDecoration(labelText: 'Joining status'),
+              ),
+            ],
+          ),
         ),
       ],
     );
