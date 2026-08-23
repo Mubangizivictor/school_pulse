@@ -446,7 +446,14 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     required String phoneNumber,
     String? parentName,
   }) async {
-    final parentCode = _generateAccessCode(prefix: 'P');
+    final schoolDoc = await firestore.collection('schools').doc(schoolId).get();
+    final schoolPrefix = (schoolDoc.data()?['schoolCode'] as String?)
+        ?.toUpperCase();
+    final parentCode = _generateAccessCode(
+      prefix: schoolPrefix != null && schoolPrefix.isNotEmpty
+          ? '$schoolPrefix-P-'
+          : 'P',
+    );
     // The code is also the document ID so pre-login users can perform the
     // rule-safe direct get without permission to enumerate access codes.
     final docRef = firestore.collection('parent_access_codes').doc(parentCode);
@@ -476,7 +483,17 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     }
     final oldData = oldSnapshot.data()!;
 
-    final newCode = _generateAccessCode(prefix: 'P');
+    final schoolId = oldData['schoolId'] as String?;
+    String prefix = 'P';
+    if (schoolId != null) {
+      final schoolDoc = await firestore.collection('schools').doc(schoolId).get();
+      final schoolPrefix = (schoolDoc.data()?['schoolCode'] as String?)
+          ?.toUpperCase();
+      if (schoolPrefix != null && schoolPrefix.isNotEmpty) {
+        prefix = '$schoolPrefix-P-';
+      }
+    }
+    final newCode = _generateAccessCode(prefix: prefix);
     final newRef = firestore.collection('parent_access_codes').doc(newCode);
 
     final batch = firestore.batch();

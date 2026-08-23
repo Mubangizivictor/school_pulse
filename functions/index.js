@@ -405,7 +405,7 @@ async function generateStaffCode(schoolId, schoolPrefix) {
     return next;
   });
 
-  return `${schoolPrefix}${year}${String(sequence).padStart(4, "0")}`;
+  return `${schoolPrefix}-T-${year}${String(sequence).padStart(4, "0")}`;
 }
 
 exports.createStaffAccount = onCall(async (request) => {

@@ -11,7 +11,7 @@ class IdGeneratorService {
   }
 
   /// Generates a School Student ID (Admission Number)
-  /// Example: MH-2026-000001
+  /// Example: MH-S-2026-000001
   /// [schoolPrefix] e.g. "MH" for Mary Hill
   /// [year] e.g. 2026
   /// [sequenceNumber] e.g. 1
@@ -21,6 +21,6 @@ class IdGeneratorService {
     required int sequenceNumber,
   }) {
     final formattedSequence = sequenceNumber.toString().padLeft(6, '0');
-    return '$schoolPrefix-$year-$formattedSequence';
+    return '$schoolPrefix-S-$year-$formattedSequence';
   }
 }
