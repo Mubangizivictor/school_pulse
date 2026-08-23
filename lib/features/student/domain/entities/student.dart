@@ -16,6 +16,13 @@ class Student extends Equatable {
   final String academicYearId;
   final String? previousSchool;
   final StudentStatus status;
+  final String? religion;
+  final String? nationality;
+
+  // Free-text bus route / pickup point, captured on the Enrollment Setup
+  // Wizard's Transport step. Deliberately not a structure-module entity -
+  // see enrollment wizard build notes.
+  final String? transportInfo;
 
   // Detailed Information
   final MedicalInfo? medicalInfo;
@@ -53,6 +60,9 @@ class Student extends Equatable {
     required this.academicYearId,
     this.previousSchool,
     required this.status,
+    this.religion,
+    this.nationality,
+    this.transportInfo,
     this.medicalInfo,
     this.emergencyContacts = const [],
     this.parentIds = const [],
@@ -101,6 +111,9 @@ class Student extends Equatable {
     academicYearId,
     previousSchool,
     status,
+    religion,
+    nationality,
+    transportInfo,
     medicalInfo,
     emergencyContacts,
     parentIds,
@@ -120,6 +133,9 @@ class Student extends Equatable {
     String? streamId,
     String? academicYearId,
     StudentStatus? status,
+    String? religion,
+    String? nationality,
+    String? transportInfo,
     MedicalInfo? medicalInfo,
     List<EmergencyContact>? emergencyContacts,
     List<String>? parentIds,
@@ -142,6 +158,9 @@ class Student extends Equatable {
       academicYearId: academicYearId ?? this.academicYearId,
       previousSchool: previousSchool,
       status: status ?? this.status,
+      religion: religion ?? this.religion,
+      nationality: nationality ?? this.nationality,
+      transportInfo: transportInfo ?? this.transportInfo,
       medicalInfo: medicalInfo ?? this.medicalInfo,
       emergencyContacts: emergencyContacts ?? this.emergencyContacts,
       parentIds: parentIds ?? this.parentIds,

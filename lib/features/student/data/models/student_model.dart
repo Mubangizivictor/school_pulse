@@ -18,6 +18,9 @@ class StudentModel extends Student {
     required super.academicYearId,
     super.previousSchool,
     required super.status,
+    super.religion,
+    super.nationality,
+    super.transportInfo,
     super.medicalInfo,
     super.emergencyContacts,
     super.parentIds,
@@ -45,6 +48,9 @@ class StudentModel extends Student {
       academicYearId: academicYearId,
       previousSchool: previousSchool,
       status: status,
+      religion: religion,
+      nationality: nationality,
+      transportInfo: transportInfo,
       medicalInfo: medicalInfo,
       emergencyContacts: emergencyContacts,
       parentIds: parentIds,
@@ -92,6 +98,9 @@ class StudentModel extends Student {
       academicYearId: map['academicYearId'] ?? '',
       previousSchool: map['previousSchool'],
       status: status,
+      religion: map['religion'],
+      nationality: map['nationality'],
+      transportInfo: map['transportInfo'],
       medicalInfo: map['medicalInfo'] is Map<String, dynamic>
           ? MedicalInfoModel.fromMap(map['medicalInfo'] as Map<String, dynamic>)
           : null,
@@ -123,6 +132,9 @@ class StudentModel extends Student {
       'academicYearId': academicYearId,
       'previousSchool': previousSchool,
       'status': status.name,
+      'religion': religion,
+      'nationality': nationality,
+      'transportInfo': transportInfo,
       // Domain entities are intentionally accepted here. UI and integration
       // callers should not have to know about data-layer model subclasses.
       'medicalInfo': medicalInfo == null
