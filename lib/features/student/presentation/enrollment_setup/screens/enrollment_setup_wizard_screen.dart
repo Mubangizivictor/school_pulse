@@ -1276,23 +1276,63 @@ class _AcademicPlacementStep extends StatelessWidget {
         AppCard(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Class: ${state.classId}',
-                  style: TextStyle(color: AppColors.textPrimary(context)),
-                ),
-                if (state.streamId != null)
-                  Text(
-                    'Stream: ${state.streamId}',
-                    style: TextStyle(color: AppColors.textPrimary(context)),
-                  ),
-                Text(
-                  'Academic year: ${state.academicYearId}',
-                  style: TextStyle(color: AppColors.textPrimary(context)),
-                ),
-              ],
+            child: StreamBuilder<List<SchoolClass>>(
+              stream: structureRepo.watchClasses(state.schoolId),
+              builder: (context, classSnap) {
+                final classes = classSnap.data ?? const <SchoolClass>[];
+                final classMatch = classes.where((c) => c.id == state.classId);
+                final classLabel = classMatch.isNotEmpty
+                    ? classMatch.first.name
+                    : (classes.isEmpty ? 'Loading…' : 'Unknown class');
+                return StreamBuilder<List<ClassStream>>(
+                  stream: structureRepo.watchStreams(state.schoolId),
+                  builder: (context, streamSnap) {
+                    final streams = streamSnap.data ?? const <ClassStream>[];
+                    final streamMatch = streams.where(
+                      (s) => s.id == state.streamId,
+                    );
+                    final streamLabel = streamMatch.isNotEmpty
+                        ? streamMatch.first.name
+                        : (streams.isEmpty ? 'Loading…' : 'Unknown stream');
+                    return StreamBuilder<List<AcademicYear>>(
+                      stream: structureRepo.watchAcademicYears(state.schoolId),
+                      builder: (context, yearSnap) {
+                        final years = yearSnap.data ?? const <AcademicYear>[];
+                        final yearMatch = years.where(
+                          (y) => y.id == state.academicYearId,
+                        );
+                        final yearLabel = yearMatch.isNotEmpty
+                            ? yearMatch.first.name
+                            : (years.isEmpty ? 'Loading…' : 'Unknown year');
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Class: $classLabel',
+                              style: TextStyle(
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                            if (state.streamId != null)
+                              Text(
+                                'Stream: $streamLabel',
+                                style: TextStyle(
+                                  color: AppColors.textPrimary(context),
+                                ),
+                              ),
+                            Text(
+                              'Academic year: $yearLabel',
+                              style: TextStyle(
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                );
+              },
             ),
           ),
         ),
