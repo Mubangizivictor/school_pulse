@@ -8,6 +8,7 @@ import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/injection_container.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
+import 'package:school_pulse/features/teacher/domain/services/academic_calendar_service.dart';
 import '../bloc/finance_bloc.dart';
 import '../bloc/finance_state.dart';
 import '../bloc/finance_event.dart';
@@ -148,150 +149,182 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen>
 
   void _showAddStructureDialog(BuildContext context) {
     final nameController = TextEditingController();
-    final academicYearController = TextEditingController(text: '2024');
     String term = 'Term 1';
     String category = 'Day';
     String? classId;
     List<FeeStructureItem> items = [];
     final authState = context.read<AuthBloc>().state as AuthAuthenticated;
     final structureRepo = sl<StructureRepository>();
+    // FeeStructure.academicYear is matched against AcademicYear.id by the
+    // enrollment wizard's Finance step, not the display name, so resolve
+    // and store the id rather than letting the admin type a year string.
+    final currentPeriodFuture = sl<AcademicCalendarService>().getCurrentPeriod(
+      authState.user.schoolId,
+    );
 
     showDialog(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setState) {
-          final financeState = context.watch<FinanceBloc>().state;
-          List<FeeCategory> availableCategories = [];
-          if (financeState is FeeConfigurationLoaded) {
-            availableCategories = financeState.categories;
-          }
+      builder: (dialogContext) => FutureBuilder<AcademicPeriod>(
+        future: currentPeriodFuture,
+        builder: (context, periodSnapshot) {
+          final period = periodSnapshot.data;
+          final academicYearId = period?.academicYearId ?? '';
+          final academicYearName = period?.academicYearName ?? '';
 
-          return AlertDialog(
-            title: const Text('Create Fee Structure'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Structure Name',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
+          return StatefulBuilder(
+            builder: (context, setState) {
+              final financeState = context.watch<FinanceBloc>().state;
+              List<FeeCategory> availableCategories = [];
+              if (financeState is FeeConfigurationLoaded) {
+                availableCategories = financeState.categories;
+              }
+
+              return AlertDialog(
+                title: const Text('Create Fee Structure'),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  child: ListView(
+                    shrinkWrap: true,
                     children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: term,
-                          items: ['Term 1', 'Term 2', 'Term 3']
-                              .map(
-                                (t) =>
-                                    DropdownMenuItem(value: t, child: Text(t)),
-                              )
-                              .toList(),
-                          onChanged: (v) => setState(() => term = v!),
-                          decoration: const InputDecoration(labelText: 'Term'),
+                      TextField(
+                        controller: nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Structure Name',
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: category,
-                          items: ['Day', 'Boarding', 'International']
-                              .map(
-                                (c) =>
-                                    DropdownMenuItem(value: c, child: Text(c)),
-                              )
-                              .toList(),
-                          onChanged: (v) => setState(() => category = v!),
-                          decoration: const InputDecoration(
-                            labelText: 'Student Category',
+                      if (academicYearName.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Academic year: $academicYearName',
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  StreamBuilder<List<SchoolClass>>(
-                    stream: structureRepo.watchClasses(authState.user.schoolId),
-                    builder: (context, snap) {
-                      final classes = snap.data ?? const <SchoolClass>[];
-                      return DropdownButtonFormField<String?>(
-                        initialValue: classId,
-                        items: [
-                          const DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('All classes'),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: term,
+                              items: ['Term 1', 'Term 2', 'Term 3']
+                                  .map(
+                                    (t) => DropdownMenuItem(
+                                      value: t,
+                                      child: Text(t),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) => setState(() => term = v!),
+                              decoration: const InputDecoration(
+                                labelText: 'Term',
+                              ),
+                            ),
                           ),
-                          ...classes.map(
-                            (c) => DropdownMenuItem<String?>(
-                              value: c.id,
-                              child: Text(c.name),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: category,
+                              items: ['Day', 'Boarding', 'International']
+                                  .map(
+                                    (c) => DropdownMenuItem(
+                                      value: c,
+                                      child: Text(c),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) => setState(() => category = v!),
+                              decoration: const InputDecoration(
+                                labelText: 'Student Category',
+                              ),
                             ),
                           ),
                         ],
-                        onChanged: (v) => setState(() => classId = v),
-                        decoration: const InputDecoration(
-                          labelText: 'Applies to class (optional)',
+                      ),
+                      const SizedBox(height: 8),
+                      StreamBuilder<List<SchoolClass>>(
+                        stream: structureRepo.watchClasses(
+                          authState.user.schoolId,
                         ),
-                      );
-                    },
+                        builder: (context, snap) {
+                          final classes = snap.data ?? const <SchoolClass>[];
+                          return DropdownButtonFormField<String?>(
+                            initialValue: classId,
+                            items: [
+                              const DropdownMenuItem<String?>(
+                                value: null,
+                                child: Text('All classes'),
+                              ),
+                              ...classes.map(
+                                (c) => DropdownMenuItem<String?>(
+                                  value: c.id,
+                                  child: Text(c.name),
+                                ),
+                              ),
+                            ],
+                            onChanged: (v) => setState(() => classId = v),
+                            decoration: const InputDecoration(
+                              labelText: 'Applies to class (optional)',
+                            ),
+                          );
+                        },
+                      ),
+                      const Divider(height: 32),
+                      const Text(
+                        'Fee Items',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      ...items.map(
+                        (item) => ListTile(
+                          title: Text(item.categoryName),
+                          trailing: Text(CurrencyFormatter.ugx(item.amount)),
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _showAddItemDialog(
+                          context,
+                          availableCategories,
+                          (newItem) {
+                            setState(() => items.add(newItem));
+                          },
+                        ),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Item'),
+                      ),
+                    ],
                   ),
-                  const Divider(height: 32),
-                  const Text(
-                    'Fee Items',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('Cancel'),
                   ),
-                  ...items.map(
-                    (item) => ListTile(
-                      title: Text(item.categoryName),
-                      trailing: Text(CurrencyFormatter.ugx(item.amount)),
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: () => _showAddItemDialog(
-                      context,
-                      availableCategories,
-                      (newItem) {
-                        setState(() => items.add(newItem));
-                      },
-                    ),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Item'),
+                  ElevatedButton(
+                    onPressed: academicYearId.isEmpty
+                        ? null
+                        : () {
+                            context.read<FinanceBloc>().add(
+                              SaveSchoolFeeStructure(
+                                FeeStructure(
+                                  id: '',
+                                  schoolId: authState.user.schoolId,
+                                  name: nameController.text,
+                                  academicYear: academicYearId,
+                                  term: term,
+                                  items: items,
+                                  classId: classId,
+                                  studentCategory: category,
+                                ),
+                              ),
+                            );
+                            Navigator.pop(dialogContext);
+                          },
+                    child: const Text('Save'),
                   ),
                 ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  context.read<FinanceBloc>().add(
-                    SaveSchoolFeeStructure(
-                      FeeStructure(
-                        id: '',
-                        schoolId: authState.user.schoolId,
-                        name: nameController.text,
-                        academicYear: academicYearController.text,
-                        term: term,
-                        items: items,
-                        classId: classId,
-                        studentCategory: category,
-                      ),
-                    ),
-                  );
-                  Navigator.pop(dialogContext);
-                },
-                child: const Text('Save'),
-              ),
-            ],
+              );
+            },
           );
         },
       ),
