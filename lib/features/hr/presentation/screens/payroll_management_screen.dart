@@ -4,12 +4,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/core/payroll_calculator.dart';
+import 'package:school_pulse/core/usecases/usecase.dart';
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/hr/domain/entities/payroll_record.dart';
 import 'package:school_pulse/features/hr/presentation/bloc/hr_bloc.dart';
 import 'package:school_pulse/features/hr/presentation/bloc/hr_event.dart';
 import 'package:school_pulse/features/hr/presentation/bloc/hr_state.dart';
+import 'package:school_pulse/features/structure/presentation/widgets/structure_ui_kit.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/staff_assignment_repository.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
@@ -27,6 +31,7 @@ class _PayrollManagementScreenState extends State<PayrollManagementScreen> {
     decimalDigits: 0,
   );
   final _staffAssignmentRepository = di.sl<StaffAssignmentRepository>();
+  List<UserEntity> _staffList = const [];
 
   String get _schoolId {
     final state = context.read<AuthBloc>().state;
@@ -37,6 +42,15 @@ class _PayrollManagementScreenState extends State<PayrollManagementScreen> {
   void initState() {
     super.initState();
     context.read<HrBloc>().add(LoadPayrollRecords(_schoolId));
+    _loadStaff();
+  }
+
+  Future<void> _loadStaff() async {
+    final result = await di.sl<GetStaffMembers>()(NoParams());
+    if (!mounted) return;
+    setState(() {
+      _staffList = result.getOrElse(() => const []);
+    });
   }
 
   @override
@@ -97,11 +111,11 @@ class _PayrollManagementScreenState extends State<PayrollManagementScreen> {
   }
 
   void _showGeneratePayrollDialog() {
-    final staffNameController = TextEditingController();
     final baseSalaryController = TextEditingController();
     final allowancesController = TextEditingController();
     final deductionsController = TextEditingController();
     PayrollFundingSource fundingSource = PayrollFundingSource.government;
+    UserEntity? selectedStaff;
 
     showDialog(
       context: context,
@@ -112,10 +126,20 @@ class _PayrollManagementScreenState extends State<PayrollManagementScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
-                  controller: staffNameController,
-                  decoration: const InputDecoration(labelText: 'Staff Name'),
+                StructureStaffPickerField(
+                  label: 'Staff Member',
+                  selectedStaffId: selectedStaff?.id,
+                  staff: _staffList,
+                  required: true,
+                  onChanged: (id) {
+                    setDialogState(() {
+                      selectedStaff = _staffList.firstWhere(
+                        (member) => member.id == id,
+                      );
+                    });
+                  },
                 ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: baseSalaryController,
                   decoration: const InputDecoration(labelText: 'Base Salary'),
@@ -169,13 +193,21 @@ class _PayrollManagementScreenState extends State<PayrollManagementScreen> {
             ),
             FilledButton(
               onPressed: () async {
+                final staff = selectedStaff;
+                if (staff == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Select a staff member.'),
+                    ),
+                  );
+                  return;
+                }
                 final base = double.tryParse(baseSalaryController.text) ?? 0;
                 final allowances =
                     double.tryParse(allowancesController.text) ?? 0;
                 final otherDeductions =
                     double.tryParse(deductionsController.text) ?? 0;
-                final staffId =
-                    'STF-${DateTime.now().millisecondsSinceEpoch}';
+                final staffId = staff.id;
 
                 final bonuses = await _roleAssignmentBonuses(staffId);
 
@@ -198,7 +230,7 @@ class _PayrollManagementScreenState extends State<PayrollManagementScreen> {
                   id: DateTime.now().millisecondsSinceEpoch.toString(),
                   schoolId: _schoolId,
                   staffId: staffId,
-                  staffName: staffNameController.text,
+                  staffName: staff.name,
                   month: DateFormat('MMMM yyyy').format(DateTime.now()),
                   baseSalary: base,
                   allowances: allowances,
