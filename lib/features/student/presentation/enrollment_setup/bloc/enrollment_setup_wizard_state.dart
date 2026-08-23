@@ -77,6 +77,7 @@ class EnrollmentSetupWizardState extends Equatable {
 
   // Step 7
   final bool identityExists;
+  final String? qrCodeData;
   final bool nfcRegistered;
   final bool nfcSkipped;
 
@@ -130,6 +131,7 @@ class EnrollmentSetupWizardState extends Equatable {
     this.parentLinked = false,
     this.parentAccessCode,
     this.identityExists = false,
+    this.qrCodeData,
     this.nfcRegistered = false,
     this.nfcSkipped = false,
     this.resumedFromDraft = false,
@@ -197,6 +199,7 @@ class EnrollmentSetupWizardState extends Equatable {
     bool? parentLinked,
     String? parentAccessCode,
     bool? identityExists,
+    String? qrCodeData,
     bool? nfcRegistered,
     bool? nfcSkipped,
     bool? resumedFromDraft,
@@ -250,6 +253,7 @@ class EnrollmentSetupWizardState extends Equatable {
       parentLinked: parentLinked ?? this.parentLinked,
       parentAccessCode: parentAccessCode ?? this.parentAccessCode,
       identityExists: identityExists ?? this.identityExists,
+      qrCodeData: qrCodeData ?? this.qrCodeData,
       nfcRegistered: nfcRegistered ?? this.nfcRegistered,
       nfcSkipped: nfcSkipped ?? this.nfcSkipped,
       resumedFromDraft: resumedFromDraft ?? this.resumedFromDraft,
@@ -304,6 +308,7 @@ class EnrollmentSetupWizardState extends Equatable {
     parentLinked,
     parentAccessCode,
     identityExists,
+    qrCodeData,
     nfcRegistered,
     nfcSkipped,
     resumedFromDraft,

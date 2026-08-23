@@ -2093,6 +2093,24 @@ class _IdentityStepState extends State<_IdentityStep> {
   final _nfcController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Issue-or-load the QR identity immediately rather than deferring to
+    // activation - getStudentIdentity is idempotent (issues once, loads
+    // thereafter), so this is safe to fire every time the step is shown.
+    if (!widget.state.identityExists) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final authState = context.read<AuthBloc>().state;
+        if (authState is! AuthAuthenticated) return;
+        context.read<EnrollmentSetupWizardBloc>().add(
+          IdentityPreviewRequested(authState.user),
+        );
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _nfcController.dispose();
     super.dispose();
@@ -2120,12 +2138,36 @@ class _IdentityStepState extends State<_IdentityStep> {
                   style: TextStyle(color: AppColors.textPrimary(context)),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  state.identityExists
-                      ? 'QR identity is ready.'
-                      : 'QR identity will be generated on activation.',
-                  style: TextStyle(color: AppColors.textSecondary(context)),
-                ),
+                if (state.identityExists && state.qrCodeData != null)
+                  Text(
+                    'QR identity: ${state.qrCodeData}',
+                    style: TextStyle(
+                      color: AppColors.success(context),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  )
+                else if (state.identityExists)
+                  Text(
+                    'QR identity is ready.',
+                    style: TextStyle(color: AppColors.textSecondary(context)),
+                  )
+                else
+                  Row(
+                    children: [
+                      const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Generating QR identity…',
+                        style: TextStyle(
+                          color: AppColors.textSecondary(context),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -2140,6 +2182,16 @@ class _IdentityStepState extends State<_IdentityStep> {
         else if (state.nfcSkipped)
           const Text('NFC registration skipped.')
         else ...[
+          Text(
+            'Only needed if a physical NFC card is being bound to this '
+            'student now. Skip to proceed with the QR identity above - a '
+            'card can be registered later from Verification.',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: AppColors.textMuted(context),
+            ),
+          ),
+          const SizedBox(height: 12),
           TextField(
             controller: _nfcController,
             decoration: const InputDecoration(

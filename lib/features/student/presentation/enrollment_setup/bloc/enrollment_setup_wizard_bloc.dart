@@ -845,7 +845,9 @@ class EnrollmentSetupWizardBloc
     );
     result.fold(
       (_) => emit(state.copyWith(identityExists: false)),
-      (_) => emit(state.copyWith(identityExists: true)),
+      (identity) => emit(
+        state.copyWith(identityExists: true, qrCodeData: identity.qrCodeData),
+      ),
     );
   }
 
