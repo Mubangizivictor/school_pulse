@@ -17,6 +17,7 @@ import 'package:school_pulse/features/student/domain/enrollment_setup/entities/s
 import 'package:school_pulse/features/structure/domain/entities/campus_entities.dart';
 import 'package:school_pulse/features/structure/domain/entities/hostel_entities.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/features/structure/domain/entities/transport_structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import 'package:school_pulse/features/student/domain/enrollment_setup/repositories/enrollment_setup_repository.dart';
 import 'package:school_pulse/features/structure/domain/repositories/teaching_assignment_repository.dart';
@@ -1061,43 +1062,60 @@ class _TransportStep extends StatefulWidget {
 }
 
 class _TransportStepState extends State<_TransportStep> {
-  late final TextEditingController _controller;
+  String? _selectedRouteName;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.state.transportInfo ?? '');
+    _selectedRouteName = widget.state.transportInfo;
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _emit() {
+  void _emit(String? routeName) {
+    setState(() => _selectedRouteName = routeName);
     context.read<EnrollmentSetupWizardBloc>().add(
-      TransportInfoUpdated(
-        _controller.text.trim().isEmpty ? null : _controller.text.trim(),
-      ),
+      TransportInfoUpdated(routeName),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final structureRepo = sl<StructureRepository>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'Transport (optional)'),
-        TextField(
-          controller: _controller,
-          maxLines: 2,
-          onChanged: (_) => _emit(),
-          decoration: const InputDecoration(
-            labelText: 'Bus route / pickup point',
-            hintText: 'e.g. Route 4 - Kireka stage',
-            border: OutlineInputBorder(),
-          ),
+        StreamBuilder<List<TransportRoute>>(
+          stream: structureRepo.watchTransportRoutes(widget.state.schoolId),
+          builder: (context, snap) {
+            final routes = (snap.data ?? [])
+                .where((r) => r.isActive)
+                .toList();
+            final currentValue =
+                routes.any((r) => r.name == _selectedRouteName)
+                ? _selectedRouteName
+                : null;
+            return DropdownButtonFormField<String?>(
+              initialValue: currentValue,
+              decoration: const InputDecoration(
+                labelText: 'Bus route',
+                hintText: 'Select a route (optional)',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('No transport'),
+                ),
+                ...routes.map(
+                  (r) => DropdownMenuItem<String?>(
+                    value: r.name,
+                    child: Text(r.name),
+                  ),
+                ),
+              ],
+              onChanged: _emit,
+            );
+          },
         ),
       ],
     );
