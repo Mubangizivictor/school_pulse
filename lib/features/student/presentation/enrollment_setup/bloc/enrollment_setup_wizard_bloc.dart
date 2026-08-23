@@ -371,7 +371,29 @@ class EnrollmentSetupWizardBloc
       return;
     }
 
-    emit(state.copyWith(isLoading: false, completedStepCount: 0));
+    // No draft - prefill the front-loaded steps from whatever the student
+    // doc already carries (set at admission time, e.g. from
+    // AdmissionApplication via admitStudent()) so a fresh wizard doesn't
+    // ask for name/DOB/gender/class again when they're already known.
+    final existing = await _loadCurrentStudent();
+    emit(
+      (existing == null
+              ? state
+              : state.copyWith(
+                  studentName: existing.name,
+                  dateOfBirth: existing.dateOfBirth,
+                  gender: existing.gender,
+                  religion: existing.religion,
+                  nationality: existing.nationality,
+                  selectedClassId: existing.classId,
+                  selectedStreamId: existing.streamId,
+                  clearSelectedStreamId: existing.streamId == null,
+                  medicalInfo: existing.medicalInfo,
+                  emergencyContacts: existing.emergencyContacts,
+                  transportInfo: existing.transportInfo,
+                ))
+          .copyWith(isLoading: false, completedStepCount: 0),
+    );
   }
 
   void _onNextStep(
