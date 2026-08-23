@@ -21,6 +21,7 @@ import 'package:school_pulse/features/structure/domain/repositories/structure_re
 import 'package:school_pulse/features/student/domain/enrollment_setup/repositories/enrollment_setup_repository.dart';
 import 'package:school_pulse/features/structure/domain/repositories/teaching_assignment_repository.dart';
 import 'package:school_pulse/features/structure/domain/repositories/curriculum_assignment_repository.dart';
+import 'package:school_pulse/features/teacher/domain/services/academic_calendar_service.dart';
 import 'package:school_pulse/features/finance/domain/repositories/finance_repository.dart';
 import 'package:school_pulse/features/finance/domain/entities/fee_structure.dart'
     as fin;
@@ -1414,6 +1415,11 @@ class _FinanceStepState extends State<_FinanceStep> {
 
   late Future<Either<Failure, List<fin.FeeStructure>>> _structuresFuture;
 
+  // The term the school admin has flagged current in Structure > Academics.
+  // Resolved once so the manual fallback can pre-fill it and the fee
+  // structure filter can reconcile against it.
+  late Future<AcademicPeriod> _currentPeriodFuture;
+
   // Guards the auto-apply of a single unambiguous match so it fires once
   // per resolved structure list, not on every rebuild.
   bool _autoApplied = false;
@@ -1425,6 +1431,9 @@ class _FinanceStepState extends State<_FinanceStep> {
     _termController.text = widget.state.term ?? '';
     _totalBilledController.text = widget.state.totalBilled?.toString() ?? '';
     _structuresFuture = sl<FinanceRepository>().getFeeStructures(
+      widget.state.schoolId,
+    );
+    _currentPeriodFuture = sl<AcademicCalendarService>().getCurrentPeriod(
       widget.state.schoolId,
     );
   }
@@ -1480,6 +1489,20 @@ class _FinanceStepState extends State<_FinanceStep> {
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
+    return FutureBuilder<AcademicPeriod>(
+      future: _currentPeriodFuture,
+      builder: (context, periodSnapshot) {
+        final currentTermName = periodSnapshot.data?.termName ?? '';
+        return _buildWithCurrentTerm(context, state, currentTermName);
+      },
+    );
+  }
+
+  Widget _buildWithCurrentTerm(
+    BuildContext context,
+    EnrollmentSetupWizardState state,
+    String currentTermName,
+  ) {
     return FutureBuilder(
       future: _structuresFuture,
       builder: (context, snapshot) {
@@ -1517,13 +1540,37 @@ class _FinanceStepState extends State<_FinanceStep> {
             .firstOrNull;
 
         if (filtered.isEmpty || _manualEntry) {
-          return _manualFallback(context, filtered.isEmpty);
+          return _manualFallback(context, filtered.isEmpty, currentTermName);
         }
+
+        final termMismatch =
+            selected != null &&
+            currentTermName.isNotEmpty &&
+            selected.term.trim().toLowerCase() !=
+                currentTermName.trim().toLowerCase();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SectionHeader(title: 'Fee Structure'),
+            if (currentTermName.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  'Current term: $currentTermName',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            if (termMismatch)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  'Selected fee structure is for ${selected.term}, not the '
+                  'current term ($currentTermName). Double-check this is '
+                  'the intended structure.',
+                  style: TextStyle(color: AppColors.warning(context)),
+                ),
+              ),
             ...filtered.map(
               (s) => RadioListTile<String>(
                 value: s.id,
@@ -1671,8 +1718,18 @@ class _FinanceStepState extends State<_FinanceStep> {
     );
   }
 
-  Widget _manualFallback(BuildContext context, bool noStructuresFound) {
+  Widget _manualFallback(
+    BuildContext context,
+    bool noStructuresFound,
+    String currentTermName,
+  ) {
     final state = widget.state;
+    if (currentTermName.isNotEmpty && _termController.text.trim().isEmpty) {
+      _termController.text = currentTermName;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _emitManual();
+      });
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
