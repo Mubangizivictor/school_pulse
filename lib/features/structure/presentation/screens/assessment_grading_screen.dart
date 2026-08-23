@@ -337,18 +337,64 @@ Future<void> _showGradingSystemFormSheet(
   required List<EducationalLevel> levels,
   GradingSystemDef? existing,
   List<GradeBand>? existingBands,
-}) async {
-  final formKey = GlobalKey<FormState>();
-  final nameController = TextEditingController(text: existing?.name);
-  final passMarkController = TextEditingController(
-    text: existing?.passingScore?.toStringAsFixed(0) ?? '50',
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) => _GradingSystemFormSheet(
+      schoolId: schoolId,
+      levels: levels,
+      existing: existing,
+      existingBands: existingBands,
+    ),
   );
-  String? selectedLevelId = existing != null && existing.levelIds.isNotEmpty
-      ? existing.levelIds.first
-      : (levels.isNotEmpty ? levels.first.id : null);
-  bool isDefault = existing?.isDefault ?? false;
-  final drafts = existingBands != null && existingBands.isNotEmpty
-      ? existingBands
+}
+
+/// Owns [nameController]/[passMarkController]/[_GradeBandDraft] controllers
+/// via normal [State] lifecycle instead of a bare function's manual
+/// dispose-after-await. `showModalBottomSheet`'s returned future completes
+/// the instant `Navigator.pop` is called — well before the sheet's exit
+/// *animation* finishes unmounting its widget subtree (that takes another
+/// ~250ms via the route's AnimationController). Disposing controllers right
+/// after that await therefore ripped them out from under TextFormFields that
+/// were still mounted and mid-animation, crashing with "TextEditingController
+/// used after being disposed". State.dispose() only runs when the element is
+/// actually unmounted, so it can never race the exit animation.
+class _GradingSystemFormSheet extends StatefulWidget {
+  const _GradingSystemFormSheet({
+    required this.schoolId,
+    required this.levels,
+    this.existing,
+    this.existingBands,
+  });
+
+  final String schoolId;
+  final List<EducationalLevel> levels;
+  final GradingSystemDef? existing;
+  final List<GradeBand>? existingBands;
+
+  @override
+  State<_GradingSystemFormSheet> createState() =>
+      _GradingSystemFormSheetState();
+}
+
+class _GradingSystemFormSheetState extends State<_GradingSystemFormSheet> {
+  final formKey = GlobalKey<FormState>();
+  late final nameController = TextEditingController(
+    text: widget.existing?.name,
+  );
+  late final passMarkController = TextEditingController(
+    text: widget.existing?.passingScore?.toStringAsFixed(0) ?? '50',
+  );
+  late String? selectedLevelId =
+      widget.existing != null && widget.existing!.levelIds.isNotEmpty
+      ? widget.existing!.levelIds.first
+      : (widget.levels.isNotEmpty ? widget.levels.first.id : null);
+  late bool isDefault = widget.existing?.isDefault ?? false;
+  late final List<_GradeBandDraft> drafts =
+      widget.existingBands != null && widget.existingBands!.isNotEmpty
+      ? widget.existingBands!
             .map(
               (b) => _GradeBandDraft(
                 grade: b.grade,
@@ -360,11 +406,23 @@ Future<void> _showGradingSystemFormSheet(
             .toList()
       : [_GradeBandDraft()];
 
-  await showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (context) => StatefulBuilder(
+  @override
+  void dispose() {
+    for (final draft in drafts) {
+      draft.dispose();
+    }
+    nameController.dispose();
+    passMarkController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final existing = widget.existing;
+    final existingBands = widget.existingBands;
+    final levels = widget.levels;
+    final schoolId = widget.schoolId;
+    return StatefulBuilder(
       builder: (context, setState) {
         final scheme = Theme.of(context).colorScheme;
         return Padding(
@@ -613,20 +671,12 @@ Future<void> _showGradingSystemFormSheet(
 
                         final bloc = context.read<StructureBloc>();
 
-                        // Pop the sheet before dispatching any bloc events.
-                        // Each SaveGradingSystemRequested/SaveGradeBandRequested
-                        // handler awaits a Firestore write and the bloc's own
-                        // watchGradingSystems/watchGradeBands stream subscriptions
-                        // then feed the write straight back as a *Loaded event,
-                        // which re-emits state asynchronously (a real async gap,
-                        // not same-frame reentrancy). If that re-emit lands while
-                        // this sheet is still mid-teardown, the ancestor
-                        // BlocBuilder rebuilds against a subtree whose
-                        // TextEditingControllers are disposing, producing "used
-                        // after disposed" -> "build dirty widget in wrong build
-                        // scope". Popping first lets the sheet fully unmount and
-                        // dispose its controllers before any such re-emit can
-                        // reach it.
+                        // Pop before dispatching so the ancestor BlocBuilder
+                        // never rebuilds this sheet's route once a Firestore
+                        // echo re-emits state. Controller safety no longer
+                        // depends on this ordering: dispose() above only runs
+                        // once the sheet is actually unmounted, decoupled from
+                        // when this Future/pop resolves.
                         Navigator.pop(context);
 
                         bloc.add(SaveGradingSystemRequested(system));
@@ -675,11 +725,6 @@ Future<void> _showGradingSystemFormSheet(
           ),
         );
       },
-    ),
-  );
-  for (final draft in drafts) {
-    draft.dispose();
+    );
   }
-  nameController.dispose();
-  passMarkController.dispose();
 }
