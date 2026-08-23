@@ -162,7 +162,11 @@ class _WizardView extends StatelessWidget {
                       icon: Icons.history,
                     ),
                   ),
-                _StepIndicator(state: state, titles: _stepTitles),
+                WizardStepProgress(
+                  currentStep: state.currentStep,
+                  stepCount: _stepTitles.length,
+                  stepTitle: _stepTitles[state.currentStep],
+                ),
                 const Divider(height: 1),
                 Expanded(
                   child: state.isLoading
@@ -216,38 +220,6 @@ class _WizardView extends StatelessWidget {
   }
 }
 
-class _StepIndicator extends StatelessWidget {
-  final EnrollmentSetupWizardState state;
-  final List<String> titles;
-  const _StepIndicator({required this.state, required this.titles});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Text(
-            'Step ${state.currentStep + 1} of ${titles.length}',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(context),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              titles[state.currentStep],
-              style: TextStyle(color: AppColors.textSecondary(context)),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _NavBar extends StatelessWidget {
   final EnrollmentSetupWizardState state;
   const _NavBar({required this.state});
@@ -256,28 +228,44 @@ class _NavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bloc = context.read<EnrollmentSetupWizardBloc>();
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
         border: Border(top: BorderSide(color: AppColors.border(context))),
-      ),
-      child: Row(
-        children: [
-          if (!state.isFirstStep)
-            SecondaryButton(
-              label: 'Back',
-              onPressed: state.isLoading || state.isActivating
-                  ? null
-                  : () => bloc.add(const WizardPreviousStep()),
-            ),
-          const Spacer(),
-          if (!state.isLastStep)
-            PrimaryButton(
-              label: 'Next',
-              onPressed: state.isLoading
-                  ? null
-                  : () => bloc.add(const WizardNextStep()),
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
         ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            if (!state.isFirstStep)
+              Expanded(
+                child: SecondaryButton(
+                  label: 'Back',
+                  onPressed: state.isLoading || state.isActivating
+                      ? null
+                      : () => bloc.add(const WizardPreviousStep()),
+                ),
+              ),
+            if (!state.isFirstStep && !state.isLastStep)
+              const SizedBox(width: 12),
+            if (!state.isLastStep)
+              Expanded(
+                child: PrimaryButton(
+                  label: 'Next',
+                  onPressed: state.isLoading
+                      ? null
+                      : () => bloc.add(const WizardNextStep()),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

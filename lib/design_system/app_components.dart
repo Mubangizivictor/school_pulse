@@ -1559,6 +1559,87 @@ class SegmentedTabControl extends StatelessWidget {
   }
 }
 
+/// Slim step-progress indicator for multi-step wizards - a "Step X of N"
+/// label plus a linear bar of filled/unfilled segments, one per step.
+/// Used by the Enrollment Setup Wizard; kept generic enough for any
+/// fixed-step flow.
+class WizardStepProgress extends StatelessWidget {
+  final int currentStep; // 0-based
+  final int stepCount;
+  final String stepTitle;
+
+  const WizardStepProgress({
+    super.key,
+    required this.currentStep,
+    required this.stepCount,
+    required this.stepTitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Step ${currentStep + 1} of $stepCount',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                  color: colors.onSurfaceVariant,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              Text(
+                '${(((currentStep + 1) / stepCount) * 100).round()}%',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                  color: colors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            stepTitle,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (int i = 0; i < stepCount; i++) ...[
+                if (i > 0) const SizedBox(width: 4),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: 1,
+                      minHeight: 5,
+                      backgroundColor: colors.surfaceContainerHighest,
+                      color: i <= currentStep
+                          ? colors.primary
+                          : colors.surfaceContainerHighest,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Theme preference row for the "More"/Settings screens.
 ///
 /// Reads and writes [ThemeProvider] directly so any screen can drop it in
