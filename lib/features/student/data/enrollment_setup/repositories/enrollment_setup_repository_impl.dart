@@ -182,6 +182,26 @@ class EnrollmentSetupRepositoryImpl implements EnrollmentSetupRepository {
     }
   }
 
+  @override
+  Stream<Map<String, int>> watchOccupiedBedCounts(
+    String schoolId,
+    String hostelId,
+  ) {
+    return _dormitoryAssignments
+        .where('schoolId', isEqualTo: schoolId)
+        .where('hostelId', isEqualTo: hostelId)
+        .snapshots()
+        .map((snap) {
+          final counts = <String, int>{};
+          for (final doc in snap.docs) {
+            final roomId = doc.data()['roomId'] as String?;
+            if (roomId == null) continue;
+            counts[roomId] = (counts[roomId] ?? 0) + 1;
+          }
+          return counts;
+        });
+  }
+
   StudentClubMembership _clubFromDoc(
     DocumentSnapshot<Map<String, dynamic>> doc,
   ) {

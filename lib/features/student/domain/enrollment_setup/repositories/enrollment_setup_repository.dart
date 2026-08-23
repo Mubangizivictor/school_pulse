@@ -52,6 +52,13 @@ abstract class EnrollmentSetupRepository {
     DormitoryAssignment assignment,
   );
 
+  /// Occupied bed count per room id, for every room in [hostelId] - used to
+  /// show "2/6 beds free" in the Boarding step's room picker.
+  Stream<Map<String, int>> watchOccupiedBedCounts(
+    String schoolId,
+    String hostelId,
+  );
+
   // Club memberships -----------------------------------------------------
   Future<Either<Failure, List<StudentClubMembership>>> getClubMemberships(
     String schoolId,

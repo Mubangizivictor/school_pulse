@@ -16,6 +16,7 @@ import 'package:school_pulse/features/structure/domain/entities/campus_entities.
 import 'package:school_pulse/features/structure/domain/entities/hostel_entities.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
+import 'package:school_pulse/features/student/domain/enrollment_setup/repositories/enrollment_setup_repository.dart';
 import 'package:school_pulse/features/structure/domain/repositories/teaching_assignment_repository.dart';
 import 'package:school_pulse/features/structure/domain/repositories/curriculum_assignment_repository.dart';
 import 'package:school_pulse/features/finance/domain/repositories/finance_repository.dart';
@@ -1868,6 +1869,9 @@ class _BoardingHouseStepState extends State<_BoardingHouseStep> {
               stream: structureRepo.watchHostels(state.schoolId),
               builder: (context, hostelSnap) {
                 final hostels = hostelSnap.data ?? [];
+                final selectedHostel = hostels
+                    .where((h) => h.id == _hostelId)
+                    .firstOrNull;
                 return StreamBuilder<List<HostelRoom>>(
                   stream: structureRepo.watchHostelRooms(state.schoolId),
                   builder: (context, roomSnap) {
@@ -1895,19 +1899,50 @@ class _BoardingHouseStepState extends State<_BoardingHouseStep> {
                             labelText: 'Hostel',
                           ),
                         ),
+                        if (selectedHostel != null &&
+                            selectedHostel.wardenName.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              'Warden: ${selectedHostel.wardenName}'
+                              '${selectedHostel.wardenContact.isNotEmpty ? ' • ${selectedHostel.wardenContact}' : ''}',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: AppColors.textMuted(context),
+                              ),
+                            ),
+                          ),
                         const SizedBox(height: 12),
-                        DropdownButtonFormField<String>(
-                          initialValue: _roomId,
-                          items: rooms
-                              .map(
-                                (r) => DropdownMenuItem(
+                        StreamBuilder<Map<String, int>>(
+                          stream: _hostelId == null
+                              ? const Stream.empty()
+                              : sl<EnrollmentSetupRepository>()
+                                    .watchOccupiedBedCounts(
+                                      state.schoolId,
+                                      _hostelId!,
+                                    ),
+                          builder: (context, occupiedSnap) {
+                            final occupied = occupiedSnap.data ?? const {};
+                            return DropdownButtonFormField<String>(
+                              initialValue: _roomId,
+                              items: rooms.map((r) {
+                                final taken = occupied[r.id] ?? 0;
+                                final label = r.bedCapacity > 0
+                                    ? '${r.roomNumber} '
+                                          '($taken/${r.bedCapacity} beds free: '
+                                          '${(r.bedCapacity - taken).clamp(0, r.bedCapacity)})'
+                                    : r.roomNumber;
+                                return DropdownMenuItem(
                                   value: r.id,
-                                  child: Text(r.roomNumber),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (v) => setState(() => _roomId = v),
-                          decoration: const InputDecoration(labelText: 'Room'),
+                                  child: Text(label),
+                                );
+                              }).toList(),
+                              onChanged: (v) => setState(() => _roomId = v),
+                              decoration: const InputDecoration(
+                                labelText: 'Room',
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(height: 12),
                         TextField(
