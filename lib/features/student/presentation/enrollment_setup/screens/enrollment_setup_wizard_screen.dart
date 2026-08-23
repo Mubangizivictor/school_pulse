@@ -1569,44 +1569,59 @@ class _FinanceStepState extends State<_FinanceStep> {
             selected.term.trim().toLowerCase() !=
                 currentTermName.trim().toLowerCase();
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SectionHeader(title: 'Fee Structure'),
-            if (currentTermName.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  'Current term: $currentTermName',
-                  style: Theme.of(context).textTheme.bodySmall,
+        return StreamBuilder<List<AcademicYear>>(
+          stream: sl<StructureRepository>().watchAcademicYears(
+            state.schoolId,
+          ),
+          builder: (context, yearSnap) {
+            final years = yearSnap.data ?? const <AcademicYear>[];
+            String yearLabel(String academicYearId) {
+              final match = years.where((y) => y.id == academicYearId);
+              return match.isNotEmpty
+                  ? match.first.name
+                  : (years.isEmpty ? 'Loading…' : 'Unknown year');
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SectionHeader(title: 'Fee Structure'),
+                if (currentTermName.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'Current term: $currentTermName',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                if (termMismatch)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'Selected fee structure is for ${selected.term}, not the '
+                      'current term ($currentTermName). Double-check this is '
+                      'the intended structure.',
+                      style: TextStyle(color: AppColors.warning(context)),
+                    ),
+                  ),
+                ...filtered.map(
+                  (s) => RadioListTile<String>(
+                    value: s.id,
+                    groupValue: _selectedFeeStructureId,
+                    title: Text(s.name),
+                    subtitle: Text(
+                      '${CurrencyFormatter.ugx(s.totalAmount)} • '
+                      '${s.studentCategory} • ${s.term} ${yearLabel(s.academicYear)}',
+                    ),
+                    onChanged: (v) {
+                      setState(() => _selectedFeeStructureId = v);
+                      final match = filtered
+                          .where((f) => f.id == v)
+                          .firstOrNull;
+                      if (match != null) _emitFromStructure(match);
+                    },
+                  ),
                 ),
-              ),
-            if (termMismatch)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  'Selected fee structure is for ${selected.term}, not the '
-                  'current term ($currentTermName). Double-check this is '
-                  'the intended structure.',
-                  style: TextStyle(color: AppColors.warning(context)),
-                ),
-              ),
-            ...filtered.map(
-              (s) => RadioListTile<String>(
-                value: s.id,
-                groupValue: _selectedFeeStructureId,
-                title: Text(s.name),
-                subtitle: Text(
-                  '${CurrencyFormatter.ugx(s.totalAmount)} • '
-                  '${s.studentCategory} • ${s.term} ${s.academicYear}',
-                ),
-                onChanged: (v) {
-                  setState(() => _selectedFeeStructureId = v);
-                  final match = filtered.where((f) => f.id == v).firstOrNull;
-                  if (match != null) _emitFromStructure(match);
-                },
-              ),
-            ),
             if (selected != null) ...[
               const SizedBox(height: 16),
               const SectionHeader(title: 'Itemized Breakdown'),
@@ -1727,12 +1742,14 @@ class _FinanceStepState extends State<_FinanceStep> {
                 ],
               ),
             ],
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () => setState(() => _manualEntry = true),
-              child: const Text('Enter fees manually instead'),
-            ),
-          ],
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => setState(() => _manualEntry = true),
+                  child: const Text('Enter fees manually instead'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
