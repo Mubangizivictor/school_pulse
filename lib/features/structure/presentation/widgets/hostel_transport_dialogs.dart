@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import '../../../auth/domain/entities/user_entity.dart';
 import '../../domain/entities/hostel_entities.dart';
 import '../../domain/entities/transport_structure_entities.dart';
 import 'structure_ui_kit.dart';
@@ -11,6 +12,10 @@ Future<void> showHostelFormDialog(
   Hostel? existing,
   required String schoolId,
   required void Function(Hostel) onSave,
+
+  /// Staff holding UserRole.boardingMatron/boardingPatron - lets the admin
+  /// link a real staff record as this hostel's warden instead of free text.
+  List<UserEntity> matronPatronStaff = const [],
 }) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
@@ -28,6 +33,7 @@ Future<void> showHostelFormDialog(
       ? existing!.gender
       : kHostelGenders.first;
   bool isActive = existing?.isActive ?? true;
+  String? selectedWardenStaffId = existing?.wardenStaffId;
 
   return showStructureFormSheet(
     context,
@@ -51,6 +57,23 @@ Future<void> showHostelFormDialog(
             onChanged: (v) =>
                 setState(() => selectedGender = v ?? selectedGender),
           ),
+          if (matronPatronStaff.isNotEmpty)
+            StructureStaffPickerField(
+              label: 'Assigned Matron/Patron (optional)',
+              selectedStaffId: selectedWardenStaffId,
+              staff: matronPatronStaff,
+              onChanged: (v) => setState(() {
+                selectedWardenStaffId = v;
+                final match = matronPatronStaff
+                    .where((s) => s.id == v)
+                    .firstOrNull;
+                if (match != null) {
+                  wardenNameController.text = match.name;
+                  wardenContactController.text =
+                      match.phoneNumber ?? match.alternatePhone ?? '';
+                }
+              }),
+            ),
           TextFormField(
             controller: wardenNameController,
             decoration: const InputDecoration(
@@ -95,6 +118,7 @@ Future<void> showHostelFormDialog(
           gender: selectedGender,
           wardenName: wardenNameController.text,
           wardenContact: wardenContactController.text,
+          wardenStaffId: selectedWardenStaffId,
           capacity: int.tryParse(capacityController.text) ?? 0,
           description: descController.text,
           isActive: isActive,

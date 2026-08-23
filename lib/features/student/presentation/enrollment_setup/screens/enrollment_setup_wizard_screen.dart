@@ -7,6 +7,8 @@ import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/injection_container.dart';
+import 'package:school_pulse/core/usecases/usecase.dart';
+import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/relationships/domain/entities/relationship_enums.dart';
@@ -2008,19 +2010,8 @@ class _BoardingHouseStepState extends State<_BoardingHouseStep> {
                             labelText: 'Hostel',
                           ),
                         ),
-                        if (selectedHostel != null &&
-                            selectedHostel.wardenName.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                              'Warden: ${selectedHostel.wardenName}'
-                              '${selectedHostel.wardenContact.isNotEmpty ? ' • ${selectedHostel.wardenContact}' : ''}',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: AppColors.textMuted(context),
-                              ),
-                            ),
-                          ),
+                        if (selectedHostel != null)
+                          _HostelWardenLabel(hostel: selectedHostel),
                         const SizedBox(height: 12),
                         StreamBuilder<Map<String, int>>(
                           stream: _hostelId == null
@@ -2116,6 +2107,50 @@ class _BoardingHouseStepState extends State<_BoardingHouseStep> {
         hostelId: _hostelId!,
         roomId: _roomId!,
         bed: _bedController.text.trim(),
+      ),
+    );
+  }
+}
+
+/// Shows the hostel's assigned Matron/Patron staff record when one exists
+/// (`Hostel.wardenStaffId`), falling back to the free-text warden fields
+/// entered before any formal staff assignment was made.
+class _HostelWardenLabel extends StatelessWidget {
+  final Hostel hostel;
+  const _HostelWardenLabel({required this.hostel});
+
+  @override
+  Widget build(BuildContext context) {
+    final staffId = hostel.wardenStaffId;
+    if (staffId == null || staffId.isEmpty) {
+      return _label(context, hostel.wardenName, hostel.wardenContact);
+    }
+    return FutureBuilder(
+      future: sl<GetStaffMembers>()(NoParams()),
+      builder: (context, snap) {
+        final staff = snap.data
+            ?.getOrElse(() => const [])
+            .where((s) => s.id == staffId)
+            .firstOrNull;
+        if (staff == null) {
+          return _label(context, hostel.wardenName, hostel.wardenContact);
+        }
+        return _label(
+          context,
+          staff.name,
+          staff.phoneNumber ?? staff.alternatePhone ?? '',
+        );
+      },
+    );
+  }
+
+  Widget _label(BuildContext context, String name, String contact) {
+    if (name.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Text(
+        'Warden: $name${contact.isNotEmpty ? ' • $contact' : ''}',
+        style: TextStyle(fontSize: 12.5, color: AppColors.textMuted(context)),
       ),
     );
   }

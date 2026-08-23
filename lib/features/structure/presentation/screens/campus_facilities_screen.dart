@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 import '../../domain/entities/campus_entities.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
@@ -414,13 +418,43 @@ class _FacilitiesEmptyState extends StatelessWidget {
   }
 }
 
-class _HostelStructureTab extends StatelessWidget {
+class _HostelStructureTab extends StatefulWidget {
   final StructureState state;
   final String schoolId;
   const _HostelStructureTab({required this.state, required this.schoolId});
 
   @override
+  State<_HostelStructureTab> createState() => _HostelStructureTabState();
+}
+
+class _HostelStructureTabState extends State<_HostelStructureTab> {
+  List<UserEntity> _matronPatronStaff = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMatronPatronStaff();
+  }
+
+  Future<void> _loadMatronPatronStaff() async {
+    final result = await di.sl<GetStaffMembers>()(NoParams());
+    if (!mounted) return;
+    final staff = result.getOrElse(() => const []);
+    setState(() {
+      _matronPatronStaff = staff
+          .where(
+            (s) =>
+                s.roles.contains(UserRole.boardingMatron) ||
+                s.roles.contains(UserRole.boardingPatron),
+          )
+          .toList();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
+    final schoolId = widget.schoolId;
     final bloc = context.read<StructureBloc>();
     return ListView(
       padding: const EdgeInsets.all(12),
@@ -437,6 +471,7 @@ class _HostelStructureTab extends StatelessWidget {
           onAction: () => showHostelFormDialog(
             context,
             schoolId: schoolId,
+            matronPatronStaff: _matronPatronStaff,
             onSave: (h) => bloc.add(SaveHostelRequested(h)),
           ),
         ),
@@ -458,6 +493,7 @@ class _HostelStructureTab extends StatelessWidget {
               context,
               schoolId: schoolId,
               existing: hostel,
+              matronPatronStaff: _matronPatronStaff,
               onSave: (u) => bloc.add(SaveHostelRequested(u)),
             ),
             onDelete: () async {
