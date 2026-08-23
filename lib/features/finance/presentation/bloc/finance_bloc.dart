@@ -267,10 +267,13 @@ class FinanceBloc extends Bloc<FinanceEvent, FinanceState> {
     LoadFeeCategories event,
     Emitter<FinanceState> emit,
   ) async {
+    final categoriesResult = await repository.getFeeCategories(event.schoolId);
+    // Read prior state after the await, not before — LoadFeeStructures runs
+    // concurrently and may have already emitted by the time this resolves;
+    // capturing "prior" at handler-start clobbers that emit's data instead of merging it.
     final priorStructures = state is FeeConfigurationLoaded
         ? (state as FeeConfigurationLoaded).structures
         : const <FeeStructure>[];
-    final categoriesResult = await repository.getFeeCategories(event.schoolId);
     categoriesResult.fold(
       (failure) => emit(const FinanceError('Failed to load fee categories')),
       (categories) => emit(
@@ -297,10 +300,10 @@ class FinanceBloc extends Bloc<FinanceEvent, FinanceState> {
     LoadFeeStructures event,
     Emitter<FinanceState> emit,
   ) async {
+    final structuresResult = await repository.getFeeStructures(event.schoolId);
     final priorCategories = state is FeeConfigurationLoaded
         ? (state as FeeConfigurationLoaded).categories
         : const <FeeCategory>[];
-    final structuresResult = await repository.getFeeStructures(event.schoolId);
     structuresResult.fold(
       (failure) => emit(const FinanceError('Failed to load fee structures')),
       (structures) => emit(
