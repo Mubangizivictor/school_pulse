@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/relationships/domain/entities/relationship_enums.dart';
+import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
 import 'package:school_pulse/features/student/domain/enrollment_setup/entities/scholarship_award.dart';
 
@@ -60,7 +62,133 @@ class WizardPreviousStep extends EnrollmentSetupWizardEvent {
   const WizardPreviousStep();
 }
 
-// Step 1: Admission
+// Step 0: Basic Info
+class BasicInfoUpdated extends EnrollmentSetupWizardEvent {
+  final String name;
+  final DateTime dateOfBirth;
+  final Gender gender;
+  final String? religion;
+  final String? nationality;
+  const BasicInfoUpdated({
+    required this.name,
+    required this.dateOfBirth,
+    required this.gender,
+    this.religion,
+    this.nationality,
+  });
+  @override
+  List<Object?> get props => [name, dateOfBirth, gender, religion, nationality];
+}
+
+// Step 1: Class & Stream (front-loaded placement, distinct from the later
+// Academic Placement step which also covers subjects/teachers).
+class ClassStreamSelected extends EnrollmentSetupWizardEvent {
+  final String classId;
+  final String? streamId;
+  const ClassStreamSelected({required this.classId, this.streamId});
+  @override
+  List<Object?> get props => [classId, streamId];
+}
+
+// Step 2: Guardians (multi-guardian list)
+class GuardianDraft extends Equatable {
+  final String name;
+  final String phoneNumber;
+  final RelationshipType type;
+  final String relationshipLabel; // e.g. "Father", "Mother", "Guardian"
+  final String? email;
+  final bool isLegalGuardian;
+  final bool isPrimaryGuardian;
+  final bool pickupAuthorized;
+
+  const GuardianDraft({
+    required this.name,
+    required this.phoneNumber,
+    required this.type,
+    required this.relationshipLabel,
+    this.email,
+    this.isLegalGuardian = false,
+    this.isPrimaryGuardian = false,
+    this.pickupAuthorized = false,
+  });
+
+  GuardianDraft copyWith({
+    String? name,
+    String? phoneNumber,
+    RelationshipType? type,
+    String? relationshipLabel,
+    String? email,
+    bool? isLegalGuardian,
+    bool? isPrimaryGuardian,
+    bool? pickupAuthorized,
+  }) {
+    return GuardianDraft(
+      name: name ?? this.name,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      type: type ?? this.type,
+      relationshipLabel: relationshipLabel ?? this.relationshipLabel,
+      email: email ?? this.email,
+      isLegalGuardian: isLegalGuardian ?? this.isLegalGuardian,
+      isPrimaryGuardian: isPrimaryGuardian ?? this.isPrimaryGuardian,
+      pickupAuthorized: pickupAuthorized ?? this.pickupAuthorized,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+    name,
+    phoneNumber,
+    type,
+    relationshipLabel,
+    email,
+    isLegalGuardian,
+    isPrimaryGuardian,
+    pickupAuthorized,
+  ];
+}
+
+class GuardiansListUpdated extends EnrollmentSetupWizardEvent {
+  final List<GuardianDraft> guardians;
+  const GuardiansListUpdated(this.guardians);
+  @override
+  List<Object?> get props => [guardians];
+}
+
+class GuardiansLinkRequested extends EnrollmentSetupWizardEvent {
+  final UserEntity operatorUser;
+  const GuardiansLinkRequested(this.operatorUser);
+  @override
+  List<Object?> get props => [operatorUser];
+}
+
+class SiblingLinkRequested extends EnrollmentSetupWizardEvent {
+  final String siblingStudentId;
+  const SiblingLinkRequested(this.siblingStudentId);
+  @override
+  List<Object?> get props => [siblingStudentId];
+}
+
+// Step 3: Health & Emergency
+class HealthInfoUpdated extends EnrollmentSetupWizardEvent {
+  final MedicalInfo medicalInfo;
+  final List<EmergencyContact> emergencyContacts;
+  const HealthInfoUpdated({
+    required this.medicalInfo,
+    required this.emergencyContacts,
+  });
+  @override
+  List<Object?> get props => [medicalInfo, emergencyContacts];
+}
+
+// Step 4: Transport
+class TransportInfoUpdated extends EnrollmentSetupWizardEvent {
+  final String? transportInfo;
+  const TransportInfoUpdated(this.transportInfo);
+  @override
+  List<Object?> get props => [transportInfo];
+}
+
+// Step 5 (was 1): Admission
 class AdmissionDetailsUpdated extends EnrollmentSetupWizardEvent {
   final StudentBoardingType boardingType;
   final String joiningStatus;

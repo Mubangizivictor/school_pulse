@@ -7,6 +7,7 @@ import 'package:school_pulse/features/relationships/domain/entities/relationship
 import 'package:school_pulse/features/relationships/domain/usecases/create_relationship.dart';
 import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft_local_data_source.dart';
 import 'package:school_pulse/features/student/data/enrollment_setup/models/enrollment_setup_draft_isar.dart';
+import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
 import 'package:school_pulse/features/student/domain/enrollment_setup/entities/dormitory_assignment.dart';
 import 'package:school_pulse/features/student/domain/enrollment_setup/entities/scholarship_award.dart';
@@ -64,6 +65,13 @@ class EnrollmentSetupWizardBloc
     on<WizardStarted>(_onWizardStarted);
     on<WizardNextStep>(_onNextStep);
     on<WizardPreviousStep>(_onPreviousStep);
+    on<BasicInfoUpdated>(_onBasicInfoUpdated);
+    on<ClassStreamSelected>(_onClassStreamSelected);
+    on<GuardiansListUpdated>(_onGuardiansListUpdated);
+    on<GuardiansLinkRequested>(_onGuardiansLinkRequested);
+    on<SiblingLinkRequested>(_onSiblingLinkRequested);
+    on<HealthInfoUpdated>(_onHealthInfoUpdated);
+    on<TransportInfoUpdated>(_onTransportInfoUpdated);
     on<AdmissionDetailsUpdated>(_onAdmissionDetailsUpdated);
     on<AcademicPlacementUpdated>(_onAcademicPlacementUpdated);
     on<FinanceDetailsUpdated>(_onFinanceDetailsUpdated);
@@ -91,6 +99,50 @@ class EnrollmentSetupWizardBloc
   /// operator left off - not a full state dump (loading/error/transient
   /// flags are excluded on purpose).
   Map<String, dynamic> _stateToDraftJson(EnrollmentSetupWizardState s) => {
+    'studentName': s.studentName,
+    'dateOfBirth': s.dateOfBirth?.toIso8601String(),
+    'gender': s.gender.name,
+    'religion': s.religion,
+    'nationality': s.nationality,
+    'selectedClassId': s.selectedClassId,
+    'selectedStreamId': s.selectedStreamId,
+    'guardians': s.guardians
+        .map(
+          (g) => {
+            'name': g.name,
+            'phoneNumber': g.phoneNumber,
+            'type': g.type.name,
+            'relationshipLabel': g.relationshipLabel,
+            'email': g.email,
+            'isLegalGuardian': g.isLegalGuardian,
+            'isPrimaryGuardian': g.isPrimaryGuardian,
+            'pickupAuthorized': g.pickupAuthorized,
+          },
+        )
+        .toList(),
+    'guardiansLinked': s.guardiansLinked,
+    'parentAccessCodes': s.parentAccessCodes,
+    'siblingStudentId': s.siblingStudentId,
+    'medicalInfo': s.medicalInfo == null
+        ? null
+        : {
+            'bloodGroup': s.medicalInfo!.bloodGroup,
+            'allergies': s.medicalInfo!.allergies,
+            'chronicConditions': s.medicalInfo!.chronicConditions,
+            'medications': s.medicalInfo!.medications,
+            'disabilities': s.medicalInfo!.disabilities,
+          },
+    'emergencyContacts': s.emergencyContacts
+        .map(
+          (c) => {
+            'name': c.name,
+            'relationship': c.relationship,
+            'phoneNumber': c.phoneNumber,
+            'email': c.email,
+          },
+        )
+        .toList(),
+    'transportInfo': s.transportInfo,
     'boardingType': s.boardingType?.name,
     'joiningStatus': s.joiningStatus,
     'classId': s.classId,
@@ -126,7 +178,79 @@ class EnrollmentSetupWizardBloc
         if (v.name == boardingName) boardingType = v;
       }
     }
+    final guardians = (json['guardians'] as List? ?? [])
+        .map((raw) {
+          final g = (raw as Map).cast<String, dynamic>();
+          final typeName = g['type'] as String?;
+          final type = RelationshipType.values.firstWhere(
+            (t) => t.name == typeName,
+            orElse: () => RelationshipType.parent,
+          );
+          return GuardianDraft(
+            name: g['name'] as String? ?? '',
+            phoneNumber: g['phoneNumber'] as String? ?? '',
+            type: type,
+            relationshipLabel: g['relationshipLabel'] as String? ?? '',
+            email: g['email'] as String?,
+            isLegalGuardian: g['isLegalGuardian'] as bool? ?? false,
+            isPrimaryGuardian: g['isPrimaryGuardian'] as bool? ?? false,
+            pickupAuthorized: g['pickupAuthorized'] as bool? ?? false,
+          );
+        })
+        .toList();
+
+    final medicalJson = json['medicalInfo'];
+    final medicalInfo = medicalJson is Map
+        ? MedicalInfo(
+            bloodGroup: medicalJson['bloodGroup'] as String?,
+            allergies: (medicalJson['allergies'] as List?)?.cast<String>() ?? const [],
+            chronicConditions:
+                (medicalJson['chronicConditions'] as List?)?.cast<String>() ??
+                const [],
+            medications: medicalJson['medications'] as String?,
+            disabilities: medicalJson['disabilities'] as String?,
+          )
+        : null;
+
+    final emergencyContacts = (json['emergencyContacts'] as List? ?? [])
+        .map((raw) {
+          final c = (raw as Map).cast<String, dynamic>();
+          return EmergencyContact(
+            name: c['name'] as String? ?? '',
+            relationship: c['relationship'] as String? ?? '',
+            phoneNumber: c['phoneNumber'] as String? ?? '',
+            email: c['email'] as String?,
+          );
+        })
+        .toList();
+
+    Gender gender = s.gender;
+    final genderName = json['gender'] as String?;
+    if (genderName != null) {
+      for (final v in Gender.values) {
+        if (v.name == genderName) gender = v;
+      }
+    }
+
     return s.copyWith(
+      studentName: json['studentName'] as String? ?? s.studentName,
+      dateOfBirth: (json['dateOfBirth'] as String?) != null
+          ? DateTime.tryParse(json['dateOfBirth'] as String)
+          : s.dateOfBirth,
+      gender: gender,
+      religion: json['religion'] as String?,
+      nationality: json['nationality'] as String?,
+      selectedClassId: json['selectedClassId'] as String? ?? s.selectedClassId,
+      selectedStreamId: json['selectedStreamId'] as String?,
+      clearSelectedStreamId: json['selectedStreamId'] == null,
+      guardians: guardians,
+      guardiansLinked: json['guardiansLinked'] as bool? ?? false,
+      parentAccessCodes:
+          (json['parentAccessCodes'] as List?)?.cast<String>() ?? const [],
+      siblingStudentId: json['siblingStudentId'] as String?,
+      medicalInfo: medicalInfo,
+      emergencyContacts: emergencyContacts,
+      transportInfo: json['transportInfo'] as String?,
       boardingType: boardingType,
       joiningStatus: json['joiningStatus'] as String?,
       classId: json['classId'] as String? ?? s.classId,
@@ -288,6 +412,170 @@ class EnrollmentSetupWizardBloc
       m >>= 1;
     }
     return count;
+  }
+
+  /// Loads and mutates the student doc for the front-loaded steps
+  /// (Basic Info, Class & Stream, Health, Transport). `recordedBy` uses
+  /// [state.schoolId] as a placeholder acting id is not available here -
+  /// these are draft-local edits until Review & Activate; the actual
+  /// enrolment history recordedBy is attributed at admitStudent() time.
+  Future<Student?> _loadCurrentStudent() async {
+    if (state.studentId == null) return null;
+    final result = await studentRepository.getStudentById(state.studentId!);
+    return result.fold((_) => null, (s) => s);
+  }
+
+  void _onBasicInfoUpdated(
+    BasicInfoUpdated event,
+    Emitter<EnrollmentSetupWizardState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        studentName: event.name,
+        dateOfBirth: event.dateOfBirth,
+        gender: event.gender,
+        religion: event.religion,
+        nationality: event.nationality,
+      ),
+    );
+  }
+
+  void _onClassStreamSelected(
+    ClassStreamSelected event,
+    Emitter<EnrollmentSetupWizardState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        selectedClassId: event.classId,
+        selectedStreamId: event.streamId,
+        clearSelectedStreamId: event.streamId == null,
+        // Keep the later Academic Placement step's classId/streamId in
+        // sync so a student who never revisits step 6 still lands on the
+        // class picked here.
+        classId: event.classId,
+        streamId: event.streamId,
+      ),
+    );
+  }
+
+  void _onGuardiansListUpdated(
+    GuardiansListUpdated event,
+    Emitter<EnrollmentSetupWizardState> emit,
+  ) {
+    emit(state.copyWith(guardians: event.guardians, guardiansLinked: false));
+  }
+
+  Future<void> _onGuardiansLinkRequested(
+    GuardiansLinkRequested event,
+    Emitter<EnrollmentSetupWizardState> emit,
+  ) async {
+    final allowed = await _allowed(
+      Permission.enrollmentParentLink,
+      event.operatorUser,
+    );
+    if (!allowed) {
+      emit(
+        state.copyWith(
+          error: 'You do not have permission to link a parent/guardian.',
+        ),
+      );
+      return;
+    }
+    if (state.studentId == null || state.guardians.isEmpty) return;
+
+    emit(state.copyWith(isLoading: true, clearError: true));
+
+    final codes = <String>[];
+    for (final guardian in state.guardians) {
+      final linkResult = await parentLinkingService.linkStudentToParent(
+        studentId: state.studentId!,
+        studentName: state.studentCode,
+        schoolId: state.schoolId,
+        phoneNumber: guardian.phoneNumber,
+        parentName: guardian.name,
+        createdBy: event.operatorUser.id,
+      );
+      final failure = linkResult.fold((f) => f, (_) => null);
+      if (failure != null) {
+        emit(state.copyWith(isLoading: false, error: failure.message));
+        return;
+      }
+      final code = linkResult.fold((_) => null, (c) => c);
+      if (code != null) codes.add(code);
+
+      await createRelationship(
+        CreateRelationshipParams(
+          schoolId: state.schoolId,
+          studentId: state.studentId!,
+          parentCode: code,
+          type: guardian.type,
+          isLegalGuardian: guardian.isLegalGuardian,
+          isPrimaryGuardian: guardian.isPrimaryGuardian,
+          createdBy: event.operatorUser.id,
+          pickupAuthorized: guardian.pickupAuthorized,
+        ),
+      );
+    }
+
+    auditService?.record(
+      schoolId: state.schoolId,
+      action: 'enrollment_guardians_linked',
+      studentId: state.studentId,
+    );
+
+    emit(
+      state.copyWith(
+        isLoading: false,
+        guardiansLinked: true,
+        parentAccessCodes: codes,
+        // Mirror onto the later single-guardian Parent/Guardian step's
+        // fields too so its already-linked branch renders and Review's
+        // "Parent linked" check is satisfied without asking twice.
+        parentLinked: true,
+        parentAccessCode: codes.isNotEmpty ? codes.first : null,
+      ),
+    );
+  }
+
+  void _onSiblingLinkRequested(
+    SiblingLinkRequested event,
+    Emitter<EnrollmentSetupWizardState> emit,
+  ) {
+    emit(state.copyWith(siblingStudentId: event.siblingStudentId));
+  }
+
+  Future<void> _onHealthInfoUpdated(
+    HealthInfoUpdated event,
+    Emitter<EnrollmentSetupWizardState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        medicalInfo: event.medicalInfo,
+        emergencyContacts: event.emergencyContacts,
+      ),
+    );
+    final current = await _loadCurrentStudent();
+    if (current == null) return;
+    await studentRepository.updateStudent(
+      current.copyWith(
+        medicalInfo: event.medicalInfo,
+        emergencyContacts: event.emergencyContacts,
+      ),
+      recordedBy: state.schoolId,
+    );
+  }
+
+  Future<void> _onTransportInfoUpdated(
+    TransportInfoUpdated event,
+    Emitter<EnrollmentSetupWizardState> emit,
+  ) async {
+    emit(state.copyWith(transportInfo: event.transportInfo));
+    final current = await _loadCurrentStudent();
+    if (current == null) return;
+    await studentRepository.updateStudent(
+      current.copyWith(transportInfo: event.transportInfo),
+      recordedBy: state.schoolId,
+    );
   }
 
   void _onAdmissionDetailsUpdated(

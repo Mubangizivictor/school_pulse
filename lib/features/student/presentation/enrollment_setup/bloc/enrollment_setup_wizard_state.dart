@@ -1,7 +1,9 @@
 import 'package:equatable/equatable.dart';
+import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
+import 'enrollment_setup_wizard_event.dart' show GuardianDraft;
 
-const int kWizardStepCount = 8;
+const int kWizardStepCount = 13;
 
 class EnrollmentSetupWizardState extends Equatable {
   final int currentStep; // 0-based, 0..7
@@ -19,16 +21,40 @@ class EnrollmentSetupWizardState extends Equatable {
   final String studentCode;
   final String admissionNumber;
 
-  // Step 1
+  // Step 0: Basic Info
+  final String studentName;
+  final DateTime? dateOfBirth;
+  final Gender gender;
+  final String? religion;
+  final String? nationality;
+
+  // Step 1: Class & Stream (front-loaded placement)
+  final String selectedClassId;
+  final String? selectedStreamId;
+
+  // Step 2: Guardians
+  final List<GuardianDraft> guardians;
+  final bool guardiansLinked;
+  final List<String> parentAccessCodes;
+  final String? siblingStudentId;
+
+  // Step 3: Health & Emergency
+  final MedicalInfo? medicalInfo;
+  final List<EmergencyContact> emergencyContacts;
+
+  // Step 4: Transport
+  final String? transportInfo;
+
+  // Step 5 (was 1)
   final StudentBoardingType? boardingType;
   final String? joiningStatus;
 
-  // Step 2
+  // Step 6 (was 2)
   final String classId;
   final String? streamId;
   final String academicYearId;
 
-  // Step 3
+  // Step 7 (was 3)
   final String? feeStructureId;
   final String? term;
   final double? totalBilled;
@@ -72,6 +98,20 @@ class EnrollmentSetupWizardState extends Equatable {
     this.uniqueSystemId = '',
     this.studentCode = '',
     this.admissionNumber = '',
+    this.studentName = '',
+    this.dateOfBirth,
+    this.gender = Gender.male,
+    this.religion,
+    this.nationality,
+    this.selectedClassId = '',
+    this.selectedStreamId,
+    this.guardians = const [],
+    this.guardiansLinked = false,
+    this.parentAccessCodes = const [],
+    this.siblingStudentId,
+    this.medicalInfo,
+    this.emergencyContacts = const [],
+    this.transportInfo,
     this.boardingType,
     this.joiningStatus,
     this.classId = '',
@@ -107,6 +147,7 @@ class EnrollmentSetupWizardState extends Equatable {
       academicYearId.isNotEmpty &&
       classId.isNotEmpty &&
       studentCode.isNotEmpty &&
+      guardians.isNotEmpty &&
       (parentLinked || parentLinkSkippedFlag);
 
   EnrollmentSetupWizardState copyWith({
@@ -124,6 +165,21 @@ class EnrollmentSetupWizardState extends Equatable {
     String? uniqueSystemId,
     String? studentCode,
     String? admissionNumber,
+    String? studentName,
+    DateTime? dateOfBirth,
+    Gender? gender,
+    String? religion,
+    String? nationality,
+    String? selectedClassId,
+    String? selectedStreamId,
+    bool clearSelectedStreamId = false,
+    List<GuardianDraft>? guardians,
+    bool? guardiansLinked,
+    List<String>? parentAccessCodes,
+    String? siblingStudentId,
+    MedicalInfo? medicalInfo,
+    List<EmergencyContact>? emergencyContacts,
+    String? transportInfo,
     StudentBoardingType? boardingType,
     String? joiningStatus,
     String? classId,
@@ -162,6 +218,22 @@ class EnrollmentSetupWizardState extends Equatable {
       uniqueSystemId: uniqueSystemId ?? this.uniqueSystemId,
       studentCode: studentCode ?? this.studentCode,
       admissionNumber: admissionNumber ?? this.admissionNumber,
+      studentName: studentName ?? this.studentName,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      gender: gender ?? this.gender,
+      religion: religion ?? this.religion,
+      nationality: nationality ?? this.nationality,
+      selectedClassId: selectedClassId ?? this.selectedClassId,
+      selectedStreamId: clearSelectedStreamId
+          ? null
+          : (selectedStreamId ?? this.selectedStreamId),
+      guardians: guardians ?? this.guardians,
+      guardiansLinked: guardiansLinked ?? this.guardiansLinked,
+      parentAccessCodes: parentAccessCodes ?? this.parentAccessCodes,
+      siblingStudentId: siblingStudentId ?? this.siblingStudentId,
+      medicalInfo: medicalInfo ?? this.medicalInfo,
+      emergencyContacts: emergencyContacts ?? this.emergencyContacts,
+      transportInfo: transportInfo ?? this.transportInfo,
       boardingType: boardingType ?? this.boardingType,
       joiningStatus: joiningStatus ?? this.joiningStatus,
       classId: classId ?? this.classId,
@@ -204,6 +276,20 @@ class EnrollmentSetupWizardState extends Equatable {
     uniqueSystemId,
     studentCode,
     admissionNumber,
+    studentName,
+    dateOfBirth,
+    gender,
+    religion,
+    nationality,
+    selectedClassId,
+    selectedStreamId,
+    guardians,
+    guardiansLinked,
+    parentAccessCodes,
+    siblingStudentId,
+    medicalInfo,
+    emergencyContacts,
+    transportInfo,
     boardingType,
     joiningStatus,
     classId,
