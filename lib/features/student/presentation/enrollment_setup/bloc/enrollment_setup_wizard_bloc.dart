@@ -22,6 +22,8 @@ import 'package:school_pulse/features/student/domain/services/parent_linking_ser
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
 import 'package:school_pulse/features/verification/domain/repositories/nfc_credential_repository.dart';
 import 'package:school_pulse/features/verification/domain/repositories/permission_evaluator.dart';
+import 'package:school_pulse/features/finance/domain/repositories/finance_repository.dart';
+import 'package:school_pulse/features/finance/domain/entities/student_financial_account.dart';
 import 'enrollment_setup_wizard_event.dart';
 import 'enrollment_setup_wizard_state.dart';
 
@@ -42,6 +44,7 @@ class EnrollmentSetupWizardBloc
   final EnrollmentSetupDraftLocalDataSource? draftLocalDataSource;
   final EnrollmentAuditService? auditService;
   final NotificationSendService? notificationSender;
+  final FinanceRepository? financeRepository;
 
   /// Bitmask of steps (0..7) whose data has been successfully persisted at
   /// least once. Not part of [EnrollmentSetupWizardState.props] directly -
@@ -61,6 +64,7 @@ class EnrollmentSetupWizardBloc
     this.draftLocalDataSource,
     this.auditService,
     this.notificationSender,
+    this.financeRepository,
   }) : super(const EnrollmentSetupWizardState()) {
     on<WizardStarted>(_onWizardStarted);
     on<WizardNextStep>(_onNextStep);
@@ -80,8 +84,6 @@ class EnrollmentSetupWizardBloc
     on<DormitoryAssignmentRequested>(_onDormitoryAssignmentRequested);
     on<ClubMembershipToggled>(_onClubMembershipToggled);
     on<ClubMembershipsSaveRequested>(_onClubMembershipsSaveRequested);
-    on<ParentLinkRequested>(_onParentLinkRequested);
-    on<ParentLinkSkipped>(_onParentLinkSkipped);
     on<IdentityPreviewRequested>(_onIdentityPreviewRequested);
     on<NfcRegistrationRequested>(_onNfcRegistrationRequested);
     on<NfcRegistrationSkipped>(_onNfcRegistrationSkipped);
@@ -161,7 +163,6 @@ class EnrollmentSetupWizardBloc
     'clubsSaved': s.clubsSaved,
     'parentLinked': s.parentLinked,
     'parentAccessCode': s.parentAccessCode,
-    'parentLinkSkippedFlag': s.parentLinkSkippedFlag,
     'identityExists': s.identityExists,
     'nfcRegistered': s.nfcRegistered,
     'nfcSkipped': s.nfcSkipped,
@@ -271,7 +272,6 @@ class EnrollmentSetupWizardBloc
       clubsSaved: json['clubsSaved'] as bool? ?? false,
       parentLinked: json['parentLinked'] as bool? ?? false,
       parentAccessCode: json['parentAccessCode'] as String?,
-      parentLinkSkippedFlag: json['parentLinkSkippedFlag'] as bool? ?? false,
       identityExists: json['identityExists'] as bool? ?? false,
       nfcRegistered: json['nfcRegistered'] as bool? ?? false,
       nfcSkipped: json['nfcSkipped'] as bool? ?? false,
@@ -636,6 +636,36 @@ class EnrollmentSetupWizardBloc
         totalBilled: event.totalBilled,
       ),
     );
+
+    // Best-effort: land the computed bill in the same
+    // StudentFinancialAccount collection the bursar dashboard already
+    // reads from (BursarStudentProjectionService), so this student shows
+    // up billed without a separate finance-side data entry step. Fire and
+    // forget - Finance isn't required to complete the wizard, and a write
+    // failure here shouldn't block enrollment.
+    final financeRepo = financeRepository;
+    final studentId = state.studentId;
+    if (financeRepo == null ||
+        studentId == null ||
+        event.feeStructureId == null ||
+        event.totalBilled == null) {
+      return;
+    }
+    unawaited(
+      financeRepo.updateStudentFinancialAccount(
+        StudentFinancialAccount(
+          studentId: studentId,
+          schoolId: state.schoolId,
+          academicYear: state.academicYearId,
+          term: event.term ?? '',
+          feeStructureId: event.feeStructureId!,
+          discountAmount: event.discountAmount ?? 0,
+          totalBilled: event.totalBilled!,
+          totalPaid: 0,
+          paymentHistory: const [],
+        ),
+      ),
+    );
   }
 
   Future<void> _onScholarshipAwardRequested(
@@ -786,88 +816,6 @@ class EnrollmentSetupWizardBloc
       }
     }
     emit(state.copyWith(isLoading: false, clubsSaved: true));
-  }
-
-  Future<void> _onParentLinkRequested(
-    ParentLinkRequested event,
-    Emitter<EnrollmentSetupWizardState> emit,
-  ) async {
-    final allowed = await _allowed(
-      Permission.enrollmentParentLink,
-      event.operatorUser,
-    );
-    if (!allowed) {
-      emit(
-        state.copyWith(
-          error: 'You do not have permission to link a parent/guardian.',
-        ),
-      );
-      return;
-    }
-    if (state.studentId == null) return;
-
-    emit(state.copyWith(isLoading: true, clearError: true));
-
-    final linkResult = await parentLinkingService.linkStudentToParent(
-      studentId: state.studentId!,
-      studentName: state.studentCode,
-      schoolId: state.schoolId,
-      phoneNumber: event.phoneNumber,
-      parentName: event.parentName,
-      createdBy: event.operatorUser.id,
-    );
-
-    final failure = linkResult.fold((f) => f, (_) => null);
-    if (failure != null) {
-      emit(state.copyWith(isLoading: false, error: failure.message));
-      return;
-    }
-    final code = linkResult.fold((_) => null, (c) => c);
-
-    // linkStudentToParent's own _recordRelationship call already creates a
-    // base relationship with default access flags. If the wizard captured
-    // stronger role flags than that default, create a supplementary
-    // relationship carrying them via CreateRelationship directly - additive,
-    // never mutating the one linkStudentToParent already wrote.
-    if (event.isLegalGuardian ||
-        event.isPrimaryGuardian ||
-        event.financialAccess ||
-        event.pickupAuthorized) {
-      await createRelationship(
-        CreateRelationshipParams(
-          schoolId: state.schoolId,
-          studentId: state.studentId!,
-          parentCode: code,
-          type: RelationshipType.parent,
-          isLegalGuardian: event.isLegalGuardian,
-          isPrimaryGuardian: event.isPrimaryGuardian,
-          createdBy: event.operatorUser.id,
-          financialAccess: event.financialAccess,
-          pickupAuthorized: event.pickupAuthorized,
-        ),
-      );
-    }
-
-    auditService?.record(
-      schoolId: state.schoolId,
-      action: 'enrollment_parent_linked',
-      studentId: state.studentId,
-    );
-
-    emit(
-      state.copyWith(
-        isLoading: false,
-        parentLinked: true,
-        parentAccessCode: code,
-      ),
-    );
-  }
-
-  void _onParentLinkSkipped(
-    ParentLinkSkipped event,
-    Emitter<EnrollmentSetupWizardState> emit,
-  ) {
-    emit(state.copyWith(parentLinkSkippedFlag: true));
   }
 
   Future<void> _onIdentityPreviewRequested(

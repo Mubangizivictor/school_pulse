@@ -19,6 +19,9 @@ import 'package:school_pulse/features/structure/domain/repositories/structure_re
 import 'package:school_pulse/features/structure/domain/repositories/teaching_assignment_repository.dart';
 import 'package:school_pulse/features/structure/domain/repositories/curriculum_assignment_repository.dart';
 import 'package:school_pulse/features/finance/domain/repositories/finance_repository.dart';
+import 'package:school_pulse/features/finance/domain/entities/fee_structure.dart'
+    as fin;
+import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
 import '../bloc/enrollment_setup_wizard_bloc.dart';
 import '../bloc/enrollment_setup_wizard_event.dart';
 import '../bloc/enrollment_setup_wizard_state.dart';
@@ -107,7 +110,6 @@ class _WizardView extends StatelessWidget {
     'Finance',
     'Boarding / House',
     'Clubs & Activities',
-    'Parent / Guardian',
     'Student Identity',
     'Review & Activate',
   ];
@@ -198,10 +200,8 @@ class _WizardView extends StatelessWidget {
       case 9:
         return _ClubsStep(state: state);
       case 10:
-        return _ParentStep(state: state);
-      case 11:
         return _IdentityStep(state: state);
-      case 12:
+      case 11:
       default:
         return _ReviewStep(state: state);
     }
@@ -1402,6 +1402,11 @@ class _FinanceStepState extends State<_FinanceStep> {
   String? _selectedFeeStructureId;
   final _termController = TextEditingController();
   final _totalBilledController = TextEditingController();
+  bool _manualEntry = false;
+
+  // Discount applied on top of the matched fee structure's total.
+  final _discountValueController = TextEditingController();
+  bool _discountIsPercentage = true;
 
   @override
   void initState() {
@@ -1415,10 +1420,39 @@ class _FinanceStepState extends State<_FinanceStep> {
   void dispose() {
     _termController.dispose();
     _totalBilledController.dispose();
+    _discountValueController.dispose();
     super.dispose();
   }
 
-  void _emit() {
+  double _computeDiscount(double baseAmount) {
+    final value = double.tryParse(_discountValueController.text.trim()) ?? 0;
+    if (value <= 0) return 0;
+    return _discountIsPercentage ? baseAmount * value / 100 : value;
+  }
+
+  void _emitFromStructure(fin.FeeStructure structure) {
+    final discount = _computeDiscount(structure.totalAmount);
+    final finalTotal = (structure.totalAmount - discount).clamp(
+      0,
+      structure.totalAmount,
+    );
+    context.read<EnrollmentSetupWizardBloc>().add(
+      FinanceDetailsUpdated(
+        feeStructureId: structure.id,
+        term: structure.term,
+        totalBilled: finalTotal.toDouble(),
+        itemizedBreakdown: {
+          for (final item in structure.items) item.categoryName: item.amount,
+        },
+        discountAmount: discount,
+        discountPercentage: _discountIsPercentage
+            ? double.tryParse(_discountValueController.text.trim())
+            : null,
+      ),
+    );
+  }
+
+  void _emitManual() {
     context.read<EnrollmentSetupWizardBloc>().add(
       FinanceDetailsUpdated(
         feeStructureId: _selectedFeeStructureId,
@@ -1438,79 +1472,236 @@ class _FinanceStepState extends State<_FinanceStep> {
       future: financeRepo.getFeeStructures(state.schoolId),
       builder: (context, snapshot) {
         final structures =
-            snapshot.data?.fold((_) => <dynamic>[], (v) => v) ?? [];
+            snapshot.data?.fold(
+              (_) => const <fin.FeeStructure>[],
+              (v) => v,
+            ) ??
+            const <fin.FeeStructure>[];
         final filtered = structures.where((s) {
-          final dyn = s as dynamic;
-          final matchesYear = dyn.academicYear == state.academicYearId;
+          final matchesYear = s.academicYear == state.academicYearId;
           final matchesType = state.boardingType == null
               ? true
-              : dyn.studentCategory.toString().toLowerCase() ==
+              : s.studentCategory.toLowerCase() ==
                     state.boardingType!.name.toLowerCase();
-          return matchesYear && matchesType;
+          final matchesClass =
+              s.classId == null || s.classId == state.classId;
+          return matchesYear && matchesType && matchesClass;
         }).toList();
+
+        final fin.FeeStructure? selected = filtered
+            .where((s) => s.id == _selectedFeeStructureId)
+            .firstOrNull;
+
+        if (filtered.isEmpty || _manualEntry) {
+          return _manualFallback(context, filtered.isEmpty);
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SectionHeader(title: 'Fee Structure'),
-            if (filtered.isEmpty)
-              const EmptyState(
-                icon: Icons.receipt_long_outlined,
-                title: 'No matching fee structures',
-                message:
-                    'No fee structure matches this student\'s year/type yet.',
-              )
-            else
-              ...filtered.map((s) {
-                final dyn = s as dynamic;
-                return RadioListTile<String>(
-                  value: dyn.id as String,
-                  groupValue: _selectedFeeStructureId,
-                  title: Text(dyn.name as String),
-                  subtitle: Text(
-                    'UGX ${dyn.totalAmount} • ${dyn.studentCategory}',
+            ...filtered.map(
+              (s) => RadioListTile<String>(
+                value: s.id,
+                groupValue: _selectedFeeStructureId,
+                title: Text(s.name),
+                subtitle: Text(
+                  '${CurrencyFormatter.ugx(s.totalAmount)} • '
+                  '${s.studentCategory} • ${s.term} ${s.academicYear}',
+                ),
+                onChanged: (v) {
+                  setState(() => _selectedFeeStructureId = v);
+                  final match = filtered.where((f) => f.id == v).firstOrNull;
+                  if (match != null) _emitFromStructure(match);
+                },
+              ),
+            ),
+            if (selected != null) ...[
+              const SizedBox(height: 16),
+              const SectionHeader(title: 'Itemized Breakdown'),
+              AppCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final item in selected.items)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(item.categoryName),
+                              Text(CurrencyFormatter.ugx(item.amount)),
+                            ],
+                          ),
+                        ),
+                      const Divider(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Subtotal',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          Text(CurrencyFormatter.ugx(selected.totalAmount)),
+                        ],
+                      ),
+                      Builder(
+                        builder: (context) {
+                          final discount = _computeDiscount(
+                            selected.totalAmount,
+                          );
+                          if (discount <= 0) return const SizedBox.shrink();
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Discount'),
+                                Text(
+                                  '- ${CurrencyFormatter.ugx(discount)}',
+                                  style: TextStyle(
+                                    color: AppColors.success(context),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                      const Divider(height: 20),
+                      Builder(
+                        builder: (context) {
+                          final discount = _computeDiscount(
+                            selected.totalAmount,
+                          );
+                          final finalTotal = (selected.totalAmount - discount)
+                              .clamp(0, selected.totalAmount);
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Total billed',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              Text(
+                                CurrencyFormatter.ugx(finalTotal.toDouble()),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                  onChanged: (v) {
-                    setState(() => _selectedFeeStructureId = v);
-                    _emit();
-                  },
-                );
-              }),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const SectionHeader(title: 'Apply Discount / Scholarship'),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _discountValueController,
+                      keyboardType: TextInputType.number,
+                      onChanged: (_) => _emitFromStructure(selected),
+                      decoration: const InputDecoration(
+                        labelText: 'Value',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('%'),
+                    selected: _discountIsPercentage,
+                    onSelected: (_) {
+                      setState(() => _discountIsPercentage = true);
+                      _emitFromStructure(selected);
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  ChoiceChip(
+                    label: const Text('Amount'),
+                    selected: !_discountIsPercentage,
+                    onSelected: (_) {
+                      setState(() => _discountIsPercentage = false);
+                      _emitFromStructure(selected);
+                    },
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
-            TextField(
-              controller: _termController,
-              onChanged: (_) => _emit(),
-              decoration: const InputDecoration(
-                labelText: 'Term',
-                border: OutlineInputBorder(),
-              ),
+            TextButton(
+              onPressed: () => setState(() => _manualEntry = true),
+              child: const Text('Enter fees manually instead'),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _totalBilledController,
-              keyboardType: TextInputType.number,
-              onChanged: (_) => _emit(),
-              decoration: const InputDecoration(
-                labelText: 'Total billed',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const SectionHeader(title: 'Scholarship / Discount'),
-            if (state.hasScholarshipAward)
-              Text(
-                'A scholarship/discount award has been recorded for this student.',
-                style: TextStyle(color: AppColors.success(context)),
-              )
-            else
-              SecondaryButton(
-                label: 'Add scholarship / discount',
-                icon: Icons.card_giftcard_outlined,
-                onPressed: () => _showScholarshipDialog(context),
-              ),
           ],
         );
       },
+    );
+  }
+
+  Widget _manualFallback(BuildContext context, bool noStructuresFound) {
+    final state = widget.state;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(title: 'Fee Structure'),
+        if (noStructuresFound)
+          const EmptyState(
+            icon: Icons.receipt_long_outlined,
+            title: 'No matching fee structures',
+            message:
+                'No fee structure matches this student\'s class/year/type '
+                'yet. Enter billing manually below, or set one up in '
+                'Structure > Academics > Fee Structures.',
+          ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _termController,
+          onChanged: (_) => _emitManual(),
+          decoration: const InputDecoration(
+            labelText: 'Term',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _totalBilledController,
+          keyboardType: TextInputType.number,
+          onChanged: (_) => _emitManual(),
+          decoration: const InputDecoration(
+            labelText: 'Total billed',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        if (!noStructuresFound) ...[
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: () => setState(() => _manualEntry = false),
+            child: const Text('Back to matching fee structures'),
+          ),
+        ],
+        const SizedBox(height: 20),
+        const SectionHeader(title: 'Scholarship / Discount'),
+        if (state.hasScholarshipAward)
+          Text(
+            'A scholarship/discount award has been recorded for this student.',
+            style: TextStyle(color: AppColors.success(context)),
+          )
+        else
+          SecondaryButton(
+            label: 'Add scholarship / discount',
+            icon: Icons.card_giftcard_outlined,
+            onPressed: () => _showScholarshipDialog(context),
+          ),
+      ],
     );
   }
 
@@ -1853,128 +2044,6 @@ class _ClubsStep extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------
-// Step 6: Parent / Guardian
-// ---------------------------------------------------------------------
-class _ParentStep extends StatefulWidget {
-  final EnrollmentSetupWizardState state;
-  const _ParentStep({required this.state});
-
-  @override
-  State<_ParentStep> createState() => _ParentStepState();
-}
-
-class _ParentStepState extends State<_ParentStep> {
-  final _phoneController = TextEditingController();
-  final _nameController = TextEditingController();
-  bool _isLegalGuardian = false;
-  bool _isPrimaryGuardian = true;
-  bool _financialAccess = false;
-  bool _pickupAuthorized = false;
-
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final state = widget.state;
-    if (state.parentLinked) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SectionHeader(title: 'Parent / Guardian'),
-          Text(
-            'Linked — parent access code: ${state.parentAccessCode}',
-            style: TextStyle(color: AppColors.success(context)),
-          ),
-        ],
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SectionHeader(title: 'Parent / Guardian'),
-        TextField(
-          controller: _nameController,
-          decoration: const InputDecoration(
-            labelText: 'Parent/guardian name',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _phoneController,
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(
-            labelText: 'Phone number',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        SwitchListTile(
-          title: const Text('Legal guardian'),
-          value: _isLegalGuardian,
-          onChanged: (v) => setState(() => _isLegalGuardian = v),
-        ),
-        SwitchListTile(
-          title: const Text('Primary guardian'),
-          value: _isPrimaryGuardian,
-          onChanged: (v) => setState(() => _isPrimaryGuardian = v),
-        ),
-        SwitchListTile(
-          title: const Text('Financial access'),
-          value: _financialAccess,
-          onChanged: (v) => setState(() => _financialAccess = v),
-        ),
-        SwitchListTile(
-          title: const Text('Pickup authorized'),
-          value: _pickupAuthorized,
-          onChanged: (v) => setState(() => _pickupAuthorized = v),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            SecondaryButton(
-              label: 'Skip',
-              onPressed: () => context.read<EnrollmentSetupWizardBloc>().add(
-                const ParentLinkSkipped(),
-              ),
-            ),
-            const SizedBox(width: 12),
-            PrimaryButton(
-              label: 'Link Parent',
-              onPressed: _phoneController.text.trim().isEmpty
-                  ? null
-                  : () => _link(context),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  void _link(BuildContext context) {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) return;
-    context.read<EnrollmentSetupWizardBloc>().add(
-      ParentLinkRequested(
-        operatorUser: authState.user,
-        phoneNumber: _phoneController.text.trim(),
-        parentName: _nameController.text.trim().isEmpty
-            ? null
-            : _nameController.text.trim(),
-        isLegalGuardian: _isLegalGuardian,
-        isPrimaryGuardian: _isPrimaryGuardian,
-        financialAccess: _financialAccess,
-        pickupAuthorized: _pickupAuthorized,
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------
 // Step 7: Student Identity
 // ---------------------------------------------------------------------
 class _IdentityStep extends StatefulWidget {
@@ -2107,11 +2176,7 @@ class _ReviewStep extends StatelessWidget {
           'At least one guardian added',
           state.guardians.isNotEmpty,
         ),
-        _checkItem(
-          context,
-          'Parent linked (or explicitly skipped)',
-          state.parentLinked || state.parentLinkSkippedFlag,
-        ),
+        _checkItem(context, 'Guardians linked', state.guardiansLinked),
         const SizedBox(height: 20),
         const SectionHeader(title: 'Optional'),
         _checkItem(context, 'NFC card registered', state.nfcRegistered),

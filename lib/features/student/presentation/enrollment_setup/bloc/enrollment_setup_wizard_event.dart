@@ -219,13 +219,31 @@ class FinanceDetailsUpdated extends EnrollmentSetupWizardEvent {
   final String? feeStructureId;
   final String? term;
   final double? totalBilled;
+
+  /// Itemized breakdown (tuition + line items) as read from the matched
+  /// `finance.FeeStructure`, kept only for display in Review - the source
+  /// of truth for the amount actually billed is [totalBilled].
+  final Map<String, double>? itemizedBreakdown;
+  final double? discountAmount;
+  final double? discountPercentage;
+
   const FinanceDetailsUpdated({
     this.feeStructureId,
     this.term,
     this.totalBilled,
+    this.itemizedBreakdown,
+    this.discountAmount,
+    this.discountPercentage,
   });
   @override
-  List<Object?> get props => [feeStructureId, term, totalBilled];
+  List<Object?> get props => [
+    feeStructureId,
+    term,
+    totalBilled,
+    itemizedBreakdown,
+    discountAmount,
+    discountPercentage,
+  ];
 }
 
 class ScholarshipAwardRequested extends EnrollmentSetupWizardEvent {
@@ -294,40 +312,6 @@ class ClubMembershipToggled extends EnrollmentSetupWizardEvent {
 
 class ClubMembershipsSaveRequested extends EnrollmentSetupWizardEvent {
   const ClubMembershipsSaveRequested();
-}
-
-// Step 6: Parent/Guardian
-class ParentLinkRequested extends EnrollmentSetupWizardEvent {
-  final UserEntity operatorUser;
-  final String phoneNumber;
-  final String? parentName;
-  final bool isLegalGuardian;
-  final bool isPrimaryGuardian;
-  final bool financialAccess;
-  final bool pickupAuthorized;
-  const ParentLinkRequested({
-    required this.operatorUser,
-    required this.phoneNumber,
-    this.parentName,
-    this.isLegalGuardian = false,
-    this.isPrimaryGuardian = false,
-    this.financialAccess = false,
-    this.pickupAuthorized = false,
-  });
-  @override
-  List<Object?> get props => [
-    operatorUser,
-    phoneNumber,
-    parentName,
-    isLegalGuardian,
-    isPrimaryGuardian,
-    financialAccess,
-    pickupAuthorized,
-  ];
-}
-
-class ParentLinkSkipped extends EnrollmentSetupWizardEvent {
-  const ParentLinkSkipped();
 }
 
 // Step 7: Student Identity

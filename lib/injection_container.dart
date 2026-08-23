@@ -788,6 +788,7 @@ Future<void> init() async {
       draftLocalDataSource: sl(),
       auditService: sl(),
       notificationSender: sl(),
+      financeRepository: sl(),
     ),
   );
 
