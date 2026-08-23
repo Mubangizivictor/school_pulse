@@ -1890,8 +1890,19 @@ final router = GoRouter(
                   // here was also hijacking every child route below (fee-
                   // structures, subjects, levels, etc.), bouncing them all
                   // back to the wizard gate before their own builder ran.
+                  //
+                  // `state.matchedLocation` is NOT the requested URL here -
+                  // for an ancestor GoRoute it is always that route's own
+                  // matched prefix ('/staff/admin/structure/academics'),
+                  // identical whether the actual request is bare `academics`
+                  // or `academics/fee-structures` beneath it. A prior fix
+                  // compared against `matchedLocation` expecting it to differ
+                  // between those two requests; it never does, so the
+                  // redirect kept firing for every child unconditionally.
+                  // `state.uri.path` is the actual full requested path and is
+                  // the only field that distinguishes the two.
                   redirect: (context, state) =>
-                      state.matchedLocation == '/staff/admin/structure/academics'
+                      state.uri.path == '/staff/admin/structure/academics'
                       ? '/staff/admin/structure?section=academics'
                       : null,
                   routes: [
