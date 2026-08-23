@@ -1,3 +1,4 @@
+import 'package:dartz/dartz.dart' hide State;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -20,8 +21,10 @@ import 'package:school_pulse/features/student/domain/enrollment_setup/repositori
 import 'package:school_pulse/features/structure/domain/repositories/teaching_assignment_repository.dart';
 import 'package:school_pulse/features/structure/domain/repositories/curriculum_assignment_repository.dart';
 import 'package:school_pulse/features/finance/domain/repositories/finance_repository.dart';
+import 'package:school_pulse/features/finance/domain/entities/fee_category.dart';
 import 'package:school_pulse/features/finance/domain/entities/fee_structure.dart'
     as fin;
+import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
 import '../bloc/enrollment_setup_wizard_bloc.dart';
 import '../bloc/enrollment_setup_wizard_event.dart';
@@ -1409,12 +1412,27 @@ class _FinanceStepState extends State<_FinanceStep> {
   final _discountValueController = TextEditingController();
   bool _discountIsPercentage = true;
 
+  // Re-assigned after creating a fee structure inline so the FutureBuilder
+  // below re-queries and immediately shows the newly created structure.
+  late Future<Either<Failure, List<fin.FeeStructure>>> _structuresFuture;
+
   @override
   void initState() {
     super.initState();
     _selectedFeeStructureId = widget.state.feeStructureId;
     _termController.text = widget.state.term ?? '';
     _totalBilledController.text = widget.state.totalBilled?.toString() ?? '';
+    _structuresFuture = sl<FinanceRepository>().getFeeStructures(
+      widget.state.schoolId,
+    );
+  }
+
+  void _refreshStructures() {
+    setState(() {
+      _structuresFuture = sl<FinanceRepository>().getFeeStructures(
+        widget.state.schoolId,
+      );
+    });
   }
 
   @override
@@ -1467,10 +1485,9 @@ class _FinanceStepState extends State<_FinanceStep> {
 
   @override
   Widget build(BuildContext context) {
-    final financeRepo = sl<FinanceRepository>();
     final state = widget.state;
     return FutureBuilder(
-      future: financeRepo.getFeeStructures(state.schoolId),
+      future: _structuresFuture,
       builder: (context, snapshot) {
         final structures =
             snapshot.data?.fold(
@@ -1654,15 +1671,22 @@ class _FinanceStepState extends State<_FinanceStep> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'Fee Structure'),
-        if (noStructuresFound)
+        if (noStructuresFound) ...[
           const EmptyState(
             icon: Icons.receipt_long_outlined,
             title: 'No matching fee structures',
             message:
                 'No fee structure matches this student\'s class/year/type '
-                'yet. Enter billing manually below, or set one up in '
-                'Structure > Academics > Fee Structures.',
+                'yet. Create one now for this class, or enter billing '
+                'manually below.',
           ),
+          const SizedBox(height: 12),
+          PrimaryButton(
+            label: 'Create fee structure for this class',
+            icon: Icons.add_circle_outline,
+            onPressed: () => _showCreateStructureSheet(context),
+          ),
+        ],
         const SizedBox(height: 16),
         TextField(
           controller: _termController,
@@ -1724,6 +1748,22 @@ class _FinanceStepState extends State<_FinanceStep> {
         reason: result.reason,
       ),
     );
+  }
+
+  Future<void> _showCreateStructureSheet(BuildContext context) async {
+    final state = widget.state;
+    final created = await showModalBottomSheet<fin.FeeStructure>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _CreateFeeStructureSheet(state: state),
+    );
+    if (created == null || !mounted) return;
+    setState(() {
+      _selectedFeeStructureId = created.id;
+      _manualEntry = false;
+    });
+    _refreshStructures();
+    _emitFromStructure(created);
   }
 }
 
@@ -2300,6 +2340,313 @@ class _ReviewStep extends StatelessWidget {
         color: done ? AppColors.success(context) : AppColors.textMuted(context),
       ),
       title: Text(label),
+    );
+  }
+}
+
+/// Inline "create a fee structure" form shown from the Finance step when
+/// no existing structure matches the student's class/boarding type/year.
+/// Class, boarding type (studentCategory) and academic year are locked to
+/// what the wizard already knows - the admin only fills name + items.
+class _CreateFeeStructureSheet extends StatefulWidget {
+  final EnrollmentSetupWizardState state;
+  const _CreateFeeStructureSheet({required this.state});
+
+  @override
+  State<_CreateFeeStructureSheet> createState() =>
+      _CreateFeeStructureSheetState();
+}
+
+class _CreateFeeStructureSheetState extends State<_CreateFeeStructureSheet> {
+  final _nameController = TextEditingController();
+  final _termController = TextEditingController(text: 'Term 1');
+  final List<fin.FeeStructureItem> _items = [];
+  bool _saving = false;
+  String? _error;
+
+  late final String _studentCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    final boardingType = widget.state.boardingType;
+    _studentCategory = boardingType == null
+        ? 'Day'
+        : boardingType.name[0].toUpperCase() + boardingType.name.substring(1);
+    _nameController.text = _studentCategory;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _termController.dispose();
+    super.dispose();
+  }
+
+  double get _total => _items.fold(0, (sum, item) => sum + item.amount);
+
+  Future<void> _addItemDialog() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return;
+    final categoriesResult = await sl<FinanceRepository>().getFeeCategories(
+      authState.user.schoolId,
+    );
+    final categories = categoriesResult.fold(
+      (_) => const <FeeCategory>[],
+      (v) => v,
+    );
+    if (!mounted) return;
+    FeeCategory? selectedCategory = categories.isNotEmpty
+        ? categories.first
+        : null;
+    final labelController = TextEditingController(
+      text: selectedCategory?.name,
+    );
+    final amountController = TextEditingController();
+
+    final item = await showDialog<fin.FeeStructureItem>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Add Fee Item'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (categories.isNotEmpty)
+              DropdownButtonFormField<FeeCategory>(
+                initialValue: selectedCategory,
+                items: categories
+                    .map(
+                      (c) => DropdownMenuItem(value: c, child: Text(c.name)),
+                    )
+                    .toList(),
+                onChanged: (v) {
+                  selectedCategory = v;
+                  labelController.text = v?.name ?? '';
+                },
+                decoration: const InputDecoration(labelText: 'Category'),
+              )
+            else
+              TextField(
+                controller: labelController,
+                decoration: const InputDecoration(labelText: 'Item label'),
+              ),
+            TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Amount (UGX)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final amount = double.tryParse(amountController.text) ?? 0;
+              if (labelController.text.trim().isEmpty || amount <= 0) return;
+              Navigator.pop(
+                dialogContext,
+                fin.FeeStructureItem(
+                  categoryId: selectedCategory?.id ?? '',
+                  categoryName: labelController.text.trim(),
+                  amount: amount,
+                ),
+              );
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+    if (item != null) setState(() => _items.add(item));
+  }
+
+  Future<void> _save() async {
+    if (_nameController.text.trim().isEmpty) {
+      setState(() => _error = 'Enter a name for this fee structure.');
+      return;
+    }
+    if (_items.isEmpty) {
+      setState(() => _error = 'Add at least one fee item.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
+    final state = widget.state;
+    final repo = sl<FinanceRepository>();
+    final result = await repo.saveFeeStructure(
+      fin.FeeStructure(
+        id: '',
+        schoolId: state.schoolId,
+        name: _nameController.text.trim(),
+        academicYear: state.academicYearId,
+        term: _termController.text.trim(),
+        items: _items,
+        classId: state.classId,
+        studentCategory: _studentCategory,
+      ),
+    );
+
+    if (!mounted) return;
+
+    final failure = result.fold((f) => f, (_) => null);
+    if (failure != null) {
+      setState(() {
+        _saving = false;
+        _error = 'Could not save fee structure. Please try again.';
+      });
+      return;
+    }
+
+    // saveFeeStructure returns void (Firestore assigns the id server-side),
+    // so re-query to find the structure we just created by its known fields.
+    final refetched = await repo.getFeeStructures(state.schoolId);
+    final created = refetched.fold((_) => null, (list) {
+      final matches = list.where(
+        (s) =>
+            s.name == _nameController.text.trim() &&
+            s.classId == state.classId &&
+            s.studentCategory == _studentCategory &&
+            s.academicYear == state.academicYearId &&
+            s.term == _termController.text.trim(),
+      );
+      return matches.isEmpty ? null : matches.last;
+    });
+
+    if (!mounted) return;
+    setState(() => _saving = false);
+
+    if (created == null) {
+      setState(
+        () => _error =
+            'Fee structure saved but could not be located. Return to '
+            'this step to try again.',
+      );
+      return;
+    }
+
+    Navigator.pop(context, created);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.state;
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => SingleChildScrollView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Create Fee Structure',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$_studentCategory • ${state.academicYearId}'
+                '${state.classId.isEmpty ? '' : ' • This class'}',
+                style: TextStyle(color: AppColors.textMuted(context)),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Structure Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _termController,
+                decoration: const InputDecoration(
+                  labelText: 'Term',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Fee Items',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  TextButton.icon(
+                    onPressed: _addItemDialog,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Item'),
+                  ),
+                ],
+              ),
+              if (_items.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'No items yet.',
+                    style: TextStyle(color: AppColors.textMuted(context)),
+                  ),
+                ),
+              ..._items.map(
+                (item) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: Text(item.categoryName),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(CurrencyFormatter.ugx(item.amount)),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () =>
+                            setState(() => _items.remove(item)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (_items.isNotEmpty) ...[
+                const Divider(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Total',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      CurrencyFormatter.ugx(_total),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ],
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(_error!, style: const TextStyle(color: Colors.red)),
+              ],
+              const SizedBox(height: 20),
+              PrimaryButton(
+                label: 'Save & apply to this student',
+                isLoading: _saving,
+                onPressed: _save,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
