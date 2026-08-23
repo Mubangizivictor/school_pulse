@@ -1475,23 +1475,34 @@ class _AcademicPlacementStep extends StatelessWidget {
                   stream: sl<TeachingAssignmentRepository>().watchAssignments(),
                   builder: (context, teachingSnap) {
                     final teaching = teachingSnap.data ?? [];
-                    return Column(
-                      children: subjects.map((subject) {
-                        final match = teaching.where((a) {
-                          final dyn = a as dynamic;
-                          return dyn.classId == state.classId &&
-                              dyn.subjectId == subject.id &&
-                              dyn.isActive == true;
-                        });
-                        final teacherLabel = match.isEmpty
-                            ? 'Teacher not assigned'
-                            : 'Assigned (staffId: ${(match.first as dynamic).staffId})';
-                        return ListTile(
-                          title: Text(subject.name),
-                          subtitle: Text(teacherLabel),
-                          leading: const Icon(Icons.book_outlined),
-                        );
-                      }).toList(),
+                    return AppCard(
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          for (final subject in subjects) ...[
+                            Builder(
+                              builder: (context) {
+                                final match = teaching.where((a) {
+                                  final dyn = a as dynamic;
+                                  return dyn.classId == state.classId &&
+                                      dyn.subjectId == subject.id &&
+                                      dyn.isActive == true;
+                                });
+                                final teacherLabel = match.isEmpty
+                                    ? 'Teacher not assigned'
+                                    : 'Assigned (staffId: ${(match.first as dynamic).staffId})';
+                                return ListTile(
+                                  title: Text(subject.name),
+                                  subtitle: Text(teacherLabel),
+                                  leading: const Icon(Icons.book_outlined),
+                                );
+                              },
+                            ),
+                            if (subject != subjects.last)
+                              const Divider(height: 1),
+                          ],
+                        ],
+                      ),
                     );
                   },
                 );
@@ -1696,22 +1707,33 @@ class _FinanceStepState extends State<_FinanceStep> {
                       style: TextStyle(color: AppColors.warning(context)),
                     ),
                   ),
-                ...filtered.map(
-                  (s) => RadioListTile<String>(
-                    value: s.id,
-                    groupValue: _selectedFeeStructureId,
-                    title: Text(s.name),
-                    subtitle: Text(
-                      '${CurrencyFormatter.ugx(s.totalAmount)} • '
-                      '${s.studentCategory} • ${s.term} ${yearLabel(s.academicYear)}',
-                    ),
-                    onChanged: (v) {
-                      setState(() => _selectedFeeStructureId = v);
-                      final match = filtered
-                          .where((f) => f.id == v)
-                          .firstOrNull;
-                      if (match != null) _emitFromStructure(match);
-                    },
+                AppCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      for (final s in filtered) ...[
+                        RadioListTile<String>(
+                          value: s.id,
+                          groupValue: _selectedFeeStructureId,
+                          title: Text(
+                            s.name,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: Text(
+                            '${CurrencyFormatter.ugx(s.totalAmount)} • '
+                            '${s.studentCategory} • ${s.term} ${yearLabel(s.academicYear)}',
+                          ),
+                          onChanged: (v) {
+                            setState(() => _selectedFeeStructureId = v);
+                            final match = filtered
+                                .where((f) => f.id == v)
+                                .firstOrNull;
+                            if (match != null) _emitFromStructure(match);
+                          },
+                        ),
+                        if (s != filtered.last) const Divider(height: 1),
+                      ],
+                    ],
                   ),
                 ),
             if (selected != null) ...[
@@ -1800,38 +1822,40 @@ class _FinanceStepState extends State<_FinanceStep> {
               ),
               const SizedBox(height: 16),
               const SectionHeader(title: 'Apply Discount / Scholarship'),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _discountValueController,
-                      keyboardType: TextInputType.number,
-                      onChanged: (_) => _emitFromStructure(selected),
-                      decoration: const InputDecoration(
-                        labelText: 'Value',
-                        border: OutlineInputBorder(),
+              AppCard(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _discountValueController,
+                        keyboardType: TextInputType.number,
+                        onChanged: (_) => _emitFromStructure(selected),
+                        decoration: const InputDecoration(
+                          labelText: 'Value',
+                          border: OutlineInputBorder(),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: const Text('%'),
-                    selected: _discountIsPercentage,
-                    onSelected: (_) {
-                      setState(() => _discountIsPercentage = true);
-                      _emitFromStructure(selected);
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  ChoiceChip(
-                    label: const Text('Amount'),
-                    selected: !_discountIsPercentage,
-                    onSelected: (_) {
-                      setState(() => _discountIsPercentage = false);
-                      _emitFromStructure(selected);
-                    },
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('%'),
+                      selected: _discountIsPercentage,
+                      onSelected: (_) {
+                        setState(() => _discountIsPercentage = true);
+                        _emitFromStructure(selected);
+                      },
+                    ),
+                    const SizedBox(width: 4),
+                    ChoiceChip(
+                      label: const Text('Amount'),
+                      selected: !_discountIsPercentage,
+                      onSelected: (_) {
+                        setState(() => _discountIsPercentage = false);
+                        _emitFromStructure(selected);
+                      },
+                    ),
+                  ],
+                ),
               ),
             ],
                 const SizedBox(height: 16),
@@ -1864,7 +1888,7 @@ class _FinanceStepState extends State<_FinanceStep> {
       children: [
         const SectionHeader(title: 'Fee Structure'),
         if (noStructuresFound) ...[
-          const EmptyState(
+          EmptyState(
             icon: Icons.receipt_long_outlined,
             title: 'No matching fee structures',
             message:
@@ -1872,42 +1896,45 @@ class _FinanceStepState extends State<_FinanceStep> {
                 'one up in Structure > Academics > Fee Structures, then '
                 'return to this step. You can also enter billing manually '
                 'below.',
-          ),
-          const SizedBox(height: 12),
-          SecondaryButton(
-            label: 'Open Structure > Academics > Fee Structures',
-            icon: Icons.open_in_new,
-            onPressed: () => context.push(
+            ctaLabel: 'Open Fee Structures',
+            onCtaPressed: () => context.push(
               '/staff/admin/structure/academics/fee-structures',
             ),
           ),
+          const SizedBox(height: 16),
         ],
-        const SizedBox(height: 16),
-        TextField(
-          controller: _termController,
-          onChanged: (_) => _emitManual(),
-          decoration: const InputDecoration(
-            labelText: 'Term',
-            border: OutlineInputBorder(),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _termController,
+                onChanged: (_) => _emitManual(),
+                decoration: const InputDecoration(
+                  labelText: 'Term',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _totalBilledController,
+                keyboardType: TextInputType.number,
+                onChanged: (_) => _emitManual(),
+                decoration: const InputDecoration(
+                  labelText: 'Total billed',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              if (!noStructuresFound) ...[
+                const SizedBox(height: 4),
+                TextButton(
+                  onPressed: () => setState(() => _manualEntry = false),
+                  child: const Text('Back to matching fee structures'),
+                ),
+              ],
+            ],
           ),
         ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _totalBilledController,
-          keyboardType: TextInputType.number,
-          onChanged: (_) => _emitManual(),
-          decoration: const InputDecoration(
-            labelText: 'Total billed',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        if (!noStructuresFound) ...[
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () => setState(() => _manualEntry = false),
-            child: const Text('Back to matching fee structures'),
-          ),
-        ],
         const SizedBox(height: 20),
         const SectionHeader(title: 'Scholarship / Discount'),
         if (state.hasScholarshipAward)
@@ -2073,109 +2100,137 @@ class _BoardingHouseStepState extends State<_BoardingHouseStep> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (!isBoarding)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 16),
-            child: Text('Day student — boarding not applicable.'),
+          AppCard(
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: AppColors.textMuted(context)),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text('Day student — boarding not applicable.'),
+                ),
+              ],
+            ),
           )
         else ...[
           const SectionHeader(title: 'Dormitory Assignment'),
           if (state.dormitoryAssigned)
-            Text(
-              'Assigned: ${state.hostelId} / room ${state.roomId} / bed ${state.bed}',
-              style: TextStyle(color: AppColors.success(context)),
+            AppCard(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: AppColors.success(context),
+                    size: 22,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Assigned: ${state.hostelId} / room ${state.roomId} / '
+                      'bed ${state.bed}',
+                      style: TextStyle(
+                        color: AppColors.success(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             )
           else
-            StreamBuilder<List<Hostel>>(
-              stream: structureRepo.watchHostels(state.schoolId),
-              builder: (context, hostelSnap) {
-                final hostels = hostelSnap.data ?? [];
-                final selectedHostel = hostels
-                    .where((h) => h.id == _hostelId)
-                    .firstOrNull;
-                return StreamBuilder<List<HostelRoom>>(
-                  stream: structureRepo.watchHostelRooms(state.schoolId),
-                  builder: (context, roomSnap) {
-                    final rooms = (roomSnap.data ?? [])
-                        .where((r) => r.hostelId == _hostelId)
-                        .toList();
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        DropdownButtonFormField<String>(
-                          initialValue: _hostelId,
-                          items: hostels
-                              .map(
-                                (h) => DropdownMenuItem(
-                                  value: h.id,
-                                  child: Text(h.name),
+            AppCard(
+              child: StreamBuilder<List<Hostel>>(
+                stream: structureRepo.watchHostels(state.schoolId),
+                builder: (context, hostelSnap) {
+                  final hostels = hostelSnap.data ?? [];
+                  final selectedHostel = hostels
+                      .where((h) => h.id == _hostelId)
+                      .firstOrNull;
+                  return StreamBuilder<List<HostelRoom>>(
+                    stream: structureRepo.watchHostelRooms(state.schoolId),
+                    builder: (context, roomSnap) {
+                      final rooms = (roomSnap.data ?? [])
+                          .where((r) => r.hostelId == _hostelId)
+                          .toList();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          DropdownButtonFormField<String>(
+                            initialValue: _hostelId,
+                            items: hostels
+                                .map(
+                                  (h) => DropdownMenuItem(
+                                    value: h.id,
+                                    child: Text(h.name),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) => setState(() {
+                              _hostelId = v;
+                              _roomId = null;
+                            }),
+                            decoration: const InputDecoration(
+                              labelText: 'Hostel',
+                            ),
+                          ),
+                          if (selectedHostel != null)
+                            _HostelWardenLabel(hostel: selectedHostel),
+                          const SizedBox(height: 12),
+                          StreamBuilder<Map<String, int>>(
+                            stream: _hostelId == null
+                                ? const Stream.empty()
+                                : sl<EnrollmentSetupRepository>()
+                                      .watchOccupiedBedCounts(
+                                        state.schoolId,
+                                        _hostelId!,
+                                      ),
+                            builder: (context, occupiedSnap) {
+                              final occupied = occupiedSnap.data ?? const {};
+                              return DropdownButtonFormField<String>(
+                                initialValue: _roomId,
+                                items: rooms.map((r) {
+                                  final taken = occupied[r.id] ?? 0;
+                                  final label = r.bedCapacity > 0
+                                      ? '${r.roomNumber} '
+                                            '($taken/${r.bedCapacity} beds free: '
+                                            '${(r.bedCapacity - taken).clamp(0, r.bedCapacity)})'
+                                      : r.roomNumber;
+                                  return DropdownMenuItem(
+                                    value: r.id,
+                                    child: Text(label),
+                                  );
+                                }).toList(),
+                                onChanged: (v) => setState(() => _roomId = v),
+                                decoration: const InputDecoration(
+                                  labelText: 'Room',
                                 ),
-                              )
-                              .toList(),
-                          onChanged: (v) => setState(() {
-                            _hostelId = v;
-                            _roomId = null;
-                          }),
-                          decoration: const InputDecoration(
-                            labelText: 'Hostel',
+                              );
+                            },
                           ),
-                        ),
-                        if (selectedHostel != null)
-                          _HostelWardenLabel(hostel: selectedHostel),
-                        const SizedBox(height: 12),
-                        StreamBuilder<Map<String, int>>(
-                          stream: _hostelId == null
-                              ? const Stream.empty()
-                              : sl<EnrollmentSetupRepository>()
-                                    .watchOccupiedBedCounts(
-                                      state.schoolId,
-                                      _hostelId!,
-                                    ),
-                          builder: (context, occupiedSnap) {
-                            final occupied = occupiedSnap.data ?? const {};
-                            return DropdownButtonFormField<String>(
-                              initialValue: _roomId,
-                              items: rooms.map((r) {
-                                final taken = occupied[r.id] ?? 0;
-                                final label = r.bedCapacity > 0
-                                    ? '${r.roomNumber} '
-                                          '($taken/${r.bedCapacity} beds free: '
-                                          '${(r.bedCapacity - taken).clamp(0, r.bedCapacity)})'
-                                    : r.roomNumber;
-                                return DropdownMenuItem(
-                                  value: r.id,
-                                  child: Text(label),
-                                );
-                              }).toList(),
-                              onChanged: (v) => setState(() => _roomId = v),
-                              decoration: const InputDecoration(
-                                labelText: 'Room',
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _bedController,
-                          decoration: const InputDecoration(
-                            labelText: 'Bed identifier',
-                            border: OutlineInputBorder(),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _bedController,
+                            decoration: const InputDecoration(
+                              labelText: 'Bed identifier',
+                              border: OutlineInputBorder(),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        PrimaryButton(
-                          label: 'Assign Bed',
-                          onPressed:
-                              _hostelId == null ||
-                                  _roomId == null ||
-                                  _bedController.text.trim().isEmpty
-                              ? null
-                              : () => _assign(context),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
+                          const SizedBox(height: 12),
+                          PrimaryButton(
+                            label: 'Assign Bed',
+                            onPressed:
+                                _hostelId == null ||
+                                    _roomId == null ||
+                                    _bedController.text.trim().isEmpty
+                                ? null
+                                : () => _assign(context),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
             ),
         ],
         const SizedBox(height: 24),
@@ -2185,21 +2240,28 @@ class _BoardingHouseStepState extends State<_BoardingHouseStep> {
           builder: (context, houseSnap) {
             final houses = houseSnap.data ?? [];
             if (houses.isEmpty) {
-              return const Text('No houses configured.');
+              return const EmptyState(
+                icon: Icons.holiday_village_outlined,
+                title: 'No houses configured',
+                message: 'No houses/dorms have been set up for this school yet.',
+              );
             }
-            return Wrap(
-              spacing: 8,
-              children: houses
-                  .map(
-                    (h) => ChoiceChip(
-                      label: Text(h.name),
-                      selected: state.houseId == h.id,
-                      onSelected: (_) => context
-                          .read<EnrollmentSetupWizardBloc>()
-                          .add(HouseSelected(h.id)),
-                    ),
-                  )
-                  .toList(),
+            return AppCard(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: houses
+                    .map(
+                      (h) => ChoiceChip(
+                        label: Text(h.name),
+                        selected: state.houseId == h.id,
+                        onSelected: (_) => context
+                            .read<EnrollmentSetupWizardBloc>()
+                            .add(HouseSelected(h.id)),
+                      ),
+                    )
+                    .toList(),
+              ),
             );
           },
         ),
@@ -2290,19 +2352,26 @@ class _ClubsStep extends StatelessWidget {
                 message: 'No clubs/societies have been set up yet.',
               );
             }
-            return Column(
-              children: clubs
-                  .map(
-                    (c) => CheckboxListTile(
-                      title: Text(c.name),
+            return AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  for (final c in clubs) ...[
+                    CheckboxListTile(
+                      title: Text(
+                        c.name,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
                       subtitle: Text(c.category),
                       value: state.selectedClubIds.contains(c.id),
                       onChanged: (v) => context
                           .read<EnrollmentSetupWizardBloc>()
                           .add(ClubMembershipToggled(c.id, v ?? false)),
                     ),
-                  )
-                  .toList(),
+                    if (c != clubs.last) const Divider(height: 1),
+                  ],
+                ],
+              ),
             );
           },
         ),
@@ -2382,22 +2451,30 @@ class _IdentityStepState extends State<_IdentityStep> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Student code: ${state.studentCode}',
-                  style: TextStyle(color: AppColors.textPrimary(context)),
-                ),
-                Text(
-                  'Admission number: ${state.admissionNumber}',
-                  style: TextStyle(color: AppColors.textPrimary(context)),
-                ),
+                _kv(context, 'Student code', state.studentCode),
                 const SizedBox(height: 8),
+                _kv(context, 'Admission number', state.admissionNumber),
+                const Divider(height: 24),
                 if (state.identityExists && state.qrCodeData != null)
-                  Text(
-                    'QR identity: ${state.qrCodeData}',
-                    style: TextStyle(
-                      color: AppColors.success(context),
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.qr_code_2,
+                        color: AppColors.success(context),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'QR identity: ${state.qrCodeData}',
+                          style: TextStyle(
+                            color: AppColors.success(context),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   )
                 else if (state.identityExists)
                   Text(
@@ -2427,53 +2504,91 @@ class _IdentityStepState extends State<_IdentityStep> {
         ),
         const SizedBox(height: 20),
         const SectionHeader(title: 'NFC Card'),
-        if (state.nfcRegistered)
-          Text(
-            'NFC registered.',
-            style: TextStyle(color: AppColors.success(context)),
-          )
-        else if (state.nfcSkipped)
-          const Text('NFC registration skipped.')
-        else ...[
-          Text(
-            'Only needed if a physical NFC card is being bound to this '
-            'student now. Skip to proceed with the QR identity above - a '
-            'card can be registered later from Verification.',
-            style: TextStyle(
-              fontSize: 12.5,
-              color: AppColors.textMuted(context),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _nfcController,
-            decoration: const InputDecoration(
-              labelText: 'Scan/enter card UID',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              SecondaryButton(
-                label: 'Skip',
-                onPressed: () => context.read<EnrollmentSetupWizardBloc>().add(
-                  const NfcRegistrationSkipped(),
+        AppCard(
+          child: state.nfcRegistered
+              ? Row(
+                  children: [
+                    Icon(Icons.check_circle, color: AppColors.success(context)),
+                    const SizedBox(width: 10),
+                    Text(
+                      'NFC registered.',
+                      style: TextStyle(
+                        color: AppColors.success(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                )
+              : state.nfcSkipped
+              ? const Text('NFC registration skipped.')
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Only needed if a physical NFC card is being bound to '
+                      'this student now. Skip to proceed with the QR '
+                      'identity above - a card can be registered later '
+                      'from Verification.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textMuted(context),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _nfcController,
+                      decoration: const InputDecoration(
+                        labelText: 'Scan/enter card UID',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SecondaryButton(
+                            label: 'Skip',
+                            onPressed: () =>
+                                context.read<EnrollmentSetupWizardBloc>().add(
+                                  const NfcRegistrationSkipped(),
+                                ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: PrimaryButton(
+                            label: 'Register NFC',
+                            onPressed: _nfcController.text.trim().isEmpty
+                                ? null
+                                : () => _register(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 12),
-              PrimaryButton(
-                label: 'Register NFC',
-                onPressed: _nfcController.text.trim().isEmpty
-                    ? null
-                    : () => _register(context),
-              ),
-            ],
-          ),
-        ],
+        ),
       ],
     );
   }
+
+  Widget _kv(BuildContext context, String k, String v) => Row(
+    children: [
+      SizedBox(
+        width: 150,
+        child: Text(k, style: TextStyle(color: AppColors.textMuted(context))),
+      ),
+      Expanded(
+        child: Text(
+          v,
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    ],
+  );
 
   void _register(BuildContext context) {
     final authState = context.read<AuthBloc>().state;
@@ -2496,38 +2611,34 @@ class _ReviewStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final required = <_ChecklistEntry>[
+      _ChecklistEntry('Academic year set', state.academicYearId.isNotEmpty),
+      _ChecklistEntry('Class assigned', state.classId.isNotEmpty),
+      _ChecklistEntry('Student code issued', state.studentCode.isNotEmpty),
+      _ChecklistEntry(
+        'At least one guardian added',
+        state.guardians.isNotEmpty,
+      ),
+      _ChecklistEntry('Guardians linked', state.guardiansLinked),
+    ];
+    final optional = <_ChecklistEntry>[
+      _ChecklistEntry('NFC card registered', state.nfcRegistered),
+      _ChecklistEntry(
+        state.boardingType?.name == 'boarding'
+            ? 'Dormitory assigned'
+            : 'Boarding not applicable (day student)',
+        state.boardingType?.name != 'boarding' || state.dormitoryAssigned,
+      ),
+      _ChecklistEntry('House selected', state.houseId != null),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'Required'),
-        _checkItem(
-          context,
-          'Academic year set',
-          state.academicYearId.isNotEmpty,
-        ),
-        _checkItem(context, 'Class assigned', state.classId.isNotEmpty),
-        _checkItem(
-          context,
-          'Student code issued',
-          state.studentCode.isNotEmpty,
-        ),
-        _checkItem(
-          context,
-          'At least one guardian added',
-          state.guardians.isNotEmpty,
-        ),
-        _checkItem(context, 'Guardians linked', state.guardiansLinked),
+        _checklistCard(context, required),
         const SizedBox(height: 20),
         const SectionHeader(title: 'Optional'),
-        _checkItem(context, 'NFC card registered', state.nfcRegistered),
-        _checkItem(
-          context,
-          state.boardingType?.name == 'boarding'
-              ? 'Dormitory assigned'
-              : 'Boarding not applicable (day student)',
-          state.boardingType?.name != 'boarding' || state.dormitoryAssigned,
-        ),
-        _checkItem(context, 'House selected', state.houseId != null),
+        _checklistCard(context, optional),
         const SizedBox(height: 24),
         PrimaryButton(
           label: state.activated ? 'Activated' : 'Activate Student',
@@ -2546,6 +2657,20 @@ class _ReviewStep extends StatelessWidget {
     );
   }
 
+  Widget _checklistCard(BuildContext context, List<_ChecklistEntry> items) {
+    return AppCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          for (final item in items) ...[
+            _checkItem(context, item.label, item.done),
+            if (item != items.last) const Divider(height: 1),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _checkItem(BuildContext context, String label, bool done) {
     return ListTile(
       leading: Icon(
@@ -2555,4 +2680,10 @@ class _ReviewStep extends StatelessWidget {
       title: Text(label),
     );
   }
+}
+
+class _ChecklistEntry {
+  final String label;
+  final bool done;
+  _ChecklistEntry(this.label, this.done);
 }
