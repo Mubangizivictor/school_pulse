@@ -1112,37 +1112,38 @@ class _AdmissionStep extends StatefulWidget {
 }
 
 class _AdmissionStepState extends State<_AdmissionStep> {
+  static const _joiningStatusOptions = [
+    'New admission',
+    'Transfer',
+    'Re-admission',
+  ];
+
   late StudentBoardingType _boardingType;
-  late final TextEditingController _joiningStatusController;
+  late String _joiningStatus;
 
   @override
   void initState() {
     super.initState();
     _boardingType = widget.state.boardingType ?? StudentBoardingType.day;
-    _joiningStatusController = TextEditingController(
-      text: widget.state.joiningStatus ?? 'New admission',
-    );
-  }
-
-  @override
-  void dispose() {
-    _joiningStatusController.dispose();
-    super.dispose();
+    final current = widget.state.joiningStatus;
+    _joiningStatus = _joiningStatusOptions.contains(current)
+        ? current!
+        : _joiningStatusOptions.first;
   }
 
   void _emit() {
     context.read<EnrollmentSetupWizardBloc>().add(
       AdmissionDetailsUpdated(
         boardingType: _boardingType,
-        joiningStatus: _joiningStatusController.text.trim(),
+        joiningStatus: _joiningStatus,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final application = widget.application;
     final state = widget.state;
+    final structureRepo = sl<StructureRepository>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1153,14 +1154,56 @@ class _AdmissionStepState extends State<_AdmissionStep> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _kv(context, 'Admission number', state.admissionNumber),
-                _kv(context, 'Student code', state.studentCode),
-                _kv(context, 'Academic year', application.academicYearId),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.badge_outlined,
+                      size: 20,
+                      color: AppColors.textMuted(context),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            state.studentCode,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Admission #${state.admissionNumber}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textMuted(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                StreamBuilder<List<AcademicYear>>(
+                  stream: structureRepo.watchAcademicYears(state.schoolId),
+                  builder: (context, snap) {
+                    final years = snap.data ?? const <AcademicYear>[];
+                    final match = years
+                        .where((y) => y.id == widget.application.academicYearId)
+                        .toList();
+                    final label = match.isNotEmpty
+                        ? match.first.name
+                        : (years.isEmpty ? 'Loading…' : 'Unknown year');
+                    return _kv(context, 'Academic year', label);
+                  },
+                ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         const SectionHeader(title: 'Student Type'),
         SegmentedButton<StudentBoardingType>(
           segments: const [
@@ -1176,15 +1219,19 @@ class _AdmissionStepState extends State<_AdmissionStep> {
             _emit();
           },
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         const SectionHeader(title: 'Joining Status'),
-        TextField(
-          controller: _joiningStatusController,
-          onChanged: (_) => _emit(),
-          decoration: const InputDecoration(
-            hintText: 'e.g. New admission, Transfer, Re-admission',
-            border: OutlineInputBorder(),
-          ),
+        DropdownButtonFormField<String>(
+          initialValue: _joiningStatus,
+          items: _joiningStatusOptions
+              .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+              .toList(),
+          onChanged: (v) {
+            if (v == null) return;
+            setState(() => _joiningStatus = v);
+            _emit();
+          },
+          decoration: const InputDecoration(labelText: 'Joining status'),
         ),
       ],
     );
@@ -1201,7 +1248,10 @@ class _AdmissionStepState extends State<_AdmissionStep> {
         Expanded(
           child: Text(
             v,
-            style: TextStyle(color: AppColors.textPrimary(context)),
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
