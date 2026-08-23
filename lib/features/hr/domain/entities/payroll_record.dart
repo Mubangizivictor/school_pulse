@@ -1,5 +1,21 @@
 import 'package:equatable/equatable.dart';
 
+/// Which budget line pays a staff member's salary. Uganda-school-specific
+/// terminology: government-aided schools split staff between the
+/// government payroll and school-funded (PTA) positions.
+enum PayrollFundingSource {
+  government,
+  pta,
+  other;
+
+  static PayrollFundingSource fromId(String? id) {
+    for (final v in PayrollFundingSource.values) {
+      if (v.name == id) return v;
+    }
+    return PayrollFundingSource.other;
+  }
+}
+
 class PayrollRecord extends Equatable {
   final String id;
   final String schoolId;
@@ -15,6 +31,7 @@ class PayrollRecord extends Equatable {
   final double paye;
   final double netPay;
   final DateTime createdAt;
+  final PayrollFundingSource fundingSource;
 
   const PayrollRecord({
     required this.id,
@@ -31,6 +48,7 @@ class PayrollRecord extends Equatable {
     required this.paye,
     required this.netPay,
     required this.createdAt,
+    this.fundingSource = PayrollFundingSource.government,
   });
 
   @override
@@ -49,5 +67,6 @@ class PayrollRecord extends Equatable {
     paye,
     netPay,
     createdAt,
+    fundingSource,
   ];
 }

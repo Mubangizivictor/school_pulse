@@ -36,6 +36,7 @@ class HrRemoteDataSourceImpl implements HrRemoteDataSource {
         paye: (data['paye'] ?? 0).toDouble(),
         netPay: (data['netPay'] ?? 0).toDouble(),
         createdAt: (data['createdAt'] as Timestamp).toDate(),
+        fundingSource: PayrollFundingSource.fromId(data['fundingSource']),
       );
     }).toList();
   }
@@ -56,6 +57,7 @@ class HrRemoteDataSourceImpl implements HrRemoteDataSource {
       'paye': record.paye,
       'netPay': record.netPay,
       'createdAt': FieldValue.serverTimestamp(),
+      'fundingSource': record.fundingSource.name,
     });
   }
 }
