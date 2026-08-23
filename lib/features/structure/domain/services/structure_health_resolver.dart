@@ -298,6 +298,20 @@ class StructureStepRegistry {
           hardPrerequisiteIds: const ['institution-info'],
           required: false,
         ),
+        // Fee Structures live in the Finance module (FinanceRepository),
+        // not StructureState, so completion can't be derived here the way
+        // other steps are - always reported optional/complete so it never
+        // blocks setup, but still surfaces as a discoverable checklist entry.
+        StructureSetupStep(
+          id: 'fee-structures',
+          title: 'Fee Structures',
+          description:
+              'Define reusable fee templates per class and boarding type.',
+          route: '/staff/admin/structure/academics/fee-structures',
+          complete: (s) => true,
+          hardPrerequisiteIds: const ['classes'],
+          required: false,
+        ),
         StructureSetupStep(
           id: 'subjects',
           title: 'Subjects / Courses',

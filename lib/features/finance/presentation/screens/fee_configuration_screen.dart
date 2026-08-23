@@ -5,6 +5,9 @@ import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/core/utils.dart';
+import 'package:school_pulse/injection_container.dart';
+import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import '../bloc/finance_bloc.dart';
 import '../bloc/finance_state.dart';
 import '../bloc/finance_event.dart';
@@ -148,7 +151,10 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen>
     final academicYearController = TextEditingController(text: '2024');
     String term = 'Term 1';
     String category = 'Day';
+    String? classId;
     List<FeeStructureItem> items = [];
+    final authState = context.read<AuthBloc>().state as AuthAuthenticated;
+    final structureRepo = sl<StructureRepository>();
 
     showDialog(
       context: context,
@@ -207,6 +213,32 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen>
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  StreamBuilder<List<SchoolClass>>(
+                    stream: structureRepo.watchClasses(authState.user.schoolId),
+                    builder: (context, snap) {
+                      final classes = snap.data ?? const <SchoolClass>[];
+                      return DropdownButtonFormField<String?>(
+                        initialValue: classId,
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('All classes'),
+                          ),
+                          ...classes.map(
+                            (c) => DropdownMenuItem<String?>(
+                              value: c.id,
+                              child: Text(c.name),
+                            ),
+                          ),
+                        ],
+                        onChanged: (v) => setState(() => classId = v),
+                        decoration: const InputDecoration(
+                          labelText: 'Applies to class (optional)',
+                        ),
+                      );
+                    },
+                  ),
                   const Divider(height: 32),
                   const Text(
                     'Fee Items',
@@ -241,8 +273,6 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen>
               ),
               ElevatedButton(
                 onPressed: () {
-                  final authState =
-                      context.read<AuthBloc>().state as AuthAuthenticated;
                   context.read<FinanceBloc>().add(
                     SaveSchoolFeeStructure(
                       FeeStructure(
@@ -252,6 +282,7 @@ class _FeeConfigurationScreenState extends State<FeeConfigurationScreen>
                         academicYear: academicYearController.text,
                         term: term,
                         items: items,
+                        classId: classId,
                         studentCategory: category,
                       ),
                     ),
@@ -393,7 +424,8 @@ class _FeeStructuresList extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
-                    '${struct.studentCategory} • ${struct.term} ${struct.academicYear}',
+                    '${struct.studentCategory} • ${struct.term} ${struct.academicYear}'
+                    '${struct.classId == null ? ' • All classes' : ''}',
                   ),
                   trailing: Text(
                     CurrencyFormatter.ugx(struct.totalAmount),

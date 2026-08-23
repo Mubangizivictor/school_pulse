@@ -58,6 +58,7 @@ import 'package:school_pulse/features/structure/presentation/screens/structure_w
 import 'package:school_pulse/features/structure/presentation/screens/academics/levels_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/years_terms_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/classes_streams_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/fee_configuration_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/subjects_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/subject_class_assignments_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/departments_screen.dart';
@@ -295,7 +296,6 @@ import 'package:school_pulse/features/attendance/presentation/screens/attendance
 import 'package:school_pulse/features/attendance/presentation/screens/attendance_list_screen.dart';
 import 'package:school_pulse/features/branding/presentation/screens/splash_screen.dart'
     as pulse_splash;
-import 'package:school_pulse/features/branding/presentation/screens/authenticated_bootstrap_screen.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
 
@@ -445,13 +445,12 @@ final router = GoRouter(
     if (authState is AuthLoading) return null;
 
     // A Firebase session alone is never enough to render a tenant route.
-    // The branding state is loaded only by /school-bootstrap after the
+    // The branding state is loaded only by /school-splash after the
     // authenticated profile has supplied a trusted schoolId.
     final path = state.uri.path;
     final isPipelineRoute =
         path == '/' ||
         path == '/welcome' ||
-        path == '/school-bootstrap' ||
         path == '/school-splash' ||
         path.startsWith('/auth') ||
         path.startsWith('/owner') ||
@@ -462,7 +461,7 @@ final router = GoRouter(
       final branding = context.read<BrandingBloc>().state;
       if (branding is! BrandingLoaded ||
           branding.branding?.schoolId != authState.user.schoolId) {
-        return '/school-bootstrap';
+        return '/school-splash';
       }
     }
 
@@ -474,12 +473,12 @@ final router = GoRouter(
     // convenience, not a security boundary: this router-level guard is the
     // actual one, catching a superAdmin session on any staff surface
     // before it ever builds, and sending it through the same
-    // /school-bootstrap -> /super-admin path a fresh owner login takes.
+    // /school-splash -> /super-admin path a fresh owner login takes.
     if (authState is AuthAuthenticated &&
         authState.user.role == UserRole.superAdmin &&
         (state.uri.path == '/staff/login' ||
             state.uri.path.startsWith('/staff/'))) {
-      return '/school-bootstrap';
+      return '/school-splash';
     }
 
     // Protect Super Admin routes
@@ -578,25 +577,6 @@ final router = GoRouter(
       builder: (context, state) => const WelcomeScreen(),
     ),
     GoRoute(
-      path: '/school-bootstrap',
-      redirect: (context, state) {
-        final authState = context.read<AuthBloc>().state;
-        if (authState is! AuthAuthenticated) return '/welcome';
-        // superAdmin is the SaaS platform owner, not a school tenant - they
-        // have no schoolId to resolve and every other route in this file
-        // already exempts them from the tenant pipeline (see the top-level
-        // redirect above). AuthenticatedBootstrapScreen has no exit of its
-        // own once landed on, so without this a superAdmin routed here from
-        // any login/session-restore path was stuck indefinitely on
-        // "Preparing your school workspace".
-        if (authState.user.role == UserRole.superAdmin) {
-          return UserRoleRouting.dashboardPath(UserRole.superAdmin);
-        }
-        return null;
-      },
-      builder: (context, state) => const AuthenticatedBootstrapScreen(),
-    ),
-    GoRoute(
       path: '/institution-suspended',
       builder: (context, state) => const InstitutionSuspendedScreen(),
     ),
@@ -609,17 +589,20 @@ final router = GoRouter(
     GoRoute(
       path: '/school-splash',
       redirect: (context, state) {
-        final user = resolveSchoolSplashUser(
-          state.extra,
-          context.read<AuthBloc>().state,
-        );
-        final branding = context.read<BrandingBloc>().state;
-        return user == null
-            ? '/welcome'
-            : branding is BrandingLoaded &&
-                  branding.branding?.schoolId == user.schoolId
-            ? null
-            : '/school-bootstrap';
+        final authState = context.read<AuthBloc>().state;
+        // superAdmin is the SaaS platform owner, not a school tenant - they
+        // have no schoolId to resolve and every other route in this file
+        // already exempts them from the tenant pipeline (see the top-level
+        // redirect above). SchoolSplashScreen has no exit of its own once
+        // landed on, so without this a superAdmin routed here from any
+        // login/session-restore path was stuck indefinitely resolving
+        // branding for a school they don't belong to.
+        if (authState is AuthAuthenticated &&
+            authState.user.role == UserRole.superAdmin) {
+          return UserRoleRouting.dashboardPath(UserRole.superAdmin);
+        }
+        final user = resolveSchoolSplashUser(state.extra, authState);
+        return user == null ? '/welcome' : null;
       },
       builder: (context, state) {
         final user = resolveSchoolSplashUser(
@@ -1940,6 +1923,11 @@ final router = GoRouter(
                             state.uri.queryParameters['wizardStepId'] ??
                             'classes',
                       ),
+                    ),
+                    GoRoute(
+                      path: 'fee-structures',
+                      builder: (context, state) =>
+                          const FeeConfigurationScreen(),
                     ),
                     GoRoute(
                       path: 'subjects',
