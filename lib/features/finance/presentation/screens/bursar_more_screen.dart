@@ -11,7 +11,7 @@ import 'budget_management_screen.dart';
 import 'fee_configuration_screen.dart';
 import 'financial_reports_screen.dart';
 import 'student_eligibility_screen.dart';
-import 'payroll_screen.dart';
+import 'package:school_pulse/features/hr/presentation/screens/payroll_management_screen.dart';
 
 class _MoreItem {
   final IconData icon;
@@ -67,7 +67,7 @@ class BursarMoreScreen extends StatelessWidget {
       icon: Icons.payments_rounded,
       label: 'Payroll',
       color: Colors.indigo,
-      builder: (_) => const PayrollScreen(),
+      builder: (_) => const PayrollManagementScreen(),
     ),
   ];
 
