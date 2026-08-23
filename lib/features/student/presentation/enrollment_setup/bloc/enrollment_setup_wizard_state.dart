@@ -3,7 +3,7 @@ import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
 import 'enrollment_setup_wizard_event.dart' show GuardianDraft;
 
-const int kWizardStepCount = 13;
+const int kWizardStepCount = 12;
 
 class EnrollmentSetupWizardState extends Equatable {
   final int currentStep; // 0-based, 0..7
@@ -74,7 +74,6 @@ class EnrollmentSetupWizardState extends Equatable {
   // Step 6
   final bool parentLinked;
   final String? parentAccessCode;
-  final bool parentLinkSkippedFlag;
 
   // Step 7
   final bool identityExists;
@@ -130,7 +129,6 @@ class EnrollmentSetupWizardState extends Equatable {
     this.clubsSaved = false,
     this.parentLinked = false,
     this.parentAccessCode,
-    this.parentLinkSkippedFlag = false,
     this.identityExists = false,
     this.nfcRegistered = false,
     this.nfcSkipped = false,
@@ -148,7 +146,7 @@ class EnrollmentSetupWizardState extends Equatable {
       classId.isNotEmpty &&
       studentCode.isNotEmpty &&
       guardians.isNotEmpty &&
-      (parentLinked || parentLinkSkippedFlag);
+      guardiansLinked;
 
   EnrollmentSetupWizardState copyWith({
     int? currentStep,
@@ -198,7 +196,6 @@ class EnrollmentSetupWizardState extends Equatable {
     bool? clubsSaved,
     bool? parentLinked,
     String? parentAccessCode,
-    bool? parentLinkSkippedFlag,
     bool? identityExists,
     bool? nfcRegistered,
     bool? nfcSkipped,
@@ -252,8 +249,6 @@ class EnrollmentSetupWizardState extends Equatable {
       clubsSaved: clubsSaved ?? this.clubsSaved,
       parentLinked: parentLinked ?? this.parentLinked,
       parentAccessCode: parentAccessCode ?? this.parentAccessCode,
-      parentLinkSkippedFlag:
-          parentLinkSkippedFlag ?? this.parentLinkSkippedFlag,
       identityExists: identityExists ?? this.identityExists,
       nfcRegistered: nfcRegistered ?? this.nfcRegistered,
       nfcSkipped: nfcSkipped ?? this.nfcSkipped,
@@ -308,7 +303,6 @@ class EnrollmentSetupWizardState extends Equatable {
     clubsSaved,
     parentLinked,
     parentAccessCode,
-    parentLinkSkippedFlag,
     identityExists,
     nfcRegistered,
     nfcSkipped,
