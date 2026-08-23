@@ -228,6 +228,12 @@ class StaffRoleAssignment extends Equatable {
   final String? updatedBy;
   final DateTime? updatedAt;
 
+  /// Extra monthly pay this specific assignment carries on top of the
+  /// staff member's base salary (e.g. "Patron of Blue House" allowance).
+  /// Null/omitted means no bonus. Summed across all of a staff member's
+  /// active assignments when payroll is generated.
+  final double? monthlyBonusAmount;
+
   const StaffRoleAssignment({
     required this.id,
     required this.schoolId,
@@ -257,6 +263,7 @@ class StaffRoleAssignment extends Equatable {
     required this.assignedAt,
     this.updatedBy,
     this.updatedAt,
+    this.monthlyBonusAmount,
   });
 
   bool get isSubstitute => substituteForStaffId != null;
@@ -349,6 +356,8 @@ class StaffRoleAssignment extends Equatable {
     DateTime? assignedAt,
     String? updatedBy,
     DateTime? updatedAt,
+    double? monthlyBonusAmount,
+    bool clearMonthlyBonusAmount = false,
   }) {
     return StaffRoleAssignment(
       id: id ?? this.id,
@@ -379,6 +388,9 @@ class StaffRoleAssignment extends Equatable {
       assignedAt: assignedAt ?? this.assignedAt,
       updatedBy: updatedBy ?? this.updatedBy,
       updatedAt: updatedAt ?? this.updatedAt,
+      monthlyBonusAmount: clearMonthlyBonusAmount
+          ? null
+          : (monthlyBonusAmount ?? this.monthlyBonusAmount),
     );
   }
 
@@ -412,5 +424,6 @@ class StaffRoleAssignment extends Equatable {
     assignedAt,
     updatedBy,
     updatedAt,
+    monthlyBonusAmount,
   ];
 }

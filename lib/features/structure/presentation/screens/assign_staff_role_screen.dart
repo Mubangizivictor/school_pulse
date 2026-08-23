@@ -57,6 +57,7 @@ class _AssignStaffRoleScreenState extends State<AssignStaffRoleScreen> {
   String? _departmentId;
   String? _houseId;
   final _extraScopeController = TextEditingController();
+  final _monthlyBonusController = TextEditingController();
 
   List<UserEntity> _staffList = const [];
   bool _staffLoaded = false;
@@ -73,6 +74,7 @@ class _AssignStaffRoleScreenState extends State<AssignStaffRoleScreen> {
   @override
   void dispose() {
     _extraScopeController.dispose();
+    _monthlyBonusController.dispose();
     super.dispose();
   }
 
@@ -150,6 +152,9 @@ class _AssignStaffRoleScreenState extends State<AssignStaffRoleScreen> {
           : {'label': _extraScopeController.text.trim()},
       assignedBy: actor.id,
       assignedAt: DateTime.now(),
+      monthlyBonusAmount: double.tryParse(
+        _monthlyBonusController.text.trim(),
+      ),
     );
 
     setState(() => _submitting = true);
@@ -264,6 +269,20 @@ class _AssignStaffRoleScreenState extends State<AssignStaffRoleScreen> {
               const SizedBox(height: 12),
               ..._scopeFields(_role!, structureState),
             ],
+            const SizedBox(height: 18),
+            _SectionLabel('Monthly Bonus (optional)'),
+            TextFormField(
+              controller: _monthlyBonusController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Extra monthly pay for this role, e.g. 50000',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(7),
+                ),
+              ),
+            ),
             const SizedBox(height: 18),
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,

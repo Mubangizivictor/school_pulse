@@ -10,6 +10,8 @@ import 'package:school_pulse/features/hr/domain/entities/payroll_record.dart';
 import 'package:school_pulse/features/hr/presentation/bloc/hr_bloc.dart';
 import 'package:school_pulse/features/hr/presentation/bloc/hr_event.dart';
 import 'package:school_pulse/features/hr/presentation/bloc/hr_state.dart';
+import 'package:school_pulse/features/teacher/domain/repositories/staff_assignment_repository.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 class PayrollManagementScreen extends StatefulWidget {
   const PayrollManagementScreen({super.key});
@@ -24,6 +26,7 @@ class _PayrollManagementScreenState extends State<PayrollManagementScreen> {
     symbol: 'UGX ',
     decimalDigits: 0,
   );
+  final _staffAssignmentRepository = di.sl<StaffAssignmentRepository>();
 
   String get _schoolId {
     final state = context.read<AuthBloc>().state;
@@ -98,88 +101,144 @@ class _PayrollManagementScreenState extends State<PayrollManagementScreen> {
     final baseSalaryController = TextEditingController();
     final allowancesController = TextEditingController();
     final deductionsController = TextEditingController();
+    PayrollFundingSource fundingSource = PayrollFundingSource.government;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Generate Payroll'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: staffNameController,
-                decoration: const InputDecoration(labelText: 'Staff Name'),
-              ),
-              TextField(
-                controller: baseSalaryController,
-                decoration: const InputDecoration(labelText: 'Base Salary'),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: allowancesController,
-                decoration: const InputDecoration(labelText: 'Allowances'),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: deductionsController,
-                decoration: const InputDecoration(
-                  labelText: 'Other Deductions',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Generate Payroll'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: staffNameController,
+                  decoration: const InputDecoration(labelText: 'Staff Name'),
                 ),
-                keyboardType: TextInputType.number,
-              ),
-            ],
+                TextField(
+                  controller: baseSalaryController,
+                  decoration: const InputDecoration(labelText: 'Base Salary'),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: allowancesController,
+                  decoration: const InputDecoration(labelText: 'Allowances'),
+                  keyboardType: TextInputType.number,
+                ),
+                TextField(
+                  controller: deductionsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Other Deductions',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<PayrollFundingSource>(
+                  initialValue: fundingSource,
+                  decoration: const InputDecoration(
+                    labelText: 'Funding Source',
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: PayrollFundingSource.government,
+                      child: Text('Government Sponsored'),
+                    ),
+                    DropdownMenuItem(
+                      value: PayrollFundingSource.pta,
+                      child: Text('PTA Sponsored'),
+                    ),
+                    DropdownMenuItem(
+                      value: PayrollFundingSource.other,
+                      child: Text('Other'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(() => fundingSource = value);
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final base = double.tryParse(baseSalaryController.text) ?? 0;
+                final allowances =
+                    double.tryParse(allowancesController.text) ?? 0;
+                final otherDeductions =
+                    double.tryParse(deductionsController.text) ?? 0;
+                final staffId =
+                    'STF-${DateTime.now().millisecondsSinceEpoch}';
+
+                final bonuses = await _roleAssignmentBonuses(staffId);
+
+                final grossTaxable = base + allowances;
+                final paye = PayrollCalculator.calculatePAYE(grossTaxable);
+                final nssfEmployee = PayrollCalculator.calculateNSSFEmployee(
+                  base,
+                );
+                final nssfEmployer = PayrollCalculator.calculateNSSFEmployer(
+                  base,
+                );
+                final netPay =
+                    grossTaxable +
+                    bonuses -
+                    paye -
+                    nssfEmployee -
+                    otherDeductions;
+
+                final record = PayrollRecord(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  schoolId: _schoolId,
+                  staffId: staffId,
+                  staffName: staffNameController.text,
+                  month: DateFormat('MMMM yyyy').format(DateTime.now()),
+                  baseSalary: base,
+                  allowances: allowances,
+                  bonuses: bonuses,
+                  deductions: otherDeductions,
+                  nssfEmployee: nssfEmployee,
+                  nssfEmployer: nssfEmployer,
+                  paye: paye,
+                  netPay: netPay,
+                  createdAt: DateTime.now(),
+                  fundingSource: fundingSource,
+                );
+
+                if (!context.mounted) return;
+                context.read<HrBloc>().add(GeneratePayroll(record));
+                Navigator.pop(context);
+              },
+              child: const Text('Generate'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final base = double.tryParse(baseSalaryController.text) ?? 0;
-              final allowances =
-                  double.tryParse(allowancesController.text) ?? 0;
-              final otherDeductions =
-                  double.tryParse(deductionsController.text) ?? 0;
-
-              final grossTaxable = base + allowances;
-              final paye = PayrollCalculator.calculatePAYE(grossTaxable);
-              final nssfEmployee = PayrollCalculator.calculateNSSFEmployee(
-                base,
-              );
-              final nssfEmployer = PayrollCalculator.calculateNSSFEmployer(
-                base,
-              );
-              final netPay =
-                  grossTaxable - paye - nssfEmployee - otherDeductions;
-
-              final record = PayrollRecord(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                schoolId: _schoolId,
-                staffId: 'STF-${DateTime.now().millisecondsSinceEpoch}',
-                staffName: staffNameController.text,
-                month: DateFormat('MMMM yyyy').format(DateTime.now()),
-                baseSalary: base,
-                allowances: allowances,
-                bonuses: 0,
-                deductions: otherDeductions,
-                nssfEmployee: nssfEmployee,
-                nssfEmployer: nssfEmployer,
-                paye: paye,
-                netPay: netPay,
-                createdAt: DateTime.now(),
-              );
-
-              context.read<HrBloc>().add(GeneratePayroll(record));
-              Navigator.pop(context);
-            },
-            child: const Text('Generate'),
-          ),
-        ],
       ),
     );
+  }
+
+  /// Sums [StaffRoleAssignment.monthlyBonusAmount] across every currently
+  /// active assignment held by this staff member, so patron/house/department
+  /// extra pay is auto-included instead of retyped each payroll run.
+  Future<double> _roleAssignmentBonuses(String staffId) async {
+    final result = await _staffAssignmentRepository.getValidAssignments(
+      schoolId: _schoolId,
+      userId: staffId,
+    );
+    return result.fold((_) => 0, (assignments) {
+      var total = 0.0;
+      for (final assignment in assignments) {
+        total += assignment.monthlyBonusAmount ?? 0;
+      }
+      return total;
+    });
   }
 }
 
@@ -202,7 +261,8 @@ class _PayrollRecordTile extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
-          '${record.month} • Net: ${currencyFormat.format(record.netPay)}',
+          '${record.month} • ${_fundingSourceLabel(record.fundingSource)} '
+          '• Net: ${currencyFormat.format(record.netPay)}',
         ),
         children: [
           Padding(
@@ -238,6 +298,17 @@ class _PayrollRecordTile extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _fundingSourceLabel(PayrollFundingSource source) {
+    switch (source) {
+      case PayrollFundingSource.government:
+        return 'Government';
+      case PayrollFundingSource.pta:
+        return 'PTA';
+      case PayrollFundingSource.other:
+        return 'Other';
+    }
   }
 
   Widget _buildDetailRow(

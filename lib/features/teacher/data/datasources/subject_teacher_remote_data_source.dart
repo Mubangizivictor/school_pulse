@@ -879,6 +879,7 @@ class SubjectTeacherRemoteDataSourceImpl
       assignedAt: _toDate(data['assignedAt']) ?? DateTime(1970),
       updatedBy: data['updatedBy'] as String?,
       updatedAt: _toDate(data['updatedAt']),
+      monthlyBonusAmount: (data['monthlyBonusAmount'] as num?)?.toDouble(),
     );
   }
 
@@ -915,6 +916,8 @@ class SubjectTeacherRemoteDataSourceImpl
       'assignedAt': Timestamp.fromDate(a.assignedAt),
       if (a.updatedBy != null) 'updatedBy': a.updatedBy,
       'updatedAt': Timestamp.now(),
+      if (a.monthlyBonusAmount != null)
+        'monthlyBonusAmount': a.monthlyBonusAmount,
     };
   }
 

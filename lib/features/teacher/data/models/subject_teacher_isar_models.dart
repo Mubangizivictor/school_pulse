@@ -61,6 +61,7 @@ class StaffRoleAssignmentIsar {
   late DateTime assignedAt;
   String? updatedBy;
   DateTime? updatedAt;
+  double? monthlyBonusAmount;
 
   /// When this row was last refreshed from the server, so a long-stale cache
   /// can be treated as suspect rather than trusted indefinitely.
@@ -98,6 +99,7 @@ class StaffRoleAssignmentIsar {
       ..assignedAt = e.assignedAt
       ..updatedBy = e.updatedBy
       ..updatedAt = e.updatedAt
+      ..monthlyBonusAmount = e.monthlyBonusAmount
       ..cachedAt = DateTime.now();
   }
 
@@ -138,6 +140,7 @@ class StaffRoleAssignmentIsar {
       assignedAt: assignedAt,
       updatedBy: updatedBy,
       updatedAt: updatedAt,
+      monthlyBonusAmount: monthlyBonusAmount,
     );
   }
 }
