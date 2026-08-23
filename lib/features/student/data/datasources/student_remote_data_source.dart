@@ -17,6 +17,22 @@ final _accessCodeRandom = Random.secure();
 /// previous scheme of a fixed prefix + trailing epoch-millis digits, which
 /// was sequential and predictable) and free of characters that are easily
 /// confused when read aloud or hand-copied.
+// Mirrors schoolPrefixFrom() in functions/index.js (staff/student code
+// generation) - schools only ever carry a top-level `name` field, never a
+// `schoolCode` field (that key only exists in the derived, display-only
+// schools/{id}/config/institution_profile doc), so reading it straight off
+// the school doc always returned null and silently fell back to bare 'P'.
+String _schoolPrefixFromName(String? schoolName) {
+  final trimmed = schoolName?.trim();
+  if (trimmed == null || trimmed.isEmpty) return '';
+  return trimmed
+      .split(RegExp(r'\s+'))
+      .map((w) => w[0])
+      .take(3)
+      .join()
+      .toUpperCase();
+}
+
 String _generateAccessCode({required String prefix, int length = 8}) {
   final suffix = String.fromCharCodes(
     List.generate(
@@ -447,12 +463,11 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     String? parentName,
   }) async {
     final schoolDoc = await firestore.collection('schools').doc(schoolId).get();
-    final schoolPrefix = (schoolDoc.data()?['schoolCode'] as String?)
-        ?.toUpperCase();
+    final schoolPrefix = _schoolPrefixFromName(
+      schoolDoc.data()?['name'] as String?,
+    );
     final parentCode = _generateAccessCode(
-      prefix: schoolPrefix != null && schoolPrefix.isNotEmpty
-          ? '$schoolPrefix-P-'
-          : 'P',
+      prefix: schoolPrefix.isNotEmpty ? '$schoolPrefix-P-' : 'P',
     );
     // The code is also the document ID so pre-login users can perform the
     // rule-safe direct get without permission to enumerate access codes.
@@ -487,9 +502,10 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     String prefix = 'P';
     if (schoolId != null) {
       final schoolDoc = await firestore.collection('schools').doc(schoolId).get();
-      final schoolPrefix = (schoolDoc.data()?['schoolCode'] as String?)
-          ?.toUpperCase();
-      if (schoolPrefix != null && schoolPrefix.isNotEmpty) {
+      final schoolPrefix = _schoolPrefixFromName(
+        schoolDoc.data()?['name'] as String?,
+      );
+      if (schoolPrefix.isNotEmpty) {
         prefix = '$schoolPrefix-P-';
       }
     }
