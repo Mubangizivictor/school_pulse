@@ -612,6 +612,23 @@ Future<void> _showGradingSystemFormSheet(
                         );
 
                         final bloc = context.read<StructureBloc>();
+
+                        // Pop the sheet before dispatching any bloc events.
+                        // Each SaveGradingSystemRequested/SaveGradeBandRequested
+                        // handler awaits a Firestore write and the bloc's own
+                        // watchGradingSystems/watchGradeBands stream subscriptions
+                        // then feed the write straight back as a *Loaded event,
+                        // which re-emits state asynchronously (a real async gap,
+                        // not same-frame reentrancy). If that re-emit lands while
+                        // this sheet is still mid-teardown, the ancestor
+                        // BlocBuilder rebuilds against a subtree whose
+                        // TextEditingControllers are disposing, producing "used
+                        // after disposed" -> "build dirty widget in wrong build
+                        // scope". Popping first lets the sheet fully unmount and
+                        // dispose its controllers before any such re-emit can
+                        // reach it.
+                        Navigator.pop(context);
+
                         bloc.add(SaveGradingSystemRequested(system));
 
                         final keptIds = <String>{};
@@ -644,8 +661,6 @@ Future<void> _showGradingSystemFormSheet(
                             }
                           }
                         }
-
-                        Navigator.pop(context);
                       },
                       child: Text(
                         existing == null
