@@ -693,31 +693,12 @@ class _AssignmentsEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-        child: Column(
-          children: [
-            Icon(Icons.badge_outlined, size: 56, color: scheme.primary),
-            const SizedBox(height: 16),
-            Text(
-              'No assignments yet',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Assign a staff member to a class, subject or department.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.badge_outlined,
+      title: 'No assignments yet',
+      message: 'Assign a staff member to a class, subject or department.',
+      ctaLabel: 'Add assignment',
+      onCtaPressed: onAdd,
     );
   }
 }

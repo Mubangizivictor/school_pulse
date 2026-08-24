@@ -522,43 +522,12 @@ class _CurriculumEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-        child: Column(
-          children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: scheme.primary.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.account_tree_outlined,
-                size: 40,
-                color: scheme.primary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No allocations yet',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Add the first subject allocation to continue.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.account_tree_outlined,
+      title: 'No allocations yet',
+      message: 'Add the first subject allocation to continue.',
+      ctaLabel: 'Add allocation',
+      onCtaPressed: onAdd,
     );
   }
 }

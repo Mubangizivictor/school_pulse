@@ -258,35 +258,10 @@ class _TimetablesEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-        child: Column(
-          children: [
-            Icon(
-              Icons.calendar_today_outlined,
-              size: 56,
-              color: scheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No timetable yet',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.calendar_today_outlined,
+      title: 'No timetable yet',
+      message: message,
     );
   }
 }
