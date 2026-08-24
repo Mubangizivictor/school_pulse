@@ -278,31 +278,12 @@ class _GradingEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-        child: Column(
-          children: [
-            Icon(Icons.insert_chart_outlined, size: 56, color: scheme.primary),
-            const SizedBox(height: 16),
-            Text(
-              'No grading system added',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Add grade bands and pass marks for your school.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.insert_chart_outlined,
+      title: 'No grading system added',
+      message: 'Add grade bands and pass marks for your school.',
+      ctaLabel: 'Add grading system',
+      onCtaPressed: onAdd,
     );
   }
 }

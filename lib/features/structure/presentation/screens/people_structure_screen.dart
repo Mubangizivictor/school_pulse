@@ -9,7 +9,6 @@ import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
 import '../widgets/structure_dialogs.dart';
-import '../widgets/structure_empty_hint.dart';
 
 const _validator = StructureIntegrityValidator();
 
@@ -193,8 +192,11 @@ class PeopleStructureScreen extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: [
           if (state.designations.isEmpty)
-            const StructureEmptyHint(
-              'No staff roles/designations yet. Add only the responsibilities this school actually uses - e.g. Teacher, Class Teacher, Head of Department, Bursar.',
+            const EmptyState(
+              icon: Icons.badge_outlined,
+              title: 'No staff roles yet',
+              message:
+                  'Add only the responsibilities this school actually uses - e.g. Teacher, Class Teacher, Head of Department, Bursar.',
             )
           else
             ...state.designations.map(
@@ -254,35 +256,12 @@ class _DepartmentsEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-        child: Column(
-          children: [
-            Icon(
-              Icons.account_balance_outlined,
-              size: 56,
-              color: scheme.primary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No departments added',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Add your first department to continue.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.account_balance_outlined,
+      title: 'No departments added',
+      message: 'Add your first department to continue.',
+      ctaLabel: 'Add department',
+      onCtaPressed: onAdd,
     );
   }
 }
