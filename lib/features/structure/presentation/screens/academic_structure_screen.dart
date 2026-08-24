@@ -11,7 +11,6 @@ import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
 import '../widgets/structure_dialogs.dart';
-import '../widgets/structure_empty_hint.dart';
 
 const _validator = StructureIntegrityValidator();
 
@@ -403,8 +402,11 @@ class AcademicStructureScreen extends StatelessWidget {
             const SizedBox(height: 20),
             if (currentYear == null)
               const Expanded(
-                child: StructureEmptyHint(
-                  'Return to Academic Years and select one current year first.',
+                child: EmptyState(
+                  icon: Icons.event_busy_outlined,
+                  title: 'No current academic year set',
+                  message:
+                      'Return to Academic Years and select one current year first.',
                 ),
               )
             else if (items.isEmpty)
@@ -1019,35 +1021,12 @@ class _StreamsEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-        child: Column(
-          children: [
-            Icon(
-              Icons.account_tree_outlined,
-              size: 56,
-              color: scheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No streams added',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'You can skip this step if your classes have no streams.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.account_tree_outlined,
+      title: 'No streams added',
+      message: 'You can skip this step if your classes have no streams.',
+      ctaLabel: onAdd == null ? null : 'Add stream',
+      onCtaPressed: onAdd,
     );
   }
 }
@@ -1059,35 +1038,12 @@ class _ClassesEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-        child: Column(
-          children: [
-            Icon(
-              Icons.desktop_windows_outlined,
-              size: 56,
-              color: scheme.primary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No classes added',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Add your first class to continue.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.desktop_windows_outlined,
+      title: 'No classes added',
+      message: 'Add your first class to continue.',
+      ctaLabel: onAdd == null ? null : 'Add class',
+      onCtaPressed: onAdd,
     );
   }
 }
@@ -1099,35 +1055,12 @@ class _SubjectsEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-        child: Column(
-          children: [
-            Icon(
-              Icons.menu_book_outlined,
-              size: 56,
-              color: scheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No subjects added',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Add your first subject to continue.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.menu_book_outlined,
+      title: 'No subjects added',
+      message: 'Add your first subject to continue.',
+      ctaLabel: 'Add subject',
+      onCtaPressed: onAdd,
     );
   }
 }
@@ -1139,35 +1072,12 @@ class _LevelsEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-        child: Column(
-          children: [
-            Icon(
-              Icons.account_balance_outlined,
-              size: 56,
-              color: scheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No levels added',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Add your first education level to continue.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.account_balance_outlined,
+      title: 'No levels added',
+      message: 'Add your first education level to continue.',
+      ctaLabel: 'Add level',
+      onCtaPressed: onAdd,
     );
   }
 }
@@ -1179,35 +1089,12 @@ class _TermsEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-        child: Column(
-          children: [
-            Icon(
-              Icons.calendar_today_outlined,
-              size: 48,
-              color: scheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No periods added',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Add your first term or semester to continue.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.calendar_today_outlined,
+      title: 'No periods added',
+      message: 'Add your first term or semester to continue.',
+      ctaLabel: 'Add term',
+      onCtaPressed: onAdd,
     );
   }
 }
@@ -1219,44 +1106,12 @@ class _AcademicYearEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-        child: Column(
-          children: [
-            Icon(
-              Icons.calendar_today_outlined,
-              size: 48,
-              color: scheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No academic year yet',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Create one to continue your school setup.',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onAdd,
-                icon: const Icon(Icons.add),
-                label: const Text('Add academic year'),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.calendar_today_outlined,
+      title: 'No academic year yet',
+      message: 'Create one to continue your school setup.',
+      ctaLabel: 'Add academic year',
+      onCtaPressed: onAdd,
     );
   }
 }
