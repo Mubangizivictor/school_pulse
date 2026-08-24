@@ -149,13 +149,19 @@ class StatusBadge extends StatelessWidget {
             Icon(icon, size: 12, color: scheme.onSurface),
             const SizedBox(width: 4),
           ],
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              color: scheme.onSurface,
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.5,
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label.toUpperCase(),
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: scheme.onSurface,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
+              ),
             ),
           ),
         ],
