@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:school_pulse/design_system/app_components.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_state.dart';
 import '../widgets/institution_tab.dart';
@@ -772,30 +773,18 @@ class _WizardStepScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isFirstStep = stepNumber <= 1;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(
-              child: Text(
-                '$stepNumber of $totalSteps',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text(title)),
       body: SafeArea(
         child: Column(
           children: [
-            LinearProgressIndicator(
-              value: stepNumber / totalSteps,
-              minHeight: 3,
+            WizardStepProgress(
+              currentStep: stepNumber - 1,
+              stepCount: totalSteps,
+              stepTitle: title,
             ),
+            const Divider(height: 1),
             Expanded(child: child),
           ],
         ),
@@ -803,7 +792,7 @@ class _WizardStepScreen extends StatelessWidget {
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             border: Border(
@@ -811,24 +800,26 @@ class _WizardStepScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.outlineVariant,
               ),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, -2),
+              ),
+            ],
           ),
           child: Row(
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onBack,
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  label: const Text('Back'),
+              if (!isFirstStep)
+                Expanded(
+                  child: SecondaryButton(label: 'Back', onPressed: onBack),
                 ),
-              ),
-              const SizedBox(width: 12),
+              if (!isFirstStep) const SizedBox(width: 12),
               Expanded(
-                flex: 2,
-                child: FilledButton.icon(
+                child: PrimaryButton(
+                  label: continueLabel,
+                  icon: continueIcon,
                   onPressed: onContinue,
-                  label: Text(continueLabel),
-                  icon: Icon(continueIcon),
-                  iconAlignment: IconAlignment.end,
                 ),
               ),
             ],
