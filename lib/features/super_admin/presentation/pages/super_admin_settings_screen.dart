@@ -224,7 +224,7 @@ class _DesktopAccountCard extends StatelessWidget {
 
     final avatar = CircleAvatar(
       radius: 32,
-      backgroundColor: primary.withValues(alpha: 0.15),
+      backgroundColor: primary,
       backgroundImage: photoUrl?.isNotEmpty == true
           ? NetworkImage(photoUrl!)
           : null,
@@ -265,7 +265,7 @@ class _DesktopAccountCard extends StatelessWidget {
                   vertical: 2,
                 ),
                 decoration: BoxDecoration(
-                  color: primary.withValues(alpha: 0.12),
+                  color: primary,
                   borderRadius: AppRadius.full,
                 ),
                 child: Text(
@@ -414,7 +414,7 @@ class _AccountCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 32,
-                backgroundColor: primary.withValues(alpha: 0.15),
+                backgroundColor: primary,
                 backgroundImage: photoUrl?.isNotEmpty == true
                     ? NetworkImage(photoUrl!)
                     : null,
@@ -630,7 +630,7 @@ class _SettingsTile extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(AppSpacing.m),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: color, size: 22),

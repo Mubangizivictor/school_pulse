@@ -67,9 +67,7 @@ class AddLessonNoteScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainer,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.1),
-                  ),
+                  border: Border.all(color: colorScheme.outlineVariant),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -103,9 +101,7 @@ class AddLessonNoteScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.1),
-        ),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Row(
         children: [

@@ -91,7 +91,7 @@ class _WastageTrackingScreenState extends State<WastageTrackingScreen> {
                         Text(
                           '${record.quantityWasted} ${record.unit} wasted',
                           style: const TextStyle(
-                            color: Colors.red,
+                            color: Colors.black,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

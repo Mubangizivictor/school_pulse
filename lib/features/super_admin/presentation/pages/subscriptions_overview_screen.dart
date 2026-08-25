@@ -252,7 +252,7 @@ class _SubscriptionsOverviewScreenState
           Container(
             padding: const EdgeInsets.all(AppSpacing.m),
             decoration: BoxDecoration(
-              color: AppColors.danger(context).withValues(alpha: 0.1),
+              color: AppColors.danger(context),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -296,7 +296,7 @@ class _SubscriptionsOverviewScreenState
             Container(
               padding: const EdgeInsets.all(AppSpacing.l),
               decoration: BoxDecoration(
-                color: accentColor.withValues(alpha: 0.1),
+                color: accentColor,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: accentColor, size: 20),

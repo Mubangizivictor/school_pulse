@@ -5,14 +5,177 @@ import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:uuid/uuid.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 import '../../domain/entities/structure_entities.dart';
+import '../../domain/entities/structure_setup_preferences.dart';
 import '../../domain/services/structure_integrity_validator.dart';
+import '../../domain/services/class_suggestion_resolver.dart';
+import '../../domain/services/structure_dependency_service.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
+import '../bloc/structure_setup_cubit.dart';
 import '../widgets/structure_dialogs.dart';
 
 const _validator = StructureIntegrityValidator();
+
+/// Standard education stages offered as suggestions for a given school type
+/// (the same free-text values captured on the Institution Profile step -
+/// see `institution_tab.dart`'s `_schoolTypes`). This is presentation-layer
+/// convenience only: nothing here is a curriculum policy, it just narrows
+/// which of the universal stages are suggested first; any of them can still
+/// be added via "Add a custom level" regardless of school type.
+class _StageSuggestion {
+  final String name;
+  final String code;
+  final String description;
+  const _StageSuggestion(this.name, this.code, this.description);
+}
+
+const _kAllStages = <_StageSuggestion>[
+  _StageSuggestion('Early years', 'EY', 'Nursery and pre-primary'),
+  _StageSuggestion('Primary', 'PRI', 'Primary 1 to Primary 7'),
+  _StageSuggestion('Secondary', 'SEC', 'S1 to S6'),
+  _StageSuggestion('Vocational', 'VOC', 'Vocational and technical training'),
+  _StageSuggestion('College', 'COL', 'College-level programmes'),
+  _StageSuggestion('University', 'UNI', 'Undergraduate and postgraduate'),
+];
+
+const _kStagesBySchoolType = <String, List<String>>{
+  'Nursery': ['Early years'],
+  'Primary': ['Early years', 'Primary'],
+  'Secondary': ['Secondary'],
+  'Mixed school': ['Early years', 'Primary', 'Secondary'],
+  'Vocational': ['Vocational'],
+  'College': ['College'],
+  'University': ['University'],
+};
+
+List<_StageSuggestion> _suggestedStages(String schoolType) {
+  final types = schoolType.split(',').map((e) => e.trim());
+  final names = <String>{};
+  for (final type in types) {
+    names.addAll(_kStagesBySchoolType[type] ?? const []);
+  }
+  if (names.isEmpty) return _kAllStages;
+  return _kAllStages.where((s) => names.contains(s.name)).toList();
+}
+
+class _CalendarTimelineItem extends StatelessWidget {
+  const _CalendarTimelineItem({
+    required this.sequence,
+    required this.isLast,
+    required this.term,
+    required this.dateLabel,
+    required this.onMenu,
+  });
+  final int sequence;
+  final bool isLast;
+  final AcademicTerm term;
+  final String dateLabel;
+  final ValueChanged<String> onMenu;
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 44,
+          child: Column(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: scheme.outline),
+                ),
+                child: Text(
+                  '$sequence',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(width: 1, color: scheme.outlineVariant),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 20),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            term.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
+                          if (term.isCurrent) ...[
+                            const SizedBox(width: 8),
+                            Chip(
+                              label: const Text('Current'),
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              labelStyle: const TextStyle(fontSize: 11),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        dateLabel,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, size: 20),
+                  onSelected: onMenu,
+                  itemBuilder: (_) => [
+                    if (!term.isCurrent)
+                      const PopupMenuItem(
+                        value: 'current',
+                        child: Text('Set as current'),
+                      ),
+                    const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                    if (!term.isCurrent && !term.isArchived)
+                      const PopupMenuItem(
+                        value: 'archive',
+                        child: Text('Archive'),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 /// One academic setup task at a time. The Structure wizard passes `section`
 /// in the query string, avoiding the old tabbed/random-navigation experience.
@@ -47,15 +210,35 @@ class AcademicStructureScreen extends StatelessWidget {
     return Scaffold(
       appBar: showAppBar ? AppBar(title: Text(_title(normalized))) : null,
       backgroundColor: showAppBar ? null : Colors.transparent,
-      body: BlocBuilder<StructureBloc, StructureState>(
-        builder: (context, state) => switch (normalized) {
-          'years' => _years(context, state),
-          'terms' => _terms(context, state),
-          'classes' => _classes(context, state),
-          'streams' => _streams(context, state),
-          'subjects' => _subjects(context, state),
-          _ => _levels(context, state),
+      body: BlocListener<StructureBloc, StructureState>(
+        listenWhen: (previous, current) =>
+            current.errorMessage != null &&
+            current.errorMessage != previous.errorMessage,
+        listener: (context, state) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(
+                content: Text(state.errorMessage!),
+                action: SnackBarAction(
+                  label: 'Retry',
+                  onPressed: () => context.read<StructureBloc>().add(
+                    LoadStructureData(_schoolId(context)),
+                  ),
+                ),
+              ),
+            );
         },
+        child: BlocBuilder<StructureBloc, StructureState>(
+          builder: (context, state) => switch (normalized) {
+            'years' => _years(context, state),
+            'terms' => _terms(context, state),
+            'classes' => _classes(context, state),
+            'streams' => _streams(context, state),
+            'subjects' => _subjects(context, state),
+            _ => _levels(context, state),
+          },
+        ),
       ),
     );
   }
@@ -73,100 +256,33 @@ class AcademicStructureScreen extends StatelessWidget {
   };
 
   Widget _levels(BuildContext context, StructureState state) {
-    final bloc = context.read<StructureBloc>();
     final schoolId = _schoolId(context);
-    final scheme = Theme.of(context).colorScheme;
-    void onAddLevel() => showLevelFormDialog(
+    final activeLevels = [...state.levels.where((l) => l.isActive)]
+      ..sort((a, b) => a.order.compareTo(b.order));
+
+    void onAddCustom() => showLevelFormDialog(
       context,
       schoolId: schoolId,
-      nextOrder: state.levels.length,
-      onSave: (value) => _dispatchIfValid(
-        context,
-        _validator.validateLevel(value, state.levels),
-        () => bloc.add(SaveLevelRequested(value)),
+      existingLevels: state.levels,
+      onSave: (levels) => context.read<StructureBloc>().add(
+        SaveLevelWithReorderRequested(levels),
       ),
     );
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Add the education levels your school offers.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  onPressed: onAddLevel,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add level'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            if (state.levels.isEmpty)
-              _LevelsEmptyState(onAdd: onAddLevel)
-            else
-              Expanded(
-                child: ListView.separated(
-                  padding: EdgeInsets.zero,
-                  itemCount: state.levels.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (_, index) {
-                    final level = state.levels[index];
-                    final classCount = state.classes
-                        .where(
-                          (item) => item.levelId == level.id && item.isActive,
-                        )
-                        .length;
-                    return AppCard(
-                      child: ListTile(
-                        title: Text(
-                          level.name,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            decoration: level.isActive
-                                ? null
-                                : TextDecoration.lineThrough,
-                          ),
-                        ),
-                        subtitle: Text(
-                          [
-                            if (level.code.trim().isNotEmpty) level.code.trim(),
-                            '$classCount active class${classCount == 1 ? '' : 'es'}',
-                          ].join(' • '),
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.edit_outlined),
-                          onPressed: () => showLevelFormDialog(
-                            context,
-                            schoolId: schoolId,
-                            existing: level,
-                            onSave: (value) => _dispatchIfValid(
-                              context,
-                              _validator.validateLevel(value, state.levels),
-                              () => bloc.add(SaveLevelRequested(value)),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-          ],
-        ),
-      ),
+    if (activeLevels.isEmpty) {
+      return _LevelSelectionView(
+        schoolId: schoolId,
+        schoolType: state.institutionProfile.schoolType,
+        existingLevels: state.levels,
+        onAddCustom: onAddCustom,
+      );
+    }
+    return _ConfiguredLevelsView(
+      schoolId: schoolId,
+      levels: activeLevels,
+      classes: state.classes,
+      allLevels: state.levels,
+      onAddAnother: onAddCustom,
     );
   }
 
@@ -183,6 +299,9 @@ class AcademicStructureScreen extends StatelessWidget {
         () => bloc.add(SaveAcademicYearRequested(value)),
       ),
     );
+    if (state.isLoading && state.academicYears.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -190,8 +309,9 @@ class AcademicStructureScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Create the academic year your school is currently using. It is used for terms, enrolment, classes and reports.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              'Create the academic year your school is currently using.',
+              style: TextStyle(
+                fontSize: 14,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 height: 1.4,
               ),
@@ -214,14 +334,12 @@ class AcademicStructureScreen extends StatelessWidget {
                             .where((term) => term.academicYearId == year.id)
                             .length;
                         return AppCard(
-                          borderColor: year.isCurrent
-                              ? scheme.primary.withValues(alpha: 0.5)
-                              : null,
+                          borderColor: scheme.primary,
                           showShadow: false,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 20,
+                              horizontal: 16,
+                              vertical: 16,
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,14 +355,14 @@ class AcademicStructureScreen extends StatelessWidget {
                                             year.name,
                                             style: const TextStyle(
                                               fontWeight: FontWeight.w800,
-                                              fontSize: 20,
+                                              fontSize: 17,
                                             ),
                                           ),
                                           Text(
                                             '${fmt.format(year.startDate)} – ${fmt.format(year.endDate)}',
                                             style: TextStyle(
                                               color: scheme.onSurfaceVariant,
-                                              fontSize: 14,
+                                              fontSize: 13,
                                             ),
                                           ),
                                         ],
@@ -346,154 +464,175 @@ class AcademicStructureScreen extends StatelessWidget {
     final bloc = context.read<StructureBloc>();
     final schoolId = _schoolId(context);
     final fmt = DateFormat('dd MMM yyyy');
+    final scheme = Theme.of(context).colorScheme;
     final currentYear = state.academicYears
         .where((year) => year.isCurrent && !year.isArchived)
         .firstOrNull;
-    final items =
-        currentYear == null
-              ? <AcademicTerm>[]
-              : state.academicTerms
-                    .where((term) => term.academicYearId == currentYear.id)
-                    .toList()
-          ..sort((a, b) => a.order.compareTo(b.order));
 
-    void onAddPeriod() => showAcademicTermFormDialog(
-      context,
-      schoolId: schoolId,
-      years: [currentYear!],
-      onSave: (value) => _dispatchIfValid(
-        context,
-        _validator.validateAcademicTerm(
-          value,
-          state.academicYears,
-          state.academicTerms,
+    if (state.isLoading && state.academicYears.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (currentYear == null) {
+      return const SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16, 24, 16, 12),
+          child: EmptyState(
+            icon: Icons.event_busy_outlined,
+            title: 'No current academic year set',
+            message:
+                'Return to Academic Years and select one current year first.',
+          ),
         ),
-        () => bloc.add(SaveAcademicTermRequested(value)),
-      ),
-    );
-    final scheme = Theme.of(context).colorScheme;
+      );
+    }
+
+    final items =
+        state.academicTerms
+            .where(
+              (term) =>
+                  term.academicYearId == currentYear.id && !term.isArchived,
+            )
+            .toList()
+          ..sort((a, b) => a.startDate.compareTo(b.startDate));
+
+    final system = items.isEmpty ? null : items.first.periodType;
+    final periodWord = system == AcademicPeriodType.semester
+        ? 'Semester'
+        : 'Term';
+
+    Future<void> addPeriod(AcademicPeriodType type) {
+      final periodTerms = state.academicTerms
+          .where((term) => term.academicYearId == currentYear.id)
+          .toList();
+      return showAcademicTermFormDialog(
+        context,
+        schoolId: schoolId,
+        years: [currentYear],
+        fixedPeriodType: type,
+        existingCount: periodTerms.where((t) => !t.isArchived).length,
+        onSave: (value) => _dispatchIfValid(
+          context,
+          _validator.validateAcademicTerm(
+            value,
+            state.academicYears,
+            state.academicTerms,
+          ),
+          () => bloc.add(SaveAcademicTermRequested(value)),
+        ),
+      );
+    }
+
+    void onEditPeriod(AcademicTerm term) {
+      showAcademicTermFormDialog(
+        context,
+        schoolId: schoolId,
+        existing: term,
+        years: [currentYear],
+        fixedPeriodType: system,
+        onSave: (value) => _dispatchIfValid(
+          context,
+          _validator.validateAcademicTerm(
+            value,
+            state.academicYears,
+            state.academicTerms,
+          ),
+          () => bloc.add(SaveAcademicTermRequested(value)),
+        ),
+      );
+    }
+
+    // No period exists yet for this year: the reference shows a dedicated
+    // "choose the calendar system" step (year summary card + two large
+    // selectable cards) before the first Add-period sheet opens, rather
+    // than a small modal picker.
+    if (items.isEmpty) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          child: _CalendarSystemChooser(
+            year: currentYear,
+            dateLabel:
+                '${fmt.format(currentYear.startDate)} – ${fmt.format(currentYear.endDate)}',
+            onContinue: (type) => addPeriod(type),
+          ),
+        ),
+      );
+    }
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    currentYear == null
-                        ? 'Set one academic year as current before adding its terms or semesters.'
-                        : 'Add the terms or semesters for ${currentYear.name}.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      height: 1.4,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: scheme.outline),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_month_outlined, color: scheme.primary),
+                  const SizedBox(width: 10),
+                  Text(
+                    currentYear.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  onPressed: currentYear == null ? null : onAddPeriod,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add period'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            if (currentYear == null)
-              const Expanded(
-                child: EmptyState(
-                  icon: Icons.event_busy_outlined,
-                  title: 'No current academic year set',
-                  message:
-                      'Return to Academic Years and select one current year first.',
-                ),
-              )
-            else if (items.isEmpty)
-              _TermsEmptyState(onAdd: onAddPeriod)
-            else
-              Expanded(
-                child: ListView.separated(
-                  padding: EdgeInsets.zero,
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (_, index) {
-                    final term = items[index];
-                    return AppCard(
-                      child: ListTile(
-                        title: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                term.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            if (term.isCurrent)
-                              Chip(
-                                label: const Text('Current'),
-                                backgroundColor: scheme.primary,
-                                labelStyle: TextStyle(
-                                  color: scheme.onPrimary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                side: BorderSide.none,
-                              ),
-                          ],
-                        ),
-                        subtitle: Text(
-                          '${fmt.format(term.startDate)} – ${fmt.format(term.endDate)}',
-                        ),
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (action) {
-                            if (action == 'current') {
-                              bloc.add(
-                                SetCurrentAcademicTermRequested(
-                                  term.id,
-                                  schoolId,
-                                ),
-                              );
-                            } else {
-                              showAcademicTermFormDialog(
-                                context,
-                                schoolId: schoolId,
-                                existing: term,
-                                years: [currentYear],
-                                onSave: (value) => _dispatchIfValid(
-                                  context,
-                                  _validator.validateAcademicTerm(
-                                    value,
-                                    state.academicYears,
-                                    state.academicTerms,
-                                  ),
-                                  () => bloc.add(
-                                    SaveAcademicTermRequested(value),
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                          itemBuilder: (_) => [
-                            if (!term.isCurrent)
-                              const PopupMenuItem(
-                                value: 'current',
-                                child: Text('Set as current'),
-                              ),
-                            const PopupMenuItem(
-                              value: 'edit',
-                              child: Text('Edit'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                  const SizedBox(width: 8),
+                  Chip(
+                    label: Text(
+                      system == AcademicPeriodType.semester
+                          ? 'Semesters'
+                          : 'Terms',
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    labelStyle: const TextStyle(fontSize: 11),
+                  ),
+                ],
               ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: items.length,
+                itemBuilder: (_, index) {
+                  final term = items[index];
+                  return _CalendarTimelineItem(
+                    sequence: index + 1,
+                    isLast: index == items.length - 1,
+                    term: term,
+                    dateLabel:
+                        '${fmt.format(term.startDate)} – ${fmt.format(term.endDate)}',
+                    onMenu: (action) {
+                      if (action == 'current') {
+                        bloc.add(
+                          SetCurrentAcademicTermRequested(term.id, schoolId),
+                        );
+                      } else if (action == 'archive') {
+                        bloc.add(ArchiveAcademicTermRequested(term.id));
+                      } else {
+                        onEditPeriod(term);
+                      }
+                    },
+                  );
+                },
+              ),
+            ),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => addPeriod(system!),
+                icon: const Icon(Icons.add, size: 18),
+                label: Text('Add ${periodWord.toLowerCase()}'),
+              ),
+            ),
           ],
         ),
       ),
@@ -501,514 +640,191 @@ class AcademicStructureScreen extends StatelessWidget {
   }
 
   Widget _classes(BuildContext context, StructureState state) {
-    final bloc = context.read<StructureBloc>();
-    final schoolId = _schoolId(context);
-    final scheme = Theme.of(context).colorScheme;
-    final activeLevels = state.levels.where((item) => item.isActive).toList();
-
-    void onAddClass() => showClassFormDialog(
-      context,
-      schoolId: schoolId,
-      levels: activeLevels,
-      onSave: (value) => _dispatchIfValid(
-        context,
-        _validator.validateClass(
-          value,
-          levels: state.levels,
-          classes: state.classes,
-          streams: state.streams,
-        ),
-        () => bloc.add(SaveClassRequested(value)),
-      ),
-    );
-
-    final byLevel = <EducationalLevel, List<SchoolClass>>{};
-    for (final level in activeLevels) {
-      final classes = state.classes
-          .where((item) => item.levelId == level.id)
-          .toList();
-      if (classes.isNotEmpty) byLevel[level] = classes;
-    }
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      if (activeLevels.isNotEmpty && state.classes.isNotEmpty)
-                        Icon(
-                          Icons.info_outline,
-                          size: 18,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      if (activeLevels.isNotEmpty && state.classes.isNotEmpty)
-                        const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          activeLevels.isEmpty
-                              ? 'Add an educational level before creating classes.'
-                              : state.classes.isEmpty
-                              ? 'Add classes under the correct education level.'
-                              : 'Classes are grouped by education level.',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                                height: 1.4,
-                              ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  onPressed: activeLevels.isEmpty ? null : onAddClass,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add class'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            if (state.classes.isEmpty)
-              _ClassesEmptyState(
-                onAdd: activeLevels.isEmpty ? null : onAddClass,
-              )
-            else
-              Expanded(
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    for (final entry in byLevel.entries) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Text.rich(
-                          TextSpan(
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                            children: [
-                              TextSpan(text: entry.key.name),
-                              TextSpan(
-                                text:
-                                    ' • ${entry.value.length} class${entry.value.length == 1 ? '' : 'es'}',
-                                style: TextStyle(
-                                  color: scheme.onSurfaceVariant,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      for (final schoolClass in entry.value)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: AppCard(
-                            child: ListTile(
-                              leading: Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: scheme.primary,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                  Icons.school_outlined,
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                              ),
-                              title: Text(
-                                schoolClass.name,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  decoration: schoolClass.isActive
-                                      ? null
-                                      : TextDecoration.lineThrough,
-                                ),
-                              ),
-                              subtitle: Text(
-                                'Capacity ${schoolClass.capacity}',
-                              ),
-                              trailing: PopupMenuButton<String>(
-                                icon: const Icon(Icons.more_vert),
-                                onSelected: (_) => showClassFormDialog(
-                                  context,
-                                  schoolId: schoolId,
-                                  existing: schoolClass,
-                                  levels: activeLevels,
-                                  onSave: (value) => _dispatchIfValid(
-                                    context,
-                                    _validator.validateClass(
-                                      value,
-                                      levels: state.levels,
-                                      classes: state.classes,
-                                      streams: state.streams,
-                                    ),
-                                    () => bloc.add(SaveClassRequested(value)),
-                                  ),
-                                ),
-                                itemBuilder: (_) => const [
-                                  PopupMenuItem(
-                                    value: 'edit',
-                                    child: Text('Edit'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: 8),
-                    ],
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
+    return _ClassesBulkSetup(
+      state: state,
+      schoolId: _schoolId(context),
+      onCreate: (classes) =>
+          context.read<StructureBloc>().add(CreateClassesRequested(classes)),
+      onEdit: (value) =>
+          context.read<StructureBloc>().add(SaveClassRequested(value)),
     );
   }
 
   Widget _streams(BuildContext context, StructureState state) {
-    final bloc = context.read<StructureBloc>();
-    final schoolId = _schoolId(context);
-    final scheme = Theme.of(context).colorScheme;
-    final activeClasses = state.classes.where((item) => item.isActive).toList();
-
-    void onAddStream() => showStreamFormDialog(
-      context,
-      schoolId: schoolId,
-      classes: activeClasses,
-      streams: state.streams,
-      onSave: (value) => _dispatchIfValid(
-        context,
-        _validator.validateStream(
-          value,
-          classes: state.classes,
-          streams: state.streams,
-        ),
-        () => bloc.add(SaveStreamRequested(value)),
-      ),
-    );
-
-    final byClass = <SchoolClass, List<ClassStream>>{};
-    for (final schoolClass in activeClasses) {
-      final streams = state.streams
-          .where((item) => item.classId == schoolClass.id)
-          .toList();
-      if (streams.isNotEmpty) byClass[schoolClass] = streams;
-    }
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    activeClasses.isEmpty
-                        ? 'Create classes before adding streams or sections.'
-                        : state.streams.isEmpty
-                        ? 'Optionally divide classes into streams or sections.'
-                        : 'Streams are grouped under their parent class.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  onPressed: activeClasses.isEmpty ? null : onAddStream,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add stream'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            if (state.streams.isEmpty)
-              _StreamsEmptyState(
-                onAdd: activeClasses.isEmpty ? null : onAddStream,
-              )
-            else
-              Expanded(
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    for (final entry in byClass.entries) ...[
-                      Builder(
-                        builder: (context) {
-                          final allocated = entry.value
-                              .where((s) => s.isActive)
-                              .fold<int>(0, (sum, s) => sum + s.capacity);
-                          final capacity = entry.key.capacity;
-                          final progress = capacity > 0
-                              ? (allocated / capacity).clamp(0.0, 1.0)
-                              : 0.0;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text.rich(
-                                  TextSpan(
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(fontWeight: FontWeight.w800),
-                                    children: [
-                                      TextSpan(text: entry.key.name),
-                                      TextSpan(
-                                        text:
-                                            ' • $allocated of $capacity allocated',
-                                        style: TextStyle(
-                                          color: scheme.onSurfaceVariant,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: LinearProgressIndicator(
-                                    value: progress,
-                                    minHeight: 5,
-                                    backgroundColor:
-                                        scheme.surfaceContainerHighest,
-                                    color: scheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      for (final stream in entry.value)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: AppCard(
-                            child: ListTile(
-                              leading: Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: scheme.primary,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                  Icons.account_tree_outlined,
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                              ),
-                              title: Text(
-                                stream.name,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  decoration: stream.isActive
-                                      ? null
-                                      : TextDecoration.lineThrough,
-                                ),
-                              ),
-                              subtitle: Text('Capacity ${stream.capacity}'),
-                              trailing: PopupMenuButton<String>(
-                                icon: const Icon(Icons.more_vert),
-                                onSelected: (_) => showStreamFormDialog(
-                                  context,
-                                  schoolId: schoolId,
-                                  existing: stream,
-                                  classes: activeClasses,
-                                  streams: state.streams,
-                                  onSave: (value) => _dispatchIfValid(
-                                    context,
-                                    _validator.validateStream(
-                                      value,
-                                      classes: state.classes,
-                                      streams: state.streams,
-                                    ),
-                                    () => bloc.add(SaveStreamRequested(value)),
-                                  ),
-                                ),
-                                itemBuilder: (_) => const [
-                                  PopupMenuItem(
-                                    value: 'edit',
-                                    child: Text('Edit'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: 8),
-                    ],
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
+    return _StreamsSetup(state: state, schoolId: _schoolId(context));
   }
 
   Widget _subjects(BuildContext context, StructureState state) {
-    final bloc = context.read<StructureBloc>();
-    final schoolId = _schoolId(context);
-    final scheme = Theme.of(context).colorScheme;
-    final departments = state.departments
-        .where((item) => item.isActive)
-        .toList();
-
-    void onAddSubject() => showSubjectFormDialog(
-      context,
-      schoolId: schoolId,
-      departments: departments,
-      onSave: (value) => _dispatchIfValid(
-        context,
-        _validator.validateSubject(
-          value,
-          subjects: state.subjects,
-          departments: state.departments,
-        ),
-        () => bloc.add(SaveSubjectRequested(value)),
-      ),
+    return _SubjectCatalogueSetup(
+      state: state,
+      schoolId: _schoolId(context),
+      onBulkCreate: (subjects) =>
+          context.read<StructureBloc>().add(CreateSubjectsRequested(subjects)),
+      onSave: (subject) =>
+          context.read<StructureBloc>().add(SaveSubjectRequested(subject)),
+      onArchive: (id) =>
+          context.read<StructureBloc>().add(ArchiveSubjectRequested(id)),
     );
+  }
+}
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+/// Step 6, top-level: choose whether this school uses streams at all before
+/// showing anything else. "No streams" is itself a saved decision (via
+/// [StructureSetupCubit]) so an empty stream list is never read as
+/// "not configured yet" elsewhere in the app.
+class _StreamsSetup extends StatelessWidget {
+  const _StreamsSetup({required this.state, required this.schoolId});
+
+  final StructureState state;
+  final String schoolId;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.streams.isNotEmpty) {
+      return _ConfiguredStreamsView(state: state, schoolId: schoolId);
+    }
+    return BlocProvider<StructureSetupCubit>(
+      create: (_) => di.sl<StructureSetupCubit>(),
+      child: _StreamsChoiceView(state: state, schoolId: schoolId),
+    );
+  }
+}
+
+class _StreamsChoiceView extends StatelessWidget {
+  const _StreamsChoiceView({required this.state, required this.schoolId});
+
+  final StructureState state;
+  final String schoolId;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return BlocBuilder<StructureSetupCubit, StructureSetupCubitState>(
+      builder: (context, setupState) {
+        final choice = setupState.preferences.streams;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    state.subjects.isEmpty
-                        ? 'Build the subject catalogue for your school.'
-                        : 'Subjects are added to the school catalogue.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      height: 1.4,
-                    ),
+                Text(
+                  'Streams are optional. Use them only when a class is divided into groups.',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: scheme.onSurface,
+                    height: 1.4,
                   ),
                 ),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  onPressed: onAddSubject,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add subject'),
+                const SizedBox(height: 20),
+                _StreamsChoiceCard(
+                  icon: Icons.people_alt_outlined,
+                  title: 'No streams',
+                  subtitle: 'Enrol learners directly into classes',
+                  selected: choice == StructureUseChoice.disabled,
+                  onTap: () => context
+                      .read<StructureSetupCubit>()
+                      .setStreams(StructureUseChoice.disabled),
                 ),
+                const SizedBox(height: 12),
+                _StreamsChoiceCard(
+                  icon: Icons.account_tree_outlined,
+                  title: 'Add streams',
+                  subtitle: 'Create groups such as East and West',
+                  selected: choice == StructureUseChoice.enabled,
+                  onTap: () => context
+                      .read<StructureSetupCubit>()
+                      .setStreams(StructureUseChoice.enabled),
+                ),
+                const Spacer(),
+                if (choice == StructureUseChoice.disabled)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: scheme.onSurfaceVariant),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'You can add streams later.',
+                            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (choice == StructureUseChoice.enabled)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _openAddStreamsSheet(context, state, schoolId),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add streams'),
+                    ),
+                  ),
               ],
             ),
-            const SizedBox(height: 20),
-            if (state.subjects.isEmpty)
-              _SubjectsEmptyState(onAdd: onAddSubject)
-            else ...[
-              Text(
-                '${state.subjects.length} subject${state.subjects.length == 1 ? '' : 's'}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _StreamsChoiceCard extends StatelessWidget {
+  const _StreamsChoiceCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: selected ? scheme.onSurface : scheme.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: selected ? scheme.onSurface : scheme.outline,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: ListView.separated(
-                  padding: EdgeInsets.zero,
-                  itemCount: state.subjects.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (_, index) {
-                    final subject = state.subjects[index];
-                    return AppCard(
-                      child: ListTile(
-                        leading: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: scheme.primary,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.menu_book_outlined,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                        ),
-                        title: Text(
-                          subject.name,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            decoration: subject.isActive
-                                ? null
-                                : TextDecoration.lineThrough,
-                          ),
-                        ),
-                        subtitle: Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: [
-                            if (subject.isElective)
-                              Chip(
-                                label: const Text('Elective'),
-                                visualDensity: VisualDensity.compact,
-                                backgroundColor: scheme.secondaryContainer,
-                                labelStyle: TextStyle(
-                                  color: scheme.onSecondaryContainer,
-                                ),
-                                side: BorderSide.none,
-                              ),
-                            if (subject.isPractical)
-                              Chip(
-                                label: const Text('Practical'),
-                                visualDensity: VisualDensity.compact,
-                                backgroundColor: scheme.secondaryContainer,
-                                labelStyle: TextStyle(
-                                  color: scheme.onSecondaryContainer,
-                                ),
-                                side: BorderSide.none,
-                              ),
-                          ],
-                        ),
-                        trailing: PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert),
-                          onSelected: (_) => showSubjectFormDialog(
-                            context,
-                            schoolId: schoolId,
-                            existing: subject,
-                            departments: departments,
-                            onSave: (value) => _dispatchIfValid(
-                              context,
-                              _validator.validateSubject(
-                                value,
-                                subjects: state.subjects,
-                                departments: state.departments,
-                              ),
-                              () => bloc.add(SaveSubjectRequested(value)),
-                            ),
-                          ),
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(value: 'edit', child: Text('Edit')),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
+            ),
+            Icon(icon, color: scheme.onSurfaceVariant),
           ],
         ),
       ),
@@ -1016,20 +832,515 @@ class AcademicStructureScreen extends StatelessWidget {
   }
 }
 
-class _StreamsEmptyState extends StatelessWidget {
-  final VoidCallback? onAdd;
+Future<void> _openAddStreamsSheet(
+  BuildContext context,
+  StructureState state,
+  String schoolId,
+) {
+  final bloc = context.read<StructureBloc>();
+  final activeClasses = state.classes.where((c) => c.isActive).toList()
+    ..sort((a, b) => a.order.compareTo(b.order));
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (sheetContext) => _AddStreamsSheet(
+      classes: activeClasses,
+      existingStreams: state.streams,
+      schoolId: schoolId,
+      onCreate: (streams) => bloc.add(CreateStreamsRequested(streams)),
+    ),
+  );
+}
 
-  const _StreamsEmptyState({required this.onAdd});
+class _AddStreamsSheet extends StatefulWidget {
+  const _AddStreamsSheet({
+    required this.classes,
+    required this.existingStreams,
+    required this.schoolId,
+    required this.onCreate,
+  });
+
+  final List<SchoolClass> classes;
+  final List<ClassStream> existingStreams;
+  final String schoolId;
+  final ValueChanged<List<ClassStream>> onCreate;
+
+  @override
+  State<_AddStreamsSheet> createState() => _AddStreamsSheetState();
+}
+
+class _AddStreamsSheetState extends State<_AddStreamsSheet> {
+  final Set<String> _selectedClassIds = {};
+  final _nameController = TextEditingController();
+  final _capacityController = TextEditingController();
+  bool _applyToAll = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.classes.isNotEmpty) {
+      _selectedClassIds.add(widget.classes.first.id);
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _capacityController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return EmptyState(
-      icon: Icons.account_tree_outlined,
-      title: 'No streams added',
-      message: 'You can skip this step if your classes have no streams.',
-      ctaLabel: onAdd == null ? null : 'Add stream',
-      onCtaPressed: onAdd,
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 4,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+      ),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Add streams',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Choose the class or classes to divide.',
+                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 16),
+              if (widget.classes.isEmpty)
+                Text(
+                  'Create classes before adding streams.',
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                )
+              else ...[
+                DropdownButtonFormField<String>(
+                  value: _selectedClassIds.isNotEmpty
+                      ? _selectedClassIds.first
+                      : null,
+                  decoration: const InputDecoration(labelText: 'Class'),
+                  items: widget.classes
+                      .map(
+                        (item) => DropdownMenuItem(
+                          value: item.id,
+                          child: Text(item.name),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => setState(() {
+                    _selectedClassIds
+                      ..clear()
+                      ..add(value!);
+                  }),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => _pickMoreClasses(context),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add to more classes'),
+                ),
+              ],
+              const SizedBox(height: 8),
+              TextField(
+                controller: _nameController,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Stream name',
+                  hintText: 'e.g. East',
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _capacityController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Capacity (optional)',
+                  hintText: 'Leave empty for no limit',
+                ),
+              ),
+              const SizedBox(height: 8),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: _applyToAll,
+                onChanged: (value) => setState(() => _applyToAll = value ?? true),
+                title: const Text('Apply this stream to selected classes'),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: scheme.onSurfaceVariant),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'If a class capacity is set, stream capacities cannot exceed it.',
+                      style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                    ),
+                  ),
+                ],
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: scheme.outline),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(_error!, style: TextStyle(color: scheme.onSurface)),
+                ),
+              ],
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton(
+                  onPressed: widget.classes.isEmpty ? null : _submit,
+                  child: const Text('Add stream'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
+  }
+
+  Future<void> _pickMoreClasses(BuildContext context) async {
+    final result = await showModalBottomSheet<Set<String>>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => _MultiClassPicker(
+        classes: widget.classes,
+        initiallySelected: _selectedClassIds,
+      ),
+    );
+    if (result != null) setState(() {
+      _selectedClassIds
+        ..clear()
+        ..addAll(result);
+    });
+  }
+
+  void _submit() {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = 'Enter a stream name.');
+      return;
+    }
+    if (_selectedClassIds.isEmpty) {
+      setState(() => _error = 'Choose at least one class.');
+      return;
+    }
+    final capacityText = _capacityController.text.trim();
+    final capacity = capacityText.isEmpty ? 0 : int.tryParse(capacityText);
+    if (capacity == null || capacity < 0) {
+      setState(() => _error = 'Enter a valid capacity, or leave it empty for no limit.');
+      return;
+    }
+    if (!_applyToAll && _selectedClassIds.length > 1) {
+      setState(() => _error = 'Turn on "Apply to selected classes" to use one class, or enable it for all.');
+      return;
+    }
+    final streams = [
+      for (final classId in _selectedClassIds)
+        ClassStream(
+          id: const Uuid().v4(),
+          schoolId: widget.schoolId,
+          name: name,
+          classId: classId,
+          capacity: capacity,
+        ),
+    ];
+    widget.onCreate(streams);
+    Navigator.pop(context);
+  }
+}
+
+class _MultiClassPicker extends StatefulWidget {
+  const _MultiClassPicker({
+    required this.classes,
+    required this.initiallySelected,
+  });
+
+  final List<SchoolClass> classes;
+  final Set<String> initiallySelected;
+
+  @override
+  State<_MultiClassPicker> createState() => _MultiClassPickerState();
+}
+
+class _MultiClassPickerState extends State<_MultiClassPicker> {
+  late final Set<String> _selected = {...widget.initiallySelected};
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Add to more classes',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (final item in widget.classes)
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: _selected.contains(item.id),
+                onChanged: (value) => setState(() {
+                  if (value == true) {
+                    _selected.add(item.id);
+                  } else {
+                    _selected.remove(item.id);
+                  }
+                }),
+                title: Text(item.name),
+              ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: FilledButton(
+                onPressed: () => Navigator.pop(context, _selected),
+                child: const Text('Done'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ConfiguredStreamsView extends StatelessWidget {
+  const _ConfiguredStreamsView({required this.state, required this.schoolId});
+
+  final StructureState state;
+  final String schoolId;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final activeClasses = state.classes.where((c) => c.isActive).toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    final byClass = <SchoolClass, List<ClassStream>>{};
+    for (final schoolClass in activeClasses) {
+      final streams = state.streams
+          .where((item) => item.classId == schoolClass.id && item.isActive)
+          .toList();
+      if (streams.isNotEmpty) byClass[schoolClass] = streams;
+    }
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Review your class streams. You can edit or add more streams.',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: scheme.onSurface,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  for (final entry in byClass.entries)
+                    _StreamClassGroup(
+                      schoolClass: entry.key,
+                      streams: entry.value,
+                      schoolId: schoolId,
+                      allClasses: activeClasses,
+                      allStreams: state.streams,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: OutlinedButton.icon(
+                onPressed: () => _openAddStreamsSheet(context, state, schoolId),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add streams'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StreamClassGroup extends StatelessWidget {
+  const _StreamClassGroup({
+    required this.schoolClass,
+    required this.streams,
+    required this.schoolId,
+    required this.allClasses,
+    required this.allStreams,
+  });
+
+  final SchoolClass schoolClass;
+  final List<ClassStream> streams;
+  final String schoolId;
+  final List<SchoolClass> allClasses;
+  final List<ClassStream> allStreams;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      schoolClass.name,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${streams.length} stream${streams.length == 1 ? '' : 's'}',
+                      style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          for (final stream in streams)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  border: Border.all(color: scheme.outlineVariant),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${stream.name} · ${stream.capacity == 0 ? 'No limit' : 'Capacity ${stream.capacity}'}',
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert, size: 20),
+                      onSelected: (action) => _handleAction(context, action, stream),
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(value: 'edit', child: Text('Edit')),
+                        PopupMenuItem(value: 'archive', child: Text('Archive')),
+                        PopupMenuItem(value: 'delete', child: Text('Delete')),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleAction(
+    BuildContext context,
+    String action,
+    ClassStream stream,
+  ) async {
+    final bloc = context.read<StructureBloc>();
+    if (action == 'edit') {
+      showStreamFormDialog(
+        context,
+        schoolId: schoolId,
+        existing: stream,
+        classes: allClasses,
+        streams: allStreams,
+        onSave: (value) => _dispatchIfValid(
+          context,
+          _validator.validateStream(value, classes: allClasses, streams: allStreams),
+          () => bloc.add(SaveStreamRequested(value)),
+        ),
+      );
+      return;
+    }
+    if (action == 'archive') {
+      bloc.add(ArchiveStreamRequested(stream.id));
+      return;
+    }
+    if (action == 'delete') {
+      final dependents = await di
+          .sl<StructureDependencyService>()
+          .countStudentsInStream(schoolId, stream.id);
+      if (!context.mounted) return;
+      if (dependents > 0) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                'This stream has $dependents enrolled student${dependents == 1 ? '' : 's'}. Archive it instead of deleting it.',
+              ),
+            ),
+          );
+        return;
+      }
+      final confirmed = await showDeleteConfirmDialog(
+        context,
+        title: 'Delete stream',
+        message: 'Delete "${stream.name}"? This cannot be undone.',
+      );
+      if (confirmed == true && context.mounted) {
+        bloc.add(DeleteStreamRequested(stream.id));
+      }
+    }
   }
 }
 
@@ -1067,36 +1378,638 @@ class _SubjectsEmptyState extends StatelessWidget {
   }
 }
 
-class _LevelsEmptyState extends StatelessWidget {
-  final VoidCallback onAdd;
+/// Step 4, state 1: pick from the standard stages suggested for this
+/// school's declared type (Institution Profile), or add a custom one.
+/// Nothing is created until the admin taps a card - the school-type hint
+/// only narrows suggestions, it never silently creates levels.
+class _LevelSelectionView extends StatefulWidget {
+  const _LevelSelectionView({
+    required this.schoolId,
+    required this.schoolType,
+    required this.existingLevels,
+    required this.onAddCustom,
+  });
 
-  const _LevelsEmptyState({required this.onAdd});
+  final String schoolId;
+  final String schoolType;
+  final List<EducationalLevel> existingLevels;
+  final VoidCallback onAddCustom;
+
+  @override
+  State<_LevelSelectionView> createState() => _LevelSelectionViewState();
+}
+
+class _LevelSelectionViewState extends State<_LevelSelectionView> {
+  final Set<String> _selected = {};
+  bool _saving = false;
 
   @override
   Widget build(BuildContext context) {
-    return EmptyState(
-      icon: Icons.account_balance_outlined,
-      title: 'No levels added',
-      message: 'Add your first education level to continue.',
-      ctaLabel: 'Add level',
-      onCtaPressed: onAdd,
+    final scheme = Theme.of(context).colorScheme;
+    final stages = _suggestedStages(widget.schoolType);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Select the stages your school offers. Classes are added next.',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: scheme.onSurface,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (widget.schoolType.trim().isNotEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  border: Border.all(color: scheme.outline),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.account_balance_outlined,
+                      size: 20,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: scheme.onSurface,
+                          ),
+                          children: [
+                            const TextSpan(text: 'Based on your school type: '),
+                            TextSpan(
+                              text: widget.schoolType,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  for (final stage in stages) ...[
+                    _StageCard(
+                      stage: stage,
+                      selected: _selected.contains(stage.name),
+                      onTap: () => setState(() {
+                        if (!_selected.remove(stage.name)) {
+                          _selected.add(stage.name);
+                        }
+                      }),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  OutlinedButton.icon(
+                    onPressed: widget.onAddCustom,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add a custom level'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 52),
+                      side: BorderSide(
+                        color: scheme.outline,
+                        style: BorderStyle.solid,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: FilledButton(
+                onPressed: _selected.isEmpty || _saving ? null : _continue,
+                child: _saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Continue'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _continue() async {
+    setState(() => _saving = true);
+    final bloc = context.read<StructureBloc>();
+    final stages = _suggestedStages(widget.schoolType);
+    final startOrder = widget.existingLevels.length;
+    final chosen = stages.where((s) => _selected.contains(s.name)).toList();
+    final levels = [
+      for (var i = 0; i < chosen.length; i++)
+        EducationalLevel(
+          id: const Uuid().v4(),
+          schoolId: widget.schoolId,
+          name: chosen[i].name,
+          code: chosen[i].code,
+          description: chosen[i].description,
+          order: startOrder + i,
+          isActive: true,
+        ),
+    ];
+    bloc.add(SaveLevelWithReorderRequested(levels));
+    if (mounted) setState(() => _saving = false);
+  }
+}
+
+class _StageCard extends StatelessWidget {
+  const _StageCard({
+    required this.stage,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _StageSuggestion stage;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: selected ? scheme.onSurface : scheme.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    stage.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    stage.description,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              selected ? Icons.check_circle : Icons.radio_button_off,
+              color: selected ? scheme.onSurface : scheme.outline,
+              size: 24,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _TermsEmptyState extends StatelessWidget {
-  final VoidCallback onAdd;
+/// Step 4, state 2: the school's chosen levels in teaching order, reorderable
+/// by drag before classes exist under them (once classes/enrolments exist
+/// for a level, reordering elsewhere in the app must still respect this
+/// `order`, but the wizard itself only touches levels here).
+class _ConfiguredLevelsView extends StatefulWidget {
+  const _ConfiguredLevelsView({
+    required this.schoolId,
+    required this.levels,
+    required this.classes,
+    required this.allLevels,
+    required this.onAddAnother,
+  });
 
-  const _TermsEmptyState({required this.onAdd});
+  final String schoolId;
+  final List<EducationalLevel> levels;
+  final List<SchoolClass> classes;
+  final List<EducationalLevel> allLevels;
+  final VoidCallback onAddAnother;
+
+  @override
+  State<_ConfiguredLevelsView> createState() => _ConfiguredLevelsViewState();
+}
+
+class _ConfiguredLevelsViewState extends State<_ConfiguredLevelsView> {
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Your education levels',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Add classes within each level in the next step.',
+              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ReorderableListView.builder(
+                buildDefaultDragHandles: false,
+                padding: EdgeInsets.zero,
+                itemCount: widget.levels.length,
+                onReorder: _onReorder,
+                itemBuilder: (context, index) {
+                  final level = widget.levels[index];
+                  final classCount = widget.classes
+                      .where((c) => c.levelId == level.id && c.isActive)
+                      .length;
+                  return _LevelRow(
+                    key: ValueKey(level.id),
+                    index: index,
+                    level: level,
+                    classCount: classCount,
+                    onEdit: () => _edit(level),
+                    onAction: (action) => _action(action, level),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Drag to arrange the teaching order.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: widget.onAddAnother,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Add another level'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 52),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _onReorder(int oldIndex, int newIndex) {
+    final reordered = [...widget.levels];
+    if (newIndex > oldIndex) newIndex -= 1;
+    final moved = reordered.removeAt(oldIndex);
+    reordered.insert(newIndex, moved);
+    final resequenced = [
+      for (var i = 0; i < reordered.length; i++)
+        reordered[i].copyWith(order: i),
+    ];
+    context.read<StructureBloc>().add(ReorderLevelsRequested(resequenced));
+  }
+
+  void _edit(EducationalLevel level) => showLevelFormDialog(
+    context,
+    schoolId: widget.schoolId,
+    existing: level,
+    existingLevels: widget.allLevels,
+    onSave: (levels) => context.read<StructureBloc>().add(
+      SaveLevelWithReorderRequested(levels),
+    ),
+  );
+
+  Future<void> _action(String action, EducationalLevel level) async {
+    final bloc = context.read<StructureBloc>();
+    final hasClasses = widget.classes.any((c) => c.levelId == level.id);
+    if (action == 'archive') {
+      bloc.add(ArchiveLevelRequested(level.id));
+      return;
+    }
+    if (action == 'delete') {
+      if (hasClasses) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text(
+                'This level is used by classes. Archive it instead of deleting it.',
+              ),
+            ),
+          );
+        return;
+      }
+      final confirmed = await showDeleteConfirmDialog(
+        context,
+        title: 'Delete level',
+        message: 'Delete "${level.name}"? This cannot be undone.',
+      );
+      if (confirmed == true) bloc.add(DeleteLevelRequested(level.id));
+    }
+  }
+}
+
+class _LevelRow extends StatelessWidget {
+  const _LevelRow({
+    required super.key,
+    required this.index,
+    required this.level,
+    required this.classCount,
+    required this.onEdit,
+    required this.onAction,
+  });
+
+  final int index;
+  final EducationalLevel level;
+  final int classCount;
+  final VoidCallback onEdit;
+  final ValueChanged<String> onAction;
 
   @override
   Widget build(BuildContext context) {
-    return EmptyState(
-      icon: Icons.calendar_today_outlined,
-      title: 'No periods added',
-      message: 'Add your first term or semester to continue.',
-      ctaLabel: 'Add term',
-      onCtaPressed: onAdd,
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      key: key,
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border.all(color: scheme.outlineVariant),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            ReorderableDragStartListener(
+              index: index,
+              child: Icon(Icons.drag_indicator, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '${index + 1}.',
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    level.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: scheme.outlineVariant),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      classCount == 0
+                          ? 'No classes yet'
+                          : '$classCount class${classCount == 1 ? '' : 'es'}',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              onPressed: onEdit,
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, size: 20),
+              onSelected: onAction,
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'archive', child: Text('Archive')),
+                PopupMenuItem(value: 'delete', child: Text('Delete')),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Step 3's first-state screen: pick exactly one calendar system for the
+/// whole academic year (Terms or Semesters) before adding any period. Shown
+/// only while the year has zero non-archived periods - once one exists, the
+/// system is locked in (enforced by [StructureIntegrityValidator]) and this
+/// screen never reappears for that year.
+class _CalendarSystemChooser extends StatefulWidget {
+  const _CalendarSystemChooser({
+    required this.year,
+    required this.dateLabel,
+    required this.onContinue,
+  });
+
+  final AcademicYear year;
+  final String dateLabel;
+  final ValueChanged<AcademicPeriodType> onContinue;
+
+  @override
+  State<_CalendarSystemChooser> createState() => _CalendarSystemChooserState();
+}
+
+class _CalendarSystemChooserState extends State<_CalendarSystemChooser> {
+  AcademicPeriodType? _selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: scheme.outline),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.calendar_month_outlined, color: scheme.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Academic year ${widget.year.name}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    Text(
+                      widget.dateLabel,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'How is your year organised?',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Choose one calendar system for this academic year.',
+          style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 16),
+        _SystemCard(
+          icon: Icons.calendar_view_month_outlined,
+          title: 'Terms',
+          subtitle: 'Usually 3 periods',
+          selected: _selected == AcademicPeriodType.term,
+          onTap: () => setState(() => _selected = AcademicPeriodType.term),
+        ),
+        const SizedBox(height: 12),
+        _SystemCard(
+          icon: Icons.menu_book_outlined,
+          title: 'Semesters',
+          subtitle: 'Usually 2 periods',
+          selected: _selected == AcademicPeriodType.semester,
+          onTap: () => setState(() => _selected = AcademicPeriodType.semester),
+        ),
+        const Spacer(),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: _selected == null
+                ? null
+                : () => widget.onContinue(_selected!),
+            child: const Text('Continue'),
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _SystemCard extends StatelessWidget {
+  const _SystemCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: scheme.outline, width: selected ? 2 : 1),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: scheme.primary),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color: scheme.primary,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1108,12 +2021,52 @@ class _AcademicYearEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return EmptyState(
-      icon: Icons.calendar_today_outlined,
-      title: 'No academic year yet',
-      message: 'Create one to continue your school setup.',
-      ctaLabel: 'Add academic year',
-      onCtaPressed: onAdd,
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.calendar_view_month_outlined,
+              size: 64,
+              color: scheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No academic year yet',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: scheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Add your first academic year to continue.',
+              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: onAdd,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: scheme.primary),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Add academic year'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1128,14 +2081,14 @@ class _AddAcademicYearTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
         decoration: BoxDecoration(
-          color: scheme.primary.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: scheme.primary.withValues(alpha: 0.7)),
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: scheme.primary),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1151,6 +2104,955 @@ class _AddAcademicYearTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ClassesBulkSetup extends StatefulWidget {
+  const _ClassesBulkSetup({
+    required this.state,
+    required this.schoolId,
+    required this.onCreate,
+    required this.onEdit,
+  });
+
+  final StructureState state;
+  final String schoolId;
+  final ValueChanged<List<SchoolClass>> onCreate;
+  final ValueChanged<SchoolClass> onEdit;
+
+  @override
+  State<_ClassesBulkSetup> createState() => _ClassesBulkSetupState();
+}
+
+class _ClassesBulkSetupState extends State<_ClassesBulkSetup> {
+  String? _levelId;
+  final Set<String> _selected = {};
+
+  EducationalLevel? get _level => widget.state.levels
+      .where((level) => level.id == _levelId && level.isActive)
+      .firstOrNull;
+
+  @override
+  void didUpdateWidget(covariant _ClassesBulkSetup oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_level == null && widget.state.levels.any((item) => item.isActive)) {
+      _levelId = widget.state.levels.firstWhere((item) => item.isActive).id;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final level = widget.state.levels
+        .where((item) => item.isActive)
+        .firstOrNull;
+    _levelId = level?.id;
+  }
+
+  List<String> _suggestions(EducationalLevel level) =>
+      const ClassSuggestionResolver().resolve(
+        level: level,
+        profile: widget.state.institutionProfile,
+        classes: widget.state.classes,
+      );
+
+  bool _isTaken(String name, EducationalLevel level) =>
+      widget.state.classes.any(
+        (item) =>
+            item.levelId == level.id &&
+            item.name.trim().toLowerCase() == name.trim().toLowerCase(),
+      );
+
+  String _levelLabel(EducationalLevel level) {
+    final count = widget.state.classes
+        .where((item) => item.levelId == level.id && item.isActive)
+        .length;
+    return count == 0
+        ? level.name
+        : '${level.name} · $count class${count == 1 ? '' : 'es'}';
+  }
+
+  Future<void> _addCustom() async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add a custom class'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(labelText: 'Class name'),
+          onSubmitted: (value) => Navigator.pop(context, value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+    final value = name?.trim() ?? '';
+    final level = _level;
+    if (value.isEmpty || level == null) return;
+    if (_isTaken(value, level) ||
+        _selected.any((item) => item.toLowerCase() == value.toLowerCase())) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'This class already exists under the selected level.',
+            ),
+          ),
+        );
+      return;
+    }
+    setState(() => _selected.add(value));
+  }
+
+  Future<void> _openCreateSheet() async {
+    final level = _level;
+    if (level == null || _selected.isEmpty) return;
+    final capacity = TextEditingController();
+    var applyToAll = true;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              4,
+              20,
+              MediaQuery.viewInsetsOf(context).bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Create classes',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_selected.length} class${_selected.length == 1 ? '' : 'es'} will be added under ${level.name}.',
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _selected
+                        .map(
+                          (name) => InputChip(
+                            label: Text(name),
+                            onDeleted: () {
+                              setState(() => _selected.remove(name));
+                              setSheetState(() {});
+                            },
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: capacity,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Default capacity (optional)',
+                      hintText: 'Leave empty for no limit',
+                    ),
+                  ),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Apply the same capacity to all classes'),
+                    value: applyToAll,
+                    onChanged: (value) =>
+                        setSheetState(() => applyToAll = value),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await _addCustom();
+                      setSheetState(() {});
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add another custom class'),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () {
+                        final parsed = capacity.text.trim().isEmpty
+                            ? 0
+                            : int.tryParse(capacity.text);
+                        if (parsed == null || parsed < 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Enter a valid capacity, or leave it empty for no limit.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        final startOrder =
+                            widget.state.classes
+                                .where((item) => item.levelId == level.id)
+                                .fold<int>(
+                                  -1,
+                                  (max, item) =>
+                                      item.order > max ? item.order : max,
+                                ) +
+                            1;
+                        widget.onCreate(
+                          _selected
+                              .toList()
+                              .asMap()
+                              .entries
+                              .map(
+                                (entry) => SchoolClass(
+                                  id: const Uuid().v4(),
+                                  schoolId: widget.schoolId,
+                                  name: entry.value,
+                                  levelId: level.id,
+                                  capacity: applyToAll ? parsed : 0,
+                                  order: startOrder + entry.key,
+                                ),
+                              )
+                              .toList(),
+                        );
+                        Navigator.pop(context);
+                        setState(() => _selected.clear());
+                      },
+                      child: Text(
+                        'Create ${_selected.length} class${_selected.length == 1 ? '' : 'es'}',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    capacity.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final levels = widget.state.levels.where((item) => item.isActive).toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    final level = _level;
+    if (levels.isEmpty)
+      return const Center(
+        child: Text('Add an education level before creating classes.'),
+      );
+    final suggestions = _suggestions(level!);
+    final configured = [...widget.state.classes]
+      ..sort((a, b) {
+        final levelOrder = levels
+            .indexWhere((item) => item.id == a.levelId)
+            .compareTo(levels.indexWhere((item) => item.id == b.levelId));
+        return levelOrder != 0
+            ? levelOrder
+            : (a.order != b.order
+                  ? a.order.compareTo(b.order)
+                  : a.name.compareTo(b.name));
+      });
+    return SafeArea(
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+              children: [
+                DropdownButtonFormField<String>(
+                  value: _levelId,
+                  decoration: const InputDecoration(
+                    labelText: 'Education level',
+                    prefixIcon: Icon(Icons.school_outlined),
+                  ),
+                  items: levels
+                      .map(
+                        (item) => DropdownMenuItem(
+                          value: item.id,
+                          child: Text(_levelLabel(item)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) => setState(() {
+                    _levelId = value;
+                    _selected.clear();
+                  }),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Choose the classes this level offers.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Text(
+                      'Suggested classes',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: suggestions.isEmpty
+                          ? null
+                          : () => setState(() => _selected.addAll(suggestions)),
+                      child: const Text('Select all'),
+                    ),
+                  ],
+                ),
+                if (suggestions.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'No configured suggestions for this level. Add the class names your school uses.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: suggestions
+                      .map(
+                        (name) => FilterChip(
+                          label: Text(name),
+                          selected: _selected.contains(name),
+                          onSelected: (value) => setState(
+                            () => value
+                                ? _selected.add(name)
+                                : _selected.remove(name),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _addCustom,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add a custom class'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Capacity and streams are configured later. Streams are added in the next step.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (configured.isNotEmpty) ...[
+                  const SizedBox(height: 28),
+                  Text(
+                    'Configured classes',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  for (final configuredLevel in levels) ...[
+                    if (configured.any(
+                      (item) =>
+                          item.levelId == configuredLevel.id &&
+                          item.isActive,
+                    )) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12, bottom: 4),
+                        child: Text(
+                          configuredLevel.name,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      _ClassLevelGroup(
+                        levelClasses: configured
+                            .where(
+                              (item) =>
+                                  item.levelId == configuredLevel.id &&
+                                  item.isActive,
+                            )
+                            .toList(),
+                        hasStreams: (classId) => widget.state.streams.any(
+                          (stream) => stream.classId == classId,
+                        ),
+                        onEdit: (classItem) => showClassFormDialog(
+                          context,
+                          schoolId: widget.schoolId,
+                          existing: classItem,
+                          levels: levels,
+                          onSave: widget.onEdit,
+                        ),
+                        onArchive: (classItem) => context
+                            .read<StructureBloc>()
+                            .add(ArchiveClassRequested(classItem.id)),
+                        onDelete: (classItem) async {
+                          final confirmed = await showDeleteConfirmDialog(
+                            context,
+                            title: 'Delete class',
+                            message: 'Delete "${classItem.name}"? This cannot be undone.',
+                          );
+                          if (confirmed == true && context.mounted) {
+                            context.read<StructureBloc>().add(
+                              DeleteClassRequested(classItem.id),
+                            );
+                          }
+                        },
+                        onReorder: (reordered) => context
+                            .read<StructureBloc>()
+                            .add(ReorderClassesRequested(reordered)),
+                      ),
+                    ],
+                  ],
+                ],
+              ],
+            ),
+          ),
+          if (_selected.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton(
+                  onPressed: _openCreateSheet,
+                  child: Text(
+                    'Create ${_selected.length} class${_selected.length == 1 ? '' : 'es'}',
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One education level's classes: a plain, non-nested list when reorder is
+/// unsafe (streams already depend on one of these classes), or a drag
+/// reorderable list otherwise. Kept level-scoped so drags can't move a class
+/// out from under its level by accident.
+class _ClassLevelGroup extends StatelessWidget {
+  const _ClassLevelGroup({
+    required this.levelClasses,
+    required this.hasStreams,
+    required this.onEdit,
+    required this.onArchive,
+    required this.onDelete,
+    required this.onReorder,
+  });
+
+  final List<SchoolClass> levelClasses;
+  final bool Function(String classId) hasStreams;
+  final ValueChanged<SchoolClass> onEdit;
+  final ValueChanged<SchoolClass> onArchive;
+  final ValueChanged<SchoolClass> onDelete;
+  final ValueChanged<List<SchoolClass>> onReorder;
+
+  bool get _reorderable => !levelClasses.any((item) => hasStreams(item.id));
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_reorderable) {
+      return Column(
+        children: [
+          for (var i = 0; i < levelClasses.length; i++)
+            _ClassCard(
+              index: i,
+              schoolClass: levelClasses[i],
+              draggable: false,
+              onEdit: () => onEdit(levelClasses[i]),
+              onAction: (action) => _handleAction(
+                context,
+                action,
+                levelClasses[i],
+              ),
+            ),
+        ],
+      );
+    }
+    return ReorderableListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      buildDefaultDragHandles: false,
+      padding: EdgeInsets.zero,
+      itemCount: levelClasses.length,
+      onReorder: (oldIndex, newIndex) {
+        final reordered = [...levelClasses];
+        if (newIndex > oldIndex) newIndex -= 1;
+        final moved = reordered.removeAt(oldIndex);
+        reordered.insert(newIndex, moved);
+        onReorder([
+          for (var i = 0; i < reordered.length; i++)
+            reordered[i].copyWith(order: i),
+        ]);
+      },
+      itemBuilder: (context, index) => _ClassCard(
+        key: ValueKey(levelClasses[index].id),
+        index: index,
+        schoolClass: levelClasses[index],
+        draggable: true,
+        onEdit: () => onEdit(levelClasses[index]),
+        onAction: (action) => _handleAction(
+          context,
+          action,
+          levelClasses[index],
+        ),
+      ),
+    );
+  }
+
+  void _handleAction(
+    BuildContext context,
+    String action,
+    SchoolClass schoolClass,
+  ) {
+    if (action == 'archive') {
+      onArchive(schoolClass);
+      return;
+    }
+    if (action == 'delete') {
+      if (hasStreams(schoolClass.id)) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text(
+                'This class has streams. Archive it instead of deleting it.',
+              ),
+            ),
+          );
+        return;
+      }
+      onDelete(schoolClass);
+    }
+  }
+}
+
+class _ClassCard extends StatelessWidget {
+  const _ClassCard({
+    super.key,
+    required this.index,
+    required this.schoolClass,
+    required this.draggable,
+    required this.onEdit,
+    required this.onAction,
+  });
+
+  final int index;
+  final SchoolClass schoolClass;
+  final bool draggable;
+  final VoidCallback onEdit;
+  final ValueChanged<String> onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final row = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          if (draggable)
+            ReorderableDragStartListener(
+              index: index,
+              child: Icon(Icons.drag_indicator, color: scheme.onSurfaceVariant),
+            )
+          else
+            SizedBox(width: 24, child: Icon(Icons.lock_outline, size: 18, color: scheme.onSurfaceVariant)),
+          const SizedBox(width: 12),
+          Text(
+            '${index + 1}.',
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  schoolClass.name,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${schoolClass.capacity == 0 ? 'No capacity set' : 'Capacity ${schoolClass.capacity}'} • Streams added next',
+                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, size: 20),
+            tooltip: 'Edit class',
+            onPressed: onEdit,
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, size: 20),
+            onSelected: onAction,
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'archive', child: Text('Archive')),
+              PopupMenuItem(value: 'delete', child: Text('Delete')),
+            ],
+          ),
+        ],
+      ),
+    );
+    return Padding(
+      key: key,
+      padding: const EdgeInsets.only(bottom: 10),
+      child: row,
+    );
+  }
+}
+
+class _SubjectCatalogueSetup extends StatefulWidget {
+  const _SubjectCatalogueSetup({
+    required this.state,
+    required this.schoolId,
+    required this.onBulkCreate,
+    required this.onSave,
+    required this.onArchive,
+  });
+  final StructureState state;
+  final String schoolId;
+  final ValueChanged<List<Subject>> onBulkCreate;
+  final ValueChanged<Subject> onSave;
+  final ValueChanged<String> onArchive;
+  @override
+  State<_SubjectCatalogueSetup> createState() => _SubjectCatalogueSetupState();
+}
+
+class _SubjectCatalogueSetupState extends State<_SubjectCatalogueSetup> {
+  String? _levelId;
+  String _query = '';
+  final Set<String> _selected = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _levelId = widget.state.levels.where((l) => l.isActive).firstOrNull?.id;
+  }
+
+  List<Subject> get _suggestions {
+    // Subject suggestions are opt-in configuration on the selected level:
+    // `Subjects: English|ENG, Mathematics|MAT`. No external curriculum is
+    // imposed when a school has not supplied this catalogue.
+    final level = widget.state.levels
+        .where((l) => l.id == _levelId)
+        .firstOrNull;
+    final match = RegExp(
+      r'^subjects\s*:',
+      caseSensitive: false,
+    ).firstMatch(level?.description ?? '');
+    if (match == null) return const [];
+    final configured = (level!.description.substring(
+      match.end,
+    )).split(RegExp(r'[,\n]'));
+    final existing = widget.state.subjects
+        .map((s) => s.name.trim().toLowerCase())
+        .toSet();
+    return configured
+        .map((raw) {
+          final parts = raw.trim().split('|');
+          return Subject(
+            id: 'suggestion:${parts.first.trim().toLowerCase()}',
+            schoolId: widget.schoolId,
+            name: parts.first.trim(),
+            code: parts.length > 1 ? parts[1].trim() : '',
+          );
+        })
+        .where(
+          (s) => s.name.isNotEmpty && !existing.contains(s.name.toLowerCase()),
+        )
+        .toList();
+  }
+
+  Future<void> _custom([Subject? existing]) async {
+    final name = TextEditingController(text: existing?.name);
+    final code = TextEditingController(text: existing?.code);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          8,
+          20,
+          MediaQuery.viewInsetsOf(context).bottom + 20,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                existing == null ? 'Add custom subject' : 'Edit subject',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'This subject will be assigned to classes in the next step.',
+              ),
+              const SizedBox(height: 18),
+              TextField(
+                controller: name,
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Subject name *',
+                  hintText: 'Enter subject name',
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: code,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(
+                  labelText: 'Short code (optional)',
+                  hintText: 'Enter short code',
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () {
+                    final subjectName = name.text.trim();
+                    if (subjectName.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Enter a subject name.')),
+                      );
+                      return;
+                    }
+                    final subject = Subject(
+                      id: existing?.id ?? const Uuid().v4(),
+                      schoolId: widget.schoolId,
+                      name: subjectName,
+                      code: code.text.trim(),
+                      isActive: true,
+                      assignedLevelIds: existing?.assignedLevelIds ?? const [],
+                      assignedClassIds: existing?.assignedClassIds ?? const [],
+                    );
+                    if (existing == null) {
+                      widget.onBulkCreate([subject]);
+                    } else {
+                      widget.onSave(subject);
+                    }
+                    Navigator.pop(context);
+                  },
+                  child: Text(existing == null ? 'Add subject' : 'Save'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    name.dispose();
+    code.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final levels = widget.state.levels.where((l) => l.isActive).toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    final catalogue =
+        widget.state.subjects
+            .where(
+              (s) => '${s.name} ${s.code}'.toLowerCase().contains(
+                _query.toLowerCase(),
+              ),
+            )
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
+    final suggestions = _suggestions
+        .where(
+          (s) => '${s.name} ${s.code}'.toLowerCase().contains(
+            _query.toLowerCase(),
+          ),
+        )
+        .toList();
+    return SafeArea(
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+              children: [
+                const Text(
+                  'Choose the subjects your school teaches. You assign them to classes next.',
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: _levelId,
+                  decoration: const InputDecoration(
+                    labelText: 'Education level',
+                  ),
+                  items: levels
+                      .map(
+                        (l) =>
+                            DropdownMenuItem(value: l.id, child: Text(l.name)),
+                      )
+                      .toList(),
+                  onChanged: (v) => setState(() {
+                    _levelId = v;
+                    _selected.clear();
+                  }),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search),
+                    hintText: 'Search subjects',
+                  ),
+                  onChanged: (v) => setState(() => _query = v),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Suggested subjects',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (suggestions.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'No configured suggestions for this level. Add the subjects your school uses.',
+                    ),
+                  ),
+                ...suggestions.map(
+                  (s) => CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(s.name),
+                    secondary: Text(s.code),
+                    value: _selected.contains(s.id),
+                    onChanged: (v) => setState(
+                      () => v == true
+                          ? _selected.add(s.id)
+                          : _selected.remove(s.id),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _custom,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add a custom subject'),
+                  ),
+                ),
+                if (catalogue.isEmpty && suggestions.isEmpty && _query.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 28),
+                    child: EmptyState(
+                      icon: Icons.menu_book_outlined,
+                      title: 'No subjects yet',
+                      message: 'Add the subjects your school teaches.',
+                      ctaLabel: 'Add a custom subject',
+                      onCtaPressed: _custom,
+                    ),
+                  ),
+                if (catalogue.isEmpty && _query.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 28),
+                    child: Text(
+                      'No subjects match "$_query".',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                if (catalogue.isNotEmpty) ...[
+                  const SizedBox(height: 28),
+                  Text(
+                    '${catalogue.length} subjects in catalogue',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  ...catalogue.map(
+                    (s) => ListTile(
+                      leading: const Icon(Icons.menu_book_outlined),
+                      title: Text(s.name),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(s.code),
+                          PopupMenuButton<String>(
+                            onSelected: (action) => action == 'archive'
+                                ? widget.onArchive(s.id)
+                                : _custom(s),
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(value: 'edit', child: Text('Edit')),
+                              PopupMenuItem(
+                                value: 'archive',
+                                child: Text('Archive'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (_selected.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton(
+                  onPressed: () {
+                    final selected = suggestions
+                        .where((s) => _selected.contains(s.id))
+                        .map(
+                          (s) => Subject(
+                            id: const Uuid().v4(),
+                            schoolId: widget.schoolId,
+                            name: s.name,
+                            code: s.code,
+                          ),
+                        )
+                        .toList();
+                    widget.onBulkCreate(selected);
+                    setState(() => _selected.clear());
+                  },
+                  child: Text('Add ${_selected.length} subjects'),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

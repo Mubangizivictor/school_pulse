@@ -491,7 +491,7 @@ class _WaitingNotice extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: AppColors.warning(context).withValues(alpha: .1),
+      color: AppColors.warning(context),
       borderRadius: BorderRadius.circular(10),
     ),
     child: Row(
@@ -641,11 +641,7 @@ class _TableRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: AppColors.border(context).withValues(alpha: .65),
-            ),
-          ),
+          border: Border(bottom: BorderSide(color: AppColors.border(context))),
         ),
         child: Row(
           children: [
@@ -753,9 +749,9 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: .12),
+      color: color,
       borderRadius: BorderRadius.circular(7),
-      border: Border.all(color: color.withValues(alpha: .65)),
+      border: Border.all(color: color),
     ),
     child: Text(
       label,

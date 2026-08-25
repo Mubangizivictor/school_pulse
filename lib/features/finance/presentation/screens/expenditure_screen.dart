@@ -99,13 +99,13 @@ class _ExpenditureScreenState extends State<ExpenditureScreen> {
         statusColor = semanticColors.error;
         break;
       case ExpenditureStatus.pending:
-        statusColor = Colors.orange;
+        statusColor = Colors.black;
         break;
       case ExpenditureStatus.released:
         statusColor = semanticColors.info;
         break;
       case ExpenditureStatus.reviewed:
-        statusColor = Colors.blue;
+        statusColor = Colors.black;
         break;
     }
 

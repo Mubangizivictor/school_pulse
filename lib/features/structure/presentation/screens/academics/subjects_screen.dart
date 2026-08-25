@@ -247,20 +247,15 @@ class _Summary extends StatelessWidget {
     padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
     child: Row(
       children: [
-        _item(
-          Icons.menu_book_outlined,
-          total,
-          'Total\nSubjects',
-          Colors.indigo,
-        ),
-        _item(Icons.check_circle_outline, active, 'Active', Colors.green),
+        _item(Icons.menu_book_outlined, total, 'Total\nSubjects', Colors.black),
+        _item(Icons.check_circle_outline, active, 'Active', Colors.black),
         _item(
           Icons.account_balance_outlined,
           departments,
           'Departments',
-          Colors.purple,
+          Colors.black,
         ),
-        _item(Icons.science_outlined, practical, 'Practical', Colors.orange),
+        _item(Icons.science_outlined, practical, 'Practical', Colors.black),
       ],
     ),
   );
@@ -269,7 +264,7 @@ class _Summary extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 20,
-          backgroundColor: color.withValues(alpha: .12),
+          backgroundColor: color,
           child: Icon(icon, color: color, size: 20),
         ),
         const SizedBox(height: 7),
@@ -347,7 +342,7 @@ class _Card extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: .1),
+        color: color,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(

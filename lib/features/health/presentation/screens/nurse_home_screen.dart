@@ -25,9 +25,9 @@ class NurseHomeScreen extends StatefulWidget {
 }
 
 class _NurseHomeScreenState extends State<NurseHomeScreen> {
-  static const _bg = Color(0xFF070914);
-  static const _card = Color(0xFF151929);
-  static const _muted = Color(0xFF8A93A6);
+  static const _bg = Colors.black;
+  static const _card = Colors.black;
+  static const _muted = Colors.black;
 
   UserAuthDetails? get _currentUser {
     final state = context.read<AuthBloc>().state;
@@ -192,7 +192,7 @@ class _NoSchoolAssigned extends StatelessWidget {
         child: Text(
           'This nurse account is not assigned to a school. Ask an administrator to update the account.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Colors.white),
         ),
       ),
     );
@@ -212,16 +212,12 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.cloud_off_outlined,
-              color: Colors.white54,
-              size: 40,
-            ),
+            const Icon(Icons.cloud_off_outlined, color: Colors.white, size: 40),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70),
+              style: const TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
             FilledButton(onPressed: onRetry, child: const Text('Retry')),
@@ -244,7 +240,7 @@ class _PrimaryActions extends StatelessWidget {
           child: FilledButton.icon(
             key: const Key('nurse-new-visit-button'),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFFF6A00),
+              backgroundColor: Colors.black,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -260,7 +256,7 @@ class _PrimaryActions extends StatelessWidget {
           child: OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.white,
-              side: const BorderSide(color: Color(0xFF3B82F6)),
+              side: const BorderSide(color: Colors.black),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -302,35 +298,20 @@ class _QuickActions extends StatelessWidget {
       _QuickActionData(
         'Medication',
         Icons.medication_outlined,
-        const Color(0xFF3B82F6),
+        Colors.black,
         () {
           context.push('/staff/nurse/inventory');
         },
       ),
-      _QuickActionData(
-        'Sick bay',
-        Icons.bed_outlined,
-        const Color(0xFF10B981),
-        () {
-          context.push('/staff/nurse/records');
-        },
-      ),
-      _QuickActionData(
-        'Send home',
-        Icons.home_outlined,
-        const Color(0xFF8B5CF6),
-        () {
-          context.push('/staff/nurse/visits/new', extra: '');
-        },
-      ),
-      _QuickActionData(
-        'Emergency',
-        Icons.emergency_outlined,
-        const Color(0xFFEF4444),
-        () {
-          context.push('/staff/nurse/records');
-        },
-      ),
+      _QuickActionData('Sick bay', Icons.bed_outlined, Colors.black, () {
+        context.push('/staff/nurse/records');
+      }),
+      _QuickActionData('Send home', Icons.home_outlined, Colors.black, () {
+        context.push('/staff/nurse/visits/new', extra: '');
+      }),
+      _QuickActionData('Emergency', Icons.emergency_outlined, Colors.black, () {
+        context.push('/staff/nurse/records');
+      }),
     ];
 
     return Row(
@@ -375,7 +356,7 @@ class _QuickActionButton extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70, fontSize: 11.5),
+                style: const TextStyle(color: Colors.white, fontSize: 11.5),
               ),
             ],
           ),
@@ -398,7 +379,7 @@ class _NeedsAttentionList extends StatelessWidget {
       items.add(
         _AttentionRow(
           icon: Icons.inventory_2_outlined,
-          color: const Color(0xFFF59E0B),
+          color: Colors.black,
           title:
               '$lowStockCount low-stock item${lowStockCount == 1 ? '' : 's'}',
           actionLabel: 'Review',
@@ -433,7 +414,7 @@ class _NeedsAttentionList extends StatelessWidget {
             if (i != items.length - 1)
               const Divider(
                 height: 1,
-                color: Colors.white10,
+                color: Colors.white,
                 indent: 16,
                 endIndent: 16,
               ),
@@ -464,10 +445,7 @@ class _AttentionRow extends StatelessWidget {
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         child: Icon(icon, color: color, size: 18),
       ),
       title: Text(
@@ -479,8 +457,8 @@ class _AttentionRow extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(actionLabel, style: const TextStyle(color: Color(0xFFFF6A00))),
-            const Icon(Icons.chevron_right, color: Color(0xFFFF6A00), size: 18),
+            Text(actionLabel, style: const TextStyle(color: Colors.black)),
+            const Icon(Icons.chevron_right, color: Colors.black, size: 18),
           ],
         ),
       ),
@@ -538,7 +516,7 @@ class _FollowUpsSection extends StatelessWidget {
                   if (i != upcoming.length - 1 && i != 4)
                     const Divider(
                       height: 1,
-                      color: Colors.white10,
+                      color: Colors.white,
                       indent: 16,
                       endIndent: 16,
                     ),
@@ -563,19 +541,16 @@ class _FollowUpRow extends StatelessWidget {
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: const Color(0xFF10B981).withValues(alpha: 0.15),
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: Colors.black, shape: BoxShape.circle),
         child: const Icon(
           Icons.schedule_outlined,
-          color: Color(0xFF10B981),
+          color: Colors.black,
           size: 18,
         ),
       ),
       title: Text(
         label,
-        style: const TextStyle(color: Color(0xFF10B981), fontSize: 12),
+        style: const TextStyle(color: Colors.black, fontSize: 12),
       ),
       subtitle: Text(
         visit.reason,
@@ -584,7 +559,7 @@ class _FollowUpRow extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+      trailing: const Icon(Icons.chevron_right, color: Colors.white),
       onTap: () => context.push('/staff/nurse/profile/${visit.studentId}'),
     );
   }

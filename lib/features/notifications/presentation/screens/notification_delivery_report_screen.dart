@@ -30,7 +30,7 @@ class NotificationDeliveryReportScreen extends StatelessWidget {
         child: Center(
           child: Text(
             'Sign in to view delivery reports',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(color: Colors.white),
           ),
         ),
       );
@@ -45,7 +45,7 @@ class NotificationDeliveryReportScreen extends StatelessWidget {
             child: Text(
               'You do not have permission to view delivery reports.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(color: Colors.white),
             ),
           ),
         ),
@@ -70,7 +70,7 @@ class NotificationDeliveryReportScreen extends StatelessWidget {
                 child: Text(
                   'Delivery reports could not be loaded right now.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(color: Colors.white),
                 ),
               ),
             );
@@ -81,7 +81,7 @@ class NotificationDeliveryReportScreen extends StatelessWidget {
             return const Center(
               child: Text(
                 'You have not sent any notifications yet',
-                style: TextStyle(color: Colors.white70),
+                style: TextStyle(color: Colors.white),
               ),
             );
           }
@@ -108,7 +108,7 @@ class _ReportScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -154,7 +154,7 @@ class _SummaryCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -179,7 +179,7 @@ class _SummaryCard extends StatelessWidget {
             Text(
               '$totalFailure device(s) could not be reached. This is usually '
               'an app that was uninstalled or notifications turned off.',
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
+              style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
           ],
         ],
@@ -210,7 +210,7 @@ class _Metric extends StatelessWidget {
           ),
           Text(
             label,
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
+            style: const TextStyle(color: Colors.white, fontSize: 12),
           ),
         ],
       ),
@@ -231,7 +231,7 @@ class _ReportTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -251,7 +251,7 @@ class _ReportTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.18),
+                  color: statusColor,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -264,7 +264,7 @@ class _ReportTile extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             _timestampLabel(report),
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
+            style: const TextStyle(color: Colors.white, fontSize: 12),
           ),
           if (report.isSent) ...[
             const SizedBox(height: 10),
@@ -286,7 +286,7 @@ class _ReportTile extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               report.error!,
-              style: const TextStyle(color: Color(0xFFE11D48), fontSize: 12),
+              style: const TextStyle(color: Colors.black, fontSize: 12),
             ),
           ],
         ],
@@ -295,11 +295,11 @@ class _ReportTile extends StatelessWidget {
   }
 
   static (Color, String) _status(NotificationDeliveryReport report) {
-    if (report.isSent) return (const Color(0xFF10B981), 'Sent');
-    if (report.isScheduled) return (const Color(0xFF3B82F6), 'Scheduled');
-    if (report.isFailed) return (const Color(0xFFE11D48), 'Failed');
-    if (report.isCancelled) return (const Color(0xFF94A3B8), 'Cancelled');
-    return (const Color(0xFFF59E0B), 'Pending');
+    if (report.isSent) return (Colors.black, 'Sent');
+    if (report.isScheduled) return (Colors.black, 'Scheduled');
+    if (report.isFailed) return (Colors.black, 'Failed');
+    if (report.isCancelled) return (Colors.black, 'Cancelled');
+    return (Colors.black, 'Pending');
   }
 
   static String _timestampLabel(NotificationDeliveryReport report) {
@@ -324,17 +324,17 @@ class _Chip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: Colors.white54),
+          Icon(icon, size: 13, color: Colors.white),
           const SizedBox(width: 5),
           Text(
             label,
-            style: const TextStyle(color: Colors.white70, fontSize: 11),
+            style: const TextStyle(color: Colors.white, fontSize: 11),
           ),
         ],
       ),

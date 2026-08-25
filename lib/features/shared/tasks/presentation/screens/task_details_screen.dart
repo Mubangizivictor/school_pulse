@@ -43,7 +43,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 padding: EdgeInsets.only(bottom: 8.0),
                 child: StatusBadge(
                   label: 'High Priority',
-                  color: Colors.green,
+                  color: Colors.black,
                   icon: Icons.verified_user,
                 ),
               ),
@@ -52,7 +52,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 padding: EdgeInsets.only(bottom: 8.0),
                 child: StatusBadge(
                   label: 'Completed',
-                  color: Colors.green,
+                  color: Colors.black,
                   icon: Icons.check_circle,
                 ),
               )
@@ -146,9 +146,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     ? 0
                     : checklist.where((e) => e.isCompleted).length /
                           checklist.length,
-                backgroundColor: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.1),
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 color: Theme.of(context).colorScheme.primary,
                 minHeight: 8,
                 borderRadius: BorderRadius.circular(4),
@@ -314,7 +312,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
-          const Icon(Icons.insert_drive_file_outlined, color: Colors.orange),
+          const Icon(Icons.insert_drive_file_outlined, color: Colors.black),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

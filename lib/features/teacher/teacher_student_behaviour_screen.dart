@@ -270,8 +270,7 @@ class _BehaviourTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: (isNegative ? AppColors.errorRed : AppColors.successGreen)
-                  .withValues(alpha: 0.1),
+              color: (isNegative ? AppColors.errorRed : AppColors.successGreen),
               shape: BoxShape.circle,
             ),
             child: Icon(

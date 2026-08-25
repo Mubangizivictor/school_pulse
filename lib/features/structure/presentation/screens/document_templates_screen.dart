@@ -38,7 +38,7 @@ class DocumentTemplatesScreen extends StatelessWidget {
                     final template = state.documentTemplates[index];
                     return StructureListRow(
                       icon: Icons.description_outlined,
-                      color: Colors.indigo,
+                      color: Colors.black,
                       title: template.name,
                       subtitle: template.templateType,
                       isActive: template.isActive,

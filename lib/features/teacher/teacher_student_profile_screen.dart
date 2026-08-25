@@ -170,7 +170,7 @@ class _TeacherStudentProfileScreenState
           ),
           child: CircleAvatar(
             radius: 50,
-            backgroundColor: AppColors.primary(context).withValues(alpha: 0.1),
+            backgroundColor: AppColors.primary(context),
             backgroundImage: (student.photoUrl?.isNotEmpty ?? false)
                 ? NetworkImage(student.photoUrl!)
                 : null,
@@ -209,7 +209,7 @@ class _TeacherStudentProfileScreenState
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: _statusColor(context, status).withValues(alpha: 0.1),
+                  color: _statusColor(context, status),
                   borderRadius: BorderRadius.circular(AppSpacing.s),
                 ),
                 child: Row(
@@ -407,9 +407,7 @@ class _TeacherStudentProfileScreenState
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary(context),
-          disabledBackgroundColor: AppColors.primary(
-            context,
-          ).withValues(alpha: 0.4),
+          disabledBackgroundColor: AppColors.primary(context),
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.m),

@@ -233,9 +233,7 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: AppColors.border(context)),
         boxShadow: [
           BoxShadow(
             color: AppColors.shadow(context),
@@ -251,7 +249,7 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary(context).withValues(alpha: 0.1),
+                  color: AppColors.primary(context),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -375,9 +373,7 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.border(context).withValues(alpha: 0.5),
-            ),
+            border: Border.all(color: AppColors.border(context)),
             boxShadow: [
               BoxShadow(
                 color: AppColors.shadow(context),
@@ -450,9 +446,7 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
               decoration: BoxDecoration(
                 color: AppColors.surfaceElevated(context),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.border(context).withValues(alpha: 0.5),
-                ),
+                border: Border.all(color: AppColors.border(context)),
               ),
               child: lesson == null
                   ? _buildNoLessonRow(context)
@@ -522,7 +516,7 @@ class _SubjectTeacherDashboardState extends State<SubjectTeacherDashboard> {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.primary(context).withValues(alpha: 0.1),
+                      color: AppColors.primary(context),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(

@@ -99,9 +99,9 @@ class _NotConfiguredCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colors.errorContainer.withValues(alpha: .3),
+        color: colors.errorContainer,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.error.withValues(alpha: .3)),
+        border: Border.all(color: colors.error),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

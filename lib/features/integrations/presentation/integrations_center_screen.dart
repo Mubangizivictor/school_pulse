@@ -42,11 +42,11 @@ class _IntegrationsCenterScreenState extends State<IntegrationsCenterScreen> {
   String _label(String status) =>
       status.replaceAllMapped(RegExp(r'([A-Z])'), (m) => ' ${m[0]}').trim();
   Color _color(String status) => switch (status) {
-    'healthy' => Colors.green,
-    'failed' || 'degraded' || 'credentialExpired' => Colors.red,
-    'warning' || 'setupRequired' || 'reauthorizationRequired' => Colors.orange,
-    'disabled' => Colors.grey,
-    _ => Colors.blueGrey,
+    'healthy' => Colors.black,
+    'failed' || 'degraded' || 'credentialExpired' => Colors.black,
+    'warning' || 'setupRequired' || 'reauthorizationRequired' => Colors.black,
+    'disabled' => Colors.black,
+    _ => Colors.black,
   };
   @override
   Widget build(BuildContext context) {
@@ -198,7 +198,7 @@ class _IntegrationCard extends StatelessWidget {
                 children: [
                   Chip(
                     label: Text(label(status)),
-                    backgroundColor: color(status).withValues(alpha: .12),
+                    backgroundColor: color(status),
                   ),
                   if ((item['connectedAccountDisplay'] as String? ?? '')
                       .isNotEmpty)

@@ -41,8 +41,8 @@ class FinancialOverviewScreen extends StatelessWidget {
             ),
             children: [
               AppCard(
-                color: semantic.success.withValues(alpha: 0.08),
-                borderColor: semantic.success.withValues(alpha: 0.25),
+                color: semantic.success,
+                borderColor: semantic.success,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

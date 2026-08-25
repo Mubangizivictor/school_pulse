@@ -217,7 +217,7 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: AppColors.primary(context).withValues(alpha: 0.12),
+            color: AppColors.primary(context),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 16, color: AppColors.primary(context)),
@@ -239,7 +239,7 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: color,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Icon(icon, color: color, size: 20),
@@ -288,8 +288,8 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
 
   Widget _buildHeader(BuildContext context, ThemeData theme) {
     return AppCard(
-      color: AppColors.primary(context).withValues(alpha: 0.08),
-      borderColor: AppColors.primary(context).withValues(alpha: 0.35),
+      color: AppColors.primary(context),
+      borderColor: AppColors.primary(context),
       child: Row(
         children: [
           CircleAvatar(
@@ -397,7 +397,7 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
       AccessMode.full => const SizedBox.shrink(),
       AccessMode.readOnly => StatusBadge(
         label: 'Read-only',
-        color: Colors.amber.shade800,
+        color: Colors.black,
         icon: Icons.lock_clock_rounded,
       ),
       AccessMode.blocked => StatusBadge(
@@ -424,16 +424,12 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
         ),
         const SizedBox(height: AppSpacing.m),
         AppCard(
-          color: Colors.purple.withValues(alpha: 0.08),
-          borderColor: Colors.purple.withValues(alpha: 0.25),
+          color: Colors.black,
+          borderColor: Colors.black,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _iconChip(
-                context,
-                Icons.workspace_premium_rounded,
-                Colors.purple,
-              ),
+              _iconChip(context, Icons.workspace_premium_rounded, Colors.black),
               const SizedBox(width: AppSpacing.l),
               Expanded(
                 child: Column(
@@ -448,7 +444,7 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
                                 : school.subscriptionPlanId.toUpperCase(),
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: Colors.purple,
+                              color: Colors.black,
                             ),
                           ),
                         ),
@@ -621,7 +617,7 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
         'id': 'exams',
         'name': 'Examination System',
         'icon': Icons.assignment,
-        'color': Colors.purple,
+        'color': Colors.black,
       },
       {
         'id': 'transport',
@@ -639,7 +635,7 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
         'id': 'qr_scanner',
         'name': 'QR Attendance Integration',
         'icon': Icons.qr_code,
-        'color': Colors.purple,
+        'color': Colors.black,
       },
       {
         'id': 'parent_portal',
@@ -697,8 +693,8 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen> {
 
   Widget _buildSupportModeAction(ThemeData theme, BuildContext context) {
     return AppCard(
-      color: AppColors.primary(context).withValues(alpha: 0.06),
-      borderColor: AppColors.primary(context).withValues(alpha: 0.25),
+      color: AppColors.primary(context),
+      borderColor: AppColors.primary(context),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

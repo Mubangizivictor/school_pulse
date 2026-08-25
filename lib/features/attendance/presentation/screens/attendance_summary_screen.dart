@@ -99,10 +99,9 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
                                       child: CircularProgressIndicator(
                                         value: rate == null ? 0 : rate / 100,
                                         strokeWidth: size * 0.07,
-                                        backgroundColor: Theme.of(context)
-                                            .colorScheme
-                                            .surfaceContainerHighest
-                                            .withValues(alpha: 0.3),
+                                        backgroundColor: Theme.of(
+                                          context,
+                                        ).colorScheme.surfaceContainerHighest,
                                         valueColor:
                                             AlwaysStoppedAnimation<Color>(
                                               AppColors.success(context),
@@ -224,9 +223,7 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: AppColors.royalBlue.withValues(
-                                      alpha: 0.1,
-                                    ),
+                                    color: AppColors.royalBlue,
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
@@ -251,7 +248,7 @@ class _AttendanceSummaryScreenState extends State<AttendanceSummaryScreen> {
                                         'View full student breakdown',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.grey,
+                                          color: Colors.black,
                                         ),
                                       ),
                                     ],
@@ -314,9 +311,9 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.15), width: 1.5),
+        border: Border.all(color: color, width: 1.5),
       ),
       child: Column(
         children: [

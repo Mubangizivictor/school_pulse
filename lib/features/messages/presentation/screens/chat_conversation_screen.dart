@@ -232,7 +232,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
         // rather than failing when the selection includes someone else's.
         if (allMine)
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            icon: const Icon(Icons.delete_outline, color: Colors.black),
             tooltip: 'Delete',
             onPressed: () => _confirmDeleteMany(selected),
           ),
@@ -464,9 +464,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
       onTap: () => context.push('/messages/pinned'),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        color: isDark
-            ? AppColors.electricBlue.withValues(alpha: 0.1)
-            : Colors.blue.withValues(alpha: 0.05),
+        color: isDark ? AppColors.electricBlue : Colors.black,
         child: Row(
           children: [
             const Icon(Icons.push_pin, size: 14, color: AppColors.electricBlue),
@@ -612,12 +610,12 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                             : null,
                         textCapitalization: TextCapitalization.sentences,
                         style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black87,
+                          color: isDark ? Colors.white : Colors.black,
                         ),
                         decoration: const InputDecoration(
                           hintText: 'Type a message...',
                           hintStyle: TextStyle(
-                            color: Colors.grey,
+                            color: Colors.black,
                             fontSize: 14,
                           ),
                           border: InputBorder.none,
@@ -626,7 +624,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                           contentPadding: EdgeInsets.symmetric(vertical: 10),
                           suffixIcon: Icon(
                             Icons.emoji_emotions_outlined,
-                            color: Colors.grey,
+                            color: Colors.black,
                             size: 20,
                           ),
                         ),
@@ -670,7 +668,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
         vertical: AppSpacing.s,
       ),
       decoration: BoxDecoration(
-        color: AppColors.electricBlue.withValues(alpha: 0.08),
+        color: AppColors.electricBlue,
         borderRadius: BorderRadius.circular(12),
         border: Border(
           left: BorderSide(color: AppColors.electricBlue, width: 3),
@@ -823,7 +821,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
@@ -852,7 +850,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
@@ -1186,7 +1184,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
     return Row(
       children: [
         IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+          icon: const Icon(Icons.delete_outline, color: Colors.black),
           tooltip: 'Discard',
           onPressed: () => _stopRecording(send: false),
         ),
@@ -1195,7 +1193,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           width: 10,
           height: 10,
           decoration: const BoxDecoration(
-            color: Colors.redAccent,
+            color: Colors.black,
             shape: BoxShape.circle,
           ),
         ),
@@ -1204,7 +1202,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           child: Text(
             'Recording  ${formatClipDuration(_recordedFor)}',
             style: AppTypography.bodyMedium.copyWith(
-              color: isDark ? Colors.white : Colors.black87,
+              color: isDark ? Colors.white : Colors.black,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1285,49 +1283,49 @@ class AttachmentsMenu extends StatelessWidget {
               _AttachmentItem(
                 icon: Icons.image,
                 kind: AttachmentKind.photos,
-                color: Colors.purple,
+                color: Colors.black,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.camera_alt,
                 kind: AttachmentKind.camera,
-                color: Colors.pink,
+                color: Colors.black,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.insert_drive_file,
                 kind: AttachmentKind.document,
-                color: Colors.blue,
+                color: Colors.black,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.headset,
                 kind: AttachmentKind.audio,
-                color: Colors.orange,
+                color: Colors.black,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.location_on,
                 kind: AttachmentKind.location,
-                color: Colors.green,
+                color: Colors.black,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.person,
                 kind: AttachmentKind.contact,
-                color: Colors.teal,
+                color: Colors.black,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.poll,
                 kind: AttachmentKind.poll,
-                color: Colors.amber,
+                color: Colors.black,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.event,
                 kind: AttachmentKind.event,
-                color: Colors.cyan,
+                color: Colors.black,
                 onSelected: onSelected,
               ),
             ],
@@ -1366,7 +1364,7 @@ class _AttachmentItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color),
@@ -1423,9 +1421,7 @@ class _ForwardSheetState extends State<_ForwardSheet> {
                 final selected = _selected.contains(chat.id);
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: AppColors.electricBlue.withValues(
-                      alpha: 0.1,
-                    ),
+                    backgroundColor: AppColors.electricBlue,
                     child: Text(
                       chat.title.isEmpty ? '?' : chat.title[0].toUpperCase(),
                       style: const TextStyle(color: AppColors.electricBlue),
@@ -1442,7 +1438,7 @@ class _ForwardSheetState extends State<_ForwardSheet> {
                     selected
                         ? Icons.check_circle
                         : Icons.radio_button_unchecked,
-                    color: selected ? AppColors.electricBlue : Colors.grey,
+                    color: selected ? AppColors.electricBlue : Colors.black,
                   ),
                   onTap: () => setState(() {
                     selected

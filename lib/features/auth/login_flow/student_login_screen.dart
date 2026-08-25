@@ -102,10 +102,7 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
         leading: IconButton(
           onPressed: () =>
               context.canPop() ? context.pop() : context.go('/welcome'),
-          icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: colors.onSurface,
-          ),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: colors.onSurface),
           tooltip: 'Back',
         ),
         title: Text(
@@ -302,10 +299,10 @@ class _StepCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: accent.withValues(alpha: .75)),
+        border: Border.all(color: accent),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: .015),
+            color: Colors.black,
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -376,7 +373,7 @@ class _PinCell extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: focused ? accent : accent.withValues(alpha: .4),
+            color: focused ? accent : accent,
             width: focused ? 1.8 : 1.4,
           ),
         ),
@@ -414,9 +411,7 @@ class _PinCell extends StatelessWidget {
                 style: TextStyle(
                   color: filled
                       ? Theme.of(context).colorScheme.onSurface
-                      : Theme.of(
-                          context,
-                        ).colorScheme.onSurfaceVariant.withValues(alpha: .42),
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 22,
                   height: 1,
                 ),
@@ -500,9 +495,7 @@ InputDecoration _fieldDecoration(
     size: 24,
   ),
   hintStyle: AppTypography.bodyLarge.copyWith(
-    color: Theme.of(
-      context,
-    ).colorScheme.onSurfaceVariant.withValues(alpha: .62),
+    color: Theme.of(context).colorScheme.onSurfaceVariant,
     fontSize: 14,
     letterSpacing: 0,
   ),
@@ -512,10 +505,7 @@ InputDecoration _fieldDecoration(
   ),
   enabledBorder: OutlineInputBorder(
     borderRadius: BorderRadius.circular(12),
-    borderSide: BorderSide(
-      color: AppColors.textPrimary(context).withValues(alpha: .4),
-      width: 1.4,
-    ),
+    borderSide: BorderSide(color: AppColors.textPrimary(context), width: 1.4),
   ),
   focusedBorder: OutlineInputBorder(
     borderRadius: BorderRadius.circular(12),

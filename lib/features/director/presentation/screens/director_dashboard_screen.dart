@@ -151,7 +151,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                           ),
                           trailingText:
                               '${stats.overallSchoolAverage.round()}%',
-                          color: Colors.blue,
+                          color: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 4),
                         ),
                         LabeledProgressRow(
@@ -162,7 +162,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                           ),
                           trailingText:
                               '${stats.collectionPercentage.round()}%',
-                          color: Colors.green,
+                          color: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 4),
                         ),
                         LabeledProgressRow(
@@ -172,7 +172,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                             1,
                           ),
                           trailingText: '${stats.staffAttendanceRate.round()}%',
-                          color: Colors.orange,
+                          color: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 4),
                         ),
                         LabeledProgressRow(
@@ -183,7 +183,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                           ),
                           trailingText:
                               '${stats.parentPortalUsageRate.round()}%',
-                          color: Colors.purple,
+                          color: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 4),
                         ),
                       ],
@@ -220,7 +220,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                               '${stats.collectedFees.toStringAsFixed(0)} / ${stats.expectedFees.toStringAsFixed(0)}',
                           isProgress: true,
                           percentage: stats.collectionPercentage / 100,
-                          color: Colors.green,
+                          color: Colors.black,
                         ),
                         const VerticalDivider(),
                         _FinancialMetric(
@@ -230,7 +230,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                               'Exp: ${stats.totalExpenditure.toStringAsFixed(0)}',
                           isProgress: true,
                           percentage: stats.budgetUtilization / 100,
-                          color: Colors.orange,
+                          color: Colors.black,
                         ),
                       ],
                     ),
@@ -287,7 +287,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                       trend:
                           '${stats.improvementTrend > 0 ? "+" : ""}${stats.improvementTrend}%',
                       icon: Icons.analytics,
-                      color: Colors.blue,
+                      color: Colors.black,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.m),
@@ -297,7 +297,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                       value: '${stats.passRate}%',
                       trend: 'Stable',
                       icon: Icons.verified_user,
-                      color: Colors.green,
+                      color: Colors.black,
                     ),
                   ),
                 ],
@@ -317,7 +317,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           ...stats.topClasses.map(
-                            (c) => _ClassListTile(c: c, color: Colors.green),
+                            (c) => _ClassListTile(c: c, color: Colors.black),
                           ),
                         ],
                       ),
@@ -335,7 +335,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           ...stats.weakClasses.map(
-                            (c) => _ClassListTile(c: c, color: Colors.red),
+                            (c) => _ClassListTile(c: c, color: Colors.black),
                           ),
                         ],
                       ),
@@ -356,25 +356,25 @@ class DirectorDashboardScreen extends StatelessWidget {
       {
         'icon': Icons.fact_check,
         'label': 'Approval Center',
-        'color': Colors.blue,
+        'color': Colors.black,
         'route': '/staff/director/approvals',
       },
       {
         'icon': Icons.insights,
         'label': 'Strategic Reports',
-        'color': Colors.purple,
+        'color': Colors.black,
         'route': '/staff/director/reports',
       },
       {
         'icon': Icons.track_changes,
         'label': 'School Goals',
-        'color': Colors.orange,
+        'color': Colors.black,
         'route': '/staff/director/goals',
       },
       {
         'icon': Icons.groups,
         'label': 'Management Meetings',
-        'color': Colors.teal,
+        'color': Colors.black,
         'route': '/staff/director/meetings',
       },
     ];
@@ -413,7 +413,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
-                      color: (action['color'] as Color).withValues(alpha: 0.12),
+                      color: (action['color'] as Color),
                       borderRadius: AppRadius.medium,
                     ),
                     child: Icon(
@@ -462,14 +462,14 @@ class DirectorDashboardScreen extends StatelessWidget {
                       label: 'Staff Attendance',
                       value: '${stats.staffAttendanceRate}%',
                       icon: Icons.how_to_reg,
-                      color: Colors.blue,
+                      color: Colors.black,
                     ),
                     const Divider(),
                     _QualityTile(
                       label: 'Parent Engagement',
                       value: '${stats.parentPortalUsageRate}% Usage',
                       icon: Icons.family_restroom,
-                      color: Colors.purple,
+                      color: Colors.black,
                     ),
                     const Divider(),
                     _QualityTile(
@@ -477,8 +477,8 @@ class DirectorDashboardScreen extends StatelessWidget {
                       value: '${stats.activeIncidents} Active',
                       icon: Icons.security,
                       color: stats.activeIncidents > 0
-                          ? Colors.red
-                          : Colors.green,
+                          ? Colors.black
+                          : Colors.black,
                     ),
                   ],
                 ),
@@ -528,7 +528,7 @@ class _FinancialMetric extends StatelessWidget {
             const SizedBox(height: 8),
             LinearProgressIndicator(
               value: percentage,
-              backgroundColor: color.withValues(alpha: 0.1),
+              backgroundColor: color,
               color: color,
               borderRadius: BorderRadius.circular(2),
             ),

@@ -197,7 +197,7 @@ class _ManualPaymentConfigScreenState extends State<ManualPaymentConfigScreen> {
                   Container(
                     padding: const EdgeInsets.all(AppSpacing.l),
                     decoration: BoxDecoration(
-                      color: AppColors.primary(context).withValues(alpha: 0.06),
+                      color: AppColors.primary(context),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
@@ -226,7 +226,7 @@ class _ManualPaymentConfigScreenState extends State<ManualPaymentConfigScreen> {
                   const SizedBox(height: AppSpacing.xl),
                   _ProviderCard(
                     icon: Icons.phone_android_rounded,
-                    iconColor: const Color(0xFFFFCB05),
+                    iconColor: Colors.black,
                     title: 'MTN Mobile Money',
                     summary: _momoNumberController.text.isEmpty
                         ? 'Not set'
@@ -276,7 +276,7 @@ class _ManualPaymentConfigScreenState extends State<ManualPaymentConfigScreen> {
                   const SizedBox(height: AppSpacing.m),
                   _ProviderCard(
                     icon: Icons.phone_android_rounded,
-                    iconColor: const Color(0xFFED1C24),
+                    iconColor: Colors.black,
                     title: 'Airtel Money',
                     summary: _airtelNumberController.text.isEmpty
                         ? 'Not set'
@@ -405,7 +405,7 @@ class _ManualPaymentConfigScreenState extends State<ManualPaymentConfigScreen> {
                   const SizedBox(height: AppSpacing.m),
                   _ProviderCard(
                     icon: Icons.payments_rounded,
-                    iconColor: const Color(0xFF2E7D32),
+                    iconColor: Colors.black,
                     title: 'Cash',
                     summary: !_cashEnabled
                         ? 'Disabled'
@@ -525,7 +525,7 @@ class _ProviderCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(AppSpacing.s),
                     decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: 0.12),
+                      color: iconColor,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(icon, color: iconColor, size: 20),

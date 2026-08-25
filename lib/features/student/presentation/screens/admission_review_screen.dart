@@ -213,8 +213,9 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
         );
       },
       (studentId) async {
-        final studentResult = await admissionService.repository
-            .getStudentById(studentId);
+        final studentResult = await admissionService.repository.getStudentById(
+          studentId,
+        );
         final codes = studentResult.fold(
           (failure) => null,
           (student) => (
@@ -294,9 +295,7 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
                 children: [
                   _InfoRow(
                     'Date of birth',
-                    application.dateOfBirth.toLocal().toString().split(
-                      ' ',
-                    )[0],
+                    application.dateOfBirth.toLocal().toString().split(' ')[0],
                   ),
                   Divider(color: AppColors.border(context)),
                   _InfoRow('Gender', application.gender.name),

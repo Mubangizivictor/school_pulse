@@ -267,15 +267,15 @@ class _GoalCard extends StatelessWidget {
   Color _statusColor() {
     switch (goal.status) {
       case GoalStatus.onTrack:
-        return Colors.green;
+        return Colors.black;
       case GoalStatus.atRisk:
-        return Colors.orange;
+        return Colors.black;
       case GoalStatus.behind:
-        return Colors.red;
+        return Colors.black;
       case GoalStatus.achieved:
-        return Colors.blue;
+        return Colors.black;
       case GoalStatus.abandoned:
-        return Colors.grey;
+        return Colors.black;
     }
   }
 
@@ -301,7 +301,7 @@ class _GoalCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
+                  color: color,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -325,7 +325,7 @@ class _GoalCard extends StatelessWidget {
           const SizedBox(height: 12),
           LinearProgressIndicator(
             value: goal.progressPercentage / 100,
-            backgroundColor: color.withValues(alpha: 0.1),
+            backgroundColor: color,
             color: color,
             borderRadius: BorderRadius.circular(3),
           ),

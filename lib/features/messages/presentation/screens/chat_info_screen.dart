@@ -107,7 +107,7 @@ class _ChatInfoView extends StatelessWidget {
                           : null,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.electricBlue.withValues(alpha: 0.3),
+                          color: AppColors.electricBlue,
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -387,7 +387,7 @@ class _ChatInfoView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.edit_outlined, color: Colors.white70),
+              leading: const Icon(Icons.edit_outlined, color: Colors.white),
               title: const Text(
                 'Edit name & description',
                 style: TextStyle(color: Colors.white),
@@ -400,7 +400,7 @@ class _ChatInfoView extends StatelessWidget {
             ListTile(
               leading: const Icon(
                 Icons.admin_panel_settings_outlined,
-                color: Colors.white70,
+                color: Colors.white,
               ),
               title: Text(
                 conversation.messagePolicy == MessagePolicy.everyone
@@ -462,7 +462,7 @@ class _ChatInfoView extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Report', style: TextStyle(color: Colors.red)),
+            child: const Text('Report', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
@@ -585,7 +585,7 @@ class _ChatInfoView extends StatelessWidget {
             onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(
               isGroup ? 'Exit' : 'Delete',
-              style: const TextStyle(color: Colors.red),
+              style: const TextStyle(color: Colors.black),
             ),
           ),
         ],
@@ -638,7 +638,7 @@ class _ChatInfoView extends StatelessWidget {
   }) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: AppColors.electricBlue.withValues(alpha: 0.1),
+        backgroundColor: AppColors.electricBlue,
         child: Text(
           participant.name.isEmpty ? '?' : participant.name[0].toUpperCase(),
           style: const TextStyle(color: AppColors.electricBlue),
@@ -674,7 +674,7 @@ class _ChatInfoView extends StatelessWidget {
               icon: const Icon(
                 Icons.person_remove_outlined,
                 size: 18,
-                color: Colors.redAccent,
+                color: Colors.black,
               ),
               onPressed: onRemove,
             ),
@@ -685,10 +685,13 @@ class _ChatInfoView extends StatelessWidget {
 
   Widget _buildDangerTile(IconData icon, String label, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: Colors.red),
+      leading: Icon(icon, color: Colors.black),
       title: Text(
         label,
-        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       onTap: onTap,
     );
@@ -794,9 +797,7 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                 final selected = _selected.contains(contact.id);
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: AppColors.electricBlue.withValues(
-                      alpha: 0.1,
-                    ),
+                    backgroundColor: AppColors.electricBlue,
                     child: Text(
                       contact.initials,
                       style: const TextStyle(color: AppColors.electricBlue),
@@ -807,7 +808,7 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                     selected
                         ? Icons.check_circle
                         : Icons.radio_button_unchecked,
-                    color: selected ? AppColors.electricBlue : Colors.grey,
+                    color: selected ? AppColors.electricBlue : Colors.black,
                   ),
                   onTap: () => setState(() {
                     selected

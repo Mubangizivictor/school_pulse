@@ -147,7 +147,7 @@ class ClassMoreOptionsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.s),
               decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.1),
+                color: iconColor,
                 borderRadius: BorderRadius.circular(AppSpacing.s),
               ),
               child: Icon(icon, color: iconColor, size: 20),

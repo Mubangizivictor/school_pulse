@@ -253,7 +253,7 @@ class _MissedLessonCard extends StatelessWidget {
               style: AppTypography.bodySmall.copyWith(
                 color: lesson.remarks != null
                     ? AppColors.textMuted(context)
-                    : AppColors.textMuted(context).withValues(alpha: 0.6),
+                    : AppColors.textMuted(context),
                 fontStyle: lesson.remarks == null
                     ? FontStyle.italic
                     : FontStyle.normal,

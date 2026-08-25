@@ -77,7 +77,7 @@ class _DepartmentsScreenState extends State<DepartmentsScreen> {
                     ];
                     return AcademicsListCard(
                       icon: Icons.account_balance_outlined,
-                      color: Colors.redAccent,
+                      color: Colors.black,
                       title: department.name,
                       subtitle: parts.join(' • '),
                       trailingLabel: subjectCount > 0
@@ -236,10 +236,10 @@ class _DepartmentFormScreenState extends State<_DepartmentFormScreen> {
                 const SizedBox(height: 8),
                 TextButton.icon(
                   onPressed: _confirmDelete,
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  icon: const Icon(Icons.delete_outline, color: Colors.black),
                   label: const Text(
                     'Delete Department',
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(color: Colors.black),
                   ),
                 ),
               ],

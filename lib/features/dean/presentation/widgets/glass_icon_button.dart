@@ -32,12 +32,9 @@ class GlassIconButton extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: primary.withValues(alpha: 0.12),
+            color: primary,
             borderRadius: AppRadius.large,
-            border: Border.all(
-              color: primary.withValues(alpha: 0.25),
-              width: 1,
-            ),
+            border: Border.all(color: primary, width: 1),
           ),
           child: Icon(icon, size: 20, color: primary),
         ),

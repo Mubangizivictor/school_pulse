@@ -683,7 +683,7 @@ class _DashboardStatCardState extends State<DashboardStatCard>
               Container(
                 padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
-                  color: widget.color.withValues(alpha: 0.1),
+                  color: widget.color,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: ScaleTransition(
@@ -796,17 +796,14 @@ class _AnalyticalStatCardState extends State<AnalyticalStatCard>
       padding: EdgeInsets.zero,
       showShadow: false,
       color: Colors.transparent,
-      borderColor: widget.color.withValues(alpha: isDark ? 0.2 : 0.15),
+      borderColor: widget.color,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              widget.color.withValues(alpha: isDark ? 0.15 : 0.08),
-              widget.color.withValues(alpha: isDark ? 0.05 : 0.02),
-            ],
+            colors: [widget.color, widget.color],
           ),
         ),
         child: Row(
@@ -814,7 +811,7 @@ class _AnalyticalStatCardState extends State<AnalyticalStatCard>
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: widget.color.withValues(alpha: 0.1),
+                color: widget.color,
                 shape: BoxShape.circle,
               ),
               child: ScaleTransition(
@@ -833,9 +830,7 @@ class _AnalyticalStatCardState extends State<AnalyticalStatCard>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.8),
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -896,7 +891,7 @@ class ProgressCard extends StatelessWidget {
           const SizedBox(height: 12),
           LinearProgressIndicator(
             value: progress,
-            backgroundColor: activeColor.withValues(alpha: 0.1),
+            backgroundColor: activeColor,
             color: activeColor,
             minHeight: 8,
             borderRadius: BorderRadius.circular(4),
@@ -1022,7 +1017,7 @@ class QuickActionGrid extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: item.color.withValues(alpha: 0.1),
+                  color: item.color,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(item.icon, color: item.color, size: 20),
@@ -1115,7 +1110,7 @@ Future<bool?> confirmActionDialog(
           onPressed: () => Navigator.pop(context, true),
           child: Text(
             confirmLabel,
-            style: TextStyle(color: isDestructive ? Colors.red : null),
+            style: TextStyle(color: isDestructive ? Colors.black : null),
           ),
         ),
       ],
@@ -1200,7 +1195,7 @@ class CircularPercentGauge extends StatelessWidget {
             child: CircularProgressIndicator(
               value: 1,
               strokeWidth: strokeWidth,
-              color: activeColor.withValues(alpha: 0.1),
+              color: activeColor,
             ),
           ),
           SizedBox.expand(
@@ -1295,7 +1290,7 @@ class LabeledProgressRow extends StatelessWidget {
             child: LinearProgressIndicator(
               value: percent.clamp(0.0, 1.0),
               minHeight: 8,
-              backgroundColor: activeColor.withValues(alpha: 0.1),
+              backgroundColor: activeColor,
               color: activeColor,
             ),
           ),
@@ -1398,10 +1393,7 @@ class TrendLineChart extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    activeColor.withValues(alpha: 0.18),
-                    activeColor.withValues(alpha: 0.0),
-                  ],
+                  colors: [activeColor, activeColor],
                 ),
               ),
             ),
@@ -1614,9 +1606,9 @@ class WizardStepProgress extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             stepTitle,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 10),
@@ -1630,10 +1622,10 @@ class WizardStepProgress extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: 1,
                       minHeight: 5,
-                      backgroundColor: colors.surfaceContainerHighest,
+                      backgroundColor: colors.primary.withValues(alpha: 0.15),
                       color: i <= currentStep
                           ? colors.primary
-                          : colors.surfaceContainerHighest,
+                          : colors.primary.withValues(alpha: 0.15),
                     ),
                   ),
                 ),

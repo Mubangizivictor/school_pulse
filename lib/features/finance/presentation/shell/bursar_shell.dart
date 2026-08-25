@@ -155,7 +155,7 @@ class _BursarShellState extends State<BursarShell> {
             backgroundColor: isDark
                 ? AppColors.surfaceDark
                 : AppColors.surfaceLight,
-            indicatorColor: AppColors.electricBlue.withValues(alpha: 0.1),
+            indicatorColor: AppColors.electricBlue,
             selectedIndex: _selectedIndex,
             onDestinationSelected: _onDestinationSelected,
             destinations: _destinations,

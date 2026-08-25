@@ -10,7 +10,6 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/institution/presentation/screens/institution_switcher_sheet.dart';
-import 'package:school_pulse/features/admin/presentation/widgets/admin_quick_add_sheet.dart';
 import 'package:school_pulse/features/auth/presentation/widgets/role_switcher_sheet.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
 import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
@@ -116,6 +115,23 @@ class StaffShell extends StatelessWidget {
           loc.startsWith('/staff/tasks');
     }
 
+    // The "School" destination is a workspace, not a single route: it opens
+    // the hub at '/staff/school' and every institution-management screen it
+    // links into (Structure & calendar, Learners, People, Fees, Facilities,
+    // Data management) so the tab stays highlighted while the admin is
+    // anywhere inside that workspace, matching how Work/More already track
+    // their own sub-routes.
+    bool isSchoolWorkspaceRoute(String loc) {
+      return loc.startsWith('/staff/school') ||
+          loc.startsWith('/staff/structure') ||
+          loc.startsWith('/staff/admin/structure') ||
+          loc.startsWith('/staff/admin/students') ||
+          loc.startsWith('/staff/admin/admissions') ||
+          loc.startsWith('/staff/admin/users') ||
+          loc.startsWith('/staff/admin/data-management') ||
+          loc.startsWith('/staff/bursar');
+    }
+
     if (_isDirector(context)) {
       if (location.startsWith('/staff/director/approvals')) return 1;
       if (location.startsWith('/staff/director/reports')) return 3;
@@ -124,8 +140,9 @@ class StaffShell extends StatelessWidget {
     }
 
     if (_isAdmin(context)) {
-      if (location.contains('/staff/admin/structure')) return 1;
-      if (isMoreSubRoute(location)) return 2;
+      if (location.startsWith('/staff/work')) return 1;
+      if (isSchoolWorkspaceRoute(location)) return 2;
+      if (isMoreSubRoute(location)) return 3;
       if (location.startsWith('/staff/admin')) return 0;
       return 0;
     }
@@ -208,9 +225,12 @@ class StaffShell extends StatelessWidget {
           context.go(_homePath(context));
           break;
         case 1:
-          context.go('/staff/admin/structure');
+          context.go('/staff/work');
           break;
         case 2:
+          context.go('/staff/school');
+          break;
+        case 3:
           context.go('/staff/more');
           break;
       }
@@ -312,7 +332,7 @@ class StaffShell extends StatelessWidget {
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
               'Logout',
-              style: TextStyle(color: AppColors.deepOrange),
+              style: TextStyle(color: AppColors.black),
             ),
           ),
         ],
@@ -343,6 +363,16 @@ class StaffShell extends StatelessWidget {
     final isNurseSection = GoRouterState.of(
       context,
     ).uri.path.startsWith('/staff/nurse');
+    // The Structure setup wizard (bare '/staff/admin/structure') owns its
+    // own per-step header and sticky Save & Continue footer and must render
+    // full-screen, matching every other step's treatment - stacking this
+    // shell's bottom nav on top of it hides content (e.g. the last field
+    // above a fixed-height wizard footer) and violates the wizard's "no
+    // bottom navigation" requirement. Named sub-routes under
+    // '/staff/admin/structure/...' (institution settings, academics, etc.)
+    // are regular management screens and keep the shared nav.
+    final isStructureWizardSection =
+        GoRouterState.of(context).uri.path == '/staff/admin/structure';
 
     final List<NavigationDestination> subjectTeacherDestinations = [
       const NavigationDestination(
@@ -407,9 +437,14 @@ class StaffShell extends StatelessWidget {
         label: 'Home',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.account_tree_outlined, size: 24),
-        selectedIcon: Icon(Icons.account_tree_rounded, size: 24),
-        label: 'Structure',
+        icon: Icon(Icons.assignment_outlined, size: 24),
+        selectedIcon: Icon(Icons.assignment_rounded, size: 24),
+        label: 'Work',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.school_outlined, size: 24),
+        selectedIcon: Icon(Icons.school_rounded, size: 24),
+        label: 'School',
       ),
       const NavigationDestination(
         icon: Icon(Icons.grid_view_outlined, size: 24),
@@ -645,7 +680,11 @@ class StaffShell extends StatelessWidget {
         ],
       ),
       bottomNavigationBar:
-          (isMobile && !isDeanSection && !isBursarSection && !isNurseSection)
+          (isMobile &&
+              !isDeanSection &&
+              !isBursarSection &&
+              !isNurseSection &&
+              !isStructureWizardSection)
           ? Container(
               decoration: BoxDecoration(
                 border: Border(

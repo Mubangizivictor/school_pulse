@@ -97,7 +97,7 @@ class StudentProfileScreen extends StatelessWidget {
               if (student.dormLeadershipRole != null) ...[
                 _buildSection(context, 'Dorm Leadership', [
                   ListTile(
-                    leading: const Icon(Icons.star, color: Colors.amber),
+                    leading: const Icon(Icons.star, color: Colors.black),
                     title: Text(student.dormLeadershipRole!),
                     subtitle: student.dormLeadershipDormName != null
                         ? Text(student.dormLeadershipDormName!)

@@ -239,9 +239,9 @@ class _AlertBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.l),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color,
         borderRadius: BorderRadius.circular(AppSpacing.l),
-        border: Border.all(color: color.withValues(alpha: 0.6)),
+        border: Border.all(color: color),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

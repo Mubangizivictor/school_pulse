@@ -42,7 +42,7 @@ class _BiometricSettingsPageState extends State<BiometricSettingsPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: Colors.red,
+                backgroundColor: Colors.black,
               ),
             );
           }

@@ -185,19 +185,19 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
                         QuickActionItem(
                           label: 'Structures',
                           icon: Icons.settings_applications,
-                          color: Colors.orange,
+                          color: Colors.black,
                           onTap: () => _navigateToFeeStructures(context),
                         ),
                         QuickActionItem(
                           label: 'Reports',
                           icon: Icons.assessment,
-                          color: Colors.purple,
+                          color: Colors.black,
                           onTap: () => _navigateToReports(context),
                         ),
                         QuickActionItem(
                           label: 'Eligibility',
                           icon: Icons.verified_user,
-                          color: Colors.teal,
+                          color: Colors.black,
                           onTap: () => _navigateToEligibility(context),
                         ),
                       ],
@@ -254,7 +254,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
         'Collection target',
         CurrencyFormatter.ugx(kpis['collectionTarget'] ?? 0),
         Icons.track_changes,
-        Colors.orange,
+        Colors.black,
       ),
       (
         'Target achieved',
@@ -278,7 +278,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
         'Partially paid',
         '${kpis['studentsPartiallyPaid'] ?? 0} students',
         Icons.timelapse,
-        Colors.orange,
+        Colors.black,
       ),
       (
         'No payments',
@@ -290,7 +290,7 @@ class _FinanceDashboardScreenState extends State<FinanceDashboardScreen> {
         'Pending requests',
         '${kpis['pendingExpenditureRequests'] ?? 0}',
         Icons.pending_actions,
-        Colors.orange,
+        Colors.black,
       ),
       (
         'Awaiting release',
@@ -558,7 +558,7 @@ class TransactionTile extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: colors.success.withValues(alpha: 0.1),
+            backgroundColor: colors.success,
             child: Icon(Icons.arrow_downward, color: colors.success, size: 18),
           ),
           const SizedBox(width: 12),
@@ -617,7 +617,7 @@ class ExpenditureTile extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: colors.error.withValues(alpha: 0.1),
+            backgroundColor: colors.error,
             child: Icon(Icons.arrow_upward, color: colors.error, size: 18),
           ),
           const SizedBox(width: 12),
@@ -651,13 +651,13 @@ class ExpenditureTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
+                  color: Colors.black,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Text(
                   'Pending',
                   style: TextStyle(
-                    color: Colors.orange,
+                    color: Colors.black,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),

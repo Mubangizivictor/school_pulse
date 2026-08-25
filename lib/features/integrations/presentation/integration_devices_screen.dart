@@ -158,10 +158,10 @@ class _IntegrationDevicesScreenState extends State<IntegrationDevicesScreen> {
   }
 
   Color _statusColor(String status) => switch (status) {
-    'online' => Colors.green,
-    'offline' => Colors.grey,
-    'revoked' => Colors.red,
-    _ => Colors.orange,
+    'online' => Colors.black,
+    'offline' => Colors.black,
+    'revoked' => Colors.black,
+    _ => Colors.black,
   };
 
   @override
@@ -224,7 +224,7 @@ class _IntegrationDevicesScreenState extends State<IntegrationDevicesScreen> {
                             leading: CircleAvatar(
                               backgroundColor: _statusColor(
                                 device['status'] as String? ?? '',
-                              ).withValues(alpha: .15),
+                              ),
                               child: Icon(
                                 Icons.fingerprint_outlined,
                                 color: _statusColor(
@@ -255,7 +255,7 @@ class _IntegrationDevicesScreenState extends State<IntegrationDevicesScreen> {
                                   ),
                                   backgroundColor: _statusColor(
                                     device['status'] as String? ?? '',
-                                  ).withValues(alpha: .12),
+                                  ),
                                 ),
                               ],
                             ),

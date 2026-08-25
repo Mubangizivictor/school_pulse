@@ -812,7 +812,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
               const SizedBox(height: 12),
               _SectionCard(
                 icon: Icons.palette_outlined,
-                color: Colors.purple,
+                color: Colors.black,
                 title: 'Branding',
                 children: [
                   _TwoCol(
@@ -839,7 +839,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
               const SizedBox(height: 12),
               _SectionCard(
                 icon: Icons.sell_outlined,
-                color: Colors.green,
+                color: Colors.black,
                 title: 'Institution Classification',
                 children: [
                   _TwoCol(
@@ -868,7 +868,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
               const SizedBox(height: 12),
               _SectionCard(
                 icon: Icons.description_outlined,
-                color: Colors.orange,
+                color: Colors.black,
                 title: 'Registration',
                 children: [
                   _field(
@@ -1083,14 +1083,34 @@ class _InstitutionFormState extends State<_InstitutionForm> {
   }
 
   Widget _buildWizardForm(BuildContext context) {
-    final monochromeTheme = Theme.of(context).copyWith(
-      brightness: Brightness.light,
+    // Step 1's mobile treatment is deliberately always light/monochrome
+    // regardless of the device theme (matching the reference design), so it
+    // must be built from a clean light ThemeData rather than `.copyWith()`
+    // off the ambient theme - `.copyWith` only replaces the fields passed to
+    // it and leaves everything else (inputDecorationTheme's fillColor/
+    // labelStyle, chipTheme, etc.) pointing at the ambient theme's tokens,
+    // which are inverted (white-on-black) when the device is in dark mode.
+    final monochromeTheme = ThemeData.light(useMaterial3: true).copyWith(
+      scaffoldBackgroundColor: Colors.white,
       colorScheme: const ColorScheme.light(
         primary: Colors.black,
         onPrimary: Colors.white,
+        secondary: Colors.black,
+        onSecondary: Colors.white,
         surface: Colors.white,
         onSurface: Colors.black,
         outline: Colors.black,
+        error: Colors.black,
+        onError: Colors.white,
+      ),
+      inputDecorationTheme: const InputDecorationTheme(
+        filled: false,
+        hintStyle: TextStyle(color: Colors.black),
+        labelStyle: TextStyle(color: Colors.black),
+      ),
+      textTheme: ThemeData.light().textTheme.apply(
+        bodyColor: Colors.black,
+        displayColor: Colors.black,
       ),
     );
     return Theme(
@@ -1100,15 +1120,15 @@ class _InstitutionFormState extends State<_InstitutionForm> {
         autovalidateMode: AutovalidateMode.onUserInteraction,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isNarrow = constraints.maxWidth < 520;
+            final isNarrow = constraints.maxWidth < 340;
             return ListView(
-              padding: const EdgeInsets.fromLTRB(30, 28, 30, 116),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
               children: [
                 const Text(
                   'Tell us about your institution.',
-                  style: TextStyle(fontSize: 23, fontWeight: FontWeight.w500),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
-                const SizedBox(height: 34),
+                const SizedBox(height: 20),
                 _wizardField(
                   controller: _name,
                   label: 'Institution name *',
@@ -1176,7 +1196,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                   keyboardType: TextInputType.emailAddress,
                   validator: _emailValidator,
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 8),
                 _wizardSectionTitle('About the institution'),
                 _wizardField(
                   controller: _motto,
@@ -1195,7 +1215,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                   hint: 'Enter mission',
                   maxLines: 3,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 8),
                 _wizardSectionTitle('Brand identity'),
                 _WizardTwoColumn(
                   isNarrow: isNarrow,
@@ -1222,7 +1242,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                     onRemove: () => _removeBrandingImage(isLogo: false),
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 12),
                 _wizardSectionTitle('Registration details'),
                 _wizardField(
                   controller: _registrationNumber,
@@ -1247,15 +1267,18 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                   keyboardType: TextInputType.url,
                   validator: _websiteValidator,
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 12),
                 _wizardSectionTitle('Location coordinates'),
                 _wizardCountryField(),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
                     onPressed: _detectLocation,
-                    icon: const Icon(Icons.my_location_outlined),
-                    label: const Text('Use current location'),
+                    icon: const Icon(Icons.my_location_outlined, size: 16),
+                    label: const Text(
+                      'Use current location',
+                      style: TextStyle(fontSize: 13),
+                    ),
                   ),
                 ),
                 _WizardTwoColumn(
@@ -1283,7 +1306,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                   padding: EdgeInsets.only(top: 4),
                   child: Text(
                     'You can update optional details later.',
-                    style: TextStyle(color: Color(0xFF6B6B6B), fontSize: 15),
+                    style: TextStyle(color: Colors.black, fontSize: 12),
                   ),
                 ),
               ],
@@ -1295,10 +1318,10 @@ class _InstitutionFormState extends State<_InstitutionForm> {
   }
 
   Widget _wizardSectionTitle(String text) => Padding(
-    padding: const EdgeInsets.only(bottom: 20),
+    padding: const EdgeInsets.only(bottom: 14),
     child: Text(
       text,
-      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
     ),
   );
 
@@ -1311,21 +1334,22 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: 24),
+    padding: const EdgeInsets.only(bottom: 16),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 6),
         TextFormField(
           controller: controller,
           maxLines: maxLines,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
           validator: validator,
+          style: const TextStyle(fontSize: 14),
           decoration: _wizardInputDecoration(hint),
         ),
       ],
@@ -1334,23 +1358,23 @@ class _InstitutionFormState extends State<_InstitutionForm> {
 
   InputDecoration _wizardInputDecoration(String hint) => InputDecoration(
     hintText: hint,
-    hintStyle: const TextStyle(color: Color(0xFF737373), fontSize: 17),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 21),
+    hintStyle: const TextStyle(color: Colors.black, fontSize: 14),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(17),
-      borderSide: const BorderSide(color: Colors.black, width: 1.5),
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.black, width: 1.2),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(17),
-      borderSide: const BorderSide(color: Colors.black, width: 2),
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.black, width: 1.6),
     ),
     errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(17),
-      borderSide: const BorderSide(color: Colors.black, width: 1.5),
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.black, width: 1.2),
     ),
     focusedErrorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(17),
-      borderSide: const BorderSide(color: Colors.black, width: 2),
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Colors.black, width: 1.6),
     ),
   );
 
@@ -1362,7 +1386,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     required ValueChanged<String> onChanged,
     bool required = false,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: 24),
+    padding: const EdgeInsets.only(bottom: 16),
     child: FormField<String>(
       initialValue: value,
       validator: required
@@ -1373,9 +1397,9 @@ class _InstitutionFormState extends State<_InstitutionForm> {
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           _wizardOutlinedContainer(
             DropdownButtonHideUnderline(
               child: DropdownButton<String>(
@@ -1383,10 +1407,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                 isExpanded: true,
                 hint: Text(
                   hint,
-                  style: const TextStyle(
-                    color: Color(0xFF737373),
-                    fontSize: 17,
-                  ),
+                  style: const TextStyle(color: Colors.black, fontSize: 14),
                 ),
                 icon: const Icon(
                   Icons.keyboard_arrow_down_rounded,
@@ -1422,7 +1443,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
   );
 
   Widget _wizardDistrictField() => Padding(
-    padding: const EdgeInsets.only(bottom: 24),
+    padding: const EdgeInsets.only(bottom: 16),
     child: FormField<String>(
       initialValue: _district,
       validator: (value) => value == null || value.isEmpty ? 'Required' : null,
@@ -1431,9 +1452,9 @@ class _InstitutionFormState extends State<_InstitutionForm> {
         children: [
           const Text(
             'District *',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           InkWell(
             onTap: () async {
               final result = await _selectDistrict();
@@ -1452,10 +1473,8 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                     child: Text(
                       _district.isEmpty ? 'Select district' : _district,
                       style: TextStyle(
-                        color: _district.isEmpty
-                            ? const Color(0xFF737373)
-                            : Colors.black,
-                        fontSize: 17,
+                        color: _district.isEmpty ? Colors.black : Colors.black,
+                        fontSize: 14,
                       ),
                     ),
                   ),
@@ -1513,12 +1532,12 @@ class _InstitutionFormState extends State<_InstitutionForm> {
   );
 
   Widget _wizardOutlinedContainer(Widget child, bool hasError) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 24),
+    padding: const EdgeInsets.symmetric(horizontal: 14),
     decoration: BoxDecoration(
-      border: Border.all(color: Colors.black, width: hasError ? 2 : 1.5),
-      borderRadius: BorderRadius.circular(17),
+      border: Border.all(color: Colors.black, width: hasError ? 1.6 : 1.2),
+      borderRadius: BorderRadius.circular(12),
     ),
-    constraints: const BoxConstraints(minHeight: 66),
+    constraints: const BoxConstraints(minHeight: 48),
     alignment: Alignment.center,
     child: child,
   );
@@ -1875,7 +1894,7 @@ class _WizardTwoColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(child: left),
-        const SizedBox(width: 24),
+        const SizedBox(width: 12),
         Expanded(child: right),
       ],
     );
@@ -1958,7 +1977,7 @@ class _BrandImagePicker extends StatelessWidget {
                 ),
               if (isUploading)
                 ColoredBox(
-                  color: Colors.black.withValues(alpha: 0.55),
+                  color: Colors.black,
                   child: const Center(
                     child: SizedBox(
                       width: 20,

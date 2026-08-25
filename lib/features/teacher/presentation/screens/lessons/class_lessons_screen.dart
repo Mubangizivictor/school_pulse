@@ -37,10 +37,7 @@ class ClassLessonsScreen extends StatelessWidget {
         centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: AppColors.border(context).withValues(alpha: 0.5),
-            height: 1,
-          ),
+          child: Container(color: AppColors.border(context), height: 1),
         ),
       ),
       body: Column(

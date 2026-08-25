@@ -116,7 +116,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                 const SizedBox(width: 8),
                 _buildPriorityChip('Medium', AppColors.goldenYellow),
                 const SizedBox(width: 8),
-                _buildPriorityChip('High', AppColors.deepOrange),
+                _buildPriorityChip('High', AppColors.black),
               ],
             ),
             const SizedBox(height: 24),
@@ -210,7 +210,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: isSelected
-                ? color.withValues(alpha: 0.15)
+                ? color
                 : (isDark ? AppColors.surfaceDark : Colors.white),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(

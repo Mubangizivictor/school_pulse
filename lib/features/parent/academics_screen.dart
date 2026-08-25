@@ -318,7 +318,7 @@ class _AcademicsScreenState extends State<AcademicsScreen>
             width: 24,
             height: 24,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
+              color: color,
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: color),
             ),

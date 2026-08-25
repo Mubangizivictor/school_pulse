@@ -106,7 +106,7 @@ class _LoaderScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -146,20 +146,20 @@ class _FallbackScreen extends StatelessWidget {
           children: [
             const Icon(
               Icons.notifications_off_outlined,
-              color: Colors.white24,
+              color: Colors.white,
               size: 64,
             ),
             const SizedBox(height: 16),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 15),
+              style: const TextStyle(color: Colors.white, fontSize: 15),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () => _popOrHome(context, basePath),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6366F1),
+                backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Back to notifications'),

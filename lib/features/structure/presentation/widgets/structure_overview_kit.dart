@@ -42,9 +42,7 @@ class StructureTopTabs extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(9),
                   border: Border.all(
-                    color: active
-                        ? scheme.primary
-                        : scheme.primary.withValues(alpha: 0.35),
+                    color: active ? scheme.primary : scheme.primary,
                   ),
                 ),
                 child: Text(
@@ -138,7 +136,7 @@ class ConfigurationHealthCard extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Material(
-            color: scheme.primary.withValues(alpha: 0.12),
+            color: scheme.primary,
             borderRadius: BorderRadius.circular(9),
             child: InkWell(
               borderRadius: BorderRadius.circular(9),
@@ -200,7 +198,7 @@ class StructureMetricCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
+              color: color,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 14),
@@ -257,9 +255,9 @@ class StructureAttentionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.orange.withValues(alpha: 0.08),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+        border: Border.all(color: Colors.black),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,12 +265,12 @@ class StructureAttentionCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.15),
+              color: Colors.black,
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.info_outline,
-              color: Colors.orange,
+              color: Colors.black,
               size: 15,
             ),
           ),
@@ -284,7 +282,7 @@ class StructureAttentionCard extends StatelessWidget {
                 Text(
                   '$pendingCount item${pendingCount == 1 ? '' : 's'} need attention',
                   style: const TextStyle(
-                    color: Colors.orange,
+                    color: Colors.black,
                     fontWeight: FontWeight.w700,
                     fontSize: 12.5,
                   ),
@@ -292,17 +290,14 @@ class StructureAttentionCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   'Some parts of your structure need to be completed.',
-                  style: TextStyle(
-                    color: Colors.orange.withValues(alpha: 0.85),
-                    fontSize: 10.5,
-                  ),
+                  style: TextStyle(color: Colors.black, fontSize: 10.5),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
           Material(
-            color: Colors.orange.withValues(alpha: 0.15),
+            color: Colors.black,
             borderRadius: BorderRadius.circular(9),
             child: InkWell(
               borderRadius: BorderRadius.circular(9),
@@ -312,7 +307,7 @@ class StructureAttentionCard extends StatelessWidget {
                 child: Text(
                   'Review now',
                   style: TextStyle(
-                    color: Colors.orange,
+                    color: Colors.black,
                     fontWeight: FontWeight.w700,
                     fontSize: 11,
                   ),

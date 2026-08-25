@@ -49,7 +49,7 @@ class RoleSwitcherSheet extends StatelessWidget {
                   leading: const Icon(Icons.badge_outlined),
                   title: Text(UserRoleDisplay.name(role)),
                   trailing: isActive
-                      ? const Icon(Icons.check_circle, color: Colors.green)
+                      ? const Icon(Icons.check_circle, color: Colors.black)
                       : null,
                   onTap: isActive
                       ? null

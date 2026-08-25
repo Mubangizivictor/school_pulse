@@ -56,7 +56,7 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
             final visitors = visitorsSnapshot.data ?? const <Visitor>[];
             return Scaffold(
               appBar: staffDashboardAppBar(context, roleLabel: 'Gate Keeper'),
-              backgroundColor: const Color(0xFFF5F7FB),
+              backgroundColor: Colors.black,
               body: SafeArea(
                 child: RefreshIndicator(
                   onRefresh: () async {},
@@ -142,7 +142,7 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
         const SizedBox(height: 5),
         const Text(
           'Find someone quickly, then check them out in one tap.',
-          style: TextStyle(color: Color(0xFF64748B)),
+          style: TextStyle(color: Colors.black),
         ),
         const SizedBox(height: 16),
         TextField(
@@ -246,7 +246,7 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
                           width: 42,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFCBD5E1),
+                            color: Colors.black,
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
@@ -262,7 +262,7 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
                       const SizedBox(height: 6),
                       const Text(
                         'Capture only what the gate needs right now.',
-                        style: TextStyle(color: Color(0xFF64748B)),
+                        style: TextStyle(color: Colors.black),
                       ),
                       const SizedBox(height: 22),
                       TextFormField(
@@ -385,7 +385,7 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
                           padding: EdgeInsets.only(top: 8),
                           child: Text(
                             'Set up a gate before checking in visitors.',
-                            style: TextStyle(color: Color(0xFFB45309)),
+                            style: TextStyle(color: Colors.black),
                           ),
                         ),
                     ],
@@ -406,9 +406,7 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError
-            ? const Color(0xFFB42318)
-            : const Color(0xFF166534),
+        backgroundColor: isError ? Colors.black : Colors.black,
       ),
     );
   }
@@ -492,17 +490,13 @@ class _VisitorTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8EDF5)),
+        border: Border.all(color: Colors.black),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: inside
-                ? const Color(0xFFE7F0FF)
-                : const Color(0xFFF1F5F9),
-            foregroundColor: inside
-                ? const Color(0xFF2563EB)
-                : const Color(0xFF64748B),
+            backgroundColor: inside ? Colors.black : Colors.black,
+            foregroundColor: inside ? Colors.black : Colors.black,
             child: Text(
               visitor.fullName.isEmpty
                   ? '?'
@@ -527,10 +521,7 @@ class _VisitorTile extends StatelessWidget {
                   '${visitor.purpose}${visitor.hostName == null ? '' : ' · ${visitor.hostName}'}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.black, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
                 Container(
@@ -539,17 +530,13 @@ class _VisitorTile extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: inside
-                        ? const Color(0xFFDCFCE7)
-                        : const Color(0xFFF1F5F9),
+                    color: inside ? Colors.black : Colors.black,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     inside ? 'IN · ${_time(visitor.arrivalTime)}' : 'OUT',
                     style: TextStyle(
-                      color: inside
-                          ? const Color(0xFF166534)
-                          : const Color(0xFF64748B),
+                      color: inside ? Colors.black : Colors.black,
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
                     ),
@@ -562,7 +549,7 @@ class _VisitorTile extends StatelessWidget {
             IconButton(
               onPressed: onCheckOut,
               tooltip: 'Check out',
-              icon: const Icon(Icons.logout_rounded, color: Color(0xFFB45309)),
+              icon: const Icon(Icons.logout_rounded, color: Colors.black),
             ),
         ],
       ),
@@ -585,7 +572,7 @@ class _EmptyVisitors extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: const Color(0xFFE8EDF5)),
+      border: Border.all(color: Colors.black),
     ),
     child: Column(
       children: [
@@ -593,13 +580,10 @@ class _EmptyVisitors extends StatelessWidget {
           width: 52,
           height: 52,
           decoration: const BoxDecoration(
-            color: Color(0xFFEAF1FF),
+            color: Colors.black,
             shape: BoxShape.circle,
           ),
-          child: const Icon(
-            Icons.person_search_outlined,
-            color: Color(0xFF2563EB),
-          ),
+          child: const Icon(Icons.person_search_outlined, color: Colors.black),
         ),
         const SizedBox(height: 15),
         const Text(
@@ -610,7 +594,7 @@ class _EmptyVisitors extends StatelessWidget {
         const Text(
           'Use the check-in action when someone arrives.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFF64748B)),
+          style: TextStyle(color: Colors.black),
         ),
         const SizedBox(height: 12),
         TextButton.icon(

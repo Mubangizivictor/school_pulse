@@ -88,22 +88,22 @@ class SchoolPerformanceScreen extends StatelessWidget {
                     LabeledProgressRow(
                       label: 'Academic',
                       percent: stats.overallSchoolAverage / 100,
-                      color: Colors.blue,
+                      color: Colors.black,
                     ),
                     LabeledProgressRow(
                       label: 'Financial (Fee Collection)',
                       percent: stats.collectionPercentage / 100,
-                      color: Colors.green,
+                      color: Colors.black,
                     ),
                     LabeledProgressRow(
                       label: 'Operational (Staff Attendance)',
                       percent: stats.staffAttendanceRate / 100,
-                      color: Colors.orange,
+                      color: Colors.black,
                     ),
                     LabeledProgressRow(
                       label: 'Engagement (Parent Portal Usage)',
                       percent: stats.parentPortalUsageRate / 100,
-                      color: Colors.purple,
+                      color: Colors.black,
                     ),
                   ],
                 ),

@@ -149,12 +149,12 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
               if (_loadingView) const Center(child: SchoolPulseLoader()),
               if (_error != null)
                 Card(
-                  color: Colors.red.shade50,
+                  color: Colors.black,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       _error!,
-                      style: const TextStyle(color: Colors.red),
+                      style: const TextStyle(color: Colors.black),
                     ),
                   ),
                 ),
@@ -188,9 +188,7 @@ class _BursarViewCard extends StatelessWidget {
             const SizedBox(height: 8),
             Chip(
               label: Text(view.isFullyPaid ? 'Fully Paid' : 'Balance Due'),
-              backgroundColor: view.isFullyPaid
-                  ? Colors.green.shade100
-                  : Colors.orange.shade100,
+              backgroundColor: view.isFullyPaid ? Colors.black : Colors.black,
             ),
           ],
         ),
@@ -212,7 +210,7 @@ class _InfoRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 160,
-            child: Text(label, style: const TextStyle(color: Colors.grey)),
+            child: Text(label, style: const TextStyle(color: Colors.black)),
           ),
           Expanded(child: Text(value)),
         ],

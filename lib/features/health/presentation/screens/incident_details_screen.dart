@@ -126,17 +126,17 @@ class _IncidentDetailsScreenState extends State<IncidentDetailsScreen> {
 
   Widget _buildStatusHeader(EmergencyIncident incident) {
     return AppCard(
-      color: Colors.red.shade50,
-      borderColor: Colors.red.shade200,
+      color: Colors.black,
+      borderColor: Colors.black,
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          const Icon(Icons.emergency, color: Colors.red, size: 48),
+          const Icon(Icons.emergency, color: Colors.black, size: 48),
           const SizedBox(height: 12),
           Text(
             'EMERGENCY REPORT',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.red,
+              color: Colors.black,
               fontWeight: FontWeight.bold,
             ),
           ),

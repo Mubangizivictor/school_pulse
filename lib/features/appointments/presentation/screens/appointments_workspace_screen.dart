@@ -238,7 +238,7 @@ class _Stats extends StatelessWidget {
       (
         'Today',
         count((a) => DateUtils.isSameDay(a.scheduledStart, today)),
-        Colors.blue,
+        Colors.black,
       ),
       (
         'Upcoming',
@@ -247,22 +247,22 @@ class _Stats extends StatelessWidget {
               a.scheduledStart.isAfter(DateTime.now()) &&
               a.status == AppointmentStatus.approved,
         ),
-        Colors.teal,
+        Colors.black,
       ),
       (
         'Pending',
         count((a) => a.status == AppointmentStatus.pending),
-        Colors.orange,
+        Colors.black,
       ),
       (
         'Completed',
         count((a) => a.status == AppointmentStatus.completed),
-        Colors.green,
+        Colors.black,
       ),
       (
         'Cancelled',
         count((a) => a.status == AppointmentStatus.cancelled),
-        Colors.red,
+        Colors.black,
       ),
       (
         'Missed',
@@ -271,7 +271,7 @@ class _Stats extends StatelessWidget {
               a.status == AppointmentStatus.noShow ||
               a.status == AppointmentStatus.expired,
         ),
-        Colors.deepOrange,
+        Colors.black,
       ),
     ];
     return LayoutBuilder(
@@ -332,7 +332,7 @@ class _AppointmentTile extends StatelessWidget {
                 width: 50,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: .13),
+                  color: color,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Column(
@@ -1188,7 +1188,7 @@ class _Status extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     decoration: BoxDecoration(
-      color: _statusColor(status).withValues(alpha: .14),
+      color: _statusColor(status),
       borderRadius: BorderRadius.circular(20),
     ),
     child: Text(
@@ -1203,13 +1203,13 @@ class _Status extends StatelessWidget {
 }
 
 Color _statusColor(AppointmentStatus s) => switch (s) {
-  AppointmentStatus.approved || AppointmentStatus.completed => Colors.green,
+  AppointmentStatus.approved || AppointmentStatus.completed => Colors.black,
   AppointmentStatus.pending ||
-  AppointmentStatus.rescheduleProposed => Colors.orange,
+  AppointmentStatus.rescheduleProposed => Colors.black,
   AppointmentStatus.cancelled ||
   AppointmentStatus.rejected ||
-  AppointmentStatus.noShow => Colors.red,
-  _ => Colors.grey,
+  AppointmentStatus.noShow => Colors.black,
+  _ => Colors.black,
 };
 
 class _StatePanel extends StatelessWidget {

@@ -49,7 +49,7 @@ class SuperAdminMobileNavShell extends StatelessWidget {
           height: 88,
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
-          indicatorColor: AppColors.primary(context).withValues(alpha: 0.14),
+          indicatorColor: AppColors.primary(context),
           labelTextStyle: WidgetStateProperty.resolveWith(
             (states) => TextStyle(
               color: states.contains(WidgetState.selected)

@@ -175,12 +175,10 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
       return _buildSmsCreditsCard();
     }
     return AppCard(
-      color: Theme.of(
-        context,
-      ).colorScheme.primaryContainer.withValues(alpha: 0.1),
+      color: Theme.of(context).colorScheme.primaryContainer,
       child: Column(
         children: [
-          const Icon(Icons.bolt, size: 32, color: Colors.amber),
+          const Icon(Icons.bolt, size: 32, color: Colors.black),
           const SizedBox(height: 12),
           const Text(
             'Push Delivery',
@@ -212,9 +210,7 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: 0.1),
+                  color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -442,7 +438,7 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
                   ? 'Broadcast scheduled for ${_scheduledDateTime.toString()}'
                   : 'Broadcast sent successfully via ${_selectedChannels.join(" & ")}',
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: Colors.black,
           ),
         );
         _messageController.clear();
@@ -457,7 +453,7 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
       closeLoadingDialog();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.black),
         );
       }
     }
@@ -609,7 +605,7 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
         if (classes.isEmpty) {
           return const Text(
             'No classes configured yet.',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+            style: TextStyle(fontSize: 12, color: Colors.black),
           );
         }
         return Wrap(
@@ -635,21 +631,19 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
 
   Widget _buildSmsCreditsCard() {
     return AppCard(
-      color: Theme.of(
-        context,
-      ).colorScheme.primaryContainer.withValues(alpha: 0.1),
+      color: Theme.of(context).colorScheme.primaryContainer,
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.1),
+              color: Colors.black,
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.account_balance_wallet,
               size: 32,
-              color: Colors.blue,
+              color: Colors.black,
             ),
           ),
           const SizedBox(height: 16),
@@ -681,7 +675,7 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
-                  color: Colors.blue,
+                  color: Colors.black,
                   letterSpacing: -0.5,
                 ),
               );
@@ -825,9 +819,9 @@ class _BroadcastSmsScreenState extends State<BroadcastSmsScreen> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color:
-                                (isFailed ? semantic.error : semantic.success)
-                                    .withValues(alpha: 0.1),
+                            color: (isFailed
+                                ? semantic.error
+                                : semantic.success),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -917,7 +911,7 @@ class _ChannelTile extends StatelessWidget {
               border: Border.all(
                 color: isSelected
                     ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).dividerColor.withValues(alpha: 0.1),
+                    : Theme.of(context).dividerColor,
               ),
             ),
             child: Column(
@@ -939,9 +933,7 @@ class _ChannelTile extends StatelessWidget {
                   description,
                   style: TextStyle(
                     color: isSelected
-                        ? Theme.of(
-                            context,
-                          ).colorScheme.onPrimary.withValues(alpha: 0.8)
+                        ? Theme.of(context).colorScheme.onPrimary
                         : Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 10,
                   ),

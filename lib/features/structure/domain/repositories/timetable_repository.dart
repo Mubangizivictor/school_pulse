@@ -41,4 +41,33 @@ abstract class TimetableRepository {
     required String schoolId,
     required String lessonId,
   });
+
+  Future<Timetable?> getPublishedTimetableForTarget(Timetable timetable);
+
+  Future<void> markValidated({
+    required String schoolId,
+    required String timetableId,
+    required String validatedBy,
+  });
+
+  /// Atomically publishes [timetable], superseding whatever timetable is
+  /// currently published for the same target, if any.
+  Future<void> publishTimetable({
+    required Timetable timetable,
+    required String publishedBy,
+    DateTime? effectiveFrom,
+  });
+
+  Future<void> archiveTimetable({
+    required String schoolId,
+    required String timetableId,
+    required String archivedBy,
+  });
+
+  Future<void> appendAuditEntry(TimetableAuditEntry entry);
+
+  Stream<List<TimetableAuditEntry>> watchAuditTrail({
+    required String schoolId,
+    required String timetableId,
+  });
 }

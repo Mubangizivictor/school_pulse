@@ -249,9 +249,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                   "© 2024 School Pulse. All rights reserved.",
                                   textAlign: TextAlign.center,
                                   style: AppTypography.labelSmall.copyWith(
-                                    color: AppColors.textPrimary(
-                                      context,
-                                    ).withValues(alpha: 0.5),
+                                    color: AppColors.textPrimary(context),
                                     fontSize: 11,
                                     letterSpacing: 0.2,
                                   ),
@@ -311,11 +309,11 @@ class _BackgroundPainter extends CustomPainter {
     canvas.drawRect(rect, Paint()..color = base);
 
     // Dot grid, fading out toward the bottom of the screen.
-    final dotPaint = Paint()..color = accent.withValues(alpha: 0.05);
+    final dotPaint = Paint()..color = accent;
     const spacing = 26.0;
     for (double y = 0; y < size.height; y += spacing) {
       final fade = (1.0 - (y / size.height)).clamp(0.0, 1.0);
-      dotPaint.color = accent.withValues(alpha: 0.06 * fade);
+      dotPaint.color = accent;
       for (double x = 0; x < size.width; x += spacing) {
         canvas.drawCircle(Offset(x, y), 1.0, dotPaint);
       }
@@ -327,18 +325,12 @@ class _BackgroundPainter extends CustomPainter {
       Offset(size.width / 2, size.height * 0.18),
       size.width * 0.62 * glow,
       Paint()
-        ..shader =
-            RadialGradient(
-              colors: [
-                accent.withValues(alpha: 0.12),
-                accent.withValues(alpha: 0.0),
-              ],
-            ).createShader(
-              Rect.fromCircle(
-                center: Offset(size.width / 2, size.height * 0.18),
-                radius: size.width * 0.62 * glow,
-              ),
-            ),
+        ..shader = RadialGradient(colors: [accent, accent]).createShader(
+          Rect.fromCircle(
+            center: Offset(size.width / 2, size.height * 0.18),
+            radius: size.width * 0.62 * glow,
+          ),
+        ),
     );
 
     // Second glow low on the page.
@@ -346,18 +338,12 @@ class _BackgroundPainter extends CustomPainter {
       Offset(size.width * 0.5, size.height * 0.92),
       size.width * 0.7,
       Paint()
-        ..shader =
-            RadialGradient(
-              colors: [
-                accent.withValues(alpha: 0.10),
-                accent.withValues(alpha: 0.0),
-              ],
-            ).createShader(
-              Rect.fromCircle(
-                center: Offset(size.width * 0.5, size.height * 0.92),
-                radius: size.width * 0.7,
-              ),
-            ),
+        ..shader = RadialGradient(colors: [accent, accent]).createShader(
+          Rect.fromCircle(
+            center: Offset(size.width * 0.5, size.height * 0.92),
+            radius: size.width * 0.7,
+          ),
+        ),
     );
 
     // Fine orbital lines add the distinctive sweeping motion of the
@@ -365,7 +351,7 @@ class _BackgroundPainter extends CustomPainter {
     final orbitPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.75
-      ..color = accent.withValues(alpha: 0.22);
+      ..color = accent;
     for (var i = 0; i < 10; i++) {
       final offset = i * 4.2;
       final path = Path()
@@ -384,7 +370,7 @@ class _BackgroundPainter extends CustomPainter {
     final lowerOrbit = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0
-      ..color = accent.withValues(alpha: 0.20);
+      ..color = accent;
     final lowerPath = Path()
       ..moveTo(-size.width * 0.1, size.height * 0.96)
       ..cubicTo(
@@ -523,9 +509,7 @@ class _WelcomeCarouselState extends State<_WelcomeCarousel> {
                           textAlign: TextAlign.center,
                           style: GoogleFonts.manrope(
                             fontSize: 12,
-                            color: AppColors.textPrimary(
-                              context,
-                            ).withValues(alpha: 0.65),
+                            color: AppColors.textPrimary(context),
                             fontWeight: FontWeight.w500,
                             letterSpacing: 0,
                           ),
@@ -597,17 +581,10 @@ class _RoleCardState extends State<_RoleCard> {
                 height: 100,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: Colors.white.withValues(
-                      alpha: _isHovered ? 0.55 : 0.35,
-                    ),
-                    width: 1.35,
-                  ),
+                  border: Border.all(color: Colors.white, width: 1.35),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(
-                        alpha: _isHovered ? 0.45 : 0.35,
-                      ),
+                      color: Colors.black,
                       blurRadius: _isHovered ? 32 : 24,
                       offset: const Offset(0, 10),
                     ),
@@ -624,10 +601,7 @@ class _RoleCardState extends State<_RoleCard> {
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.80),
-                            Colors.black.withValues(alpha: 0.90),
-                          ],
+                          colors: [Colors.black, Colors.black],
                         ),
                       ),
                       child: LayoutBuilder(
@@ -654,7 +628,7 @@ class _RoleCardState extends State<_RoleCard> {
                                 child: Icon(
                                   widget.bgIcons[0],
                                   size: 30,
-                                  color: Colors.white.withValues(alpha: 0.22),
+                                  color: Colors.white,
                                 ),
                               ),
                               Positioned(
@@ -663,7 +637,7 @@ class _RoleCardState extends State<_RoleCard> {
                                 child: Icon(
                                   widget.bgIcons[1],
                                   size: 34,
-                                  color: Colors.white.withValues(alpha: 0.22),
+                                  color: Colors.white,
                                 ),
                               ),
                               // Content Layout
@@ -678,15 +652,9 @@ class _RoleCardState extends State<_RoleCard> {
                                       width: 62,
                                       height: 62,
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.14,
-                                        ),
+                                        color: Colors.white,
                                         borderRadius: BorderRadius.circular(18),
-                                        border: Border.all(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.35,
-                                          ),
-                                        ),
+                                        border: Border.all(color: Colors.white),
                                       ),
                                       child: Icon(
                                         widget.icon,
@@ -716,9 +684,7 @@ class _RoleCardState extends State<_RoleCard> {
                                           Text(
                                             widget.subtitle,
                                             style: GoogleFonts.manrope(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.75,
-                                              ),
+                                              color: Colors.white,
                                               fontSize: 12.5,
                                               height: 1.25,
                                               fontWeight: FontWeight.w500,
@@ -772,7 +738,7 @@ class _CardWavePainter extends CustomPainter {
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.7
-      ..color = color.withValues(alpha: 0.33);
+      ..color = color;
     for (var i = 0; i < 7; i++) {
       final offset = i * 5.5;
       final path = Path()
@@ -826,30 +792,20 @@ class _BottomFeatures extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(
-              child: Divider(
-                color: AppColors.textPrimary(context).withValues(alpha: 0.24),
-              ),
-            ),
+            Expanded(child: Divider(color: AppColors.textPrimary(context))),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 '•  W H Y   S C H O O L   P U L S E ?  •',
                 style: TextStyle(
-                  color: AppColors.textPrimary(
-                    context,
-                  ).withValues(alpha: 0.65),
+                  color: AppColors.textPrimary(context),
                   fontSize: 9,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 2.1,
                 ),
               ),
             ),
-            Expanded(
-              child: Divider(
-                color: AppColors.textPrimary(context).withValues(alpha: 0.24),
-              ),
-            ),
+            Expanded(child: Divider(color: AppColors.textPrimary(context))),
           ],
         ),
         const SizedBox(height: AppSpacing.xl),
@@ -862,9 +818,7 @@ class _BottomFeatures extends StatelessWidget {
                   Container(
                     width: 1,
                     margin: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                    color: AppColors.textPrimary(
-                      context,
-                    ).withValues(alpha: 0.17),
+                    color: AppColors.textPrimary(context),
                   ),
                 Expanded(child: items[i]),
               ],
@@ -897,8 +851,8 @@ class _FeatureItem extends StatelessWidget {
           height: 48,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: textColor.withValues(alpha: 0.10),
-            border: Border.all(color: textColor.withValues(alpha: 0.30)),
+            color: textColor,
+            border: Border.all(color: textColor),
           ),
           child: Icon(icon, color: textColor, size: 26),
         ),
@@ -917,7 +871,7 @@ class _FeatureItem extends StatelessWidget {
           desc,
           textAlign: TextAlign.center,
           style: GoogleFonts.manrope(
-            color: textColor.withValues(alpha: 0.7),
+            color: textColor,
             fontSize: 9.5,
             height: 1.3,
             fontWeight: FontWeight.w500,

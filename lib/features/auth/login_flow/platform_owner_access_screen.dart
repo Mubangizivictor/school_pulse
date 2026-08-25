@@ -226,7 +226,7 @@ class _PlatformOwnerAccessScreenState extends State<PlatformOwnerAccessScreen> {
                                 AuthCtaButton(
                                   label: 'Continue',
                                   gradient: const [
-                                    Color(0xFF0B4FA8),
+                                    Colors.black,
                                     AppColors.brightCyan,
                                   ],
                                   isLoading: isLoading,
@@ -285,13 +285,10 @@ class _OwnerBadge extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: AppColors.surfaceDark,
-          border: Border.all(
-            color: AppColors.brightCyan.withValues(alpha: 0.6),
-            width: 1.6,
-          ),
+          border: Border.all(color: AppColors.brightCyan, width: 1.6),
           boxShadow: [
             BoxShadow(
-              color: AppColors.brightCyan.withValues(alpha: 0.28),
+              color: AppColors.brightCyan,
               blurRadius: 28,
               spreadRadius: 2,
             ),
@@ -335,9 +332,7 @@ class _SocialSignInButton extends StatelessWidget {
             height: 56,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppColors.borderDark.withValues(alpha: 0.9),
-              ),
+              border: Border.all(color: AppColors.borderDark),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -368,12 +363,7 @@ class _OrDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: Container(
-            height: 1,
-            color: AppColors.borderDark.withValues(alpha: 0.6),
-          ),
-        ),
+        Expanded(child: Container(height: 1, color: AppColors.borderDark)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
           child: Text(
@@ -384,12 +374,7 @@ class _OrDivider extends StatelessWidget {
             ),
           ),
         ),
-        Expanded(
-          child: Container(
-            height: 1,
-            color: AppColors.borderDark.withValues(alpha: 0.6),
-          ),
-        ),
+        Expanded(child: Container(height: 1, color: AppColors.borderDark)),
       ],
     );
   }
@@ -417,7 +402,7 @@ class _OwnerBackdropPainter extends CustomPainter {
         ..shader = const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF040B1C), Color(0xFF071235), Color(0xFF03081A)],
+          colors: [Colors.black, Colors.black, Colors.black],
           stops: [0.0, 0.45, 1.0],
         ).createShader(rect),
     );
@@ -428,10 +413,7 @@ class _OwnerBackdropPainter extends CustomPainter {
       Paint()
         ..shader =
             RadialGradient(
-              colors: [
-                AppColors.brightCyan.withValues(alpha: 0.16),
-                AppColors.brightCyan.withValues(alpha: 0.0),
-              ],
+              colors: [AppColors.brightCyan, AppColors.brightCyan],
             ).createShader(
               Rect.fromCircle(
                 center: Offset(size.width / 2, size.height * 0.18),

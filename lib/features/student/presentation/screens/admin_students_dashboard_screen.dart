@@ -764,10 +764,7 @@ class _StatusPill extends StatelessWidget {
         horizontal: AppSpacing.l,
         vertical: AppSpacing.xs,
       ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: AppRadius.full,
-      ),
+      decoration: BoxDecoration(color: color, borderRadius: AppRadius.full),
       child: Text(
         label,
         style: AppTypography.labelSmall.copyWith(

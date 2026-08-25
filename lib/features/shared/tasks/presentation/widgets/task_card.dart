@@ -10,14 +10,14 @@ class TaskCard extends StatelessWidget {
   const TaskCard({super.key, required this.task, this.onTap});
 
   Color _getCategoryColor(String category) {
-    if (category.contains('Attendance')) return Colors.green;
+    if (category.contains('Attendance')) return Colors.black;
     if (category.contains('Hygiene') || category.contains('Inspection')) {
-      return Colors.purple;
+      return Colors.black;
     }
     if (category.contains('Welfare') || category.contains('Sarah')) {
-      return Colors.orange;
+      return Colors.black;
     }
-    return Colors.blue;
+    return Colors.black;
   }
 
   IconData _getCategoryIcon(String category) {
@@ -47,7 +47,7 @@ class TaskCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -104,16 +104,14 @@ class TaskCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               if (task.status == TaskStatus.completed)
-                const Icon(Icons.check_box, color: Colors.blue, size: 22)
+                const Icon(Icons.check_box, color: Colors.black, size: 22)
               else
                 Container(
                   width: 20,
                   height: 20,
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.outline.withValues(alpha: 0.5),
+                      color: Theme.of(context).colorScheme.outline,
                     ),
                     borderRadius: BorderRadius.circular(4),
                   ),

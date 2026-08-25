@@ -740,7 +740,7 @@ class _NfcCircleState extends State<_NfcCircle>
             height: 160,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: widget.color.withValues(alpha: 0.12),
+              color: widget.color,
               border: Border.all(color: widget.color, width: 2),
             ),
             child: Icon(Icons.wifi_tethering, color: widget.color, size: 64),

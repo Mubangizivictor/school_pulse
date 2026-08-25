@@ -4,16 +4,19 @@ import 'package:uuid/uuid.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 import '../../domain/entities/assessment_grading_entities.dart';
 import '../../domain/entities/structure_entities.dart';
+import '../../domain/services/grading_band_validator.dart';
+import '../../domain/services/structure_dependency_service.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
 
-/// Assessment & Grading step: define the grading system(s) used to convert
-/// marks into grades. Replaces the earlier Fee Categories tab, which
-/// duplicated Finance's own configuration and did not belong in Structure
-/// setup.
+/// Step 11: define the grading system(s) used to convert marks into grades,
+/// grouped by education level. Self-contained (its own repository access
+/// goes through StructureBloc like every other Structure screen) so it can
+/// move into Academic Settings later without a rewrite.
 class AssessmentGradingScreen extends StatelessWidget {
   const AssessmentGradingScreen({super.key, this.showAppBar = true});
 
@@ -27,212 +30,320 @@ class AssessmentGradingScreen extends StatelessWidget {
           : null,
       backgroundColor: showAppBar ? null : Colors.transparent,
       body: BlocBuilder<StructureBloc, StructureState>(
-        builder: (context, state) => _GradingSystemsBody(state: state),
+        builder: (context, state) => _Overview(state: state),
       ),
     );
   }
 }
 
-class _GradingSystemsBody extends StatelessWidget {
-  const _GradingSystemsBody({required this.state});
-
+class _Overview extends StatelessWidget {
+  const _Overview({required this.state});
   final StructureState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final levels = [...state.levels.where((l) => l.isActive)]
+      ..sort((a, b) => a.order.compareTo(b.order));
+    final systems = state.gradingSystems.where((s) => s.isActive).toList();
+
+    void onAdd([EducationalLevel? level]) => Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CreateGradingSystemScreen(
+          levels: levels,
+          preselectedLevelId: level?.id,
+        ),
+      ),
+    );
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Set the rules used to calculate marks and report results.',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: scheme.onSurface,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: levels.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Add an education level before configuring grading.',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
+                      ),
+                    )
+                  : ListView(
+                      padding: EdgeInsets.zero,
+                      children: [
+                        for (final level in levels)
+                          _LevelSection(
+                            level: level,
+                            systems: systems
+                                .where((s) => s.levelIds.contains(level.id))
+                                .toList(),
+                            allBands: state.gradeBands,
+                            onAdd: () => onAdd(level),
+                            onOpen: (system) => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => _GradingSystemDetailScreen(
+                                  system: system,
+                                  bands: state.gradeBands
+                                      .where((b) => b.gradingSystemId == system.id)
+                                      .toList()
+                                    ..sort((a, b) => a.order.compareTo(b.order)),
+                                  levels: levels,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LevelSection extends StatelessWidget {
+  const _LevelSection({
+    required this.level,
+    required this.systems,
+    required this.allBands,
+    required this.onAdd,
+    required this.onOpen,
+  });
+
+  final EducationalLevel level;
+  final List<GradingSystemDef> systems;
+  final List<GradeBand> allBands;
+  final VoidCallback onAdd;
+  final ValueChanged<GradingSystemDef> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                level.name,
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  border: Border.all(color: scheme.outlineVariant),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  systems.isEmpty
+                      ? 'No grading system yet'
+                      : '${systems.length} grading system${systems.length == 1 ? '' : 's'}',
+                  style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (systems.isEmpty)
+            _EmptyLevelCard(onAdd: onAdd)
+          else ...[
+            for (final system in systems)
+              _SystemCard(
+                system: system,
+                bandCount: allBands.where((b) => b.gradingSystemId == system.id).length,
+                onTap: () => onOpen(system),
+              ),
+            OutlinedButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Add grading system'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyLevelCard extends StatelessWidget {
+  const _EmptyLevelCard({required this.onAdd});
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onAdd,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border.all(color: scheme.outlineVariant),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.add, size: 18, color: scheme.onSurfaceVariant),
+            const SizedBox(width: 10),
+            Text('Add grading system', style: TextStyle(color: scheme.onSurfaceVariant)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SystemCard extends StatelessWidget {
+  const _SystemCard({required this.system, required this.bandCount, required this.onTap});
+  final GradingSystemDef system;
+  final int bandCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: AppCard(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  border: Border.all(color: scheme.outline),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.bar_chart_rounded, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      system.name,
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '0–${system.maximumMark.toStringAsFixed(0)} marks • $bandCount grade band${bandCount == 1 ? '' : 's'}',
+                      style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              if (system.isDefault)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: scheme.outline),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text('Default', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                )
+              else
+                const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GradingSystemDetailScreen extends StatelessWidget {
+  const _GradingSystemDetailScreen({
+    required this.system,
+    required this.bands,
+    required this.levels,
+  });
+
+  final GradingSystemDef system;
+  final List<GradeBand> bands;
+  final List<EducationalLevel> levels;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final schoolId =
         (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
-    final systems = state.gradingSystems;
-
-    void onAdd() => _showGradingSystemFormSheet(
-      context,
-      schoolId: schoolId,
-      levels: state.levels,
-    );
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(system.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Edit',
+            onPressed: () => _editSystem(context, schoolId),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Create the grading system used to calculate results.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  onPressed: onAdd,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add grading system'),
-                ),
-              ],
+            Text(
+              '0–${system.maximumMark.toStringAsFixed(0)} marks'
+              '${system.passingScore != null ? ' • Pass mark ${system.passingScore!.toStringAsFixed(0)}' : ''}',
+              style: TextStyle(color: scheme.onSurfaceVariant),
             ),
+            if (system.isDefault) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  border: Border.all(color: scheme.outline),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text('Default for this level', style: TextStyle(fontSize: 12)),
+              ),
+            ],
             const SizedBox(height: 20),
-            if (systems.isEmpty)
-              _GradingEmptyState(onAdd: onAdd)
-            else
-              Expanded(
-                child: ListView.separated(
-                  padding: EdgeInsets.zero,
-                  itemCount: systems.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (_, index) {
-                    final system = systems[index];
-                    final bands =
-                        state.gradeBands
-                            .where((b) => b.gradingSystemId == system.id)
-                            .toList()
-                          ..sort((a, b) => a.order.compareTo(b.order));
-                    final levelName = system.levelIds.isEmpty
-                        ? 'Whole school'
-                        : state.levels
-                              .where((l) => system.levelIds.contains(l.id))
-                              .map((l) => l.name)
-                              .join(', ');
-                    final passMark = system.passingScore != null
-                        ? '${system.passingScore!.toStringAsFixed(0)}%'
-                        : (system.passingGradeCode ?? '—');
-                    final shown = bands.take(3).toList();
-                    final more = bands.length - shown.length;
-
-                    return AppCard(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: scheme.primary,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                    Icons.bar_chart_rounded,
-                                    color: Colors.white,
-                                    size: 22,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Flexible(
-                                            child: Text(
-                                              system.name,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w800,
-                                                fontSize: 16,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          if (system.isDefault) ...[
-                                            const SizedBox(width: 8),
-                                            Chip(
-                                              label: const Text('Default'),
-                                              visualDensity:
-                                                  VisualDensity.compact,
-                                              backgroundColor: scheme.primary,
-                                              labelStyle: TextStyle(
-                                                color: scheme.onPrimary,
-                                              ),
-                                              side: BorderSide.none,
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                      Text(
-                                        '$levelName  •  Pass mark $passMark',
-                                        style: TextStyle(
-                                          color: scheme.onSurfaceVariant,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                      Text(
-                                        '${bands.length} grade band${bands.length == 1 ? '' : 's'}'
-                                        '${bands.isEmpty ? '' : '  •  ${bands.first.grade} to ${bands.last.grade}'}',
-                                        style: TextStyle(
-                                          color: scheme.onSurfaceVariant,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert),
-                                  onSelected: (_) =>
-                                      _showGradingSystemFormSheet(
-                                        context,
-                                        schoolId: schoolId,
-                                        levels: state.levels,
-                                        existing: system,
-                                        existingBands: bands,
-                                      ),
-                                  itemBuilder: (_) => const [
-                                    PopupMenuItem(
-                                      value: 'edit',
-                                      child: Text('Edit'),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            if (shown.isNotEmpty) ...[
-                              const SizedBox(height: 10),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  for (final band in shown)
-                                    _bandChip(context, band),
-                                  if (more > 0)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: scheme.outlineVariant,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        '+$more more',
-                                        style: TextStyle(
-                                          color: scheme.primary,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
+            Text(
+              'Grade bands',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            for (final band in bands)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: scheme.outlineVariant),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(band.grade, style: const TextStyle(fontWeight: FontWeight.w800)),
+                      const Spacer(),
+                      Text(
+                        '${band.minScore.toStringAsFixed(0)}–${band.maxScore.toStringAsFixed(0)}',
+                        style: TextStyle(color: scheme.onSurfaceVariant),
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
               ),
           ],
@@ -241,471 +352,589 @@ class _GradingSystemsBody extends StatelessWidget {
     );
   }
 
-  Widget _bandChip(BuildContext context, GradeBand band) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            band.grade,
-            style: TextStyle(
-              color: scheme.primary,
-              fontWeight: FontWeight.w800,
-            ),
+  Future<void> _editSystem(BuildContext context, String schoolId) async {
+    final dependents = await di
+        .sl<StructureDependencyService>()
+        .countAssessmentsUsingGradingSystem(schoolId, system.id);
+    if (!context.mounted) return;
+    if (dependents > 0) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Assessments use this grading system'),
+          content: Text(
+            '$dependents assessment${dependents == 1 ? '' : 's'} already used "${system.name}". '
+            'Editing will create a new version instead of changing recorded marks.',
           ),
-          Text(
-            band.hasNumericBoundary
-                ? '${band.minScore.toStringAsFixed(0)}–${band.maxScore.toStringAsFixed(0)}'
-                : band.label,
-            style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
-          ),
-        ],
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Continue')),
+          ],
+        ),
+      );
+      if (proceed != true || !context.mounted) return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CreateGradingSystemScreen(
+          levels: levels,
+          existing: system,
+          existingBands: bands,
+        ),
       ),
     );
   }
 }
 
-class _GradingEmptyState extends StatelessWidget {
-  final VoidCallback onAdd;
-
-  const _GradingEmptyState({required this.onAdd});
-
-  @override
-  Widget build(BuildContext context) {
-    return EmptyState(
-      icon: Icons.insert_chart_outlined,
-      title: 'No grading system added',
-      message: 'Add grade bands and pass marks for your school.',
-      ctaLabel: 'Add grading system',
-      onCtaPressed: onAdd,
-    );
-  }
-}
-
-class _GradeBandDraft {
-  _GradeBandDraft({String? grade, String? range})
-    : gradeController = TextEditingController(text: grade),
-      rangeController = TextEditingController(text: range);
-
-  final TextEditingController gradeController;
-  final TextEditingController rangeController;
-
-  void dispose() {
-    gradeController.dispose();
-    rangeController.dispose();
-  }
-}
-
-/// Parses "80-100" / "80–100" into (min, max); returns null if malformed.
-(double, double)? _parseRange(String raw) {
-  final parts = raw.trim().split(RegExp(r'[-–]'));
-  if (parts.length != 2) return null;
-  final min = double.tryParse(parts[0].trim());
-  final max = double.tryParse(parts[1].trim());
-  if (min == null || max == null) return null;
-  return (min, max);
-}
-
-Future<void> _showGradingSystemFormSheet(
-  BuildContext context, {
-  required String schoolId,
-  required List<EducationalLevel> levels,
-  GradingSystemDef? existing,
-  List<GradeBand>? existingBands,
-}) {
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (context) => _GradingSystemFormSheet(
-      schoolId: schoolId,
-      levels: levels,
-      existing: existing,
-      existingBands: existingBands,
-    ),
-  );
-}
-
-/// Owns [nameController]/[passMarkController]/[_GradeBandDraft] controllers
-/// via normal [State] lifecycle instead of a bare function's manual
-/// dispose-after-await. `showModalBottomSheet`'s returned future completes
-/// the instant `Navigator.pop` is called — well before the sheet's exit
-/// *animation* finishes unmounting its widget subtree (that takes another
-/// ~250ms via the route's AnimationController). Disposing controllers right
-/// after that await therefore ripped them out from under TextFormFields that
-/// were still mounted and mid-animation, crashing with "TextEditingController
-/// used after being disposed". State.dispose() only runs when the element is
-/// actually unmounted, so it can never race the exit animation.
-class _GradingSystemFormSheet extends StatefulWidget {
-  const _GradingSystemFormSheet({
-    required this.schoolId,
+/// Stage 1 of 2: basic scoring rules.
+class CreateGradingSystemScreen extends StatefulWidget {
+  const CreateGradingSystemScreen({
+    super.key,
     required this.levels,
+    this.preselectedLevelId,
     this.existing,
     this.existingBands,
   });
 
-  final String schoolId;
   final List<EducationalLevel> levels;
+  final String? preselectedLevelId;
   final GradingSystemDef? existing;
   final List<GradeBand>? existingBands;
 
   @override
-  State<_GradingSystemFormSheet> createState() =>
-      _GradingSystemFormSheetState();
+  State<CreateGradingSystemScreen> createState() => _CreateGradingSystemScreenState();
 }
 
-class _GradingSystemFormSheetState extends State<_GradingSystemFormSheet> {
-  final formKey = GlobalKey<FormState>();
-  late final nameController = TextEditingController(
-    text: widget.existing?.name,
+class _CreateGradingSystemScreenState extends State<CreateGradingSystemScreen> {
+  final _formKey = GlobalKey<FormState>();
+  late final _name = TextEditingController(text: widget.existing?.name);
+  late final _maximumMark = TextEditingController(
+    text: widget.existing?.maximumMark.toStringAsFixed(0) ?? '',
   );
-  late final passMarkController = TextEditingController(
-    text: widget.existing?.passingScore?.toStringAsFixed(0) ?? '50',
+  late final _passMark = TextEditingController(
+    text: widget.existing?.passingScore?.toStringAsFixed(0) ?? '',
   );
-  late String? selectedLevelId =
-      widget.existing != null && widget.existing!.levelIds.isNotEmpty
+  late String? _levelId = widget.existing != null && widget.existing!.levelIds.isNotEmpty
       ? widget.existing!.levelIds.first
-      : (widget.levels.isNotEmpty ? widget.levels.first.id : null);
-  late bool isDefault = widget.existing?.isDefault ?? false;
-  late final List<_GradeBandDraft> drafts =
-      widget.existingBands != null && widget.existingBands!.isNotEmpty
-      ? widget.existingBands!
-            .map(
-              (b) => _GradeBandDraft(
-                grade: b.grade,
-                range: b.hasNumericBoundary
-                    ? '${b.minScore.toStringAsFixed(0)}-${b.maxScore.toStringAsFixed(0)}'
-                    : b.label,
-              ),
-            )
-            .toList()
-      : [_GradeBandDraft()];
+      : (widget.preselectedLevelId ?? (widget.levels.isNotEmpty ? widget.levels.first.id : null));
+  late bool _isDefault = widget.existing?.isDefault ?? false;
 
   @override
   void dispose() {
-    for (final draft in drafts) {
-      draft.dispose();
-    }
-    nameController.dispose();
-    passMarkController.dispose();
+    _name.dispose();
+    _maximumMark.dispose();
+    _passMark.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final existing = widget.existing;
-    final existingBands = widget.existingBands;
-    final levels = widget.levels;
-    final schoolId = widget.schoolId;
-    return StatefulBuilder(
-      builder: (context, setState) {
-        final scheme = Theme.of(context).colorScheme;
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('1 of 2'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(4),
+          child: LinearProgressIndicator(
+            value: 0.5,
+            minHeight: 4,
+            backgroundColor: scheme.outlineVariant,
+            color: scheme.onSurface,
           ),
-          child: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          existing == null
-                              ? 'Add grading system'
-                              : 'Edit grading system',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        style: IconButton.styleFrom(
-                          shape: const CircleBorder(),
-                          side: BorderSide(color: scheme.outlineVariant),
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
+                  const Text(
+                    'Create grading system',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Define how marks are converted into grades.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    'Set the basic scoring rules.',
+                    style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 14),
                   ),
-                  const SizedBox(height: 18),
-                  TextFormField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: 'System name'),
-                    validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 18),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedLevelId,
-                    decoration: const InputDecoration(
-                      labelText: 'Education level',
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: scheme.outlineVariant),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    items: levels
-                        .map(
-                          (l) => DropdownMenuItem(
-                            value: l.id,
-                            child: Text(l.name),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.info_outline, size: 18, color: scheme.onSurfaceVariant),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'These settings affect how marks are calculated and reported. Changes apply only after assignment.',
+                            style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
                           ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setState(() => selectedLevelId = v),
-                  ),
-                  const SizedBox(height: 18),
-                  TextFormField(
-                    controller: passMarkController,
-                    decoration: const InputDecoration(
-                      labelText: 'Pass mark',
-                      suffixText: '%',
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (v) {
-                      final value = double.tryParse(v ?? '');
-                      if (value == null || value < 0 || value > 100) {
-                        return 'Enter a value between 0 and 100';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    'Grade bands',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  for (var i = 0; i < drafts.length; i++)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: drafts[i].gradeController,
-                              decoration: const InputDecoration(
-                                hintText: 'D1',
-                                isDense: true,
-                              ),
-                              validator: (v) => v == null || v.trim().isEmpty
-                                  ? 'Required'
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            flex: 2,
-                            child: TextFormField(
-                              controller: drafts[i].rangeController,
-                              decoration: const InputDecoration(
-                                hintText: '80-100',
-                                isDense: true,
-                              ),
-                              validator: (v) {
-                                if (v == null || v.trim().isEmpty) {
-                                  return 'Required';
-                                }
-                                return _parseRange(v) == null
-                                    ? 'Use e.g. 80-100'
-                                    : null;
-                              },
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            onPressed: drafts.length == 1
-                                ? null
-                                : () => setState(() {
-                                    drafts[i].dispose();
-                                    drafts.removeAt(i);
-                                  }),
-                          ),
-                        ],
-                      ),
-                    ),
-                  OutlinedButton.icon(
-                    onPressed: () =>
-                        setState(() => drafts.add(_GradeBandDraft())),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add grade band'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
-                      side: BorderSide(
-                        color: scheme.primary,
-                        style: BorderStyle.solid,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Set as default',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      Switch(
-                        value: isDefault,
-                        onChanged: (v) => setState(() => isDefault = v),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () {
-                        if (!formKey.currentState!.validate()) return;
-
-                        final parsed = <(String grade, double min, double max)>[
-                          for (final draft in drafts)
-                            (
-                              draft.gradeController.text.trim(),
-                              _parseRange(draft.rangeController.text)!.$1,
-                              _parseRange(draft.rangeController.text)!.$2,
-                            ),
-                        ]..sort((a, b) => b.$2.compareTo(a.$2));
-
-                        final gradeCodes = parsed.map(
-                          (e) => e.$1.toLowerCase(),
-                        );
-                        if (gradeCodes.toSet().length != parsed.length) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Grade codes must be unique.'),
-                            ),
-                          );
-                          return;
-                        }
-                        for (final band in parsed) {
-                          if (band.$3 < band.$2) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  '${band.$1}: max must be greater than or equal to min.',
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-                        }
-                        for (var i = 0; i < parsed.length - 1; i++) {
-                          final higher = parsed[i];
-                          final lower = parsed[i + 1];
-                          if (higher.$2 <= lower.$3) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  '${higher.$1} and ${lower.$1} overlap.',
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-                          if (higher.$2 > lower.$3 + 1) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'There is a gap between ${lower.$1} and ${higher.$1}.',
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-                        }
-
-                        final systemId = existing?.id ?? const Uuid().v4();
-                        final system = GradingSystemDef(
-                          id: systemId,
-                          schoolId: schoolId,
-                          name: nameController.text.trim(),
-                          isDefault: isDefault,
-                          appliesTo: selectedLevelId == null
-                              ? 'school'
-                              : 'levels',
-                          levelIds: selectedLevelId == null
-                              ? const []
-                              : [selectedLevelId!],
-                          passingScore: double.tryParse(
-                            passMarkController.text,
-                          ),
-                        );
-
-                        final bloc = context.read<StructureBloc>();
-
-                        // Pop before dispatching so the ancestor BlocBuilder
-                        // never rebuilds this sheet's route once a Firestore
-                        // echo re-emits state. Controller safety no longer
-                        // depends on this ordering: dispose() above only runs
-                        // once the sheet is actually unmounted, decoupled from
-                        // when this Future/pop resolves.
-                        Navigator.pop(context);
-
-                        bloc.add(SaveGradingSystemRequested(system));
-
-                        final keptIds = <String>{};
-                        for (var i = 0; i < parsed.length; i++) {
-                          final existingBand =
-                              existingBands != null && i < existingBands.length
-                              ? existingBands[i]
-                              : null;
-                          final id = existingBand?.id ?? const Uuid().v4();
-                          keptIds.add(id);
-                          bloc.add(
-                            SaveGradeBandRequested(
-                              GradeBand(
-                                id: id,
-                                schoolId: schoolId,
-                                gradingSystemId: systemId,
-                                grade: parsed[i].$1,
-                                minScore: parsed[i].$2,
-                                maxScore: parsed[i].$3,
-                                order: i,
-                                hasNumericBoundary: true,
+                  const SizedBox(height: 20),
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('System name', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _name,
+                          decoration: const InputDecoration(hintText: 'e.g., Primary standard'),
+                          validator: (v) => v == null || v.trim().isEmpty ? 'Enter a system name.' : null,
+                        ),
+                        const SizedBox(height: 18),
+                        const Text('Education level', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          initialValue: _levelId,
+                          decoration: const InputDecoration(),
+                          items: widget.levels
+                              .map((l) => DropdownMenuItem(value: l.id, child: Text(l.name)))
+                              .toList(),
+                          validator: (v) => v == null ? 'Select an education level.' : null,
+                          onChanged: (v) => setState(() => _levelId = v),
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Maximum mark', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                                  const SizedBox(height: 8),
+                                  TextFormField(
+                                    controller: _maximumMark,
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(hintText: '100'),
+                                    validator: (v) {
+                                      final value = double.tryParse(v ?? '');
+                                      return value == null || value <= 0
+                                          ? 'Enter a maximum mark greater than zero.'
+                                          : null;
+                                    },
+                                  ),
+                                ],
                               ),
                             ),
-                          );
-                        }
-                        if (existingBands != null) {
-                          for (final old in existingBands) {
-                            if (!keptIds.contains(old.id)) {
-                              bloc.add(DeleteGradeBandRequested(old.id));
-                            }
-                          }
-                        }
-                      },
-                      child: Text(
-                        existing == null
-                            ? 'Save grading system'
-                            : 'Save changes',
-                      ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Pass mark (optional)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                                  const SizedBox(height: 8),
+                                  TextFormField(
+                                    controller: _passMark,
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(hintText: 'e.g., 50'),
+                                    validator: (v) {
+                                      if ((v ?? '').trim().isEmpty) return null;
+                                      final value = double.tryParse(v!);
+                                      final maximum = double.tryParse(_maximumMark.text);
+                                      if (value == null || value < 0 || maximum == null || value > maximum) {
+                                        return 'Enter a value within the maximum mark.';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Set as default for this level'),
+                            Switch(
+                              value: _isDefault,
+                              onChanged: (v) => setState(() => _isDefault = v),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        );
-      },
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton(
+                  onPressed: _continue,
+                  child: const Text('Continue to grade bands'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
+
+  void _continue() {
+    if (!_formKey.currentState!.validate()) return;
+    final level = widget.levels.where((l) => l.id == _levelId).firstOrNull;
+    final schoolId = (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
+    final system = GradingSystemDef(
+      id: const Uuid().v4(),
+      schoolId: schoolId,
+      name: _name.text.trim(),
+      isDefault: _isDefault,
+      appliesTo: 'levels',
+      levelIds: level == null ? const [] : [level.id],
+      passingScore: double.tryParse(_passMark.text.trim()),
+      maximumMark: double.parse(_maximumMark.text.trim()),
+      version: (widget.existing?.version ?? 0) + 1,
+    );
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DefineGradeBandsScreen(
+          system: system,
+          level: level,
+          existingBands: widget.existingBands,
+          replacing: widget.existing,
+        ),
+      ),
+    );
+  }
+}
+
+/// Stage 2 of 2: grade bands, added/edited/reordered/removed, saved
+/// atomically with the system from stage 1.
+class DefineGradeBandsScreen extends StatefulWidget {
+  const DefineGradeBandsScreen({
+    super.key,
+    required this.system,
+    required this.level,
+    this.existingBands,
+    this.replacing,
+  });
+
+  final GradingSystemDef system;
+  final EducationalLevel? level;
+  final List<GradeBand>? existingBands;
+
+  /// The previous version being superseded, if this is an edit. Archived
+  /// (isActive: false) after the new version saves - never mutated in
+  /// place, so any assessment/report that already referenced it by id keeps
+  /// reading the same bands it was recorded against.
+  final GradingSystemDef? replacing;
+
+  @override
+  State<DefineGradeBandsScreen> createState() => _DefineGradeBandsScreenState();
+}
+
+class _BandDraft {
+  _BandDraft({String? grade, String? min, String? max})
+      : gradeController = TextEditingController(text: grade),
+        minController = TextEditingController(text: min),
+        maxController = TextEditingController(text: max);
+  final TextEditingController gradeController;
+  final TextEditingController minController;
+  final TextEditingController maxController;
+  void dispose() {
+    gradeController.dispose();
+    minController.dispose();
+    maxController.dispose();
+  }
+}
+
+class _DefineGradeBandsScreenState extends State<DefineGradeBandsScreen> {
+  late final List<_BandDraft> _drafts = widget.existingBands != null && widget.existingBands!.isNotEmpty
+      ? widget.existingBands!
+          .map(
+            (b) => _BandDraft(
+              grade: b.grade,
+              min: b.minScore.toStringAsFixed(0),
+              max: b.maxScore.toStringAsFixed(0),
+            ),
+          )
+          .toList()
+      : [_BandDraft()];
+  String? _error;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    for (final draft in _drafts) {
+      draft.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('2 of 2'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(4),
+          child: LinearProgressIndicator(
+            value: 1,
+            minHeight: 4,
+            backgroundColor: scheme.outlineVariant,
+            color: scheme.onSurface,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+                children: [
+                  const Text(
+                    'Define grade bands',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'List all grade bands that cover the full range of marks.',
+                    style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: scheme.outlineVariant),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: scheme.outline),
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: const Icon(Icons.bar_chart_rounded, size: 18),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(widget.system.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                            Text(
+                              '0–${widget.system.maximumMark.toStringAsFixed(0)}',
+                              style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: const [
+                      SizedBox(width: 24),
+                      SizedBox(width: 10),
+                      Expanded(child: Text('Band', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                      SizedBox(width: 10),
+                      Expanded(child: Text('From', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                      SizedBox(width: 10),
+                      Expanded(child: Text('To', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                      SizedBox(width: 40),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ReorderableListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    buildDefaultDragHandles: false,
+                    itemCount: _drafts.length,
+                    onReorder: (oldIndex, newIndex) {
+                      setState(() {
+                        if (newIndex > oldIndex) newIndex -= 1;
+                        final moved = _drafts.removeAt(oldIndex);
+                        _drafts.insert(newIndex, moved);
+                      });
+                    },
+                    itemBuilder: (context, index) => Padding(
+                      key: ValueKey(_drafts[index]),
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        children: [
+                          ReorderableDragStartListener(
+                            index: index,
+                            child: Icon(Icons.drag_indicator, color: scheme.onSurfaceVariant),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: _drafts[index].gradeController,
+                              decoration: const InputDecoration(isDense: true, hintText: 'D1'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: _drafts[index].minController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(isDense: true, hintText: '80'),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text('–'),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: TextField(
+                              controller: _drafts[index].maxController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(isDense: true, hintText: '100'),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            onPressed: _drafts.length == 1
+                                ? null
+                                : () => setState(() {
+                                      _drafts[index].dispose();
+                                      _drafts.removeAt(index);
+                                    }),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() => _drafts.add(_BandDraft())),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add grade band'),
+                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: scheme.onSurfaceVariant),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Every mark from 0 to ${widget.system.maximumMark.toStringAsFixed(0)} must be covered once.',
+                            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: scheme.outline),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(_error!, style: TextStyle(color: scheme.onSurface)),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton(
+                  onPressed: _saving ? null : _save,
+                  child: _saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Save grading system'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _save() {
+    final bands = <GradeBand>[];
+    for (var i = 0; i < _drafts.length; i++) {
+      final draft = _drafts[i];
+      final grade = draft.gradeController.text.trim();
+      final min = double.tryParse(draft.minController.text.trim());
+      final max = double.tryParse(draft.maxController.text.trim());
+      if (grade.isEmpty || min == null || max == null) {
+        setState(() => _error = 'Complete every grade band\'s label, from and to mark.');
+        return;
+      }
+      bands.add(
+        GradeBand(
+          id: const Uuid().v4(),
+          schoolId: widget.system.schoolId,
+          gradingSystemId: widget.system.id,
+          grade: grade,
+          minScore: min,
+          maxScore: max,
+          order: i,
+          hasNumericBoundary: true,
+        ),
+      );
+    }
+    final validationError = GradingBandValidator.validate(
+      maximumMark: widget.system.maximumMark,
+      bands: bands,
+    );
+    if (validationError != null) {
+      setState(() => _error = validationError);
+      return;
+    }
+    setState(() {
+      _error = null;
+      _saving = true;
+    });
+    final bloc = context.read<StructureBloc>();
+    bloc.add(SaveGradingSystemWithBandsRequested(widget.system, bands));
+    if (widget.replacing != null) {
+      bloc.add(
+        SaveGradingSystemRequested(
+          widget.replacing!.copyWith(
+            isActive: false,
+            isDefault: false,
+          ),
+        ),
+      );
+    }
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+}
+
+extension _FirstOrNullExtension<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }

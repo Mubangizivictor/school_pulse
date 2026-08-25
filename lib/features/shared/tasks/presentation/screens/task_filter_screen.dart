@@ -87,9 +87,7 @@ class _TaskFilterScreenState extends State<TaskFilterScreen> {
       selected: isSelected,
       onSelected: (val) {},
       backgroundColor: Colors.transparent,
-      selectedColor: Theme.of(
-        context,
-      ).colorScheme.primary.withValues(alpha: 0.1),
+      selectedColor: Theme.of(context).colorScheme.primary,
       checkmarkColor: Theme.of(context).colorScheme.primary,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),

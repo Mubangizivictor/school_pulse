@@ -45,7 +45,7 @@ class ParentEngagementScreen extends StatelessWidget {
                   children: [
                     _EngagementRow(
                       icon: Icons.family_restroom,
-                      color: Colors.purple,
+                      color: Colors.black,
                       label: 'Portal Usage',
                       value: '${stats.parentPortalUsageRate}%',
                     ),

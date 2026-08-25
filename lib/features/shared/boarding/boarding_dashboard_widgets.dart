@@ -63,9 +63,7 @@ class BoardingDashboardHeader extends StatelessWidget {
               children: [
                 Positioned.fill(
                   child: CircleAvatar(
-                    backgroundColor: theme.colorScheme.primary.withValues(
-                      alpha: 0.15,
-                    ),
+                    backgroundColor: theme.colorScheme.primary,
                     backgroundImage: hasPhoto ? NetworkImage(photoUrl!) : null,
                     child: hasPhoto
                         ? null
@@ -228,9 +226,7 @@ class BoardingOverviewCard extends StatelessWidget {
                       VerticalDivider(
                         width: 1,
                         thickness: 1,
-                        color: theme.colorScheme.outlineVariant.withValues(
-                          alpha: 0.5,
-                        ),
+                        color: theme.colorScheme.outlineVariant,
                       ),
                     Expanded(child: _MetricTile(metric: metrics[i])),
                   ],
@@ -274,7 +270,7 @@ class _MetricTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+                color: theme.colorScheme.onSurface,
                 fontSize: 11.5,
                 height: 1.15,
               ),
@@ -450,11 +446,9 @@ class _QuickActionIcon extends StatelessWidget {
       height: 48,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+        color: Theme.of(context).colorScheme.onSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
-        ),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface),
       ),
       child: iconWidget,
     );
@@ -524,7 +518,7 @@ class BoardingSecondaryMetricsRow extends StatelessWidget {
                 height: 38,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: metric.color.withValues(alpha: 0.15),
+                  color: metric.color,
                 ),
                 child: Icon(metric.icon, size: 18, color: metric.color),
               ),
@@ -611,12 +605,7 @@ class BoardingScheduleCard extends StatelessWidget {
             children: [
               for (var i = 0; i < items.length; i++) ...[
                 if (i > 0)
-                  Divider(
-                    height: 1,
-                    color: theme.colorScheme.outlineVariant.withValues(
-                      alpha: 0.5,
-                    ),
-                  ),
+                  Divider(height: 1, color: theme.colorScheme.outlineVariant),
                 _ScheduleRow(item: items[i]),
               ],
             ],
@@ -763,12 +752,7 @@ class BoardingTasksCard extends StatelessWidget {
           else
             for (var i = 0; i < tasks.length; i++) ...[
               if (i > 0)
-                Divider(
-                  height: 1,
-                  color: theme.colorScheme.outlineVariant.withValues(
-                    alpha: 0.5,
-                  ),
-                ),
+                Divider(height: 1, color: theme.colorScheme.outlineVariant),
               _TaskRow(task: tasks[i]),
             ],
         ],
@@ -932,8 +916,7 @@ class _BoardingAlertsCardState extends State<BoardingAlertsCard> {
                               VerticalDivider(
                                 width: 1,
                                 thickness: 1,
-                                color: theme.colorScheme.outlineVariant
-                                    .withValues(alpha: 0.5),
+                                color: theme.colorScheme.outlineVariant,
                               ),
                             Expanded(child: _AlertTile(alert: group[i])),
                           ],
@@ -993,7 +976,7 @@ class _AlertTile extends StatelessWidget {
               height: 34,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: alert.color.withValues(alpha: 0.18),
+                color: alert.color,
               ),
               child: Icon(alert.icon, size: 18, color: alert.color),
             ),

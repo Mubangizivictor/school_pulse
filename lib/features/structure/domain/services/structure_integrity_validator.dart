@@ -90,6 +90,15 @@ class StructureIntegrityValidator {
     )) {
       return 'A period with this name already exists in ${year.name}.';
     }
+    if (terms.any(
+      (other) =>
+          other.id != candidate.id &&
+          other.academicYearId == candidate.academicYearId &&
+          !other.isArchived &&
+          other.periodType != candidate.periodType,
+    )) {
+      return '${year.name} already uses ${terms.firstWhere((other) => other.academicYearId == candidate.academicYearId && !other.isArchived).periodType.name}s. Terms and semesters cannot be mixed.';
+    }
     return null;
   }
 
@@ -151,12 +160,7 @@ class StructureIntegrityValidator {
     );
     if (parents.isEmpty) return 'Select an active parent class.';
     final parent = parents.first;
-    if (candidate.capacity <= 0 && candidate.isActive) {
-      return 'Enter a stream capacity greater than zero.';
-    }
-    if (parent.capacity <= 0 && candidate.isActive) {
-      return 'Set ${parent.name} capacity before adding active streams.';
-    }
+    if (candidate.capacity < 0) return 'Stream capacity cannot be negative.';
     if (streams.any(
       (stream) =>
           stream.id != candidate.id &&
@@ -181,6 +185,10 @@ class StructureIntegrityValidator {
       return 'This stream code is already used in ${parent.name}.';
     }
 
+    // A class capacity of 0 means "no limit configured" and is not
+    // enforced against its streams; the same convention SchoolClass already
+    // uses elsewhere (see CapacityValidationService).
+    if (parent.capacity <= 0 || candidate.capacity <= 0) return null;
     final allocated = streams
         .where(
           (stream) =>
@@ -205,6 +213,16 @@ class StructureIntegrityValidator {
     required List<Department> departments,
   }) {
     if (candidate.name.trim().isEmpty) return 'Enter a subject name.';
+    if (subjects.any(
+      (subject) =>
+          subject.id != candidate.id &&
+          subject.isActive &&
+          candidate.isActive &&
+          subject.name.trim().toLowerCase() ==
+              candidate.name.trim().toLowerCase(),
+    )) {
+      return 'This subject name is already in use.';
+    }
     final code = candidate.code.trim().toLowerCase();
     if (code.isNotEmpty &&
         subjects.any(

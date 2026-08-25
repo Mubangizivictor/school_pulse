@@ -66,18 +66,16 @@ class ParentAuthLayout extends StatelessWidget {
                       : null,
                   decoration: isDesktop
                       ? BoxDecoration(
-                          color: isDark
-                              ? AppColors.surfaceDark.withValues(alpha: 0.5)
-                              : Colors.white,
+                          color: isDark ? AppColors.surfaceDark : Colors.white,
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
                             color: isDark
-                                ? AppColors.white.withValues(alpha: 0.1)
+                                ? AppColors.white
                                 : AppColors.borderLight,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
+                              color: Colors.black,
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
@@ -286,7 +284,7 @@ class _ParentAccessCodeField extends StatelessWidget {
             errorText: errorText,
             errorMaxLines: 2,
             hintStyle: AppTypography.bodyLarge.copyWith(
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: .65),
+              color: theme.colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w400,
             ),
             prefixIcon: Icon(Icons.vpn_key_outlined, color: accent, size: 29),
@@ -296,7 +294,7 @@ class _ParentAccessCodeField extends StatelessWidget {
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: radius,
-              borderSide: BorderSide(color: accent.withValues(alpha: .9)),
+              borderSide: BorderSide(color: accent),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: radius,
@@ -331,7 +329,7 @@ class _ParentPortalHelpCard extends StatelessWidget {
         vertical: AppSpacing.x2l,
       ),
       decoration: BoxDecoration(
-        color: accent.withValues(alpha: isDark ? .13 : .075),
+        color: accent,
         borderRadius: BorderRadius.circular(22),
       ),
       child: Row(
@@ -378,9 +376,7 @@ class _ParentContinueButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onPressed != null && !isLoading;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final disabled = Theme.of(
-      context,
-    ).colorScheme.onSurface.withValues(alpha: .20);
+    final disabled = Theme.of(context).colorScheme.onSurface;
     final fill = isDark ? Colors.white : Colors.black;
     final foreground = isDark ? Colors.black : Colors.white;
 
@@ -402,7 +398,7 @@ class _ParentContinueButton extends StatelessWidget {
               boxShadow: enabled
                   ? [
                       BoxShadow(
-                        color: fill.withValues(alpha: .25),
+                        color: fill,
                         blurRadius: 18,
                         offset: const Offset(0, 8),
                       ),
@@ -462,10 +458,7 @@ class _ParentPortalPrivacyNote extends StatelessWidget {
         Container(
           width: 58,
           height: 58,
-          decoration: BoxDecoration(
-            color: accent.withValues(alpha: .11),
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
           child: Stack(
             alignment: Alignment.center,
             children: [

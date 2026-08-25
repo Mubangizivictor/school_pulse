@@ -56,9 +56,7 @@ class _ShareResourceScreenState extends State<ShareResourceScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.1),
+                        color: Theme.of(context).colorScheme.primary,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -177,9 +175,7 @@ class _ShareOption extends StatelessWidget {
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).colorScheme.primary.withValues(alpha: 0.1),
+              color: Theme.of(context).colorScheme.primary,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -209,7 +205,7 @@ class _ShareOption extends StatelessWidget {
             height: 1,
             indent: 64,
             endIndent: 16,
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
+            color: Theme.of(context).dividerColor,
           ),
       ],
     );

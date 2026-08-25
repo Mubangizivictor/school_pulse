@@ -116,12 +116,9 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: AppColors.electricBlue.withValues(alpha: 0.1),
+                    color: AppColors.electricBlue,
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.electricBlue.withValues(alpha: 0.2),
-                      width: 1,
-                    ),
+                    border: Border.all(color: AppColors.electricBlue, width: 1),
                     image: conversation.avatarUrl != null
                         ? DecorationImage(
                             image: NetworkImage(conversation.avatarUrl!),
@@ -150,9 +147,7 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
                 Text(
                   '${conversation.type == ChatType.channel ? 'Channel' : 'Broadcast'} • '
                   '${recipients.length} recipients',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: Colors.white60,
-                  ),
+                  style: AppTypography.bodyMedium.copyWith(color: Colors.white),
                 ),
               ],
             ),
@@ -170,7 +165,7 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
             decoration: BoxDecoration(
               color: AppColors.surfaceDark,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+              border: Border.all(color: Colors.white),
             ),
             child: Column(
               children: [
@@ -184,14 +179,14 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
                         const Icon(
                           Icons.lock_outline,
                           size: 18,
-                          color: Colors.white54,
+                          color: Colors.white,
                         ),
                         const SizedBox(width: AppSpacing.m),
                         Expanded(
                           child: Text(
                             'Recipients are only visible to whoever manages this list.',
                             style: AppTypography.bodyMedium.copyWith(
-                              color: Colors.white60,
+                              color: Colors.white,
                             ),
                           ),
                         ),
@@ -204,7 +199,7 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
                     child: Text(
                       'No recipients yet',
                       style: AppTypography.bodyMedium.copyWith(
-                        color: Colors.white60,
+                        color: Colors.white,
                       ),
                     ),
                   )
@@ -213,11 +208,8 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: visible.length,
-                    separatorBuilder: (context, index) => Divider(
-                      height: 1,
-                      color: Colors.white.withValues(alpha: 0.05),
-                      indent: 72,
-                    ),
+                    separatorBuilder: (context, index) =>
+                        Divider(height: 1, color: Colors.white, indent: 72),
                     itemBuilder: (context, index) {
                       final recipient = visible[index];
                       final role = UserRole.values.where(
@@ -230,9 +222,7 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
                         ),
                         leading: CircleAvatar(
                           radius: 24,
-                          backgroundColor: AppColors.electricBlue.withValues(
-                            alpha: 0.15,
-                          ),
+                          backgroundColor: AppColors.electricBlue,
                           child: Text(
                             recipient.name.isEmpty
                                 ? '?'
@@ -255,7 +245,7 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
                               ? recipient.role
                               : UserRoleDisplay.name(role.first),
                           style: AppTypography.bodySmall.copyWith(
-                            color: Colors.white60,
+                            color: Colors.white,
                           ),
                         ),
                         trailing: amAdmin
@@ -263,7 +253,7 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
                                 icon: const Icon(
                                   Icons.person_remove_outlined,
                                   size: 18,
-                                  color: Colors.redAccent,
+                                  color: Colors.black,
                                 ),
                                 onPressed: () =>
                                     context.read<ConversationBloc>().add(
@@ -278,7 +268,7 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
                     },
                   ),
                 if (amAdmin && recipients.length > _previewCount) ...[
-                  const Divider(height: 1, color: Colors.white10),
+                  const Divider(height: 1, color: Colors.white),
                   TextButton(
                     onPressed: () => setState(
                       () => _showAllRecipients = !_showAllRecipients,
@@ -329,11 +319,11 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
               onPressed: () =>
                   _confirmDelete(context, user, conversation, amAdmin),
               style: TextButton.styleFrom(
-                foregroundColor: Colors.redAccent,
+                foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: Colors.redAccent, width: 1),
+                  side: const BorderSide(color: Colors.black, width: 1),
                 ),
               ),
               child: Text(
@@ -373,7 +363,7 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
             onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(
               amAdmin ? 'Delete' : 'Leave',
-              style: const TextStyle(color: Colors.red),
+              style: const TextStyle(color: Colors.black),
             ),
           ),
         ],
@@ -398,7 +388,7 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
         decoration: BoxDecoration(
           color: AppColors.surfaceDark,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          border: Border.all(color: Colors.white),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,10 +396,10 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, size: 20, color: Colors.white70),
+              child: Icon(icon, size: 20, color: Colors.white),
             ),
             const SizedBox(width: AppSpacing.m),
             Expanded(
@@ -427,7 +417,7 @@ class _BroadcastDetailsViewState extends State<_BroadcastDetailsView> {
                   Text(
                     subtitle,
                     style: AppTypography.bodyMedium.copyWith(
-                      color: Colors.white60,
+                      color: Colors.white,
                     ),
                   ),
                 ],

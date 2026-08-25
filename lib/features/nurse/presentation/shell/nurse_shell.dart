@@ -128,7 +128,7 @@ class _NurseShellState extends State<NurseShell> {
             backgroundColor: isDark
                 ? AppColors.surfaceDark
                 : AppColors.surfaceLight,
-            indicatorColor: AppColors.primary(context).withValues(alpha: 0.1),
+            indicatorColor: AppColors.primary(context),
             selectedIndex: _selectedIndex,
             onDestinationSelected: _onDestinationSelected,
             destinations: _destinations(context),

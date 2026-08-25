@@ -48,10 +48,7 @@ class _LogoutConfirmationDialog extends StatelessWidget {
             Container(
               width: 58,
               height: 58,
-              decoration: BoxDecoration(
-                color: danger.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: danger, shape: BoxShape.circle),
               child: Icon(Icons.logout_rounded, color: danger, size: 29),
             ),
             const SizedBox(height: 18),

@@ -207,7 +207,7 @@ class _TimetableConfigBody extends StatelessWidget {
             icon: slot.type == 'period'
                 ? Icons.menu_book_outlined
                 : Icons.free_breakfast_outlined,
-            color: slot.type == 'period' ? Colors.blue : Colors.orange,
+            color: slot.type == 'period' ? Colors.black : Colors.black,
             title: slot.name,
             subtitle: '${slot.startTime} - ${slot.endTime} - ${slot.type}',
             onEdit: () => showTimetableSlotFormDialog(

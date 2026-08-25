@@ -474,7 +474,7 @@ class _SecurityOverviewBodyState extends State<_SecurityOverviewBody> {
           ),
           const SizedBox(height: AppSpacing.m),
           AppCard(
-            borderColor: AppColors.danger(context).withValues(alpha: 0.3),
+            borderColor: AppColors.danger(context),
             showShadow: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -546,18 +546,15 @@ class _SecureStatusBanner extends StatelessWidget {
         ? AppColors.success(context)
         : AppColors.warning(context);
     return AppCard(
-      color: color.withValues(alpha: 0.08),
+      color: color,
       showBorder: true,
-      borderColor: color.withValues(alpha: 0.25),
+      borderColor: color,
       showShadow: false,
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(AppSpacing.l),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             child: Icon(
               secure ? Icons.shield_rounded : Icons.gpp_maybe_rounded,
               color: color,
@@ -664,7 +661,7 @@ class _SecurityRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.l),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
+              color: iconColor,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: iconColor, size: 22),
@@ -779,7 +776,7 @@ class _SuspiciousActivityCard extends StatelessWidget {
               AppCard(
                 margin: const EdgeInsets.only(bottom: AppSpacing.s),
                 showShadow: false,
-                borderColor: AppColors.warning(context).withValues(alpha: 0.3),
+                borderColor: AppColors.warning(context),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

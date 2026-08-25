@@ -79,7 +79,7 @@ class _RepairListScreenState extends State<RepairListScreen> {
                         const Icon(
                           Icons.calendar_today,
                           size: 14,
-                          color: Colors.grey,
+                          color: Colors.black,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -116,9 +116,9 @@ class _RepairListScreenState extends State<RepairListScreen> {
 }
 
 Color _repairStatusColor(RepairStatus status) => switch (status) {
-  RepairStatus.pending => Colors.orange,
-  RepairStatus.approved => Colors.blue,
-  RepairStatus.inProgress => Colors.deepPurple,
-  RepairStatus.completed => Colors.green,
-  RepairStatus.cancelled => Colors.red,
+  RepairStatus.pending => Colors.black,
+  RepairStatus.approved => Colors.black,
+  RepairStatus.inProgress => Colors.black,
+  RepairStatus.completed => Colors.black,
+  RepairStatus.cancelled => Colors.black,
 };

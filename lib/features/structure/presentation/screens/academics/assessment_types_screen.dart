@@ -57,7 +57,7 @@ class _AssessmentTypesScreenState extends State<AssessmentTypesScreen> {
                     final type = types[index];
                     return AcademicsListCard(
                       icon: Icons.fact_check_outlined,
-                      color: Colors.green,
+                      color: Colors.black,
                       title: type.name,
                       subtitle: type.description,
                       trailingLabel: type.weightPercentage > 0
@@ -204,10 +204,10 @@ class _AssessmentTypeFormScreenState extends State<_AssessmentTypeFormScreen> {
                       Navigator.of(context).pop();
                     }
                   },
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  icon: const Icon(Icons.delete_outline, color: Colors.black),
                   label: const Text(
                     'Delete Assessment Type',
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(color: Colors.black),
                   ),
                 ),
               ],

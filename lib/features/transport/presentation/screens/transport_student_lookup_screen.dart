@@ -149,12 +149,12 @@ class _TransportStudentLookupScreenState
               if (_loadingView) const Center(child: SchoolPulseLoader()),
               if (_error != null)
                 Card(
-                  color: Colors.red.shade50,
+                  color: Colors.black,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       _error!,
-                      style: const TextStyle(color: Colors.red),
+                      style: const TextStyle(color: Colors.black),
                     ),
                   ),
                 ),
@@ -204,7 +204,7 @@ class _InfoRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 100,
-            child: Text(label, style: const TextStyle(color: Colors.grey)),
+            child: Text(label, style: const TextStyle(color: Colors.black)),
           ),
           Expanded(child: Text(value)),
         ],

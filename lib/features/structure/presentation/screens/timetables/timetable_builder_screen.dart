@@ -356,7 +356,7 @@ class _SlotRow extends StatelessWidget {
       child: Material(
         color: lesson == null
             ? Theme.of(context).cardColor
-            : colors.primaryContainer.withValues(alpha: .3),
+            : colors.primaryContainer,
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
@@ -372,7 +372,7 @@ class _SlotRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: colors.outline.withValues(alpha: .18)),
+              border: Border.all(color: colors.outline),
             ),
             child: Row(
               children: [

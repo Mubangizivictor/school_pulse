@@ -60,12 +60,8 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final inboxSurface = isDark
-        ? const Color(0xFF10376F)
-        : colors.surfaceContainerHigh;
-    final inboxBorder = isDark
-        ? const Color(0xFF3466A7)
-        : colors.outlineVariant;
+    final inboxSurface = isDark ? Colors.black : colors.surfaceContainerHigh;
+    final inboxBorder = isDark ? Colors.black : colors.outlineVariant;
     return Scaffold(
       backgroundColor: colors.surface,
       appBar: AppBar(
@@ -335,13 +331,10 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(
-                Icons.delete_outline,
-                color: Colors.redAccent,
-              ),
+              leading: const Icon(Icons.delete_outline, color: Colors.black),
               title: Text(
                 chat.type == ChatType.direct ? 'Delete chat' : 'Exit group',
-                style: const TextStyle(color: Colors.redAccent),
+                style: const TextStyle(color: Colors.black),
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -400,20 +393,16 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             Container(
               padding: const EdgeInsets.all(40),
               decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF0D315F)
-                    : colors.surfaceContainerHigh,
+                color: isDark ? Colors.black : colors.surfaceContainerHigh,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isDark
-                      ? const Color(0xFF2D5B98)
-                      : colors.outlineVariant,
+                  color: isDark ? Colors.black : colors.outlineVariant,
                 ),
               ),
               child: Icon(
                 Icons.chat_bubble_outline_rounded,
                 size: 80,
-                color: AppColors.electricBlue.withValues(alpha: 0.3),
+                color: AppColors.electricBlue,
               ),
             ),
             const SizedBox(height: 32),
@@ -482,9 +471,7 @@ class _FilterChip extends StatelessWidget {
         selected: isSelected,
         onSelected: (_) => onTap?.call(),
         selectedColor: colors.primary,
-        backgroundColor: isDark
-            ? const Color(0xFF10376F)
-            : colors.surfaceContainerHigh,
+        backgroundColor: isDark ? Colors.black : colors.surfaceContainerHigh,
         labelStyle: TextStyle(
           color: isSelected ? colors.onPrimary : colors.onSurfaceVariant,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -495,7 +482,7 @@ class _FilterChip extends StatelessWidget {
             color: isSelected
                 ? colors.primary
                 : isDark
-                ? const Color(0xFF3466A7)
+                ? Colors.black
                 : colors.outlineVariant,
           ),
         ),

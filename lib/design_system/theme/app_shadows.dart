@@ -6,7 +6,7 @@ class AppShadows {
 
   static List<BoxShadow> get subtle => [
     BoxShadow(
-      color: AppColors.deepNavy.withValues(alpha: 0.05),
+      color: AppColors.deepNavy,
       blurRadius: 4,
       offset: const Offset(0, 2),
     ),
@@ -14,7 +14,7 @@ class AppShadows {
 
   static List<BoxShadow> get card => [
     BoxShadow(
-      color: AppColors.deepNavy.withValues(alpha: 0.08),
+      color: AppColors.deepNavy,
       blurRadius: 12,
       offset: const Offset(0, 4),
     ),
@@ -22,7 +22,7 @@ class AppShadows {
 
   static List<BoxShadow> get elevated => [
     BoxShadow(
-      color: AppColors.deepNavy.withValues(alpha: 0.12),
+      color: AppColors.deepNavy,
       blurRadius: 24,
       offset: const Offset(0, 8),
     ),
@@ -30,7 +30,7 @@ class AppShadows {
 
   static List<BoxShadow> get modal => [
     BoxShadow(
-      color: AppColors.midnightNavy.withValues(alpha: 0.2),
+      color: AppColors.midnightNavy,
       blurRadius: 40,
       offset: const Offset(0, 16),
     ),
@@ -38,7 +38,7 @@ class AppShadows {
 
   static List<BoxShadow> get glowBlue => [
     BoxShadow(
-      color: AppColors.electricBlue.withValues(alpha: 0.3),
+      color: AppColors.electricBlue,
       blurRadius: 16,
       offset: const Offset(0, 4),
     ),

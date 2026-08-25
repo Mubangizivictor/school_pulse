@@ -70,15 +70,15 @@ class NotificationCategoryConfig {
 class NotificationCategoryCatalog {
   const NotificationCategoryCatalog._();
 
-  static const Color _indigo = Color(0xFF6366F1);
-  static const Color _green = Color(0xFF10B981);
-  static const Color _amber = Color(0xFFF59E0B);
-  static const Color _blue = Color(0xFF3B82F6);
-  static const Color _pink = Color(0xFFEC4899);
-  static const Color _violet = Color(0xFF8B5CF6);
-  static const Color _cyan = Color(0xFF06B6D4);
-  static const Color _slate = Color(0xFF94A3B8);
-  static const Color _rose = Color(0xFFE11D48);
+  static const Color _indigo = Colors.black;
+  static const Color _green = Colors.black;
+  static const Color _amber = Colors.black;
+  static const Color _blue = Colors.black;
+  static const Color _pink = Colors.black;
+  static const Color _violet = Colors.black;
+  static const Color _cyan = Colors.black;
+  static const Color _slate = Colors.black;
+  static const Color _rose = Colors.black;
 
   static const Map<NotificationCategory, NotificationCategoryConfig>
   _configs = {

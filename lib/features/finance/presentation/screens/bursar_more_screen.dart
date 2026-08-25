@@ -36,37 +36,37 @@ class BursarMoreScreen extends StatelessWidget {
     _MoreItem(
       icon: Icons.request_page_rounded,
       label: 'Expenditure\nRequests',
-      color: Colors.orange,
+      color: Colors.black,
       builder: (_) => const ExpenditureScreen(),
     ),
     _MoreItem(
       icon: Icons.fact_check_rounded,
       label: 'Approvals',
-      color: Colors.deepPurple,
+      color: Colors.black,
       builder: (_) => const ExpenditureScreen(),
     ),
     _MoreItem(
       icon: Icons.pie_chart_rounded,
       label: 'Budget\nManagement',
-      color: Colors.blue,
+      color: Colors.black,
       builder: (_) => const BudgetManagementScreen(),
     ),
     _MoreItem(
       icon: Icons.settings_applications_rounded,
       label: 'Fee\nStructures',
-      color: Colors.teal,
+      color: Colors.black,
       builder: (_) => const FeeConfigurationScreen(),
     ),
     _MoreItem(
       icon: Icons.verified_user_rounded,
       label: 'Eligibility\nRules',
-      color: Colors.green,
+      color: Colors.black,
       builder: (_) => const StudentEligibilityScreen(),
     ),
     _MoreItem(
       icon: Icons.payments_rounded,
       label: 'Payroll',
-      color: Colors.indigo,
+      color: Colors.black,
       builder: (_) => const PayrollManagementScreen(),
     ),
   ];
@@ -75,7 +75,7 @@ class BursarMoreScreen extends StatelessWidget {
     _MoreItem(
       icon: Icons.assessment_rounded,
       label: 'Financial Reports',
-      color: Colors.purple,
+      color: Colors.black,
       builder: (_) => const FinancialReportsScreen(),
     ),
   ];
@@ -199,7 +199,7 @@ class _GridTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: item.color.withValues(alpha: 0.12),
+                color: item.color,
                 shape: BoxShape.circle,
               ),
               child: Icon(item.icon, color: item.color, size: 22),
@@ -244,7 +244,7 @@ class _MoreRow extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: item.color.withValues(alpha: 0.12),
+                color: item.color,
                 borderRadius: AppRadius.medium,
               ),
               child: Icon(item.icon, color: item.color, size: 20),
@@ -285,11 +285,9 @@ class _LogoutRow extends StatelessWidget {
           vertical: AppSpacing.l,
         ),
         decoration: BoxDecoration(
-          color: AppColors.danger(context).withValues(alpha: 0.08),
+          color: AppColors.danger(context),
           borderRadius: AppRadius.large,
-          border: Border.all(
-            color: AppColors.danger(context).withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: AppColors.danger(context)),
         ),
         child: Row(
           children: [

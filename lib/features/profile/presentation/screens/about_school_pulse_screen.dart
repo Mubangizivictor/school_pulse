@@ -442,7 +442,7 @@ class _VersionIcon extends StatelessWidget {
     width: 70,
     height: 70,
     decoration: BoxDecoration(
-      color: color.withValues(alpha: .14),
+      color: color,
       borderRadius: BorderRadius.circular(18),
     ),
     child: Icon(Icons.verified_user_outlined, color: color, size: 36),
@@ -510,7 +510,7 @@ class _ActionRow extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: primary.withValues(alpha: .14),
+                  color: primary,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(action.icon, color: primary, size: 28),
@@ -567,7 +567,7 @@ class _SocialButton extends StatelessWidget {
       icon: Icon(icon),
       color: AppColors.primary(context),
       style: IconButton.styleFrom(
-        backgroundColor: AppColors.primary(context).withValues(alpha: .1),
+        backgroundColor: AppColors.primary(context),
         minimumSize: const Size(52, 52),
       ),
     ),

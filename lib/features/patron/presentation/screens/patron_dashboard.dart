@@ -189,7 +189,7 @@ class _PatronDashboardState extends State<PatronDashboard> {
       BoardingSecondaryMetric(
         label: 'Occupancy',
         icon: Icons.pie_chart_outline,
-        color: Colors.teal,
+        color: Colors.black,
         value: '$occupancyPercent%',
         onTap: () => _openSection('/staff/patron/dorms'),
       ),
@@ -203,7 +203,7 @@ class _PatronDashboardState extends State<PatronDashboard> {
       BoardingSecondaryMetric(
         label: 'Welfare Concerns',
         icon: Icons.favorite_outline,
-        color: Colors.pink,
+        color: Colors.black,
         value: '${data.pendingWelfareConcerns}',
         onTap: () => _openSection('/staff/patron/welfare'),
       ),
@@ -271,7 +271,7 @@ class _PatronDashboardState extends State<PatronDashboard> {
           title: 'Clinic Review',
           detail: '${data.studentsInClinic} boarder(s) in the clinic today',
           icon: Icons.medical_services_outlined,
-          color: Colors.purple,
+          color: Colors.black,
           onTap: () => _openSection('/staff/patron/welfare'),
         ),
       );
@@ -282,7 +282,7 @@ class _PatronDashboardState extends State<PatronDashboard> {
           title: 'Welfare',
           detail: '${data.pendingWelfareConcerns} open concern(s)',
           icon: Icons.favorite_outline,
-          color: Colors.pink,
+          color: Colors.black,
           onTap: () => _openSection('/staff/patron/welfare'),
         ),
       );

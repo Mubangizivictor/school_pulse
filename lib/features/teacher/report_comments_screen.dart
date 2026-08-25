@@ -86,9 +86,8 @@ class _ReportCommentsScreenState extends State<ReportCommentsScreen> {
                   return ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: state.students.length,
-                    separatorBuilder: (context, index) => Divider(
-                      color: AppColors.border(context).withValues(alpha: 0.5),
-                    ),
+                    separatorBuilder: (context, index) =>
+                        Divider(color: AppColors.border(context)),
                     itemBuilder: (context, index) {
                       final student = state.students[index];
                       final commentAuthState = context.read<AuthBloc>().state;

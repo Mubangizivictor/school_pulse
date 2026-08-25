@@ -77,7 +77,7 @@ class Step4Review extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: colors.primaryContainer.withValues(alpha: .3),
+                  color: colors.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -137,7 +137,7 @@ class _ReviewCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outline.withValues(alpha: .18)),
+        border: Border.all(color: colors.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

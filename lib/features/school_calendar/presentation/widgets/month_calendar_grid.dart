@@ -56,7 +56,7 @@ class MonthCalendarGrid extends StatelessWidget {
           child: Container(
             decoration: isToday
                 ? BoxDecoration(
-                    color: AppColors.primary(context).withValues(alpha: 0.15),
+                    color: AppColors.primary(context),
                     borderRadius: BorderRadius.circular(8),
                   )
                 : null,

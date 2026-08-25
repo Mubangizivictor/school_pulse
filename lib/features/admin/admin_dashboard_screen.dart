@@ -1,130 +1,72 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/theme/app_spacing.dart';
-import 'package:school_pulse/design_system/theme/app_radius.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:intl/intl.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_bloc.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_event.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_state.dart';
-import 'package:school_pulse/features/admin/presentation/widgets/quick_access_prefs.dart';
-import 'package:school_pulse/features/admin/data/models/audit_log.dart';
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
-import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
+import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
+/// Tenant-scoped School Admin home. All metric values come from the existing
+/// dashboard BLoC; action counts and pins are read from the active tenant.
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
 
   @override
+  Widget build(BuildContext context) => BlocProvider(
+    create: (_) => di.sl<AdminDashboardBloc>()..add(LoadAdminDashboardStats()),
+    child: const _AdminHome(),
+  );
+}
+
+class _AdminHome extends StatelessWidget {
+  const _AdminHome();
+
+  @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) =>
-          di.sl<AdminDashboardBloc>()..add(LoadAdminDashboardStats()),
-      child: Scaffold(
-        appBar: staffDashboardAppBar(context, roleLabel: 'School Admin'),
-        body: Builder(
-          builder: (context) => RefreshIndicator(
-            onRefresh: () async {
-              context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats());
-              await context.read<AdminDashboardBloc>().stream.firstWhere(
-                (state) => state is! AdminDashboardLoading,
-              );
-            },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 640),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.xl,
-                      AppSpacing.l,
-                      AppSpacing.xl,
-                      AppSpacing.x3l,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
-                          builder: (context, state) {
-                            final label = state is AdminDashboardLoaded
-                                ? state.stats.currentPeriodLabel
-                                : null;
-                            final stats = state is AdminDashboardLoaded
-                                ? state.stats
-                                : null;
-                            final feesLabel = stats?.termFeesCollected == null
-                                ? null
-                                : _formatUgx(stats!.termFeesCollected!);
-                            return StaffHeroSummaryCard(
-                              greetingNameFallback: 'Admin',
-                              periodLabel: label,
-                              onPeriodTap: () => _showTermPicker(context),
-                              kpis: stats == null
-                                  ? null
-                                  : [
-                                      StaffKpiData(
-                                        title: 'Students',
-                                        valueText:
-                                            '${stats.totalStudentsCount}',
-                                        subtitle: stats.isHistoricalTerm
-                                            ? 'Active now (current)'
-                                            : 'Active students',
-                                        icon: Icons.school_rounded,
-                                        color: AppColors.information(context),
-                                      ),
-                                      StaffKpiData(
-                                        title: 'Staff',
-                                        valueText: '${stats.activeStaffCount}',
-                                        subtitle: stats.isHistoricalTerm
-                                            ? 'Active now (current)'
-                                            : 'Active staff',
-                                        icon: Icons.badge_rounded,
-                                        color: AppColors.danger(context),
-                                      ),
-                                      StaffKpiData(
-                                        title: 'Attendance',
-                                        valueText:
-                                            stats.studentAttendancePercent ==
-                                                null
-                                            ? '—'
-                                            : '${stats.studentAttendancePercent!.round()}%',
-                                        subtitle:
-                                            stats.currentPeriodLabel ??
-                                            'This week',
-                                        icon: Icons.fact_check_rounded,
-                                        color: AppColors.success(context),
-                                      ),
-                                      StaffKpiData(
-                                        title: 'Fees Collected',
-                                        valueText: feesLabel ?? '—',
-                                        subtitle:
-                                            stats.currentPeriodLabel == null
-                                            ? 'UGX · This year'
-                                            : 'UGX · ${stats.currentPeriodLabel}',
-                                        icon: Icons
-                                            .account_balance_wallet_rounded,
-                                        color: AppColors.warning(context),
-                                      ),
-                                    ],
-                            );
-                          },
-                        ),
-                        const SizedBox(height: AppSpacing.xl),
-                        _QuickAccessSection(),
-                        const SizedBox(height: AppSpacing.xl),
-                        const _PendingApprovalsCard(),
-                        const SizedBox(height: AppSpacing.l),
-                        const _RecentActivityCard(),
-                      ],
-                    ),
-                  ),
+    final auth = context.watch<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return const SizedBox.shrink();
+    final user = auth.user;
+    return Scaffold(
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: _ink(context),
+          onRefresh: () async {
+            context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats());
+            await context.read<AdminDashboardBloc>().stream.firstWhere(
+              (state) => state is! AdminDashboardLoading,
+            );
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Header(user: user),
+                    const SizedBox(height: 28),
+                    _ContextRow(user: user),
+                    const SizedBox(height: 32),
+                    _AttentionSection(user: user),
+                    const SizedBox(height: 32),
+                    _GlanceSection(user: user),
+                    const SizedBox(height: 32),
+                    _ContinueWorking(user: user),
+                    const SizedBox(height: 32),
+                    _PinnedSection(user: user),
+                  ],
                 ),
               ),
             ),
@@ -135,818 +77,778 @@ class AdminDashboardScreen extends StatelessWidget {
   }
 }
 
-void _showTermPicker(BuildContext context) {
-  final dashboardBloc = context.read<AdminDashboardBloc>();
-  final authState = context.read<AuthBloc>().state;
-  final schoolId = authState is AuthAuthenticated
-      ? authState.user.schoolId
-      : null;
-  if (schoolId == null || schoolId.isEmpty) return;
+class _Header extends StatelessWidget {
+  const _Header({required this.user});
+  final UserEntity user;
 
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    builder: (_) => _TermPickerSheet(
-      schoolId: schoolId,
-      onPicked: (term) => dashboardBloc.add(
-        LoadAdminDashboardStats(forTerm: term.isCurrent ? null : term),
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          border: Border.all(color: _ink(context)),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.school_outlined),
+      ),
+      const SizedBox(width: 14),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              user.schoolName?.isNotEmpty == true ? user.schoolName! : 'School',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            Text(
+              'School Admin',
+              style: TextStyle(fontSize: 12, color: _ink(context)),
+            ),
+          ],
+        ),
+      ),
+      Stack(
+        clipBehavior: Clip.none,
+        children: [
+          IconButton(
+            onPressed: () => context.push('/staff/notifications'),
+            icon: const Icon(Icons.notifications_none_rounded, size: 22),
+          ),
+          Positioned(
+            right: 8,
+            top: 7,
+            child: CircleAvatar(radius: 3.5, backgroundColor: _ink(context)),
+          ),
+        ],
+      ),
+      IconButton(
+        onPressed: () => context.push('/staff/messages'),
+        icon: const MessagesNavIcon(
+          icon: Icons.chat_bubble_outline_rounded,
+          size: 22,
+        ),
+      ),
+    ],
+  );
+}
+
+class _ContextRow extends StatelessWidget {
+  const _ContextRow({required this.user});
+  final UserEntity user;
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      OutlinedButton.icon(
+        onPressed: () => _showTermPicker(context, user),
+        icon: const Icon(Icons.calendar_today_outlined),
+        label: BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
+          builder: (_, state) => Text(
+            state is AdminDashboardLoaded
+                ? state.stats.currentPeriodLabel ?? 'Select term'
+                : 'Select term',
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _ink(context),
+          side: BorderSide(color: _ink(context)),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        ),
+      ),
+      const Spacer(),
+      Flexible(
+        child: Text(
+          DateFormat('EEEE, d MMMM').format(DateTime.now()),
+          textAlign: TextAlign.end,
+          style: const TextStyle(fontSize: 13),
+        ),
+      ),
+    ],
+  );
+}
+
+class _AttentionSection extends StatelessWidget {
+  const _AttentionSection({required this.user});
+  final UserEntity user;
+  @override
+  Widget build(BuildContext context) => StreamBuilder<List<_WorkItem>>(
+    stream: _watchWork(user),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return _Retry(
+          message: 'Couldn\'t load work.',
+          onRetry: () =>
+              context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats()),
+        );
+      }
+      if (!snapshot.hasData) return const _LoadingBlock();
+      final items = snapshot.data!;
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          border: Border.all(color: _ink(context)),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Today needs your attention',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 12),
+            if (items.isEmpty)
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: Text(
+                  'You’re all caught up.',
+                  style: TextStyle(fontSize: 13, color: _ink(context)),
+                ),
+              )
+            else ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 64,
+                    child: Column(
+                      children: [
+                        Text(
+                          '${items.fold<int>(0, (value, item) => value + item.count)}',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          'items',
+                          style: TextStyle(fontSize: 11, color: _ink(context)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  VerticalDivider(color: _ink(context), width: 1),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      children: items
+                          .take(3)
+                          .map((item) => _WorkRow(item: item))
+                          .toList(),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => context.go('/staff/admin/approvals'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _ink(context),
+                  foregroundColor: _paper(context),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text('View all work', style: TextStyle(fontSize: 14)),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+class _WorkRow extends StatelessWidget {
+  const _WorkRow({required this.item});
+  final _WorkItem item;
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: () => context.push(item.route),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: _paper(context),
+              border: Border.all(color: _ink(context)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(item.icon, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '${item.count} ${item.label}',
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+          const Icon(Icons.chevron_right, size: 18),
+        ],
       ),
     ),
   );
 }
 
-String _formatUgx(double amount) {
-  if (amount >= 1000000) {
-    return '${(amount / 1000000).toStringAsFixed(1)}M';
-  }
-  if (amount >= 1000) {
-    return '${(amount / 1000).toStringAsFixed(0)}K';
-  }
-  return amount.toStringAsFixed(0);
-}
-
-/// Lets School Admin pick any configured term (current or past) to view
-/// Attendance/Fees for that term instead of the live current one. Students
-/// and Staff counts stay live regardless - see AdminDashboardStats.isHistoricalTerm.
-class _TermPickerSheet extends StatelessWidget {
-  const _TermPickerSheet({required this.schoolId, required this.onPicked});
-
-  final String schoolId;
-  final ValueChanged<AcademicTerm> onPicked;
-
+class _GlanceSection extends StatelessWidget {
+  const _GlanceSection({required this.user});
+  final UserEntity user;
   @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SectionHeader(title: 'Switch Term'),
-            const SizedBox(height: 12),
-            StreamBuilder<List<AcademicTerm>>(
-              stream: di.sl<StructureRepository>().watchAcademicTerms(schoolId),
-              builder: (context, snapshot) {
-                final terms =
-                    (snapshot.data ?? const <AcademicTerm>[])
-                        .where((t) => !t.isArchived)
-                        .toList()
-                      ..sort((a, b) => a.order.compareTo(b.order));
-                if (!snapshot.hasData) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-                if (terms.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text('No terms configured yet.'),
-                  );
-                }
-                return ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: terms.length,
-                  itemBuilder: (context, index) {
-                    final term = terms[index];
-                    return ListTile(
-                      leading: const Icon(Icons.calendar_today_rounded),
-                      title: Text(term.name),
-                      subtitle: Text(
-                        '${_formatDate(term.startDate)} - ${_formatDate(term.endDate)}',
-                      ),
-                      trailing: term.isCurrent
-                          ? Icon(
-                              Icons.check_circle,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            )
-                          : null,
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        onPicked(term);
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  static String _formatDate(DateTime date) =>
-      '${date.day}/${date.month}/${date.year}';
+  Widget build(
+    BuildContext context,
+  ) => BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
+    builder: (context, state) {
+      if (state is AdminDashboardError) {
+        return _Retry(
+          message: 'Couldn\'t load school metrics.',
+          onRetry: () =>
+              context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats()),
+        );
+      }
+      if (state is! AdminDashboardLoaded) return const _LoadingBlock();
+      final stats = state.stats;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'School at a glance',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _Metric(
+                  label: 'Active learners',
+                  value: '${stats.totalStudentsCount}',
+                  subtitle: stats.isHistoricalTerm
+                      ? 'Active now'
+                      : 'Selected term',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _Metric(
+                  label: 'Staff',
+                  value: '${stats.activeStaffCount}',
+                  subtitle: 'Active staff',
+                ),
+              ),
+              if (_canSeeFinance(user)) ...[
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _Metric(
+                    label: 'Fees',
+                    value: stats.termFeesCollected == null
+                        ? '—'
+                        : 'UGX ${_money(stats.termFeesCollected!)}',
+                    subtitle:
+                        '${stats.currentPeriodLabel ?? 'Selected term'} collected',
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      );
+    },
+  );
 }
 
-/// Quick Access destination: fixed metadata (icon/color/route) keyed by id,
-/// so the persisted preference only ever stores ids, never widgets/routes.
-class _QuickAccessItem {
-  final String id;
-  final String label;
-  final IconData icon;
-  final String route;
-
-  const _QuickAccessItem({
-    required this.id,
+class _Metric extends StatelessWidget {
+  const _Metric({
     required this.label,
-    required this.icon,
-    required this.route,
+    required this.value,
+    required this.subtitle,
   });
+  final String label, value, subtitle;
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 96,
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      border: Border.all(color: _ink(context)),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+        const Spacer(),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            maxLines: 1,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: _ink(context), fontSize: 12),
+        ),
+      ],
+    ),
+  );
 }
 
-final Map<String, _QuickAccessItem> _quickAccessCatalog = {
-  'students': const _QuickAccessItem(
-    id: 'students',
-    label: 'Students',
-    icon: Icons.school_rounded,
-    route: '/staff/admin/students',
-  ),
-  'staff': const _QuickAccessItem(
-    id: 'staff',
-    label: 'Staff',
-    icon: Icons.badge_rounded,
-    route: '/staff/admin/users',
-  ),
-  'attendance': const _QuickAccessItem(
-    id: 'attendance',
-    label: 'Attendance',
-    icon: Icons.fact_check_rounded,
-    route: '/staff/attendance',
-  ),
-  'classes': const _QuickAccessItem(
-    id: 'classes',
-    label: 'Classes',
-    icon: Icons.class_rounded,
-    route: '/staff/classes',
-  ),
-  'exams': const _QuickAccessItem(
-    id: 'exams',
-    label: 'Exams & Marks',
-    icon: Icons.assignment_rounded,
-    route: '/staff/exams',
-  ),
-  'finance': const _QuickAccessItem(
-    id: 'finance',
-    label: 'Finance',
-    icon: Icons.account_balance_wallet_rounded,
-    route: '/staff/bursar',
-  ),
-  'transport': const _QuickAccessItem(
-    id: 'transport',
-    label: 'Transport',
-    icon: Icons.directions_bus_rounded,
-    route: '/staff/transport',
-  ),
-  'library': const _QuickAccessItem(
-    id: 'library',
-    label: 'Library',
-    icon: Icons.local_library_rounded,
-    route: '/staff/librarian',
-  ),
-  'announcements': const _QuickAccessItem(
-    id: 'announcements',
-    label: 'Announcements',
-    icon: Icons.campaign_rounded,
-    route: '/staff/more/announcements',
-  ),
-  'communication': const _QuickAccessItem(
-    id: 'communication',
-    label: 'Communication',
-    icon: Icons.chat_bubble_rounded,
-    route: '/staff/messages',
-  ),
-  'reports': const _QuickAccessItem(
-    id: 'reports',
-    label: 'Reports',
-    icon: Icons.bar_chart_rounded,
-    route: '/staff/admin/reports',
-  ),
-  'calendar': const _QuickAccessItem(
-    id: 'calendar',
-    label: 'Calendar',
-    icon: Icons.calendar_month_rounded,
-    route: '/staff/calendar',
-  ),
-  'security': const _QuickAccessItem(
-    id: 'security',
-    label: 'Security',
-    icon: Icons.shield_rounded,
-    route: '/staff/admin/security',
-  ),
-  'institution_health': const _QuickAccessItem(
-    id: 'institution_health',
-    label: 'Institution Health',
-    icon: Icons.health_and_safety_rounded,
-    route: '/staff/admin/institution-health',
-  ),
-  'data_management': const _QuickAccessItem(
-    id: 'data_management',
-    label: 'Data Management',
-    icon: Icons.storage_rounded,
-    route: '/staff/admin/data-management',
-  ),
-  'communication_center': const _QuickAccessItem(
-    id: 'communication_center',
-    label: 'Communication Center',
-    icon: Icons.campaign_rounded,
-    route: '/staff/admin/communication-center',
-  ),
-};
-
-class _QuickAccessSection extends StatefulWidget {
-  @override
-  State<_QuickAccessSection> createState() => _QuickAccessSectionState();
-}
-
-class _QuickAccessSectionState extends State<_QuickAccessSection> {
-  List<String>? _ids;
-
-  @override
-  void initState() {
-    super.initState();
-    QuickAccessPrefs.load().then((ids) {
-      if (mounted) setState(() => _ids = ids);
-    });
-  }
-
-  Future<void> _openEditSheet() async {
-    final current = _ids ?? List.of(QuickAccessPrefs.allIds);
-    final result = await showModalBottomSheet<List<String>>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _QuickAccessEditSheet(initialIds: current),
-    );
-    if (result != null) {
-      await QuickAccessPrefs.save(result);
-      if (mounted) setState(() => _ids = result);
-    }
-  }
-
+class _ContinueWorking extends StatelessWidget {
+  const _ContinueWorking({required this.user});
+  final UserEntity user;
   @override
   Widget build(BuildContext context) {
-    final ids = _ids ?? QuickAccessPrefs.allIds;
-    final items = ids
-        .map((id) => _quickAccessCatalog[id])
-        .whereType<_QuickAccessItem>()
-        .toList();
-
+    final actions = <_Shortcut>[
+      if (_canTakeAttendance(user)) _catalog['attendance']!,
+      _catalog['school']!,
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(
-          title: 'Quick Access',
-          actionLabel: 'Edit',
-          onActionPressed: _openEditSheet,
+        const Text(
+          'Continue working',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
-        GridView.builder(
-          padding: EdgeInsets.zero,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            mainAxisSpacing: AppSpacing.m,
-            crossAxisSpacing: AppSpacing.m,
-            childAspectRatio: 2.05,
-          ),
-          itemCount: items.length,
-          itemBuilder: (context, index) {
-            final item = items[index];
-            return _QuickAccessTile(item: item);
-          },
-        ),
+        const SizedBox(height: 14),
+        ...actions.map((action) => _ActionCard(action: action)),
       ],
     );
   }
 }
 
-class _QuickAccessTile extends StatelessWidget {
-  final _QuickAccessItem item;
-
-  const _QuickAccessTile({required this.item});
-
+class _ActionCard extends StatelessWidget {
+  const _ActionCard({required this.action});
+  final _Shortcut action;
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AppCard(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.s,
-        vertical: 6,
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: OutlinedButton(
+      onPressed: () => context.push(action.route),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _ink(context),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.all(12),
+        side: BorderSide(color: _ink(context)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      showShadow: false,
-      onTap: () => context.go(item.route),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(item.icon, color: scheme.primary, size: 20),
-          const SizedBox(width: AppSpacing.s),
-          Expanded(
-            child: Text(
-              item.label,
-              textAlign: TextAlign.left,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurface,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Reorder + show/hide sheet for the Edit action. Core shortcuts
-/// (students/staff/attendance) can be reordered but not hidden.
-class _QuickAccessEditSheet extends StatefulWidget {
-  final List<String> initialIds;
-
-  const _QuickAccessEditSheet({required this.initialIds});
-
-  @override
-  State<_QuickAccessEditSheet> createState() => _QuickAccessEditSheetState();
-}
-
-class _QuickAccessEditSheetState extends State<_QuickAccessEditSheet> {
-  late List<String> _visible;
-  late List<String> _hidden;
-
-  @override
-  void initState() {
-    super.initState();
-    _visible = List.of(widget.initialIds);
-    _hidden = QuickAccessPrefs.allIds
-        .where((id) => !_visible.contains(id))
-        .toList();
-  }
-
-  void _toggle(String id, bool show) {
-    setState(() {
-      if (show) {
-        _hidden.remove(id);
-        _visible.add(id);
-      } else {
-        _visible.remove(id);
-        _hidden.add(id);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.75,
-      minChildSize: 0.4,
-      maxChildSize: 0.92,
-      expand: false,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(AppRadius.xl),
-            ),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: AppSpacing.m),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  borderRadius: AppRadius.full,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Customize Quick Access',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(_visible),
-                      child: const Text('Done'),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ReorderableListView.builder(
-                  scrollController: scrollController,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                  ),
-                  itemCount: _visible.length + 1 + _hidden.length,
-                  onReorder: (oldIndex, newIndex) {
-                    if (oldIndex >= _visible.length ||
-                        newIndex > _visible.length) {
-                      return;
-                    }
-                    setState(() {
-                      if (newIndex > oldIndex) newIndex -= 1;
-                      final id = _visible.removeAt(oldIndex);
-                      _visible.insert(newIndex, id);
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    if (index < _visible.length) {
-                      final id = _visible[index];
-                      final item = _quickAccessCatalog[id];
-                      if (item == null)
-                        return const SizedBox.shrink(key: ValueKey('_'));
-                      final isCore = QuickAccessPrefs.coreIds.contains(id);
-                      return ListTile(
-                        key: ValueKey('visible_$id'),
-                        leading: Icon(item.icon),
-                        title: Text(item.label),
-                        trailing: isCore
-                            ? const Icon(Icons.lock_outline_rounded, size: 18)
-                            : IconButton(
-                                icon: const Icon(Icons.visibility_off_outlined),
-                                onPressed: () => _toggle(id, false),
-                              ),
-                      );
-                    }
-                    if (index == _visible.length) {
-                      return Padding(
-                        key: const ValueKey('divider'),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.m,
-                        ),
-                        child: Text(
-                          _hidden.isEmpty ? '' : 'Hidden',
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                        ),
-                      );
-                    }
-                    final id = _hidden[index - _visible.length - 1];
-                    final item = _quickAccessCatalog[id];
-                    if (item == null)
-                      return const SizedBox.shrink(key: ValueKey('_'));
-                    return ListTile(
-                      key: ValueKey('hidden_$id'),
-                      leading: Icon(
-                        item.icon,
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                      title: Text(
-                        item.label,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.add_circle_outline_rounded),
-                        onPressed: () => _toggle(id, true),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Real pending-approvals queue. Today the only backed queue is Finance
-/// expenditure requests; other categories from the reference design
-/// (leave, visitor, purchase) aren't wired to a real repository yet, so
-/// they're intentionally omitted rather than shown with fake counts.
-class _PendingApprovalsCard extends StatelessWidget {
-  const _PendingApprovalsCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
-      builder: (context, state) {
-        final loading =
-            state is AdminDashboardLoading || state is AdminDashboardInitial;
-        final error = state is AdminDashboardError;
-        final count = state is AdminDashboardLoaded
-            ? state.stats.pendingExpenditureRequestsCount
-            : 0;
-
-        return AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SectionHeader(
-                title: 'Pending Approvals',
-                actionLabel: count > 0 ? 'View all' : null,
-                onActionPressed: () => context.push('/staff/bursar'),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.fact_check_outlined),
-                title: const Text('Report Card Approvals'),
-                subtitle: const Text(
-                  'Review and sign report cards submitted by the Dean',
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () =>
-                    context.push('/staff/headteacher/report-approvals'),
-              ),
-              if (loading)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.s),
-                  child: Skeleton(height: 56),
-                )
-              else if (error)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.error_outline_rounded,
-                        color: Theme.of(
-                          context,
-                        ).extension<SemanticColors>()!.error,
-                        size: 18,
-                      ),
-                      const SizedBox(width: AppSpacing.m),
-                      Expanded(
-                        child: Text(
-                          'Couldn\'t load approvals. Pull to refresh.',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else if (count == 0)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.check_circle_outline_rounded,
-                        color: Theme.of(
-                          context,
-                        ).extension<SemanticColors>()!.success,
-                        size: 18,
-                      ),
-                      const SizedBox(width: AppSpacing.m),
-                      Expanded(
-                        child: Text(
-                          'All clear — nothing needs your attention.',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.s),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _ApprovalStat(
-                          icon: Icons.receipt_long_rounded,
-                          color: Theme.of(context).colorScheme.onSurface,
-                          label: 'Expense\nRequests',
-                          count: count,
-                          onTap: () => context.push('/staff/bursar'),
-                        ),
-                      ),
-                      const Spacer(flex: 3),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ApprovalStat extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String label;
-  final int count;
-  final VoidCallback onTap;
-
-  const _ApprovalStat({
-    required this.icon,
-    required this.color,
-    required this.label,
-    required this.count,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: AppRadius.medium,
-      onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border.all(color: Theme.of(context).colorScheme.outline),
-              borderRadius: AppRadius.medium,
-            ),
-            child: Icon(
-              icon,
-              color: Theme.of(context).colorScheme.onSurface,
-              size: 18,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.s),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-              height: 1.2,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            '$count',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Renders the audit-log stream that was already wired into the bloc but
-/// never shown in the old UI.
-class _RecentActivityCard extends StatelessWidget {
-  const _RecentActivityCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
-      builder: (context, state) {
-        final logs = state is AdminDashboardLoaded
-            ? state.recentLogs
-            : const <AuditLog>[];
-        final loading =
-            state is AdminDashboardLoading || state is AdminDashboardInitial;
-        final error = state is AdminDashboardError;
-
-        return AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SectionHeader(
-                title: 'Recent Activity',
-                actionLabel: logs.isNotEmpty ? 'View all' : null,
-                onActionPressed: () => context.push('/staff/admin/audit-log'),
-              ),
-              if (loading)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.s),
-                  child: Skeleton(height: 56),
-                )
-              else if (error)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
-                  child: Text(
-                    'Couldn\'t load recent activity. Pull to refresh.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                )
-              else if (logs.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
-                  child: Text(
-                    'No recent activity yet.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                )
-              else
-                ...logs.take(5).map((log) => _ActivityRow(log: log)),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ActivityRow extends StatelessWidget {
-  final AuditLog log;
-
-  const _ActivityRow({required this.log});
-
-  IconData get _icon {
-    switch (log.iconName) {
-      case 'person_add':
-        return Icons.person_add_alt_1_rounded;
-      case 'payment':
-        return Icons.payments_rounded;
-      case 'announcement':
-        return Icons.campaign_rounded;
-      case 'attendance':
-        return Icons.fact_check_rounded;
-      case 'structure':
-        return Icons.account_tree_rounded;
-      case 'appointment':
-        return Icons.event_available_rounded;
-      default:
-        return Icons.info_outline_rounded;
-    }
-  }
-
-  String _timeAgo(DateTime time) {
-    final diff = DateTime.now().difference(time);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${time.day}/${time.month}/${time.year}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border.all(color: Theme.of(context).colorScheme.outline),
-              borderRadius: AppRadius.medium,
-            ),
-            child: Icon(
-              _icon,
-              color: Theme.of(context).colorScheme.onSurface,
-              size: 16,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.l),
+          Icon(action.icon, size: 20),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  log.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  action.label,
                   style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                if (log.description.isNotEmpty)
-                  Text(
-                    log.description,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                Text(
+                  action.description,
+                  style: TextStyle(fontSize: 12, color: _ink(context)),
+                ),
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.s),
-          Text(
-            _timeAgo(log.timestamp),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
+          const Icon(Icons.chevron_right, size: 18),
         ],
       ),
+    ),
+  );
+}
+
+class _PinnedSection extends StatelessWidget {
+  const _PinnedSection({required this.user});
+  final UserEntity user;
+  @override
+  Widget build(
+    BuildContext context,
+  ) => StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+    stream: FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.id)
+        .collection('dashboard_preferences')
+        .doc(user.schoolId)
+        .snapshots(),
+    builder: (context, snapshot) {
+      final ids =
+          ((snapshot.data?.data()?['pinned'] as List?)
+                      ?.whereType<String>()
+                      .toList() ??
+                  _defaults(user))
+              .where(
+                (id) =>
+                    _catalog.containsKey(id) && _allowed(_catalog[id]!, user),
+              )
+              .take(4)
+              .toList();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Pinned',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () => _editPins(context, user, ids),
+                child: Text('Edit', style: TextStyle(color: _ink(context))),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (ids.isEmpty)
+            const Text('Pin frequently used permitted modules.')
+          else
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: ids.map((id) => _Pin(shortcut: _catalog[id]!)).toList(),
+            ),
+        ],
+      );
+    },
+  );
+}
+
+class _Pin extends StatelessWidget {
+  const _Pin({required this.shortcut});
+  final _Shortcut shortcut;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 180,
+    child: OutlinedButton(
+      onPressed: () => context.push(shortcut.route),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _ink(context),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.all(12),
+        side: BorderSide(color: _ink(context)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: Row(
+        children: [
+          Icon(shortcut.icon, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              shortcut.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+          const Icon(Icons.chevron_right, size: 16),
+        ],
+      ),
+    ),
+  );
+}
+
+Future<void> _editPins(
+  BuildContext context,
+  UserEntity user,
+  List<String> selected,
+) async {
+  var values = List<String>.of(selected);
+  await showModalBottomSheet<void>(
+    context: context,
+    builder: (sheetContext) => StatefulBuilder(
+      builder: (context, setState) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Edit pinned shortcuts',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+              ..._catalog.entries
+                  .where((entry) => _allowed(entry.value, user))
+                  .map(
+                    (entry) => CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: _ink(context),
+                      value: values.contains(entry.key),
+                      title: Text(entry.value.label),
+                      onChanged: (checked) => setState(() {
+                        if (checked == true && values.length < 4) {
+                          values.add(entry.key);
+                        }
+                        if (checked == false) {
+                          values.remove(entry.key);
+                        }
+                      }),
+                    ),
+                  ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user.id)
+                        .collection('dashboard_preferences')
+                        .doc(user.schoolId)
+                        .set({
+                          'schoolId': user.schoolId,
+                          'pinned': values,
+                          'updatedAt': FieldValue.serverTimestamp(),
+                        }, SetOptions(merge: true));
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _ink(context),
+                    foregroundColor: _paper(context),
+                  ),
+                  child: const Text('Save'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+void _showTermPicker(BuildContext context, UserEntity user) {
+  final bloc = context.read<AdminDashboardBloc>();
+  showModalBottomSheet<void>(
+    context: context,
+    builder: (_) => SafeArea(
+      child: StreamBuilder<List<AcademicTerm>>(
+        stream: di.sl<StructureRepository>().watchAcademicTerms(user.schoolId),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return SizedBox(
+              height: 160,
+              child: Center(
+                child: CircularProgressIndicator(color: _ink(context)),
+              ),
+            );
+          }
+          final terms =
+              snapshot.data!.where((term) => !term.isArchived).toList()
+                ..sort((a, b) => b.startDate.compareTo(a.startDate));
+          return ListView(
+            shrinkWrap: true,
+            children: terms
+                .map(
+                  (term) => ListTile(
+                    title: Text('${term.name} · ${term.startDate.year}'),
+                    trailing: term.isCurrent ? const Icon(Icons.check) : null,
+                    onTap: () {
+                      Navigator.pop(context);
+                      bloc.add(
+                        LoadAdminDashboardStats(
+                          forTerm: term.isCurrent ? null : term,
+                        ),
+                      );
+                    },
+                  ),
+                )
+                .toList(),
+          );
+        },
+      ),
+    ),
+  );
+}
+
+Stream<List<_WorkItem>> _watchWork(UserEntity user) {
+  final school = FirebaseFirestore.instance
+      .collection('schools')
+      .doc(user.schoolId);
+  final streams = [
+    school
+        .collection('expenditures')
+        .where('status', isEqualTo: 'pending')
+        .snapshots(),
+    school
+        .collection('reportCards')
+        .where('academicStatus', isEqualTo: 'pendingHeadteacher')
+        .snapshots(),
+  ];
+  return _streamZip(streams).map((data) {
+    final work = <_WorkItem>[];
+    if (_canSeeFinance(user) && data[0].docs.isNotEmpty) {
+      work.add(
+        _WorkItem(
+          data[0].docs.length,
+          'fees exceptions',
+          Icons.account_balance_wallet_outlined,
+          '/staff/bursar',
+        ),
+      );
+    }
+    if (_canApproveReports(user) && data[1].docs.isNotEmpty) {
+      work.add(
+        _WorkItem(
+          data[1].docs.length,
+          'report cards awaiting approval',
+          Icons.description_outlined,
+          '/staff/headteacher/report-approvals',
+        ),
+      );
+    }
+    return work;
+  });
+}
+
+Stream<List<QuerySnapshot<Map<String, dynamic>>>> _streamZip(
+  List<Stream<QuerySnapshot<Map<String, dynamic>>>> streams,
+) => Stream.multi((controller) {
+  final latest = List<QuerySnapshot<Map<String, dynamic>>?>.filled(
+    streams.length,
+    null,
+  );
+  final subscriptions =
+      <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[];
+  for (var index = 0; index < streams.length; index++) {
+    final current = index;
+    subscriptions.add(
+      streams[index].listen((value) {
+        latest[current] = value;
+        if (latest.every((item) => item != null)) {
+          controller.add(latest.cast<QuerySnapshot<Map<String, dynamic>>>());
+        }
+      }, onError: controller.addError),
     );
   }
+  controller.onCancel = () async {
+    for (final subscription in subscriptions) {
+      await subscription.cancel();
+    }
+  };
+});
+
+class _WorkItem {
+  const _WorkItem(this.count, this.label, this.icon, this.route);
+  final int count;
+  final String label;
+  final IconData icon;
+  final String route;
 }
+
+class _Shortcut {
+  const _Shortcut(this.id, this.label, this.description, this.icon, this.route);
+  final String id, label, description, route;
+  final IconData icon;
+}
+
+const _catalog = <String, _Shortcut>{
+  'learners': _Shortcut(
+    'learners',
+    'Learners',
+    'Manage learners and admissions',
+    Icons.people_outline,
+    '/staff/admin/students',
+  ),
+  'staff': _Shortcut(
+    'staff',
+    'Staff',
+    'Manage staff',
+    Icons.badge_outlined,
+    '/staff/admin/users',
+  ),
+  'attendance': _Shortcut(
+    'attendance',
+    'Take attendance',
+    'Open an attendance session',
+    Icons.check_circle_outline,
+    '/staff/attendance',
+  ),
+  'finance': _Shortcut(
+    'finance',
+    'Finance',
+    'Fees and collections',
+    Icons.account_balance_wallet_outlined,
+    '/staff/bursar',
+  ),
+  'school': _Shortcut(
+    'school',
+    'Finish school setup',
+    'Complete recommended setup tasks',
+    Icons.school_outlined,
+    '/staff/admin/structure',
+  ),
+};
+List<String> _defaults(UserEntity user) =>
+    _catalog.keys.where((id) => _allowed(_catalog[id]!, user)).take(4).toList();
+bool _allowed(_Shortcut shortcut, UserEntity user) =>
+    shortcut.id != 'finance' || _canSeeFinance(user);
+bool _canSeeFinance(UserEntity user) => user.roles.any(
+  (role) =>
+      role == UserRole.schoolAdmin ||
+      role == UserRole.director ||
+      role == UserRole.headTeacher ||
+      role == UserRole.bursar,
+);
+bool _canTakeAttendance(UserEntity user) => user.roles.any(
+  (role) =>
+      role == UserRole.schoolAdmin ||
+      role == UserRole.director ||
+      role == UserRole.headTeacher ||
+      role == UserRole.classTeacher ||
+      role == UserRole.subjectTeacher,
+);
+bool _canApproveReports(UserEntity user) => user.roles.any(
+  (role) =>
+      role == UserRole.schoolAdmin ||
+      role == UserRole.director ||
+      role == UserRole.headTeacher,
+);
+String _money(double amount) => amount >= 1000000
+    ? '${(amount / 1000000).toStringAsFixed(1)}M'
+    : NumberFormat.decimalPattern().format(amount);
+
+class _LoadingBlock extends StatelessWidget {
+  const _LoadingBlock();
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 100,
+    child: Center(child: CircularProgressIndicator(color: _ink(context))),
+  );
+}
+
+class _Retry extends StatelessWidget {
+  const _Retry({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+  @override
+  Widget build(BuildContext context) => OutlinedButton(
+    onPressed: onRetry,
+    style: OutlinedButton.styleFrom(
+      foregroundColor: _ink(context),
+      side: BorderSide(color: _ink(context)),
+    ),
+    child: Text('$message Retry'),
+  );
+}
+
+Color _ink(BuildContext context) => Theme.of(context).colorScheme.onSurface;
+Color _paper(BuildContext context) => Theme.of(context).colorScheme.surface;

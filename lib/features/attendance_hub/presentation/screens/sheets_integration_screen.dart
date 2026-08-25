@@ -227,13 +227,9 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
                   Container(
                     padding: const EdgeInsets.all(AppSpacing.m),
                     decoration: BoxDecoration(
-                      color: AppColors.warning(context).withValues(alpha: 0.12),
+                      color: AppColors.warning(context),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: AppColors.warning(
-                          context,
-                        ).withValues(alpha: 0.4),
-                      ),
+                      border: Border.all(color: AppColors.warning(context)),
                     ),
                     child: Row(
                       children: [

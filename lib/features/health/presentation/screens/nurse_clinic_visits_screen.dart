@@ -38,7 +38,7 @@ class _NurseClinicVisitsScreenState extends State<NurseClinicVisitsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF070914),
+      backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -85,7 +85,7 @@ class _NurseClinicVisitsScreenState extends State<NurseClinicVisitsScreen> {
         ), // Redirect to student lookup for new visit
         label: const Text('New Visit'),
         icon: const Icon(Icons.add),
-        backgroundColor: const Color(0xFFF04400),
+        backgroundColor: Colors.black,
       ),
     );
   }
@@ -95,9 +95,9 @@ class _NurseClinicVisitsScreenState extends State<NurseClinicVisitsScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF151929),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E293B), width: 1),
+        border: Border.all(color: Colors.black, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,15 +107,11 @@ class _NurseClinicVisitsScreenState extends State<NurseClinicVisitsScreen> {
             children: [
               Text(
                 'Student ID: ${visit.studentId.substring(0, 8)}',
-                style: AppTypography.labelSmall.copyWith(
-                  color: const Color(0xFF64748B),
-                ),
+                style: AppTypography.labelSmall.copyWith(color: Colors.black),
               ),
               Text(
                 'Today, 10:30 AM', // In a real app, format visit.dateTime
-                style: AppTypography.labelSmall.copyWith(
-                  color: const Color(0xFF64748B),
-                ),
+                style: AppTypography.labelSmall.copyWith(color: Colors.black),
               ),
             ],
           ),
@@ -130,13 +126,10 @@ class _NurseClinicVisitsScreenState extends State<NurseClinicVisitsScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              _buildBadge(
-                visit.outcome.name.splitCamelCase(),
-                const Color(0xFF3B82F6),
-              ),
+              _buildBadge(visit.outcome.name.splitCamelCase(), Colors.black),
               if (visit.temperature != null) ...[
                 const SizedBox(width: 8),
-                _buildBadge('${visit.temperature}°C', const Color(0xFF10B981)),
+                _buildBadge('${visit.temperature}°C', Colors.black),
               ],
             ],
           ),
@@ -149,7 +142,7 @@ class _NurseClinicVisitsScreenState extends State<NurseClinicVisitsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(

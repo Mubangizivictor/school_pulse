@@ -18,6 +18,7 @@ import 'package:school_pulse/features/matron/presentation/screens/dormitory_mana
 import 'package:school_pulse/features/patron/presentation/screens/dormitory_management_screen.dart'
     as patron_scr;
 import 'package:school_pulse/features/admin/admin_dashboard_screen.dart';
+import 'package:school_pulse/features/admin/school_workspace_screen.dart';
 import 'package:school_pulse/features/institution/presentation/bloc/institution_context_cubit.dart';
 import 'package:school_pulse/features/institution/presentation/bloc/institution_context_state.dart';
 import 'package:school_pulse/app/screens/institution_suspended_screen.dart';
@@ -237,6 +238,7 @@ import 'package:school_pulse/features/religion/presentation/religious_leader_das
 import 'package:school_pulse/features/exams/presentation/exams_dashboard_screen.dart';
 import 'package:school_pulse/features/hr/presentation/screens/hr_dashboard_screen.dart';
 import 'package:school_pulse/features/approvals/presentation/screens/approval_center_screen.dart';
+import 'package:school_pulse/features/approvals/presentation/screens/work_inbox_screen.dart';
 import 'package:school_pulse/features/approvals/presentation/screens/approval_policy_manager_screen.dart';
 import 'package:school_pulse/features/approvals/presentation/screens/approval_delegation_screen.dart';
 import 'package:school_pulse/features/approvals/presentation/screens/approval_request_submission_screen.dart';
@@ -2660,6 +2662,14 @@ final router = GoRouter(
           builder: (context, state) => const ClassActivitiesScreen(),
         ),
         GoRoute(
+          path: '/staff/work',
+          builder: (context, state) => const WorkInboxScreen(),
+        ),
+        GoRoute(
+          path: '/staff/school',
+          builder: (context, state) => const SchoolWorkspaceScreen(),
+        ),
+        GoRoute(
           path: '/staff/more',
           builder: (context, state) => const ProfileMoreScreen(),
           routes: [
@@ -3201,7 +3211,7 @@ class ParentShell extends StatelessWidget {
             },
             child: const Text(
               'Logout',
-              style: TextStyle(color: AppColors.deepOrange),
+              style: TextStyle(color: AppColors.black),
             ),
           ),
         ],
@@ -3376,7 +3386,7 @@ class ParentShell extends StatelessWidget {
                 backgroundColor: isDark
                     ? AppColors.surfaceDark
                     : AppColors.surfaceLight,
-                indicatorColor: AppColors.electricBlue.withValues(alpha: 0.1),
+                indicatorColor: AppColors.electricBlue,
                 selectedIndex: _calculateSelectedIndex(context),
                 onDestinationSelected: (idx) => _onItemTapped(idx, context),
                 destinations: destinations,
@@ -3401,12 +3411,10 @@ class _LogoutButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
         child: TextButton.icon(
           onPressed: onPressed,
-          icon: const Icon(Icons.logout_rounded, color: AppColors.deepOrange),
+          icon: const Icon(Icons.logout_rounded, color: AppColors.black),
           label: Text(
             'Logout',
-            style: AppTypography.labelLarge.copyWith(
-              color: AppColors.deepOrange,
-            ),
+            style: AppTypography.labelLarge.copyWith(color: AppColors.black),
           ),
           style: TextButton.styleFrom(
             alignment: Alignment.centerLeft,
@@ -3417,7 +3425,7 @@ class _LogoutButton extends StatelessWidget {
     }
 
     return IconButton(
-      icon: const Icon(Icons.logout_rounded, color: AppColors.deepOrange),
+      icon: const Icon(Icons.logout_rounded, color: AppColors.black),
       onPressed: onPressed,
       tooltip: 'Logout',
     );

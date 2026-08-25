@@ -3,7 +3,13 @@ import 'package:equatable/equatable.dart';
 enum TeachingResponsibilityType {
   subjectTeacher,
   classTeacher,
+  streamTeacher,
   headOfDepartment,
+  directorOfStudies,
+  academicCoordinator,
+  examinationsOfficer,
+  timetableCoordinator,
+  assessmentReportsCoordinator,
 }
 
 class TeachingAssignment extends Equatable {
@@ -11,6 +17,8 @@ class TeachingAssignment extends Equatable {
   final String schoolId;
   final String staffId;
   final String academicYearId;
+  final String academicTermId;
+  final String designationId;
   final TeachingResponsibilityType responsibilityType;
   final String departmentId;
   final String classId;
@@ -20,12 +28,16 @@ class TeachingAssignment extends Equatable {
   final DateTime? endDate;
   final bool isPrimary;
   final bool isActive;
+  final DateTime? createdAt;
+  final String assignedBy;
 
   const TeachingAssignment({
     required this.id,
     this.schoolId = '',
     required this.staffId,
     required this.academicYearId,
+    this.academicTermId = '',
+    this.designationId = '',
     this.responsibilityType = TeachingResponsibilityType.subjectTeacher,
     this.departmentId = '',
     this.classId = '',
@@ -35,6 +47,8 @@ class TeachingAssignment extends Equatable {
     this.endDate,
     this.isPrimary = false,
     this.isActive = true,
+    this.createdAt,
+    this.assignedBy = '',
   });
 
   TeachingAssignment copyWith({
@@ -42,6 +56,8 @@ class TeachingAssignment extends Equatable {
     String? schoolId,
     String? staffId,
     String? academicYearId,
+    String? academicTermId,
+    String? designationId,
     TeachingResponsibilityType? responsibilityType,
     String? departmentId,
     String? classId,
@@ -51,12 +67,16 @@ class TeachingAssignment extends Equatable {
     DateTime? endDate,
     bool? isPrimary,
     bool? isActive,
+    DateTime? createdAt,
+    String? assignedBy,
   }) {
     return TeachingAssignment(
       id: id ?? this.id,
       schoolId: schoolId ?? this.schoolId,
       staffId: staffId ?? this.staffId,
       academicYearId: academicYearId ?? this.academicYearId,
+      academicTermId: academicTermId ?? this.academicTermId,
+      designationId: designationId ?? this.designationId,
       responsibilityType: responsibilityType ?? this.responsibilityType,
       departmentId: departmentId ?? this.departmentId,
       classId: classId ?? this.classId,
@@ -66,6 +86,8 @@ class TeachingAssignment extends Equatable {
       endDate: endDate ?? this.endDate,
       isPrimary: isPrimary ?? this.isPrimary,
       isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      assignedBy: assignedBy ?? this.assignedBy,
     );
   }
 
@@ -75,6 +97,8 @@ class TeachingAssignment extends Equatable {
     schoolId,
     staffId,
     academicYearId,
+    academicTermId,
+    designationId,
     responsibilityType,
     departmentId,
     classId,
@@ -84,5 +108,7 @@ class TeachingAssignment extends Equatable {
     endDate,
     isPrimary,
     isActive,
+    createdAt,
+    assignedBy,
   ];
 }

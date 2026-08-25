@@ -225,37 +225,37 @@ const _quickAccessItems = [
   _QuickAccessItem(
     label: 'Curriculum',
     icon: Icons.menu_book_rounded,
-    color: Colors.blueAccent,
+    color: Colors.black,
     route: '/staff/dean/curriculum',
   ),
   _QuickAccessItem(
     label: 'Lessons',
     icon: Icons.history_edu_rounded,
-    color: Colors.indigo,
+    color: Colors.black,
     route: '/staff/dean/lessons',
   ),
   _QuickAccessItem(
     label: 'Marks QA',
     icon: Icons.grading_rounded,
-    color: Colors.teal,
+    color: Colors.black,
     route: '/staff/dean/marks-qa',
   ),
   _QuickAccessItem(
     label: 'Interventions',
     icon: Icons.psychology_rounded,
-    color: Colors.deepPurple,
+    color: Colors.black,
     route: '/staff/dean/interventions',
   ),
   _QuickAccessItem(
     label: 'Observations',
     icon: Icons.visibility_rounded,
-    color: Colors.cyan,
+    color: Colors.black,
     route: '/staff/dean/observations',
   ),
   _QuickAccessItem(
     label: 'Report Approvals',
     icon: Icons.verified_user_rounded,
-    color: Colors.green,
+    color: Colors.black,
     route: '/staff/dean/approvals',
   ),
 ];
@@ -308,7 +308,7 @@ class _QuickAccessTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: item.color.withValues(alpha: 0.12),
+              color: item.color,
               borderRadius: AppRadius.medium,
             ),
             child: Icon(item.icon, color: item.color, size: 16),
@@ -445,7 +445,7 @@ class _CriticalAttentionRow extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color,
                 borderRadius: AppRadius.medium,
               ),
               child: Icon(Icons.error, color: color, size: 16),
@@ -554,7 +554,7 @@ class _ActivityRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color,
               borderRadius: AppRadius.medium,
             ),
             child: Icon(Icons.info_outline_rounded, color: color, size: 16),

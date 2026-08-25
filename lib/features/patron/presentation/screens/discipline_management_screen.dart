@@ -306,9 +306,9 @@ class _IncidentCard extends StatelessWidget {
       case 'Resolved':
         return semanticColors.success;
       case 'Follow-up':
-        return Colors.blue;
+        return Colors.black;
       default:
-        return Colors.grey;
+        return Colors.black;
     }
   }
 
@@ -320,7 +320,7 @@ class _IncidentCard extends StatelessWidget {
       padding: EdgeInsets.zero,
       child: ExpansionTile(
         leading: CircleAvatar(
-          backgroundColor: _statusColor(semanticColors).withValues(alpha: 0.2),
+          backgroundColor: _statusColor(semanticColors),
           child: Icon(Icons.gavel, color: _statusColor(semanticColors)),
         ),
         title: Text(
@@ -382,7 +382,7 @@ class _IncidentCard extends StatelessWidget {
                           ? Icons.lock_outline
                           : Icons.lock_open_outlined,
                       size: 14,
-                      color: Colors.grey,
+                      color: Colors.black,
                     ),
                     const SizedBox(width: 4),
                     Text(

@@ -109,7 +109,7 @@ class _InstitutionHealthCenterScreenState
               child: AlertBanner(
                 icon: Icons.schedule_outlined,
                 title: 'Health data may be outdated',
-                color: Colors.orange,
+                color: Colors.black,
                 message:
                     'The last confirmed health result is shown. Recheck to request a targeted server refresh.',
               ),
@@ -338,7 +338,7 @@ class _CheckCard extends StatelessWidget {
         backgroundColor: _severityColor(
           Theme.of(context).colorScheme,
           check.severity,
-        ).withValues(alpha: .14),
+        ),
         child: Icon(
           _statusIcon(check.status),
           color: _severityColor(Theme.of(context).colorScheme, check.severity),
@@ -427,7 +427,7 @@ Color _statusColor(ColorScheme scheme, InstitutionHealthStatus value) =>
     switch (value) {
       InstitutionHealthStatus.excellent ||
       InstitutionHealthStatus.good => scheme.primary,
-      InstitutionHealthStatus.needsAttention => Colors.orange,
+      InstitutionHealthStatus.needsAttention => Colors.black,
       InstitutionHealthStatus.atRisk ||
       InstitutionHealthStatus.critical => scheme.error,
       InstitutionHealthStatus.unknown => scheme.outline,
@@ -435,7 +435,7 @@ Color _statusColor(ColorScheme scheme, InstitutionHealthStatus value) =>
 Color _severityColor(ColorScheme scheme, HealthSeverity value) =>
     switch (value) {
       HealthSeverity.critical || HealthSeverity.high => scheme.error,
-      HealthSeverity.medium => Colors.orange,
+      HealthSeverity.medium => Colors.black,
       HealthSeverity.low => scheme.primary,
       HealthSeverity.informational => scheme.outline,
     };

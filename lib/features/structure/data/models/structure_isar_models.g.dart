@@ -34561,38 +34561,43 @@ const GradingSystemDefIsarSchema = CollectionSchema(
       name: r'levelIds',
       type: IsarType.stringList,
     ),
-    r'name': PropertySchema(
+    r'maximumMark': PropertySchema(
       id: 11,
+      name: r'maximumMark',
+      type: IsarType.double,
+    ),
+    r'name': PropertySchema(
+      id: 12,
       name: r'name',
       type: IsarType.string,
     ),
     r'passingGradeCode': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'passingGradeCode',
       type: IsarType.string,
     ),
     r'passingScore': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'passingScore',
       type: IsarType.double,
     ),
     r'scaleType': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'scaleType',
       type: IsarType.string,
     ),
     r'schoolId': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'schoolId',
       type: IsarType.string,
     ),
     r'type': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'type',
       type: IsarType.string,
     ),
     r'version': PropertySchema(
-      id: 17,
+      id: 18,
       name: r'version',
       type: IsarType.long,
     )
@@ -34686,13 +34691,14 @@ void _gradingSystemDefIsarSerialize(
   writer.writeBool(offsets[8], object.isActive);
   writer.writeBool(offsets[9], object.isDefault);
   writer.writeStringList(offsets[10], object.levelIds);
-  writer.writeString(offsets[11], object.name);
-  writer.writeString(offsets[12], object.passingGradeCode);
-  writer.writeDouble(offsets[13], object.passingScore);
-  writer.writeString(offsets[14], object.scaleType);
-  writer.writeString(offsets[15], object.schoolId);
-  writer.writeString(offsets[16], object.type);
-  writer.writeLong(offsets[17], object.version);
+  writer.writeDouble(offsets[11], object.maximumMark);
+  writer.writeString(offsets[12], object.name);
+  writer.writeString(offsets[13], object.passingGradeCode);
+  writer.writeDouble(offsets[14], object.passingScore);
+  writer.writeString(offsets[15], object.scaleType);
+  writer.writeString(offsets[16], object.schoolId);
+  writer.writeString(offsets[17], object.type);
+  writer.writeLong(offsets[18], object.version);
 }
 
 GradingSystemDefIsar _gradingSystemDefIsarDeserialize(
@@ -34714,13 +34720,14 @@ GradingSystemDefIsar _gradingSystemDefIsarDeserialize(
   object.isActive = reader.readBool(offsets[8]);
   object.isDefault = reader.readBool(offsets[9]);
   object.levelIds = reader.readStringList(offsets[10]) ?? [];
-  object.name = reader.readString(offsets[11]);
-  object.passingGradeCode = reader.readStringOrNull(offsets[12]);
-  object.passingScore = reader.readDoubleOrNull(offsets[13]);
-  object.scaleType = reader.readString(offsets[14]);
-  object.schoolId = reader.readString(offsets[15]);
-  object.type = reader.readString(offsets[16]);
-  object.version = reader.readLong(offsets[17]);
+  object.maximumMark = reader.readDouble(offsets[11]);
+  object.name = reader.readString(offsets[12]);
+  object.passingGradeCode = reader.readStringOrNull(offsets[13]);
+  object.passingScore = reader.readDoubleOrNull(offsets[14]);
+  object.scaleType = reader.readString(offsets[15]);
+  object.schoolId = reader.readString(offsets[16]);
+  object.type = reader.readString(offsets[17]);
+  object.version = reader.readLong(offsets[18]);
   return object;
 }
 
@@ -34754,18 +34761,20 @@ P _gradingSystemDefIsarDeserializeProp<P>(
     case 10:
       return (reader.readStringList(offset) ?? []) as P;
     case 11:
-      return (reader.readString(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 12:
-      return (reader.readStringOrNull(offset)) as P;
-    case 13:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 14:
       return (reader.readString(offset)) as P;
+    case 13:
+      return (reader.readStringOrNull(offset)) as P;
+    case 14:
+      return (reader.readDoubleOrNull(offset)) as P;
     case 15:
       return (reader.readString(offset)) as P;
     case 16:
       return (reader.readString(offset)) as P;
     case 17:
+      return (reader.readString(offset)) as P;
+    case 18:
       return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -36350,6 +36359,72 @@ extension GradingSystemDefIsarQueryFilter on QueryBuilder<GradingSystemDefIsar,
   }
 
   QueryBuilder<GradingSystemDefIsar, GradingSystemDefIsar,
+      QAfterFilterCondition> maximumMarkEqualTo(
+    double value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'maximumMark',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<GradingSystemDefIsar, GradingSystemDefIsar,
+      QAfterFilterCondition> maximumMarkGreaterThan(
+    double value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'maximumMark',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<GradingSystemDefIsar, GradingSystemDefIsar,
+      QAfterFilterCondition> maximumMarkLessThan(
+    double value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'maximumMark',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<GradingSystemDefIsar, GradingSystemDefIsar,
+      QAfterFilterCondition> maximumMarkBetween(
+    double lower,
+    double upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'maximumMark',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<GradingSystemDefIsar, GradingSystemDefIsar,
       QAfterFilterCondition> nameEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -37319,6 +37394,20 @@ extension GradingSystemDefIsarQuerySortBy
   }
 
   QueryBuilder<GradingSystemDefIsar, GradingSystemDefIsar, QAfterSortBy>
+      sortByMaximumMark() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'maximumMark', Sort.asc);
+    });
+  }
+
+  QueryBuilder<GradingSystemDefIsar, GradingSystemDefIsar, QAfterSortBy>
+      sortByMaximumMarkDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'maximumMark', Sort.desc);
+    });
+  }
+
+  QueryBuilder<GradingSystemDefIsar, GradingSystemDefIsar, QAfterSortBy>
       sortByName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'name', Sort.asc);
@@ -37546,6 +37635,20 @@ extension GradingSystemDefIsarQuerySortThenBy
   }
 
   QueryBuilder<GradingSystemDefIsar, GradingSystemDefIsar, QAfterSortBy>
+      thenByMaximumMark() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'maximumMark', Sort.asc);
+    });
+  }
+
+  QueryBuilder<GradingSystemDefIsar, GradingSystemDefIsar, QAfterSortBy>
+      thenByMaximumMarkDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'maximumMark', Sort.desc);
+    });
+  }
+
+  QueryBuilder<GradingSystemDefIsar, GradingSystemDefIsar, QAfterSortBy>
       thenByName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'name', Sort.asc);
@@ -37725,6 +37828,13 @@ extension GradingSystemDefIsarQueryWhereDistinct
   }
 
   QueryBuilder<GradingSystemDefIsar, GradingSystemDefIsar, QDistinct>
+      distinctByMaximumMark() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'maximumMark');
+    });
+  }
+
+  QueryBuilder<GradingSystemDefIsar, GradingSystemDefIsar, QDistinct>
       distinctByName({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'name', caseSensitive: caseSensitive);
@@ -37857,6 +37967,13 @@ extension GradingSystemDefIsarQueryProperty on QueryBuilder<
       levelIdsProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'levelIds');
+    });
+  }
+
+  QueryBuilder<GradingSystemDefIsar, double, QQueryOperations>
+      maximumMarkProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'maximumMark');
     });
   }
 

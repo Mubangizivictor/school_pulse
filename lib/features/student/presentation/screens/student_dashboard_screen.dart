@@ -337,7 +337,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             : AppColors.success(context);
 
         return AppCard(
-          color: statusColor.withValues(alpha: 0.1),
+          color: statusColor,
           child: Row(
             children: [
               Icon(Icons.account_balance_wallet_outlined, color: statusColor),

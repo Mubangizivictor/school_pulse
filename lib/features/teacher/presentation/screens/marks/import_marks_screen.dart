@@ -100,9 +100,7 @@ class _ImportMarksScreenState extends State<ImportMarksScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.surfaceElevated(context),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColors.border(context).withValues(alpha: 0.6),
-                  ),
+                  border: Border.all(color: AppColors.border(context)),
                 ),
                 child: IconButton(
                   tooltip: 'Back',
@@ -147,18 +145,14 @@ class _ImportMarksScreenState extends State<ImportMarksScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.surfaceElevated(context),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.border(context).withValues(alpha: 0.5),
-                      ),
+                      border: Border.all(color: AppColors.border(context)),
                     ),
                     child: Column(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.success(
-                              context,
-                            ).withValues(alpha: 0.1),
+                            color: AppColors.success(context),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(

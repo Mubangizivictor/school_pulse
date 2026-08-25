@@ -179,32 +179,31 @@ class EnrollmentSetupWizardBloc
         if (v.name == boardingName) boardingType = v;
       }
     }
-    final guardians = (json['guardians'] as List? ?? [])
-        .map((raw) {
-          final g = (raw as Map).cast<String, dynamic>();
-          final typeName = g['type'] as String?;
-          final type = RelationshipType.values.firstWhere(
-            (t) => t.name == typeName,
-            orElse: () => RelationshipType.parent,
-          );
-          return GuardianDraft(
-            name: g['name'] as String? ?? '',
-            phoneNumber: g['phoneNumber'] as String? ?? '',
-            type: type,
-            relationshipLabel: g['relationshipLabel'] as String? ?? '',
-            email: g['email'] as String?,
-            isLegalGuardian: g['isLegalGuardian'] as bool? ?? false,
-            isPrimaryGuardian: g['isPrimaryGuardian'] as bool? ?? false,
-            pickupAuthorized: g['pickupAuthorized'] as bool? ?? false,
-          );
-        })
-        .toList();
+    final guardians = (json['guardians'] as List? ?? []).map((raw) {
+      final g = (raw as Map).cast<String, dynamic>();
+      final typeName = g['type'] as String?;
+      final type = RelationshipType.values.firstWhere(
+        (t) => t.name == typeName,
+        orElse: () => RelationshipType.parent,
+      );
+      return GuardianDraft(
+        name: g['name'] as String? ?? '',
+        phoneNumber: g['phoneNumber'] as String? ?? '',
+        type: type,
+        relationshipLabel: g['relationshipLabel'] as String? ?? '',
+        email: g['email'] as String?,
+        isLegalGuardian: g['isLegalGuardian'] as bool? ?? false,
+        isPrimaryGuardian: g['isPrimaryGuardian'] as bool? ?? false,
+        pickupAuthorized: g['pickupAuthorized'] as bool? ?? false,
+      );
+    }).toList();
 
     final medicalJson = json['medicalInfo'];
     final medicalInfo = medicalJson is Map
         ? MedicalInfo(
             bloodGroup: medicalJson['bloodGroup'] as String?,
-            allergies: (medicalJson['allergies'] as List?)?.cast<String>() ?? const [],
+            allergies:
+                (medicalJson['allergies'] as List?)?.cast<String>() ?? const [],
             chronicConditions:
                 (medicalJson['chronicConditions'] as List?)?.cast<String>() ??
                 const [],
@@ -213,17 +212,17 @@ class EnrollmentSetupWizardBloc
           )
         : null;
 
-    final emergencyContacts = (json['emergencyContacts'] as List? ?? [])
-        .map((raw) {
-          final c = (raw as Map).cast<String, dynamic>();
-          return EmergencyContact(
-            name: c['name'] as String? ?? '',
-            relationship: c['relationship'] as String? ?? '',
-            phoneNumber: c['phoneNumber'] as String? ?? '',
-            email: c['email'] as String?,
-          );
-        })
-        .toList();
+    final emergencyContacts = (json['emergencyContacts'] as List? ?? []).map((
+      raw,
+    ) {
+      final c = (raw as Map).cast<String, dynamic>();
+      return EmergencyContact(
+        name: c['name'] as String? ?? '',
+        relationship: c['relationship'] as String? ?? '',
+        phoneNumber: c['phoneNumber'] as String? ?? '',
+        email: c['email'] as String?,
+      );
+    }).toList();
 
     Gender gender = s.gender;
     final genderName = json['gender'] as String?;

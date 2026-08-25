@@ -140,7 +140,7 @@ class _PollComposerSheetState extends State<PollComposerSheet> {
                     IconButton(
                       icon: const Icon(
                         Icons.remove_circle_outline,
-                        color: Colors.redAccent,
+                        color: Colors.black,
                       ),
                       onPressed: () =>
                           setState(() => _options.removeAt(i).dispose()),
@@ -375,9 +375,7 @@ class _ContactPickerSheetState extends State<ContactPickerSheet> {
                 );
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: AppColors.electricBlue.withValues(
-                      alpha: 0.1,
-                    ),
+                    backgroundColor: AppColors.electricBlue,
                     child: Text(
                       contact.initials,
                       style: const TextStyle(color: AppColors.electricBlue),

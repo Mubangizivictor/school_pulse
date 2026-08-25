@@ -222,7 +222,7 @@ class _ResourceItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconData.$2.withValues(alpha: 0.1),
+              color: iconData.$2,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(iconData.$1, color: iconData.$2),
@@ -274,14 +274,14 @@ class _ResourceItem extends StatelessWidget {
   }
 
   static (IconData, Color) _iconFor(ClassResourceKind kind) => switch (kind) {
-    ClassResourceKind.document => (Icons.picture_as_pdf, Colors.red),
-    ClassResourceKind.spreadsheet => (Icons.grid_on, Colors.green),
-    ClassResourceKind.presentation => (Icons.slideshow, Colors.orange),
-    ClassResourceKind.image => (Icons.image, Colors.green),
-    ClassResourceKind.audio => (Icons.audiotrack, Colors.teal),
-    ClassResourceKind.video => (Icons.videocam, Colors.purple),
-    ClassResourceKind.link => (Icons.link, Colors.blue),
-    ClassResourceKind.folder => (Icons.folder, Colors.amber),
-    ClassResourceKind.other => (Icons.insert_drive_file, Colors.grey),
+    ClassResourceKind.document => (Icons.picture_as_pdf, Colors.black),
+    ClassResourceKind.spreadsheet => (Icons.grid_on, Colors.black),
+    ClassResourceKind.presentation => (Icons.slideshow, Colors.black),
+    ClassResourceKind.image => (Icons.image, Colors.black),
+    ClassResourceKind.audio => (Icons.audiotrack, Colors.black),
+    ClassResourceKind.video => (Icons.videocam, Colors.black),
+    ClassResourceKind.link => (Icons.link, Colors.black),
+    ClassResourceKind.folder => (Icons.folder, Colors.black),
+    ClassResourceKind.other => (Icons.insert_drive_file, Colors.black),
   };
 }

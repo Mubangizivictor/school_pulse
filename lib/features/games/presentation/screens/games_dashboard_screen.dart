@@ -183,7 +183,7 @@ class _HousePointsGrid extends StatelessWidget {
     try {
       return Color(int.parse(colorStr.replaceFirst('#', '0xFF')));
     } catch (_) {
-      return Colors.grey;
+      return Colors.black;
     }
   }
 }

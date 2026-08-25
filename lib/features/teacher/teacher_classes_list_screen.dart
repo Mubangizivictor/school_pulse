@@ -124,7 +124,7 @@ class _TeacherClassesListScreenState extends State<TeacherClassesListScreen> {
           Container(
             padding: const EdgeInsets.all(AppSpacing.l),
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withValues(alpha: 0.1),
+              color: AppColors.primary(context),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -158,7 +158,7 @@ class _TeacherClassesListScreenState extends State<TeacherClassesListScreen> {
             Container(
               padding: const EdgeInsets.all(AppSpacing.m),
               decoration: BoxDecoration(
-                color: AppColors.primary(context).withValues(alpha: 0.1),
+                color: AppColors.primary(context),
                 borderRadius: BorderRadius.circular(AppSpacing.m),
               ),
               child: Icon(
@@ -186,7 +186,7 @@ class _TeacherClassesListScreenState extends State<TeacherClassesListScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.success(context).withValues(alpha: 0.1),
+                  color: AppColors.success(context),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(

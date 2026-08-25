@@ -17,10 +17,7 @@ class MyClassesScreen extends StatelessWidget {
         elevation: 0,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: AppColors.border(context).withValues(alpha: 0.5),
-            height: 1,
-          ),
+          child: Container(color: AppColors.border(context), height: 1),
         ),
       ),
       body: Column(
@@ -122,7 +119,7 @@ class MyClassesScreen extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withValues(alpha: 0.1),
+              color: AppColors.primary(context),
               borderRadius: BorderRadius.circular(8),
             ),
             alignment: Alignment.center,

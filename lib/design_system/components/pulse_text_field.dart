@@ -81,7 +81,7 @@ class _PulseTextFieldState extends State<PulseTextField> {
                 Text(
                   '*',
                   style: TextStyle(
-                    color: AppColors.deepOrange,
+                    color: AppColors.black,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -174,7 +174,7 @@ class _PulseTextFieldState extends State<PulseTextField> {
   }) {
     Color borderColor;
     if (isError) {
-      borderColor = AppColors.deepOrange;
+      borderColor = AppColors.black;
     } else if (isFocused) {
       borderColor = AppColors.electricBlue;
     } else if (isDisabled) {

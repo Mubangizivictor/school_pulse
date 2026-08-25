@@ -127,7 +127,7 @@ class InventoryDashboardScreen extends StatelessWidget {
                       _QuickAction(
                         label: 'Procurement',
                         icon: Icons.shopping_basket_outlined,
-                        color: Colors.deepPurple,
+                        color: Colors.black,
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -138,7 +138,7 @@ class InventoryDashboardScreen extends StatelessWidget {
                       _QuickAction(
                         label: 'Medical Requests',
                         icon: Icons.medical_services_outlined,
-                        color: Colors.teal,
+                        color: Colors.black,
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -469,10 +469,7 @@ class _InventoryItemTile extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             child: Icon(
               status == 'Restocked' ? Icons.arrow_downward : Icons.arrow_upward,
               color: color,
@@ -524,9 +521,9 @@ class _QuickAction extends StatelessWidget {
         width: (MediaQuery.of(context).size.width - 44) / 2,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          border: Border.all(color: color),
         ),
         child: Column(
           children: [

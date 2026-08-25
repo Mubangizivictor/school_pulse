@@ -603,7 +603,7 @@ class _NotificationTileState extends State<_NotificationTile> {
     if (photoUrl != null && photoUrl.isNotEmpty) {
       return CircleAvatar(
         radius: 20,
-        backgroundColor: iconColor.withValues(alpha: 0.15),
+        backgroundColor: iconColor,
         foregroundImage: NetworkImage(photoUrl),
         // Shown while loading and if the image fails or was deleted.
         child: Icon(config.icon, color: iconColor, size: 20),
@@ -615,7 +615,7 @@ class _NotificationTileState extends State<_NotificationTile> {
       height: 40,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: iconColor.withValues(alpha: 0.15),
+        color: iconColor,
         borderRadius: AppRadius.medium,
       ),
       child: Icon(config.icon, color: iconColor, size: 20),

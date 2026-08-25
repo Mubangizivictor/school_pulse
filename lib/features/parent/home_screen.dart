@@ -587,10 +587,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: iconColor, shape: BoxShape.circle),
             child: Icon(icon, color: iconColor, size: 24),
           ),
           const SizedBox(width: 16),

@@ -110,9 +110,7 @@ class _RoleChip extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: selected
-              ? primary.withValues(alpha: 0.14)
-              : AppColors.surfaceContainer(context),
+          color: selected ? primary : AppColors.surfaceContainer(context),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? primary : AppColors.border(context),

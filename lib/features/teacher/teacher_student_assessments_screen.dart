@@ -213,7 +213,7 @@ class _SubjectTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: AppColors.primary(context).withValues(alpha: 0.1),
+                color: AppColors.primary(context),
                 borderRadius: BorderRadius.circular(AppSpacing.m),
               ),
               child: Icon(Icons.menu_book, color: AppColors.primary(context)),
@@ -237,11 +237,9 @@ class _SubjectTile extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color:
-                          (passed
-                                  ? AppColors.success(context)
-                                  : AppColors.danger(context))
-                              .withValues(alpha: 0.1),
+                      color: (passed
+                          ? AppColors.success(context)
+                          : AppColors.danger(context)),
                       borderRadius: BorderRadius.circular(AppSpacing.s),
                     ),
                     child: Text(

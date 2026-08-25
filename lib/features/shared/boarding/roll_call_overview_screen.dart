@@ -130,9 +130,7 @@ class RollCallOverviewScreen extends StatelessWidget {
                       if (i > 0)
                         Divider(
                           height: 1,
-                          color: theme.colorScheme.outlineVariant.withValues(
-                            alpha: 0.5,
-                          ),
+                          color: theme.colorScheme.outlineVariant,
                         ),
                       _dormBreakdownRow(dormitories[i]),
                     ],

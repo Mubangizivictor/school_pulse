@@ -477,7 +477,7 @@ class TimetableSectionState extends State<_TimetableSection> {
           final slot = entry.value;
           return StructureListRow(
             icon: _slotIcon(slot.type),
-            color: Colors.purple,
+            color: Colors.black,
             title: slot.name,
             subtitle:
                 '${slot.startTime} - ${slot.endTime} • ${_pretty(slot.type)}',
@@ -668,7 +668,7 @@ class _AttendanceSection extends StatelessWidget {
         ...state.attendanceTypes.map(
           (type) => StructureListRow(
             icon: Icons.check_circle_outline,
-            color: _safeHex(type.colorHex, Colors.blueGrey),
+            color: _safeHex(type.colorHex, Colors.black),
             title: type.name,
             isActive: type.isActive,
             onEdit: () => showAttendanceTypeFormDialog(
@@ -706,7 +706,7 @@ class _AttendanceSection extends StatelessWidget {
         ...state.attendanceSessions.map(
           (session) => StructureListRow(
             icon: Icons.access_time_outlined,
-            color: Colors.purple,
+            color: Colors.black,
             title: session.name,
             isActive: session.isActive,
             onEdit: () => showAttendanceSessionFormDialog(
@@ -757,7 +757,7 @@ class _CommunicationSection extends StatelessWidget {
         ...state.announcementCategories.map(
           (category) => StructureListRow(
             icon: Icons.campaign_outlined,
-            color: Colors.purple,
+            color: Colors.black,
             title: category.name,
             isActive: category.isActive,
             onEdit: () => showAnnouncementCategoryFormDialog(
@@ -793,7 +793,7 @@ class _CommunicationSection extends StatelessWidget {
         ...state.notificationCategories.map(
           (category) => StructureListRow(
             icon: Icons.notifications_outlined,
-            color: Colors.purple,
+            color: Colors.black,
             title: category.name,
             isActive: category.isActive,
             onEdit: () => showNotificationCategoryFormDialog(
@@ -829,7 +829,7 @@ class _CommunicationSection extends StatelessWidget {
         ...state.messageTemplates.map(
           (template) => StructureListRow(
             icon: Icons.sms_outlined,
-            color: Colors.purple,
+            color: Colors.black,
             title: template.name,
             subtitle: template.channel.toUpperCase(),
             isActive: template.isActive,
@@ -876,7 +876,7 @@ class _FeeCategoriesSection extends StatelessWidget {
                 final category = state.feeCategories[index];
                 return StructureListRow(
                   icon: Icons.account_balance_wallet_outlined,
-                  color: Colors.green,
+                  color: Colors.black,
                   title: category.name,
                   subtitle: [
                     if (category.code.isNotEmpty) category.code,
@@ -938,7 +938,7 @@ class _DocumentTemplatesSection extends StatelessWidget {
                 final template = state.documentTemplates[index];
                 return StructureListRow(
                   icon: Icons.description_outlined,
-                  color: Colors.purple,
+                  color: Colors.black,
                   title: template.name,
                   subtitle: template.templateType,
                   isActive: template.isActive,
@@ -994,7 +994,7 @@ class _CustomFieldsSection extends StatelessWidget {
                 final field = state.customFields[index];
                 return StructureListRow(
                   icon: Icons.dynamic_form_outlined,
-                  color: Colors.purple,
+                  color: Colors.black,
                   title: field.fieldName,
                   subtitle:
                       '${field.appliesTo} - ${field.fieldType}${field.isRequired ? ' - Required' : ''}',

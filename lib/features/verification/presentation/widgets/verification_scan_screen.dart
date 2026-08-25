@@ -95,7 +95,7 @@ class _VerificationScanScreenState extends State<VerificationScanScreen> {
             builder: (context, state) => switch (state) {
               VerificationIdle() ||
               VerificationResolving() => const _StatusView(
-                color: Colors.blue,
+                color: Colors.black,
                 icon: Icons.sensors,
                 title: 'Scanning…',
                 message: 'Present a card, code, or scan a QR to continue.',
@@ -104,7 +104,7 @@ class _VerificationScanScreenState extends State<VerificationScanScreen> {
                 decision: decision,
               ),
               VerificationRecording() => const _StatusView(
-                color: Colors.green,
+                color: Colors.black,
                 icon: Icons.check_circle_outline,
                 title: 'Recording…',
                 message: '',
@@ -112,7 +112,7 @@ class _VerificationScanScreenState extends State<VerificationScanScreen> {
               VerificationRecorded(:final decision, :final direction) =>
                 _RecordedView(decision: decision, direction: direction),
               VerificationSessionError(:final message) => _StatusView(
-                color: Colors.red,
+                color: Colors.black,
                 icon: Icons.error_outline,
                 title: 'Something went wrong',
                 message: message,
@@ -138,8 +138,8 @@ class _DecidedView extends StatelessWidget {
         decision.outcome == VerificationOutcome.alreadyRecorded ||
         decision.outcome == VerificationOutcome.requiresOverride;
     final color = isAllowed
-        ? Colors.green
-        : (isWarning ? Colors.orange : Colors.red);
+        ? Colors.black
+        : (isWarning ? Colors.black : Colors.black);
     final icon = isAllowed
         ? Icons.check_circle
         : (isWarning ? Icons.warning_amber_rounded : Icons.cancel);
@@ -181,7 +181,7 @@ class _RecordedView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _ResultScaffold(
-      color: Colors.green,
+      color: Colors.black,
       icon: Icons.check_circle,
       title: direction == 'In' ? 'ENTRY RECORDED' : 'EXIT RECORDED',
       subtitle: '',
@@ -217,7 +217,7 @@ class _DirectionConfirmButtons extends StatelessWidget {
           onPressed: () => context.read<VerificationSessionBloc>().add(
             const VerificationDirectionConfirmed('Out'),
           ),
-          style: FilledButton.styleFrom(backgroundColor: Colors.blueGrey),
+          style: FilledButton.styleFrom(backgroundColor: Colors.black),
           icon: const Icon(Icons.logout),
           label: Text(
             suggestedDirection == 'Out'
@@ -291,7 +291,7 @@ class _ResultScaffold extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               message,
-              style: const TextStyle(fontSize: 16, color: Colors.white70),
+              style: const TextStyle(fontSize: 16, color: Colors.white),
               textAlign: TextAlign.center,
             ),
           ],

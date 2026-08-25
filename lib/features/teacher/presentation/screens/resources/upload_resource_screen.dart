@@ -59,18 +59,14 @@ class _UploadResourceScreenState extends State<UploadResourceScreen> {
                 onTap: _pickFile,
                 child: AppCard(
                   padding: const EdgeInsets.symmetric(vertical: 40),
-                  borderColor: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: 0.3),
+                  borderColor: Theme.of(context).colorScheme.primary,
                   child: Center(
                     child: Column(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.primary.withValues(alpha: 0.1),
+                            color: Theme.of(context).colorScheme.primary,
                             shape: BoxShape.circle,
                           ),
                           child: Icon(

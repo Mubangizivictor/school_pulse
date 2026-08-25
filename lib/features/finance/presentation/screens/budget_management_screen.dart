@@ -152,7 +152,7 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> {
     final color = utilization > 90
         ? semanticColors.error
         : utilization > 70
-        ? Colors.orange
+        ? Colors.black
         : semanticColors.success;
 
     return AppCard(
@@ -178,7 +178,7 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> {
           const SizedBox(height: 16),
           LinearProgressIndicator(
             value: utilization / 100,
-            backgroundColor: color.withValues(alpha: 0.1),
+            backgroundColor: color,
             color: color,
             minHeight: 8,
             borderRadius: BorderRadius.circular(4),

@@ -263,10 +263,7 @@ class _ClassBehaviourScreenState extends State<ClassBehaviourScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(AppSpacing.s),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             child: Icon(
               isPositive ? Icons.add_circle : Icons.remove_circle,
               color: color,

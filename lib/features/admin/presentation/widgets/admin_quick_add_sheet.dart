@@ -39,13 +39,13 @@ final _actions = [
   _QuickAddAction(
     label: 'Add Staff',
     icon: Icons.person_add_alt_1_rounded,
-    color: Colors.indigo,
+    color: Colors.black,
     onTap: (context) => context.push('/staff/admin/users/add-staff'),
   ),
   _QuickAddAction(
     label: 'Add Student',
     icon: Icons.school_outlined,
-    color: Colors.teal,
+    color: Colors.black,
     onTap: (context) {
       final auth = context.read<AuthBloc>().state;
       if (auth is AuthAuthenticated) {
@@ -56,7 +56,7 @@ final _actions = [
   _QuickAddAction(
     label: 'Add Parent',
     icon: Icons.person_add_outlined,
-    color: Colors.green,
+    color: Colors.black,
     onTap: (context) => Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const AccessCodesScreen())),
@@ -64,13 +64,13 @@ final _actions = [
   _QuickAddAction(
     label: 'Create Announcement',
     icon: Icons.campaign_rounded,
-    color: Colors.redAccent,
+    color: Colors.black,
     onTap: (context) => context.push('/staff/more/announcements/new'),
   ),
   _QuickAddAction(
     label: 'Create Appointment',
     icon: Icons.event_available_rounded,
-    color: Colors.lightBlue,
+    color: Colors.black,
     onTap: (context) => context.push('/staff/admin/appointments'),
   ),
 ];
@@ -107,7 +107,7 @@ class _AdminQuickAddSheetContent extends StatelessWidget {
                   leading: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: action.color.withValues(alpha: 0.12),
+                      color: action.color,
                       borderRadius: AppRadius.medium,
                     ),
                     child: Icon(action.icon, color: action.color, size: 20),

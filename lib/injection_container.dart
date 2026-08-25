@@ -455,11 +455,14 @@ import 'package:school_pulse/features/admin/data/repositories/subscription_repos
 
 // Structure module
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
+import 'package:school_pulse/features/structure/domain/repositories/structure_setup_repository.dart';
 import 'package:school_pulse/features/structure/domain/services/structure_dependency_service.dart';
 import 'package:school_pulse/features/structure/data/repositories/structure_repository_impl.dart';
+import 'package:school_pulse/features/structure/data/repositories/structure_setup_repository_impl.dart';
 import 'package:school_pulse/features/structure/data/datasources/structure_remote_data_source.dart';
 import 'package:school_pulse/features/structure/data/datasources/structure_local_data_source.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
+import 'package:school_pulse/features/structure/presentation/bloc/structure_setup_cubit.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/role_assignment_cubit.dart';
 import 'package:school_pulse/features/structure/data/datasources/structure_local_data_source_factory.dart';
 import 'package:school_pulse/features/structure/domain/services/structure_configuration_service.dart';
@@ -2044,6 +2047,12 @@ Future<void> init() async {
     () =>
         StructureRepositoryImpl(remoteDataSource: sl(), localDataSource: sl()),
   );
+
+  sl.registerLazySingleton<StructureSetupRepository>(
+    () => StructureSetupRepositoryImpl(firestore: sl(), auth: sl()),
+  );
+
+  sl.registerFactory(() => StructureSetupCubit(repository: sl()));
 
   sl.registerLazySingleton<StructureRemoteDataSource>(
     () => StructureRemoteDataSourceImpl(firestore: sl()),

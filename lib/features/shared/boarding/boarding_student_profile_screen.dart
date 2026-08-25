@@ -312,9 +312,7 @@ class _VerticalDivider extends StatelessWidget {
     return Container(
       width: 1,
       height: 36,
-      color: Theme.of(
-        context,
-      ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+      color: Theme.of(context).colorScheme.outlineVariant,
     );
   }
 }
@@ -333,7 +331,7 @@ class _AttendanceCell extends StatelessWidget {
       'present' => semanticColors.success,
       'absent' => semanticColors.error,
       'late' => semanticColors.warning,
-      'leave' => Colors.deepOrange,
+      'leave' => Colors.black,
       _ => theme.colorScheme.outline,
     };
     return Column(

@@ -205,6 +205,25 @@ service cloud.firestore {
       allow delete: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
         resource.data.role != 'parent' &&
         isSameSchool(resource.data.schoolId);
+
+      // Personal dashboard layout is isolated by both Firebase UID and
+      // tenant. This is intentionally not a school-wide settings document:
+      // one admin must never be able to read or overwrite another admin's
+      // pinned modules, including while using the SDK directly.
+      match /dashboard_preferences/{schoolId} {
+        allow read: if isSignedIn() && request.auth.uid == uid &&
+          isSameSchool(schoolId);
+        allow create, update: if isSignedIn() && request.auth.uid == uid &&
+          isSameSchool(schoolId) &&
+          request.resource.data.schoolId == schoolId &&
+          request.resource.data.keys().hasOnly([
+            'schoolId', 'pinned', 'updatedAt'
+          ]) &&
+          request.resource.data.pinned is list &&
+          request.resource.data.pinned.size() <= 4;
+        allow delete: if isSignedIn() && request.auth.uid == uid &&
+          isSameSchool(schoolId);
+      }
     }
 
     // Sanitized directory used by parent-facing contact actions. It contains
@@ -450,6 +469,48 @@ service cloud.firestore {
           hasEnrollmentPermission(resource.data.schoolId, 'admission.enroll')
         );
       allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
+
+      // Direct-enrolment document metadata. Guardian access is deliberately
+      // limited to linked learner records; staff remains tenant-scoped.
+      match /documents/{documentId} {
+        allow read: if isSameSchool(resource.data.schoolId) &&
+          (isStaff() || isParentOf(studentId));
+        allow write: if false;
+      }
+    }
+
+    // A direct enrolment draft contains only non-clinical working data and
+    // is editable only by its creator (or an enrolment-authorised staff
+    // member). Activation itself is server-only via directEnrolLearner.
+    match /direct_enrolment_drafts/{draftId} {
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        (resource.data.createdBy == request.auth.uid ||
+          hasEnrollmentPermission(resource.data.schoolId, 'admission.enroll'));
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        request.resource.data.createdBy == request.auth.uid && schoolCanWrite(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        resource.data.schoolId == request.resource.data.schoolId &&
+        (resource.data.createdBy == request.auth.uid ||
+          hasEnrollmentPermission(resource.data.schoolId, 'admission.enroll')) &&
+        schoolCanWrite(resource.data.schoolId);
+      allow delete: if false;
+    }
+
+    // These are written by the callable finaliser. Client reads are kept
+    // narrow; medical/support notes are never broadly visible.
+    match /student_guardians/{studentId} {
+      allow read: if isSameSchool(resource.data.schoolId) &&
+        (isStaff() || isParentOf(studentId));
+      allow write: if false;
+    }
+    match /student_services/{studentId} {
+      allow read: if isSameSchool(resource.data.schoolId) &&
+        (isStaff() || isParentOf(studentId));
+      allow write: if false;
+    }
+    match /student_medical_support/{studentId} {
+      allow read: if isSameSchool(resource.data.schoolId) && canManageClinicalRecords();
+      allow write: if false;
     }
 
     // QR/NFC identity lookup for ID cards - StudentIdentityRepository
@@ -1263,6 +1324,15 @@ service cloud.firestore {
         (document != 'institution_profile' && isStaff())
       );
     }
+    // Step 14 Feature Choices - which optional modules this school has
+    // switched on. Read by any signed-in staff (other features gate their
+    // own nav on it), but only School Admin-tier roles may change it, same
+    // as the institution profile above.
+    match /schools/{schoolId}/settings/features {
+      allow read: if isSignedIn() && isSameSchool(schoolId);
+      allow write: if isSameSchool(schoolId) &&
+        hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']);
+    }
     // Central module configuration. Subscription entitlement is written only
     // by trusted server-side billing code; tenant admins can update local
     // enablement but cannot forge entitlement or re-parent configuration.
@@ -1321,25 +1391,46 @@ service cloud.firestore {
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
         request.resource.data.schoolId == resource.data.schoolId;
     }
+    match /structure_teaching_plans/{id} {
+      allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+    }
+    match /structure_teaching_plan_subjects/{id} {
+      allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+    }
+    match /structure_class_plan_overrides/{id} {
+      allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
+        request.resource.data.schoolId == resource.data.schoolId;
+    }
     match /structure_teaching_assignments/{id} {
-      allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
-        request.resource.data.schoolId == resource.data.schoolId;
+      // Academic duties are not app-access roles. Only a school academic
+      // administrator may manage them, and every document is tenant-bound.
+      // Assignments are audit records: ending them is an update, never a
+      // delete, so historical marks, reports and timetables keep their link.
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow create: if isSameSchool(request.resource.data.schoolId) &&
+        hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']) &&
+        request.resource.data.schoolId == myUser().schoolId &&
+        request.resource.data.academicYearId is string &&
+        request.resource.data.academicTermId is string;
+      allow update: if isSameSchool(resource.data.schoolId) &&
+        hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director']) &&
+        request.resource.data.schoolId == resource.data.schoolId &&
+        // An assignment's scope is immutable audit data. The only client
+        // mutation is ending it; reassignment creates a separate row for the
+        // new scope and term instead of changing historical links.
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['isActive', 'endDate', 'updatedAt']) &&
+        request.resource.data.isActive == false;
+      allow delete: if false;
     }
-    match /structure_class_timetables/{id} {
-      allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
-        request.resource.data.schoolId == resource.data.schoolId;
-    }
-    match /structure_timetable_lessons/{id} {
-      allow read, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
-      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
-        request.resource.data.schoolId == resource.data.schoolId;
-    }
-
     match /houses/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
@@ -2134,16 +2225,76 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // A class/stream's timetable envelope (draft/active/archived, versioned).
-    // Timetable creation, editing and publishing is admin-owned; every
-    // teacher and student at the school can read timetables so their own
-    // class/subject view can be derived from the same source of truth.
+    // Step 12 named rooms live under the tenant path. They are intentionally
+    // not global facilities: only school structure administrators may manage
+    // scheduling resources for their own institution.
+    match /schools/{schoolId}/spaceSettings/{settingId} {
+      allow read: if isSameSchool(schoolId) && schoolAcademicAdmin();
+      allow create, update: if isSameSchool(schoolId) && schoolAcademicAdmin()
+        && settingId == 'current';
+      allow delete: if false;
+    }
+    match /schools/{schoolId}/spaces/{spaceId} {
+      allow read: if isSameSchool(schoolId) && schoolAcademicAdmin();
+      allow create: if isSameSchool(schoolId) && schoolAcademicAdmin()
+        && request.resource.data.name is string
+        && request.resource.data.normalizedName is string
+        && request.resource.data.type is string
+        && request.resource.data.active == true
+        && (!request.resource.data.keys().hasAny(['capacity']) ||
+          (request.resource.data.capacity is int && request.resource.data.capacity > 0));
+      allow update: if isSameSchool(schoolId) && schoolAcademicAdmin()
+        && request.resource.data.active is bool
+        && (!request.resource.data.keys().hasAny(['capacity']) ||
+          (request.resource.data.capacity is int && request.resource.data.capacity > 0));
+      allow delete: if false;
+    }
+
+    // Draft -> Validated -> Published -> Superseded/Archived. `active` is
+    // accepted as a legacy synonym for `published` on existing documents
+    // (see TimetableStatus.fromId) but is never written by current code.
+    // Rules only enforce that a write moves *forward* through this order
+    // (or stays put, e.g. re-saving lessons on a draft) - the actual
+    // conflict/allocation checks that decide whether a transition is safe
+    // live in TimetableConflictResolver on the client, run inside the same
+    // Firestore transaction that performs the publish
+    // (TimetableRemoteDataSourceImpl.publishTimetable), not in rules.
+    function timetableStatusRank(status) {
+      return status == 'draft' ? 0
+        : status == 'validated' ? 1
+        : (status == 'active' || status == 'published') ? 2
+        : (status == 'superseded' || status == 'archived') ? 3
+        : -1;
+    }
+    function isValidTimetableStatusTransition() {
+      return !resource.data.keys().hasAny(['status']) ||
+        !request.resource.data.keys().hasAny(['status']) ||
+        request.resource.data.status == resource.data.status ||
+        timetableStatusRank(request.resource.data.status) >
+          timetableStatusRank(resource.data.status);
+    }
+
+    // A class/stream's timetable envelope (draft/validated/published/
+    // superseded/archived, versioned). Timetable creation, editing and
+    // publishing is admin-owned; every teacher and student at the school
+    // can read timetables so their own class/subject view can be derived
+    // from the same source of truth.
     match /schools/{schoolId}/timetables/{timetableId} {
       allow read: if isSameSchool(schoolId);
-      allow create, update: if isSameSchool(schoolId) && schoolAcademicAdmin();
-      // Superseded timetables are archived, never deleted - printed copies
-      // and audit history reference them by id.
+      allow create: if isSameSchool(schoolId) && schoolAcademicAdmin();
+      allow update: if isSameSchool(schoolId) && schoolAcademicAdmin() &&
+        schoolIdUnchanged() && isValidTimetableStatusTransition();
+      // Superseded/archived timetables are kept, never deleted - printed
+      // copies and audit history reference them by id.
       allow delete: if false;
+    }
+
+    // Immutable per-timetable history row - who did what, when. Appended
+    // by the same admin write that performs the action; never edited.
+    match /schools/{schoolId}/timetables/{timetableId}/audit_trail/{entryId} {
+      allow read: if isSameSchool(schoolId);
+      allow create: if isSameSchool(schoolId) && schoolAcademicAdmin();
+      allow update, delete: if false;
     }
 
     // One scheduled subject+teacher(+room) assignment inside a timetable.

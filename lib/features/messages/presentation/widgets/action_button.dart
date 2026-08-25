@@ -22,7 +22,7 @@ class ActionButton extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.electricBlue.withValues(alpha: 0.1),
+              color: AppColors.electricBlue,
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: AppColors.electricBlue),

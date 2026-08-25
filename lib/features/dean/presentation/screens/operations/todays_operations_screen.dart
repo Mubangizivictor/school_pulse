@@ -177,7 +177,7 @@ class _OperationRow extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.s),
               decoration: BoxDecoration(
-                color: data.color.withValues(alpha: 0.1),
+                color: data.color,
                 borderRadius: AppRadius.small,
               ),
               child: Icon(data.icon, color: data.color, size: 18),

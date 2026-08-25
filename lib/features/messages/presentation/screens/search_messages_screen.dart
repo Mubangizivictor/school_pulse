@@ -115,7 +115,7 @@ class _SearchMessagesScreenState extends State<SearchMessagesScreen> {
         title: Container(
           height: 40,
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.grey[200],
+            color: isDark ? AppColors.surfaceDark : Colors.black,
             borderRadius: BorderRadius.circular(20),
           ),
           child: TextField(

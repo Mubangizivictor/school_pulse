@@ -152,9 +152,7 @@ class _AssignStaffRoleScreenState extends State<AssignStaffRoleScreen> {
           : {'label': _extraScopeController.text.trim()},
       assignedBy: actor.id,
       assignedAt: DateTime.now(),
-      monthlyBonusAmount: double.tryParse(
-        _monthlyBonusController.text.trim(),
-      ),
+      monthlyBonusAmount: double.tryParse(_monthlyBonusController.text.trim()),
     );
 
     setState(() => _submitting = true);
@@ -486,9 +484,7 @@ class _LoadingField extends StatelessWidget {
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: .35),
-          ),
+          border: Border.all(color: Theme.of(context).colorScheme.outline),
           borderRadius: BorderRadius.circular(7),
         ),
         child: const SizedBox(
@@ -529,7 +525,7 @@ class _DatePickerField extends StatelessWidget {
         height: 46,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          border: Border.all(color: colors.outline.withValues(alpha: .35)),
+          border: Border.all(color: colors.outline),
           borderRadius: BorderRadius.circular(7),
         ),
         child: Row(

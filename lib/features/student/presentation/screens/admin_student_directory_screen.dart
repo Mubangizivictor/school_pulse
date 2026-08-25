@@ -275,7 +275,7 @@ class _StudentCard extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: student.status == StudentStatus.active
-                      ? Colors.green
+                      ? Colors.black
                       : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),

@@ -42,7 +42,7 @@ class AnnouncementsScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.l),
                   decoration: BoxDecoration(
-                    color: AppColors.primary(context).withValues(alpha: 0.1),
+                    color: AppColors.primary(context),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(

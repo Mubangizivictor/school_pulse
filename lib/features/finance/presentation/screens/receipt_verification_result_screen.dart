@@ -28,14 +28,14 @@ class ReceiptVerificationResultScreen extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 80),
+            const Icon(Icons.check_circle, color: Colors.black, size: 80),
             const SizedBox(height: 16),
             const Text(
               'AUTHENTIC RECEIPT',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.green,
+                color: Colors.black,
               ),
             ),
             const SizedBox(height: 8),
@@ -61,7 +61,7 @@ class ReceiptVerificationResultScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: semanticColors.success.withValues(alpha: 0.1),
+                      color: semanticColors.success,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -105,7 +105,7 @@ class ReceiptVerificationResultScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(label, style: const TextStyle(color: Colors.black)),
           Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),

@@ -166,10 +166,7 @@ class _TypeTile extends StatelessWidget {
         ),
         leading: Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           child: Icon(icon, color: color, size: 24),
         ),
         title: Text(
@@ -212,7 +209,7 @@ class _ContactTile extends StatelessWidget {
         radius: 24,
         backgroundColor: isDark
             ? AppColors.surfaceContainerHigh(context)
-            : Colors.grey[200],
+            : Colors.black,
         child: Text(
           contact.initials,
           style: TextStyle(

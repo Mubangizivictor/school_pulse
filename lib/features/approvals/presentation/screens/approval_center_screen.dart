@@ -201,9 +201,9 @@ class _Summary extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          _Metric('Pending', pending, Colors.orange),
-          _Metric('Urgent', urgent, Colors.red),
-          _Metric('Overdue', overdue, Colors.deepPurple),
+          _Metric('Pending', pending, Colors.black),
+          _Metric('Urgent', urgent, Colors.black),
+          _Metric('Overdue', overdue, Colors.black),
         ],
       ),
     );
@@ -258,8 +258,8 @@ class _RequestCard extends StatelessWidget {
           _Chip(
             text: request.priority.name,
             color: request.priority.index >= ApprovalPriority.urgent.index
-                ? Colors.red
-                : Colors.blueGrey,
+                ? Colors.black
+                : Colors.black,
           ),
           const SizedBox(height: 4),
           Text(
@@ -280,7 +280,7 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: .12),
+      color: color,
       borderRadius: BorderRadius.circular(12),
     ),
     child: Text(
@@ -433,8 +433,8 @@ class _ApprovalDetailScreenState extends State<ApprovalDetailScreen> {
           Wrap(
             spacing: 8,
             children: [
-              _Chip(text: r.currentStatus.name, color: Colors.blue),
-              _Chip(text: r.sensitivity.name, color: Colors.purple),
+              _Chip(text: r.currentStatus.name, color: Colors.black),
+              _Chip(text: r.sensitivity.name, color: Colors.black),
             ],
           ),
           const Divider(height: 32),

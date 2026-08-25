@@ -174,7 +174,7 @@ class _AssignSubjectSheetState extends State<_AssignSubjectSheet> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.withValues(alpha: 0.4),
+                      color: Colors.black,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -274,11 +274,7 @@ class _AssignSubjectSheetState extends State<_AssignSubjectSheet> {
                       12 + MediaQuery.paddingOf(context).bottom,
                     ),
                     decoration: BoxDecoration(
-                      border: Border(
-                        top: BorderSide(
-                          color: Colors.grey.withValues(alpha: 0.15),
-                        ),
-                      ),
+                      border: Border(top: BorderSide(color: Colors.black)),
                     ),
                     child: Row(
                       children: [
@@ -364,7 +360,7 @@ class _PickerField extends StatelessWidget {
             height: 46,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              border: Border.all(color: colors.outline.withValues(alpha: .35)),
+              border: Border.all(color: colors.outline),
               borderRadius: BorderRadius.circular(7),
             ),
             child: Row(
@@ -402,9 +398,9 @@ class _ConflictBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: colors.errorContainer.withValues(alpha: .35),
+        color: colors.errorContainer,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.error.withValues(alpha: .4)),
+        border: Border.all(color: colors.error),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

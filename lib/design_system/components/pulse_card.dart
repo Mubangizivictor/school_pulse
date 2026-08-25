@@ -83,11 +83,7 @@ class PulseCard extends StatelessWidget {
           borderRadius: borderRadius,
           boxShadow: isDark
               ? AppShadows.card
-                    .map(
-                      (s) => s.copyWith(
-                        color: Colors.black.withValues(alpha: 0.5),
-                      ),
-                    )
+                    .map((s) => s.copyWith(color: Colors.black))
                     .toList()
               : AppShadows.card,
           border: isDark
@@ -107,16 +103,10 @@ class PulseCard extends StatelessWidget {
         );
       case PulseCardVariant.glass:
         return BoxDecoration(
-          color:
-              backgroundColor ??
-              (isDark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.white.withValues(alpha: 0.7)),
+          color: backgroundColor ?? (isDark ? Colors.white : Colors.white),
           borderRadius: borderRadius,
           border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.1)
-                : Colors.white.withValues(alpha: 0.2),
+            color: isDark ? Colors.white : Colors.white,
             width: 1,
           ),
         );

@@ -4,221 +4,230 @@ import 'package:uuid/uuid.dart';
 import '../../domain/entities/structure_entities.dart';
 
 const List<Color> kSubjectColorSwatches = [
-  Color(0xFF1976D2),
-  Color(0xFF2E7D32),
-  Color(0xFFC62828),
-  Color(0xFFED6C02),
-  Color(0xFF6A1B9A),
-  Color(0xFF00838F),
-  Color(0xFF5D4037),
-  Color(0xFF455A64),
+  Colors.black,
+  Colors.black,
+  Colors.black,
+  Colors.black,
+  Colors.black,
+  Colors.black,
+  Colors.black,
+  Colors.black,
 ];
 
 String _colorToHex(Color color) =>
     '#${color.toARGB32().toRadixString(16).substring(2)}';
 
+/// Add-or-edit bottom sheet for a custom [EducationalLevel]. `existingLevels`
+/// must be the full current list (in teaching order) so name/code
+/// uniqueness can be checked and "position in school order" can be offered.
 Future<void> showLevelFormDialog(
   BuildContext context, {
   EducationalLevel? existing,
   required String schoolId,
-  required void Function(EducationalLevel) onSave,
-  int nextOrder = 0,
+  required List<EducationalLevel> existingLevels,
+  required void Function(List<EducationalLevel> toSave) onSave,
 }) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final codeController = TextEditingController(text: existing?.code);
-  final orderController = TextEditingController(
-    text: existing?.order.toString() ?? '0',
-  );
-  final descController = TextEditingController(text: existing?.description);
-  bool isActive = existing?.isActive ?? true;
+  final others = existingLevels
+      .where((level) => level.id != existing?.id)
+      .toList()
+    ..sort((a, b) => a.order.compareTo(b.order));
+  String placement = 'after';
+  String? relativeToId = others.isNotEmpty ? others.last.id : null;
 
-  if (existing != null) {
-    return showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Edit Educational Level'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Level Name (e.g. Primary)',
-                    ),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Required' : null,
-                  ),
-                  TextFormField(
-                    controller: codeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Code (optional)',
-                    ),
-                  ),
-                  TextFormField(
-                    controller: orderController,
-                    decoration: const InputDecoration(
-                      labelText: 'Display Order',
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  TextFormField(
-                    controller: descController,
-                    decoration: const InputDecoration(
-                      labelText: 'Description (optional)',
-                    ),
-                    maxLines: 2,
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Active'),
-                    value: isActive,
-                    onChanged: (v) => setState(() => isActive = v),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (!formKey.currentState!.validate()) return;
-                onSave(
-                  EducationalLevel(
-                    id: existing.id,
-                    schoolId: existing.schoolId,
-                    name: nameController.text,
-                    code: codeController.text,
-                    order: int.tryParse(orderController.text) ?? 0,
-                    description: descController.text,
-                    isActive: isActive,
-                  ),
-                );
-                Navigator.pop(context);
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
+  String? validateName(String? v) {
+    final name = v?.trim() ?? '';
+    if (name.isEmpty) return 'Enter a level name.';
+    if (others.any((l) => l.name.trim().toLowerCase() == name.toLowerCase())) {
+      return 'A level with this name already exists.';
+    }
+    return null;
+  }
+
+  String? validateCode(String? v) {
+    final code = v?.trim() ?? '';
+    if (code.isEmpty) return null;
+    if (others.any(
+      (l) => l.code.trim().toLowerCase() == code.toLowerCase(),
+    )) {
+      return 'This short code is already in use.';
+    }
+    return null;
+  }
+
+  int resolveOrder() {
+    if (others.isEmpty) return 0;
+    others.sort((a, b) => a.order.compareTo(b.order));
+    final index = others.indexWhere((l) => l.id == relativeToId);
+    final anchor = index == -1 ? others.length - 1 : index;
+    final insertAt = placement == 'before' ? anchor : anchor + 1;
+    return insertAt;
+  }
+
+  List<EducationalLevel> resequence(EducationalLevel inserted) {
+    final all = [...others];
+    final insertIndex = resolveOrder().clamp(0, all.length);
+    all.insert(insertIndex, inserted);
+    return [
+      for (var i = 0; i < all.length; i++) all[i].copyWith(order: i),
+    ];
   }
 
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (context) => Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: SingleChildScrollView(
-        child: Form(
-          key: formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Add education level',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      shape: const CircleBorder(),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Create a level your school currently offers.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 18),
-              TextFormField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Level name',
-                  hintText: 'e.g. Nursery, Primary, Secondary',
-                ),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Required' : null,
-              ),
-              const SizedBox(height: 18),
-              TextFormField(
-                controller: codeController,
-                decoration: const InputDecoration(
-                  labelText: 'Short code',
-                  hintText: 'e.g. PRI',
-                  suffixText: '(optional)',
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 18,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'You can reorder levels after adding them.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: SingleChildScrollView(
+          child: Form(
+            key: formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        existing != null
+                            ? 'Edit level'
+                            : 'Add custom level',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Use this only if your school offers a level not listed above.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Level name',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(hintText: 'e.g., Sixth Form'),
+                  validator: validateName,
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Short code (optional)',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: codeController,
+                  decoration: const InputDecoration(hintText: 'e.g., SF'),
+                  validator: validateCode,
+                ),
+                if (others.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Position in school order',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Choose where this level should appear.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 110,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: placement,
+                          decoration: const InputDecoration(),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'before',
+                              child: Text('Before'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'after',
+                              child: Text('After'),
+                            ),
+                          ],
+                          onChanged: (v) =>
+                              setState(() => placement = v ?? 'after'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: relativeToId,
+                          isExpanded: true,
+                          decoration: const InputDecoration(),
+                          items: [
+                            for (final level in others)
+                              DropdownMenuItem(
+                                value: level.id,
+                                child: Text(
+                                  level.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                          ],
+                          onChanged: (v) => setState(() => relativeToId = v),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () {
-                    if (!formKey.currentState!.validate()) return;
-                    onSave(
-                      EducationalLevel(
-                        id: const Uuid().v4(),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: FilledButton(
+                    onPressed: () {
+                      if (!formKey.currentState!.validate()) return;
+                      final base = EducationalLevel(
+                        id: existing?.id ?? const Uuid().v4(),
                         schoolId: schoolId,
                         name: nameController.text.trim(),
                         code: codeController.text.trim(),
-                        order: nextOrder,
-                        description: '',
                         isActive: true,
-                      ),
-                    );
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Add level'),
+                      );
+                      final ordered = resequence(base);
+                      final changed = [
+                        for (final level in ordered)
+                          if (level.id == base.id ||
+                              level.order !=
+                                  others
+                                      .firstWhere((l) => l.id == level.id)
+                                      .order)
+                            level,
+                      ];
+                      onSave(changed);
+                      Navigator.pop(context);
+                    },
+                    child: Text(existing != null ? 'Save changes' : 'Add level'),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -234,10 +243,11 @@ Future<void> showAcademicYearFormDialog(
 }) {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
-  DateTime startDate =
-      existing?.startDate ?? DateTime(DateTime.now().year, 1, 1);
-  DateTime endDate = existing?.endDate ?? DateTime(DateTime.now().year, 12, 31);
+  DateTime? startDate = existing?.startDate;
+  DateTime? endDate = existing?.endDate;
   bool isCurrent = existing?.isCurrent ?? true;
+  bool showDateOrderError = false;
+  bool showDateRequiredError = false;
 
   return showModalBottomSheet<void>(
     context: context,
@@ -249,10 +259,9 @@ Future<void> showAcademicYearFormDialog(
         final dateFormat = DateFormat('dd MMM yyyy');
 
         Future<void> pickDate({required bool isStart}) async {
-          final selected = isStart ? startDate : endDate;
           final picked = await showDatePicker(
             context: context,
-            initialDate: selected,
+            initialDate: (isStart ? startDate : endDate) ?? DateTime.now(),
             firstDate: DateTime(2000),
             lastDate: DateTime(2100),
           );
@@ -263,6 +272,11 @@ Future<void> showAcademicYearFormDialog(
             } else {
               endDate = picked;
             }
+            showDateRequiredError = false;
+            showDateOrderError =
+                startDate != null &&
+                endDate != null &&
+                !startDate!.isBefore(endDate!);
           });
         }
 
@@ -309,7 +323,7 @@ Future<void> showAcademicYearFormDialog(
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'Enter the school calendar period.',
+                                  'Set the dates for one school calendar year.',
                                   style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
                                         color: scheme.onSurfaceVariant,
@@ -329,6 +343,7 @@ Future<void> showAcademicYearFormDialog(
                         controller: nameController,
                         decoration: const InputDecoration(
                           labelText: 'Year name',
+                          hintText: 'e.g. 2026',
                         ),
                         validator: (value) =>
                             value == null || value.trim().isEmpty
@@ -340,21 +355,62 @@ Future<void> showAcademicYearFormDialog(
                         children: [
                           Expanded(
                             child: _AcademicYearDateField(
-                              label: 'Starts',
-                              value: dateFormat.format(startDate),
+                              label: 'Start date',
+                              value: startDate == null
+                                  ? 'Select start date'
+                                  : dateFormat.format(startDate!),
+                              isPlaceholder: startDate == null,
                               onTap: () => pickDate(isStart: true),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: _AcademicYearDateField(
-                              label: 'Ends',
-                              value: dateFormat.format(endDate),
+                              label: 'End date',
+                              value: endDate == null
+                                  ? 'Select end date'
+                                  : dateFormat.format(endDate!),
+                              isPlaceholder: endDate == null,
                               onTap: () => pickDate(isStart: false),
                             ),
                           ),
                         ],
                       ),
+                      if (showDateRequiredError || showDateOrderError) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: scheme.outlineVariant,
+                              style: BorderStyle.solid,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 18,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  showDateRequiredError
+                                      ? 'Select a start and end date.'
+                                      : 'End date must be after start date.',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: scheme.onSurfaceVariant,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       InkWell(
                         borderRadius: BorderRadius.circular(12),
@@ -368,10 +424,10 @@ Future<void> showAcademicYearFormDialog(
                           ),
                           child: Row(
                             children: [
-                              Checkbox(
+                              Switch(
                                 value: isCurrent,
                                 onChanged: (value) =>
-                                    setState(() => isCurrent = value ?? false),
+                                    setState(() => isCurrent = value),
                               ),
                               const SizedBox(width: 4),
                               Expanded(
@@ -381,7 +437,7 @@ Future<void> showAcademicYearFormDialog(
                                     const Text('Set as current academic year'),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Used for active classes, terms and reports.',
+                                      'This will be used for new enrolments and terms.',
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall
@@ -402,13 +458,21 @@ Future<void> showAcademicYearFormDialog(
                         child: FilledButton(
                           onPressed: () {
                             if (!formKey.currentState!.validate()) return;
+                            if (startDate == null || endDate == null) {
+                              setState(() => showDateRequiredError = true);
+                              return;
+                            }
+                            if (!startDate!.isBefore(endDate!)) {
+                              setState(() => showDateOrderError = true);
+                              return;
+                            }
                             onSave(
                               AcademicYear(
                                 id: existing?.id ?? const Uuid().v4(),
                                 schoolId: existing?.schoolId ?? schoolId,
                                 name: nameController.text.trim(),
-                                startDate: startDate,
-                                endDate: endDate,
+                                startDate: startDate!,
+                                endDate: endDate!,
                                 isCurrent: isCurrent,
                                 isArchived: existing?.isArchived ?? false,
                               ),
@@ -417,7 +481,7 @@ Future<void> showAcademicYearFormDialog(
                           },
                           child: Text(
                             existing == null
-                                ? 'Add academic year'
+                                ? 'Save academic year'
                                 : 'Save changes',
                           ),
                         ),
@@ -439,11 +503,13 @@ class _AcademicYearDateField extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onTap,
+    this.isPlaceholder = false,
   });
 
   final String label;
   final String value;
   final VoidCallback onTap;
+  final bool isPlaceholder;
 
   @override
   Widget build(BuildContext context) {
@@ -473,7 +539,9 @@ class _AcademicYearDateField extends StatelessWidget {
                   child: Text(
                     value,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: isPlaceholder ? scheme.onSurfaceVariant : null,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -493,173 +561,260 @@ Future<void> showAcademicTermFormDialog(
   required List<AcademicYear> years,
   required String schoolId,
   required void Function(AcademicTerm) onSave,
+  AcademicPeriodType? fixedPeriodType,
+  int existingCount = 0,
 }) {
   final formKey = GlobalKey<FormState>();
-  final nameController = TextEditingController(
-    text: existing?.name ?? 'Term 1',
-  );
   final year = years.first;
-  DateTime startDate = existing?.startDate ?? year.startDate;
-  DateTime endDate =
-      existing?.endDate ?? year.startDate.add(const Duration(days: 90));
-  AcademicPeriodType periodType =
-      existing?.periodType ?? AcademicPeriodType.term;
+  final periodType =
+      existing?.periodType ?? fixedPeriodType ?? AcademicPeriodType.term;
+  final periodWord = periodType == AcademicPeriodType.semester
+      ? 'Semester'
+      : 'Term';
+  // The sequence number in the title/button ("Add Term 2") reflects how
+  // many non-archived periods already exist for this year - it does not
+  // persist as data, purely a label matching the reference's numbering.
+  final sequence = existing == null ? existingCount + 1 : existing.order;
+  final nameController = TextEditingController(
+    text: existing?.name ?? '$periodWord $sequence',
+  );
+  DateTime? startDate = existing?.startDate;
+  DateTime? endDate = existing?.endDate;
+  bool isCurrent = existing?.isCurrent ?? false;
+  bool showDateRequiredError = false;
 
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    showDragHandle: true,
+    backgroundColor: Colors.transparent,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) {
         final scheme = Theme.of(context).colorScheme;
         return Padding(
           padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
           ),
-          child: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          existing == null ? 'Add period' : 'Edit period',
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        style: IconButton.styleFrom(
-                          backgroundColor: scheme.surfaceContainerHighest,
-                          shape: const CircleBorder(),
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Chip(
-                    label: Text('Academic year ${year.name}'),
-                    backgroundColor: scheme.primaryContainer,
-                    labelStyle: TextStyle(color: scheme.onPrimaryContainer),
-                    side: BorderSide.none,
-                  ),
-                  const SizedBox(height: 18),
-                  SegmentedButton<AcademicPeriodType>(
-                    segments: const [
-                      ButtonSegment(
-                        value: AcademicPeriodType.term,
-                        label: Text('Term'),
-                      ),
-                      ButtonSegment(
-                        value: AcademicPeriodType.semester,
-                        label: Text('Semester'),
-                      ),
-                    ],
-                    selected: {periodType},
-                    onSelectionChanged: (selection) =>
-                        setState(() => periodType = selection.first),
-                  ),
-                  const SizedBox(height: 18),
-                  TextFormField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: 'Period name'),
-                    validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate: startDate,
-                              firstDate: year.startDate,
-                              lastDate: year.endDate,
-                            );
-                            if (picked != null) {
-                              setState(() => startDate = picked);
-                            }
-                          },
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Starts',
-                              suffixIcon: Icon(Icons.calendar_today_outlined),
-                            ),
-                            child: Text(
-                              DateFormat('dd MMM yyyy').format(startDate),
+          child: Material(
+            color: scheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: scheme.outlineVariant,
+                              borderRadius: BorderRadius.circular(99),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate: endDate,
-                              firstDate: year.startDate,
-                              lastDate: year.endDate,
-                            );
-                            if (picked != null) {
-                              setState(() => endDate = picked);
-                            }
-                          },
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Ends',
-                              suffixIcon: Icon(Icons.calendar_today_outlined),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                existing == null
+                                    ? 'Add $periodWord $sequence'
+                                    : 'Edit $periodWord',
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
                             ),
-                            child: Text(
-                              DateFormat('dd MMM yyyy').format(endDate),
+                            IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.close_rounded),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${periodWord}s • Academic year ${year.name}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: nameController,
+                          decoration: InputDecoration(
+                            labelText: '$periodWord name',
+                          ),
+                          validator: (v) =>
+                              v == null || v.trim().isEmpty ? 'Required' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _AcademicYearDateField(
+                                label: 'Start date',
+                                value: startDate == null
+                                    ? 'Select start date'
+                                    : DateFormat(
+                                        'dd MMM yyyy',
+                                      ).format(startDate!),
+                                isPlaceholder: startDate == null,
+                                onTap: () async {
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: startDate ?? year.startDate,
+                                    firstDate: year.startDate,
+                                    lastDate: year.endDate,
+                                  );
+                                  if (picked == null) return;
+                                  setState(() {
+                                    startDate = picked;
+                                    showDateRequiredError = false;
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _AcademicYearDateField(
+                                label: 'End date',
+                                value: endDate == null
+                                    ? 'Select end date'
+                                    : DateFormat(
+                                        'dd MMM yyyy',
+                                      ).format(endDate!),
+                                isPlaceholder: endDate == null,
+                                onTap: () async {
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: endDate ?? year.endDate,
+                                    firstDate: year.startDate,
+                                    lastDate: year.endDate,
+                                  );
+                                  if (picked == null) return;
+                                  setState(() {
+                                    endDate = picked;
+                                    showDateRequiredError = false;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: scheme.outlineVariant),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 18,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  showDateRequiredError
+                                      ? 'Select a start and end date.'
+                                      : 'Dates must fall within ${year.name} and cannot overlap.',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: scheme.onSurfaceVariant,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => setState(() => isCurrent = !isCurrent),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: scheme.outlineVariant),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Switch(
+                                  value: isCurrent,
+                                  onChanged: (value) =>
+                                      setState(() => isCurrent = value),
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Set as current ${periodWord.toLowerCase()} (optional)',
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Mark this ${periodWord.toLowerCase()} as the current one for reporting and timetables.',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: scheme.onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Dates must be within ${year.name} and cannot overlap.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: () {
+                              if (!formKey.currentState!.validate()) return;
+                              if (startDate == null || endDate == null) {
+                                setState(() => showDateRequiredError = true);
+                                return;
+                              }
+                              onSave(
+                                AcademicTerm(
+                                  id: existing?.id ?? const Uuid().v4(),
+                                  schoolId: existing?.schoolId ?? schoolId,
+                                  academicYearId: year.id,
+                                  name: nameController.text.trim(),
+                                  order: existing?.order ?? sequence,
+                                  startDate: startDate!,
+                                  endDate: endDate!,
+                                  isCurrent: isCurrent,
+                                  periodType: periodType,
+                                ),
+                              );
+                              Navigator.pop(context);
+                            },
+                            child: Text(
+                              existing == null
+                                  ? 'Save $periodWord $sequence'
+                                  : 'Save changes',
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () {
-                        if (!formKey.currentState!.validate()) return;
-                        onSave(
-                          AcademicTerm(
-                            id: existing?.id ?? const Uuid().v4(),
-                            schoolId: existing?.schoolId ?? schoolId,
-                            academicYearId: year.id,
-                            name: nameController.text.trim(),
-                            order: existing?.order ?? 0,
-                            startDate: startDate,
-                            endDate: endDate,
-                            isCurrent: existing?.isCurrent ?? false,
-                            periodType: periodType,
-                          ),
-                        );
-                        Navigator.pop(context);
-                      },
-                      child: Text(existing == null ? 'Add period' : 'Save'),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -1766,7 +1921,7 @@ Future<bool?> showDeleteConfirmDialog(
             const SizedBox(height: 8),
             Text(
               impactMessage,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: const TextStyle(fontSize: 12, color: Colors.black),
             ),
           ],
         ],
@@ -1778,7 +1933,7 @@ Future<bool?> showDeleteConfirmDialog(
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, true),
-          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          child: const Text('Delete', style: TextStyle(color: Colors.black)),
         ),
       ],
     ),

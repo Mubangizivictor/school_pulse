@@ -130,7 +130,7 @@ class _StudentHeader extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+      color: scheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: scheme.outlineVariant),
@@ -185,7 +185,7 @@ class _EmptyState extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+      color: scheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: scheme.outlineVariant),
@@ -402,11 +402,11 @@ class _AccessCodeDetails extends StatelessWidget {
                 children: [
                   Chip(
                     label: Text(accessCode.isActive ? 'ACTIVE' : 'DISABLED'),
-                    backgroundColor:
-                        (accessCode.isActive ? Colors.green : Colors.red)
-                            .withValues(alpha: 0.12),
+                    backgroundColor: (accessCode.isActive
+                        ? Colors.black
+                        : Colors.black),
                     labelStyle: TextStyle(
-                      color: accessCode.isActive ? Colors.green : Colors.red,
+                      color: accessCode.isActive ? Colors.black : Colors.black,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -455,7 +455,7 @@ class _CodeCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+      color: scheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: scheme.outlineVariant),

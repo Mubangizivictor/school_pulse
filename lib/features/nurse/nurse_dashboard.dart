@@ -191,7 +191,7 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
                     if (state.todayEmergencies.isNotEmpty) ...[
                       const SectionHeader(
                         title: "Today's Emergencies",
-                        color: Colors.red,
+                        color: Colors.black,
                       ),
                       ...state.todayEmergencies.map(
                         (e) =>
@@ -232,7 +232,7 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
                     if (state.lowStockItems.isNotEmpty) ...[
                       const SectionHeader(title: 'Inventory Alerts'),
                       AppCard(
-                        color: semanticColors.warning.withValues(alpha: 0.1),
+                        color: semanticColors.warning,
                         child: Column(
                           children: state.lowStockItems
                               .map(
@@ -511,7 +511,7 @@ class _NurseDashboardScreenState extends State<NurseDashboardScreen> {
             ),
             FilledButton(
               key: const Key('record-emergency-button'),
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              style: FilledButton.styleFrom(backgroundColor: Colors.black),
               onPressed: () {
                 if (selectedStudentId == null) {
                   setDialogState(
@@ -886,15 +886,15 @@ class _EmergencyCard extends StatelessWidget {
     );
     return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
-      color: Colors.red.shade50,
-      borderColor: Colors.red.shade200,
+      color: Colors.black,
+      borderColor: Colors.black,
       child: ListTile(
-        leading: const Icon(Icons.emergency, color: Colors.red),
+        leading: const Icon(Icons.emergency, color: Colors.black),
         title: Text(
           student.name,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.red,
+            color: Colors.black,
           ),
         ),
         subtitle: Text(
@@ -902,7 +902,7 @@ class _EmergencyCard extends StatelessWidget {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.red),
+        trailing: const Icon(Icons.chevron_right, color: Colors.black),
         onTap: () => context.push('/staff/nurse/incident/${incident.id}'),
       ),
     );

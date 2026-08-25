@@ -248,9 +248,7 @@ class _SchoolsHeader extends StatelessWidget {
               height: 220,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [Color(0x294D8BFF), Color(0x004D8BFF)],
-                ),
+                gradient: RadialGradient(colors: [Colors.black, Colors.black]),
               ),
             ),
           ),
@@ -310,7 +308,7 @@ class _SchoolsHeader extends StatelessWidget {
 class _DotGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = const Color(0x1A4D8BFF);
+    final paint = Paint()..color = Colors.black;
     const spacing = 14.0;
     for (double y = 0; y < size.height; y += spacing) {
       for (double x = 0; x < size.width; x += spacing) {
@@ -951,10 +949,10 @@ class _SchoolInitialAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const palettes = [
-      (Color(0xFFBED0FF), Color(0xFFE8EEFF), Color(0xFF1549B8)),
-      (Color(0xFFBCEFD7), Color(0xFFE7FAEF), Color(0xFF087342)),
-      (Color(0xFFE0C8FF), Color(0xFFF2E9FF), Color(0xFF4E149D)),
-      (Color(0xFFFFD1B5), Color(0xFFFFEEE3), Color(0xFFB3430B)),
+      (Colors.black, Colors.black, Colors.black),
+      (Colors.black, Colors.black, Colors.black),
+      (Colors.black, Colors.black, Colors.black),
+      (Colors.black, Colors.black, Colors.black),
     ];
     final palette =
         palettes[name.codeUnits.fold<int>(0, (a, b) => a + b) %
@@ -970,7 +968,7 @@ class _SchoolInitialAvatar extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [palette.$1, palette.$2],
         ),
-        border: Border.all(color: palette.$1.withValues(alpha: .75)),
+        border: Border.all(color: palette.$1),
       ),
       child: Text(
         initial,
@@ -1024,16 +1022,16 @@ class _AccessModePill extends StatelessWidget {
   Widget build(BuildContext context) {
     final mode = AccessMode.fromRaw(accessMode);
     final (label, color) = switch (mode) {
-      AccessMode.readOnly => ('READ-ONLY', Colors.amber.shade800),
+      AccessMode.readOnly => ('READ-ONLY', Colors.black),
       AccessMode.blocked => ('BLOCKED', Theme.of(context).colorScheme.error),
       AccessMode.full => ('', Colors.transparent),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: .12),
+        color: color,
         borderRadius: AppRadius.full,
-        border: Border.all(color: color.withValues(alpha: .14)),
+        border: Border.all(color: color),
       ),
       child: Text(
         label,
@@ -1062,11 +1060,9 @@ class _SchoolStatusPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: isActive
-            ? AppColors.successSurface(context)
-            : color.withValues(alpha: .12),
+        color: isActive ? AppColors.successSurface(context) : color,
         borderRadius: AppRadius.full,
-        border: Border.all(color: color.withValues(alpha: .14)),
+        border: Border.all(color: color),
       ),
       child: Text(
         status.name.toUpperCase(),

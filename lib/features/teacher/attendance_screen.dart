@@ -278,11 +278,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
-        border: Border(
-          bottom: BorderSide(
-            color: AppColors.border(context).withValues(alpha: 0.1),
-          ),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.border(context))),
       ),
       child: Row(
         children: [
@@ -534,7 +530,7 @@ class _StatusButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isSelected ? color : color.withValues(alpha: 0.1),
+            color: isSelected ? color : color,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 18, color: isSelected ? Colors.white : color),

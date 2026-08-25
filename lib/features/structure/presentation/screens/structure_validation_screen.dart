@@ -30,7 +30,7 @@ class StructureValidationScreen extends StatelessWidget {
                   Icon(
                     Icons.verified_user_outlined,
                     size: 72,
-                    color: Colors.green,
+                    color: Colors.black,
                   ),
                   SizedBox(height: 16),
                   Text(
@@ -72,7 +72,7 @@ class _ValidationIssueCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isError = issue.severity == ValidationSeverity.error;
-    final color = isError ? Colors.redAccent : Colors.orange;
+    final color = isError ? Colors.black : Colors.black;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),

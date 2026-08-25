@@ -47,7 +47,7 @@ class PaymentReviewScreen extends StatefulWidget {
         context: context,
         barrierLabel: 'Payment Verification',
         barrierDismissible: true,
-        barrierColor: Colors.black.withValues(alpha: 0.4),
+        barrierColor: Colors.black,
         transitionDuration: const Duration(milliseconds: 220),
         pageBuilder: (context, _, _) => Align(
           alignment: Alignment.centerRight,
@@ -300,7 +300,7 @@ class _PaymentReviewScreenState extends State<PaymentReviewScreen> {
           Container(
             padding: const EdgeInsets.all(AppSpacing.l),
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withValues(alpha: 0.1),
+              color: AppColors.primary(context),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(

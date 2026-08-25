@@ -178,7 +178,7 @@ class _SectionCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+      color: scheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: scheme.outlineVariant),
@@ -286,7 +286,7 @@ class _QrCredentialSection extends StatelessWidget {
             children: [
               Icon(
                 issued ? Icons.check_circle : Icons.circle_outlined,
-                color: issued ? Colors.green : scheme.onSurfaceVariant,
+                color: issued ? Colors.black : scheme.onSurfaceVariant,
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -587,8 +587,8 @@ class _NfcManagementSectionState extends State<_NfcManagementSection> {
     final status = widget.identity.nfcStatus;
     final scheme = Theme.of(context).colorScheme;
     final Color statusColor = switch (status) {
-      'active' => Colors.green,
-      'revoked' => Colors.red,
+      'active' => Colors.black,
+      'revoked' => Colors.black,
       _ => scheme.onSurfaceVariant,
     };
 
@@ -601,7 +601,7 @@ class _NfcManagementSectionState extends State<_NfcManagementSection> {
             children: [
               Chip(
                 label: Text(status.toUpperCase()),
-                backgroundColor: statusColor.withValues(alpha: 0.12),
+                backgroundColor: statusColor,
                 labelStyle: TextStyle(
                   color: statusColor,
                   fontWeight: FontWeight.w600,
@@ -649,7 +649,7 @@ class _NfcManagementSectionState extends State<_NfcManagementSection> {
                     icon: const Icon(Icons.block),
                     label: const Text('Revoke Card'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
+                      foregroundColor: Colors.black,
                     ),
                   ),
                 ],

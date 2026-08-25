@@ -93,7 +93,7 @@ class _YearsTermsScreenState extends State<YearsTermsScreen> {
                       _tab == 0
                           ? 'Create and select the current academic year.'
                           : 'Manage terms or semesters for your academic years.',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 13, color: Colors.black),
                     ),
                     const SizedBox(height: 12),
                     AppSearchFieldCompat(
@@ -345,7 +345,7 @@ class _YearsList extends StatelessWidget {
             .length;
         return AppCardTapRow(
           icon: Icons.calendar_today_outlined,
-          color: Colors.blue,
+          color: Colors.black,
           title: year.name,
           statusChip: _StatusChip.forYear(year),
           subtitle:
@@ -455,7 +455,7 @@ class _TermsList extends StatelessWidget {
             ...entry.value.map(
               (term) => AppCardTapRow(
                 icon: Icons.event_note_outlined,
-                color: Colors.indigo,
+                color: Colors.black,
                 title: term.name,
                 statusChip: _StatusChip.forTerm(term),
                 subtitle:
@@ -522,32 +522,26 @@ bool _matchesTermFilter(AcademicTerm term, _TermFilter filter) {
 class _StatusChip {
   static Widget? forYear(AcademicYear year) {
     if (year.isCurrent)
-      return const AcademicsStatusChip(label: 'Current', color: Colors.green);
+      return const AcademicsStatusChip(label: 'Current', color: Colors.black);
     if (year.isArchived)
-      return const AcademicsStatusChip(label: 'Inactive', color: Colors.grey);
+      return const AcademicsStatusChip(label: 'Inactive', color: Colors.black);
     if (year.startDate.isAfter(DateTime.now()))
-      return const AcademicsStatusChip(
-        label: 'Upcoming',
-        color: Colors.deepPurple,
-      );
+      return const AcademicsStatusChip(label: 'Upcoming', color: Colors.black);
     if (year.endDate.isBefore(DateTime.now()))
-      return const AcademicsStatusChip(label: 'Completed', color: Colors.grey);
-    return const AcademicsStatusChip(label: 'Active', color: Colors.green);
+      return const AcademicsStatusChip(label: 'Completed', color: Colors.black);
+    return const AcademicsStatusChip(label: 'Active', color: Colors.black);
   }
 
   static Widget? forTerm(AcademicTerm term) {
     if (term.isCurrent)
-      return const AcademicsStatusChip(label: 'Current', color: Colors.green);
+      return const AcademicsStatusChip(label: 'Current', color: Colors.black);
     if (term.isArchived)
-      return const AcademicsStatusChip(label: 'Inactive', color: Colors.grey);
+      return const AcademicsStatusChip(label: 'Inactive', color: Colors.black);
     if (term.startDate.isAfter(DateTime.now()))
-      return const AcademicsStatusChip(
-        label: 'Upcoming',
-        color: Colors.deepPurple,
-      );
+      return const AcademicsStatusChip(label: 'Upcoming', color: Colors.black);
     if (term.endDate.isBefore(DateTime.now()))
-      return const AcademicsStatusChip(label: 'Completed', color: Colors.grey);
-    return const AcademicsStatusChip(label: 'Active', color: Colors.green);
+      return const AcademicsStatusChip(label: 'Completed', color: Colors.black);
+    return const AcademicsStatusChip(label: 'Active', color: Colors.black);
   }
 }
 
@@ -682,9 +676,7 @@ class AppCardTapRow extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Theme.of(
-                context,
-              ).colorScheme.outlineVariant.withValues(alpha: 0.8),
+              color: Theme.of(context).colorScheme.outlineVariant,
             ),
           ),
           child: Row(
@@ -692,7 +684,7 @@ class AppCardTapRow extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
+                  color: color,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 20),
@@ -725,7 +717,7 @@ class AppCardTapRow extends StatelessWidget {
                     Text(
                       subtitle,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12.5, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 12.5, color: Colors.black),
                     ),
                   ],
                 ),
@@ -733,11 +725,11 @@ class AppCardTapRow extends StatelessWidget {
               if (trailingLabel != null) ...[
                 Text(
                   trailingLabel!,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 12, color: Colors.black),
                 ),
                 const SizedBox(width: 6),
               ],
-              Icon(Icons.chevron_right, color: Colors.grey[500]),
+              Icon(Icons.chevron_right, color: Colors.black),
             ],
           ),
         ),
@@ -935,10 +927,10 @@ class _YearFormScreenState extends State<_YearFormScreen> {
                       Navigator.of(context).pop();
                     }
                   },
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  icon: const Icon(Icons.delete_outline, color: Colors.black),
                   label: const Text(
                     'Delete Year',
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(color: Colors.black),
                   ),
                 ),
               ],
@@ -1133,10 +1125,10 @@ class _TermFormScreenState extends State<_TermFormScreen> {
                       Navigator.of(context).pop();
                     }
                   },
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  icon: const Icon(Icons.delete_outline, color: Colors.black),
                   label: const Text(
                     'Delete Term',
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(color: Colors.black),
                   ),
                 ),
               ],

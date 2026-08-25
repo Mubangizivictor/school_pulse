@@ -92,7 +92,7 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Marks saved successfully!'),
-                      backgroundColor: Colors.green,
+                      backgroundColor: Colors.black,
                     ),
                   );
                 }
@@ -100,7 +100,7 @@ class _MarksEntryScreenState extends State<MarksEntryScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(state.errorMessage ?? 'An error occurred'),
-                      backgroundColor: Colors.red,
+                      backgroundColor: Colors.black,
                     ),
                   );
                 }

@@ -96,9 +96,7 @@ class _SuperAdminProfileScreenState extends State<SuperAdminProfileScreen> {
                 children: [
                   CircleAvatar(
                     radius: 64,
-                    backgroundColor: AppColors.primary(
-                      context,
-                    ).withValues(alpha: 0.12),
+                    backgroundColor: AppColors.primary(context),
                     backgroundImage: _photoUrl?.isNotEmpty == true
                         ? NetworkImage(_photoUrl!)
                         : null,

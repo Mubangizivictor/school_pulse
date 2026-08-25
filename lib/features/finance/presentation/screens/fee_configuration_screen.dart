@@ -418,7 +418,7 @@ class _FeeCategoriesList extends StatelessWidget {
                             'Mandatory',
                             style: TextStyle(fontSize: 10),
                           ),
-                          backgroundColor: Colors.red,
+                          backgroundColor: Colors.black,
                         )
                       : null,
                 ),

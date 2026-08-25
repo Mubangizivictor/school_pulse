@@ -89,9 +89,7 @@ class DormSearchBar extends StatelessWidget {
     final theme = Theme.of(context);
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(
-        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-      ),
+      borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
     );
 
     return Row(
@@ -130,9 +128,7 @@ class DormSearchBar extends StatelessWidget {
             height: 46,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-              ),
+              border: Border.all(color: theme.colorScheme.outlineVariant),
             ),
             child: Icon(
               Icons.tune,
@@ -203,7 +199,7 @@ class DormitoryCard extends StatelessWidget {
     final barColor = ratio >= 1.0
         ? semanticColors.error
         : ratio >= 0.85
-        ? Colors.orange
+        ? Colors.black
         : semanticColors.success;
 
     return AppCard(
@@ -260,9 +256,7 @@ class DormitoryCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: ratio.clamp(0.0, 1.0),
               minHeight: 6,
-              backgroundColor: theme.colorScheme.outlineVariant.withValues(
-                alpha: 0.4,
-              ),
+              backgroundColor: theme.colorScheme.outlineVariant,
               valueColor: AlwaysStoppedAnimation(barColor),
             ),
           ),
@@ -300,10 +294,7 @@ class DormitoryCard extends StatelessWidget {
               value: dormPrefectName,
             ),
             const SizedBox(height: AppSpacing.m),
-            Divider(
-              height: 1,
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-            ),
+            Divider(height: 1, color: theme.colorScheme.outlineVariant),
             Row(
               children: [
                 Expanded(
@@ -447,9 +438,7 @@ class DormFormField extends StatelessWidget {
     final theme = Theme.of(context);
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(
-        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-      ),
+      borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
     );
 
     return Column(
@@ -553,17 +542,13 @@ class DormPersonPicker extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-          ),
+          border: Border.all(color: theme.colorScheme.outlineVariant),
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 20,
-              backgroundColor: theme.colorScheme.primary.withValues(
-                alpha: 0.15,
-              ),
+              backgroundColor: theme.colorScheme.primary,
               child: Icon(
                 Icons.person_outline,
                 size: 20,
@@ -693,7 +678,7 @@ class BedListTile extends StatelessWidget {
           const SizedBox(width: AppSpacing.m),
           StatusBadge(
             label: occupied ? 'Occupied' : 'Available',
-            color: occupied ? Colors.orange : semanticColors.success,
+            color: occupied ? Colors.black : semanticColors.success,
           ),
         ],
       ),
@@ -736,7 +721,7 @@ class TransferHistoryTile extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: typeColor.withValues(alpha: 0.18),
+            backgroundColor: typeColor,
             child: Icon(Icons.person_outline, size: 18, color: typeColor),
           ),
           const SizedBox(width: AppSpacing.l),

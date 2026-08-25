@@ -34,9 +34,9 @@ class StructureEmptyHint extends StatelessWidget {
             if (title != null) ...[
               Text(
                 title!,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),

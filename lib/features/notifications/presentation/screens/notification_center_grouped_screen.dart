@@ -22,11 +22,11 @@ class NotificationCenterGroupedScreen extends StatelessWidget {
 
     if (user == null) {
       return const Scaffold(
-        backgroundColor: Color(0xFF0F172A),
+        backgroundColor: Colors.black,
         body: Center(
           child: Text(
             'Sign in to see your notifications',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(color: Colors.white),
           ),
         ),
       );
@@ -77,7 +77,7 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
         final grouped = state.groupedByCategory;
 
         return Scaffold(
-          backgroundColor: const Color(0xFF0F172A),
+          backgroundColor: Colors.black,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
@@ -114,7 +114,7 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                       const Text(
                         'Today',
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -126,8 +126,8 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                           'Mark all as read',
                           style: TextStyle(
                             color: state.unreadCount == 0
-                                ? Colors.white24
-                                : const Color(0xFF6366F1),
+                                ? Colors.white
+                                : Colors.black,
                             fontSize: 12,
                           ),
                         ),
@@ -146,7 +146,7 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                       child: Center(
                         child: Text(
                           'No notifications yet',
-                          style: TextStyle(color: Colors.white70),
+                          style: TextStyle(color: Colors.white),
                         ),
                       ),
                     )
@@ -234,7 +234,7 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
           return _buildCategoryItem(
             'All',
             Icons.apps,
-            const Color(0xFF6366F1),
+            Colors.black,
             isSelected: isSelected,
             count: state.unreadCount == 0 ? null : state.unreadCount,
             onTap: () => setState(() => _selectedCategory = null),
@@ -283,9 +283,7 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? color.withValues(alpha: 0.2)
-                      : Colors.white.withValues(alpha: 0.05),
+                  color: isSelected ? color : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: isSelected
                       ? Border.all(color: color, width: 2)
@@ -293,7 +291,7 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                 ),
                 child: Icon(
                   icon,
-                  color: isSelected ? color : Colors.white70,
+                  color: isSelected ? color : Colors.white,
                   size: 24,
                 ),
               ),
@@ -304,7 +302,7 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: isSelected ? color : const Color(0xFFE11D48),
+                      color: isSelected ? color : Colors.black,
                       shape: BoxShape.circle,
                     ),
                     child: Text(
@@ -323,7 +321,7 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
           Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.white70,
+              color: isSelected ? Colors.white : Colors.white,
               fontSize: 10,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
@@ -348,7 +346,7 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -377,15 +375,12 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white12,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       count.toString(),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -393,14 +388,14 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                     isExpanded
                         ? Icons.keyboard_arrow_up
                         : Icons.keyboard_arrow_down,
-                    color: Colors.white60,
+                    color: Colors.white,
                   ),
                 ],
               ),
             ),
           ),
           if (isExpanded) ...[
-            const Divider(height: 1, color: Colors.white12),
+            const Divider(height: 1, color: Colors.white),
             ...items.map((item) => _buildSimpleTile(context, item, color)),
           ],
         ],
@@ -453,7 +448,7 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                       Text(
                         DateFormat('h:mm a').format(item.timestamp),
                         style: const TextStyle(
-                          color: Colors.white60,
+                          color: Colors.white,
                           fontSize: 12,
                         ),
                       ),
@@ -462,7 +457,7 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                   const SizedBox(height: 4),
                   Text(
                     item.description,
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -474,15 +469,12 @@ class _GroupedCenterViewState extends State<_GroupedCenterView> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE11D48).withValues(alpha: 0.2),
+                        color: Colors.black,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: const Text(
                         'High',
-                        style: TextStyle(
-                          color: Color(0xFFE11D48),
-                          fontSize: 10,
-                        ),
+                        style: TextStyle(color: Colors.black, fontSize: 10),
                       ),
                     ),
                   ],

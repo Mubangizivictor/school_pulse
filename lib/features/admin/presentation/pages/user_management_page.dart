@@ -214,9 +214,7 @@ class _ActivityItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Color(
-                int.parse('0x${log.colorHex}'),
-              ).withValues(alpha: 0.1),
+              color: Color(int.parse('0x${log.colorHex}')),
               shape: BoxShape.circle,
             ),
             child: Icon(

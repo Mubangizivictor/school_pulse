@@ -388,6 +388,92 @@ function schoolPrefixFrom(schoolName) {
     .toUpperCase();
 }
 
+/**
+ * Direct-enrolment finaliser.  The client can only save an untrusted draft;
+ * this callable owns validation, capacity, idempotency and numbering in one
+ * Firestore transaction.  It intentionally does not touch
+ * admission_applications, which remain a separate review pipeline.
+ */
+exports.directEnrolLearner = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in to enrol a learner.");
+  const draftId = String(request.data?.draftId || "");
+  if (!draftId) throw new HttpsError("invalid-argument", "A draft is required.");
+  const db = admin.firestore();
+  const actorRef = db.collection("users").doc(request.auth.uid);
+  const draftRef = db.collection("direct_enrolment_drafts").doc(draftId);
+  const response = await db.runTransaction(async (tx) => {
+    const [actorSnap, draftSnap] = await Promise.all([tx.get(actorRef), tx.get(draftRef)]);
+    if (!actorSnap.exists) throw new HttpsError("permission-denied", "Your staff profile is unavailable.");
+    if (!draftSnap.exists) throw new HttpsError("not-found", "This enrolment draft no longer exists.");
+    const actor = actorSnap.data();
+    const roles = Array.isArray(actor.roles) ? actor.roles : [actor.role];
+    if (!roles.some((r) => ["schoolAdmin", "director", "headTeacher", "deputyHead", "admissions", "registrar", "receptionist"].includes(r))) {
+      throw new HttpsError("permission-denied", "You do not have permission to enrol learners.");
+    }
+    const draft = draftSnap.data();
+    if (!draft.schoolId || draft.schoolId !== actor.schoolId) throw new HttpsError("permission-denied", "This draft belongs to another school.");
+    const learner = draft.learner || {}, placement = draft.placement || {};
+    if (!String(learner.firstNames || "").trim() || !String(learner.surname || "").trim() || !String(learner.dateOfBirth || "").trim()) {
+      throw new HttpsError("failed-precondition", "Learner legal names and date of birth are required.");
+    }
+    if (!placement.academicYearId || !placement.classId || !String(placement.term || "").trim()) {
+      throw new HttpsError("failed-precondition", "Academic placement is incomplete.");
+    }
+    const guardians = Array.isArray(draft.guardians) ? draft.guardians : [];
+    const overrideReason = String(draft.guardianOverride?.reason || "").trim();
+    if (!guardians.length && !overrideReason) throw new HttpsError("failed-precondition", "Add a guardian or provide an authorised override reason.");
+    if (!draft.consentAcknowledged) throw new HttpsError("failed-precondition", "Privacy and guardian consent must be acknowledged.");
+    const studentId = String(draft.studentId || "");
+    if (!studentId) throw new HttpsError("failed-precondition", "Draft has no learner identifier.");
+    const studentRef = db.collection("students").doc(studentId);
+    const existing = await tx.get(studentRef);
+    if (existing.exists) {
+      const data = existing.data();
+      if (data.schoolId !== draft.schoolId) throw new HttpsError("permission-denied", "Learner identifier is invalid.");
+      return { studentId, studentNumber: data.admissionNumber, status: data.status, alreadyEnrolled: true };
+    }
+    const classRef = db.collection("classes").doc(placement.classId);
+    const classSnap = await tx.get(classRef);
+    if (!classSnap.exists || classSnap.data().schoolId !== draft.schoolId) throw new HttpsError("failed-precondition", "Selected class is unavailable.");
+    const classData = classSnap.data();
+    // Querying the active roster inside the transaction makes the capacity
+    // decision retry-safe under concurrent enrolments.
+    const activeInClass = await tx.get(db.collection("students").where("schoolId", "==", draft.schoolId).where("classId", "==", placement.classId).where("status", "==", "active"));
+    if (Number(classData.capacity || 0) > 0 && activeInClass.size >= Number(classData.capacity)) {
+      throw new HttpsError("failed-precondition", "This class is at its configured capacity.");
+    }
+    const schoolRef = db.collection("schools").doc(draft.schoolId);
+    const schoolSnap = await tx.get(schoolRef);
+    const school = schoolSnap.exists ? schoolSnap.data() : {};
+    const prefix = schoolPrefixFrom(school.name || actor.schoolName);
+    const yearLabel = String(placement.academicYear || new Date().getFullYear());
+    const counterRef = schoolRef.collection("counters").doc(`direct_student_${yearLabel.replace(/[^0-9A-Za-z]/g, "")}`);
+    const counterSnap = await tx.get(counterRef);
+    const sequence = Number(counterSnap.exists ? counterSnap.data().count || 0 : 0) + 1;
+    const studentNumber = `${prefix}-${yearLabel}-${String(sequence).padStart(5, "0")}`;
+    const requirements = Array.isArray(school.enrolmentPolicy?.documentRequirements) ? school.enrolmentPolicy.documentRequirements : [];
+    const docs = Array.isArray(draft.documents) ? draft.documents.filter((d) => d && d.status === "uploaded") : [];
+    const missingRequired = requirements.filter((r) => r.required && !docs.some((d) => d.requirementId === r.id));
+    const permitsDeadline = missingRequired.every((r) => r.postEnrolmentDeadlineAllowed === true);
+    if (missingRequired.length && !permitsDeadline) throw new HttpsError("failed-precondition", "Required documents are missing under school policy.");
+    const status = missingRequired.length ? "provisional" : "active";
+    tx.set(counterRef, { count: sequence, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    tx.set(studentRef, { schoolId: draft.schoolId, name: `${learner.firstNames.trim()} ${learner.surname.trim()}`, firstNames: learner.firstNames.trim(), surname: learner.surname.trim(), dateOfBirth: learner.dateOfBirth, gender: learner.sex || "other", nationality: learner.nationality || null, entryType: learner.entryType || "New admission", previousSchool: learner.entryType === "Transfer" ? (learner.previousSchool || null) : null, previousClass: learner.entryType === "Transfer" ? (learner.previousClass || null) : null, classId: placement.classId, className: placement.className || classData.name, academicYearId: placement.academicYearId, academicYear: placement.academicYear, term: placement.term, stream: placement.stream || null, admissionNumber: studentNumber, studentCode: studentNumber, status, directEnrolmentDraftId: draftId, createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp(), enrolledBy: request.auth.uid }, { merge: false });
+    tx.set(db.collection("student_guardians").doc(studentId), { schoolId: draft.schoolId, studentId, guardians, updatedAt: admin.firestore.FieldValue.serverTimestamp(), updatedBy: request.auth.uid });
+    tx.set(db.collection("student_services").doc(studentId), { schoolId: draft.schoolId, studentId, ...(draft.services || {}), updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    if (String(draft.support || "").trim()) tx.set(db.collection("student_medical_support").doc(studentId), { schoolId: draft.schoolId, studentId, note: String(draft.support).trim(), updatedAt: admin.firestore.FieldValue.serverTimestamp(), updatedBy: request.auth.uid });
+    for (const doc of docs) tx.set(studentRef.collection("documents").doc(String(doc.id)), { ...doc, schoolId: draft.schoolId, studentId, uploadedBy: request.auth.uid, uploadedAt: admin.firestore.FieldValue.serverTimestamp() });
+    tx.set(draftRef, { status: "enrolled", enrolledStudentId: studentId, enrolledAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    const audit = (action, details) => tx.set(db.collection("audit_logs").doc(), { schoolId: draft.schoolId, actorId: request.auth.uid, module: "enrollment", action, targetType: "student", targetId: studentId, details, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+    audit("enrolment_activated", { draftId, studentNumber, status });
+    audit("guardian_changed", { count: guardians.length });
+    if (overrideReason) audit("guardian_override", { reason: overrideReason });
+    for (const doc of docs) audit("document_uploaded", { documentId: doc.id, name: doc.name });
+    return { studentId, studentNumber, status, alreadyEnrolled: false };
+  });
+  return response;
+});
+
 // Staff code shape mirrors the student code convention (prefix + year +
 // sequence), e.g. SMAC260007. Uses the same transactional counter pattern
 // as getNextSequenceNumber (student_remote_data_source.dart) so concurrent

@@ -190,8 +190,8 @@ class _ClassTeacherStudentListScreenState
 
   Widget _buildErrorBanner(BuildContext context, String message) {
     return PulseCard(
-      backgroundColor: AppColors.danger(context).withValues(alpha: 0.08),
-      borderColor: AppColors.danger(context).withValues(alpha: 0.3),
+      backgroundColor: AppColors.danger(context),
+      borderColor: AppColors.danger(context),
       padding: const EdgeInsets.all(AppSpacing.l),
       child: Row(
         children: [
@@ -220,10 +220,7 @@ class _ClassTeacherStudentListScreenState
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppColors.primary(context).withValues(alpha: 0.12),
-            AppColors.primary(context).withValues(alpha: 0.04),
-          ],
+          colors: [AppColors.primary(context), AppColors.primary(context)],
         ),
         borderRadius: BorderRadius.circular(AppSpacing.xl),
         border: Border.all(color: AppColors.border(context)),
@@ -290,7 +287,7 @@ class _ClassTeacherStudentListScreenState
         Container(
           padding: const EdgeInsets.all(AppSpacing.s),
           decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.12),
+            color: iconColor,
             borderRadius: BorderRadius.circular(AppSpacing.m),
           ),
           child: Icon(icon, color: iconColor, size: 20),
@@ -385,7 +382,7 @@ class _ClassTeacherStudentListScreenState
               Container(
                 padding: const EdgeInsets.all(AppSpacing.xl),
                 decoration: BoxDecoration(
-                  color: AppColors.primary(context).withValues(alpha: 0.1),
+                  color: AppColors.primary(context),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -466,7 +463,7 @@ class _ClassTeacherStudentListScreenState
               vertical: 2,
             ),
             decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
+              color: statusColor,
               borderRadius: BorderRadius.circular(AppSpacing.s),
             ),
             child: Text(
@@ -493,7 +490,7 @@ class _ClassTeacherStudentListScreenState
     }
     return CircleAvatar(
       radius: 24,
-      backgroundColor: AppColors.primary(context).withValues(alpha: 0.12),
+      backgroundColor: AppColors.primary(context),
       child: Text(
         student.initials,
         style: AppTypography.titleMedium.copyWith(
@@ -599,9 +596,7 @@ class _ClassTeacherStudentListScreenState
             vertical: AppSpacing.s,
           ),
           decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.primary(context).withValues(alpha: 0.12)
-                : Colors.transparent,
+            color: isSelected ? AppColors.primary(context) : Colors.transparent,
             borderRadius: BorderRadius.circular(AppSpacing.m),
             border: Border.all(
               color: isSelected

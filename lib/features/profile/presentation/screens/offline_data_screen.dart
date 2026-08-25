@@ -87,7 +87,7 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
                               : Icons.cloud_off_outlined,
                           color: _isOnline
                               ? AppColors.successGreen
-                              : AppColors.deepOrange,
+                              : AppColors.black,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -152,7 +152,7 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
                                   : Icons.schedule,
                               size: 18,
                               color: op.status == OfflineSyncStatus.failed
-                                  ? AppColors.deepOrange
+                                  ? AppColors.black
                                   : AppColors.textMuted(context),
                             ),
                             const SizedBox(width: 10),
@@ -174,7 +174,7 @@ class _OfflineDataScreenState extends State<OfflineDataScreen> {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: AppColors.deepOrange,
+                                        color: AppColors.black,
                                       ),
                                     ),
                                 ],

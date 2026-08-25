@@ -118,7 +118,7 @@ class _LeaveCard extends StatelessWidget {
             'Approved' || 'Out' => semanticColors.warning,
             'Returned' => semanticColors.success,
             'Rejected' => semanticColors.error,
-            _ => Colors.grey,
+            _ => Colors.black,
           };
 
     return AppCard(

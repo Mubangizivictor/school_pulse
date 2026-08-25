@@ -196,9 +196,7 @@ class _SuperAdminOverviewScreenState extends State<SuperAdminOverviewScreen> {
                                                     as num)
                                                 .toInt(),
                                         icon: Icons.school_rounded,
-                                        iconBg: AppColors.information(
-                                          context,
-                                        ).withValues(alpha: 0.15),
+                                        iconBg: AppColors.information(context),
                                         iconColor: AppColors.information(
                                           context,
                                         ),
@@ -211,9 +209,7 @@ class _SuperAdminOverviewScreenState extends State<SuperAdminOverviewScreen> {
                                                     as num)
                                                 .toInt(),
                                         icon: Icons.verified_rounded,
-                                        iconBg: AppColors.success(
-                                          context,
-                                        ).withValues(alpha: 0.15),
+                                        iconBg: AppColors.success(context),
                                         iconColor: AppColors.success(context),
                                       ),
                                     ],
@@ -352,7 +348,7 @@ class _ActionRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.m),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color),
@@ -550,7 +546,7 @@ class _ApplicationRow extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.information(context).withValues(alpha: 0.12),
+              color: AppColors.information(context),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -632,7 +628,7 @@ class _PaymentRow extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.electricBlue.withValues(alpha: 0.12),
+                color: AppColors.electricBlue,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: AppColors.electricBlue, size: 20),
@@ -708,7 +704,7 @@ class _OverviewHeader extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF4839E0), Color(0xFF6A3AE0), Color(0xFF8B3FE0)],
+            colors: [Colors.black, Colors.black, Colors.black],
           ),
         ),
         child: Stack(
@@ -721,7 +717,7 @@ class _OverviewHeader extends StatelessWidget {
                 height: 160,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.06),
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -733,7 +729,7 @@ class _OverviewHeader extends StatelessWidget {
                 height: 180,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -757,7 +753,7 @@ class _OverviewHeader extends StatelessWidget {
                         Text(
                           'Monitor schools, subscriptions, payments and platform activity.',
                           style: AppTypography.bodyMedium.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85),
+                            color: Colors.white,
                           ),
                         ),
                       ],
@@ -793,10 +789,10 @@ class _HeaderIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(14),
-      side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
+      side: BorderSide(color: Colors.white),
     );
     return Material(
-      color: Colors.white.withValues(alpha: 0.16),
+      color: Colors.white,
       shape: shape,
       child: InkWell(
         customBorder: shape,
@@ -837,7 +833,7 @@ class _TotalRevenueCard extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.deepNavy.withValues(alpha: 0.35),
+                color: AppColors.deepNavy,
                 blurRadius: 16,
                 offset: const Offset(0, 8),
               ),
@@ -849,7 +845,7 @@ class _TotalRevenueCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.s),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -861,9 +857,7 @@ class _TotalRevenueCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.m),
               Text(
                 'Total Revenue',
-                style: AppTypography.bodySmall.copyWith(
-                  color: Colors.white.withValues(alpha: 0.75),
-                ),
+                style: AppTypography.bodySmall.copyWith(color: Colors.white),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
@@ -881,7 +875,7 @@ class _TotalRevenueCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(AppSpacing.s),
                   decoration: BoxDecoration(
-                    color: AppColors.electricBlue.withValues(alpha: 0.9),
+                    color: AppColors.electricBlue,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
@@ -1286,7 +1280,7 @@ class _DesktopMetricCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.s),
                 decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.14),
+                  color: accent,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: accent, size: 18),

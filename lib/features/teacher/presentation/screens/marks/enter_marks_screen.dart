@@ -169,11 +169,7 @@ class _EnterMarksScreenState extends State<EnterMarksScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: AppColors.border(context).withValues(alpha: 0.3),
-          ),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.border(context))),
       ),
       child: Row(
         children: [
@@ -209,7 +205,7 @@ class _EnterMarksScreenState extends State<EnterMarksScreen> {
               height: 36,
               decoration: BoxDecoration(
                 color: hasScore
-                    ? AppColors.primary(context).withValues(alpha: 0.1)
+                    ? AppColors.primary(context)
                     : Colors.transparent,
                 border: Border.all(
                   color: hasScore

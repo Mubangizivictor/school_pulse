@@ -109,7 +109,7 @@ class ContactProfileScreen extends StatelessWidget {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: AppColors.electricBlue.withValues(alpha: 0.1),
+                    color: AppColors.electricBlue,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -201,13 +201,13 @@ class ContactProfileScreen extends StatelessWidget {
                 _buildActionRow(
                   Icons.block,
                   'Block ${contact.name}',
-                  Colors.red,
+                  Colors.black,
                   () => _block(context, user, data),
                 ),
                 _buildActionRow(
                   Icons.report_gmailerrorred,
                   'Report Contact',
-                  Colors.red,
+                  Colors.black,
                   () => _report(context, user, data),
                 ),
               ],
@@ -321,7 +321,7 @@ class ContactProfileScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Report', style: TextStyle(color: Colors.red)),
+            child: const Text('Report', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
@@ -357,7 +357,7 @@ class ContactProfileScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Block', style: TextStyle(color: Colors.red)),
+            child: const Text('Block', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),

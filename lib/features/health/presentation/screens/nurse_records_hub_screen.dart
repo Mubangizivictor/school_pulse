@@ -26,8 +26,8 @@ class NurseRecordsHubScreen extends StatefulWidget {
 }
 
 class _NurseRecordsHubScreenState extends State<NurseRecordsHubScreen> {
-  static const _card = Color(0xFF151929);
-  static const _muted = Color(0xFF8A93A6);
+  static const _card = Colors.black;
+  static const _muted = Colors.black;
 
   List<Student> _students = [];
 
@@ -58,7 +58,7 @@ class _NurseRecordsHubScreenState extends State<NurseRecordsHubScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF070914),
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: BlocBuilder<HealthBloc, HealthState>(
           builder: (context, state) {
@@ -96,7 +96,7 @@ class _NurseRecordsHubScreenState extends State<NurseRecordsHubScreen> {
                       onPressed: () => context.push('/staff/nurse/history'),
                       child: const Text(
                         'View all',
-                        style: TextStyle(color: Color(0xFFFF6A00)),
+                        style: TextStyle(color: Colors.black),
                       ),
                     ),
                   ],
@@ -169,12 +169,12 @@ class _SearchAndFilterRow extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.search, color: Colors.white38, size: 20),
+                const Icon(Icons.search, color: Colors.white, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
                     style: const TextStyle(color: Colors.white),
-                    cursorColor: const Color(0xFFFF6A00),
+                    cursorColor: Colors.black,
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
@@ -211,13 +211,13 @@ class _SearchAndFilterRow extends StatelessWidget {
           child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.tune, color: Colors.white70, size: 18),
+              Icon(Icons.tune, color: Colors.white, size: 18),
               SizedBox(width: 6),
               Text(
                 'All records',
                 style: TextStyle(color: Colors.white, fontSize: 13),
               ),
-              Icon(Icons.expand_more, color: Colors.white70, size: 18),
+              Icon(Icons.expand_more, color: Colors.white, size: 18),
             ],
           ),
         ),
@@ -251,25 +251,25 @@ class _StatsStrip extends StatelessWidget {
           Expanded(
             child: _StatItem(
               icon: Icons.calendar_today_outlined,
-              color: const Color(0xFF3B82F6),
+              color: Colors.black,
               value: visitsToday,
               label: 'Visits today',
             ),
           ),
-          Container(width: 1, height: 40, color: Colors.white10),
+          Container(width: 1, height: 40, color: Colors.white),
           Expanded(
             child: _StatItem(
               icon: Icons.healing_outlined,
-              color: const Color(0xFF10B981),
+              color: Colors.black,
               value: 0,
               label: 'Medication due',
             ),
           ),
-          Container(width: 1, height: 40, color: Colors.white10),
+          Container(width: 1, height: 40, color: Colors.white),
           Expanded(
             child: _StatItem(
               icon: Icons.warning_amber_rounded,
-              color: const Color(0xFFF59E0B),
+              color: Colors.black,
               value: lowStock,
               label: 'Low stock',
             ),
@@ -299,7 +299,7 @@ class _StatItem extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
+            color: color,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: color, size: 18),
@@ -345,28 +345,28 @@ class _RecordsList extends StatelessWidget {
         title: 'Clinic visits',
         subtitle: 'View consultations and treatment history',
         icon: Icons.medical_services_outlined,
-        color: const Color(0xFF3B82F6),
+        color: Colors.black,
         onTap: () => context.push('/staff/nurse/visits'),
       ),
       _RecordEntryData(
         title: 'Student health profiles',
         subtitle: 'Allergies, conditions and medical notes',
         icon: Icons.person_outline,
-        color: const Color(0xFF10B981),
+        color: Colors.black,
         onTap: () => context.push('/staff/nurse/lookup'),
       ),
       _RecordEntryData(
         title: 'Medication log',
         subtitle: 'Doses, prescriptions and administration',
         icon: Icons.medication_outlined,
-        color: const Color(0xFFF59E0B),
+        color: Colors.black,
         onTap: () => context.push('/staff/nurse/inventory'),
       ),
       _RecordEntryData(
         title: 'Clinic inventory',
         subtitle: 'Medicine and supplies',
         icon: Icons.inventory_2_outlined,
-        color: const Color(0xFF8B5CF6),
+        color: Colors.black,
         onTap: () => context.push('/staff/nurse/inventory'),
       ),
     ];
@@ -383,7 +383,7 @@ class _RecordsList extends StatelessWidget {
             if (i != records.length - 1)
               const Divider(
                 height: 1,
-                color: Colors.white10,
+                color: Colors.white,
                 indent: 16,
                 endIndent: 16,
               ),
@@ -420,7 +420,7 @@ class _RecordEntry extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: data.color.withValues(alpha: 0.15),
+          color: data.color,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(data.icon, color: data.color, size: 22),
@@ -439,7 +439,7 @@ class _RecordEntry extends StatelessWidget {
           fontSize: 12.5,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+      trailing: const Icon(Icons.chevron_right, color: Colors.white),
     );
   }
 }
@@ -495,7 +495,7 @@ class _RecentActivityList extends StatelessWidget {
             if (i != recent.length - 1)
               const Divider(
                 height: 1,
-                color: Colors.white10,
+                color: Colors.white,
                 indent: 16,
                 endIndent: 16,
               ),
@@ -517,11 +517,11 @@ class _ActivityRow extends StatelessWidget {
   });
 
   static const _avatarColors = [
-    Color(0xFF3B82F6),
-    Color(0xFF10B981),
-    Color(0xFF8B5CF6),
-    Color(0xFFF59E0B),
-    Color(0xFFEC4899),
+    Colors.black,
+    Colors.black,
+    Colors.black,
+    Colors.black,
+    Colors.black,
   ];
 
   @override
@@ -542,7 +542,7 @@ class _ActivityRow extends StatelessWidget {
     return ListTile(
       onTap: () => context.push('/staff/nurse/profile/${visit.studentId}'),
       leading: CircleAvatar(
-        backgroundColor: color.withValues(alpha: 0.2),
+        backgroundColor: color,
         child: Text(
           initials.isEmpty ? '?' : initials,
           style: TextStyle(
@@ -579,7 +579,7 @@ class _ActivityRow extends StatelessWidget {
               fontSize: 11,
             ),
           ),
-          const Icon(Icons.chevron_right, color: Colors.white38, size: 18),
+          const Icon(Icons.chevron_right, color: Colors.white, size: 18),
         ],
       ),
     );

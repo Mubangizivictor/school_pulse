@@ -189,7 +189,7 @@ class _ClassAnnouncementsScreenState extends State<ClassAnnouncementsScreen> {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.s),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color,
                   borderRadius: BorderRadius.circular(AppSpacing.s),
                 ),
                 child: Icon(_iconFor(status), color: color, size: 20),

@@ -24,8 +24,8 @@ class NurseMoreScreen extends StatefulWidget {
 }
 
 class _NurseMoreScreenState extends State<NurseMoreScreen> {
-  static const _card = Color(0xFF151929);
-  static const _muted = Color(0xFF8A93A6);
+  static const _card = Colors.black;
+  static const _muted = Colors.black;
 
   StaffAlertsRepository? _alertsRepository;
 
@@ -54,7 +54,7 @@ class _NurseMoreScreenState extends State<NurseMoreScreen> {
     final uid = authState is AuthAuthenticated ? authState.user.id : '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFF070914),
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
@@ -70,21 +70,21 @@ class _NurseMoreScreenState extends State<NurseMoreScreen> {
               rows: [
                 _MoreRowData(
                   icon: Icons.bed_outlined,
-                  color: const Color(0xFF10B981),
+                  color: Colors.black,
                   title: 'Sick bay',
                   subtitle: 'Admissions, beds and observations',
                   onTap: () => context.push('/staff/nurse/records'),
                 ),
                 _MoreRowData(
                   icon: Icons.vaccines_outlined,
-                  color: const Color(0xFF10B981),
+                  color: Colors.black,
                   title: 'Immunizations',
                   subtitle: 'Vaccination schedules and records',
                   onTap: () => context.push('/staff/nurse/lookup'),
                 ),
                 _MoreRowData(
                   icon: Icons.how_to_reg_outlined,
-                  color: const Color(0xFF3B82F6),
+                  color: Colors.black,
                   title: 'Health screenings',
                   subtitle: 'Programs, results and follow-ups',
                   onTap: () => context.push('/staff/nurse/records'),
@@ -102,7 +102,7 @@ class _NurseMoreScreenState extends State<NurseMoreScreen> {
                   rows: [
                     _MoreRowData(
                       icon: Icons.local_shipping_outlined,
-                      color: const Color(0xFFFF6A00),
+                      color: Colors.black,
                       title: 'Supply requests',
                       subtitle: 'Request medicines and clinic supplies',
                       badge: pending > 0 ? '$pending pending' : null,
@@ -110,14 +110,14 @@ class _NurseMoreScreenState extends State<NurseMoreScreen> {
                     ),
                     _MoreRowData(
                       icon: Icons.event_available_outlined,
-                      color: const Color(0xFF10B981),
+                      color: Colors.black,
                       title: 'Appointments & referrals',
                       subtitle: 'Clinic bookings and external referrals',
                       onTap: () => context.push('/staff/nurse/visits'),
                     ),
                     _MoreRowData(
                       icon: Icons.bar_chart_outlined,
-                      color: const Color(0xFF3B82F6),
+                      color: Colors.black,
                       title: 'Reports & analytics',
                       subtitle: 'Health trends and statutory reports',
                       onTap: () => context.push('/staff/nurse/records'),
@@ -139,21 +139,21 @@ class _NurseMoreScreenState extends State<NurseMoreScreen> {
               rows: [
                 _MoreRowData(
                   icon: Icons.settings_outlined,
-                  color: const Color(0xFF3B82F6),
+                  color: Colors.black,
                   title: 'Clinic settings',
                   subtitle: 'Preferences, policies and permissions',
                   onTap: () => context.push('/staff/more'),
                 ),
                 _MoreRowData(
                   icon: Icons.help_outline,
-                  color: const Color(0xFF10B981),
+                  color: Colors.black,
                   title: 'Help & support',
                   subtitle: 'Guides and contact support',
                   onTap: () => context.push('/staff/more'),
                 ),
                 _MoreRowData(
                   icon: Icons.logout_rounded,
-                  color: const Color(0xFFEF4444),
+                  color: Colors.black,
                   title: 'Logout',
                   subtitle: 'Sign out of your nurse account',
                   onTap: () => _handleLogout(context),
@@ -179,10 +179,7 @@ class _NurseMoreScreenState extends State<NurseMoreScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Logout',
-              style: TextStyle(color: Color(0xFFEF4444)),
-            ),
+            child: const Text('Logout', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
@@ -228,10 +225,10 @@ class _Header extends StatelessWidget {
         ),
         const CircleAvatar(
           radius: 26,
-          backgroundColor: Color(0xFF1E293B),
+          backgroundColor: Colors.black,
           child: Icon(
             Icons.local_hospital_rounded,
-            color: Color(0xFFFF6A00),
+            color: Colors.black,
             size: 26,
           ),
         ),
@@ -251,7 +248,7 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title.toUpperCase(),
         style: const TextStyle(
-          color: Color(0xFF64748B),
+          color: Colors.black,
           fontWeight: FontWeight.bold,
           fontSize: 12,
           letterSpacing: 0.5,
@@ -297,7 +294,7 @@ class _MoreSection extends StatelessWidget {
             if (i != rows.length - 1)
               const Divider(
                 height: 1,
-                color: Colors.white10,
+                color: Colors.white,
                 indent: 16,
                 endIndent: 16,
               ),
@@ -319,7 +316,7 @@ class _MoreRow extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: data.color.withValues(alpha: 0.18),
+          color: data.color,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(data.icon, color: data.color, size: 20),
@@ -348,7 +345,7 @@ class _MoreRow extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF6A00),
+                    color: Colors.black,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -361,10 +358,10 @@ class _MoreRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Icon(Icons.chevron_right, color: Colors.white38),
+                const Icon(Icons.chevron_right, color: Colors.white),
               ],
             )
-          : const Icon(Icons.chevron_right, color: Colors.white38),
+          : const Icon(Icons.chevron_right, color: Colors.white),
     );
   }
 }
@@ -408,7 +405,7 @@ class _NotificationsAwareSection extends StatelessWidget {
       rows: [
         _MoreRowData(
           icon: Icons.notifications_outlined,
-          color: const Color(0xFFFF6A00),
+          color: Colors.black,
           title: 'Notifications',
           subtitle: 'Clinic alerts and announcements',
           badge: unread > 0 ? '$unread' : null,
@@ -416,7 +413,7 @@ class _NotificationsAwareSection extends StatelessWidget {
         ),
         _MoreRowData(
           icon: Icons.forum_outlined,
-          color: const Color(0xFF10B981),
+          color: Colors.black,
           title: 'Parent updates',
           subtitle: 'Health updates sent to guardians',
           onTap: () => context.push('/staff/messages'),

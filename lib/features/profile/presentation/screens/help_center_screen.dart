@@ -115,13 +115,9 @@ class HelpCenterScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: colors.surface.withValues(alpha: isDark ? .62 : 1),
+                    color: colors.surface,
                     borderRadius: AppRadius.large,
-                    border: Border.all(
-                      color: AppColors.border(
-                        context,
-                      ).withValues(alpha: isDark ? .72 : .45),
-                    ),
+                    border: Border.all(color: AppColors.border(context)),
                   ),
                   child: Column(
                     children: [
@@ -209,7 +205,7 @@ class _HelpHero extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF3079EC), Color(0xFF1555CF)],
+          colors: [Colors.black, Colors.black],
         ),
       ),
       child: Row(
@@ -233,7 +229,7 @@ class _HelpHero extends StatelessWidget {
                 Text(
                   'Browse help articles or contact our\nsupport team.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: .96),
+                    color: Colors.white,
                     fontSize: 14,
                     height: 1.42,
                     fontWeight: FontWeight.w500,
@@ -262,11 +258,7 @@ class _HeroIllustration extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Icon(
-            Icons.headset_mic_rounded,
-            size: 112,
-            color: Colors.white.withValues(alpha: .9),
-          ),
+          Icon(Icons.headset_mic_rounded, size: 112, color: Colors.white),
           Positioned(
             bottom: 7,
             child: Icon(Icons.forum_rounded, size: 48, color: Colors.white),
@@ -307,9 +299,7 @@ class _TopicRow extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.primary(
-                          context,
-                        ).withValues(alpha: .08),
+                        color: AppColors.primary(context),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
@@ -346,7 +336,7 @@ class _TopicRow extends StatelessWidget {
                 height: 1,
                 indent: 76,
                 endIndent: 18,
-                color: AppColors.border(context).withValues(alpha: .42),
+                color: AppColors.border(context),
               ),
           ],
         ),
@@ -372,15 +362,9 @@ class _ContactSupportCard extends StatelessWidget {
           height: 86,
           padding: const EdgeInsets.symmetric(horizontal: 28),
           decoration: BoxDecoration(
-            color: AppColors.primary(
-              context,
-            ).withValues(alpha: isDark ? .08 : .035),
+            color: AppColors.primary(context),
             borderRadius: AppRadius.large,
-            border: Border.all(
-              color: AppColors.primary(
-                context,
-              ).withValues(alpha: isDark ? .38 : .18),
-            ),
+            border: Border.all(color: AppColors.primary(context)),
           ),
           child: Row(
             children: [

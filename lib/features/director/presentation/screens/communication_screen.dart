@@ -31,7 +31,7 @@ class CommunicationScreen extends StatelessWidget {
         children: [
           _ActionTile(
             icon: Icons.campaign_outlined,
-            color: Colors.blue,
+            color: Colors.black,
             title: 'Send Announcement',
             subtitle: 'To entire school community',
             onTap: () => Navigator.of(context).push(
@@ -42,14 +42,14 @@ class CommunicationScreen extends StatelessWidget {
           ),
           _ActionTile(
             icon: Icons.chat_bubble_outline,
-            color: Colors.orange,
+            color: Colors.black,
             title: 'Send Message',
             subtitle: 'To staff, parents or students',
             onTap: () => context.push('/staff/messages'),
           ),
           _ActionTile(
             icon: Icons.dashboard_customize_outlined,
-            color: Colors.teal,
+            color: Colors.black,
             title: 'Announcement Board',
             subtitle: 'View all announcements',
             onTap: () => Navigator.of(context).push(
@@ -58,7 +58,7 @@ class CommunicationScreen extends StatelessWidget {
           ),
           _ActionTile(
             icon: Icons.description_outlined,
-            color: Colors.deepOrange,
+            color: Colors.black,
             title: 'Message Templates',
             subtitle: 'Quick message templates',
             onTap: () => ScaffoldMessenger.of(context).showSnackBar(
@@ -94,7 +94,7 @@ class _ActionTile extends StatelessWidget {
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.12),
+          backgroundColor: color,
           child: Icon(icon, color: color),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),

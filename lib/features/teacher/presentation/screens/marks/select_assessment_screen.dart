@@ -248,9 +248,7 @@ class _SelectAssessmentScreenState extends State<SelectAssessmentScreen> {
                 borderRadius: BorderRadius.circular(20),
                 border: isSelected
                     ? null
-                    : Border.all(
-                        color: AppColors.border(context).withValues(alpha: 0.6),
-                      ),
+                    : Border.all(color: AppColors.border(context)),
               ),
               child: Text(
                 label,
@@ -275,7 +273,7 @@ class _SelectAssessmentScreenState extends State<SelectAssessmentScreen> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.primary(context).withValues(alpha: 0.08),
+          color: AppColors.primary(context),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
@@ -326,7 +324,7 @@ class _SelectAssessmentScreenState extends State<SelectAssessmentScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.primary(context).withValues(alpha: 0.08),
+        color: AppColors.primary(context),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -396,9 +394,7 @@ class _SelectAssessmentScreenState extends State<SelectAssessmentScreen> {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -473,7 +469,7 @@ class _SelectAssessmentScreenState extends State<SelectAssessmentScreen> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: style.color.withValues(alpha: 0.12),
+                          color: style.color,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -530,9 +526,7 @@ class _SelectAssessmentScreenState extends State<SelectAssessmentScreen> {
                             : CircularProgressIndicator(
                                 value: completion / 100,
                                 strokeWidth: 2,
-                                backgroundColor: AppColors.border(
-                                  context,
-                                ).withValues(alpha: 0.4),
+                                backgroundColor: AppColors.border(context),
                                 color: completion == 100
                                     ? AppColors.success(context)
                                     : AppColors.primary(context),
@@ -570,10 +564,7 @@ class _SelectAssessmentScreenState extends State<SelectAssessmentScreen> {
     return Container(
       width: 38,
       height: 38,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       child: Icon(icon, color: color, size: 18),
     );
   }

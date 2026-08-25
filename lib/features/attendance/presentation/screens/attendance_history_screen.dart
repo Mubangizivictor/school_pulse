@@ -159,7 +159,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.black)),
         const SizedBox(height: 4),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -201,8 +201,7 @@ class _HistoryCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: (isPerfect ? colors.success : colors.warning)
-                      .withValues(alpha: 0.1),
+                  color: (isPerfect ? colors.success : colors.warning),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -227,12 +226,12 @@ class _HistoryCard extends StatelessWidget {
                       DateFormat('d/M/yyyy • h:mm a').format(entry.date),
                       style: Theme.of(
                         context,
-                      ).textTheme.labelSmall?.copyWith(color: Colors.grey),
+                      ).textTheme.labelSmall?.copyWith(color: Colors.black),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+              const Icon(Icons.chevron_right, color: Colors.black, size: 20),
             ],
           ),
           const SizedBox(height: 16),
@@ -289,7 +288,7 @@ class _HistoryCard extends StatelessWidget {
                     'of ${entry.summary.totalMarked}',
                     style: const TextStyle(
                       fontSize: 10,
-                      color: Colors.grey,
+                      color: Colors.black,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

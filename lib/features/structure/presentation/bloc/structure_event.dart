@@ -297,6 +297,23 @@ class ArchiveLevelRequested extends StructureEvent {
   List<Object?> get props => [levelId];
 }
 
+class ReorderLevelsRequested extends StructureEvent {
+  final List<EducationalLevel> orderedLevels;
+  const ReorderLevelsRequested(this.orderedLevels);
+  @override
+  List<Object?> get props => [orderedLevels];
+}
+
+/// Saves a new/edited level together with any sibling levels whose `order`
+/// shifted as a result (e.g. inserting "before"/"after" an existing level),
+/// so the whole change lands as one atomic write.
+class SaveLevelWithReorderRequested extends StructureEvent {
+  final List<EducationalLevel> levels;
+  const SaveLevelWithReorderRequested(this.levels);
+  @override
+  List<Object?> get props => [levels];
+}
+
 class SaveAcademicYearRequested extends StructureEvent {
   final AcademicYear year;
   const SaveAcademicYearRequested(this.year);
@@ -348,11 +365,28 @@ class SetCurrentAcademicTermRequested extends StructureEvent {
   List<Object?> get props => [termId, schoolId];
 }
 
+class ArchiveAcademicTermRequested extends StructureEvent {
+  final String termId;
+  const ArchiveAcademicTermRequested(this.termId);
+  @override
+  List<Object?> get props => [termId];
+}
+
 class SaveClassRequested extends StructureEvent {
   final SchoolClass schoolClass;
   const SaveClassRequested(this.schoolClass);
   @override
   List<Object?> get props => [schoolClass];
+}
+
+/// A single atomic batch used by the setup wizard.  This deliberately keeps
+/// creation separate from edits so a failed bulk setup never leaves a subset
+/// of its selected classes behind.
+class CreateClassesRequested extends StructureEvent {
+  final List<SchoolClass> classes;
+  const CreateClassesRequested(this.classes);
+  @override
+  List<Object?> get props => [classes];
 }
 
 class DeleteClassRequested extends StructureEvent {
@@ -369,11 +403,32 @@ class ArchiveClassRequested extends StructureEvent {
   List<Object?> get props => [classId];
 }
 
+/// Reorders classes within one education level. Blocked once any class in
+/// the batch has dependent streams, so a live teaching order tied to
+/// existing sections/timetables can't be silently reshuffled.
+class ReorderClassesRequested extends StructureEvent {
+  final List<SchoolClass> orderedClasses;
+  const ReorderClassesRequested(this.orderedClasses);
+  @override
+  List<Object?> get props => [orderedClasses];
+}
+
 class SaveStreamRequested extends StructureEvent {
   final ClassStream stream;
   const SaveStreamRequested(this.stream);
   @override
   List<Object?> get props => [stream];
+}
+
+/// A single atomic batch used by the setup wizard, e.g. applying the same
+/// stream name (East, West, ...) to several selected classes at once. Kept
+/// separate from [SaveStreamRequested] so a failed bulk add never leaves a
+/// subset of the intended streams behind.
+class CreateStreamsRequested extends StructureEvent {
+  final List<ClassStream> streams;
+  const CreateStreamsRequested(this.streams);
+  @override
+  List<Object?> get props => [streams];
 }
 
 class DeleteStreamRequested extends StructureEvent {
@@ -397,6 +452,13 @@ class SaveSubjectRequested extends StructureEvent {
   List<Object?> get props => [subject];
 }
 
+class CreateSubjectsRequested extends StructureEvent {
+  final List<Subject> subjects;
+  const CreateSubjectsRequested(this.subjects);
+  @override
+  List<Object?> get props => [subjects];
+}
+
 class DeleteSubjectRequested extends StructureEvent {
   final String subjectId;
   const DeleteSubjectRequested(this.subjectId);
@@ -416,6 +478,22 @@ class SaveDepartmentRequested extends StructureEvent {
   const SaveDepartmentRequested(this.department);
   @override
   List<Object?> get props => [department];
+}
+
+/// Saves a department and reassigns its subject membership atomically -
+/// used by the New Department screen so a create/edit never leaves the
+/// department saved with only some of its subjects moved.
+class SaveDepartmentWithSubjectsRequested extends StructureEvent {
+  final Department department;
+  final List<Subject> addedSubjects;
+  final List<Subject> removedSubjects;
+  const SaveDepartmentWithSubjectsRequested(
+    this.department,
+    this.addedSubjects,
+    this.removedSubjects,
+  );
+  @override
+  List<Object?> get props => [department, addedSubjects, removedSubjects];
 }
 
 class DeleteDepartmentRequested extends StructureEvent {
@@ -642,6 +720,18 @@ class SaveGradingSystemRequested extends StructureEvent {
   const SaveGradingSystemRequested(this.system);
   @override
   List<Object?> get props => [system];
+}
+
+/// The two-stage builder's final save: the grading system plus its complete
+/// set of grade bands, written atomically. [bands] must already be a valid,
+/// gapless, non-overlapping partition of `[0, system.maximumMark]` - the
+/// bloc re-validates this before writing, it never trusts the caller.
+class SaveGradingSystemWithBandsRequested extends StructureEvent {
+  final GradingSystemDef system;
+  final List<GradeBand> bands;
+  const SaveGradingSystemWithBandsRequested(this.system, this.bands);
+  @override
+  List<Object?> get props => [system, bands];
 }
 
 class DeleteGradingSystemRequested extends StructureEvent {

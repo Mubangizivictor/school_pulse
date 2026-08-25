@@ -72,7 +72,7 @@ class StaffIdCardService {
       width: 220,
       height: 350,
       decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey, width: 1),
+        border: pw.Border.all(color: PdfColors.black, width: 1),
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
       ),
       child: child,
@@ -84,7 +84,7 @@ class StaffIdCardService {
       width: double.infinity,
       padding: const pw.EdgeInsets.symmetric(vertical: 10),
       decoration: const pw.BoxDecoration(
-        color: PdfColors.blueGrey900,
+        color: PdfColors.black,
         borderRadius: pw.BorderRadius.vertical(top: pw.Radius.circular(9)),
       ),
       child: pw.Column(
@@ -105,7 +105,7 @@ class StaffIdCardService {
               style: pw.TextStyle(
                 fontWeight: pw.FontWeight.bold,
                 fontSize: 10,
-                color: PdfColors.amber,
+                color: PdfColors.black,
               ),
             ),
           ],
@@ -145,7 +145,7 @@ class StaffIdCardService {
               height: 80,
               decoration: const pw.BoxDecoration(
                 shape: pw.BoxShape.circle,
-                color: PdfColors.blueGrey100,
+                color: PdfColors.black,
               ),
             ),
           pw.SizedBox(height: 10),
@@ -157,10 +157,7 @@ class StaffIdCardService {
           pw.SizedBox(height: 4),
           pw.Text(
             roleLabel,
-            style: const pw.TextStyle(
-              fontSize: 11,
-              color: PdfColors.blueGrey700,
-            ),
+            style: const pw.TextStyle(fontSize: 11, color: PdfColors.black),
           ),
           pw.Spacer(),
           _buildCardRow('Staff Code:', staffCode),
@@ -190,7 +187,7 @@ class StaffIdCardService {
               style: pw.TextStyle(
                 fontWeight: pw.FontWeight.bold,
                 fontSize: 8,
-                color: PdfColors.blueGrey700,
+                color: PdfColors.black,
               ),
             ),
           ),
@@ -200,7 +197,7 @@ class StaffIdCardService {
             child: pw.Text(
               'If found, please return to the school office.',
               textAlign: pw.TextAlign.center,
-              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+              style: const pw.TextStyle(fontSize: 8, color: PdfColors.black),
             ),
           ),
           pw.SizedBox(height: 12),
@@ -217,7 +214,7 @@ class StaffIdCardService {
         children: [
           pw.Text(
             label,
-            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+            style: const pw.TextStyle(fontSize: 10, color: PdfColors.black),
           ),
           pw.Text(
             value,

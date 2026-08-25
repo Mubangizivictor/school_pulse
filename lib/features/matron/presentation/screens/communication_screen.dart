@@ -230,7 +230,7 @@ class _AnnouncementCard extends StatelessWidget {
             children: [
               const Icon(
                 Icons.campaign_outlined,
-                color: Colors.orange,
+                color: Colors.black,
                 size: 20,
               ),
               const SizedBox(width: AppSpacing.s),

@@ -597,7 +597,7 @@ class SubscriptionScreen extends StatelessWidget {
       switch (metric.status) {
         UsageStatus.hardLimitReached => Theme.of(context).colorScheme.error,
         UsageStatus.softLimitReached ||
-        UsageStatus.approachingLimit => Colors.orange,
+        UsageStatus.approachingLimit => Colors.black,
         _ => null,
       };
   static String _usageMessage(UsageMetric metric) => switch (metric.status) {

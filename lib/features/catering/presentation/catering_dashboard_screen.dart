@@ -60,13 +60,16 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
           _showEligibilityResult(context, state.eligibilityData);
         } else if (state is CateringError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.black,
+            ),
           );
         } else if (state is CateringSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
-              backgroundColor: Colors.green,
+              backgroundColor: Colors.black,
             ),
           );
         }
@@ -308,7 +311,7 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
   ) {
     if (count == 0) return const SizedBox.shrink();
     return AppCard(
-      color: semanticColors.error.withValues(alpha: 0.1),
+      color: semanticColors.error,
       child: ListTile(
         leading: Icon(Icons.warning, color: semanticColors.error),
         title: Text(
@@ -381,8 +384,8 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
               height: 80,
               decoration: BoxDecoration(
                 color: isCleared
-                    ? semanticColors.success.withValues(alpha: 0.1)
-                    : semanticColors.error.withValues(alpha: 0.1),
+                    ? semanticColors.success
+                    : semanticColors.error,
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -476,7 +479,7 @@ class _CateringDashboardScreenState extends State<CateringDashboardScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(label, style: const TextStyle(color: Colors.black)),
           Text(
             value,
             style: TextStyle(fontWeight: FontWeight.bold, color: color),
@@ -508,7 +511,7 @@ class _ActionChip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: Colors.black),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(

@@ -86,21 +86,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         .map((d) => d.capacity)
                         .reduce((a, b) => a > b ? a : b)
                         .toDouble(),
-              color: Colors.blue,
+              color: Colors.black,
             ),
             const SizedBox(height: 24),
             SectionHeader(title: 'Discipline Cases by Category'),
             const SizedBox(height: 12),
             _BarChartCard(
               data: _countBy(_discipline.map((d) => d.category)),
-              color: Colors.red,
+              color: Colors.black,
             ),
             const SizedBox(height: 24),
             SectionHeader(title: 'Welfare Records by Category'),
             const SizedBox(height: 12),
             _BarChartCard(
               data: _countBy(_welfare.map((w) => w.category)),
-              color: Colors.pink,
+              color: Colors.black,
             ),
             const SizedBox(height: 24),
             SectionHeader(title: 'Leave Requests by Status'),
@@ -109,7 +109,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               data: _countBy(
                 _leave.map((l) => l.isOverdue ? 'Overdue' : l.status),
               ),
-              color: Colors.orange,
+              color: Colors.black,
             ),
           ],
         ),
@@ -169,7 +169,7 @@ class _StatsGrid extends StatelessWidget {
                   ? 0
                   : (data.occupiedBeds / data.totalBeds) * 100,
               icon: Icons.bed_outlined,
-              color: Colors.blue,
+              color: Colors.black,
               suffix: '%',
             ),
             AnalyticalStatCard(
@@ -182,13 +182,13 @@ class _StatsGrid extends StatelessWidget {
               title: 'Welfare Concerns',
               value: data.pendingWelfareConcerns.toDouble(),
               icon: Icons.favorite_outline,
-              color: Colors.pink,
+              color: Colors.black,
             ),
             AnalyticalStatCard(
               title: 'Pending Leave',
               value: data.pendingLeaveRequests.toDouble(),
               icon: Icons.pending_actions_outlined,
-              color: Colors.purple,
+              color: Colors.black,
             ),
             AnalyticalStatCard(
               title: 'Missing',

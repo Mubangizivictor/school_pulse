@@ -501,7 +501,10 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     final schoolId = oldData['schoolId'] as String?;
     String prefix = 'P';
     if (schoolId != null) {
-      final schoolDoc = await firestore.collection('schools').doc(schoolId).get();
+      final schoolDoc = await firestore
+          .collection('schools')
+          .doc(schoolId)
+          .get();
       final schoolPrefix = _schoolPrefixFromName(
         schoolDoc.data()?['name'] as String?,
       );

@@ -127,7 +127,7 @@ class AssetDetailsScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(label, style: const TextStyle(color: Colors.black)),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
         ],
       ),

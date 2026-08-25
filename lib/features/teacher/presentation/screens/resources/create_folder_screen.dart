@@ -41,9 +41,7 @@ class _CreateFolderScreenState extends State<CreateFolderScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: 0.1),
+                    color: Theme.of(context).colorScheme.primary,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(

@@ -101,7 +101,7 @@ class _FolderItem extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          const Icon(Icons.folder, color: Colors.amber, size: 32),
+          const Icon(Icons.folder, color: Colors.black, size: 32),
           const SizedBox(width: 16),
           Expanded(
             child: Column(

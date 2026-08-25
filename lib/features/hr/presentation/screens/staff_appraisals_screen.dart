@@ -76,13 +76,13 @@ class _AppraisalTile extends StatelessWidget {
                 ),
                 Text(
                   status,
-                  style: const TextStyle(fontSize: 12, color: Colors.blue),
+                  style: const TextStyle(fontSize: 12, color: Colors.black),
                 ),
               ],
             ),
             Text(
               department,
-              style: const TextStyle(fontSize: 13, color: Colors.grey),
+              style: const TextStyle(fontSize: 13, color: Colors.black),
             ),
             const SizedBox(height: 12),
             Row(
@@ -90,8 +90,8 @@ class _AppraisalTile extends StatelessWidget {
                 Expanded(
                   child: LinearProgressIndicator(
                     value: score,
-                    backgroundColor: Colors.grey.withValues(alpha: 0.1),
-                    color: score > 0.8 ? Colors.green : Colors.blue,
+                    backgroundColor: Colors.black,
+                    color: score > 0.8 ? Colors.black : Colors.black,
                   ),
                 ),
                 const SizedBox(width: 12),

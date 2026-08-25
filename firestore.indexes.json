@@ -1,6 +1,122 @@
 {
   "indexes": [
     {
+      "collectionGroup": "classes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "schoolId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "levelId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "structure_teaching_plans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "schoolId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "academicYearId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "educationLevelId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "structure_teaching_plan_subjects",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "schoolId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "planId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "structure_class_plan_overrides",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "schoolId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "planId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "structure_class_plan_overrides",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "schoolId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "planId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "classId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "structure_curriculum_assignments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "schoolId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "subjectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "users",
       "queryScope": "COLLECTION",
       "fields": [

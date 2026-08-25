@@ -155,12 +155,12 @@ class _NurseStudentLookupScreenState extends State<NurseStudentLookupScreen> {
               if (_loadingView) const Center(child: SchoolPulseLoader()),
               if (_error != null)
                 Card(
-                  color: Colors.red.shade50,
+                  color: Colors.black,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       _error!,
-                      style: const TextStyle(color: Colors.red),
+                      style: const TextStyle(color: Colors.black),
                     ),
                   ),
                 ),
@@ -203,7 +203,7 @@ class _NurseViewCard extends StatelessWidget {
                 const Text(
                   'Clinical details (allergies, medications, emergency contacts) require '
                   'additional permission.',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: Colors.black),
                 )
               else ...[
                 _InfoRow(
@@ -253,7 +253,7 @@ class _InfoRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 160,
-            child: Text(label, style: const TextStyle(color: Colors.grey)),
+            child: Text(label, style: const TextStyle(color: Colors.black)),
           ),
           Expanded(child: Text(value)),
         ],

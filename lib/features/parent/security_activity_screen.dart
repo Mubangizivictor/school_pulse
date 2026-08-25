@@ -182,10 +182,10 @@ class _MovementTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: isIn ? Colors.green.shade50 : Colors.blue.shade50,
+          backgroundColor: isIn ? Colors.black : Colors.black,
           child: Icon(
             isIn ? Icons.login : Icons.logout,
-            color: isIn ? Colors.green : Colors.blue,
+            color: isIn ? Colors.black : Colors.black,
           ),
         ),
         title: Text(movement.movementType),

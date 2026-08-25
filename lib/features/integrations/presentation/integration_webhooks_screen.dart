@@ -227,8 +227,8 @@ class _IntegrationWebhooksScreenState extends State<IntegrationWebhooksScreen> {
                             leading: Icon(
                               Icons.webhook_outlined,
                               color: webhook['status'] == 'active'
-                                  ? Colors.green
-                                  : Colors.grey,
+                                  ? Colors.black
+                                  : Colors.black,
                             ),
                             title: Text(
                               webhook['url'] as String? ?? '',
@@ -250,9 +250,8 @@ class _IntegrationWebhooksScreenState extends State<IntegrationWebhooksScreen> {
                                   ),
                                   backgroundColor:
                                       (webhook['status'] == 'active'
-                                              ? Colors.green
-                                              : Colors.grey)
-                                          .withValues(alpha: .12),
+                                      ? Colors.black
+                                      : Colors.black),
                                 ),
                               ],
                             ),

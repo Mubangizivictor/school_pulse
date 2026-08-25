@@ -115,7 +115,7 @@ class _AdmissionsListViewState extends State<_AdmissionsListView> {
               : null;
           if (message != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(message), backgroundColor: Colors.red),
+              SnackBar(content: Text(message), backgroundColor: Colors.black),
             );
           }
         },
@@ -169,8 +169,7 @@ class _AdmissionsListViewState extends State<_AdmissionsListView> {
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
                         itemCount: visible.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: 12),
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final application = visible[index];
                           return AppCard(
@@ -186,9 +185,7 @@ class _AdmissionsListViewState extends State<_AdmissionsListView> {
                                         application.studentName,
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
-                                          color: AppColors.textPrimary(
-                                            context,
-                                          ),
+                                          color: AppColors.textPrimary(context),
                                         ),
                                       ),
                                       const SizedBox(height: 4),

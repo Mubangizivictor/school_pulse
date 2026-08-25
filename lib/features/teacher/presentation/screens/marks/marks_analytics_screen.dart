@@ -138,9 +138,7 @@ class MarksAnalyticsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -206,9 +204,7 @@ class MarksAnalyticsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
         children: [
@@ -230,9 +226,7 @@ class MarksAnalyticsScreen extends StatelessWidget {
                   Expanded(
                     child: LinearProgressIndicator(
                       value: total == 0 ? 0 : entry.value / total,
-                      backgroundColor: AppColors.border(
-                        context,
-                      ).withValues(alpha: 0.2),
+                      backgroundColor: AppColors.border(context),
                       valueColor: AlwaysStoppedAnimation<Color>(
                         AppColors.primary(context),
                       ),
@@ -264,16 +258,12 @@ class MarksAnalyticsScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.surfaceElevated(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.border(context).withValues(alpha: 0.5),
-              ),
+              border: Border.all(color: AppColors.border(context)),
             ),
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: AppColors.primary(
-                    context,
-                  ).withValues(alpha: 0.1),
+                  backgroundColor: AppColors.primary(context),
                   child: Text(
                     '${i + 1}',
                     style: TextStyle(color: AppColors.primary(context)),

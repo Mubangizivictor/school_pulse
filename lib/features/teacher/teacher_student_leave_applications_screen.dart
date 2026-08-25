@@ -453,9 +453,9 @@ class _StatusPill extends StatelessWidget {
         vertical: 2,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color,
         borderRadius: BorderRadius.circular(AppSpacing.s),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
+        border: Border.all(color: color),
       ),
       child: Text(
         label,

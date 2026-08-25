@@ -81,7 +81,7 @@ class AttachmentViewerScreen extends StatelessWidget {
         ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -104,22 +104,22 @@ class AttachmentViewerScreen extends StatelessWidget {
 
                 switch (attachment.type.toUpperCase()) {
                   case 'PDF':
-                    color = Colors.red;
+                    color = Colors.black;
                     icon = Icons.picture_as_pdf;
                     break;
                   case 'XLSX':
                   case 'XLS':
-                    color = Colors.green;
+                    color = Colors.black;
                     icon = Icons.table_chart;
                     break;
                   case 'JPG':
                   case 'PNG':
                   case 'JPEG':
-                    color = Colors.blue;
+                    color = Colors.black;
                     icon = Icons.image;
                     break;
                   default:
-                    color = Colors.purple;
+                    color = Colors.black;
                     icon = Icons.description;
                 }
 
@@ -138,16 +138,16 @@ class AttachmentViewerScreen extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.white30, size: 16),
+                  Icon(Icons.info_outline, color: Colors.white, size: 16),
                   SizedBox(width: 12),
                   Text(
                     'Attachments are available for 30 days',
-                    style: TextStyle(color: Colors.white30, fontSize: 12),
+                    style: TextStyle(color: Colors.white, fontSize: 12),
                   ),
                 ],
               ),
@@ -169,7 +169,7 @@ class AttachmentViewerScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -177,7 +177,7 @@ class AttachmentViewerScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
+              color: color,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 24),
@@ -196,14 +196,14 @@ class AttachmentViewerScreen extends StatelessWidget {
                 ),
                 Text(
                   details,
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
               ],
             ),
           ),
           Builder(
             builder: (buttonContext) => IconButton(
-              icon: const Icon(Icons.download, color: Colors.white70),
+              icon: const Icon(Icons.download, color: Colors.white),
               onPressed: () async {
                 final error = await _downloadAndOpen(url: url, fileName: name);
                 if (error != null && buttonContext.mounted) {
@@ -266,11 +266,8 @@ class ImageViewerScreen extends StatelessWidget {
               imageUrl ??
                   'https://images.unsplash.com/photo-1577891729319-86adcd962860?q=80&w=2069&auto=format&fit=crop',
               fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const Icon(
-                Icons.broken_image,
-                color: Colors.white54,
-                size: 64,
-              ),
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.broken_image, color: Colors.white, size: 64),
             ),
           ),
           Positioned(

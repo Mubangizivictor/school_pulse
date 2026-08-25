@@ -274,7 +274,7 @@ class DepartmentDetailsScreen extends StatelessWidget {
       return _RecordDetailsShell(
         title: current.name,
         icon: Icons.account_balance_outlined,
-        color: Colors.blue,
+        color: Colors.black,
         isActive: current.isActive,
         onEdit: () => Navigator.of(context).push(
           MaterialPageRoute(
@@ -611,12 +611,10 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: selected
-                    ? _color.withValues(alpha: .15)
-                    : Colors.transparent,
+                color: selected ? _color : Colors.transparent,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: selected ? _color : Colors.grey.shade300,
+                  color: selected ? _color : Colors.black,
                   width: selected ? 2 : 1,
                 ),
               ),
@@ -641,7 +639,7 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
                 color: swatch,
                 shape: BoxShape.circle,
                 border: selected
-                    ? Border.all(color: Colors.black87, width: 3)
+                    ? Border.all(color: Colors.black, width: 3)
                     : null,
               ),
               child: selected
@@ -1142,7 +1140,7 @@ class _RecordDetailsShell extends StatelessWidget {
                 value: 'delete',
                 child: Text(
                   deleteLabel,
-                  style: const TextStyle(color: Colors.red),
+                  style: const TextStyle(color: Colors.black),
                 ),
               ),
             ],
@@ -1158,7 +1156,7 @@ class _RecordDetailsShell extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: .10),
+                  color: color,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 26),
@@ -1191,7 +1189,7 @@ class _RecordDetailsShell extends StatelessWidget {
             decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colors.outline.withValues(alpha: .18)),
+              border: Border.all(color: colors.outline),
             ),
             child: Column(children: rows),
           ),
@@ -1476,11 +1474,7 @@ class _LoadingSelector extends StatelessWidget {
           height: 46,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            border: Border.all(
-              color: Theme.of(
-                context,
-              ).colorScheme.outline.withValues(alpha: .35),
-            ),
+            border: Border.all(color: Theme.of(context).colorScheme.outline),
             borderRadius: BorderRadius.circular(7),
           ),
           alignment: Alignment.centerLeft,

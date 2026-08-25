@@ -129,7 +129,7 @@ class ReportCardBody extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 40,
                         fontWeight: FontWeight.w900,
-                        color: Colors.red,
+                        color: Colors.black,
                         letterSpacing: 2,
                       ),
                     ),
@@ -164,9 +164,9 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: .12),
+        color: color,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: .5)),
+        border: Border.all(color: color),
       ),
       child: Text(
         status.label,
@@ -199,9 +199,9 @@ class _FinancialAccessChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: .12),
+        color: color,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: .5)),
+        border: Border.all(color: color),
       ),
       child: Text(
         card.financialAccessStatus.label,
@@ -222,7 +222,7 @@ class _IncompleteWarning extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(AppSpacing.m),
     decoration: BoxDecoration(
-      color: AppColors.warning(context).withValues(alpha: .12),
+      color: AppColors.warning(context),
       borderRadius: BorderRadius.circular(10),
     ),
     child: Text(

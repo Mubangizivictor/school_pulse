@@ -552,7 +552,7 @@ class _IncidentsTab extends StatelessWidget {
                         backgroundColor: _getSeverityColor(
                           incident.severity,
                           semanticColors,
-                        ).withValues(alpha: 0.1),
+                        ),
                         child: Icon(
                           Icons.warning_amber_rounded,
                           color: _getSeverityColor(

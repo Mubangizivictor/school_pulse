@@ -68,7 +68,7 @@ class _ApprovalDelegationScreenState extends State<ApprovalDelegationScreen> {
                         : expired
                         ? Icons.event_busy
                         : Icons.schedule,
-                    color: active ? Colors.green : Colors.grey,
+                    color: active ? Colors.black : Colors.black,
                   ),
                   title: Text('${d.delegatorId} → ${d.delegateId}'),
                   subtitle: Text(
@@ -81,7 +81,7 @@ class _ApprovalDelegationScreenState extends State<ApprovalDelegationScreen> {
                   trailing: Text(
                     active ? 'Active' : (expired ? 'Expired' : d.status),
                     style: TextStyle(
-                      color: active ? Colors.green : Colors.grey,
+                      color: active ? Colors.black : Colors.black,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

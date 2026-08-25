@@ -128,7 +128,7 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
                       label: 'Total Capacity',
                       value: '$totalCapacity',
                       icon: Icons.groups_outlined,
-                      color: Colors.orange,
+                      color: Colors.black,
                     ),
                   ),
                 ],

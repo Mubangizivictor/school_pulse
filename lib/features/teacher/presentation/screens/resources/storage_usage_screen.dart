@@ -62,9 +62,7 @@ class _StorageUsageScreenState extends State<StorageUsageScreen> {
                         child: CircularProgressIndicator(
                           value: fraction,
                           strokeWidth: 12,
-                          backgroundColor: Theme.of(
-                            context,
-                          ).dividerColor.withValues(alpha: 0.1),
+                          backgroundColor: Theme.of(context).dividerColor,
                           color: Theme.of(context).colorScheme.primary,
                           strokeCap: StrokeCap.round,
                         ),
@@ -107,22 +105,22 @@ class _StorageUsageScreenState extends State<StorageUsageScreen> {
                       _StorageItem(
                         label: 'Documents',
                         bytes: byKind[ClassResourceKind.document] ?? 0,
-                        color: Colors.blue,
+                        color: Colors.black,
                       ),
                       _StorageItem(
                         label: 'Videos',
                         bytes: byKind[ClassResourceKind.video] ?? 0,
-                        color: Colors.purple,
+                        color: Colors.black,
                       ),
                       _StorageItem(
                         label: 'Images',
                         bytes: byKind[ClassResourceKind.image] ?? 0,
-                        color: Colors.green,
+                        color: Colors.black,
                       ),
                       _StorageItem(
                         label: 'Others',
                         bytes: byKind[ClassResourceKind.other] ?? 0,
-                        color: Colors.orange,
+                        color: Colors.black,
                         isLast: true,
                       ),
                     ],
@@ -191,7 +189,7 @@ class _StorageItem extends StatelessWidget {
             height: 1,
             indent: 44,
             endIndent: 16,
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
+            color: Theme.of(context).dividerColor,
           ),
       ],
     );

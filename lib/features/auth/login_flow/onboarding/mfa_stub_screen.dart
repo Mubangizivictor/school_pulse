@@ -31,15 +31,14 @@ class MfaStubScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.l),
         decoration: BoxDecoration(
-          color: (isDark ? AppColors.surfaceDark : AppColors.borderLight)
-              .withValues(alpha: 0.4),
+          color: (isDark ? AppColors.surfaceDark : AppColors.borderLight),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: [
             Icon(
               Icons.shield_outlined,
-              color: isDark ? Colors.white70 : AppColors.textSecondaryLight,
+              color: isDark ? Colors.white : AppColors.textSecondaryLight,
             ),
             const SizedBox(width: AppSpacing.m),
             Expanded(
@@ -48,7 +47,7 @@ class MfaStubScreen extends StatelessWidget {
                     ? 'MFA policy: required by your institution'
                     : 'MFA policy: not required',
                 style: TextStyle(
-                  color: isDark ? Colors.white70 : AppColors.textSecondaryLight,
+                  color: isDark ? Colors.white : AppColors.textSecondaryLight,
                   fontSize: 13,
                 ),
               ),

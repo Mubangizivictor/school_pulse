@@ -1,4 +1,7 @@
+import '../entities/teaching_assignment.dart';
+import '../entities/teaching_plan.dart';
 import '../entities/timetable.dart';
+import '../entities/timetable_config.dart';
 
 enum TimetableConflictType {
   invalidTime,
@@ -6,6 +9,8 @@ enum TimetableConflictType {
   teacher,
   room,
   teacherAvailability,
+  unallocatedSubject,
+  teacherNotAssigned,
 }
 
 class TimetableConflict {
@@ -178,5 +183,130 @@ class TimetableConflictResolver {
       }
     }
     return result;
+  }
+
+  /// Checks [candidate] against the school's own curriculum/assignment
+  /// records rather than other lessons: is this subject actually allocated
+  /// to this class (via its education level's [TeachingPlan] plus any
+  /// [ClassPlanOverride]), and is this teacher actually assigned to teach
+  /// this subject for this class in this academic year/term. Both checks
+  /// are skipped (never silently assumed) when the referenced plan/subject
+  /// or assignment data is not passed in - callers are expected to load the
+  /// relevant year/term's data before validating.
+  List<TimetableConflict> checkAllocation({
+    required TimetableLesson candidate,
+    required List<TeachingPlanSubject> levelPlanSubjects,
+    required List<ClassPlanOverride> classOverrides,
+    required List<TeachingAssignment> teachingAssignments,
+  }) {
+    final conflicts = <TimetableConflict>[];
+
+    final override = classOverrides
+        .where((o) => o.subjectId == candidate.subjectId && o.isActive)
+        .toList();
+    final removedByOverride = override.any(
+      (o) => o.action == ClassPlanOverrideAction.remove,
+    );
+    final addedByOverride = override.any(
+      (o) => o.action == ClassPlanOverrideAction.add,
+    );
+    final inLevelPlan = levelPlanSubjects.any(
+      (s) => s.subjectId == candidate.subjectId && s.isActive,
+    );
+    final allocated = addedByOverride || (inLevelPlan && !removedByOverride);
+    if (!allocated) {
+      conflicts.add(
+        TimetableConflict(
+          type: TimetableConflictType.unallocatedSubject,
+          message:
+              '${candidate.subjectName.isNotEmpty ? candidate.subjectName : 'This subject'} is not allocated to ${candidate.classLabel.isNotEmpty ? candidate.classLabel : 'this class'}.',
+          conflictingLesson: candidate,
+          slotId: '',
+        ),
+      );
+    }
+
+    final assigned = teachingAssignments.any(
+      (a) =>
+          a.isActive &&
+          a.staffId == candidate.teacherId &&
+          a.subjectId == candidate.subjectId &&
+          a.classId == candidate.classId &&
+          (a.streamId.isEmpty || a.streamId == candidate.streamId) &&
+          a.academicYearId == candidate.academicYearId &&
+          (a.academicTermId.isEmpty || a.academicTermId == candidate.termId),
+    );
+    if (candidate.teacherId.isNotEmpty && !assigned) {
+      conflicts.add(
+        TimetableConflict(
+          type: TimetableConflictType.teacherNotAssigned,
+          message:
+              '${candidate.teacherName.isNotEmpty ? candidate.teacherName : 'This teacher'} does not have an active teaching assignment for ${candidate.subjectName.isNotEmpty ? candidate.subjectName : 'this subject'} in ${candidate.classLabel.isNotEmpty ? candidate.classLabel : 'this class'}.',
+          conflictingLesson: candidate,
+          slotId: '',
+        ),
+      );
+    }
+
+    return conflicts;
+  }
+
+  /// Every occurrence of [candidate] must reference a currently-configured,
+  /// active, teaching-type slot on the right day - never a break/lunch/
+  /// assembly slot or a slot the school has since removed. This is what
+  /// [TimetableConflictType.invalidTime] represents.
+  List<TimetableConflict> checkValidTimes({
+    required TimetableLesson candidate,
+    required List<TimetableSlot> configuredSlots,
+  }) {
+    final conflicts = <TimetableConflict>[];
+    for (final occurrence in candidate.occurrences) {
+      final slot = configuredSlots
+          .where((s) => s.id == occurrence.slotId)
+          .toList();
+      if (slot.isEmpty) {
+        conflicts.add(
+          TimetableConflict(
+            type: TimetableConflictType.invalidTime,
+            message: 'This lesson uses a slot that no longer exists.',
+            conflictingLesson: candidate,
+            slotId: occurrence.slotId,
+          ),
+        );
+        continue;
+      }
+      final matched = slot.first;
+      if (!matched.isActive) {
+        conflicts.add(
+          TimetableConflict(
+            type: TimetableConflictType.invalidTime,
+            message: '${matched.name} is no longer an active slot.',
+            conflictingLesson: candidate,
+            slotId: occurrence.slotId,
+          ),
+        );
+      } else if (matched.type != 'period') {
+        conflicts.add(
+          TimetableConflict(
+            type: TimetableConflictType.invalidTime,
+            message:
+                '${matched.name} is a ${matched.type}, not a teaching period.',
+            conflictingLesson: candidate,
+            slotId: occurrence.slotId,
+          ),
+        );
+      } else if (matched.days.isNotEmpty &&
+          !matched.days.contains(occurrence.day)) {
+        conflicts.add(
+          TimetableConflict(
+            type: TimetableConflictType.invalidTime,
+            message: '${matched.name} is not scheduled on ${occurrence.day}.',
+            conflictingLesson: candidate,
+            slotId: occurrence.slotId,
+          ),
+        );
+      }
+    }
+    return conflicts;
   }
 }

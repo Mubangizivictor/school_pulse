@@ -106,7 +106,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(state.message),
-                  backgroundColor: Colors.red,
+                  backgroundColor: Colors.black,
                 ),
               );
             }
@@ -135,7 +135,7 @@ class _BiometricEnrollmentScreenState extends State<BiometricEnrollmentScreen> {
                             ? Icons.fingerprint
                             : Icons.fingerprint_outlined,
                         color: _selectedDevice?.id == device.id
-                            ? Colors.green
+                            ? Colors.black
                             : null,
                       ),
                       title: Text(device.name),

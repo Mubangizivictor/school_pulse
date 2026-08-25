@@ -104,13 +104,13 @@ class _RecordClinicVisitScreenState extends State<RecordClinicVisitScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
-              backgroundColor: AppColors.deepOrange,
+              backgroundColor: AppColors.black,
             ),
           );
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF070914),
+        backgroundColor: Colors.black,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -266,7 +266,7 @@ class _RecordClinicVisitScreenState extends State<RecordClinicVisitScreen> {
                 ),
                 value: _followUp,
                 onChanged: (v) => setState(() => _followUp = v),
-                activeThumbColor: AppColors.deepOrange,
+                activeThumbColor: AppColors.black,
                 contentPadding: EdgeInsets.zero,
               ),
               const SizedBox(height: 40),
@@ -275,7 +275,7 @@ class _RecordClinicVisitScreenState extends State<RecordClinicVisitScreen> {
                 child: FilledButton(
                   onPressed: _submit,
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.deepOrange,
+                    backgroundColor: AppColors.black,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -300,7 +300,7 @@ class _RecordClinicVisitScreenState extends State<RecordClinicVisitScreen> {
     return Text(
       title,
       style: AppTypography.titleSmall.copyWith(
-        color: const Color(0xFF64748B),
+        color: Colors.black,
         letterSpacing: 1.2,
       ),
     );
@@ -323,23 +323,21 @@ class _RecordClinicVisitScreenState extends State<RecordClinicVisitScreen> {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: const TextStyle(color: Color(0xFF64748B)),
-        hintStyle: const TextStyle(color: Color(0xFF334155)),
+        labelStyle: const TextStyle(color: Colors.black),
+        hintStyle: const TextStyle(color: Colors.black),
         filled: true,
-        fillColor: const Color(0xFF151929),
+        fillColor: Colors.black,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF1E293B)),
+          borderSide: const BorderSide(color: Colors.black),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF1E293B)),
+          borderSide: const BorderSide(color: Colors.black),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: AppColors.deepOrange.withValues(alpha: 0.5),
-          ),
+          borderSide: BorderSide(color: AppColors.black),
         ),
       ),
     );
@@ -349,15 +347,15 @@ class _RecordClinicVisitScreenState extends State<RecordClinicVisitScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF151929),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF1E293B)),
+        border: Border.all(color: Colors.black),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<VisitOutcome>(
           value: _outcome,
-          dropdownColor: const Color(0xFF151929),
-          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF64748B)),
+          dropdownColor: Colors.black,
+          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black),
           isExpanded: true,
           style: const TextStyle(color: Colors.white),
           onChanged: (v) => setState(() => _outcome = v!),
@@ -411,9 +409,9 @@ class _MedicationAdministeredSection extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFF151929),
+                color: Colors.black,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF1E293B)),
+                border: Border.all(color: Colors.black),
               ),
               child: Row(
                 children: [
@@ -431,14 +429,14 @@ class _MedicationAdministeredSection extends StatelessWidget {
                         Text(
                           '${med.dosage} (${med.quantity} unit)',
                           style: AppTypography.bodySmall.copyWith(
-                            color: const Color(0xFF64748B),
+                            color: Colors.black,
                           ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    icon: const Icon(Icons.delete_outline, color: Colors.black),
                     onPressed: () {
                       medications.removeAt(index);
                       onChanged();
@@ -453,8 +451,8 @@ class _MedicationAdministeredSection extends StatelessWidget {
           icon: const Icon(Icons.add, size: 20),
           label: const Text('Add Medication'),
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.deepOrange,
-            side: const BorderSide(color: AppColors.deepOrange),
+            foregroundColor: AppColors.black,
+            side: const BorderSide(color: AppColors.black),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -515,7 +513,7 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
     final nurseName = authState is AuthAuthenticated ? authState.user.name : '';
 
     return Dialog(
-      backgroundColor: const Color(0xFF151929),
+      backgroundColor: Colors.black,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -541,10 +539,10 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                         .toList();
                     return DropdownButtonFormField<MedicalInventoryItem>(
                       initialValue: _selectedItem,
-                      dropdownColor: const Color(0xFF151929),
+                      dropdownColor: Colors.black,
                       decoration: const InputDecoration(
                         labelText: 'Select Medication',
-                        labelStyle: TextStyle(color: Color(0xFF64748B)),
+                        labelStyle: TextStyle(color: Colors.black),
                       ),
                       style: const TextStyle(color: Colors.white),
                       items: meds.map((item) {
@@ -569,7 +567,7 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                 decoration: const InputDecoration(
                   labelText: 'Dosage',
                   hintText: 'e.g., 2 tablets, 5ml',
-                  labelStyle: TextStyle(color: Color(0xFF64748B)),
+                  labelStyle: TextStyle(color: Colors.black),
                 ),
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
               ),
@@ -581,7 +579,7 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                 decoration: const InputDecoration(
                   labelText: 'Quantity to decrement',
                   hintText: '1',
-                  labelStyle: TextStyle(color: Color(0xFF64748B)),
+                  labelStyle: TextStyle(color: Colors.black),
                 ),
                 validator: (v) {
                   final n = int.tryParse(v ?? '');
@@ -618,7 +616,7 @@ class _AddMedicationDialogState extends State<_AddMedicationDialog> {
                       Navigator.pop(context);
                     },
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.deepOrange,
+                      backgroundColor: AppColors.black,
                     ),
                     child: const Text('Add'),
                   ),

@@ -136,7 +136,7 @@ class ClassDetailsScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.m),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(AppSpacing.m),
             ),
             child: const Icon(Icons.groups, color: Colors.white, size: 32),
@@ -155,15 +155,11 @@ class ClassDetailsScreen extends StatelessWidget {
                 ),
                 Text(
                   'Primary Five • 2024',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: Colors.white.withValues(alpha: 0.8),
-                  ),
+                  style: AppTypography.bodyMedium.copyWith(color: Colors.white),
                 ),
                 Text(
                   '32 Students • 18 Boys, 14 Girls',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
+                  style: AppTypography.bodySmall.copyWith(color: Colors.white),
                 ),
               ],
             ),

@@ -513,7 +513,7 @@ class _PreviousAttendanceScreenState extends State<PreviousAttendanceScreen> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
+                color: color,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(Icons.groups_rounded, color: color, size: 22),
@@ -570,7 +570,7 @@ class _PreviousAttendanceScreenState extends State<PreviousAttendanceScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
+                    color: color,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(

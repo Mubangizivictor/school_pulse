@@ -60,9 +60,7 @@ class PinnedMessagesScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.surfaceDark : Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.electricBlue.withValues(alpha: 0.3),
-                      ),
+                      border: Border.all(color: AppColors.electricBlue),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.m),

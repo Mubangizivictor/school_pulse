@@ -436,7 +436,7 @@ class _WelfareLogTab extends StatelessWidget {
                         const Icon(
                           Icons.lock_outline,
                           size: 14,
-                          color: Colors.grey,
+                          color: Colors.black,
                         ),
                         const SizedBox(width: AppSpacing.s),
                       ],
@@ -596,7 +596,7 @@ class _CategoryChip extends StatelessWidget {
         color = AppColors.warning(context);
         break;
       case 'Check-in':
-        color = Colors.teal;
+        color = Colors.black;
         break;
       case 'Counseling':
         color = AppColors.primary(context);
@@ -605,7 +605,7 @@ class _CategoryChip extends StatelessWidget {
         color = AppColors.success(context);
         break;
       case 'Observation':
-        color = Colors.purple;
+        color = Colors.black;
         break;
       default:
         color = AppColors.border(context);

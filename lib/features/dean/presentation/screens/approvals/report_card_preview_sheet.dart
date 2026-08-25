@@ -121,7 +121,7 @@ class _IncompleteWarning extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(AppSpacing.m),
     decoration: BoxDecoration(
-      color: AppColors.warning(context).withValues(alpha: .12),
+      color: AppColors.warning(context),
       borderRadius: BorderRadius.circular(10),
     ),
     child: Text(

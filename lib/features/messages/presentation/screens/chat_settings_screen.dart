@@ -186,10 +186,10 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                     context,
                     leading: const Icon(
                       Icons.delete_outline_rounded,
-                      color: Colors.redAccent,
+                      color: Colors.black,
                     ),
                     title: 'Delete all chats',
-                    titleColor: Colors.redAccent,
+                    titleColor: Colors.black,
                     onTap: () => _confirmBulkAction(
                       user,
                       title: 'Delete all chats?',
@@ -231,7 +231,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
             onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(
               confirmLabel,
-              style: TextStyle(color: destructive ? Colors.red : null),
+              style: TextStyle(color: destructive ? Colors.black : null),
             ),
           ),
         ],

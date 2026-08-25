@@ -234,7 +234,7 @@ class _NavBar extends StatelessWidget {
         border: Border(top: BorderSide(color: AppColors.border(context))),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black,
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -479,8 +479,10 @@ class _ClassStreamStepState extends State<_ClassStreamStep> {
                     initialValue: _classId,
                     items: classes
                         .map(
-                          (c) =>
-                              DropdownMenuItem(value: c.id, child: Text(c.name)),
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.name),
+                          ),
                         )
                         .toList(),
                     onChanged: (v) {
@@ -794,9 +796,7 @@ class _GuardianDialogState extends State<_GuardianDialog> {
             ),
             TextField(
               controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email (optional)',
-              ),
+              decoration: const InputDecoration(labelText: 'Email (optional)'),
             ),
             DropdownButtonFormField<String>(
               initialValue: _relationshipLabel,
@@ -910,11 +910,8 @@ class _HealthEmergencyStepState extends State<_HealthEmergencyStep> {
     super.dispose();
   }
 
-  List<String> _splitList(String text) => text
-      .split(',')
-      .map((s) => s.trim())
-      .where((s) => s.isNotEmpty)
-      .toList();
+  List<String> _splitList(String text) =>
+      text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
   void _emit() {
     context.read<EnrollmentSetupWizardBloc>().add(
@@ -1630,10 +1627,7 @@ class _FinanceStepState extends State<_FinanceStep> {
       future: _structuresFuture,
       builder: (context, snapshot) {
         final structures =
-            snapshot.data?.fold(
-              (_) => const <fin.FeeStructure>[],
-              (v) => v,
-            ) ??
+            snapshot.data?.fold((_) => const <fin.FeeStructure>[], (v) => v) ??
             const <fin.FeeStructure>[];
         final filtered = structures.where((s) {
           final matchesYear = s.academicYear == state.academicYearId;
@@ -1641,8 +1635,7 @@ class _FinanceStepState extends State<_FinanceStep> {
               ? true
               : s.studentCategory.toLowerCase() ==
                     state.boardingType!.name.toLowerCase();
-          final matchesClass =
-              s.classId == null || s.classId == state.classId;
+          final matchesClass = s.classId == null || s.classId == state.classId;
           return matchesYear && matchesType && matchesClass;
         }).toList();
 
@@ -1673,9 +1666,7 @@ class _FinanceStepState extends State<_FinanceStep> {
                 currentTermName.trim().toLowerCase();
 
         return StreamBuilder<List<AcademicYear>>(
-          stream: sl<StructureRepository>().watchAcademicYears(
-            state.schoolId,
-          ),
+          stream: sl<StructureRepository>().watchAcademicYears(state.schoolId),
           builder: (context, yearSnap) {
             final years = yearSnap.data ?? const <AcademicYear>[];
             String yearLabel(String academicYearId) {
@@ -1736,128 +1727,137 @@ class _FinanceStepState extends State<_FinanceStep> {
                     ],
                   ),
                 ),
-            if (selected != null) ...[
-              const SizedBox(height: 16),
-              const SectionHeader(title: 'Itemized Breakdown'),
-              AppCard(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (final item in selected.items)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 3),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(item.categoryName),
-                              Text(CurrencyFormatter.ugx(item.amount)),
-                            ],
-                          ),
-                        ),
-                      const Divider(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                if (selected != null) ...[
+                  const SizedBox(height: 16),
+                  const SectionHeader(title: 'Itemized Breakdown'),
+                  AppCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Subtotal',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          Text(CurrencyFormatter.ugx(selected.totalAmount)),
-                        ],
-                      ),
-                      Builder(
-                        builder: (context) {
-                          final discount = _computeDiscount(
-                            selected.totalAmount,
-                          );
-                          if (discount <= 0) return const SizedBox.shrink();
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Discount'),
-                                Text(
-                                  '- ${CurrencyFormatter.ugx(discount)}',
-                                  style: TextStyle(
-                                    color: AppColors.success(context),
-                                  ),
-                                ),
-                              ],
+                          for (final item in selected.items)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 3),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(item.categoryName),
+                                  Text(CurrencyFormatter.ugx(item.amount)),
+                                ],
+                              ),
                             ),
-                          );
-                        },
-                      ),
-                      const Divider(height: 20),
-                      Builder(
-                        builder: (context) {
-                          final discount = _computeDiscount(
-                            selected.totalAmount,
-                          );
-                          final finalTotal = (selected.totalAmount - discount)
-                              .clamp(0, selected.totalAmount);
-                          return Row(
+                          const Divider(height: 20),
+                          Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text(
-                                'Total billed',
-                                style: TextStyle(fontWeight: FontWeight.w700),
+                                'Subtotal',
+                                style: TextStyle(fontWeight: FontWeight.w600),
                               ),
-                              Text(
-                                CurrencyFormatter.ugx(finalTotal.toDouble()),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
+                              Text(CurrencyFormatter.ugx(selected.totalAmount)),
                             ],
-                          );
-                        },
+                          ),
+                          Builder(
+                            builder: (context) {
+                              final discount = _computeDiscount(
+                                selected.totalAmount,
+                              );
+                              if (discount <= 0) return const SizedBox.shrink();
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Discount'),
+                                    Text(
+                                      '- ${CurrencyFormatter.ugx(discount)}',
+                                      style: TextStyle(
+                                        color: AppColors.success(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                          const Divider(height: 20),
+                          Builder(
+                            builder: (context) {
+                              final discount = _computeDiscount(
+                                selected.totalAmount,
+                              );
+                              final finalTotal =
+                                  (selected.totalAmount - discount).clamp(
+                                    0,
+                                    selected.totalAmount,
+                                  );
+                              return Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'Total billed',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Text(
+                                    CurrencyFormatter.ugx(
+                                      finalTotal.toDouble(),
+                                    ),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const SectionHeader(title: 'Apply Discount / Scholarship'),
-              AppCard(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _discountValueController,
-                        keyboardType: TextInputType.number,
-                        onChanged: (_) => _emitFromStructure(selected),
-                        decoration: const InputDecoration(
-                          labelText: 'Value',
-                          border: OutlineInputBorder(),
+                  const SizedBox(height: 16),
+                  const SectionHeader(title: 'Apply Discount / Scholarship'),
+                  AppCard(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _discountValueController,
+                            keyboardType: TextInputType.number,
+                            onChanged: (_) => _emitFromStructure(selected),
+                            decoration: const InputDecoration(
+                              labelText: 'Value',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          label: const Text('%'),
+                          selected: _discountIsPercentage,
+                          onSelected: (_) {
+                            setState(() => _discountIsPercentage = true);
+                            _emitFromStructure(selected);
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                        ChoiceChip(
+                          label: const Text('Amount'),
+                          selected: !_discountIsPercentage,
+                          onSelected: (_) {
+                            setState(() => _discountIsPercentage = false);
+                            _emitFromStructure(selected);
+                          },
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
-                      label: const Text('%'),
-                      selected: _discountIsPercentage,
-                      onSelected: (_) {
-                        setState(() => _discountIsPercentage = true);
-                        _emitFromStructure(selected);
-                      },
-                    ),
-                    const SizedBox(width: 4),
-                    ChoiceChip(
-                      label: const Text('Amount'),
-                      selected: !_discountIsPercentage,
-                      onSelected: (_) {
-                        setState(() => _discountIsPercentage = false);
-                        _emitFromStructure(selected);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                  ),
+                ],
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => setState(() => _manualEntry = true),
@@ -1897,9 +1897,8 @@ class _FinanceStepState extends State<_FinanceStep> {
                 'return to this step. You can also enter billing manually '
                 'below.',
             ctaLabel: 'Open Fee Structures',
-            onCtaPressed: () => context.push(
-              '/staff/admin/structure/academics/fee-structures',
-            ),
+            onCtaPressed: () =>
+                context.push('/staff/admin/structure/academics/fee-structures'),
           ),
           const SizedBox(height: 16),
         ],
@@ -1971,7 +1970,6 @@ class _FinanceStepState extends State<_FinanceStep> {
       ),
     );
   }
-
 }
 
 class _ScholarshipInput {
@@ -2243,7 +2241,8 @@ class _BoardingHouseStepState extends State<_BoardingHouseStep> {
               return const EmptyState(
                 icon: Icons.holiday_village_outlined,
                 title: 'No houses configured',
-                message: 'No houses/dorms have been set up for this school yet.',
+                message:
+                    'No houses/dorms have been set up for this school yet.',
               );
             }
             return AppCard(
@@ -2548,10 +2547,9 @@ class _IdentityStepState extends State<_IdentityStep> {
                         Expanded(
                           child: SecondaryButton(
                             label: 'Skip',
-                            onPressed: () =>
-                                context.read<EnrollmentSetupWizardBloc>().add(
-                                  const NfcRegistrationSkipped(),
-                                ),
+                            onPressed: () => context
+                                .read<EnrollmentSetupWizardBloc>()
+                                .add(const NfcRegistrationSkipped()),
                           ),
                         ),
                         const SizedBox(width: 12),

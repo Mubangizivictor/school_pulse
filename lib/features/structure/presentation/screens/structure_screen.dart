@@ -7,12 +7,12 @@ import '../bloc/structure_state.dart';
 import '../widgets/institution_tab.dart';
 import 'institution_settings_screen.dart';
 import 'academic_structure_screen.dart';
-import 'people_structure_screen.dart';
+import 'academic_departments_screen.dart';
 import 'assessment_grading_screen.dart';
-import 'campus_facilities_screen.dart';
+import 'spaces_rooms_screen.dart';
 import 'operations_config_screen.dart';
 import 'feature_toggles_screen.dart';
-import 'curriculum_assignment_screen.dart';
+import 'teaching_plans_screen.dart';
 import 'academic_staff_assignment_screen.dart';
 import 'timetables/timetables_list_screen.dart';
 
@@ -64,8 +64,8 @@ class _StructureScreenState extends State<StructureScreen> {
       'Build the subject catalogue before curriculum and teacher assignment.',
     ),
     _StructureStep(
-      'Curriculum',
-      'Assign the correct subjects to the classes that study them.',
+      'Teaching plans',
+      'Set the subjects and weekly lesson load for each education level.',
     ),
     _StructureStep(
       'People & roles',
@@ -131,9 +131,16 @@ class _StructureScreenState extends State<StructureScreen> {
         }
         if (_index == 2) {
           return _WizardStepScreen(
-            title: 'Terms / Semesters',
+            title: 'Academic calendar',
             stepNumber: _index + 1,
             totalSteps: _steps.length,
+            continueEnabled: state.academicTerms.any(
+              (term) =>
+                  !term.isArchived &&
+                  state.academicYears.any(
+                    (year) => year.id == term.academicYearId && year.isCurrent,
+                  ),
+            ),
             onBack: () async {
               if (!await _confirmLeaveCurrentStep()) return;
               setState(() => _index--);
@@ -151,9 +158,10 @@ class _StructureScreenState extends State<StructureScreen> {
         }
         if (_index == 3) {
           return _WizardStepScreen(
-            title: 'Educational Levels',
+            title: 'Education levels',
             stepNumber: _index + 1,
             totalSteps: _steps.length,
+            continueEnabled: state.levels.any((level) => level.isActive),
             onBack: () async {
               if (!await _confirmLeaveCurrentStep()) return;
               setState(() => _index--);
@@ -174,6 +182,9 @@ class _StructureScreenState extends State<StructureScreen> {
             title: 'Classes',
             stepNumber: _index + 1,
             totalSteps: _steps.length,
+            continueEnabled: state.classes.any(
+              (schoolClass) => schoolClass.isActive,
+            ),
             onBack: () async {
               if (!await _confirmLeaveCurrentStep()) return;
               setState(() => _index--);
@@ -211,9 +222,10 @@ class _StructureScreenState extends State<StructureScreen> {
         }
         if (_index == 6) {
           return _WizardStepScreen(
-            title: 'Subjects',
+            title: 'Subject catalogue',
             stepNumber: _index + 1,
             totalSteps: _steps.length,
+            continueEnabled: state.subjects.any((subject) => subject.isActive),
             onBack: () async {
               if (!await _confirmLeaveCurrentStep()) return;
               setState(() => _index--);
@@ -231,7 +243,7 @@ class _StructureScreenState extends State<StructureScreen> {
         }
         if (_index == 7) {
           return _WizardStepScreen(
-            title: 'Curriculum',
+            title: 'Teaching plans',
             stepNumber: _index + 1,
             totalSteps: _steps.length,
             onBack: () async {
@@ -243,12 +255,12 @@ class _StructureScreenState extends State<StructureScreen> {
               if (!mounted) return;
               setState(() => _index++);
             },
-            child: const CurriculumAssignmentScreen(showAppBar: false),
+            child: const TeachingPlansScreen(showAppBar: false),
           );
         }
         if (_index == 8) {
           return _WizardStepScreen(
-            title: 'Departments',
+            title: 'Academic departments',
             stepNumber: _index + 1,
             totalSteps: _steps.length,
             onBack: () async {
@@ -260,12 +272,12 @@ class _StructureScreenState extends State<StructureScreen> {
               if (!mounted) return;
               setState(() => _index++);
             },
-            child: const PeopleStructureScreen(showAppBar: false),
+            child: const AcademicDepartmentsScreen(showAppBar: false),
           );
         }
         if (_index == 9) {
           return _WizardStepScreen(
-            title: 'Academic assignments',
+            title: 'Academic responsibilities',
             stepNumber: _index + 1,
             totalSteps: _steps.length,
             onBack: () async {
@@ -299,7 +311,7 @@ class _StructureScreenState extends State<StructureScreen> {
         }
         if (_index == 11) {
           return _WizardStepScreen(
-            title: 'Rooms & spaces',
+            title: 'Spaces & rooms',
             stepNumber: _index + 1,
             totalSteps: _steps.length,
             onBack: () async {
@@ -311,7 +323,7 @@ class _StructureScreenState extends State<StructureScreen> {
               if (!mounted) return;
               setState(() => _index++);
             },
-            child: const CampusFacilitiesScreen(showAppBar: false),
+            child: const SpacesRoomsScreen(),
           );
         }
         if (_index == 12) {
@@ -353,7 +365,7 @@ class _StructureScreenState extends State<StructureScreen> {
         }
         if (_index == 14) {
           return _WizardStepScreen(
-            title: 'Class timetables',
+            title: 'Timetables',
             stepNumber: _index + 1,
             totalSteps: _steps.length,
             onBack: () async {
@@ -501,7 +513,7 @@ class _Review extends StatelessWidget {
       // count isn't part of StructureState - this row still lets an admin
       // jump back to review it even without a live tally.
       const _ReviewRow(
-        label: 'Academic assignments',
+        label: 'Academic responsibilities',
         icon: Icons.assignment_ind_outlined,
         stepIndex: 9,
       ),
@@ -530,13 +542,13 @@ class _Review extends StatelessWidget {
       ),
     ];
 
-    // Curriculum allocations and Class Timetables are likewise written via
-    // their own repositories/blocs (CurriculumAssignmentRepository,
-    // TimetableBloc), not StructureState, so they're surfaced as
-    // count-less jump rows rather than omitted from Review entirely.
+    // Teaching plans and Class Timetables are likewise written via their own
+    // repositories/blocs (TeachingPlanRepository, TimetableBloc), not
+    // StructureState, so they're surfaced as count-less jump rows rather
+    // than omitted from Review entirely.
     final schedulingAndFeatures = [
       const _ReviewRow(
-        label: 'Curriculum',
+        label: 'Teaching plans',
         icon: Icons.menu_book_outlined,
         stepIndex: 7,
       ),
@@ -589,7 +601,7 @@ class _Review extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(Icons.check_circle_outline, color: Colors.green, size: 32),
+              Icon(Icons.check_circle_outline, color: Colors.black, size: 32),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -806,7 +818,7 @@ class _WizardStepScreen extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Colors.black,
                 blurRadius: 8,
                 offset: const Offset(0, -2),
               ),
@@ -855,11 +867,11 @@ class _InstitutionProfileStep extends StatelessWidget {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(30, 20, 30, 16),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
               child: Column(
                 children: [
                   SizedBox(
-                    height: 42,
+                    height: 36,
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
@@ -867,7 +879,10 @@ class _InstitutionProfileStep extends StatelessWidget {
                           alignment: Alignment.centerLeft,
                           child: IconButton(
                             onPressed: onBack,
-                            icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              size: 20,
+                            ),
                             color: Colors.black,
                           ),
                         ),
@@ -875,44 +890,45 @@ class _InstitutionProfileStep extends StatelessWidget {
                           'Institution profile',
                           style: TextStyle(
                             color: Colors.black,
-                            fontSize: 28,
+                            fontSize: 18,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 14),
                   const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Step 1 of 16',
-                        style: TextStyle(color: Colors.black, fontSize: 20),
+                        style: TextStyle(color: Colors.black, fontSize: 13),
                       ),
                       Text(
                         '6%',
-                        style: TextStyle(color: Colors.black, fontSize: 20),
+                        style: TextStyle(color: Colors.black, fontSize: 13),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  Container(
-                    height: 12,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black, width: 1.5),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    alignment: Alignment.centerLeft,
-                    child: FractionallySizedBox(
-                      widthFactor: 1 / 16,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.circular(8),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      for (int i = 0; i < 16; i++) ...[
+                        if (i > 0) const SizedBox(width: 4),
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(3),
+                            child: LinearProgressIndicator(
+                              value: 1,
+                              minHeight: 5,
+                              backgroundColor: Colors.black,
+                              color: i == 0 ? Colors.black : Colors.black,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -926,23 +942,23 @@ class _InstitutionProfileStep extends StatelessWidget {
         top: false,
         child: Container(
           color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(30, 12, 30, 22),
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
           child: SizedBox(
-            height: 80,
+            height: 52,
             child: FilledButton.icon(
               onPressed: onContinue,
               style: FilledButton.styleFrom(
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
               iconAlignment: IconAlignment.end,
-              icon: const Icon(Icons.arrow_forward_rounded, size: 30),
+              icon: const Icon(Icons.arrow_forward_rounded, size: 20),
               label: const Text(
                 'Save & continue',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
           ),

@@ -39,7 +39,7 @@ class _StudentEligibilityScreenState extends State<StudentEligibilityScreen> {
               const Text(
                 'Verify student eligibility for specific school services based on their financial standing.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: Colors.black),
               ),
               const SizedBox(height: 40),
               const Text(
@@ -68,7 +68,7 @@ class _StudentEligibilityScreenState extends State<StudentEligibilityScreen> {
                     const Icon(
                       Icons.qr_code_scanner,
                       size: 80,
-                      color: Colors.blue,
+                      color: Colors.black,
                     ),
                     const SizedBox(height: 24),
                     const Text(
@@ -135,7 +135,7 @@ class _StudentEligibilityScreenState extends State<StudentEligibilityScreen> {
       builder: (context) => AlertDialog(
         icon: Icon(
           state.isEligible ? Icons.check_circle : Icons.cancel,
-          color: state.isEligible ? Colors.green : Colors.red,
+          color: state.isEligible ? Colors.black : Colors.black,
           size: 64,
         ),
         title: Text(state.isEligible ? 'Access Granted' : 'Access Denied'),

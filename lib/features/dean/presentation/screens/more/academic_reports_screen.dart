@@ -77,7 +77,7 @@ class AcademicReportsScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.m),
                   decoration: BoxDecoration(
-                    color: AppColors.primary(context).withValues(alpha: 0.1),
+                    color: AppColors.primary(context),
                     borderRadius: AppRadius.medium,
                   ),
                   child: Icon(report.icon, color: AppColors.primary(context)),

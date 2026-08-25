@@ -158,7 +158,7 @@ class _MtnMomoPaymentViewState extends State<_MtnMomoPaymentView> {
         message:
             'MTN will process a small test charge on your phone, not the real '
             'subscription price shown above. No real money moves in sandbox mode.',
-        color: Colors.orange,
+        color: Colors.black,
         icon: Icons.science_outlined,
       ),
     );

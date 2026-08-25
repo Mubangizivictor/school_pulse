@@ -73,11 +73,9 @@ class MeetingsScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.m),
                   decoration: BoxDecoration(
-                    color:
-                        (meeting.isPast
-                                ? AppColors.textMuted(context)
-                                : AppColors.primary(context))
-                            .withValues(alpha: 0.1),
+                    color: (meeting.isPast
+                        ? AppColors.textMuted(context)
+                        : AppColors.primary(context)),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(

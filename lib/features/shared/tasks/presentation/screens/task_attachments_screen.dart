@@ -106,7 +106,7 @@ class _TaskAttachmentsScreenState extends State<TaskAttachmentsScreen> {
           Icon(
             Icons.description_outlined,
             size: 80,
-            color: AppColors.textMuted(context).withValues(alpha: 0.5),
+            color: AppColors.textMuted(context),
           ),
           const SizedBox(height: 16),
           Text(
@@ -147,8 +147,7 @@ class _TaskAttachmentsScreenState extends State<TaskAttachmentsScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: (isImage ? AppColors.royalBlue : AppColors.brightOrange)
-                    .withValues(alpha: 0.1),
+                color: (isImage ? AppColors.royalBlue : AppColors.brightOrange),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -189,7 +188,7 @@ class _TaskAttachmentsScreenState extends State<TaskAttachmentsScreen> {
                 const PopupMenuItem(value: 'download', child: Text('Download')),
                 const PopupMenuItem(
                   value: 'delete',
-                  child: Text('Delete', style: TextStyle(color: Colors.red)),
+                  child: Text('Delete', style: TextStyle(color: Colors.black)),
                 ),
               ],
             ),

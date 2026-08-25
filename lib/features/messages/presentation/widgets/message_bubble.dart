@@ -78,7 +78,7 @@ class MessageBubble extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.only(bottom: AppSpacing.m),
       // A selected row is tinted edge to edge, the way a list selection reads.
-      color: isSelected ? AppColors.electricBlue.withValues(alpha: 0.12) : null,
+      color: isSelected ? AppColors.electricBlue : null,
       child: Column(
         crossAxisAlignment: message.isMe
             ? CrossAxisAlignment.end
@@ -110,7 +110,7 @@ class MessageBubble extends StatelessWidget {
                     ? AppColors.electricBlue
                     : (isDark
                           ? AppColors.surfaceContainerHigh(context)
-                          : Colors.grey[200]),
+                          : Colors.black),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(16),
                   topRight: const Radius.circular(16),
@@ -129,7 +129,7 @@ class MessageBubble extends StatelessWidget {
                       style: TextStyle(
                         fontStyle: FontStyle.italic,
                         color: message.isMe
-                            ? Colors.white70
+                            ? Colors.white
                             : AppColors.textMuted(context),
                       ),
                     )
@@ -140,7 +140,7 @@ class MessageBubble extends StatelessWidget {
                       style: TextStyle(
                         color: message.isMe
                             ? Colors.white
-                            : (isDark ? Colors.white : Colors.black87),
+                            : (isDark ? Colors.white : Colors.black),
                       ),
                     ),
                   const SizedBox(height: 4),
@@ -152,7 +152,7 @@ class MessageBubble extends StatelessWidget {
                           Icons.star,
                           size: 10,
                           color: message.isMe
-                              ? Colors.white70
+                              ? Colors.white
                               : AppColors.goldenYellow,
                         ),
                         const SizedBox(width: 4),
@@ -162,7 +162,7 @@ class MessageBubble extends StatelessWidget {
                           Icons.push_pin,
                           size: 10,
                           color: message.isMe
-                              ? Colors.white70
+                              ? Colors.white
                               : AppColors.textMuted(context),
                         ),
                         const SizedBox(width: 4),
@@ -174,7 +174,7 @@ class MessageBubble extends StatelessWidget {
                             fontSize: 10,
                             fontStyle: FontStyle.italic,
                             color: message.isMe
-                                ? Colors.white70
+                                ? Colors.white
                                 : AppColors.textMuted(context),
                           ),
                         ),
@@ -185,7 +185,7 @@ class MessageBubble extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 10,
                           color: message.isMe
-                              ? Colors.white70
+                              ? Colors.white
                               : AppColors.textMuted(context),
                         ),
                       ),
@@ -194,7 +194,7 @@ class MessageBubble extends StatelessWidget {
                         Icon(
                           message.isRead ? Icons.done_all : Icons.done,
                           size: 12,
-                          color: Colors.white70,
+                          color: Colors.white,
                         ),
                       ],
                     ],
@@ -214,9 +214,7 @@ class MessageBubble extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: message.isMe
-            ? Colors.white.withValues(alpha: 0.15)
-            : Colors.black.withValues(alpha: 0.05),
+        color: message.isMe ? Colors.white : Colors.black,
         borderRadius: BorderRadius.circular(8),
         border: Border(
           left: BorderSide(
@@ -240,9 +238,7 @@ class MessageBubble extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: AppTypography.bodySmall.copyWith(
-              color: message.isMe
-                  ? Colors.white70
-                  : AppColors.textMuted(context),
+              color: message.isMe ? Colors.white : AppColors.textMuted(context),
             ),
           ),
         ],
@@ -294,9 +290,7 @@ class MessageBubble extends StatelessWidget {
   /// Panel behind a card inside the bubble - lighter on the sender's blue,
   /// darker on the recipient's grey.
   BoxDecoration _cardDecoration() => BoxDecoration(
-    color: message.isMe
-        ? Colors.white.withValues(alpha: 0.15)
-        : Colors.black.withValues(alpha: 0.05),
+    color: message.isMe ? Colors.white : Colors.black,
     borderRadius: BorderRadius.circular(10),
   );
 
@@ -335,7 +329,7 @@ class MessageBubble extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           color: message.isMe
-                              ? Colors.white70
+                              ? Colors.white
                               : AppColors.textMuted(context),
                         ),
                       ),
@@ -415,7 +409,7 @@ class MessageBubble extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         color: message.isMe
-                            ? Colors.white70
+                            ? Colors.white
                             : AppColors.textMuted(context),
                       ),
                     ),
@@ -453,8 +447,8 @@ class MessageBubble extends StatelessWidget {
               CircleAvatar(
                 radius: 18,
                 backgroundColor: message.isMe
-                    ? Colors.white.withValues(alpha: 0.25)
-                    : AppColors.electricBlue.withValues(alpha: 0.15),
+                    ? Colors.white
+                    : AppColors.electricBlue,
                 child: Icon(Icons.person, size: 20, color: _accent()),
               ),
               const SizedBox(width: 8),
@@ -477,7 +471,7 @@ class MessageBubble extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         color: message.isMe
-                            ? Colors.white70
+                            ? Colors.white
                             : AppColors.textMuted(context),
                       ),
                     ),
@@ -531,7 +525,7 @@ class MessageBubble extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       color: message.isMe
-                          ? Colors.white70
+                          ? Colors.white
                           : AppColors.textMuted(context),
                     ),
                   ),
@@ -554,7 +548,7 @@ class MessageBubble extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 11,
                                 color: message.isMe
-                                    ? Colors.white70
+                                    ? Colors.white
                                     : AppColors.textMuted(context),
                               ),
                             ),
@@ -599,7 +593,7 @@ class MessageBubble extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 color: message.isMe
-                    ? Colors.white70
+                    ? Colors.white
                     : AppColors.textMuted(context),
               ),
             ),
@@ -633,9 +627,7 @@ class MessageBubble extends StatelessWidget {
               child: Container(
                 height: 34,
                 decoration: BoxDecoration(
-                  color: message.isMe
-                      ? Colors.white.withValues(alpha: 0.3)
-                      : AppColors.electricBlue.withValues(alpha: 0.2),
+                  color: message.isMe ? Colors.white : AppColors.electricBlue,
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -673,7 +665,7 @@ class MessageBubble extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         color: message.isMe
-                            ? Colors.white70
+                            ? Colors.white
                             : AppColors.textMuted(context),
                       ),
                     ),
@@ -726,7 +718,7 @@ class MessageBubble extends StatelessWidget {
               width: 220,
               height: 160,
               child: Center(
-                child: Icon(Icons.broken_image_outlined, color: Colors.white54),
+                child: Icon(Icons.broken_image_outlined, color: Colors.white),
               ),
             ),
           ),
@@ -777,9 +769,7 @@ class MessageBubble extends StatelessWidget {
                 color: isDark ? AppColors.surfaceDark : Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: mine
-                      ? AppColors.electricBlue
-                      : Colors.grey.withValues(alpha: 0.3),
+                  color: mine ? AppColors.electricBlue : Colors.black,
                 ),
               ),
               child: Text(
@@ -872,15 +862,13 @@ class _VoiceNoteBubbleState extends State<VoiceNoteBubble> {
   @override
   Widget build(BuildContext context) {
     final foreground = widget.onDark ? Colors.white : AppColors.electricBlue;
-    final muted = widget.onDark ? Colors.white70 : AppColors.textMuted(context);
+    final muted = widget.onDark ? Colors.white : AppColors.textMuted(context);
 
     return Container(
       width: 220,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: widget.onDark
-            ? Colors.white.withValues(alpha: 0.15)
-            : Colors.black.withValues(alpha: 0.05),
+        color: widget.onDark ? Colors.white : Colors.black,
         borderRadius: BorderRadius.circular(10),
       ),
       child: StreamBuilder<PlayerState>(
@@ -920,7 +908,7 @@ class _VoiceNoteBubbleState extends State<VoiceNoteBubble> {
                         LinearProgressIndicator(
                           value: progress,
                           minHeight: 3,
-                          backgroundColor: muted.withValues(alpha: 0.3),
+                          backgroundColor: muted,
                           valueColor: AlwaysStoppedAnimation(foreground),
                         ),
                         const SizedBox(height: 4),
@@ -1008,9 +996,7 @@ class MessageActionsMenu extends StatelessWidget {
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: mine
-                            ? AppColors.electricBlue.withValues(alpha: 0.2)
-                            : null,
+                        color: mine ? AppColors.electricBlue : null,
                       ),
                       child: Text(emoji, style: const TextStyle(fontSize: 24)),
                     ),
@@ -1053,7 +1039,7 @@ class MessageActionsMenu extends StatelessWidget {
               _ActionItem(
                 icon: Icons.delete_outline,
                 label: 'Delete',
-                color: Colors.red,
+                color: Colors.black,
                 onTap: onDelete!,
               ),
             if (onSelect != null)

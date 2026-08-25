@@ -37,7 +37,7 @@ class ChatListTile extends StatelessWidget {
             radius: 28,
             backgroundColor: isDark
                 ? AppColors.surfaceContainerHigh(context)
-                : Colors.grey[200],
+                : Colors.black,
             backgroundImage: chat.avatarUrl != null
                 ? NetworkImage(chat.avatarUrl!)
                 : null,
@@ -104,7 +104,7 @@ class ChatListTile extends StatelessWidget {
                 chat.hasMessages ? chat.lastMessage.content : 'No messages yet',
                 style: AppTypography.bodySmall.copyWith(
                   color: chat.unreadCount > 0
-                      ? (isDark ? Colors.white : Colors.black87)
+                      ? (isDark ? Colors.white : Colors.black)
                       : AppColors.textMuted(context),
                 ),
                 maxLines: 1,

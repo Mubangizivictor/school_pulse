@@ -301,18 +301,14 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
                       ),
                       items: _classes
                           .map(
-                            (c) => DropdownMenuItem(
-                              value: c,
-                              child: Text(c.name),
-                            ),
+                            (c) =>
+                                DropdownMenuItem(value: c, child: Text(c.name)),
                           )
                           .toList(),
                       onChanged: (v) => setState(() => _selectedClass = v),
                       validator: (v) => v == null ? 'Required' : null,
                       hint: Text(
-                        _classes.isEmpty
-                            ? 'Loading classes…'
-                            : 'Select class',
+                        _classes.isEmpty ? 'Loading classes…' : 'Select class',
                         style: TextStyle(
                           color: AppColors.textSecondary(context),
                         ),
@@ -336,10 +332,8 @@ class _NewApplicationViewState extends State<_NewApplicationView> {
                       ),
                       items: _academicYears
                           .map(
-                            (y) => DropdownMenuItem(
-                              value: y,
-                              child: Text(y.name),
-                            ),
+                            (y) =>
+                                DropdownMenuItem(value: y, child: Text(y.name)),
                           )
                           .toList(),
                       onChanged: (v) => setState(() => _selectedYear = v),

@@ -133,8 +133,7 @@ class _TransportScreenState extends State<TransportScreen> {
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                       colors: [
-                                        Theme.of(context).colorScheme.primary
-                                            .withValues(alpha: 0.06),
+                                        Theme.of(context).colorScheme.primary,
                                         Theme.of(
                                           context,
                                         ).colorScheme.surfaceContainerHighest,
@@ -143,10 +142,9 @@ class _TransportScreenState extends State<TransportScreen> {
                                   ),
                                   child: CustomPaint(
                                     painter: _RoutePathPainter(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary
-                                          .withValues(alpha: 0.35),
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
                                     ),
                                   ),
                                 ),
@@ -160,8 +158,9 @@ class _TransportScreenState extends State<TransportScreen> {
                                     vertical: 6,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surface
-                                        .withValues(alpha: 0.9),
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.surface,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Row(

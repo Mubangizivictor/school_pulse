@@ -125,14 +125,17 @@ class _MyBorrowingsTab extends StatelessWidget {
                       Text(
                         'Due: ${DateFormat('MMM dd').format(borrowing.dueDate)}',
                         style: TextStyle(
-                          color: isOverdue ? Colors.red : Colors.grey[700],
+                          color: isOverdue ? Colors.black : Colors.black,
                           fontWeight: isOverdue
                               ? FontWeight.bold
                               : FontWeight.normal,
                         ),
                       ),
                       if (isOverdue)
-                        const StatusBadge(label: 'OVERDUE', color: Colors.red),
+                        const StatusBadge(
+                          label: 'OVERDUE',
+                          color: Colors.black,
+                        ),
                     ],
                   ),
                 ),
@@ -216,18 +219,14 @@ class _DigitalResourceCard extends StatelessWidget {
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.grey[200],
+                color: Colors.black,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(8),
                 ),
               ),
               child: resource.coverImageUrl != null
                   ? Image.network(resource.coverImageUrl!, fit: BoxFit.cover)
-                  : Icon(
-                      Icons.picture_as_pdf,
-                      size: 48,
-                      color: Colors.red[400],
-                    ),
+                  : Icon(Icons.picture_as_pdf, size: 48, color: Colors.black),
             ),
           ),
           Padding(

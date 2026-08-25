@@ -19,11 +19,7 @@ class AppGradients {
   static const LinearGradient orange = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [
-      AppColors.goldenYellow,
-      AppColors.brightOrange,
-      AppColors.deepOrange,
-    ],
+    colors: [AppColors.goldenYellow, AppColors.brightOrange, AppColors.black],
   );
 
   static const LinearGradient success = LinearGradient(

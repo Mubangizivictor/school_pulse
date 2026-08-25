@@ -288,9 +288,7 @@ class _PlanSelector extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surfaceContainer(context),
           borderRadius: AppRadius.medium,
-          border: Border.all(
-            color: AppColors.border(context).withValues(alpha: .35),
-          ),
+          border: Border.all(color: AppColors.border(context)),
         ),
         child: Row(
           children: [
@@ -318,9 +316,7 @@ class _PlanSelector extends StatelessWidget {
                           boxShadow: index == selectedIndex
                               ? [
                                   BoxShadow(
-                                    color: scheme.primary.withValues(
-                                      alpha: .22,
-                                    ),
+                                    color: scheme.primary,
                                     blurRadius: 10,
                                     offset: const Offset(0, 3),
                                   ),
@@ -390,7 +386,7 @@ class _PlanCardPage extends StatelessWidget {
               width: 62,
               height: 62,
               decoration: BoxDecoration(
-                color: primary.withValues(alpha: .10),
+                color: primary,
                 borderRadius: AppRadius.large,
               ),
               child: Icon(Icons.auto_awesome_rounded, color: primary, size: 31),
@@ -422,9 +418,9 @@ class _PlanCardPage extends StatelessWidget {
                 horizontal: AppSpacing.l,
               ),
               decoration: BoxDecoration(
-                color: primary.withValues(alpha: .08),
+                color: primary,
                 borderRadius: AppRadius.medium,
-                border: Border.all(color: primary.withValues(alpha: .10)),
+                border: Border.all(color: primary),
               ),
               child: Column(
                 children: [

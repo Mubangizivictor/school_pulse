@@ -81,11 +81,9 @@ class CurriculumManagementScreen extends StatelessWidget {
                                         ),
                                         backgroundColor: AppColors.primary(
                                           context,
-                                        ).withValues(alpha: 0.1),
+                                        ),
                                         side: BorderSide(
-                                          color: AppColors.primary(
-                                            context,
-                                          ).withValues(alpha: 0.3),
+                                          color: AppColors.primary(context),
                                         ),
                                         visualDensity: VisualDensity.compact,
                                       ),

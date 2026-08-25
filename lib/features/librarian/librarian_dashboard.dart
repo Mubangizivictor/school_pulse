@@ -126,7 +126,7 @@ class _LibrarianDashboardScreenState extends State<LibrarianDashboardScreen> {
           title: 'Borrowed',
           value: stats['borrowedBooks'].toDouble(),
           icon: Icons.book_outlined,
-          color: Colors.blue,
+          color: Colors.black,
         ),
         DashboardStatCard(
           title: 'Overdue',
@@ -138,7 +138,7 @@ class _LibrarianDashboardScreenState extends State<LibrarianDashboardScreen> {
           title: 'Fines Due',
           value: 0.0, // TODO: Fetch from state
           icon: Icons.account_balance_wallet_outlined,
-          color: Colors.orange,
+          color: Colors.black,
         ),
       ],
     );
@@ -179,10 +179,10 @@ class _LibrarianDashboardScreenState extends State<LibrarianDashboardScreen> {
         AppCard(
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.purple.withValues(alpha: 0.1),
+              backgroundColor: Colors.black,
               child: const Icon(
                 Icons.shopping_cart_outlined,
-                color: Colors.purple,
+                color: Colors.black,
               ),
             ),
             title: const Text('Procurement Request'),
@@ -197,8 +197,8 @@ class _LibrarianDashboardScreenState extends State<LibrarianDashboardScreen> {
         AppCard(
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.orange.withValues(alpha: 0.1),
-              child: const Icon(Icons.build_outlined, color: Colors.orange),
+              backgroundColor: Colors.black,
+              child: const Icon(Icons.build_outlined, color: Colors.black),
             ),
             title: const Text('Repair Request'),
             subtitle: const Text('Report damaged furniture or equipment'),

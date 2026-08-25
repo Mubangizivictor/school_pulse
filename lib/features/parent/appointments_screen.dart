@@ -252,13 +252,13 @@ class _AppointmentCard extends StatelessWidget {
   }
 
   Color _statusColor(AppointmentStatus status) => switch (status) {
-    AppointmentStatus.approved || AppointmentStatus.completed => Colors.green,
+    AppointmentStatus.approved || AppointmentStatus.completed => Colors.black,
     AppointmentStatus.pending ||
-    AppointmentStatus.rescheduleProposed => Colors.orange,
+    AppointmentStatus.rescheduleProposed => Colors.black,
     AppointmentStatus.cancelled ||
     AppointmentStatus.rejected ||
-    AppointmentStatus.noShow => Colors.red,
-    _ => Colors.grey,
+    AppointmentStatus.noShow => Colors.black,
+    _ => Colors.black,
   };
 }
 

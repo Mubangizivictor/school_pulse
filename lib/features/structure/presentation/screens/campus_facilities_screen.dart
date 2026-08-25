@@ -96,7 +96,7 @@ class _HousesTab extends StatelessWidget {
                 final house = state.houses[index];
                 return StructureListRow(
                   icon: Icons.home_outlined,
-                  color: _fromHex(house.colorHex, Colors.blueGrey),
+                  color: _fromHex(house.colorHex, Colors.black),
                   title: house.name,
                   subtitle: house.description,
                   isActive: house.isActive,
@@ -150,7 +150,7 @@ class _ClubsTab extends StatelessWidget {
                 final club = state.clubs[index];
                 return StructureListRow(
                   icon: Icons.groups_outlined,
-                  color: Colors.deepPurple,
+                  color: Colors.black,
                   title: club.name,
                   subtitle: [
                     if (club.category.isNotEmpty) club.category,
@@ -457,7 +457,7 @@ class _HostelStructureTabState extends State<_HostelStructureTab> {
         ...state.hostels.map(
           (hostel) => StructureListRow(
             icon: Icons.night_shelter_outlined,
-            color: Colors.brown,
+            color: Colors.black,
             title: hostel.name,
             subtitle: [
               hostel.gender,
@@ -508,7 +508,7 @@ class _HostelStructureTabState extends State<_HostelStructureTab> {
               .firstOrNull;
           return StructureListRow(
             icon: Icons.meeting_room_outlined,
-            color: Colors.brown,
+            color: Colors.black,
             title: 'Room ${room.roomNumber}',
             subtitle: [
               hostel?.name ?? 'No hostel',
@@ -571,7 +571,7 @@ class _TransportStructureTab extends StatelessWidget {
         ...state.transportRoutes.map(
           (route) => StructureListRow(
             icon: Icons.route_outlined,
-            color: Colors.teal,
+            color: Colors.black,
             title: route.name,
             subtitle: route.code,
             isActive: route.isActive,
@@ -616,7 +616,7 @@ class _TransportStructureTab extends StatelessWidget {
               .firstOrNull;
           return StructureListRow(
             icon: Icons.pin_drop_outlined,
-            color: Colors.teal,
+            color: Colors.black,
             title: stop.name,
             subtitle: [
               route?.name ?? 'No route',
@@ -662,7 +662,7 @@ class _TransportStructureTab extends StatelessWidget {
               .firstOrNull;
           return StructureListRow(
             icon: Icons.directions_bus_outlined,
-            color: Colors.teal,
+            color: Colors.black,
             title: vehicle.busNumber,
             subtitle: [
               if (vehicle.plateNumber.isNotEmpty) vehicle.plateNumber,

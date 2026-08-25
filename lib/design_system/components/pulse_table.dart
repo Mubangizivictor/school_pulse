@@ -74,9 +74,7 @@ class PulseTable<T> extends StatelessWidget {
         ),
         child: DataTable(
           headingRowColor: WidgetStateProperty.all(
-            isDark
-                ? AppColors.deepNavy.withValues(alpha: 0.5)
-                : AppColors.bgLight,
+            isDark ? AppColors.deepNavy : AppColors.bgLight,
           ),
           columnSpacing: AppSpacing.x3l,
           horizontalMargin: AppSpacing.xl,

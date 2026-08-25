@@ -244,7 +244,7 @@ class _Chip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -298,7 +298,7 @@ class _MessageBubble extends StatelessWidget {
                         ? message.senderName
                         : 'Support'),
               style: AppTypography.labelSmall.copyWith(
-                color: textColor.withValues(alpha: 0.8),
+                color: textColor,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -311,7 +311,7 @@ class _MessageBubble extends StatelessWidget {
             Text(
               DateFormat('MMM d, h:mm a').format(message.createdAt.toLocal()),
               style: AppTypography.labelSmall.copyWith(
-                color: textColor.withValues(alpha: 0.65),
+                color: textColor,
                 fontSize: 10,
               ),
             ),

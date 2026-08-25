@@ -64,7 +64,7 @@ class _ExamsDashboardView extends StatelessWidget {
       builder: (context) => AlertDialog(
         icon: Icon(
           isEligible ? Icons.check_circle : Icons.cancel,
-          color: isEligible ? Colors.green : Colors.red,
+          color: isEligible ? Colors.black : Colors.black,
           size: 64,
         ),
         title: Text(isEligible ? 'Clear for Exam' : 'Financial Hold'),

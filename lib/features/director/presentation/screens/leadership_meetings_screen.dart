@@ -202,7 +202,7 @@ class _MeetingCard extends StatelessWidget {
             MeetingType.board => Icons.gavel,
             MeetingType.management => Icons.groups,
             MeetingType.department => Icons.account_tree,
-          }, color: Colors.teal),
+          }, color: Colors.black),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -223,13 +223,13 @@ class _MeetingCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.12),
+                color: Colors.black,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 '$pendingActions open',
                 style: const TextStyle(
-                  color: Colors.orange,
+                  color: Colors.black,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                 ),

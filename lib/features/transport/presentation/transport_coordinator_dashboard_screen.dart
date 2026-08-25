@@ -44,7 +44,7 @@ class _TransportCoordinatorDashboardScreenState
               const SizedBox(height: 24),
               if (route.status != 'In Transit')
                 ListTile(
-                  leading: const Icon(Icons.play_arrow, color: Colors.green),
+                  leading: const Icon(Icons.play_arrow, color: Colors.black),
                   title: const Text('Start Trip'),
                   onTap: () {
                     context.read<TransportCoordinatorBloc>().add(
@@ -55,7 +55,7 @@ class _TransportCoordinatorDashboardScreenState
                 )
               else
                 ListTile(
-                  leading: const Icon(Icons.stop, color: Colors.red),
+                  leading: const Icon(Icons.stop, color: Colors.black),
                   title: const Text('End Trip'),
                   onTap: () {
                     context.read<TransportCoordinatorBloc>().add(
@@ -197,8 +197,8 @@ class _TransportCoordinatorDashboardScreenState
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundColor: isEnRoute
-                          ? semanticColors.info.withValues(alpha: 0.1)
-                          : semanticColors.success.withValues(alpha: 0.1),
+                          ? semanticColors.info
+                          : semanticColors.success,
                       child: Icon(
                         Icons.directions_bus_filled_outlined,
                         color: isEnRoute

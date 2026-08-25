@@ -48,9 +48,7 @@ class SchoolApplicationReviewScreen extends StatelessWidget {
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withValues(
-                    alpha: .35,
-                  ),
+                  color: theme.colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -248,9 +246,7 @@ class SchoolApplicationReviewScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(
-                    alpha: .55,
-                  ),
+                  color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Row(
@@ -399,19 +395,17 @@ class _ApplicationHero extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              theme.colorScheme.primaryContainer.withValues(alpha: .6),
+              theme.colorScheme.primaryContainer,
               theme.colorScheme.surface,
             ],
           ),
-          border: Border.all(color: theme.dividerColor.withValues(alpha: .7)),
+          border: Border.all(color: theme.dividerColor),
         ),
         child: Stack(
           children: [
             Positioned.fill(
               child: CustomPaint(
-                painter: _HeroWavePainter(
-                  color: theme.colorScheme.primary.withValues(alpha: .16),
-                ),
+                painter: _HeroWavePainter(color: theme.colorScheme.primary),
               ),
             ),
             Padding(
@@ -457,7 +451,7 @@ class _ApplicationHero extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: color.withValues(alpha: .12),
+                            color: color,
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Row(
@@ -542,9 +536,7 @@ class _ReviewChecklist extends StatelessWidget {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                border: Border.all(
-                  color: theme.dividerColor.withValues(alpha: .6),
-                ),
+                border: Border.all(color: theme.dividerColor),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
@@ -606,7 +598,7 @@ class _DetailCard extends StatelessWidget {
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLow,
-        border: Border.all(color: theme.dividerColor.withValues(alpha: .65)),
+        border: Border.all(color: theme.dividerColor),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -618,9 +610,7 @@ class _DetailCard extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withValues(
-                    alpha: .45,
-                  ),
+                  color: theme.colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, size: 19, color: theme.colorScheme.primary),

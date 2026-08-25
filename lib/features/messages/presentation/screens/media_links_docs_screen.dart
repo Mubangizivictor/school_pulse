@@ -122,10 +122,10 @@ class MediaLinksDocsScreen extends StatelessWidget {
                     message.mediaUrl!,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stack) => Container(
-                      color: Colors.grey[800],
+                      color: Colors.black,
                       child: const Icon(
                         Icons.broken_image_outlined,
-                        color: Colors.white54,
+                        color: Colors.white,
                       ),
                     ),
                   ),
@@ -164,7 +164,7 @@ class MediaLinksDocsScreen extends StatelessWidget {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.electricBlue.withValues(alpha: 0.1),
+                color: AppColors.electricBlue,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(Icons.link, color: AppColors.electricBlue),
@@ -208,10 +208,10 @@ class MediaLinksDocsScreen extends StatelessWidget {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
+                color: Colors.black,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.picture_as_pdf, color: Colors.red),
+              child: const Icon(Icons.picture_as_pdf, color: Colors.black),
             ),
             title: Text(
               doc.fileName ?? 'Attachment',

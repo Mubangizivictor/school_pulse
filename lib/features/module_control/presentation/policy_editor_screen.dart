@@ -81,8 +81,8 @@ class _PolicyEditorScreenState extends State<PolicyEditorScreen> {
                               ? Icons.check_circle
                               : Icons.schedule,
                           color: current.status == PolicyStatus.active
-                              ? Colors.green
-                              : Colors.orange,
+                              ? Colors.black
+                              : Colors.black,
                         ),
                         const SizedBox(width: 8),
                         Expanded(

@@ -62,9 +62,7 @@ class MarksHistoryScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.surfaceElevated(context),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColors.border(context).withValues(alpha: 0.5),
-                  ),
+                  border: Border.all(color: AppColors.border(context)),
                 ),
                 child: InkWell(
                   onTap: () {
@@ -78,9 +76,7 @@ class MarksHistoryScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.primary(
-                            context,
-                          ).withValues(alpha: 0.1),
+                          color: AppColors.primary(context),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(

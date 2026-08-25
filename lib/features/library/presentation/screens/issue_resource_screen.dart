@@ -291,12 +291,12 @@ class _IssueResourceScreenState extends State<IssueResourceScreen> {
                 padding: EdgeInsets.all(16.0),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, size: 16, color: Colors.blue),
+                    Icon(Icons.info_outline, size: 16, color: Colors.black),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'This resource will be automatically marked as overdue if not returned by the due date.',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        style: TextStyle(fontSize: 12, color: Colors.black),
                       ),
                     ),
                   ],

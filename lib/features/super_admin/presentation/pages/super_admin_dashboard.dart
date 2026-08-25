@@ -293,7 +293,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           height: 88,
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
-          indicatorColor: AppColors.primary(context).withValues(alpha: 0.14),
+          indicatorColor: AppColors.primary(context),
           labelTextStyle: WidgetStateProperty.resolveWith(
             (states) => TextStyle(
               color: states.contains(WidgetState.selected)
@@ -522,9 +522,7 @@ class _SidebarItem extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Material(
-        color: isSelected
-            ? AppColors.primary(context).withValues(alpha: 0.1)
-            : Colors.transparent,
+        color: isSelected ? AppColors.primary(context) : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: ListTile(
           onTap: onTap,

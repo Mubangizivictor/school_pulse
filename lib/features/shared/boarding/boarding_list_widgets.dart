@@ -206,7 +206,7 @@ class _MiniStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -268,7 +268,7 @@ class AttendanceStatusToggle extends StatelessWidget {
         const SizedBox(width: 4),
         _ToggleButton(
           icon: Icons.exit_to_app,
-          color: Colors.deepOrange,
+          color: Colors.black,
           isSelected: selected == AttendanceQuickStatus.leave,
           onTap: () => onChanged(AttendanceQuickStatus.leave),
         ),
@@ -298,7 +298,7 @@ class _ToggleButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(7),
         decoration: BoxDecoration(
-          color: isSelected ? color : color.withValues(alpha: 0.1),
+          color: isSelected ? color : color,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, size: 16, color: isSelected ? Colors.white : color),
@@ -519,12 +519,7 @@ class MoreMenuSection extends StatelessWidget {
             children: [
               for (var i = 0; i < rows.length; i++) ...[
                 if (i > 0)
-                  Divider(
-                    height: 1,
-                    color: theme.colorScheme.outlineVariant.withValues(
-                      alpha: 0.5,
-                    ),
-                  ),
+                  Divider(height: 1, color: theme.colorScheme.outlineVariant),
                 rows[i],
               ],
             ],

@@ -403,10 +403,7 @@ class _Stat extends StatelessWidget {
         Container(
           width: 48,
           height: 48,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color.withValues(alpha: .12),
-          ),
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
           child: Icon(icon, color: color),
         ),
         const SizedBox(height: AppSpacing.m),
@@ -472,7 +469,7 @@ class _LevelCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.xl),
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: color.withValues(alpha: .12),
+                  backgroundColor: color,
                   foregroundColor: color,
                   child: Text(
                     _initials(level),
@@ -577,10 +574,7 @@ class _Badge extends StatelessWidget {
         horizontal: AppSpacing.l,
         vertical: AppSpacing.s + 2,
       ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: .12),
-        borderRadius: AppRadius.full,
-      ),
+      decoration: BoxDecoration(color: color, borderRadius: AppRadius.full),
       child: Text(
         active ? 'Active' : 'Inactive',
         style: TextStyle(

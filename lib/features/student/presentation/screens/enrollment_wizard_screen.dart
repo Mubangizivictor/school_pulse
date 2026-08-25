@@ -71,9 +71,7 @@ class _EnrollmentWizardViewState extends State<_EnrollmentWizardView> {
                 preferredSize: const Size.fromHeight(4),
                 child: LinearProgressIndicator(
                   value: state.progress,
-                  backgroundColor: AppColors.primary(
-                    context,
-                  ).withValues(alpha: 0.1),
+                  backgroundColor: AppColors.primary(context),
                   valueColor: AlwaysStoppedAnimation<Color>(
                     AppColors.primary(context),
                   ),
@@ -276,7 +274,7 @@ class _TypeCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withValues(alpha: 0.1),
+              color: AppColors.primary(context),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: AppColors.primary(context), size: 32),
@@ -317,7 +315,7 @@ class _Step2Overview extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        const Icon(Icons.school_outlined, size: 64, color: Colors.blue),
+        const Icon(Icons.school_outlined, size: 64, color: Colors.black),
         const SizedBox(height: 24),
         Text(
           'Enrollment Process',
@@ -941,11 +939,9 @@ class _UploadTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color:
-                  (isUploaded
-                          ? AppColors.success(context)
-                          : AppColors.primary(context))
-                      .withValues(alpha: 0.1),
+              color: (isUploaded
+                  ? AppColors.success(context)
+                  : AppColors.primary(context)),
               borderRadius: BorderRadius.circular(8),
             ),
             child: isUploading
@@ -1157,9 +1153,7 @@ class _Step11Submitting extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation<Color>(
                 AppColors.primary(context),
               ),
-              backgroundColor: AppColors.primary(
-                context,
-              ).withValues(alpha: 0.1),
+              backgroundColor: AppColors.primary(context),
             ),
           ),
           const SizedBox(height: 32),
@@ -1192,7 +1186,7 @@ class _Step12Success extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppColors.success(context).withValues(alpha: 0.1),
+                color: AppColors.success(context),
                 shape: BoxShape.circle,
               ),
               child: Icon(

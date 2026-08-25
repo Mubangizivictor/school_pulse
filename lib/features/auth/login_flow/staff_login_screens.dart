@@ -172,7 +172,7 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
             const SizedBox(height: AppSpacing.x3l),
             AuthCtaButton(
               label: 'Sign In',
-              gradient: const [Color(0xFFEF4A17), Color(0xFFFFB020)],
+              gradient: const [Colors.black, Colors.black],
               filled: !isDark,
               isLoading: isLoading,
               onPressed: isLoading ? null : _handleLogin,
@@ -230,10 +230,7 @@ class _StaffPortalField extends StatelessWidget {
           height: 56,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: accent.withValues(alpha: .8),
-              width: 1.25,
-            ),
+            border: Border.all(color: accent, width: 1.25),
           ),
           child: TextField(
             controller: controller,
@@ -259,7 +256,7 @@ class _StaffPortalField extends StatelessWidget {
               filled: true,
               hintText: hint,
               hintStyle: AppTypography.bodyLarge.copyWith(
-                color: colors.onSurfaceVariant.withValues(alpha: .65),
+                color: colors.onSurfaceVariant,
                 fontSize: 15,
               ),
               contentPadding: const EdgeInsets.symmetric(vertical: 15),
@@ -271,7 +268,7 @@ class _StaffPortalField extends StatelessWidget {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: accent.withValues(alpha: .09),
+                      color: accent,
                       borderRadius: BorderRadius.circular(9),
                     ),
                     child: Icon(icon, color: accent, size: 23),
@@ -310,7 +307,7 @@ class _StaffTrustStrip extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(23),
-        border: Border.all(color: colors.outlineVariant.withValues(alpha: .55)),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: IntrinsicHeight(
         child: Row(
@@ -320,7 +317,7 @@ class _StaffTrustStrip extends StatelessWidget {
                 VerticalDivider(
                   width: 1,
                   thickness: 1,
-                  color: colors.outlineVariant.withValues(alpha: .45),
+                  color: colors.outlineVariant,
                 ),
               Expanded(
                 child: Column(
@@ -369,17 +366,14 @@ class _StaffPrivacyNote extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: colors.outlineVariant.withValues(alpha: .55)),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Row(
         children: [
           Container(
             width: 50,
             height: 50,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: accent.withValues(alpha: .11),
-            ),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: accent),
             child: Icon(Icons.lock_outline_rounded, color: accent, size: 26),
           ),
           const SizedBox(width: 12),

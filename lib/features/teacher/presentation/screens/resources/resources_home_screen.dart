@@ -42,9 +42,7 @@ class _ResourcesHomeScreenState extends State<ResourcesHomeScreen> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.15),
+                color: Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -186,26 +184,26 @@ class _ResourcesHomeScreenState extends State<ResourcesHomeScreen> {
                       _QuickActionTile(
                         icon: Icons.cloud_upload_rounded,
                         label: 'Upload\nResource',
-                        color: Colors.blue,
+                        color: Colors.black,
                         onTap: () => context.push('/staff/resources/upload'),
                       ),
                       _QuickActionTile(
                         icon: Icons.create_new_folder_rounded,
                         label: 'Create\nFolder',
-                        color: Colors.green,
+                        color: Colors.black,
                         onTap: () =>
                             context.push('/staff/resources/create-folder'),
                       ),
                       _QuickActionTile(
                         icon: Icons.link_rounded,
                         label: 'Add Link',
-                        color: Colors.deepPurple,
+                        color: Colors.black,
                         onTap: () => context.push('/staff/resources/add-link'),
                       ),
                       _QuickActionTile(
                         icon: Icons.folder_rounded,
                         label: 'View\nFolders',
-                        color: Colors.amber,
+                        color: Colors.black,
                         onTap: () => context.push('/staff/resources/folders'),
                       ),
                     ],
@@ -310,7 +308,7 @@ class _TotalResourcesCard extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             Theme.of(context).colorScheme.primary,
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.75),
+            Theme.of(context).colorScheme.primary,
           ],
         ),
       ),
@@ -320,7 +318,7 @@ class _TotalResourcesCard extends StatelessWidget {
           const Text(
             'Total Resources',
             style: TextStyle(
-              color: Colors.white70,
+              color: Colors.white,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -336,7 +334,7 @@ class _TotalResourcesCard extends StatelessWidget {
           ),
           const Text(
             'This Term',
-            style: TextStyle(color: Colors.white60, fontSize: 11),
+            style: TextStyle(color: Colors.white, fontSize: 11),
           ),
           const SizedBox(height: AppSpacing.l),
           Row(
@@ -346,7 +344,7 @@ class _TotalResourcesCard extends StatelessWidget {
                   icon: Icons.description_outlined,
                   label: 'Documents',
                   count: counts[ClassResourceKind.document] ?? 0,
-                  color: Colors.blue[200]!,
+                  color: Colors.black!,
                 ),
               ),
               const SizedBox(width: AppSpacing.s),
@@ -355,7 +353,7 @@ class _TotalResourcesCard extends StatelessWidget {
                   icon: Icons.play_circle_outline_rounded,
                   label: 'Videos',
                   count: counts[ClassResourceKind.video] ?? 0,
-                  color: Colors.purple[200]!,
+                  color: Colors.black!,
                 ),
               ),
               const SizedBox(width: AppSpacing.s),
@@ -364,7 +362,7 @@ class _TotalResourcesCard extends StatelessWidget {
                   icon: Icons.link_rounded,
                   label: 'Links',
                   count: counts[ClassResourceKind.link] ?? 0,
-                  color: Colors.orange[200]!,
+                  color: Colors.black!,
                 ),
               ),
               const SizedBox(width: AppSpacing.s),
@@ -373,7 +371,7 @@ class _TotalResourcesCard extends StatelessWidget {
                   icon: Icons.image_outlined,
                   label: 'Images',
                   count: counts[ClassResourceKind.image] ?? 0,
-                  color: Colors.green[200]!,
+                  color: Colors.black!,
                 ),
               ),
             ],
@@ -405,7 +403,7 @@ class _ResourceStat extends StatelessWidget {
         vertical: AppSpacing.m,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -417,7 +415,7 @@ class _ResourceStat extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white70, fontSize: 10),
+            style: const TextStyle(color: Colors.white, fontSize: 10),
           ),
           Text(
             '$count',
@@ -461,10 +459,7 @@ class _QuickActionTile extends StatelessWidget {
           Container(
             width: 32,
             height: 32,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 16),
           ),
           const SizedBox(height: AppSpacing.s),
@@ -560,7 +555,7 @@ class _RecentResourceCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconData.$2.withValues(alpha: 0.1),
+              color: iconData.$2,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(iconData.$1, color: iconData.$2),
@@ -593,15 +588,15 @@ class _RecentResourceCard extends StatelessWidget {
   }
 
   static (IconData, Color) _iconFor(ClassResourceKind kind) => switch (kind) {
-    ClassResourceKind.document => (Icons.picture_as_pdf, Colors.red),
-    ClassResourceKind.spreadsheet => (Icons.grid_on, Colors.green),
-    ClassResourceKind.presentation => (Icons.slideshow, Colors.orange),
-    ClassResourceKind.image => (Icons.image, Colors.green),
-    ClassResourceKind.audio => (Icons.audiotrack, Colors.teal),
-    ClassResourceKind.video => (Icons.videocam, Colors.purple),
-    ClassResourceKind.link => (Icons.link, Colors.blue),
-    ClassResourceKind.folder => (Icons.folder, Colors.amber),
-    ClassResourceKind.other => (Icons.insert_drive_file, Colors.grey),
+    ClassResourceKind.document => (Icons.picture_as_pdf, Colors.black),
+    ClassResourceKind.spreadsheet => (Icons.grid_on, Colors.black),
+    ClassResourceKind.presentation => (Icons.slideshow, Colors.black),
+    ClassResourceKind.image => (Icons.image, Colors.black),
+    ClassResourceKind.audio => (Icons.audiotrack, Colors.black),
+    ClassResourceKind.video => (Icons.videocam, Colors.black),
+    ClassResourceKind.link => (Icons.link, Colors.black),
+    ClassResourceKind.folder => (Icons.folder, Colors.black),
+    ClassResourceKind.other => (Icons.insert_drive_file, Colors.black),
   };
 }
 
@@ -622,7 +617,7 @@ class _NoResourcesEmptyState extends StatelessWidget {
           Icon(
             Icons.folder_off_outlined,
             size: 44,
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+            color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(height: AppSpacing.l),
           const Text(

@@ -53,7 +53,7 @@ class VaccinationCard extends StatelessWidget {
                 return ListTile(
                   leading: const Icon(
                     Icons.vaccines_outlined,
-                    color: Colors.blue,
+                    color: Colors.black,
                   ),
                   title: Text(
                     record.vaccineName,
@@ -66,7 +66,7 @@ class VaccinationCard extends StatelessWidget {
                     message: 'On file',
                     child: Icon(
                       Icons.verified_user,
-                      color: Colors.green,
+                      color: Colors.black,
                       size: 16,
                     ),
                   ),

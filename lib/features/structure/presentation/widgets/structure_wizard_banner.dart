@@ -60,9 +60,7 @@ class StructureWizardBanner extends StatelessWidget
                 child: LinearProgressIndicator(
                   value: ratio.clamp(0.0, 1.0),
                   minHeight: 4,
-                  backgroundColor: theme.colorScheme.primary.withValues(
-                    alpha: .15,
-                  ),
+                  backgroundColor: theme.colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 10),

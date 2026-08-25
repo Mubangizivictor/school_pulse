@@ -57,7 +57,7 @@ const EnrollmentSetupDraftIsarSchema = CollectionSchema(
       id: 7,
       name: r'updatedAt',
       type: IsarType.dateTime,
-    ),
+    )
   },
   estimateSize: _enrollmentSetupDraftIsarEstimateSize,
   serialize: _enrollmentSetupDraftIsarSerialize,
@@ -75,7 +75,7 @@ const EnrollmentSetupDraftIsarSchema = CollectionSchema(
           name: r'studentId',
           type: IndexType.hash,
           caseSensitive: true,
-        ),
+        )
       ],
     ),
     r'schoolId': IndexSchema(
@@ -88,9 +88,9 @@ const EnrollmentSetupDraftIsarSchema = CollectionSchema(
           name: r'schoolId',
           type: IndexType.hash,
           caseSensitive: true,
-        ),
+        )
       ],
-    ),
+    )
   },
   links: {},
   embeddedSchemas: {},
@@ -184,16 +184,12 @@ Id _enrollmentSetupDraftIsarGetId(EnrollmentSetupDraftIsar object) {
 }
 
 List<IsarLinkBase<dynamic>> _enrollmentSetupDraftIsarGetLinks(
-  EnrollmentSetupDraftIsar object,
-) {
+    EnrollmentSetupDraftIsar object) {
   return [];
 }
 
 void _enrollmentSetupDraftIsarAttach(
-  IsarCollection<dynamic> col,
-  Id id,
-  EnrollmentSetupDraftIsar object,
-) {}
+    IsarCollection<dynamic> col, Id id, EnrollmentSetupDraftIsar object) {}
 
 extension EnrollmentSetupDraftIsarByIndex
     on IsarCollection<EnrollmentSetupDraftIsar> {
@@ -214,15 +210,13 @@ extension EnrollmentSetupDraftIsarByIndex
   }
 
   Future<List<EnrollmentSetupDraftIsar?>> getAllByStudentId(
-    List<String> studentIdValues,
-  ) {
+      List<String> studentIdValues) {
     final values = studentIdValues.map((e) => [e]).toList();
     return getAllByIndex(r'studentId', values);
   }
 
   List<EnrollmentSetupDraftIsar?> getAllByStudentIdSync(
-    List<String> studentIdValues,
-  ) {
+      List<String> studentIdValues) {
     final values = studentIdValues.map((e) => [e]).toList();
     return getAllByIndexSync(r'studentId', values);
   }
@@ -241,10 +235,8 @@ extension EnrollmentSetupDraftIsarByIndex
     return putByIndex(r'studentId', object);
   }
 
-  Id putByStudentIdSync(
-    EnrollmentSetupDraftIsar object, {
-    bool saveLinks = true,
-  }) {
+  Id putByStudentIdSync(EnrollmentSetupDraftIsar object,
+      {bool saveLinks = true}) {
     return putByIndexSync(r'studentId', object, saveLinks: saveLinks);
   }
 
@@ -252,55 +244,36 @@ extension EnrollmentSetupDraftIsarByIndex
     return putAllByIndex(r'studentId', objects);
   }
 
-  List<Id> putAllByStudentIdSync(
-    List<EnrollmentSetupDraftIsar> objects, {
-    bool saveLinks = true,
-  }) {
+  List<Id> putAllByStudentIdSync(List<EnrollmentSetupDraftIsar> objects,
+      {bool saveLinks = true}) {
     return putAllByIndexSync(r'studentId', objects, saveLinks: saveLinks);
   }
 }
 
-extension EnrollmentSetupDraftIsarQueryWhereSort
-    on
-        QueryBuilder<
-          EnrollmentSetupDraftIsar,
-          EnrollmentSetupDraftIsar,
-          QWhere
-        > {
+extension EnrollmentSetupDraftIsarQueryWhereSort on QueryBuilder<
+    EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QWhere> {
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterWhere>
-  anyIsarId() {
+      anyIsarId() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(const IdWhereClause.any());
     });
   }
 }
 
-extension EnrollmentSetupDraftIsarQueryWhere
-    on
-        QueryBuilder<
-          EnrollmentSetupDraftIsar,
-          EnrollmentSetupDraftIsar,
-          QWhereClause
-        > {
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterWhereClause
-  >
-  isarIdEqualTo(Id isarId) {
+extension EnrollmentSetupDraftIsarQueryWhere on QueryBuilder<
+    EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QWhereClause> {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterWhereClause> isarIdEqualTo(Id isarId) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(
-        IdWhereClause.between(lower: isarId, upper: isarId),
-      );
+      return query.addWhereClause(IdWhereClause.between(
+        lower: isarId,
+        upper: isarId,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterWhereClause
-  >
-  isarIdNotEqualTo(Id isarId) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterWhereClause> isarIdNotEqualTo(Id isarId) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -322,12 +295,8 @@ extension EnrollmentSetupDraftIsarQueryWhere
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterWhereClause
-  >
-  isarIdGreaterThan(Id isarId, {bool include = false}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterWhereClause> isarIdGreaterThan(Id isarId, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.greaterThan(lower: isarId, includeLower: include),
@@ -335,12 +304,8 @@ extension EnrollmentSetupDraftIsarQueryWhere
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterWhereClause
-  >
-  isarIdLessThan(Id isarId, {bool include = false}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterWhereClause> isarIdLessThan(Id isarId, {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.lessThan(upper: isarId, includeUpper: include),
@@ -348,250 +313,182 @@ extension EnrollmentSetupDraftIsarQueryWhere
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterWhereClause
-  >
-  isarIdBetween(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterWhereClause> isarIdBetween(
     Id lowerIsarId,
     Id upperIsarId, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(
-        IdWhereClause.between(
-          lower: lowerIsarId,
-          includeLower: includeLower,
-          upper: upperIsarId,
-          includeUpper: includeUpper,
-        ),
-      );
+      return query.addWhereClause(IdWhereClause.between(
+        lower: lowerIsarId,
+        includeLower: includeLower,
+        upper: upperIsarId,
+        includeUpper: includeUpper,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterWhereClause
-  >
-  studentIdEqualTo(String studentId) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterWhereClause> studentIdEqualTo(String studentId) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(
-        IndexWhereClause.equalTo(indexName: r'studentId', value: [studentId]),
-      );
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'studentId',
+        value: [studentId],
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterWhereClause
-  >
-  studentIdNotEqualTo(String studentId) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterWhereClause> studentIdNotEqualTo(String studentId) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'studentId',
-                lower: [],
-                upper: [studentId],
-                includeUpper: false,
-              ),
-            )
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'studentId',
-                lower: [studentId],
-                includeLower: false,
-                upper: [],
-              ),
-            );
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'studentId',
+              lower: [],
+              upper: [studentId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'studentId',
+              lower: [studentId],
+              includeLower: false,
+              upper: [],
+            ));
       } else {
         return query
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'studentId',
-                lower: [studentId],
-                includeLower: false,
-                upper: [],
-              ),
-            )
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'studentId',
-                lower: [],
-                upper: [studentId],
-                includeUpper: false,
-              ),
-            );
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'studentId',
+              lower: [studentId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'studentId',
+              lower: [],
+              upper: [studentId],
+              includeUpper: false,
+            ));
       }
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterWhereClause
-  >
-  schoolIdEqualTo(String schoolId) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterWhereClause> schoolIdEqualTo(String schoolId) {
     return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(
-        IndexWhereClause.equalTo(indexName: r'schoolId', value: [schoolId]),
-      );
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'schoolId',
+        value: [schoolId],
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterWhereClause
-  >
-  schoolIdNotEqualTo(String schoolId) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterWhereClause> schoolIdNotEqualTo(String schoolId) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'schoolId',
-                lower: [],
-                upper: [schoolId],
-                includeUpper: false,
-              ),
-            )
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'schoolId',
-                lower: [schoolId],
-                includeLower: false,
-                upper: [],
-              ),
-            );
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'schoolId',
+              lower: [],
+              upper: [schoolId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'schoolId',
+              lower: [schoolId],
+              includeLower: false,
+              upper: [],
+            ));
       } else {
         return query
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'schoolId',
-                lower: [schoolId],
-                includeLower: false,
-                upper: [],
-              ),
-            )
-            .addWhereClause(
-              IndexWhereClause.between(
-                indexName: r'schoolId',
-                lower: [],
-                upper: [schoolId],
-                includeUpper: false,
-              ),
-            );
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'schoolId',
+              lower: [schoolId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'schoolId',
+              lower: [],
+              upper: [schoolId],
+              includeUpper: false,
+            ));
       }
     });
   }
 }
 
-extension EnrollmentSetupDraftIsarQueryFilter
-    on
-        QueryBuilder<
-          EnrollmentSetupDraftIsar,
-          EnrollmentSetupDraftIsar,
-          QFilterCondition
-        > {
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  applicationIdIsNull() {
+extension EnrollmentSetupDraftIsarQueryFilter on QueryBuilder<
+    EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QFilterCondition> {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> applicationIdIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        const FilterCondition.isNull(property: r'applicationId'),
-      );
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'applicationId',
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  applicationIdIsNotNull() {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> applicationIdIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        const FilterCondition.isNotNull(property: r'applicationId'),
-      );
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'applicationId',
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  applicationIdEqualTo(String? value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> applicationIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(
-          property: r'applicationId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'applicationId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  applicationIdGreaterThan(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> applicationIdGreaterThan(
     String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'applicationId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'applicationId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  applicationIdLessThan(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> applicationIdLessThan(
     String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'applicationId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'applicationId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  applicationIdBetween(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> applicationIdBetween(
     String? lower,
     String? upper, {
     bool includeLower = true,
@@ -599,464 +496,361 @@ extension EnrollmentSetupDraftIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'applicationId',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'applicationId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  applicationIdStartsWith(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> applicationIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.startsWith(
-          property: r'applicationId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'applicationId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  applicationIdEndsWith(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> applicationIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.endsWith(
-          property: r'applicationId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'applicationId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  applicationIdContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+          QAfterFilterCondition>
+      applicationIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.contains(
-          property: r'applicationId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'applicationId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  applicationIdMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+          QAfterFilterCondition>
+      applicationIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.matches(
-          property: r'applicationId',
-          wildcard: pattern,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'applicationId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  applicationIdIsEmpty() {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> applicationIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'applicationId', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'applicationId',
+        value: '',
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  applicationIdIsNotEmpty() {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> applicationIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(property: r'applicationId', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'applicationId',
+        value: '',
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  completedStepCountEqualTo(int value) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> completedStepCountEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'completedStepCount', value: value),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'completedStepCount',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  completedStepCountGreaterThan(int value, {bool include = false}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> completedStepCountGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'completedStepCount',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'completedStepCount',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  completedStepCountLessThan(int value, {bool include = false}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> completedStepCountLessThan(
+    int value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'completedStepCount',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'completedStepCount',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  completedStepCountBetween(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> completedStepCountBetween(
     int lower,
     int upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'completedStepCount',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'completedStepCount',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  completedStepsMaskEqualTo(int value) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> completedStepsMaskEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'completedStepsMask', value: value),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'completedStepsMask',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  completedStepsMaskGreaterThan(int value, {bool include = false}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> completedStepsMaskGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'completedStepsMask',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'completedStepsMask',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  completedStepsMaskLessThan(int value, {bool include = false}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> completedStepsMaskLessThan(
+    int value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'completedStepsMask',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'completedStepsMask',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  completedStepsMaskBetween(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> completedStepsMaskBetween(
     int lower,
     int upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'completedStepsMask',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'completedStepsMask',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  currentStepEqualTo(int value) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> currentStepEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'currentStep', value: value),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'currentStep',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  currentStepGreaterThan(int value, {bool include = false}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> currentStepGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'currentStep',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'currentStep',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  currentStepLessThan(int value, {bool include = false}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> currentStepLessThan(
+    int value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'currentStep',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'currentStep',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  currentStepBetween(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> currentStepBetween(
     int lower,
     int upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'currentStep',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'currentStep',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  isarIdEqualTo(Id value) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> isarIdEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'isarId', value: value),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isarId',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  isarIdGreaterThan(Id value, {bool include = false}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> isarIdGreaterThan(
+    Id value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'isarId',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'isarId',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  isarIdLessThan(Id value, {bool include = false}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> isarIdLessThan(
+    Id value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'isarId',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'isarId',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  isarIdBetween(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> isarIdBetween(
     Id lower,
     Id upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'isarId',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'isarId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  schoolIdEqualTo(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> schoolIdEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(
-          property: r'schoolId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  schoolIdGreaterThan(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> schoolIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'schoolId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  schoolIdLessThan(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> schoolIdLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'schoolId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  schoolIdBetween(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> schoolIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1064,180 +858,137 @@ extension EnrollmentSetupDraftIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'schoolId',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'schoolId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  schoolIdStartsWith(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> schoolIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.startsWith(
-          property: r'schoolId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  schoolIdEndsWith(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> schoolIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.endsWith(
-          property: r'schoolId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  schoolIdContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+          QAfterFilterCondition>
+      schoolIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.contains(
-          property: r'schoolId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'schoolId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  schoolIdMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+          QAfterFilterCondition>
+      schoolIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.matches(
-          property: r'schoolId',
-          wildcard: pattern,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'schoolId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  schoolIdIsEmpty() {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> schoolIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'schoolId', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'schoolId',
+        value: '',
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  schoolIdIsNotEmpty() {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> schoolIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(property: r'schoolId', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'schoolId',
+        value: '',
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  stateJsonEqualTo(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> stateJsonEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(
-          property: r'stateJson',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'stateJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  stateJsonGreaterThan(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> stateJsonGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'stateJson',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'stateJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  stateJsonLessThan(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> stateJsonLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'stateJson',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'stateJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  stateJsonBetween(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> stateJsonBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1245,180 +996,137 @@ extension EnrollmentSetupDraftIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'stateJson',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'stateJson',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  stateJsonStartsWith(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> stateJsonStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.startsWith(
-          property: r'stateJson',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'stateJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  stateJsonEndsWith(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> stateJsonEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.endsWith(
-          property: r'stateJson',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'stateJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  stateJsonContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+          QAfterFilterCondition>
+      stateJsonContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.contains(
-          property: r'stateJson',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'stateJson',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  stateJsonMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+          QAfterFilterCondition>
+      stateJsonMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.matches(
-          property: r'stateJson',
-          wildcard: pattern,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'stateJson',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  stateJsonIsEmpty() {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> stateJsonIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'stateJson', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'stateJson',
+        value: '',
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  stateJsonIsNotEmpty() {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> stateJsonIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(property: r'stateJson', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'stateJson',
+        value: '',
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  studentIdEqualTo(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> studentIdEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(
-          property: r'studentId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'studentId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  studentIdGreaterThan(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> studentIdGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'studentId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'studentId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  studentIdLessThan(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> studentIdLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'studentId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'studentId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  studentIdBetween(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> studentIdBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -1426,587 +1134,516 @@ extension EnrollmentSetupDraftIsarQueryFilter
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'studentId',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'studentId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  studentIdStartsWith(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> studentIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.startsWith(
-          property: r'studentId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'studentId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  studentIdEndsWith(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> studentIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.endsWith(
-          property: r'studentId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'studentId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  studentIdContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+          QAfterFilterCondition>
+      studentIdContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.contains(
-          property: r'studentId',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'studentId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  studentIdMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+          QAfterFilterCondition>
+      studentIdMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.matches(
-          property: r'studentId',
-          wildcard: pattern,
-          caseSensitive: caseSensitive,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'studentId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  studentIdIsEmpty() {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> studentIdIsEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'studentId', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'studentId',
+        value: '',
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  studentIdIsNotEmpty() {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> studentIdIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(property: r'studentId', value: ''),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'studentId',
+        value: '',
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  updatedAtEqualTo(DateTime value) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> updatedAtEqualTo(DateTime value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'updatedAt', value: value),
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'updatedAt',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  updatedAtGreaterThan(DateTime value, {bool include = false}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> updatedAtGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'updatedAt',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'updatedAt',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  updatedAtLessThan(DateTime value, {bool include = false}) {
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> updatedAtLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'updatedAt',
-          value: value,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'updatedAt',
+        value: value,
+      ));
     });
   }
 
-  QueryBuilder<
-    EnrollmentSetupDraftIsar,
-    EnrollmentSetupDraftIsar,
-    QAfterFilterCondition
-  >
-  updatedAtBetween(
+  QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar,
+      QAfterFilterCondition> updatedAtBetween(
     DateTime lower,
     DateTime upper, {
     bool includeLower = true,
     bool includeUpper = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'updatedAt',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-        ),
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'updatedAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
     });
   }
 }
 
-extension EnrollmentSetupDraftIsarQueryObject
-    on
-        QueryBuilder<
-          EnrollmentSetupDraftIsar,
-          EnrollmentSetupDraftIsar,
-          QFilterCondition
-        > {}
+extension EnrollmentSetupDraftIsarQueryObject on QueryBuilder<
+    EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QFilterCondition> {}
 
-extension EnrollmentSetupDraftIsarQueryLinks
-    on
-        QueryBuilder<
-          EnrollmentSetupDraftIsar,
-          EnrollmentSetupDraftIsar,
-          QFilterCondition
-        > {}
+extension EnrollmentSetupDraftIsarQueryLinks on QueryBuilder<
+    EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QFilterCondition> {}
 
-extension EnrollmentSetupDraftIsarQuerySortBy
-    on
-        QueryBuilder<
-          EnrollmentSetupDraftIsar,
-          EnrollmentSetupDraftIsar,
-          QSortBy
-        > {
+extension EnrollmentSetupDraftIsarQuerySortBy on QueryBuilder<
+    EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QSortBy> {
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortByApplicationId() {
+      sortByApplicationId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'applicationId', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortByApplicationIdDesc() {
+      sortByApplicationIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'applicationId', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortByCompletedStepCount() {
+      sortByCompletedStepCount() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'completedStepCount', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortByCompletedStepCountDesc() {
+      sortByCompletedStepCountDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'completedStepCount', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortByCompletedStepsMask() {
+      sortByCompletedStepsMask() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'completedStepsMask', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortByCompletedStepsMaskDesc() {
+      sortByCompletedStepsMaskDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'completedStepsMask', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortByCurrentStep() {
+      sortByCurrentStep() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'currentStep', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortByCurrentStepDesc() {
+      sortByCurrentStepDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'currentStep', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortBySchoolId() {
+      sortBySchoolId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortBySchoolIdDesc() {
+      sortBySchoolIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortByStateJson() {
+      sortByStateJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'stateJson', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortByStateJsonDesc() {
+      sortByStateJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'stateJson', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortByStudentId() {
+      sortByStudentId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'studentId', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortByStudentIdDesc() {
+      sortByStudentIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'studentId', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortByUpdatedAt() {
+      sortByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  sortByUpdatedAtDesc() {
+      sortByUpdatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.desc);
     });
   }
 }
 
-extension EnrollmentSetupDraftIsarQuerySortThenBy
-    on
-        QueryBuilder<
-          EnrollmentSetupDraftIsar,
-          EnrollmentSetupDraftIsar,
-          QSortThenBy
-        > {
+extension EnrollmentSetupDraftIsarQuerySortThenBy on QueryBuilder<
+    EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QSortThenBy> {
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByApplicationId() {
+      thenByApplicationId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'applicationId', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByApplicationIdDesc() {
+      thenByApplicationIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'applicationId', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByCompletedStepCount() {
+      thenByCompletedStepCount() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'completedStepCount', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByCompletedStepCountDesc() {
+      thenByCompletedStepCountDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'completedStepCount', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByCompletedStepsMask() {
+      thenByCompletedStepsMask() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'completedStepsMask', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByCompletedStepsMaskDesc() {
+      thenByCompletedStepsMaskDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'completedStepsMask', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByCurrentStep() {
+      thenByCurrentStep() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'currentStep', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByCurrentStepDesc() {
+      thenByCurrentStepDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'currentStep', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByIsarId() {
+      thenByIsarId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isarId', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByIsarIdDesc() {
+      thenByIsarIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isarId', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenBySchoolId() {
+      thenBySchoolId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenBySchoolIdDesc() {
+      thenBySchoolIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'schoolId', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByStateJson() {
+      thenByStateJson() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'stateJson', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByStateJsonDesc() {
+      thenByStateJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'stateJson', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByStudentId() {
+      thenByStudentId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'studentId', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByStudentIdDesc() {
+      thenByStudentIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'studentId', Sort.desc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByUpdatedAt() {
+      thenByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.asc);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QAfterSortBy>
-  thenByUpdatedAtDesc() {
+      thenByUpdatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'updatedAt', Sort.desc);
     });
   }
 }
 
-extension EnrollmentSetupDraftIsarQueryWhereDistinct
-    on
-        QueryBuilder<
-          EnrollmentSetupDraftIsar,
-          EnrollmentSetupDraftIsar,
-          QDistinct
-        > {
+extension EnrollmentSetupDraftIsarQueryWhereDistinct on QueryBuilder<
+    EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QDistinct> {
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QDistinct>
-  distinctByApplicationId({bool caseSensitive = true}) {
+      distinctByApplicationId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(
-        r'applicationId',
-        caseSensitive: caseSensitive,
-      );
+      return query.addDistinctBy(r'applicationId',
+          caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QDistinct>
-  distinctByCompletedStepCount() {
+      distinctByCompletedStepCount() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'completedStepCount');
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QDistinct>
-  distinctByCompletedStepsMask() {
+      distinctByCompletedStepsMask() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'completedStepsMask');
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QDistinct>
-  distinctByCurrentStep() {
+      distinctByCurrentStep() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'currentStep');
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QDistinct>
-  distinctBySchoolId({bool caseSensitive = true}) {
+      distinctBySchoolId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'schoolId', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QDistinct>
-  distinctByStateJson({bool caseSensitive = true}) {
+      distinctByStateJson({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'stateJson', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QDistinct>
-  distinctByStudentId({bool caseSensitive = true}) {
+      distinctByStudentId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'studentId', caseSensitive: caseSensitive);
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QDistinct>
-  distinctByUpdatedAt() {
+      distinctByUpdatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'updatedAt');
     });
   }
 }
 
-extension EnrollmentSetupDraftIsarQueryProperty
-    on
-        QueryBuilder<
-          EnrollmentSetupDraftIsar,
-          EnrollmentSetupDraftIsar,
-          QQueryProperty
-        > {
+extension EnrollmentSetupDraftIsarQueryProperty on QueryBuilder<
+    EnrollmentSetupDraftIsar, EnrollmentSetupDraftIsar, QQueryProperty> {
   QueryBuilder<EnrollmentSetupDraftIsar, int, QQueryOperations>
-  isarIdProperty() {
+      isarIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isarId');
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, String?, QQueryOperations>
-  applicationIdProperty() {
+      applicationIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'applicationId');
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, int, QQueryOperations>
-  completedStepCountProperty() {
+      completedStepCountProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'completedStepCount');
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, int, QQueryOperations>
-  completedStepsMaskProperty() {
+      completedStepsMaskProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'completedStepsMask');
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, int, QQueryOperations>
-  currentStepProperty() {
+      currentStepProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'currentStep');
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, String, QQueryOperations>
-  schoolIdProperty() {
+      schoolIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'schoolId');
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, String, QQueryOperations>
-  stateJsonProperty() {
+      stateJsonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'stateJson');
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, String, QQueryOperations>
-  studentIdProperty() {
+      studentIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'studentId');
     });
   }
 
   QueryBuilder<EnrollmentSetupDraftIsar, DateTime, QQueryOperations>
-  updatedAtProperty() {
+      updatedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'updatedAt');
     });

@@ -150,6 +150,10 @@ class AppTheme {
         side: outline,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.small),
       ),
+      badgeTheme: BadgeThemeData(
+        backgroundColor: foreground,
+        textColor: background,
+      ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStatePropertyAll(background),
         trackColor: WidgetStatePropertyAll(foreground),
@@ -225,6 +229,61 @@ class AppTheme {
         color: foreground,
         linearTrackColor: background,
         circularTrackColor: background,
+      ),
+      listTileTheme: ListTileThemeData(
+        iconColor: foreground,
+        textColor: foreground,
+        tileColor: background,
+        selectedColor: background,
+        selectedTileColor: foreground,
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: foreground,
+        unselectedLabelColor: foreground,
+        indicatorColor: foreground,
+        dividerColor: foreground,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: background,
+        indicatorColor: foreground,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            color: states.contains(WidgetState.selected)
+                ? background
+                : foreground,
+          ),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? background
+                : foreground,
+          ),
+        ),
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: background,
+        surfaceTintColor: Colors.transparent,
+        headerBackgroundColor: foreground,
+        headerForegroundColor: background,
+        dayForegroundColor: WidgetStatePropertyAll(foreground),
+        todayForegroundColor: WidgetStatePropertyAll(foreground),
+        todayBorder: BorderSide(color: foreground),
+        yearForegroundColor: WidgetStatePropertyAll(foreground),
+      ),
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: background,
+        dialBackgroundColor: background,
+        dialHandColor: foreground,
+        dialTextColor: foreground,
+        hourMinuteColor: background,
+        hourMinuteTextColor: foreground,
+        entryModeIconColor: foreground,
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: foreground,
+        selectionColor: foreground,
+        selectionHandleColor: foreground,
       ),
     );
   }

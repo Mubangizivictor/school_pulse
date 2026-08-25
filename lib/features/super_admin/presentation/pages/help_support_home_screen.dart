@@ -133,7 +133,7 @@ class _SupportTile extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(AppSpacing.m),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: color, size: 22),
@@ -248,9 +248,7 @@ class SupportHelpCenterScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(AppSpacing.s),
                         decoration: BoxDecoration(
-                          color: AppColors.primary(
-                            context,
-                          ).withValues(alpha: 0.1),
+                          color: AppColors.primary(context),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(

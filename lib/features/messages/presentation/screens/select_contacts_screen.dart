@@ -202,8 +202,7 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
                                 ),
                                 child: CircleAvatar(
                                   radius: 25,
-                                  backgroundColor: AppColors.electricBlue
-                                      .withValues(alpha: 0.1),
+                                  backgroundColor: AppColors.electricBlue,
                                   child: Text(
                                     contact.initials,
                                     style: const TextStyle(
@@ -223,7 +222,7 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: const BoxDecoration(
-                                      color: Colors.red,
+                                      color: Colors.black,
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
@@ -524,7 +523,7 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
         child: ListTile(
           leading: CircleAvatar(
             radius: 22,
-            backgroundColor: AppColors.electricBlue.withValues(alpha: 0.1),
+            backgroundColor: AppColors.electricBlue,
             child: Text(
               contact.initials,
               style: const TextStyle(
@@ -551,9 +550,7 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: isSelected
-                    ? AppColors.electricBlue
-                    : Colors.grey.withValues(alpha: 0.3),
+                color: isSelected ? AppColors.electricBlue : Colors.black,
                 width: 2,
               ),
               color: isSelected ? AppColors.electricBlue : Colors.transparent,

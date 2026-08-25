@@ -732,9 +732,7 @@ class _AdvancedFilterButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final primary = AppColors.primary(context);
     return Material(
-      color: active
-          ? primary.withValues(alpha: 0.1)
-          : Theme.of(context).colorScheme.surface,
+      color: active ? primary : Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -1126,7 +1124,7 @@ class _BillingStatTile extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
+                        color: color,
                         shape: BoxShape.circle,
                       ),
                       child: Icon(icon, color: color, size: 18),

@@ -323,25 +323,25 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
               children: [
                 _StatColumn(
                   icon: Icons.groups_rounded,
-                  color: const Color(0xFF11A85B),
+                  color: Colors.black,
                   value: total ?? 0,
                   label: 'Total Students',
                 ),
                 _StatColumn(
                   icon: Icons.check_circle_rounded,
-                  color: const Color(0xFF11A85B),
+                  color: Colors.black,
                   value: _presentCount,
                   label: 'Present',
                 ),
                 _StatColumn(
                   icon: Icons.cancel_rounded,
-                  color: const Color(0xFFE0473C),
+                  color: Colors.black,
                   value: _absentCount,
                   label: 'Absent',
                 ),
                 _StatColumn(
                   icon: Icons.access_time_filled_rounded,
-                  color: const Color(0xFFFFB400),
+                  color: Colors.black,
                   value: _lateCount,
                   label: 'Late',
                 ),
@@ -446,9 +446,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: AppColors.primary(
-                                context,
-                              ).withValues(alpha: 0.15),
+                              color: AppColors.primary(context),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(
@@ -513,7 +511,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                 _MethodCard(
                   title: 'NFC Scan',
                   subtitle: 'Mark attendance using NFC card',
-                  accentColor: const Color(0xFF11A85B),
+                  accentColor: Colors.black,
                   icon: Icons.sensors_rounded,
                   badgeIcon: Icons.shield_rounded,
                   badgeLabel: 'Fast & Secure',
@@ -524,7 +522,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                 _MethodCard(
                   title: 'QR Code Scanner',
                   subtitle: 'Scan student QR code',
-                  accentColor: const Color(0xFF103ECF),
+                  accentColor: Colors.black,
                   icon: Icons.qr_code_2_rounded,
                   badgeIcon: Icons.shield_rounded,
                   badgeLabel: 'Quick & Easy',
@@ -535,7 +533,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                 _MethodCard(
                   title: 'Manual Attendance',
                   subtitle: 'Mark attendance manually',
-                  accentColor: const Color(0xFFFFB400),
+                  accentColor: Colors.black,
                   icon: Icons.assignment_turned_in_rounded,
                   badgeIcon: Icons.shield_rounded,
                   badgeLabel: 'Full Control',
@@ -564,7 +562,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                 _MethodCard(
                   title: 'Previous Attendances',
                   subtitle: 'View and manage past records',
-                  accentColor: const Color(0xFF7C4DFF),
+                  accentColor: Colors.black,
                   icon: Icons.history_rounded,
                   badgeIcon: Icons.bar_chart_rounded,
                   badgeLabel: 'History & Reports',
@@ -669,7 +667,7 @@ class _Badge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: color,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -730,7 +728,7 @@ class _MethodCard extends StatelessWidget {
               height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: accentColor.withValues(alpha: 0.15),
+                color: accentColor,
               ),
               child: Icon(icon, color: accentColor, size: 18),
             ),
@@ -799,7 +797,7 @@ class _IntegrationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color iconColor = AppColors.textMuted(context);
     final Color statusColor = linked
-        ? const Color(0xFF11A85B)
+        ? Colors.black
         : AppColors.textMuted(context);
     return InkWell(
       onTap: onTap,
@@ -819,7 +817,7 @@ class _IntegrationCard extends StatelessWidget {
               height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: iconColor.withValues(alpha: 0.15),
+                color: iconColor,
               ),
               child: Icon(
                 Icons.description_rounded,
@@ -853,7 +851,7 @@ class _IntegrationCard extends StatelessWidget {
                   _Badge(
                     icon: badgeIcon,
                     label: badgeLabel,
-                    color: const Color(0xFF11A85B),
+                    color: Colors.black,
                   ),
                 ],
               ),

@@ -70,7 +70,7 @@ class _ScanResultCardState extends State<ScanResultCard> {
               height: 82,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: color.withValues(alpha: 0.14),
+                color: color,
                 border: Border.all(color: color, width: 2),
               ),
               child: Icon(

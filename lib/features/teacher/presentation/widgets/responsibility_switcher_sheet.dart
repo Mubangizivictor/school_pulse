@@ -133,7 +133,7 @@ class ResponsibilitySwitcherSheet extends StatelessWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: AppColors.primary(context).withValues(alpha: 0.1),
+          color: AppColors.primary(context),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(
@@ -164,7 +164,7 @@ class ResponsibilitySwitcherSheet extends StatelessWidget {
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.primary(context).withValues(alpha: 0.12),
+                color: AppColors.primary(context),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(

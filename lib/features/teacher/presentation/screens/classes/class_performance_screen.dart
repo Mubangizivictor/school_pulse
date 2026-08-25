@@ -403,7 +403,7 @@ class _ClassPerformanceScreenState extends State<ClassPerformanceScreen> {
             valueColor: AlwaysStoppedAnimation<Color>(
               // Faded while the marks are still coming in, so a partial
               // average does not read as a settled one.
-              (coverage ?? 1) < 1 ? color.withValues(alpha: 0.45) : color,
+              (coverage ?? 1) < 1 ? color : color,
             ),
             minHeight: 4,
           ),

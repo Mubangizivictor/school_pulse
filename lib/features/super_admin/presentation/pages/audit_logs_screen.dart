@@ -269,7 +269,7 @@ class _AuditLogTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.m),
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withValues(alpha: 0.1),
+              color: AppColors.primary(context),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -517,7 +517,7 @@ class _ActiveDateRangeChip extends StatelessWidget {
           vertical: 6,
         ),
         decoration: BoxDecoration(
-          color: AppColors.primary(context).withValues(alpha: 0.1),
+          color: AppColors.primary(context),
           borderRadius: AppRadius.full,
           border: Border.all(color: AppColors.primary(context)),
         ),
@@ -574,7 +574,7 @@ class _CategoryPill extends StatelessWidget {
         : AppColors.textSecondary(context);
     return Material(
       color: isSelected
-          ? AppColors.primary(context).withValues(alpha: 0.1)
+          ? AppColors.primary(context)
           : AppColors.surfaceElevated(context),
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.medium,
@@ -675,7 +675,7 @@ class _AuditTableRow extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary(context).withValues(alpha: 0.1),
+                    color: AppColors.primary(context),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(

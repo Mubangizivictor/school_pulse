@@ -931,6 +931,7 @@ class GradingSystemDefIsar {
   List<String> classIds = const [];
   List<String> academicYearIds = const [];
   late int version;
+  late double maximumMark;
 
   GradingSystemDefIsar();
 
@@ -953,7 +954,8 @@ class GradingSystemDefIsar {
       ..levelIds = e.levelIds
       ..classIds = e.classIds
       ..academicYearIds = e.academicYearIds
-      ..version = e.version;
+      ..version = e.version
+      ..maximumMark = e.maximumMark;
   }
 
   GradingSystemDef toEntity() {
@@ -976,6 +978,7 @@ class GradingSystemDefIsar {
       classIds: classIds,
       academicYearIds: academicYearIds,
       version: version,
+      maximumMark: maximumMark,
     );
   }
 }

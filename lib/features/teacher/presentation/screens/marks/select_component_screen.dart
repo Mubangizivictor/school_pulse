@@ -92,14 +92,14 @@ class SelectComponentScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
+          border: Border.all(color: theme.dividerColor),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                color: theme.colorScheme.primary,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(

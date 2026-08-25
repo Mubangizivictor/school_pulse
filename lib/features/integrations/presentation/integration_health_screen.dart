@@ -93,37 +93,37 @@ class _IntegrationHealthScreenState extends State<IntegrationHealthScreen> {
                           title: 'Connected',
                           value: _count('connected').toDouble(),
                           icon: Icons.link,
-                          color: Colors.blue,
+                          color: Colors.black,
                         ),
                         DashboardStatCard(
                           title: 'Healthy',
                           value: _count('healthy').toDouble(),
                           icon: Icons.check_circle_outline,
-                          color: Colors.green,
+                          color: Colors.black,
                         ),
                         DashboardStatCard(
                           title: 'Warning',
                           value: _count('warning').toDouble(),
                           icon: Icons.warning_amber_outlined,
-                          color: Colors.orange,
+                          color: Colors.black,
                         ),
                         DashboardStatCard(
                           title: 'Failed',
                           value: _count('failed').toDouble(),
                           icon: Icons.error_outline,
-                          color: Colors.red,
+                          color: Colors.black,
                         ),
                         DashboardStatCard(
                           title: 'Needs Reauth',
                           value: _count('reauthRequired').toDouble(),
                           icon: Icons.lock_reset_outlined,
-                          color: Colors.deepOrange,
+                          color: Colors.black,
                         ),
                         DashboardStatCard(
                           title: 'Devices Offline',
                           value: _count('deviceOffline').toDouble(),
                           icon: Icons.wifi_off_outlined,
-                          color: Colors.grey,
+                          color: Colors.black,
                         ),
                       ];
                       return GridView.count(

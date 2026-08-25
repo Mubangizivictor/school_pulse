@@ -260,10 +260,7 @@ class _RenewalReadOnlyGate extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         AbsorbPointer(absorbing: true, child: child),
-        ModalBarrier(
-          dismissible: false,
-          color: theme.colorScheme.scrim.withValues(alpha: 0.58),
-        ),
+        ModalBarrier(dismissible: false, color: theme.colorScheme.scrim),
         SafeArea(
           child: Center(
             child: SingleChildScrollView(

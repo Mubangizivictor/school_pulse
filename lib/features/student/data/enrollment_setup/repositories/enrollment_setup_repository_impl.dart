@@ -35,8 +35,7 @@ class EnrollmentSetupRepositoryImpl implements EnrollmentSetupRepository {
       approvedBy: data['approvedBy'] as String,
       reason: data['reason'] as String? ?? '',
       supportingDocumentUrl: data['supportingDocumentUrl'] as String?,
-      createdAt:
-          (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 
@@ -85,9 +84,7 @@ class EnrollmentSetupRepositoryImpl implements EnrollmentSetupRepository {
     }
   }
 
-  DormitoryAssignment _dormFromDoc(
-    DocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
+  DormitoryAssignment _dormFromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data()!;
     return DormitoryAssignment(
       id: doc.id,

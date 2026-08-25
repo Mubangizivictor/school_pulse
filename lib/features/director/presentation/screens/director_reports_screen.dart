@@ -25,7 +25,7 @@ class DirectorReportsScreen extends StatelessWidget {
             _ReportItem(
               title: 'Annual Budget Performance',
               icon: Icons.account_balance,
-              color: Colors.blue,
+              color: Colors.black,
               open: (context) => _openReport(
                 context,
                 'Annual Budget Performance',
@@ -51,7 +51,7 @@ class DirectorReportsScreen extends StatelessWidget {
                       label: 'Budget Utilization',
                       percent: (stats.budgetUtilization / 100).clamp(0, 1),
                       trailingText: '${stats.budgetUtilization}%',
-                      color: Colors.orange,
+                      color: Colors.black,
                     ),
                   ],
                 ),
@@ -60,7 +60,7 @@ class DirectorReportsScreen extends StatelessWidget {
             _ReportItem(
               title: 'Fee Collection Analysis',
               icon: Icons.payments,
-              color: Colors.green,
+              color: Colors.black,
               open: (context) => _openReport(
                 context,
                 'Fee Collection Analysis',
@@ -90,7 +90,7 @@ class DirectorReportsScreen extends StatelessWidget {
                       label: 'Collection Percentage',
                       percent: (stats.collectionPercentage / 100).clamp(0, 1),
                       trailingText: '${stats.collectionPercentage}%',
-                      color: Colors.green,
+                      color: Colors.black,
                     ),
                   ],
                 ),
@@ -99,7 +99,7 @@ class DirectorReportsScreen extends StatelessWidget {
             _ReportItem(
               title: 'Expenditure by Department',
               icon: Icons.pie_chart,
-              color: Colors.orange,
+              color: Colors.black,
               open: (context) => _openReport(
                 context,
                 'Expenditure by Department',
@@ -119,7 +119,7 @@ class DirectorReportsScreen extends StatelessWidget {
             _ReportItem(
               title: 'School-wide Performance Trend',
               icon: Icons.trending_up,
-              color: Colors.purple,
+              color: Colors.black,
               open: (context) => _openReport(
                 context,
                 'School-wide Performance Trend',
@@ -139,8 +139,8 @@ class DirectorReportsScreen extends StatelessWidget {
                             label:
                                 '${stats.improvementTrend >= 0 ? "+" : ""}${stats.improvementTrend}% vs Last Term',
                             color: stats.improvementTrend >= 0
-                                ? Colors.green
-                                : Colors.red,
+                                ? Colors.black
+                                : Colors.black,
                           ),
                           const SizedBox(height: AppSpacing.m),
                           // TODO: Wire to a real term-over-term series once
@@ -156,7 +156,7 @@ class DirectorReportsScreen extends StatelessWidget {
             _ReportItem(
               title: 'Subject Performance Comparison',
               icon: Icons.bar_chart,
-              color: Colors.teal,
+              color: Colors.black,
               open: (context) => _openReport(
                 context,
                 'Subject Performance Comparison',
@@ -171,7 +171,7 @@ class DirectorReportsScreen extends StatelessWidget {
             _ReportItem(
               title: 'Teacher Delivery Metrics',
               icon: Icons.person_search,
-              color: Colors.indigo,
+              color: Colors.black,
               open: (context) => _openReport(
                 context,
                 'Teacher Delivery Metrics',
@@ -188,7 +188,7 @@ class DirectorReportsScreen extends StatelessWidget {
             _ReportItem(
               title: 'Staff Attendance Summary',
               icon: Icons.assignment_ind,
-              color: Colors.cyan,
+              color: Colors.black,
               open: (context) => _openReport(
                 context,
                 'Staff Attendance Summary',
@@ -213,7 +213,7 @@ class DirectorReportsScreen extends StatelessWidget {
             _ReportItem(
               title: 'Inventory & Asset Audit',
               icon: Icons.inventory,
-              color: Colors.brown,
+              color: Colors.black,
               open: (context) => _openReport(
                 context,
                 'Inventory & Asset Audit',
@@ -227,7 +227,7 @@ class DirectorReportsScreen extends StatelessWidget {
             _ReportItem(
               title: 'Incident & Discipline Log',
               icon: Icons.gavel,
-              color: Colors.red,
+              color: Colors.black,
               open: (context) => _openReport(
                 context,
                 'Incident & Discipline Log',
@@ -296,7 +296,7 @@ class DirectorReportsScreen extends StatelessWidget {
   Widget _buildReportTile(BuildContext context, _ReportItem item) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: item.color.withValues(alpha: 0.12),
+        backgroundColor: item.color,
         child: Icon(item.icon, color: item.color, size: 20),
       ),
       title: Text(

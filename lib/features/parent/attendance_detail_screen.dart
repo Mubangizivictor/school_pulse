@@ -183,7 +183,7 @@ class _AttendanceDetailScreenState extends State<AttendanceDetailScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
+              color: statusColor,
               shape: BoxShape.circle,
             ),
             child: Icon(statusIcon, color: statusColor, size: 20),

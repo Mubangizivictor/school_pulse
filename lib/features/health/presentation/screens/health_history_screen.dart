@@ -173,13 +173,13 @@ class _HistoryItem extends StatelessWidget {
   Color _getOutcomeColor(VisitOutcome outcome) {
     switch (outcome) {
       case VisitOutcome.sentBackToClass:
-        return Colors.green;
+        return Colors.black;
       case VisitOutcome.sentHome:
-        return Colors.orange;
+        return Colors.black;
       case VisitOutcome.admittedToSickBay:
-        return Colors.blue;
+        return Colors.black;
       case VisitOutcome.referredToHospital:
-        return Colors.red;
+        return Colors.black;
     }
   }
 }

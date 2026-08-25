@@ -175,7 +175,7 @@ class _QuickActions extends StatelessWidget {
             QuickActionItem(
               label: 'Generate\nReceipt',
               icon: Icons.receipt_long_rounded,
-              color: Colors.blue,
+              color: Colors.black,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const FeeCollectionScreen()),
@@ -184,7 +184,7 @@ class _QuickActions extends StatelessWidget {
             QuickActionItem(
               label: 'Invoices',
               icon: Icons.description_rounded,
-              color: Colors.deepPurple,
+              color: Colors.black,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const FeeCollectionScreen()),
@@ -193,7 +193,7 @@ class _QuickActions extends StatelessWidget {
             QuickActionItem(
               label: 'Expenditure\nRequests',
               icon: Icons.request_page_rounded,
-              color: Colors.orange,
+              color: Colors.black,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ExpenditureScreen()),
@@ -202,7 +202,7 @@ class _QuickActions extends StatelessWidget {
             QuickActionItem(
               label: 'Fee\nStructures',
               icon: Icons.fact_check_rounded,
-              color: Colors.teal,
+              color: Colors.black,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -213,7 +213,7 @@ class _QuickActions extends StatelessWidget {
             QuickActionItem(
               label: 'Report\nRelease',
               icon: Icons.lock_open_rounded,
-              color: Colors.indigo,
+              color: Colors.black,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -279,7 +279,7 @@ class _TransactionRow extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: colors.success.withValues(alpha: 0.1),
+            backgroundColor: colors.success,
             child: Icon(Icons.arrow_downward, color: colors.success, size: 18),
           ),
           const SizedBox(width: AppSpacing.s),
@@ -368,7 +368,7 @@ class _ApprovalRow extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: colors.error.withValues(alpha: 0.1),
+            backgroundColor: colors.error,
             child: Icon(Icons.arrow_upward, color: colors.error, size: 18),
           ),
           const SizedBox(width: AppSpacing.s),
@@ -402,13 +402,13 @@ class _ApprovalRow extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
+                  color: Colors.black,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Text(
                   'Pending',
                   style: TextStyle(
-                    color: Colors.orange,
+                    color: Colors.black,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),

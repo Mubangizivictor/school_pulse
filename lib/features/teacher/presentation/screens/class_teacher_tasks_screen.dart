@@ -287,7 +287,7 @@ class _ClassTeacherTasksScreenState extends State<ClassTeacherTasksScreen> {
           : 'Class register',
       icon: Icons.people_alt_outlined,
       iconColor: AppColors.success(context),
-      iconBg: AppColors.success(context).withValues(alpha: 0.12),
+      iconBg: AppColors.success(context),
       status: status,
       dueAt: dueAt,
       dueLabel: isSubmitted
@@ -319,7 +319,7 @@ class _ClassTeacherTasksScreenState extends State<ClassTeacherTasksScreen> {
       subtitle: subtitleParts.join(' • '),
       icon: icon,
       iconColor: color,
-      iconBg: color.withValues(alpha: 0.12),
+      iconBg: color,
       status: status,
       dueAt: task.dueAt,
       dueLabel: _dueLabel(task),
@@ -585,7 +585,7 @@ class _HeroBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.l),
       decoration: BoxDecoration(
-        color: AppColors.primary(context).withValues(alpha: 0.08),
+        color: AppColors.primary(context),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -594,7 +594,7 @@ class _HeroBanner extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withValues(alpha: 0.15),
+              color: AppColors.primary(context),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(

@@ -245,7 +245,7 @@ class _CardFront extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1.4,
-                      color: Colors.amber.shade400,
+                      color: Colors.black,
                     ),
                   ),
                 ],
@@ -285,7 +285,7 @@ class _CardFront extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: scheme.primary.withValues(alpha: 0.1),
+                  color: scheme.primary,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -406,7 +406,7 @@ class _BackBadge extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: scheme.primary.withValues(alpha: 0.1),
+            color: scheme.primary,
             shape: BoxShape.circle,
           ),
           child: Icon(icon, size: 18, color: scheme.primary),

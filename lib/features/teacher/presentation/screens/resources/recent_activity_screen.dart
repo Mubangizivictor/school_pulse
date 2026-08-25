@@ -71,10 +71,10 @@ class _ActivityItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final iconData = resource.isFolder
-        ? (Icons.create_new_folder_outlined, Colors.orange)
+        ? (Icons.create_new_folder_outlined, Colors.black)
         : resource.isLink
-        ? (Icons.link_outlined, Colors.purple)
-        : (Icons.upload_file_outlined, Colors.red);
+        ? (Icons.link_outlined, Colors.black)
+        : (Icons.upload_file_outlined, Colors.black);
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
@@ -85,7 +85,7 @@ class _ActivityItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconData.$2.withValues(alpha: 0.1),
+              color: iconData.$2,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(iconData.$1, color: iconData.$2, size: 20),

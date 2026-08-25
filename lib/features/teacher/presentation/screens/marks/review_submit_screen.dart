@@ -162,14 +162,10 @@ class ReviewSubmitScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.danger(
-                              context,
-                            ).withValues(alpha: 0.1),
+                            color: AppColors.danger(context),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: AppColors.danger(
-                                context,
-                              ).withValues(alpha: 0.3),
+                              color: AppColors.danger(context),
                             ),
                           ),
                           child: Row(
@@ -197,7 +193,7 @@ class ReviewSubmitScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: theme.dividerColor.withValues(alpha: 0.1),
+                            color: theme.dividerColor,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: theme.dividerColor),
                           ),

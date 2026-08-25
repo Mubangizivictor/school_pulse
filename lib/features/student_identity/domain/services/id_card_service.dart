@@ -122,7 +122,7 @@ class IdCardService {
             width: 85.60 * PdfPageFormat.mm,
             height: 53.98 * PdfPageFormat.mm,
             decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColors.grey, width: 1),
+              border: pw.Border.all(color: PdfColors.black, width: 1),
               borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
             ),
             padding: const pw.EdgeInsets.all(12),
@@ -156,7 +156,7 @@ class IdCardService {
                     height: 48,
                     decoration: const pw.BoxDecoration(
                       shape: pw.BoxShape.circle,
-                      color: PdfColors.grey300,
+                      color: PdfColors.black,
                     ),
                   ),
                 pw.SizedBox(height: 5),
@@ -179,7 +179,7 @@ class IdCardService {
                   'This card is the property of $schoolName.',
                   style: const pw.TextStyle(
                     fontSize: 6,
-                    color: PdfColors.grey700,
+                    color: PdfColors.black,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
@@ -226,7 +226,7 @@ class IdCardService {
       build: (context) => pw.Container(
         padding: const pw.EdgeInsets.all(12),
         decoration: pw.BoxDecoration(
-          border: pw.Border.all(color: PdfColors.grey, width: 1),
+          border: pw.Border.all(color: PdfColors.black, width: 1),
           borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
         ),
         child: pw.Column(
@@ -255,7 +255,7 @@ class IdCardService {
             pw.Spacer(),
             pw.Text(
               'This card is the property of $schoolName. If found, please return it to the school.',
-              style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey700),
+              style: const pw.TextStyle(fontSize: 6, color: PdfColors.black),
               textAlign: pw.TextAlign.center,
             ),
           ],
@@ -272,7 +272,7 @@ class IdCardService {
         children: [
           pw.Text(
             label,
-            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+            style: const pw.TextStyle(fontSize: 10, color: PdfColors.black),
           ),
           pw.Text(
             value,

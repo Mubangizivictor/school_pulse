@@ -7,22 +7,22 @@ const calendarEventTypeLegendOrder = CalendarEventType.values;
 Color calendarEventTypeColor(CalendarEventType type) {
   switch (type) {
     case CalendarEventType.schoolDay:
-      return const Color(0xFF4CAF50);
+      return Colors.black;
     case CalendarEventType.event:
-      return const Color(0xFF2196F3);
+      return Colors.black;
     case CalendarEventType.holiday:
-      return const Color(0xFFE53935);
+      return Colors.black;
     case CalendarEventType.breakDay:
-      return const Color(0xFFFF9800);
+      return Colors.black;
     case CalendarEventType.examination:
-      return const Color(0xFF9C27B0);
+      return Colors.black;
     case CalendarEventType.staffTraining:
-      return const Color(0xFF00BCD4);
+      return Colors.black;
     case CalendarEventType.meeting:
-      return const Color(0xFFFF9800);
+      return Colors.black;
     case CalendarEventType.sports:
-      return const Color(0xFF9C27B0);
+      return Colors.black;
     case CalendarEventType.other:
-      return const Color(0xFF8792A6);
+      return Colors.black;
   }
 }

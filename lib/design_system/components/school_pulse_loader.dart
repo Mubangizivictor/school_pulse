@@ -113,7 +113,7 @@ class _SchoolPulseLoaderState extends State<SchoolPulseLoader>
             decoration: BoxDecoration(
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF176BFF).withValues(
+                  color: Colors.black.withValues(
                     alpha: _reducedMotion == true
                         ? 0.10
                         : 0.06 + (_pulseController.value * 0.06),

@@ -60,7 +60,7 @@ class Step3Schedule extends StatelessWidget {
                           shape: BoxShape.circle,
                           color: slot.type == 'period'
                               ? colors.primary
-                              : Colors.orange,
+                              : Colors.black,
                         ),
                       ),
                       Expanded(

@@ -96,13 +96,10 @@ class ArchivedChatsScreen extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(
-                Icons.delete_outline,
-                color: Colors.redAccent,
-              ),
+              leading: const Icon(Icons.delete_outline, color: Colors.black),
               title: const Text(
                 'Delete',
-                style: TextStyle(color: Colors.redAccent),
+                style: TextStyle(color: Colors.black),
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -129,7 +126,7 @@ class ArchivedChatsScreen extends StatelessWidget {
             child: Icon(
               Icons.archive_outlined,
               size: 80,
-              color: AppColors.electricBlue.withValues(alpha: 0.3),
+              color: AppColors.electricBlue,
             ),
           ),
           const SizedBox(height: AppSpacing.xl),

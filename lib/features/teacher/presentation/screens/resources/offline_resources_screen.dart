@@ -80,9 +80,7 @@ class _OfflineResourcesScreenState extends State<OfflineResourcesScreen> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: AppColors.success(
-                                  context,
-                                ).withValues(alpha: 0.1),
+                                color: AppColors.success(context),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(

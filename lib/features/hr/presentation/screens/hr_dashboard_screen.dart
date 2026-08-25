@@ -41,28 +41,28 @@ class HRDashboardScreen extends StatelessWidget {
           valueText: '84',
           subtitle: 'Employed',
           icon: Icons.people,
-          color: Colors.blue,
+          color: Colors.black,
         ),
         StaffKpiData(
           title: 'Recruits',
           valueText: '12',
           subtitle: 'In pipeline',
           icon: Icons.person_add,
-          color: Colors.green,
+          color: Colors.black,
         ),
         StaffKpiData(
           title: 'On Leave',
           valueText: '5',
           subtitle: 'Currently away',
           icon: Icons.time_to_leave,
-          color: Colors.orange,
+          color: Colors.black,
         ),
         StaffKpiData(
           title: 'Appraisals',
           valueText: '8',
           subtitle: 'Pending review',
           icon: Icons.assessment,
-          color: Colors.purple,
+          color: Colors.black,
         ),
       ],
     );
@@ -81,21 +81,21 @@ class HRDashboardScreen extends StatelessWidget {
           icon: Icons.assignment_ind,
           label: 'Staff Recruitment',
           subtitle: 'Manage job openings & interviews',
-          color: Colors.blue,
+          color: Colors.black,
           onTap: () {},
         ),
         _MenuTile(
           icon: Icons.history_edu,
           label: 'Contracts',
           subtitle: 'Staff agreements & terms',
-          color: Colors.teal,
+          color: Colors.black,
           onTap: () {},
         ),
         _MenuTile(
           icon: Icons.event_note,
           label: 'Leave Management',
           subtitle: 'Requests, approvals & balances',
-          color: Colors.orange,
+          color: Colors.black,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -107,7 +107,7 @@ class HRDashboardScreen extends StatelessWidget {
           icon: Icons.trending_up,
           label: 'Appraisals',
           subtitle: 'Performance reviews & scores',
-          color: Colors.purple,
+          color: Colors.black,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -119,7 +119,7 @@ class HRDashboardScreen extends StatelessWidget {
           icon: Icons.payments,
           label: 'Payroll (PAYE/NSSF)',
           subtitle: 'Uganda tax & social security',
-          color: Colors.green,
+          color: Colors.black,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -131,21 +131,21 @@ class HRDashboardScreen extends StatelessWidget {
           icon: Icons.warning_amber,
           label: 'Staff Warnings',
           subtitle: 'Disciplinary records',
-          color: Colors.red,
+          color: Colors.black,
           onTap: () {},
         ),
         _MenuTile(
           icon: Icons.folder_shared,
           label: 'Staff Documents',
           subtitle: 'IDs, certificates & forms',
-          color: Colors.indigo,
+          color: Colors.black,
           onTap: () {},
         ),
         _MenuTile(
           icon: Icons.exit_to_app,
           label: 'Exit Management',
           subtitle: 'Resignations & terminations',
-          color: Colors.blueGrey,
+          color: Colors.black,
           onTap: () {},
         ),
       ],
@@ -178,10 +178,7 @@ class _MenuTile extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 28),
           ),
           const SizedBox(height: 12),

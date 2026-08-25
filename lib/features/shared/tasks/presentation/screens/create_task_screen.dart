@@ -81,16 +81,16 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
             const SizedBox(height: 16),
             const Text(
               'Priority',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
+              style: TextStyle(fontSize: 14, color: Colors.black),
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildPriorityChip('Low', Colors.green),
+                _buildPriorityChip('Low', Colors.black),
                 const SizedBox(width: 8),
-                _buildPriorityChip('Medium', Colors.orange),
+                _buildPriorityChip('Medium', Colors.black),
                 const SizedBox(width: 8),
-                _buildPriorityChip('High', Colors.red),
+                _buildPriorityChip('High', Colors.black),
               ],
             ),
             const SizedBox(height: 24),
@@ -148,9 +148,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected
-                ? color.withValues(alpha: 0.1)
-                : Colors.transparent,
+            color: isSelected ? color : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isSelected
@@ -220,23 +218,21 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Theme.of(
-            context,
-          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           children: [
-            const Icon(Icons.drag_indicator, size: 20, color: Colors.grey),
+            const Icon(Icons.drag_indicator, size: 20, color: Colors.black),
             const SizedBox(width: 8),
             const Icon(
               Icons.radio_button_unchecked,
               size: 20,
-              color: Colors.grey,
+              color: Colors.black,
             ),
             const SizedBox(width: 12),
             Expanded(child: Text(title, style: const TextStyle(fontSize: 14))),
-            const Icon(Icons.close, size: 18, color: Colors.grey),
+            const Icon(Icons.close, size: 18, color: Colors.black),
           ],
         ),
       ),

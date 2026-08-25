@@ -56,7 +56,7 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
                 icon: Icon(
                   blocked ? Icons.block_rounded : Icons.verified_rounded,
                   color: active
-                      ? Colors.green
+                      ? Colors.black
                       : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               );
@@ -116,25 +116,25 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
                       _CardActionTile(
                         label: 'Download',
                         icon: Icons.download_outlined,
-                        color: Colors.lightBlueAccent,
+                        color: Colors.black,
                         onPressed: () => _shareIdCard(context, state.identity),
                       ),
                       _CardActionTile(
                         label: 'Share',
                         icon: Icons.share_outlined,
-                        color: Colors.greenAccent,
+                        color: Colors.black,
                         onPressed: () => _shareIdCard(context, state.identity),
                       ),
                       _CardActionTile(
                         label: 'Print',
                         icon: Icons.print_outlined,
-                        color: Colors.deepPurpleAccent,
+                        color: Colors.black,
                         onPressed: () => _printIdCard(context, state.identity),
                       ),
                       _CardActionTile(
                         label: 'Replace',
                         icon: Icons.badge_outlined,
-                        color: Colors.amberAccent,
+                        color: Colors.black,
                         onPressed: () => _confirmCardAction(
                           context,
                           title: 'Replace this card?',
@@ -146,7 +146,7 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
                       _CardActionTile(
                         label: 'Revoke',
                         icon: Icons.shield_outlined,
-                        color: Colors.redAccent,
+                        color: Colors.black,
                         onPressed: () => _confirmCardAction(
                           context,
                           title: 'Revoke this card?',
@@ -402,11 +402,11 @@ class _IdCardPreview extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // PALETTE — matches the Victor High School reference design exactly.
 // ---------------------------------------------------------------------------
-const _navy = Color(0xFF0B1B3A);
-const _teal = Color(0xFF12332F);
-const _gold = Color(0xFFD4AF37);
-const _goldBright = Color(0xFFF0D98C);
-const _ivory = Color(0xFFF3F0E6);
+const _navy = Colors.black;
+const _teal = Colors.black;
+const _gold = Colors.black;
+const _goldBright = Colors.black;
+const _ivory = Colors.black;
 
 const _cardGradient = LinearGradient(
   begin: Alignment.topLeft,
@@ -457,7 +457,7 @@ class _MetallicStudentIdFront extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: GoogleFonts.cormorant(
-            color: _ivory.withValues(alpha: .65),
+            color: _ivory,
             fontStyle: FontStyle.italic,
             fontSize: 12,
           ),
@@ -485,14 +485,11 @@ class _MetallicStudentIdFront extends StatelessWidget {
             if (classAndStream.isNotEmpty) ...[
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: _gold.withValues(alpha: .15),
+                  color: _gold,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: _gold.withValues(alpha: .5)),
+                  border: Border.all(color: _gold),
                 ),
                 child: Text(
                   classAndStream,
@@ -533,7 +530,7 @@ class _MetallicStudentIdFront extends StatelessWidget {
             Text(
               'Official Student Identity Card',
               style: GoogleFonts.cormorant(
-                color: _ivory.withValues(alpha: .55),
+                color: _ivory,
                 fontStyle: FontStyle.italic,
                 fontSize: 12,
               ),
@@ -548,8 +545,7 @@ class _MetallicStudentIdFront extends StatelessWidget {
     ),
   );
 
-  static Widget _divider() =>
-      Container(height: 1, color: _ivory.withValues(alpha: .08));
+  static Widget _divider() => Container(height: 1, color: _ivory);
 }
 
 class _MetallicStudentIdBack extends StatelessWidget {
@@ -588,7 +584,7 @@ class _MetallicStudentIdBack extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        Container(height: 1, color: _gold.withValues(alpha: .3)),
+        Container(height: 1, color: _gold),
         const SizedBox(height: 14),
         Text(
           'Scan to Verify Student',
@@ -623,11 +619,7 @@ class _MetallicStudentIdBack extends StatelessWidget {
               : const SizedBox(
                   width: 140,
                   height: 140,
-                  child: Icon(
-                    Icons.qr_code_2_outlined,
-                    size: 96,
-                    color: _navy,
-                  ),
+                  child: Icon(Icons.qr_code_2_outlined, size: 96, color: _navy),
                 ),
         ),
         const SizedBox(height: 14),
@@ -636,11 +628,7 @@ class _MetallicStudentIdBack extends StatelessWidget {
           textAlign: TextAlign.center,
           maxLines: 3,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.inter(
-            color: _ivory.withValues(alpha: .7),
-            fontSize: 10.5,
-            height: 1.4,
-          ),
+          style: GoogleFonts.inter(color: _ivory, fontSize: 10.5, height: 1.4),
         ),
         const Spacer(),
         Row(
@@ -663,10 +651,7 @@ class _MetallicStudentIdBack extends StatelessWidget {
             contact,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
-              color: _ivory.withValues(alpha: .6),
-              fontSize: 10,
-            ),
+            style: GoogleFonts.inter(color: _ivory, fontSize: 10),
           ),
         const SizedBox(height: 12),
         Container(
@@ -706,7 +691,7 @@ class _CardShell extends StatelessWidget {
       gradient: _cardGradient,
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: .5),
+          color: Colors.black,
           blurRadius: 30,
           offset: const Offset(0, 18),
         ),
@@ -720,20 +705,14 @@ class _CardShell extends StatelessWidget {
             padding: const EdgeInsets.all(10),
             child: Container(
               decoration: BoxDecoration(
-                border: Border.all(
-                  color: _gold.withValues(alpha: .55),
-                  width: 1.4,
-                ),
+                border: Border.all(color: _gold, width: 1.4),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(3),
                 child: Container(
                   decoration: BoxDecoration(
-                    border: Border.all(
-                      color: _gold.withValues(alpha: .25),
-                      width: .8,
-                    ),
+                    border: Border.all(color: _gold, width: .8),
                     borderRadius: BorderRadius.circular(11),
                   ),
                 ),
@@ -754,10 +733,10 @@ class _CircuitPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = _gold.withValues(alpha: .14)
+      ..color = _gold
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
-    final nodePaint = Paint()..color = _gold.withValues(alpha: .16);
+    final nodePaint = Paint()..color = _gold;
 
     void corner(Offset origin, bool flipX, bool flipY) {
       final sx = flipX ? -1.0 : 1.0;
@@ -883,8 +862,8 @@ class _SealBadge extends StatelessWidget {
     height: 34,
     decoration: const BoxDecoration(
       shape: BoxShape.circle,
-      gradient: RadialGradient(colors: [Color(0xFFE8E8E8), Color(0xFFAFAFAF)]),
-      border: Border.fromBorderSide(BorderSide(color: Colors.white24)),
+      gradient: RadialGradient(colors: [Colors.black, Colors.black]),
+      border: Border.fromBorderSide(BorderSide(color: Colors.white)),
     ),
     child: Center(
       child: Text(
@@ -915,9 +894,9 @@ class _Avatar extends StatelessWidget {
     child: Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: _gold.withValues(alpha: .4), width: 1),
+        border: Border.all(color: _gold, width: 1),
         gradient: const LinearGradient(
-          colors: [Color(0xFF25406C), Color(0xFF152A4C)],
+          colors: [Colors.black, Colors.black],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -925,11 +904,7 @@ class _Avatar extends StatelessWidget {
       child: ClipOval(
         child: photoUrl?.isNotEmpty == true
             ? Image.network(photoUrl!, fit: BoxFit.cover)
-            : const Icon(
-                Icons.person_rounded,
-                size: 54,
-                color: Colors.white30,
-              ),
+            : const Icon(Icons.person_rounded, size: 54, color: Colors.white),
       ),
     ),
   );
@@ -959,7 +934,7 @@ class _DetailRow extends StatelessWidget {
               Text(
                 label,
                 style: GoogleFonts.inter(
-                  color: _ivory.withValues(alpha: .55),
+                  color: _ivory,
                   fontSize: 9.5,
                   letterSpacing: .4,
                 ),
@@ -991,9 +966,9 @@ class _StatusPill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(
-      color: _gold.withValues(alpha: .1),
+      color: _gold,
       borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: _gold.withValues(alpha: .5)),
+      border: Border.all(color: _gold),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -1035,7 +1010,7 @@ class _CardActionTile extends StatelessWidget {
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
-          side: BorderSide(color: Colors.white.withValues(alpha: .24)),
+          side: BorderSide(color: Colors.white),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1058,15 +1033,11 @@ class _CardStatusPanel extends StatelessWidget {
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Colors.white.withValues(alpha: .22)),
+      border: Border.all(color: Colors.white),
     ),
     child: Row(
       children: [
-        const Icon(
-          Icons.verified_user_outlined,
-          color: Color(0xFFF0D98C),
-          size: 32,
-        ),
+        const Icon(Icons.verified_user_outlined, color: Colors.black, size: 32),
         const SizedBox(width: 12),
         const Expanded(
           child: Column(
@@ -1086,13 +1057,13 @@ class _CardStatusPanel extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.green.withValues(alpha: .22),
+            color: Colors.black,
             borderRadius: BorderRadius.circular(20),
           ),
           child: const Text(
             'ACTIVE',
             style: TextStyle(
-              color: Colors.lightGreenAccent,
+              color: Colors.black,
               fontSize: 11,
               fontWeight: FontWeight.w800,
             ),

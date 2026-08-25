@@ -379,9 +379,7 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
                               color: AppColors.surfaceElevated(context),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: AppColors.border(
-                                  context,
-                                ).withValues(alpha: 0.5),
+                                color: AppColors.border(context),
                               ),
                             ),
                             child: Row(
@@ -433,7 +431,7 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
         const SizedBox(width: 8),
         CircleAvatar(
           radius: 18,
-          backgroundColor: AppColors.primary(context).withValues(alpha: 0.15),
+          backgroundColor: AppColors.primary(context),
           child: Icon(
             Icons.menu_book_rounded,
             color: AppColors.primary(context),
@@ -483,9 +481,7 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: AppColors.border(context).withValues(alpha: 0.6),
-          ),
+          border: Border.all(color: AppColors.border(context)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -540,9 +536,7 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Row(
         children: [
@@ -599,10 +593,7 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
         Container(
           width: 34,
           height: 34,
-          decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.15),
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: iconColor, shape: BoxShape.circle),
           child: Icon(icon, color: iconColor, size: 16),
         ),
         const SizedBox(height: 6),
@@ -683,9 +674,7 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
           decoration: BoxDecoration(
             color: AppColors.surfaceElevated(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.border(context).withValues(alpha: 0.5),
-            ),
+            border: Border.all(color: AppColors.border(context)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -694,7 +683,7 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.15),
+                  color: iconColor,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: iconColor, size: 16),
@@ -737,16 +726,14 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
         decoration: BoxDecoration(
           color: AppColors.surfaceElevated(context),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppColors.border(context).withValues(alpha: 0.5),
-          ),
+          border: Border.all(color: AppColors.border(context)),
         ),
         child: Column(
           children: [
             Icon(
               Icons.assignment_outlined,
               size: 40,
-              color: AppColors.primary(context).withValues(alpha: 0.6),
+              color: AppColors.primary(context),
             ),
             const SizedBox(height: 10),
             Text(
@@ -806,9 +793,7 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Row(
         children: [
@@ -816,7 +801,7 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withValues(alpha: 0.15),
+              color: AppColors.primary(context),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -877,9 +862,7 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: InkWell(
         onTap: () {
@@ -915,7 +898,7 @@ class _MarksDashboardScreenState extends State<MarksDashboardScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.1),
+                color: statusColor,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(

@@ -327,7 +327,7 @@ class TransferHistoryScreen extends StatelessWidget {
             fromLabel: e.fromLabel,
             toLabel: e.toLabel,
             typeLabel: e.isDormTransfer ? 'Dorm Transfer' : 'Bed Transfer',
-            typeColor: e.isDormTransfer ? Colors.purple : primary,
+            typeColor: e.isDormTransfer ? Colors.black : primary,
             dateLabel: e.dateLabel,
             timeLabel: e.timeLabel,
           ),

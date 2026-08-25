@@ -182,7 +182,7 @@ class _AdminStaffAttendanceScreenState
             value: 0,
             suffix: avgLabel,
             icon: Icons.speed,
-            color: Colors.purple,
+            color: Colors.black,
             trend: 'Today',
             decimalPlaces: 0,
           ),

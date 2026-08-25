@@ -17,16 +17,16 @@ class DepartmentsOverviewScreen extends StatelessWidget {
   const DepartmentsOverviewScreen({super.key});
 
   static const _icons = <String, (IconData, Color)>{
-    'academics': (Icons.school_outlined, Colors.blue),
-    'finance': (Icons.account_balance_wallet_outlined, Colors.green),
-    'library': (Icons.local_library_outlined, Colors.orange),
-    'health': (Icons.favorite_outline, Colors.pink),
-    'security': (Icons.security_outlined, Colors.red),
-    'transport': (Icons.directions_bus_outlined, Colors.amber),
-    'stores': (Icons.inventory_2_outlined, Colors.brown),
-    'catering': (Icons.restaurant_outlined, Colors.deepOrange),
-    'boarding': (Icons.night_shelter_outlined, Colors.indigo),
-    'discipline': (Icons.gavel_outlined, Colors.purple),
+    'academics': (Icons.school_outlined, Colors.black),
+    'finance': (Icons.account_balance_wallet_outlined, Colors.black),
+    'library': (Icons.local_library_outlined, Colors.black),
+    'health': (Icons.favorite_outline, Colors.black),
+    'security': (Icons.security_outlined, Colors.black),
+    'transport': (Icons.directions_bus_outlined, Colors.black),
+    'stores': (Icons.inventory_2_outlined, Colors.black),
+    'catering': (Icons.restaurant_outlined, Colors.black),
+    'boarding': (Icons.night_shelter_outlined, Colors.black),
+    'discipline': (Icons.gavel_outlined, Colors.black),
   };
 
   (IconData, Color) _iconFor(String name) {
@@ -34,7 +34,7 @@ class DepartmentsOverviewScreen extends StatelessWidget {
     for (final entry in _icons.entries) {
       if (key.contains(entry.key)) return entry.value;
     }
-    return (Icons.corporate_fare_outlined, Colors.blueGrey);
+    return (Icons.corporate_fare_outlined, Colors.black);
   }
 
   @override
@@ -70,7 +70,7 @@ class DepartmentsOverviewScreen extends StatelessWidget {
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(
-                    backgroundColor: color.withValues(alpha: 0.12),
+                    backgroundColor: color,
                     child: Icon(icon, color: color, size: 20),
                   ),
                   title: Text(

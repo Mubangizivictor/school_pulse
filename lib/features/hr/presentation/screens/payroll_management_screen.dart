@@ -196,9 +196,7 @@ class _PayrollManagementScreenState extends State<PayrollManagementScreen> {
                 final staff = selectedStaff;
                 if (staff == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Select a staff member.'),
-                    ),
+                    const SnackBar(content: Text('Select a staff member.')),
                   );
                   return;
                 }
@@ -359,14 +357,14 @@ class _PayrollRecordTile extends StatelessWidget {
             label,
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: isInfo ? Colors.grey : null,
+              color: isInfo ? Colors.black : null,
             ),
           ),
           Text(
             currencyFormat.format(value),
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: isNegative ? Colors.red : (isInfo ? Colors.grey : null),
+              color: isNegative ? Colors.black : (isInfo ? Colors.black : null),
             ),
           ),
         ],

@@ -916,7 +916,7 @@ class _RoleCard extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: .10),
+              color: color,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -939,7 +939,7 @@ class _RoleCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: .12),
+                color: color,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(

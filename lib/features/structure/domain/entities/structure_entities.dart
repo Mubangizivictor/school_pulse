@@ -202,6 +202,9 @@ class SchoolClass extends Equatable {
   final String name;
   final String code;
   final String levelId;
+
+  /// Display order within [levelId]. Zero is retained for legacy documents.
+  final int order;
   final int capacity;
   final String description;
   final bool isActive;
@@ -212,6 +215,7 @@ class SchoolClass extends Equatable {
     required this.name,
     this.code = '',
     this.levelId = '',
+    this.order = 0,
     this.capacity = 0,
     this.description = '',
     this.isActive = true,
@@ -223,6 +227,7 @@ class SchoolClass extends Equatable {
     String? name,
     String? code,
     String? levelId,
+    int? order,
     int? capacity,
     String? description,
     bool? isActive,
@@ -233,6 +238,7 @@ class SchoolClass extends Equatable {
       name: name ?? this.name,
       code: code ?? this.code,
       levelId: levelId ?? this.levelId,
+      order: order ?? this.order,
       capacity: capacity ?? this.capacity,
       description: description ?? this.description,
       isActive: isActive ?? this.isActive,
@@ -246,6 +252,7 @@ class SchoolClass extends Equatable {
     name,
     code,
     levelId,
+    order,
     capacity,
     description,
     isActive,

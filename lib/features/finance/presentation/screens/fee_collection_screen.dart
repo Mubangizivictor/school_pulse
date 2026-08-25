@@ -401,7 +401,7 @@ class TransactionTile extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: colors.success.withValues(alpha: 0.1),
+            backgroundColor: colors.success,
             child: Icon(Icons.arrow_downward, color: colors.success, size: 18),
           ),
           const SizedBox(width: 12),
