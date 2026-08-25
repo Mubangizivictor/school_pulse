@@ -208,10 +208,12 @@ class ClassTimetableBloc
 
   /// The single active timetable for this class/stream target. Draft and
   /// archived versions of the same target are expected to coexist per
-  /// [Timetable]'s own contract, so only [TimetableStatus.active] is ever
+  /// [Timetable]'s own contract, so only [TimetableStatus.published] is ever
   /// shown to a teacher - a draft is not yet real.
   Timetable? _activeFor(List<Timetable> timetables, {String? streamId}) {
-    final active = timetables.where((t) => t.status == TimetableStatus.active);
+    final active = timetables.where(
+      (t) => t.status == TimetableStatus.published,
+    );
     if (streamId != null && streamId.isNotEmpty) {
       for (final t in active) {
         if (t.streamId == streamId) return t;

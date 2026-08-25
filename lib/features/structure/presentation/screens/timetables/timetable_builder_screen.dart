@@ -210,7 +210,7 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
                     ),
                     StructureStatusBadge(
                       label: timetable.status.label,
-                      isActive: timetable.status == TimetableStatus.active,
+                      isActive: timetable.status == TimetableStatus.published,
                     ),
                   ],
                 ),

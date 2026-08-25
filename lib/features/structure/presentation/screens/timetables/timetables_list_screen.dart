@@ -78,7 +78,7 @@ class _TimetablesListScreenState extends State<TimetablesListScreen> {
             })
             .toList();
         final published = timetableRows
-            .where((t) => t.status == TimetableStatus.active)
+            .where((t) => t.status == TimetableStatus.published)
             .length;
         final drafts = timetableRows
             .where((t) => t.status == TimetableStatus.draft)
@@ -181,7 +181,7 @@ class _TimetablesListScreenState extends State<TimetablesListScreen> {
                             ),
                             title: Text(t.name),
                             subtitle: Text(
-                              t.status == TimetableStatus.active
+                              t.status == TimetableStatus.published
                                   ? 'Published · 100%'
                                   : 'Draft · needs validation',
                             ),
