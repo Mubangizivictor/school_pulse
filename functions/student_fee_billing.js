@@ -98,6 +98,45 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     return { planId, versionId: versionRef.id, totalUgx };
   });
 
+  // Read-only matching endpoint for the enrolment review. It returns only a
+  // published plan/version and never accepts a client-provided price.
+  exports.findMatchingFeePlan = onCall(async (request) => {
+    const data = request.data || {};
+    const schoolId = asText(data.schoolId);
+    await callerForSchool(request, schoolId);
+    const selector = {
+      academicYearId: asText(data.academicYearId),
+      termId: asText(data.termId),
+      classId: asText(data.classId),
+      studentCategory: normalizedName(data.studentCategory || "day"),
+    };
+    if (!selector.academicYearId || !selector.termId || !selector.classId) {
+      throw new HttpsError("invalid-argument", "academicYearId, termId, and classId are required.");
+    }
+    const plans = await db.collection(`schools/${schoolId}/fee_plans`)
+      .where("status", "==", "published")
+      .where("selector.academicYearId", "==", selector.academicYearId)
+      .where("selector.termId", "==", selector.termId)
+      .where("selector.classId", "==", selector.classId)
+      .where("selector.studentCategory", "==", selector.studentCategory)
+      .limit(2)
+      .get();
+    if (plans.empty) return { match: null };
+    if (plans.size > 1) {
+      throw new HttpsError("failed-precondition", "More than one published fee plan matches this learner.");
+    }
+    const plan = plans.docs[0].data();
+    const version = await plans.docs[0].ref.collection("versions").doc(plan.currentVersionId).get();
+    if (!version.exists) throw new HttpsError("failed-precondition", "The published fee-plan version is missing.");
+    const snapshot = version.data();
+    return {
+      match: {
+        planId: plans.docs[0].id, versionId: version.id, name: plan.name,
+        currency: "UGX", totalUgx: snapshot.totalUgx, lines: snapshot.lines,
+      },
+    };
+  });
+
   exports.issueStudentBill = onCall(async (request) => {
     const data = request.data || {};
     const schoolId = asText(data.schoolId);
