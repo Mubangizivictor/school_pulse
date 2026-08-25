@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:school_pulse/injection_container.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -214,104 +215,125 @@ class _DirectStudentRegistrationScreenState
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  const WizardStepProgress(
+                    currentStep: 0,
+                    stepCount: 2,
+                    stepTitle: 'Register Student',
+                  ),
+                  const SizedBox(height: 4),
                   Text(
                     'Creates the student record and continues straight into '
                     'enrollment setup, where full details are collected.',
                     style: TextStyle(color: AppColors.textSecondary(context)),
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<SchoolClass>(
-                    initialValue: _selectedClass,
-                    style: TextStyle(color: AppColors.textPrimary(context)),
-                    decoration: InputDecoration(
-                      labelText: 'Class',
-                      labelStyle: TextStyle(
-                        color: AppColors.textSecondary(context),
-                      ),
-                      border: const OutlineInputBorder(),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: AppColors.border(context),
+                  AppCard(
+                    child: Column(
+                      children: [
+                        DropdownButtonFormField<SchoolClass>(
+                          initialValue: _selectedClass,
+                          style: TextStyle(
+                            color: AppColors.textPrimary(context),
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Class',
+                            labelStyle: TextStyle(
+                              color: AppColors.textSecondary(context),
+                            ),
+                            border: const OutlineInputBorder(),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: AppColors.border(context),
+                              ),
+                            ),
+                          ),
+                          items: _classes
+                              .map(
+                                (c) => DropdownMenuItem(
+                                  value: c,
+                                  child: Text(c.name),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) =>
+                              setState(() => _selectedClass = v),
+                          validator: (v) => v == null ? 'Required' : null,
+                          hint: Text(
+                            _classes.isEmpty
+                                ? 'Loading classes…'
+                                : 'Select class',
+                            style: TextStyle(
+                              color: AppColors.textSecondary(context),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    items: _classes
-                        .map(
-                          (c) =>
-                              DropdownMenuItem(value: c, child: Text(c.name)),
-                        )
-                        .toList(),
-                    onChanged: (v) => setState(() => _selectedClass = v),
-                    validator: (v) => v == null ? 'Required' : null,
-                    hint: Text(
-                      _classes.isEmpty ? 'Loading classes…' : 'Select class',
-                      style: TextStyle(
-                        color: AppColors.textSecondary(context),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<AcademicYear>(
-                    initialValue: _selectedYear,
-                    style: TextStyle(color: AppColors.textPrimary(context)),
-                    decoration: InputDecoration(
-                      labelText: 'Academic year',
-                      labelStyle: TextStyle(
-                        color: AppColors.textSecondary(context),
-                      ),
-                      border: const OutlineInputBorder(),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: AppColors.border(context),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<AcademicYear>(
+                          initialValue: _selectedYear,
+                          style: TextStyle(
+                            color: AppColors.textPrimary(context),
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'Academic year',
+                            labelStyle: TextStyle(
+                              color: AppColors.textSecondary(context),
+                            ),
+                            border: const OutlineInputBorder(),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: AppColors.border(context),
+                              ),
+                            ),
+                          ),
+                          items: _academicYears
+                              .map(
+                                (y) => DropdownMenuItem(
+                                  value: y,
+                                  child: Text(y.name),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) => setState(() => _selectedYear = v),
+                          validator: (v) => v == null ? 'Required' : null,
+                          hint: Text(
+                            _academicYears.isEmpty
+                                ? 'Loading academic years…'
+                                : 'Select year',
+                            style: TextStyle(
+                              color: AppColors.textSecondary(context),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    items: _academicYears
-                        .map(
-                          (y) =>
-                              DropdownMenuItem(value: y, child: Text(y.name)),
-                        )
-                        .toList(),
-                    onChanged: (v) => setState(() => _selectedYear = v),
-                    validator: (v) => v == null ? 'Required' : null,
-                    hint: Text(
-                      _academicYears.isEmpty
-                          ? 'Loading academic years…'
-                          : 'Select year',
-                      style: TextStyle(
-                        color: AppColors.textSecondary(context),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _schoolCodeController,
-                    textCapitalization: TextCapitalization.characters,
-                    style: TextStyle(color: AppColors.textPrimary(context)),
-                    decoration: InputDecoration(
-                      labelText: 'School code prefix',
-                      helperText:
-                          'Used to build the student\'s human-readable code, e.g. "MH"',
-                      labelStyle: TextStyle(
-                        color: AppColors.textSecondary(context),
-                      ),
-                      border: const OutlineInputBorder(),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: AppColors.border(context),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _schoolCodeController,
+                          textCapitalization: TextCapitalization.characters,
+                          style: TextStyle(
+                            color: AppColors.textPrimary(context),
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'School code prefix',
+                            helperText:
+                                'Used to build the student\'s human-readable code, e.g. "MH"',
+                            labelStyle: TextStyle(
+                              color: AppColors.textSecondary(context),
+                            ),
+                            border: const OutlineInputBorder(),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: AppColors.border(context),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 24),
-                  FilledButton(
+                  PrimaryButton(
+                    label: 'Create Student & Continue',
+                    isLoading: _busy,
                     onPressed: _busy ? null : _register,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary(context),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: const Text('Create Student & Continue'),
                   ),
                 ],
               ),
