@@ -115,7 +115,7 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
       return;
     }
 
-    context.go('/school-bootstrap');
+    context.go('/school-splash');
   }
 
   @override

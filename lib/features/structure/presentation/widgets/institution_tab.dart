@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart' as file_picker;
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -210,9 +209,6 @@ class _InstitutionFormState extends State<_InstitutionForm> {
   late final TextEditingController _motto;
   late final TextEditingController _vision;
   late final TextEditingController _mission;
-  late final TextEditingController _primaryColor;
-  late final TextEditingController _secondaryColor;
-  late final TextEditingController _accentColor;
   late String _logoUrl;
   late String _badgeUrl;
   bool _isUploadingLogo = false;
@@ -269,15 +265,6 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     _motto = TextEditingController(text: p.motto);
     _vision = TextEditingController(text: p.vision);
     _mission = TextEditingController(text: p.mission);
-    _primaryColor = TextEditingController(
-      text: p.colors.isNotEmpty ? p.colors[0] : '',
-    );
-    _secondaryColor = TextEditingController(
-      text: p.colors.length > 1 ? p.colors[1] : '',
-    );
-    _accentColor = TextEditingController(
-      text: p.colors.length > 2 ? p.colors[2] : '',
-    );
     _logoUrl = p.logoUrl;
     _badgeUrl = p.badgeUrl;
     _schoolType = p.schoolType;
@@ -303,9 +290,6 @@ class _InstitutionFormState extends State<_InstitutionForm> {
       _motto,
       _vision,
       _mission,
-      _primaryColor,
-      _secondaryColor,
-      _accentColor,
       _registrationNumber,
       _ministryRegistrationNumber,
       _taxNumber,
@@ -339,9 +323,6 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     _motto.text = p.motto;
     _vision.text = p.vision;
     _mission.text = p.mission;
-    _primaryColor.text = p.colors.isNotEmpty ? p.colors[0] : '';
-    _secondaryColor.text = p.colors.length > 1 ? p.colors[1] : '';
-    _accentColor.text = p.colors.length > 2 ? p.colors[2] : '';
     _registrationNumber.text = p.registrationNumber;
     _ministryRegistrationNumber.text = p.ministryRegistrationNumber;
     _taxNumber.text = p.taxNumber;
@@ -382,10 +363,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     mission: _mission.text.trim(),
     logoUrl: _logoUrl,
     badgeUrl: _badgeUrl,
-    colors: [_primaryColor.text, _secondaryColor.text, _accentColor.text]
-        .map((color) => color.trim().toUpperCase())
-        .where((color) => color.isNotEmpty)
-        .toList(),
+    colors: const [],
     schoolType: _schoolType,
     schoolCategory: _schoolCategory,
     registrationNumber: _registrationNumber.text.trim(),
@@ -437,13 +415,6 @@ class _InstitutionFormState extends State<_InstitutionForm> {
               schoolType: profile.schoolType,
               logoUrl: profile.logoUrl,
               badgeUrl: profile.badgeUrl,
-              primaryColor: profile.colors.isNotEmpty
-                  ? profile.colors[0]
-                  : null,
-              secondaryColor: profile.colors.length > 1
-                  ? profile.colors[1]
-                  : null,
-              accentColor: profile.colors.length > 2 ? profile.colors[2] : null,
               version: widget.profile.brandingVersion + 1,
             ),
           ),
@@ -804,21 +775,6 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                       maxLines: 3,
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  _TwoCol(
-                    isNarrow: isNarrow,
-                    left: _colorField(_primaryColor, 'Primary colour'),
-                    right: _colorField(_secondaryColor, 'Secondary colour'),
-                  ),
-                  const SizedBox(height: 10),
-                  _colorField(_accentColor, 'Accent colour'),
-                  const Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: Text(
-                      'Use #RRGGBB values. Colours update tenant headers and buttons after saving.',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -1120,95 +1076,6 @@ class _InstitutionFormState extends State<_InstitutionForm> {
           vertical: 12,
         ),
       ),
-    );
-  }
-
-  Widget _colorField(TextEditingController controller, String label) {
-    Color? parseHex(String value) {
-      final hex = value.trim();
-      if (!RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(hex)) return null;
-      return Color(int.parse('FF${hex.substring(1)}', radix: 16));
-    }
-
-    return StatefulBuilder(
-      builder: (context, setFieldState) {
-        return TextFormField(
-          controller: controller,
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'#[0-9a-fA-F]{0,6}')),
-          ],
-          validator: (value) {
-            final color = value?.trim() ?? '';
-            if (color.isEmpty) return null;
-            return RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(color)
-                ? null
-                : 'Use a 6-digit hex colour';
-          },
-          onChanged: (_) => setFieldState(() {}),
-          style: const TextStyle(fontSize: 14),
-          decoration: InputDecoration(
-            labelText: label,
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
-            suffixIcon: Padding(
-              padding: const EdgeInsets.all(6),
-              child: GestureDetector(
-                onTap: () async {
-                  final initial = parseHex(controller.text) ?? Colors.blue;
-                  final picked = await showDialog<Color>(
-                    context: context,
-                    builder: (dialogContext) {
-                      var current = initial;
-                      return AlertDialog(
-                        title: Text(label),
-                        content: SingleChildScrollView(
-                          child: ColorPicker(
-                            pickerColor: current,
-                            onColorChanged: (c) => current = c,
-                            enableAlpha: false,
-                            labelTypes: const [ColorLabelType.hex],
-                          ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(dialogContext).pop(),
-                            child: const Text('Cancel'),
-                          ),
-                          FilledButton(
-                            onPressed: () =>
-                                Navigator.of(dialogContext).pop(current),
-                            child: const Text('Select'),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                  if (picked != null) {
-                    final hex =
-                        '#${picked.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
-                    controller.text = hex;
-                    setFieldState(() {});
-                  }
-                },
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: parseHex(controller.text) ?? Colors.transparent,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 

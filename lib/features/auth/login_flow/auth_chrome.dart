@@ -330,6 +330,7 @@ class AuthCtaButton extends StatelessWidget {
   final List<Color> gradient;
   final VoidCallback? onPressed;
   final bool isLoading;
+  final bool filled;
 
   const AuthCtaButton({
     super.key,
@@ -337,11 +338,14 @@ class AuthCtaButton extends StatelessWidget {
     required this.gradient,
     this.onPressed,
     this.isLoading = false,
+    this.filled = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null && !isLoading;
+    final background = filled ? Colors.black : Colors.white;
+    final foreground = filled ? Colors.white : Colors.black;
 
     return Opacity(
       opacity: enabled ? 1 : 0.45,
@@ -350,16 +354,12 @@ class AuthCtaButton extends StatelessWidget {
         child: Container(
           height: 58,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: gradient,
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
+            color: background,
             borderRadius: BorderRadius.circular(14),
             boxShadow: enabled
                 ? [
                     BoxShadow(
-                      color: gradient.last.withValues(alpha: 0.35),
+                      color: background.withValues(alpha: 0.25),
                       blurRadius: 20,
                       offset: const Offset(0, 6),
                     ),
@@ -370,25 +370,25 @@ class AuthCtaButton extends StatelessWidget {
             alignment: Alignment.center,
             children: [
               if (isLoading)
-                const SizedBox(
+                SizedBox(
                   width: 22,
                   height: 22,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.4,
-                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                    valueColor: AlwaysStoppedAnimation(foreground),
                   ),
                 )
               else ...[
                 Text(
                   label,
                   style: AppTypography.titleMedium.copyWith(
-                    color: Colors.white,
+                    color: foreground,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const Positioned(
+                Positioned(
                   right: AppSpacing.x2l,
-                  child: Icon(Icons.arrow_forward_rounded, color: Colors.white),
+                  child: Icon(Icons.arrow_forward_rounded, color: foreground),
                 ),
               ],
             ],
@@ -487,6 +487,7 @@ class AuthPortalScaffold extends StatelessWidget {
   final List<Widget> children;
   final bool alignToTop;
   final Color? backgroundColor;
+  final String? title;
 
   const AuthPortalScaffold({
     super.key,
@@ -494,6 +495,7 @@ class AuthPortalScaffold extends StatelessWidget {
     required this.children,
     this.alignToTop = false,
     this.backgroundColor,
+    this.title,
   });
 
   @override
@@ -513,6 +515,15 @@ class AuthPortalScaffold extends StatelessWidget {
           onPressed: () =>
               context.canPop() ? context.pop() : context.go('/welcome'),
         ),
+        title: title == null
+            ? null
+            : Text(
+                title!,
+                style: AppTypography.titleLarge.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
       ),
       body: SafeArea(
         child: LayoutBuilder(

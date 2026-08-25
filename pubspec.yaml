@@ -82,19 +82,12 @@ dev_dependencies:
   flutter_native_splash: ^2.4.3
 
 flutter_native_splash:
-  # Keep the native hand-off visually consistent with the app's blue palette.
   # The OS selects the dark variant before Flutter has restored the saved
   # in-app theme preference.
-  color: "#EAF3FF"
+  color: "#FFFFFF"
   image: assets/splash/splash_light_mode.png
-  color_dark: "#020B2D"
+  color_dark: "#000000"
   image_dark: assets/splash/splash_dark_mode.png
-
-  android_12:
-    image: assets/splash/android12/splash_light_mode.png
-    icon_background_color: "#EAF3FF"
-    image_dark: assets/splash/android12/splash_dark_mode.png
-    icon_background_color_dark: "#020B2D"
 
 flutter_launcher_icons:
   android: "ic_launcher"
@@ -114,7 +107,8 @@ flutter:
   generate: true
 
   assets:
-    - assets/loading_icon/loading_icon.png
+    - assets/loading_icon/loading_for_dark_mode.png
+    - assets/loading_icon/loading_for_light_mode.png
     - assets/logos/
     - assets/launcher_icons/
     - assets/splash/splash_dark_mode.png

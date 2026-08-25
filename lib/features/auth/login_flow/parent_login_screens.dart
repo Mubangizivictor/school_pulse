@@ -196,15 +196,9 @@ class _ChildIdScreenState extends State<ChildIdScreen> {
     return AuthPortalScaffold(
       accent: AppColors.emeraldGreen,
       alignToTop: true,
+      title: 'Parent Portal',
       backgroundColor: isDark ? AppColors.bgDark : Colors.white,
       children: [
-        // The back affordance stays at the top; the portal identity starts
-        // below it at the same visual position as the access-screen reference.
-        const SizedBox(height: 92),
-        const _ParentPortalBadge(),
-        const SizedBox(height: AppSpacing.x2l),
-        const _ParentPortalTitle(),
-        const SizedBox(height: AppSpacing.m),
         const _ParentPortalIntroduction(),
         const SizedBox(height: AppSpacing.x5l),
         _ParentAccessCodeField(
@@ -228,88 +222,20 @@ class _ChildIdScreenState extends State<ChildIdScreen> {
   }
 }
 
-class _ParentPortalBadge extends StatelessWidget {
-  const _ParentPortalBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const accent = AppColors.emeraldGreen;
-
-    return Center(
-      child: Container(
-        width: 96,
-        height: 96,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isDark ? AppColors.elevatedSurfaceDark : Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: accent.withValues(alpha: isDark ? 0.20 : 0.25),
-              blurRadius: 28,
-              spreadRadius: 4,
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.045),
-              blurRadius: 12,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: const Icon(
-          Icons.family_restroom_rounded,
-          color: accent,
-          size: 47,
-        ),
-      ),
-    );
-  }
-}
-
-class _ParentPortalTitle extends StatelessWidget {
-  const _ParentPortalTitle();
-
-  @override
-  Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    return RichText(
-      textAlign: TextAlign.center,
-      text: TextSpan(
-        style: AppTypography.headlineLarge.copyWith(
-          color: onSurface,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -1.1,
-        ),
-        children: const [
-          TextSpan(text: 'Parent '),
-          TextSpan(
-            text: 'Portal',
-            style: TextStyle(color: AppColors.emeraldGreen),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ParentPortalIntroduction extends StatelessWidget {
   const _ParentPortalIntroduction();
 
   @override
   Widget build(BuildContext context) {
     final textColor = Theme.of(context).colorScheme.onSurfaceVariant;
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
-        child: Text(
-          "Enter the code provided by the school office to access your child's records.",
-          textAlign: TextAlign.center,
-          style: AppTypography.bodyMedium.copyWith(
-            color: textColor,
-            fontWeight: FontWeight.w400,
-            height: 1.45,
-          ),
-        ),
+    return Text(
+      "Enter the code provided by the school office to access your child's records.",
+      textAlign: TextAlign.center,
+      style: AppTypography.bodyMedium.copyWith(
+        color: textColor,
+        fontSize: 14,
+        height: 1.45,
+        letterSpacing: 0.1,
       ),
     );
   }
@@ -333,8 +259,7 @@ class _ParentAccessCodeField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    const accent = AppColors.emeraldGreen;
+    final accent = AppColors.textPrimary(context);
     final radius = BorderRadius.circular(16);
 
     return Column(
@@ -364,13 +289,7 @@ class _ParentAccessCodeField extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant.withValues(alpha: .65),
               fontWeight: FontWeight.w400,
             ),
-            prefixIcon: const Icon(
-              Icons.vpn_key_outlined,
-              color: accent,
-              size: 29,
-            ),
-            filled: true,
-            fillColor: isDark ? AppColors.elevatedSurfaceDark : Colors.white,
+            prefixIcon: Icon(Icons.vpn_key_outlined, color: accent, size: 29),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.xl,
               vertical: AppSpacing.xl,
@@ -381,7 +300,7 @@ class _ParentAccessCodeField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: radius,
-              borderSide: const BorderSide(color: accent, width: 2),
+              borderSide: BorderSide(color: accent, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: radius,
@@ -405,21 +324,19 @@ class _ParentPortalHelpCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    const accent = AppColors.emeraldGreen;
+    final accent = AppColors.textPrimary(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.x3l,
         vertical: AppSpacing.x2l,
       ),
       decoration: BoxDecoration(
-        color: isDark
-            ? accent.withValues(alpha: .13)
-            : accent.withValues(alpha: .075),
+        color: accent.withValues(alpha: isDark ? .13 : .075),
         borderRadius: BorderRadius.circular(22),
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline_rounded, color: accent, size: 34),
+          Icon(Icons.info_outline_rounded, color: accent, size: 34),
           const SizedBox(width: AppSpacing.x2l),
           Expanded(
             child: Column(
@@ -444,7 +361,7 @@ class _ParentPortalHelpCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.l),
-          const Icon(Icons.support_agent_rounded, color: accent, size: 36),
+          Icon(Icons.support_agent_rounded, color: accent, size: 36),
         ],
       ),
     );
@@ -460,10 +377,12 @@ class _ParentContinueButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null && !isLoading;
-    const green = AppColors.emeraldGreen;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final disabled = Theme.of(
       context,
     ).colorScheme.onSurface.withValues(alpha: .20);
+    final fill = isDark ? Colors.white : Colors.black;
+    final foreground = isDark ? Colors.black : Colors.white;
 
     return Semantics(
       button: true,
@@ -478,19 +397,12 @@ class _ParentContinueButton extends StatelessWidget {
           child: Ink(
             height: 64,
             decoration: BoxDecoration(
-              color: enabled ? null : disabled,
-              gradient: enabled
-                  ? const LinearGradient(
-                      colors: [AppColors.successGreen, green],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    )
-                  : null,
+              color: enabled ? fill : disabled,
               borderRadius: BorderRadius.circular(18),
               boxShadow: enabled
                   ? [
                       BoxShadow(
-                        color: green.withValues(alpha: .22),
+                        color: fill.withValues(alpha: .25),
                         blurRadius: 18,
                         offset: const Offset(0, 8),
                       ),
@@ -501,27 +413,29 @@ class _ParentContinueButton extends StatelessWidget {
               alignment: Alignment.center,
               children: [
                 if (isLoading)
-                  const SizedBox(
+                  SizedBox(
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation(Colors.white),
+                      valueColor: AlwaysStoppedAnimation(
+                        enabled ? foreground : fill,
+                      ),
                     ),
                   )
                 else ...[
                   Text(
                     'Continue',
                     style: AppTypography.titleLarge.copyWith(
-                      color: Colors.white,
+                      color: enabled ? foreground : fill,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const Positioned(
+                  Positioned(
                     right: AppSpacing.x3l,
                     child: Icon(
                       Icons.arrow_forward_rounded,
-                      color: Colors.white,
+                      color: enabled ? foreground : fill,
                       size: 31,
                     ),
                   ),
@@ -541,7 +455,7 @@ class _ParentPortalPrivacyNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const accent = AppColors.emeraldGreen;
+    final accent = AppColors.textPrimary(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -552,7 +466,7 @@ class _ParentPortalPrivacyNote extends StatelessWidget {
             color: accent.withValues(alpha: .11),
             shape: BoxShape.circle,
           ),
-          child: const Stack(
+          child: Stack(
             alignment: Alignment.center,
             children: [
               Icon(Icons.shield_outlined, color: accent, size: 34),
@@ -736,7 +650,7 @@ class _ParentPinScreenState extends State<ParentPinScreen> {
             code: widget.accessCode.parentCode,
             phone: widget.phoneNumber,
           );
-          context.go('/school-bootstrap');
+          context.go('/school-splash');
         } else if (state is AuthFailureState) {
           setState(() => _error = state.message);
         }

@@ -372,7 +372,7 @@ class _IdCardPreview extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 340),
         child: AspectRatio(
-          aspectRatio: 856 / 540,
+          aspectRatio: 540 / 856,
           child: showFront
               ? _MetallicStudentIdFront(
                   student: student,

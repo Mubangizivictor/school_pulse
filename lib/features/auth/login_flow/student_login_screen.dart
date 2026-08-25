@@ -90,12 +90,32 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    const accent = AppColors.emeraldGreen;
 
     return Scaffold(
       backgroundColor: colors.brightness == Brightness.dark
           ? colors.surface
           : AppColors.surfaceLight,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/welcome'),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: colors.onSurface,
+          ),
+          tooltip: 'Back',
+        ),
+        title: Text(
+          'Student Hub',
+          style: AppTypography.titleLarge.copyWith(
+            color: colors.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, viewport) => SingleChildScrollView(
@@ -103,56 +123,22 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
             padding: const EdgeInsets.fromLTRB(28, 4, 28, AppSpacing.x4l),
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: viewport.maxHeight - 36),
-              child: Center(
+              child: Align(
+                alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 480),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: IconButton(
-                          onPressed: () => context.canPop()
-                              ? context.pop()
-                              : context.go('/welcome'),
-                          icon: Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            color: colors.onSurface,
-                            size: 32,
-                          ),
-                          tooltip: 'Back',
-                        ),
-                      ),
-                      const SizedBox(height: 26),
-                      const _StudentBadge(),
-                      const SizedBox(height: AppSpacing.xl),
-                      RichText(
-                        textAlign: TextAlign.center,
-                        text: TextSpan(
-                          style: AppTypography.headlineLarge.copyWith(
-                            color: colors.onSurface,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.8,
-                          ),
-                          children: const [
-                            TextSpan(text: 'Student '),
-                            TextSpan(
-                              text: 'Hub',
-                              style: TextStyle(color: accent),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.l),
+                      const SizedBox(height: AppSpacing.m),
                       Text(
-                        'Enter the code and PIN issued by\nyour school to get started.',
+                        'Enter the code and PIN issued by your school to get started.',
                         textAlign: TextAlign.center,
-                        style: AppTypography.bodyLarge.copyWith(
+                        style: AppTypography.bodyMedium.copyWith(
                           color: colors.onSurfaceVariant,
-                          fontSize: 16,
-                          height: 1.5,
-                          letterSpacing: 0,
+                          fontSize: 14,
+                          height: 1.45,
+                          letterSpacing: 0.1,
                         ),
                       ),
                       const SizedBox(height: 28),
@@ -184,39 +170,6 @@ class _StudentHubScreenState extends State<StudentHubScreen> {
       ),
     );
   }
-}
-
-class _StudentBadge extends StatelessWidget {
-  const _StudentBadge();
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Container(
-      width: 86,
-      height: 86,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Theme.of(context).colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.emeraldGreen.withValues(alpha: .18),
-            blurRadius: 26,
-            spreadRadius: 4,
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: .04),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: const Icon(
-        Icons.school_rounded,
-        color: AppColors.emeraldGreen,
-        size: 38,
-      ),
-    ),
-  );
 }
 
 class _AccessCodeCard extends StatelessWidget {
@@ -343,12 +296,13 @@ class _StepCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final accent = AppColors.textPrimary(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderLight.withValues(alpha: .75)),
+        border: Border.all(color: accent.withValues(alpha: .75)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: .015),
@@ -368,12 +322,12 @@ class _StepCard extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.emeraldGreen, width: 2),
+                  border: Border.all(color: accent, width: 2),
                 ),
                 child: Text(
                   '$step',
                   style: AppTypography.titleLarge.copyWith(
-                    color: AppColors.emeraldGreen,
+                    color: accent,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -413,6 +367,7 @@ class _PinCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final focused = focusNode.hasFocus;
     final filled = controller.text.isNotEmpty;
+    final accent = AppColors.textPrimary(context);
     return SizedBox(
       width: width,
       height: 52,
@@ -421,7 +376,7 @@ class _PinCell extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: focused ? AppColors.emeraldGreen : AppColors.borderLight,
+            color: focused ? accent : accent.withValues(alpha: .4),
             width: focused ? 1.8 : 1.4,
           ),
         ),
@@ -458,7 +413,7 @@ class _PinCell extends StatelessWidget {
                 '•',
                 style: TextStyle(
                   color: filled
-                      ? AppColors.emeraldGreen
+                      ? Theme.of(context).colorScheme.onSurface
                       : Theme.of(
                           context,
                         ).colorScheme.onSurfaceVariant.withValues(alpha: .42),
@@ -478,46 +433,49 @@ class _ContinueButton extends StatelessWidget {
   const _ContinueButton({required this.onPressed});
   final VoidCallback onPressed;
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 58,
-    child: Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(14),
-      child: Ink(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF18B4A4), AppColors.emeraldGreen],
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fill = isDark ? Colors.white : Colors.black;
+    final foreground = isDark ? Colors.black : Colors.white;
+    return SizedBox(
+      height: 58,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            color: fill,
           ),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onPressed,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Text(
-                'Continue',
-                style: AppTypography.headlineSmall.copyWith(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: onPressed,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Text(
+                  'Continue',
+                  style: AppTypography.headlineSmall.copyWith(
+                    color: foreground,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              const Positioned(
-                right: AppSpacing.x2l,
-                child: Icon(
-                  Icons.arrow_forward_rounded,
-                  color: Colors.white,
-                  size: 28,
+                Positioned(
+                  right: AppSpacing.x2l,
+                  child: Icon(
+                    Icons.arrow_forward_rounded,
+                    color: foreground,
+                    size: 28,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 TextStyle _descriptionStyle(BuildContext context) =>
@@ -554,11 +512,14 @@ InputDecoration _fieldDecoration(
   ),
   enabledBorder: OutlineInputBorder(
     borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: AppColors.borderLight, width: 1.4),
+    borderSide: BorderSide(
+      color: AppColors.textPrimary(context).withValues(alpha: .4),
+      width: 1.4,
+    ),
   ),
   focusedBorder: OutlineInputBorder(
     borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: AppColors.emeraldGreen, width: 1.8),
+    borderSide: BorderSide(color: AppColors.textPrimary(context), width: 1.8),
   ),
   errorBorder: OutlineInputBorder(
     borderRadius: BorderRadius.circular(12),

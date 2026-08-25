@@ -119,13 +119,18 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       }
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: isDark ? Colors.black : Colors.white,
       body: Stack(
         children: [
-          // Deep Space/Tech Background
+          // Monochrome backdrop
           Positioned.fill(
-            child: _BackgroundEffect(pulseAnimation: _pulseController),
+            child: _BackgroundEffect(
+              pulseAnimation: _pulseController,
+              isDark: isDark,
+            ),
           ),
 
           SafeArea(
@@ -173,19 +178,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 // Intentionally static: only the visual entrance
                                 // treatment was removed. _WelcomeLogo retains its
                                 // concealed long-press owner access behaviour.
-                                ClipRect(
-                                  child: Align(
-                                    alignment: Alignment.topCenter,
-                                    // The light and dark splash assets place
-                                    // their wordmarks at slightly different
-                                    // vertical positions. Keep a little extra
-                                    // room so neither wordmark is clipped.
-                                    heightFactor: 0.82,
-                                    child: _WelcomeLogo(
-                                      size: isMobile ? 190 : 220,
-                                    ),
-                                  ),
-                                ),
+                                _WelcomeLogo(size: isMobile ? 160 : 185),
 
                                 SizedBox(height: headerGap),
 
@@ -210,7 +203,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                     Icons.school_outlined,
                                     Icons.menu_book_rounded,
                                   ],
-                                  color: AppColors.electricBlue,
                                   opacity: _cardOpacities[0],
                                   slide: _cardSlides[0],
                                   pulse: _pulseController,
@@ -227,7 +219,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                     Icons.calendar_today_rounded,
                                     Icons.bar_chart_rounded,
                                   ],
-                                  color: AppColors.brightOrange,
                                   opacity: _cardOpacities[1],
                                   slide: _cardSlides[1],
                                   pulse: _pulseController,
@@ -243,7 +234,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                     Icons.menu_book_outlined,
                                     Icons.lightbulb_outline,
                                   ],
-                                  color: AppColors.emeraldGreen,
                                   opacity: _cardOpacities[2],
                                   slide: _cardSlides[2],
                                   pulse: _pulseController,
@@ -259,8 +249,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                   "© 2024 School Pulse. All rights reserved.",
                                   textAlign: TextAlign.center,
                                   style: AppTypography.labelSmall.copyWith(
-                                    color: AppColors.textSecondaryDark
-                                        .withValues(alpha: 0.5),
+                                    color: AppColors.textPrimary(
+                                      context,
+                                    ).withValues(alpha: 0.5),
                                     fontSize: 11,
                                     letterSpacing: 0.2,
                                   ),
@@ -282,12 +273,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 }
 
-/// Deep-space backdrop: a radial glow behind the logo, a second cooler glow
+/// Monochrome backdrop: a soft radial glow behind the logo, a second glow
 /// low on the page, and a faint dot grid - painted rather than shipped as an
-/// image so it scales to any screen size.
+/// image so it scales to any screen size. Black/white/gray only.
 class _BackgroundEffect extends StatelessWidget {
   final Animation<double> pulseAnimation;
-  const _BackgroundEffect({required this.pulseAnimation});
+  final bool isDark;
+  const _BackgroundEffect({required this.pulseAnimation, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -295,7 +287,10 @@ class _BackgroundEffect extends StatelessWidget {
       animation: pulseAnimation,
       builder: (context, _) {
         return CustomPaint(
-          painter: _BackgroundPainter(progress: pulseAnimation.value),
+          painter: _BackgroundPainter(
+            progress: pulseAnimation.value,
+            isDark: isDark,
+          ),
         );
       },
     );
@@ -304,30 +299,23 @@ class _BackgroundEffect extends StatelessWidget {
 
 class _BackgroundPainter extends CustomPainter {
   final double progress;
-  const _BackgroundPainter({required this.progress});
+  final bool isDark;
+  const _BackgroundPainter({required this.progress, required this.isDark});
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
+    final base = isDark ? Colors.black : Colors.white;
+    final accent = isDark ? Colors.white : Colors.black;
 
-    // Base vertical gradient - near-black at the edges, navy through the middle.
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF040B1C), Color(0xFF071235), Color(0xFF03081A)],
-          stops: [0.0, 0.45, 1.0],
-        ).createShader(rect),
-    );
+    canvas.drawRect(rect, Paint()..color = base);
 
     // Dot grid, fading out toward the bottom of the screen.
-    final dotPaint = Paint()..color = Colors.white.withValues(alpha: 0.05);
+    final dotPaint = Paint()..color = accent.withValues(alpha: 0.05);
     const spacing = 26.0;
     for (double y = 0; y < size.height; y += spacing) {
       final fade = (1.0 - (y / size.height)).clamp(0.0, 1.0);
-      dotPaint.color = Colors.white.withValues(alpha: 0.06 * fade);
+      dotPaint.color = accent.withValues(alpha: 0.06 * fade);
       for (double x = 0; x < size.width; x += spacing) {
         canvas.drawCircle(Offset(x, y), 1.0, dotPaint);
       }
@@ -342,8 +330,8 @@ class _BackgroundPainter extends CustomPainter {
         ..shader =
             RadialGradient(
               colors: [
-                const Color(0xFF1E6BFF).withValues(alpha: 0.20),
-                const Color(0xFF1E6BFF).withValues(alpha: 0.0),
+                accent.withValues(alpha: 0.12),
+                accent.withValues(alpha: 0.0),
               ],
             ).createShader(
               Rect.fromCircle(
@@ -353,7 +341,7 @@ class _BackgroundPainter extends CustomPainter {
             ),
     );
 
-    // Cooler secondary glow low on the page.
+    // Second glow low on the page.
     canvas.drawCircle(
       Offset(size.width * 0.5, size.height * 0.92),
       size.width * 0.7,
@@ -361,8 +349,8 @@ class _BackgroundPainter extends CustomPainter {
         ..shader =
             RadialGradient(
               colors: [
-                const Color(0xFF0A2A6B).withValues(alpha: 0.35),
-                const Color(0xFF0A2A6B).withValues(alpha: 0.0),
+                accent.withValues(alpha: 0.10),
+                accent.withValues(alpha: 0.0),
               ],
             ).createShader(
               Rect.fromCircle(
@@ -372,12 +360,12 @@ class _BackgroundPainter extends CustomPainter {
             ),
     );
 
-    // Fine electric-blue orbital lines add the distinctive sweeping motion of
-    // the reference without adding a bitmap that would blur on large screens.
+    // Fine orbital lines add the distinctive sweeping motion of the
+    // reference without adding a bitmap that would blur on large screens.
     final orbitPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.75
-      ..color = const Color(0xFF176BFF).withValues(alpha: 0.40);
+      ..color = accent.withValues(alpha: 0.22);
     for (var i = 0; i < 10; i++) {
       final offset = i * 4.2;
       final path = Path()
@@ -396,7 +384,7 @@ class _BackgroundPainter extends CustomPainter {
     final lowerOrbit = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0
-      ..color = const Color(0xFF176BFF).withValues(alpha: 0.38);
+      ..color = accent.withValues(alpha: 0.20);
     final lowerPath = Path()
       ..moveTo(-size.width * 0.1, size.height * 0.96)
       ..cubicTo(
@@ -412,7 +400,7 @@ class _BackgroundPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BackgroundPainter oldDelegate) =>
-      oldDelegate.progress != progress;
+      oldDelegate.progress != progress || oldDelegate.isDark != isDark;
 }
 
 /// The headline/subtitle pair, presented as a swipeable carousel that also
@@ -492,7 +480,7 @@ class _WelcomeCarouselState extends State<_WelcomeCarousel> {
     return Column(
       children: [
         SizedBox(
-          height: 68,
+          height: 54,
           // A manual swipe should not fight the timer, so any touch restarts
           // the countdown from zero.
           child: NotificationListener<ScrollNotification>(
@@ -523,19 +511,21 @@ class _WelcomeCarouselState extends State<_WelcomeCarousel> {
                           slide.title,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.manrope(
-                            color: AppColors.textPrimaryDark,
+                            color: AppColors.textPrimary(context),
                             fontWeight: FontWeight.w800,
-                            fontSize: 21,
-                            letterSpacing: -0.35,
+                            fontSize: 16,
+                            letterSpacing: -0.25,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
                           slide.body,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.manrope(
-                            fontSize: 15,
-                            color: const Color(0xFFB4C2DF),
+                            fontSize: 12,
+                            color: AppColors.textPrimary(
+                              context,
+                            ).withValues(alpha: 0.65),
                             fontWeight: FontWeight.w500,
                             letterSpacing: 0,
                           ),
@@ -561,7 +551,6 @@ class _RoleCard extends StatefulWidget {
   final String subtitle;
   final IconData icon;
   final List<IconData> bgIcons;
-  final Color color;
   final Animation<double> opacity;
   final Animation<Offset> slide;
   final Animation<double> pulse;
@@ -573,7 +562,6 @@ class _RoleCard extends StatefulWidget {
     required this.subtitle,
     required this.icon,
     required this.bgIcons,
-    required this.color,
     required this.opacity,
     required this.slide,
     required this.pulse,
@@ -610,24 +598,17 @@ class _RoleCardState extends State<_RoleCard> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: widget.color.withValues(
-                      alpha: _isHovered ? 0.85 : 0.55,
+                    color: Colors.white.withValues(
+                      alpha: _isHovered ? 0.55 : 0.35,
                     ),
                     width: 1.35,
                   ),
                   boxShadow: [
-                    // Accent halo in the card's own colour.
                     BoxShadow(
-                      color: widget.color.withValues(
-                        alpha: _isHovered ? 0.30 : 0.18,
+                      color: Colors.black.withValues(
+                        alpha: _isHovered ? 0.45 : 0.35,
                       ),
                       blurRadius: _isHovered ? 32 : 24,
-                      spreadRadius: 1,
-                    ),
-                    // Depth shadow so the glass lifts off the background.
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.35),
-                      blurRadius: 24,
                       offset: const Offset(0, 10),
                     ),
                   ],
@@ -637,19 +618,16 @@ class _RoleCardState extends State<_RoleCard> {
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                     child: Container(
-                      // Frosted glass: a low-alpha accent tint over the blur,
-                      // plus a white sheen falling from the top-left edge so
-                      // the surface catches light like real glass.
+                      // Frosted black glass, regardless of app theme, so the
+                      // card reads consistently over either splash background.
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            widget.color.withValues(alpha: 0.20),
-                            const Color(0xFF07122C).withValues(alpha: 0.86),
-                            const Color(0xFF071027).withValues(alpha: 0.94),
+                            Colors.black.withValues(alpha: 0.80),
+                            Colors.black.withValues(alpha: 0.90),
                           ],
-                          stops: const [0.0, 0.50, 1.0],
                         ),
                       ),
                       child: LayoutBuilder(
@@ -660,7 +638,7 @@ class _RoleCardState extends State<_RoleCard> {
                                 child: IgnorePointer(
                                   child: CustomPaint(
                                     painter: _CardWavePainter(
-                                      color: widget.color,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
@@ -700,33 +678,15 @@ class _RoleCardState extends State<_RoleCard> {
                                       width: 62,
                                       height: 62,
                                       decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                          colors: [
-                                            widget.color.withValues(
-                                              alpha: 0.85,
-                                            ),
-                                            widget.color.withValues(
-                                              alpha: 0.45,
-                                            ),
-                                          ],
+                                        color: Colors.white.withValues(
+                                          alpha: 0.14,
                                         ),
                                         borderRadius: BorderRadius.circular(18),
                                         border: Border.all(
                                           color: Colors.white.withValues(
-                                            alpha: 0.25,
+                                            alpha: 0.35,
                                           ),
                                         ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: widget.color.withValues(
-                                              alpha: 0.45,
-                                            ),
-                                            blurRadius: 16,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
                                       ),
                                       child: Icon(
                                         widget.icon,
@@ -746,7 +706,7 @@ class _RoleCardState extends State<_RoleCard> {
                                           Text(
                                             widget.title,
                                             style: GoogleFonts.manrope(
-                                              color: AppColors.textPrimaryDark,
+                                              color: Colors.white,
                                               fontWeight: FontWeight.bold,
                                               fontSize: 19,
                                               letterSpacing: -0.25,
@@ -756,8 +716,9 @@ class _RoleCardState extends State<_RoleCard> {
                                           Text(
                                             widget.subtitle,
                                             style: GoogleFonts.manrope(
-                                              color: AppColors.textSecondaryDark
-                                                  .withValues(alpha: 0.8),
+                                              color: Colors.white.withValues(
+                                                alpha: 0.75,
+                                              ),
                                               fontSize: 12.5,
                                               height: 1.25,
                                               fontWeight: FontWeight.w500,
@@ -772,12 +733,12 @@ class _RoleCardState extends State<_RoleCard> {
                                       width: 44,
                                       height: 44,
                                       decoration: BoxDecoration(
-                                        color: widget.color,
+                                        color: Colors.white,
                                         shape: BoxShape.circle,
                                       ),
                                       child: const Icon(
                                         Icons.chevron_right_rounded,
-                                        color: Colors.white,
+                                        color: Colors.black,
                                         size: 30,
                                       ),
                                     ),
@@ -867,15 +828,17 @@ class _BottomFeatures extends StatelessWidget {
           children: [
             Expanded(
               child: Divider(
-                color: AppColors.electricBlue.withValues(alpha: 0.24),
+                color: AppColors.textPrimary(context).withValues(alpha: 0.24),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 '•  W H Y   S C H O O L   P U L S E ?  •',
                 style: TextStyle(
-                  color: Color(0xFFB4C2DF),
+                  color: AppColors.textPrimary(
+                    context,
+                  ).withValues(alpha: 0.65),
                   fontSize: 9,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 2.1,
@@ -884,7 +847,7 @@ class _BottomFeatures extends StatelessWidget {
             ),
             Expanded(
               child: Divider(
-                color: AppColors.electricBlue.withValues(alpha: 0.24),
+                color: AppColors.textPrimary(context).withValues(alpha: 0.24),
               ),
             ),
           ],
@@ -899,7 +862,9 @@ class _BottomFeatures extends StatelessWidget {
                   Container(
                     width: 1,
                     margin: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                    color: Colors.white.withValues(alpha: 0.17),
+                    color: AppColors.textPrimary(
+                      context,
+                    ).withValues(alpha: 0.17),
                   ),
                 Expanded(child: items[i]),
               ],
@@ -923,6 +888,7 @@ class _FeatureItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = AppColors.textPrimary(context);
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
@@ -931,29 +897,16 @@ class _FeatureItem extends StatelessWidget {
           height: 48,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: RadialGradient(
-              colors: [
-                AppColors.electricBlue.withValues(alpha: 0.34),
-                const Color(0xFF172264).withValues(alpha: 0.32),
-              ],
-            ),
-            border: Border.all(
-              color: AppColors.electricBlue.withValues(alpha: 0.40),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.electricBlue.withValues(alpha: 0.16),
-                blurRadius: 15,
-              ),
-            ],
+            color: textColor.withValues(alpha: 0.10),
+            border: Border.all(color: textColor.withValues(alpha: 0.30)),
           ),
-          child: Icon(icon, color: AppColors.brightCyan, size: 26),
+          child: Icon(icon, color: textColor, size: 26),
         ),
         const SizedBox(height: 12),
         Text(
           label,
           style: GoogleFonts.manrope(
-            color: AppColors.textPrimaryDark,
+            color: textColor,
             fontWeight: FontWeight.bold,
             fontSize: 12.5,
             letterSpacing: -0.1,
@@ -964,7 +917,7 @@ class _FeatureItem extends StatelessWidget {
           desc,
           textAlign: TextAlign.center,
           style: GoogleFonts.manrope(
-            color: AppColors.textSecondaryDark.withValues(alpha: 0.7),
+            color: textColor.withValues(alpha: 0.7),
             fontSize: 9.5,
             height: 1.3,
             fontWeight: FontWeight.w500,

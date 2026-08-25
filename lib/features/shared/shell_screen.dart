@@ -669,6 +669,8 @@ class StaffShell extends StatelessWidget {
                 child: NavigationBar(
                   height: 64,
                   backgroundColor: AppColors.surfaceElevated(context),
+                  surfaceTintColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
                   indicatorColor: Colors.transparent,
                   selectedIndex: _calculateSelectedIndex(context),
                   onDestinationSelected: (idx) => _onItemTapped(idx, context),
@@ -685,9 +687,9 @@ class StaffShell extends StatelessWidget {
                             color: AppColors.primary(context),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.add_rounded,
-                            color: Colors.black,
+                            color: AppColors.background(context),
                             size: 22,
                           ),
                         ),
