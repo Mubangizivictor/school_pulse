@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../design_system/app_components.dart';
 import '../../../../design_system/components/pulse_table.dart';
 import '../../../../design_system/responsive/responsive_builder.dart';
 import '../../../../design_system/theme/app_colors.dart';
@@ -12,9 +13,10 @@ import '../../../shared/staff_dashboard/staff_dashboard_widgets.dart';
 import '../../../../injection_container.dart' as di;
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
-import '../../../structure/domain/entities/structure_entities.dart';
 import '../../../structure/presentation/bloc/structure_bloc.dart';
 import '../../../structure/presentation/bloc/structure_state.dart';
+import '../../../../core/user_roles.dart';
+import '../../data/datasources/student_profile_data_source.dart';
 import '../../domain/entities/admission_application.dart';
 import '../../domain/entities/student.dart';
 import '../../domain/entities/student_enums.dart';
@@ -26,12 +28,22 @@ import '../bloc/students_event.dart';
 import '../bloc/students_state.dart';
 import 'admissions_list_screen.dart' show admissionStatusLabel;
 
-/// Admin Students Dashboard + List, merged onto one screen: a search bar
-/// (name/class/code/admission no./parent name - all matched client-side
-/// against the already school-scoped roster StudentsBloc loads), a compact
-/// stat row, and the full filterable student list below it. No separate
-/// List screen is needed - AdminStudentsListScreen still exists for direct
-/// deep-linking but this is the primary entry point.
+/// Admin Students Dashboard + List, merged onto one screen: a search bar, a
+/// compact stat row, and the full filterable student list below it. No
+/// separate List screen is needed - AdminStudentsListScreen still exists for
+/// direct deep-linking but this is the primary entry point.
+///
+/// Search matches legal name, student number (studentCode/admissionNumber -
+/// never the raw Firestore doc id), class name and emergency-contact name
+/// client-side against the already school-scoped roster StudentsBloc loads.
+/// Guardian *phone* is the one exception: those numbers live in
+/// `student_guardians`, so a phone-like query fires an additional
+/// school-scoped lookup (see [_maybeLookupGuardianPhone]).
+///
+/// Known gaps, deliberately not faked: the roster is fetched whole
+/// (StudentRepository.getAllStudents has no server-side pagination), and
+/// there is no offline cache - both would need repository-level work beyond
+/// this screen.
 class AdminStudentsDashboardScreen extends StatelessWidget {
   const AdminStudentsDashboardScreen({super.key});
 
@@ -69,12 +81,122 @@ class _AdminStudentsView extends StatefulWidget {
   State<_AdminStudentsView> createState() => _AdminStudentsViewState();
 }
 
+/// User-facing status groups. These map onto the real [StudentStatus] values
+/// rather than adding enum members, so the filter reads the way staff talk
+/// about learners while the underlying data keeps its full granularity.
+enum StudentStatusGroup { active, provisional, inactive, transferred }
+
+const Map<StudentStatusGroup, Set<StudentStatus>> kStatusGroups = {
+  StudentStatusGroup.active: {StudentStatus.active, StudentStatus.enrolled},
+  StudentStatusGroup.provisional: {
+    StudentStatus.applicant,
+    StudentStatus.pendingAdmission,
+    StudentStatus.admitted,
+    StudentStatus.enrollmentInProgress,
+  },
+  StudentStatusGroup.inactive: {
+    StudentStatus.deferred,
+    StudentStatus.onLeave,
+    StudentStatus.suspended,
+    StudentStatus.withdrawn,
+    StudentStatus.completed,
+    StudentStatus.graduated,
+    StudentStatus.alumni,
+    StudentStatus.expelled,
+    StudentStatus.deceased,
+    StudentStatus.archived,
+  },
+  StudentStatusGroup.transferred: {
+    StudentStatus.transferredIn,
+    StudentStatus.transferredOut,
+  },
+};
+
+String _statusGroupLabel(StudentStatusGroup g) => switch (g) {
+  StudentStatusGroup.active => 'Active',
+  StudentStatusGroup.provisional => 'Provisional',
+  StudentStatusGroup.inactive => 'Inactive',
+  StudentStatusGroup.transferred => 'Transferred',
+};
+
 class _AdminStudentsViewState extends State<_AdminStudentsView> {
   String _query = '';
   StudentStatus? _statusFilter;
+  StudentStatusGroup? _statusGroupFilter;
   String? _classFilter;
+  String? _streamFilter;
+  String? _yearFilter;
+  StudentBoardingType? _boardingFilter;
   Gender? _genderFilter;
   final _searchController = TextEditingController();
+
+  /// Student ids whose guardian phone matches the current query, resolved
+  /// against `student_guardians` (a phone lives there, not on Student). Null
+  /// while the lookup is in flight or when the query isn't phone-like.
+  Set<String>? _guardianPhoneMatches;
+  String? _guardianLookupQuery;
+  final _profileDataSource = StudentProfileDataSource();
+
+  bool get _hasActiveFilters =>
+      _query.trim().isNotEmpty ||
+      _statusFilter != null ||
+      _statusGroupFilter != null ||
+      _classFilter != null ||
+      _streamFilter != null ||
+      _yearFilter != null ||
+      _boardingFilter != null ||
+      _genderFilter != null;
+
+  void _clearFilters() {
+    setState(() {
+      _query = '';
+      _searchController.clear();
+      _statusFilter = null;
+      _statusGroupFilter = null;
+      _classFilter = null;
+      _streamFilter = null;
+      _yearFilter = null;
+      _boardingFilter = null;
+      _genderFilter = null;
+      _guardianPhoneMatches = null;
+      _guardianLookupQuery = null;
+    });
+  }
+
+  /// Guardian-phone search runs as a separate school-scoped Firestore read,
+  /// because guardian contact details are not denormalised onto Student. It
+  /// only fires for queries that look like a phone number, so ordinary
+  /// name/code searches stay purely client-side as before.
+  void _maybeLookupGuardianPhone(String query) {
+    final trimmed = query.trim();
+    final isPhoneLike =
+        trimmed.length >= 3 && RegExp(r'^[\d+\s-]+$').hasMatch(trimmed);
+    if (!isPhoneLike) {
+      if (_guardianPhoneMatches != null || _guardianLookupQuery != null) {
+        setState(() {
+          _guardianPhoneMatches = null;
+          _guardianLookupQuery = null;
+        });
+      }
+      return;
+    }
+    if (_guardianLookupQuery == trimmed) return;
+    _guardianLookupQuery = trimmed;
+    _profileDataSource
+        .findStudentIdsByGuardianPhone(
+          schoolId: widget.schoolId,
+          phone: trimmed,
+        )
+        .then((matches) {
+          // Ignore a response that arrived after the query moved on.
+          if (!mounted || _guardianLookupQuery != trimmed) return;
+          setState(() => _guardianPhoneMatches = matches);
+        })
+        .catchError((_) {
+          if (!mounted) return;
+          setState(() => _guardianPhoneMatches = <String>{});
+        });
+  }
 
   @override
   void dispose() {
@@ -91,6 +213,7 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
     required String Function(String classId) classLabel,
   }) {
     final q = _query.trim().toLowerCase();
+    final guardianMatches = _guardianPhoneMatches;
     return students.where((s) {
       if (q.isNotEmpty) {
         // Parent name/phone visibility here matches what this screen
@@ -102,16 +225,30 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
               c.phoneNumber.toLowerCase().contains(q),
         );
         final matchesClass = classLabel(s.classId).toLowerCase().contains(q);
+        // A guardian-phone hit comes from the school-scoped
+        // `student_guardians` lookup, which is where enrolment actually
+        // records guardian numbers.
+        final matchesGuardianPhone = guardianMatches?.contains(s.id) ?? false;
         final matches =
             s.name.toLowerCase().contains(q) ||
             s.studentCode.toLowerCase().contains(q) ||
             s.admissionNumber.toLowerCase().contains(q) ||
             matchesClass ||
-            matchesParent;
+            matchesParent ||
+            matchesGuardianPhone;
         if (!matches) return false;
       }
       if (_statusFilter != null && s.status != _statusFilter) return false;
+      if (_statusGroupFilter != null &&
+          !(kStatusGroups[_statusGroupFilter]?.contains(s.status) ?? false)) {
+        return false;
+      }
       if (_classFilter != null && s.classId != _classFilter) return false;
+      if (_streamFilter != null && s.streamId != _streamFilter) return false;
+      if (_yearFilter != null && s.academicYearId != _yearFilter) return false;
+      if (_boardingFilter != null && s.boardingType != _boardingFilter) {
+        return false;
+      }
       if (_genderFilter != null && s.gender != _genderFilter) return false;
       return true;
     }).toList();
@@ -148,7 +285,8 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
     }).toList();
   }
 
-  void _openFilterSheet(List<SchoolClass> classes) {
+  void _openFilterSheet(StructureState structure) {
+    final classes = structure.classes;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -156,96 +294,222 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
         return StatefulBuilder(
           builder: (sheetContext, setSheetState) {
             final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
-            return Padding(
-              padding: EdgeInsets.only(
-                left: AppSpacing.xl,
-                right: AppSpacing.xl,
-                top: AppSpacing.xl,
-                bottom:
-                    MediaQuery.of(sheetContext).viewInsets.bottom +
-                    AppSpacing.xl,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Filter Students',
-                    style: AppTypography.titleMedium.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Text(
-                    'Class',
-                    style: AppTypography.labelLarge.copyWith(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.m),
-                  Wrap(
-                    spacing: AppSpacing.m,
-                    runSpacing: AppSpacing.m,
-                    children: [
-                      ChoiceChip(
-                        label: const Text('All'),
-                        selected: _classFilter == null,
-                        onSelected: (_) =>
-                            setSheetState(() => _classFilter = null),
+            return SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: AppSpacing.xl,
+                  right: AppSpacing.xl,
+                  top: AppSpacing.xl,
+                  bottom:
+                      MediaQuery.of(sheetContext).viewInsets.bottom +
+                      AppSpacing.xl,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Filter Students',
+                      style: AppTypography.titleMedium.copyWith(
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
                       ),
-                      for (final c in classes)
-                        ChoiceChip(
-                          label: Text(c.name),
-                          selected: _classFilter == c.id,
-                          onSelected: (_) =>
-                              setSheetState(() => _classFilter = c.id),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Text(
-                    'Gender',
-                    style: AppTypography.labelLarge.copyWith(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.m),
-                  Wrap(
-                    spacing: AppSpacing.m,
-                    children: [
-                      ChoiceChip(
-                        label: const Text('All'),
-                        selected: _genderFilter == null,
-                        onSelected: (_) =>
-                            setSheetState(() => _genderFilter = null),
+                    const SizedBox(height: AppSpacing.xl),
+                    Text(
+                      'Class',
+                      style: AppTypography.labelLarge.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
                       ),
-                      for (final g in Gender.values)
-                        ChoiceChip(
-                          label: Text(_genderLabel(g)),
-                          selected: _genderFilter == g,
-                          onSelected: (_) =>
-                              setSheetState(() => _genderFilter = g),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.x3l),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        setState(() {});
-                        Navigator.of(sheetContext).pop();
-                      },
-                      child: const Text('Apply Filters'),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: AppSpacing.m),
+                    Wrap(
+                      spacing: AppSpacing.m,
+                      runSpacing: AppSpacing.m,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('All'),
+                          selected: _classFilter == null,
+                          onSelected: (_) =>
+                              setSheetState(() => _classFilter = null),
+                        ),
+                        for (final c in classes)
+                          ChoiceChip(
+                            label: Text(c.name),
+                            selected: _classFilter == c.id,
+                            onSelected: (_) =>
+                                setSheetState(() => _classFilter = c.id),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    Text(
+                      'Gender',
+                      style: AppTypography.labelLarge.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.m),
+                    Wrap(
+                      spacing: AppSpacing.m,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('All'),
+                          selected: _genderFilter == null,
+                          onSelected: (_) =>
+                              setSheetState(() => _genderFilter = null),
+                        ),
+                        for (final g in Gender.values)
+                          ChoiceChip(
+                            label: Text(_genderLabel(g)),
+                            selected: _genderFilter == g,
+                            onSelected: (_) =>
+                                setSheetState(() => _genderFilter = g),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    Text(
+                      'Academic year',
+                      style: AppTypography.labelLarge.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.m),
+                    Wrap(
+                      spacing: AppSpacing.m,
+                      runSpacing: AppSpacing.m,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('All'),
+                          selected: _yearFilter == null,
+                          onSelected: (_) =>
+                              setSheetState(() => _yearFilter = null),
+                        ),
+                        for (final y in structure.academicYears)
+                          ChoiceChip(
+                            label: Text(y.name),
+                            selected: _yearFilter == y.id,
+                            onSelected: (_) =>
+                                setSheetState(() => _yearFilter = y.id),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    Text(
+                      'Stream',
+                      style: AppTypography.labelLarge.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.m),
+                    Wrap(
+                      spacing: AppSpacing.m,
+                      runSpacing: AppSpacing.m,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('All'),
+                          selected: _streamFilter == null,
+                          onSelected: (_) =>
+                              setSheetState(() => _streamFilter = null),
+                        ),
+                        // Streams narrow to the selected class when there is
+                        // one, so the chip list stays meaningful.
+                        for (final st in structure.streams.where(
+                          (x) =>
+                              _classFilter == null || x.classId == _classFilter,
+                        ))
+                          ChoiceChip(
+                            label: Text(st.name),
+                            selected: _streamFilter == st.id,
+                            onSelected: (_) =>
+                                setSheetState(() => _streamFilter = st.id),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    Text(
+                      'Status',
+                      style: AppTypography.labelLarge.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.m),
+                    Wrap(
+                      spacing: AppSpacing.m,
+                      runSpacing: AppSpacing.m,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('All'),
+                          selected: _statusGroupFilter == null,
+                          onSelected: (_) =>
+                              setSheetState(() => _statusGroupFilter = null),
+                        ),
+                        for (final g in StudentStatusGroup.values)
+                          ChoiceChip(
+                            label: Text(_statusGroupLabel(g)),
+                            selected: _statusGroupFilter == g,
+                            onSelected: (_) => setSheetState(
+                              () => _statusGroupFilter = _statusGroupFilter == g
+                                  ? null
+                                  : g,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    Text(
+                      'Day / boarding',
+                      style: AppTypography.labelLarge.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.m),
+                    Wrap(
+                      spacing: AppSpacing.m,
+                      runSpacing: AppSpacing.m,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('All'),
+                          selected: _boardingFilter == null,
+                          onSelected: (_) =>
+                              setSheetState(() => _boardingFilter = null),
+                        ),
+                        for (final b in StudentBoardingType.values)
+                          ChoiceChip(
+                            label: Text(_boardingLabel(b)),
+                            selected: _boardingFilter == b,
+                            onSelected: (_) =>
+                                setSheetState(() => _boardingFilter = b),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.x3l),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {});
+                          Navigator.of(sheetContext).pop();
+                        },
+                        child: const Text('Apply Filters'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -253,6 +517,24 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
       },
     );
   }
+
+  /// Whether the signed-in user may see a learner's finance indicator in the
+  /// list. Same role set the profile's Fees tab gates on, so the directory
+  /// never hints at a balance the user could not open.
+  static bool _canSeeFinance(BuildContext context) {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return false;
+    const permitted = {
+      UserRole.bursar,
+      UserRole.director,
+      UserRole.headTeacher,
+      UserRole.schoolAdmin,
+    };
+    return auth.user.roles.any(permitted.contains);
+  }
+
+  static String _boardingLabel(StudentBoardingType b) =>
+      '${b.name[0].toUpperCase()}${b.name.substring(1)}';
 
   String _genderLabel(Gender g) {
     switch (g) {
@@ -397,7 +679,10 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                         children: [
                           TextField(
                             controller: _searchController,
-                            onChanged: (v) => setState(() => _query = v),
+                            onChanged: (v) {
+                              setState(() => _query = v);
+                              _maybeLookupGuardianPhone(v);
+                            },
                             style: AppTypography.bodyMedium.copyWith(
                               color: isDark
                                   ? AppColors.textPrimaryDark
@@ -405,7 +690,7 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                             ),
                             decoration: InputDecoration(
                               hintText:
-                                  'Search name, class, student code or parent',
+                                  'Search name, student number or guardian phone',
                               prefixIcon: const Icon(Icons.search),
                               filled: true,
                               fillColor: isDark
@@ -520,7 +805,8 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                                       ? AppColors.textPrimaryDark
                                       : AppColors.textPrimaryLight,
                                 ),
-                                onPressed: () => _openFilterSheet(classes),
+                                onPressed: () =>
+                                    _openFilterSheet(structureState),
                               ),
                             ],
                           ),
@@ -668,16 +954,20 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                                     }
 
                                     if (filtered.isEmpty) {
-                                      return Center(
-                                        child: Text(
-                                          'No students match the current filters',
-                                          style: AppTypography.bodyMedium
-                                              .copyWith(
-                                                color: isDark
-                                                    ? AppColors.textMutedDark
-                                                    : AppColors.textMutedLight,
-                                              ),
-                                        ),
+                                      return EmptyState(
+                                        icon: Icons.groups_2_outlined,
+                                        title: 'No learners found',
+                                        message: _hasActiveFilters
+                                            ? 'No learners match the current '
+                                                  'search and filters.'
+                                            : 'No learners have been enrolled '
+                                                  'yet.',
+                                        ctaLabel: _hasActiveFilters
+                                            ? 'Clear filters'
+                                            : null,
+                                        onCtaPressed: _hasActiveFilters
+                                            ? _clearFilters
+                                            : null,
                                       );
                                     }
 
@@ -702,6 +992,9 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                                             s.status,
                                           ),
                                           initials: _initials(s.name),
+                                          showFinanceIndicator: _canSeeFinance(
+                                            context,
+                                          ),
                                           onTap: () => context.push(
                                             '/staff/admin/students/${s.id}',
                                           ),
@@ -782,6 +1075,10 @@ class _StudentRow extends StatelessWidget {
   final String statusLabel;
   final Color statusColor;
   final String initials;
+
+  /// Bursar/admin only. The indicator marks that a fee account exists to
+  /// open, not a balance figure - amounts stay behind the profile's Fees tab.
+  final bool showFinanceIndicator;
   final VoidCallback onTap;
 
   const _StudentRow({
@@ -790,6 +1087,7 @@ class _StudentRow extends StatelessWidget {
     required this.statusLabel,
     required this.statusColor,
     required this.initials,
+    required this.showFinanceIndicator,
     required this.onTap,
   });
 
@@ -852,6 +1150,14 @@ class _StudentRow extends StatelessWidget {
                 ],
               ),
             ),
+            if (showFinanceIndicator) ...[
+              Icon(
+                Icons.account_balance_wallet_outlined,
+                size: 18,
+                color: AppColors.textMuted(context),
+              ),
+              const SizedBox(width: AppSpacing.m),
+            ],
             _StatusPill(label: statusLabel, color: statusColor),
           ],
         ),

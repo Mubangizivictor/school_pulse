@@ -28,16 +28,36 @@ import '../bloc/student_identity_state.dart';
 /// iPhones. That screen remains reachable separately (router path
 /// 'student-id-card') for the dedicated print/preview flow; this screen
 /// links out to it for the full card preview instead of re-rendering it.
-class IdentityAndCardsScreen extends StatefulWidget {
+class IdentityAndCardsScreen extends StatelessWidget {
   final Student student;
 
   const IdentityAndCardsScreen({super.key, required this.student});
 
   @override
-  State<IdentityAndCardsScreen> createState() => _IdentityAndCardsScreenState();
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Identity & Cards')),
+    body: IdentityAndCardsBody(student: student),
+  );
 }
 
-class _IdentityAndCardsScreenState extends State<IdentityAndCardsScreen> {
+/// The screen's content without its own [Scaffold], so the admin student
+/// profile can host it as an Identity tab while the standalone route
+/// ([IdentityAndCardsScreen]) keeps working unchanged. Both paths share this
+/// one implementation - the bloc wiring, NFC flow and QR sections are not
+/// duplicated.
+///
+/// Callers must provide a [StudentIdentityBloc] above this widget, exactly as
+/// the standalone route already does.
+class IdentityAndCardsBody extends StatefulWidget {
+  final Student student;
+
+  const IdentityAndCardsBody({super.key, required this.student});
+
+  @override
+  State<IdentityAndCardsBody> createState() => _IdentityAndCardsBodyState();
+}
+
+class _IdentityAndCardsBodyState extends State<IdentityAndCardsBody> {
   @override
   void initState() {
     super.initState();
@@ -51,118 +71,113 @@ class _IdentityAndCardsScreenState extends State<IdentityAndCardsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Identity & Cards')),
-      body: BlocConsumer<StudentIdentityBloc, StudentIdentityState>(
-        listener: (context, state) {
-          if (state is StudentIdentityActionSuccess) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
-          } else if (state is StudentIdentityError) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
-          }
-        },
-        builder: (context, state) {
-          if (state is StudentIdentityLoading ||
-              state is StudentIdentityInitial) {
-            return const Center(child: SchoolPulseLoader());
-          }
+    return BlocConsumer<StudentIdentityBloc, StudentIdentityState>(
+      listener: (context, state) {
+        if (state is StudentIdentityActionSuccess) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
+        } else if (state is StudentIdentityError) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
+        }
+      },
+      builder: (context, state) {
+        if (state is StudentIdentityLoading ||
+            state is StudentIdentityInitial) {
+          return const Center(child: SchoolPulseLoader());
+        }
 
-          if (state is StudentIdentityError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.error_outline_rounded, size: 48),
-                    const SizedBox(height: 12),
-                    Text(state.message, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () => context.read<StudentIdentityBloc>().add(
-                        LoadStudentIdentityEvent(
-                          widget.student.id,
-                          schoolId: widget.student.schoolId,
-                        ),
+        if (state is StudentIdentityError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline_rounded, size: 48),
+                  const SizedBox(height: 12),
+                  Text(state.message, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () => context.read<StudentIdentityBloc>().add(
+                      LoadStudentIdentityEvent(
+                        widget.student.id,
+                        schoolId: widget.student.schoolId,
                       ),
-                      child: const Text('Try Again'),
                     ),
-                  ],
-                ),
+                    child: const Text('Try Again'),
+                  ),
+                ],
               ),
-            );
-          }
+            ),
+          );
+        }
 
-          if (state is StudentIdentityLoaded) {
-            return ResponsiveBuilder(
-              builder: (context, layout) {
-                final isDesktop = layout == ResponsiveLayout.desktop;
-                final idCardSection = _IdCardPreviewSection(
-                  student: widget.student,
-                );
-                final nfcSection = _NfcManagementSection(
-                  student: widget.student,
-                  identity: state.identity,
-                  assignedCardUid: state.assignedCardUid,
-                );
-                final qrSection = _QrCredentialSection(
-                  identity: state.identity,
-                );
+        if (state is StudentIdentityLoaded) {
+          return ResponsiveBuilder(
+            builder: (context, layout) {
+              final isDesktop = layout == ResponsiveLayout.desktop;
+              final idCardSection = _IdCardPreviewSection(
+                student: widget.student,
+              );
+              final nfcSection = _NfcManagementSection(
+                student: widget.student,
+                identity: state.identity,
+                assignedCardUid: state.assignedCardUid,
+              );
+              final qrSection = _QrCredentialSection(identity: state.identity);
 
-                if (isDesktop) {
-                  return Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1100),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 4,
-                              child: Column(children: [idCardSection]),
+              if (isDesktop) {
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1100),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 4,
+                            child: Column(children: [idCardSection]),
+                          ),
+                          const SizedBox(width: 24),
+                          Expanded(
+                            flex: 6,
+                            child: Column(
+                              children: [
+                                nfcSection,
+                                const SizedBox(height: 24),
+                                qrSection,
+                              ],
                             ),
-                            const SizedBox(width: 24),
-                            Expanded(
-                              flex: 6,
-                              child: Column(
-                                children: [
-                                  nfcSection,
-                                  const SizedBox(height: 24),
-                                  qrSection,
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                }
-
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      idCardSection,
-                      const SizedBox(height: 24),
-                      nfcSection,
-                      const SizedBox(height: 24),
-                      qrSection,
-                    ],
                   ),
                 );
-              },
-            );
-          }
+              }
 
-          return const SizedBox.shrink();
-        },
-      ),
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    idCardSection,
+                    const SizedBox(height: 24),
+                    nfcSection,
+                    const SizedBox(height: 24),
+                    qrSection,
+                  ],
+                ),
+              );
+            },
+          );
+        }
+
+        return const SizedBox.shrink();
+      },
     );
   }
 }

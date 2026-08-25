@@ -2224,8 +2224,15 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: ':id',
+                  // An optional `?tab=` query parameter selects the initial
+                  // profile tab (used by the enrolment success screen's "Set
+                  // up fee plan" action). Omitting it - the existing plain
+                  // `students/:id` deep link - still lands on Overview.
                   builder: (context, state) => AdminStudentProfileScreen(
                     studentId: state.pathParameters['id']!,
+                    initialTab:
+                        int.tryParse(state.uri.queryParameters['tab'] ?? '') ??
+                        StudentProfileTab.overview,
                   ),
                   routes: [
                     GoRoute(

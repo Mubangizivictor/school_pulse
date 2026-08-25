@@ -21,10 +21,36 @@ import 'package:school_pulse/injection_container.dart' as di;
 
 import 'admin_student_documents_screen.dart';
 import 'student_portal_codes_screen.dart';
+import 'student_profile_tabs.dart';
+
+/// Tab indices on [AdminStudentProfileScreen], so callers can deep-link to a
+/// specific tab without hard-coding a magic number at the call site.
+abstract final class StudentProfileTab {
+  static const overview = 0;
+  static const guardians = 1;
+  static const academics = 2;
+  static const attendance = 3;
+  static const fees = 4;
+  static const documents = 5;
+  static const services = 6;
+  static const identity = 7;
+  static const history = 8;
+  static const count = 9;
+}
 
 class AdminStudentProfileScreen extends StatefulWidget {
   final String studentId;
-  const AdminStudentProfileScreen({super.key, required this.studentId});
+
+  /// Which tab to open on. Defaults to Overview so the plain
+  /// `students/:id` deep link is unaffected; the route reads an optional
+  /// `?tab=` query parameter to set it (see router.dart).
+  final int initialTab;
+
+  const AdminStudentProfileScreen({
+    super.key,
+    required this.studentId,
+    this.initialTab = StudentProfileTab.overview,
+  });
   @override
   State<AdminStudentProfileScreen> createState() =>
       _AdminStudentProfileScreenState();
@@ -91,6 +117,7 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
             student: student,
             canMutate: _canMutate(context),
             onChanged: _reload,
+            initialTab: widget.initialTab,
           ),
         );
       },
@@ -102,10 +129,12 @@ class _Profile extends StatefulWidget {
   final Student student;
   final bool canMutate;
   final VoidCallback onChanged;
+  final int initialTab;
   const _Profile({
     required this.student,
     required this.canMutate,
     required this.onChanged,
+    required this.initialTab,
   });
   @override
   State<_Profile> createState() => _ProfileState();
@@ -117,7 +146,13 @@ class _ProfileState extends State<_Profile>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 4, vsync: this);
+    // initialIndex is clamped so a malformed `?tab=` query parameter can't
+    // throw on a route that would otherwise render fine.
+    _tabs = TabController(
+      length: StudentProfileTab.count,
+      vsync: this,
+      initialIndex: widget.initialTab.clamp(0, StudentProfileTab.count - 1),
+    );
   }
 
   @override
@@ -142,15 +177,25 @@ class _ProfileState extends State<_Profile>
             ),
           ),
         ),
+        // Nine tabs never fit a phone width evenly, so the bar scrolls
+        // horizontally rather than crushing every label - icons are dropped
+        // here too, since text-only tabs stay readable at this density.
         child: TabBar(
           controller: _tabs,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           indicatorSize: TabBarIndicatorSize.label,
           dividerColor: Colors.transparent,
           tabs: const [
-            Tab(icon: Icon(Icons.home_rounded), text: 'Overview'),
-            Tab(icon: Icon(Icons.groups_2_outlined), text: 'Guardian'),
-            Tab(icon: Icon(Icons.menu_book_outlined), text: 'Academic'),
-            Tab(icon: Icon(Icons.grid_view_rounded), text: 'More'),
+            Tab(text: 'Overview'),
+            Tab(text: 'Guardians'),
+            Tab(text: 'Academics'),
+            Tab(text: 'Attendance'),
+            Tab(text: 'Fees'),
+            Tab(text: 'Documents'),
+            Tab(text: 'Services'),
+            Tab(text: 'Identity'),
+            Tab(text: 'History'),
           ],
         ),
       ),
@@ -159,13 +204,26 @@ class _ProfileState extends State<_Profile>
           controller: _tabs,
           children: [
             _Overview(student: widget.student),
-            _Guardians(student: widget.student),
-            _Academic(student: widget.student),
-            _More(
+            GuardiansTab(student: widget.student, canMutate: widget.canMutate),
+            AcademicsTab(student: widget.student),
+            AttendanceTab(student: widget.student),
+            FeesTab(student: widget.student),
+            // The same body the standalone documents route renders, given
+            // the already-loaded Student and the profile's own reload
+            // callback rather than reading state.extra.
+            StudentDocumentsBody(
               student: widget.student,
               canMutate: widget.canMutate,
-              onChanged: widget.onChanged,
+              onDocumentsChanged: widget.onChanged,
             ),
+            ServicesTab(student: widget.student),
+            // IdentityAndCardsBody needs a StudentIdentityBloc above it, the
+            // same one the standalone route provides.
+            BlocProvider(
+              create: (_) => di.sl<StudentIdentityBloc>(),
+              child: IdentityAndCardsBody(student: widget.student),
+            ),
+            HistoryTab(student: widget.student),
           ],
         ),
       ),
@@ -415,118 +473,6 @@ class _InfoRow extends StatelessWidget {
       ],
     ),
   );
-}
-
-class _Guardians extends StatelessWidget {
-  final Student student;
-  const _Guardians({required this.student});
-  @override
-  Widget build(BuildContext context) => _Scroll([
-    if (student.emergencyContacts.isEmpty)
-      const Padding(
-        padding: EdgeInsets.only(top: 64),
-        child: EmptyState(
-          icon: Icons.groups_2_outlined,
-          title: 'No guardians on file',
-          message: 'Emergency contacts for this student will appear here.',
-        ),
-      )
-    else
-      ...student.emergencyContacts.map(
-        (x) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: AppCard(
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const CircleAvatar(child: Icon(Icons.person_outline)),
-              title: Text(x.name),
-              subtitle: Text(
-                '${x.relationship}\n${x.phoneNumber}${x.email?.isNotEmpty == true ? '\n${x.email}' : ''}',
-              ),
-              isThreeLine: x.email?.isNotEmpty == true,
-            ),
-          ),
-        ),
-      ),
-  ]);
-}
-
-class _Academic extends StatelessWidget {
-  final Student student;
-  const _Academic({required this.student});
-  @override
-  Widget build(BuildContext context) => _Scroll([
-    BlocBuilder<StructureBloc, StructureState>(
-      builder: (context, s) {
-        final c =
-            s.classes.where((x) => x.id == student.classId).firstOrNull?.name ??
-            '—';
-        final stream = s.streams
-            .where((x) => x.id == student.streamId)
-            .firstOrNull
-            ?.name;
-        final y =
-            s.academicYears
-                .where((x) => x.id == student.academicYearId)
-                .firstOrNull
-                ?.name ??
-            '—';
-        return AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Academic Placement',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 8),
-              _InfoRow(Icons.class_outlined, 'Class', c),
-              const Divider(height: 1),
-              if (stream != null) ...[
-                _InfoRow(Icons.account_tree_outlined, 'Stream', stream),
-                const Divider(height: 1),
-              ],
-              _InfoRow(Icons.calendar_month_outlined, 'Academic Year', y),
-            ],
-          ),
-        );
-      },
-    ),
-  ]);
-}
-
-class _More extends StatelessWidget {
-  final Student student;
-  final bool canMutate;
-  final VoidCallback onChanged;
-  const _More({
-    required this.student,
-    required this.canMutate,
-    required this.onChanged,
-  });
-  @override
-  Widget build(BuildContext context) => _Scroll([
-    AppCard(
-      padding: EdgeInsets.zero,
-      child: ListTile(
-        leading: const Icon(Icons.folder_outlined),
-        title: const Text('Documents'),
-        subtitle: const Text('View student documents'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => AdminStudentDocumentsScreen(
-              student: student,
-              canMutate: canMutate,
-              onDocumentsChanged: onChanged,
-            ),
-          ),
-        ),
-      ),
-    ),
-  ]);
 }
 
 class ActionsSheet extends StatelessWidget {

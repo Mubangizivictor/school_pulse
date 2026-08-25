@@ -15,6 +15,8 @@ import 'package:school_pulse/features/structure/domain/entities/structure_entiti
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import 'package:school_pulse/injection_container.dart';
 
+import 'admin_student_profile_screen.dart' show StudentProfileTab;
+
 /// Direct enrolment is deliberately independent of admission applications.
 /// It saves a tenant-scoped draft until the server atomically activates it.
 class DirectStudentRegistrationScreen extends StatefulWidget {
@@ -1033,19 +1035,30 @@ class _Success extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
+            // Each follow-up action lands on the tab that actually serves it,
+            // rather than all four dropping the user on Overview.
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: () => c.go('/staff/admin/students/$studentId'),
+                onPressed: () => c.go(
+                  '/staff/admin/students/$studentId'
+                  '?tab=${StudentProfileTab.fees}',
+                ),
                 child: const Text('Set up fee plan'),
               ),
             ),
             TextButton(
-              onPressed: () => c.go('/staff/admin/students/$studentId'),
+              onPressed: () => c.go(
+                '/staff/admin/students/$studentId'
+                '?tab=${StudentProfileTab.identity}',
+              ),
               child: const Text('Issue ID card later'),
             ),
             TextButton(
-              onPressed: () => c.go('/staff/admin/students/$studentId'),
+              onPressed: () => c.go(
+                '/staff/admin/students/$studentId'
+                '?tab=${StudentProfileTab.services}',
+              ),
               child: const Text('Add transport or boarding'),
             ),
           ],
