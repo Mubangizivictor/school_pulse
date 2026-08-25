@@ -14,6 +14,7 @@ class InstitutionSettingsScreen extends StatelessWidget {
     this.wizardStepId = 'institution-info',
     this.tabKey,
     this.showAppBar = true,
+    this.wizardMode = false,
   });
 
   final int? wizardStep;
@@ -21,6 +22,7 @@ class InstitutionSettingsScreen extends StatelessWidget {
   final String wizardStepId;
   final GlobalKey<InstitutionTabState>? tabKey;
   final bool showAppBar;
+  final bool wizardMode;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -37,6 +39,6 @@ class InstitutionSettingsScreen extends StatelessWidget {
           )
         : null,
     backgroundColor: showAppBar ? null : Colors.transparent,
-    body: InstitutionTab(key: tabKey),
+    body: InstitutionTab(key: tabKey, wizardMode: wizardMode),
   );
 }

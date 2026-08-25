@@ -300,6 +300,10 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       }
       await _write(emit, () => repository.deleteAcademicYear(event.yearId));
     });
+    on<ArchiveAcademicYearRequested>(
+      (event, emit) async =>
+          _write(emit, () => repository.archiveAcademicYear(event.yearId)),
+    );
     on<SetCurrentAcademicYearRequested>((event, emit) async {
       final matches = state.academicYears.where(
         (item) => item.id == event.yearId && !item.isArchived,

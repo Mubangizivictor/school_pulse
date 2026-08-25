@@ -107,9 +107,12 @@ class _StructureScreenState extends State<StructureScreen> {
       builder: (context, state) {
         if (_index == 1) {
           return _WizardStepScreen(
-            title: 'Academic Year',
+            title: 'Academic years',
             stepNumber: _index + 1,
             totalSteps: _steps.length,
+            continueEnabled: state.academicYears.any(
+              (year) => year.isCurrent && !year.isArchived,
+            ),
             onBack: () async {
               if (!await _confirmLeaveCurrentStep()) return;
               setState(() => _index--);
@@ -388,13 +391,10 @@ class _StructureScreenState extends State<StructureScreen> {
             ),
           );
         }
-        return _WizardStepScreen(
-          title: 'Institution Settings',
-          stepNumber: _index + 1,
-          totalSteps: _steps.length,
+        return _InstitutionProfileStep(
           onBack: () async {
             if (!await _confirmLeaveCurrentStep()) return;
-            setState(() => _index--);
+            if (context.mounted) Navigator.of(context).maybePop();
           },
           onContinue: () async {
             if (!await _confirmLeaveCurrentStep()) return;
@@ -404,6 +404,7 @@ class _StructureScreenState extends State<StructureScreen> {
           child: InstitutionSettingsScreen(
             tabKey: _institutionTabKey,
             showAppBar: false,
+            wizardMode: true,
           ),
         );
       },
@@ -412,7 +413,8 @@ class _StructureScreenState extends State<StructureScreen> {
 
   Future<bool> _confirmLeaveCurrentStep() async {
     if (_index == 0) {
-      return _institutionTabKey.currentState?.saveIfDirty() ?? true;
+      return _institutionTabKey.currentState?.saveAndValidateForContinue() ??
+          false;
     }
     if (_index == 12) {
       return _timetableSectionKey.currentState?.saveIfDirty() ?? true;
@@ -760,6 +762,7 @@ class _WizardStepScreen extends StatelessWidget {
     required this.child,
     this.continueLabel = 'Save & Continue',
     this.continueIcon = Icons.arrow_forward_rounded,
+    this.continueEnabled = true,
   });
 
   final String title;
@@ -770,6 +773,7 @@ class _WizardStepScreen extends StatelessWidget {
   final Widget child;
   final String continueLabel;
   final IconData continueIcon;
+  final bool continueEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -819,10 +823,128 @@ class _WizardStepScreen extends StatelessWidget {
                 child: PrimaryButton(
                   label: continueLabel,
                   icon: continueIcon,
-                  onPressed: onContinue,
+                  onPressed: continueEnabled ? onContinue : null,
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The first setup screen intentionally has its own mobile treatment. Later
+/// setup steps continue using [_WizardStepScreen] unchanged.
+class _InstitutionProfileStep extends StatelessWidget {
+  const _InstitutionProfileStep({
+    required this.onBack,
+    required this.onContinue,
+    required this.child,
+  });
+
+  final Future<void> Function() onBack;
+  final Future<void> Function() onContinue;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(30, 20, 30, 16),
+              child: Column(
+                children: [
+                  SizedBox(
+                    height: 42,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            onPressed: onBack,
+                            icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                            color: Colors.black,
+                          ),
+                        ),
+                        const Text(
+                          'Institution profile',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Step 1 of 16',
+                        style: TextStyle(color: Colors.black, fontSize: 20),
+                      ),
+                      Text(
+                        '6%',
+                        style: TextStyle(color: Colors.black, fontSize: 20),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    height: 12,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.black, width: 1.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.centerLeft,
+                    child: FractionallySizedBox(
+                      widthFactor: 1 / 16,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: Colors.black),
+            Expanded(child: child),
+          ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(30, 12, 30, 22),
+          child: SizedBox(
+            height: 80,
+            child: FilledButton.icon(
+              onPressed: onContinue,
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              iconAlignment: IconAlignment.end,
+              icon: const Icon(Icons.arrow_forward_rounded, size: 30),
+              label: const Text(
+                'Save & continue',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+              ),
+            ),
           ),
         ),
       ),

@@ -190,7 +190,7 @@ class AcademicStructureScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Choose the current school year.',
+              'Create the academic year your school is currently using. It is used for terms, enrolment, classes and reports.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 height: 1.4,
@@ -210,6 +210,9 @@ class AcademicStructureScreen extends StatelessWidget {
                         }
                         final year = state.academicYears[index];
                         final scheme = Theme.of(context).colorScheme;
+                        final terms = state.academicTerms
+                            .where((term) => term.academicYearId == year.id)
+                            .length;
                         return AppCard(
                           borderColor: year.isCurrent
                               ? scheme.primary.withValues(alpha: 0.5)
@@ -247,21 +250,8 @@ class AcademicStructureScreen extends StatelessWidget {
                                         ],
                                       ),
                                     ),
-                                    if (year.isCurrent) ...[
-                                      Icon(
-                                        Icons.check_circle_rounded,
-                                        color: scheme.primary,
-                                        size: 23,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        'Current',
-                                        style: TextStyle(
-                                          color: scheme.primary,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ],
+                                    if (year.isCurrent)
+                                      const Chip(label: Text('Current')),
                                     PopupMenuButton<String>(
                                       icon: const Icon(Icons.more_vert),
                                       onSelected: (action) {
@@ -270,6 +260,14 @@ class AcademicStructureScreen extends StatelessWidget {
                                             SetCurrentAcademicYearRequested(
                                               year.id,
                                               schoolId,
+                                            ),
+                                          );
+                                          return;
+                                        }
+                                        if (action == 'archive') {
+                                          bloc.add(
+                                            ArchiveAcademicYearRequested(
+                                              year.id,
                                             ),
                                           );
                                           return;
@@ -300,33 +298,37 @@ class AcademicStructureScreen extends StatelessWidget {
                                           value: 'edit',
                                           child: Text('Edit'),
                                         ),
+                                        if (!year.isCurrent && !year.isArchived)
+                                          const PopupMenuItem(
+                                            value: 'archive',
+                                            child: Text('Archive'),
+                                          ),
                                       ],
                                     ),
                                   ],
                                 ),
-                                if (year.isCurrent && onSetUpTerms != null) ...[
-                                  const SizedBox(height: 12),
-                                  InkWell(
-                                    onTap: onSetUpTerms,
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Set up terms',
-                                          style: TextStyle(
-                                            color: scheme.primary,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                        Icon(
-                                          Icons.chevron_right,
-                                          color: scheme.primary,
-                                        ),
-                                      ],
+                                const Divider(height: 28),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.calendar_month_outlined,
+                                      size: 18,
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        terms == 0
+                                            ? 'Terms not set up'
+                                            : '$terms term${terms == 1 ? '' : 's'} set up',
+                                      ),
+                                    ),
+                                    if (onSetUpTerms != null)
+                                      OutlinedButton(
+                                        onPressed: onSetUpTerms,
+                                        child: const Text('Set up terms'),
+                                      ),
+                                  ],
+                                ),
                               ],
                             ),
                           ),

@@ -311,6 +311,13 @@ class DeleteAcademicYearRequested extends StructureEvent {
   List<Object?> get props => [yearId];
 }
 
+class ArchiveAcademicYearRequested extends StructureEvent {
+  final String yearId;
+  const ArchiveAcademicYearRequested(this.yearId);
+  @override
+  List<Object?> get props => [yearId];
+}
+
 class SetCurrentAcademicYearRequested extends StructureEvent {
   final String yearId;
   final String schoolId;

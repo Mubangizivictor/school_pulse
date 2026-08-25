@@ -341,23 +341,18 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
 
   @override
   Future<void> saveAcademicYear(AcademicYear year) async {
-    // A current year is a school-wide singleton. Keep the writes in one
-    // batch so listeners never observe a partially-updated current state.
-    // years selected at once.
     if (!year.isCurrent) {
-      await _years.doc(year.id).set(_yearToMap(year), SetOptions(merge: true));
+      final reference = _years.doc(year.id);
+      await firestore.runTransaction((transaction) async {
+        final existing = await transaction.get(reference);
+        transaction.set(reference, {
+          ..._yearToMap(year),
+          if (!existing.exists) 'createdAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      });
       return;
     }
-    final current = await _years
-        .where('schoolId', isEqualTo: year.schoolId)
-        .where('isCurrent', isEqualTo: true)
-        .get();
-    final batch = firestore.batch();
-    for (final doc in current.docs) {
-      if (doc.id != year.id) batch.update(doc.reference, {'isCurrent': false});
-    }
-    batch.set(_years.doc(year.id), _yearToMap(year));
-    await batch.commit();
+    await _setCurrentYearTransaction(year.id, year.schoolId, year: year);
   }
 
   @override
@@ -365,21 +360,48 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
 
   @override
   Future<void> setCurrentAcademicYear(String yearId, String schoolId) async {
-    final target = await _years.doc(yearId).get();
-    if (!target.exists || target.data()?['schoolId'] != schoolId) {
+    await _setCurrentYearTransaction(yearId, schoolId);
+  }
+
+  Future<void> _setCurrentYearTransaction(
+    String yearId,
+    String schoolId, {
+    AcademicYear? year,
+  }) => firestore.runTransaction((transaction) async {
+    final target = _years.doc(yearId);
+    final targetSnapshot = await transaction.get(target);
+    if (year == null &&
+        (!targetSnapshot.exists ||
+            targetSnapshot.data()?['schoolId'] != schoolId)) {
       throw StateError('Academic year is not available for this school.');
     }
-    final existingCurrent = await _years
+    // The Flutter Firestore transaction API only supports document reads.
+    // The canonical current set is tenant-filtered and is committed together
+    // with the target, so observers do not receive a partial state.
+    final current = await _years
         .where('schoolId', isEqualTo: schoolId)
         .where('isCurrent', isEqualTo: true)
         .get();
-    final batch = firestore.batch();
-    for (final doc in existingCurrent.docs) {
-      batch.update(doc.reference, {'isCurrent': false});
+    for (final doc in current.docs) {
+      if (doc.id != yearId)
+        transaction.update(doc.reference, {
+          'isCurrent': false,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
     }
-    batch.update(target.reference, {'isCurrent': true, 'isArchived': false});
-    await batch.commit();
-  }
+    if (year != null) {
+      transaction.set(target, {
+        ..._yearToMap(year),
+        if (!targetSnapshot.exists) 'createdAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } else {
+      transaction.update(target, {
+        'isCurrent': true,
+        'isArchived': false,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+  });
 
   @override
   Future<void> archiveAcademicYear(String yearId) =>
@@ -410,6 +432,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'description': e.description,
     'isCurrent': e.isCurrent,
     'isArchived': e.isArchived,
+    'updatedAt': FieldValue.serverTimestamp(),
   };
 
   // Academic Terms

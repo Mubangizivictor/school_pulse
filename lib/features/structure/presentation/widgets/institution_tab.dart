@@ -21,7 +21,11 @@ import '../bloc/structure_state.dart';
 /// hub (no separate profile screen/route) - one continuous scrollable form
 /// matching the compact enterprise-panel reference layout.
 class InstitutionTab extends StatefulWidget {
-  const InstitutionTab({super.key});
+  const InstitutionTab({super.key, this.wizardMode = false});
+
+  /// Step 1 has a deliberately focused mobile layout. The same editor is
+  /// still available in the management area without changing that surface.
+  final bool wizardMode;
 
   @override
   State<InstitutionTab> createState() => InstitutionTabState();
@@ -46,11 +50,21 @@ class InstitutionTabState extends State<InstitutionTab> {
     return formState.saveIfDirty();
   }
 
+  /// Validates the wizard's required Step 1 fields before moving ahead.
+  Future<bool> saveAndValidateForContinue() async {
+    final formState = _formKey.currentState;
+    if (formState == null) return false;
+    return formState.saveAndValidateForContinue();
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<StructureBloc, StructureState>(
-      builder: (context, state) =>
-          _InstitutionForm(key: _formKey, profile: state.institutionProfile),
+      builder: (context, state) => _InstitutionForm(
+        key: _formKey,
+        profile: state.institutionProfile,
+        wizardMode: widget.wizardMode,
+      ),
     );
   }
 }
@@ -194,8 +208,13 @@ const _ugandaDistricts = [
 ];
 
 class _InstitutionForm extends StatefulWidget {
-  const _InstitutionForm({super.key, required this.profile});
+  const _InstitutionForm({
+    super.key,
+    required this.profile,
+    required this.wizardMode,
+  });
   final InstitutionProfile profile;
+  final bool wizardMode;
 
   @override
   State<_InstitutionForm> createState() => _InstitutionFormState();
@@ -218,6 +237,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
   late final TextEditingController _registrationNumber;
   late final TextEditingController _ministryRegistrationNumber;
   late final TextEditingController _taxNumber;
+  late final TextEditingController _countryText;
   late String _country;
   late String _district;
   late final TextEditingController _city;
@@ -275,6 +295,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     );
     _taxNumber = TextEditingController(text: p.taxNumber);
     _country = p.country.isEmpty ? 'Uganda' : p.country;
+    _countryText = TextEditingController(text: _country);
     _district = p.district;
     _city = TextEditingController(text: p.city);
     _address = TextEditingController(text: p.address);
@@ -293,6 +314,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
       _registrationNumber,
       _ministryRegistrationNumber,
       _taxNumber,
+      _countryText,
       _city,
       _address,
       _gpsLat,
@@ -326,6 +348,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     _registrationNumber.text = p.registrationNumber;
     _ministryRegistrationNumber.text = p.ministryRegistrationNumber;
     _taxNumber.text = p.taxNumber;
+    _countryText.text = p.country.isEmpty ? 'Uganda' : p.country;
     _city.text = p.city;
     _address.text = p.address;
     _gpsLat.text = p.gpsLat?.toString() ?? '';
@@ -355,7 +378,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     super.dispose();
   }
 
-  InstitutionProfile _buildProfile() => InstitutionProfile(
+  InstitutionProfile _buildProfile() => widget.profile.copyWith(
     name: _name.text.trim(),
     shortName: _shortName.text.trim(),
     motto: _motto.text.trim(),
@@ -363,13 +386,12 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     mission: _mission.text.trim(),
     logoUrl: _logoUrl,
     badgeUrl: _badgeUrl,
-    colors: const [],
     schoolType: _schoolType,
     schoolCategory: _schoolCategory,
     registrationNumber: _registrationNumber.text.trim(),
     ministryRegistrationNumber: _ministryRegistrationNumber.text.trim(),
     taxNumber: _taxNumber.text.trim(),
-    country: _country,
+    country: widget.wizardMode ? _countryText.text.trim() : _country,
     district: _district,
     city: _city.text.trim(),
     address: _address.text.trim(),
@@ -378,7 +400,6 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     phone: _phone.text.trim(),
     email: _email.text.trim(),
     website: _website.text.trim(),
-    socialMedia: widget.profile.socialMedia,
     timeZone: _timeZone,
     currency: _currency,
     language: _language,
@@ -453,6 +474,14 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     if (!_isDirty) return true;
     if (!_formKey.currentState!.validate()) return false;
     await _save();
+    return true;
+  }
+
+  /// Used by the wizard's primary action. Unlike a background save, moving
+  /// forward must always check the fields that make Step 1 complete.
+  Future<bool> saveAndValidateForContinue() async {
+    if (!_formKey.currentState!.validate()) return false;
+    if (_isDirty) await _save();
     return true;
   }
 
@@ -654,7 +683,9 @@ class _InstitutionFormState extends State<_InstitutionForm> {
       );
       await reference.putData(
         bytes,
-        SettableMetadata(contentType: 'image/$extension'),
+        SettableMetadata(
+          contentType: extension == 'jpg' ? 'image/jpeg' : 'image/$extension',
+        ),
       );
       final url = await reference.getDownloadURL();
       if (!mounted) return;
@@ -737,6 +768,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.wizardMode) return _buildWizardForm(context);
     final scheme = Theme.of(context).colorScheme;
     return Form(
       key: _formKey,
@@ -1050,8 +1082,475 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     );
   }
 
+  Widget _buildWizardForm(BuildContext context) {
+    final monochromeTheme = Theme.of(context).copyWith(
+      brightness: Brightness.light,
+      colorScheme: const ColorScheme.light(
+        primary: Colors.black,
+        onPrimary: Colors.white,
+        surface: Colors.white,
+        onSurface: Colors.black,
+        outline: Colors.black,
+      ),
+    );
+    return Theme(
+      data: monochromeTheme,
+      child: Form(
+        key: _formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 520;
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(30, 28, 30, 116),
+              children: [
+                const Text(
+                  'Tell us about your institution.',
+                  style: TextStyle(fontSize: 23, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 34),
+                _wizardField(
+                  controller: _name,
+                  label: 'Institution name *',
+                  hint: 'Enter institution name',
+                  validator: _requiredValidator,
+                ),
+                _wizardField(
+                  controller: _shortName,
+                  label: 'Short name (optional)',
+                  hint: 'Enter short name',
+                ),
+                _WizardTwoColumn(
+                  isNarrow: isNarrow,
+                  left: _wizardDropdown(
+                    label: 'School type *',
+                    hint: 'Select school type',
+                    value: _schoolType,
+                    values: _schoolTypes,
+                    required: true,
+                    onChanged: (value) => setState(() {
+                      _schoolType = value;
+                      _isDirty = true;
+                    }),
+                  ),
+                  right: _wizardDropdown(
+                    label: 'School category (optional)',
+                    hint: 'Select school category',
+                    value: _schoolCategory,
+                    values: _schoolCategories,
+                    onChanged: (value) => setState(() {
+                      _schoolCategory = value;
+                      _isDirty = true;
+                    }),
+                  ),
+                ),
+                _WizardTwoColumn(
+                  isNarrow: isNarrow,
+                  left: _wizardDistrictField(),
+                  right: _wizardField(
+                    controller: _city,
+                    label: 'Town *',
+                    hint: 'Enter town',
+                    validator: _requiredValidator,
+                  ),
+                ),
+                _wizardField(
+                  controller: _address,
+                  label: 'Physical address (optional)',
+                  hint: 'Enter physical address',
+                ),
+                _wizardField(
+                  controller: _phone,
+                  label: 'Main phone *',
+                  hint: 'Enter main phone number',
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+                  ],
+                  validator: _phoneValidator,
+                ),
+                _wizardField(
+                  controller: _email,
+                  label: 'Main email *',
+                  hint: 'Enter main email address',
+                  keyboardType: TextInputType.emailAddress,
+                  validator: _emailValidator,
+                ),
+                const SizedBox(height: 22),
+                _wizardSectionTitle('About the institution'),
+                _wizardField(
+                  controller: _motto,
+                  label: 'Motto (optional)',
+                  hint: 'Enter motto',
+                ),
+                _wizardField(
+                  controller: _vision,
+                  label: 'Vision (optional)',
+                  hint: 'Enter vision',
+                  maxLines: 3,
+                ),
+                _wizardField(
+                  controller: _mission,
+                  label: 'Mission (optional)',
+                  hint: 'Enter mission',
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 20),
+                _wizardSectionTitle('Brand identity'),
+                _WizardTwoColumn(
+                  isNarrow: isNarrow,
+                  left: _BrandImagePicker(
+                    label: 'School logo (optional)',
+                    actionLabel: _logoUrl.isEmpty
+                        ? 'Upload logo'
+                        : 'Replace logo',
+                    imageUrl: _logoUrl,
+                    isUploading: _isUploadingLogo,
+                    monochrome: true,
+                    onPick: () => _pickBrandingImage(isLogo: true),
+                    onRemove: () => _removeBrandingImage(isLogo: true),
+                  ),
+                  right: _BrandImagePicker(
+                    label: 'School crest (optional)',
+                    actionLabel: _badgeUrl.isEmpty
+                        ? 'Upload crest'
+                        : 'Replace crest',
+                    imageUrl: _badgeUrl,
+                    isUploading: _isUploadingBadge,
+                    monochrome: true,
+                    onPick: () => _pickBrandingImage(isLogo: false),
+                    onRemove: () => _removeBrandingImage(isLogo: false),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                _wizardSectionTitle('Registration details'),
+                _wizardField(
+                  controller: _registrationNumber,
+                  label: 'Registration number (optional)',
+                  hint: 'Enter registration number',
+                ),
+                _wizardField(
+                  controller: _ministryRegistrationNumber,
+                  label: 'Ministry registration (optional)',
+                  hint: 'Enter ministry registration',
+                ),
+                _wizardField(
+                  controller: _taxNumber,
+                  label: 'TIN (optional)',
+                  hint: 'Enter TIN',
+                  keyboardType: TextInputType.number,
+                ),
+                _wizardField(
+                  controller: _website,
+                  label: 'Website (optional)',
+                  hint: 'Enter website',
+                  keyboardType: TextInputType.url,
+                  validator: _websiteValidator,
+                ),
+                const SizedBox(height: 28),
+                _wizardSectionTitle('Location coordinates'),
+                _wizardCountryField(),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: _detectLocation,
+                    icon: const Icon(Icons.my_location_outlined),
+                    label: const Text('Use current location'),
+                  ),
+                ),
+                _WizardTwoColumn(
+                  isNarrow: isNarrow,
+                  left: _wizardField(
+                    controller: _gpsLat,
+                    label: 'GPS latitude (optional)',
+                    hint: 'Enter latitude',
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                      signed: true,
+                    ),
+                  ),
+                  right: _wizardField(
+                    controller: _gpsLng,
+                    label: 'GPS longitude (optional)',
+                    hint: 'Enter longitude',
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                      signed: true,
+                    ),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(top: 4),
+                  child: Text(
+                    'You can update optional details later.',
+                    style: TextStyle(color: Color(0xFF6B6B6B), fontSize: 15),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _wizardSectionTitle(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 20),
+    child: Text(
+      text,
+      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+    ),
+  );
+
+  Widget _wizardField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 24),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 10),
+        TextFormField(
+          controller: controller,
+          maxLines: maxLines,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          validator: validator,
+          decoration: _wizardInputDecoration(hint),
+        ),
+      ],
+    ),
+  );
+
+  InputDecoration _wizardInputDecoration(String hint) => InputDecoration(
+    hintText: hint,
+    hintStyle: const TextStyle(color: Color(0xFF737373), fontSize: 17),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 21),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(17),
+      borderSide: const BorderSide(color: Colors.black, width: 1.5),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(17),
+      borderSide: const BorderSide(color: Colors.black, width: 2),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(17),
+      borderSide: const BorderSide(color: Colors.black, width: 1.5),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(17),
+      borderSide: const BorderSide(color: Colors.black, width: 2),
+    ),
+  );
+
+  Widget _wizardDropdown({
+    required String label,
+    required String hint,
+    required String value,
+    required List<String> values,
+    required ValueChanged<String> onChanged,
+    bool required = false,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 24),
+    child: FormField<String>(
+      initialValue: value,
+      validator: required
+          ? (value) => value == null || value.isEmpty ? 'Required' : null
+          : null,
+      builder: (state) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 10),
+          _wizardOutlinedContainer(
+            DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: values.contains(value) ? value : null,
+                isExpanded: true,
+                hint: Text(
+                  hint,
+                  style: const TextStyle(
+                    color: Color(0xFF737373),
+                    fontSize: 17,
+                  ),
+                ),
+                icon: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: Colors.black,
+                ),
+                items: values
+                    .map(
+                      (item) =>
+                          DropdownMenuItem(value: item, child: Text(item)),
+                    )
+                    .toList(),
+                onChanged: (selected) {
+                  if (selected != null) {
+                    onChanged(selected);
+                    state.didChange(selected);
+                  }
+                },
+              ),
+            ),
+            state.hasError,
+          ),
+          if (state.hasError)
+            Padding(
+              padding: const EdgeInsets.only(top: 6, left: 12),
+              child: Text(
+                state.errorText!,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _wizardDistrictField() => Padding(
+    padding: const EdgeInsets.only(bottom: 24),
+    child: FormField<String>(
+      initialValue: _district,
+      validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+      builder: (state) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'District *',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 10),
+          InkWell(
+            onTap: () async {
+              final result = await _selectDistrict();
+              if (result != null) {
+                setState(() {
+                  _district = result;
+                  _isDirty = true;
+                });
+                state.didChange(result);
+              }
+            },
+            child: _wizardOutlinedContainer(
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _district.isEmpty ? 'Select district' : _district,
+                      style: TextStyle(
+                        color: _district.isEmpty
+                            ? const Color(0xFF737373)
+                            : Colors.black,
+                        fontSize: 17,
+                      ),
+                    ),
+                  ),
+                  const Icon(Icons.keyboard_arrow_down_rounded),
+                ],
+              ),
+              state.hasError,
+            ),
+          ),
+          if (state.hasError)
+            Padding(
+              padding: const EdgeInsets.only(top: 6, left: 12),
+              child: Text(
+                state.errorText!,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+
+  Future<String?> _selectDistrict() async {
+    String? selected;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Select district'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: ListView(
+            children: _ugandaDistricts
+                .map(
+                  (district) => ListTile(
+                    title: Text(district),
+                    onTap: () {
+                      selected = district;
+                      Navigator.pop(dialogContext);
+                    },
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      ),
+    );
+    return selected;
+  }
+
+  Widget _wizardCountryField() => _wizardField(
+    controller: _countryText,
+    label: 'Country (optional)',
+    hint: 'Uganda',
+  );
+
+  Widget _wizardOutlinedContainer(Widget child, bool hasError) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 24),
+    decoration: BoxDecoration(
+      border: Border.all(color: Colors.black, width: hasError ? 2 : 1.5),
+      borderRadius: BorderRadius.circular(17),
+    ),
+    constraints: const BoxConstraints(minHeight: 66),
+    alignment: Alignment.center,
+    child: child,
+  );
+
   String? _requiredValidator(String? value) =>
       value == null || value.trim().isEmpty ? 'Required' : null;
+
+  String? _phoneValidator(String? value) {
+    final phone = value?.trim() ?? '';
+    if (phone.isEmpty) return 'Required';
+    return RegExp(r'^\+?[0-9]{9,15}$').hasMatch(phone)
+        ? null
+        : 'Enter a valid phone number';
+  }
+
+  String? _emailValidator(String? value) {
+    final email = value?.trim() ?? '';
+    if (email.isEmpty) return 'Required';
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)
+        ? null
+        : 'Enter a valid email address';
+  }
+
+  String? _websiteValidator(String? value) {
+    final website = value?.trim() ?? '';
+    if (website.isEmpty) return null;
+    return RegExp(
+          r'^(https?:\/\/)?([\w-]+\.)+[a-zA-Z]{2,}(\/\S*)?$',
+        ).hasMatch(website)
+        ? null
+        : 'Enter a valid website';
+  }
 
   Widget _field({
     required TextEditingController controller,
@@ -1354,6 +1853,35 @@ class _TwoCol extends StatelessWidget {
   }
 }
 
+/// Wider desktop layouts retain a concise two-column form; phones stack each
+/// pair while preserving the visual order shown in the setup flow.
+class _WizardTwoColumn extends StatelessWidget {
+  const _WizardTwoColumn({
+    required this.left,
+    required this.right,
+    required this.isNarrow,
+  });
+
+  final Widget left;
+  final Widget right;
+  final bool isNarrow;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isNarrow) {
+      return Column(children: [left, right]);
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: left),
+        const SizedBox(width: 24),
+        Expanded(child: right),
+      ],
+    );
+  }
+}
+
 class _BrandImagePicker extends StatelessWidget {
   const _BrandImagePicker({
     required this.label,
@@ -1362,6 +1890,7 @@ class _BrandImagePicker extends StatelessWidget {
     required this.isUploading,
     required this.onPick,
     this.onRemove,
+    this.monochrome = false,
   });
 
   final String label;
@@ -1370,11 +1899,17 @@ class _BrandImagePicker extends StatelessWidget {
   final bool isUploading;
   final VoidCallback onPick;
   final VoidCallback? onRemove;
+  final bool monochrome;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final hasImage = imageUrl.isNotEmpty;
+    final foreground = monochrome ? Colors.black : scheme.onSurfaceVariant;
+    final background = monochrome
+        ? Colors.white
+        : scheme.surfaceContainerHighest;
+    final border = monochrome ? Colors.black : scheme.outlineVariant;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1382,7 +1917,7 @@ class _BrandImagePicker extends StatelessWidget {
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: scheme.onSurfaceVariant,
+            color: foreground,
             fontSize: 11.5,
             fontWeight: FontWeight.w600,
           ),
@@ -1392,9 +1927,9 @@ class _BrandImagePicker extends StatelessWidget {
           width: double.infinity,
           height: 96,
           decoration: BoxDecoration(
-            color: scheme.surfaceContainerHighest,
+            color: background,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: scheme.outlineVariant),
+            border: Border.all(color: border),
           ),
           clipBehavior: Clip.antiAlias,
           child: Stack(
@@ -1408,7 +1943,7 @@ class _BrandImagePicker extends StatelessWidget {
                     fit: BoxFit.contain,
                     errorBuilder: (_, _, _) => Icon(
                       Icons.broken_image_outlined,
-                      color: scheme.onSurfaceVariant,
+                      color: foreground,
                       size: 28,
                     ),
                   ),
@@ -1417,7 +1952,7 @@ class _BrandImagePicker extends StatelessWidget {
                 Center(
                   child: Icon(
                     Icons.image_outlined,
-                    color: scheme.onSurfaceVariant,
+                    color: foreground,
                     size: 28,
                   ),
                 ),
@@ -1445,7 +1980,8 @@ class _BrandImagePicker extends StatelessWidget {
             onPressed: isUploading ? null : onPick,
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 9),
-              side: BorderSide(color: scheme.outlineVariant),
+              side: BorderSide(color: border),
+              foregroundColor: foreground,
             ),
             icon: const Icon(Icons.image_outlined, size: 15),
             label: Text(actionLabel, style: const TextStyle(fontSize: 12.5)),
@@ -1459,7 +1995,7 @@ class _BrandImagePicker extends StatelessWidget {
               onPressed: isUploading ? null : onRemove,
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                foregroundColor: scheme.error,
+                foregroundColor: foreground,
               ),
               icon: const Icon(Icons.delete_outline, size: 15),
               label: const Text('Remove', style: TextStyle(fontSize: 12.5)),
