@@ -394,7 +394,7 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                             ),
                             decoration: InputDecoration(
                               hintText:
-                                  'Search name, class, code, admission no. or parent',
+                                  'Search name, class, student code or parent',
                               prefixIcon: const Icon(Icons.search),
                               filled: true,
                               fillColor: isDark
@@ -646,9 +646,9 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
                                                 ),
                                               ),
                                               PulseTableColumn<Student>(
-                                                title: 'Admission No.',
+                                                title: 'Student Code',
                                                 cellBuilder: (s) =>
-                                                    Text(s.admissionNumber),
+                                                    Text(s.studentCode),
                                               ),
                                             ],
                                           ),
@@ -834,7 +834,7 @@ class _StudentRow extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '$classLabel · ${student.admissionNumber}',
+                    '$classLabel · ${student.studentCode}',
                     style: AppTypography.bodySmall.copyWith(
                       color: isDark
                           ? AppColors.textMutedDark
