@@ -285,21 +285,53 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
               ),
             ),
             const SizedBox(height: 16),
-            _InfoRow(
-              'Date of birth',
-              application.dateOfBirth.toLocal().toString().split(' ').first,
+            const SectionHeader(title: 'Application Details'),
+            const SizedBox(height: 8),
+            AppCard(
+              child: Column(
+                children: [
+                  _InfoRow(
+                    'Date of birth',
+                    application.dateOfBirth.toLocal().toString().split(
+                      ' ',
+                    )[0],
+                  ),
+                  Divider(color: AppColors.border(context)),
+                  _InfoRow('Gender', application.gender.name),
+                  Divider(color: AppColors.border(context)),
+                  _InfoRow('Target class', application.targetClassId),
+                  if (application.targetStreamId != null) ...[
+                    Divider(color: AppColors.border(context)),
+                    _InfoRow('Stream', application.targetStreamId!),
+                  ],
+                  Divider(color: AppColors.border(context)),
+                  _InfoRow('Academic year', application.academicYearId),
+                  if (application.previousSchool != null) ...[
+                    Divider(color: AppColors.border(context)),
+                    _InfoRow('Previous school', application.previousSchool!),
+                  ],
+                ],
+              ),
             ),
-            _InfoRow('Gender', application.gender.name),
-            _InfoRow('Target class', application.targetClassId),
-            if (application.targetStreamId != null)
-              _InfoRow('Stream', application.targetStreamId!),
-            _InfoRow('Academic year', application.academicYearId),
-            if (application.previousSchool != null)
-              _InfoRow('Previous school', application.previousSchool!),
-            _InfoRow('Parent / guardian', application.applicantParentName),
-            _InfoRow('Parent phone', application.applicantParentPhone),
-            if (application.reviewComments != null)
-              _InfoRow('Review comments', application.reviewComments!),
+            const SizedBox(height: 20),
+            const SectionHeader(title: 'Parent / Guardian'),
+            const SizedBox(height: 8),
+            AppCard(
+              child: Column(
+                children: [
+                  _InfoRow(
+                    'Parent / guardian',
+                    application.applicantParentName,
+                  ),
+                  Divider(color: AppColors.border(context)),
+                  _InfoRow('Parent phone', application.applicantParentPhone),
+                  if (application.reviewComments != null) ...[
+                    Divider(color: AppColors.border(context)),
+                    _InfoRow('Review comments', application.reviewComments!),
+                  ],
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
             if (application.status == AdmissionStatus.application ||
                 application.status == AdmissionStatus.review) ...[
