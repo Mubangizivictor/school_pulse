@@ -8,6 +8,7 @@ const { hashPin, verifyPin, assertNotLockedOut, failedAttemptUpdate, clearLockou
 
 admin.initializeApp();
 const supportAuditFunctions = require("./support_audit")({ admin, onCall, HttpsError });
+Object.assign(exports, require("./student_fee_billing")({ admin, onCall, HttpsError }));
 
 /**
  * Enqueue a templated transactional email for the `public_functions`
