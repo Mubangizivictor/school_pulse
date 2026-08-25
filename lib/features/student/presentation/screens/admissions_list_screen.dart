@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/injection_container.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import '../../domain/entities/admission_application.dart';
 import '../../domain/entities/student_enums.dart';
 import '../bloc/admission_bloc.dart';
@@ -77,6 +79,20 @@ class _AdmissionsListViewState extends State<_AdmissionsListView> {
     if (created == true && mounted) _reload();
   }
 
+  Color _statusColor(BuildContext context, AdmissionStatus status) {
+    switch (status) {
+      case AdmissionStatus.application:
+        return AppColors.information(context);
+      case AdmissionStatus.review:
+        return AppColors.warning(context);
+      case AdmissionStatus.approved:
+      case AdmissionStatus.admitted:
+        return AppColors.success(context);
+      case AdmissionStatus.rejected:
+        return AppColors.danger(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -116,11 +132,12 @@ class _AdmissionsListViewState extends State<_AdmissionsListView> {
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
+                  horizontal: 16,
                   vertical: 8,
                 ),
                 child: Wrap(
                   spacing: 8,
+                  runSpacing: 8,
                   children: [
                     ChoiceChip(
                       label: const Text('All'),
@@ -138,26 +155,65 @@ class _AdmissionsListViewState extends State<_AdmissionsListView> {
               ),
               Expanded(
                 child: visible.isEmpty
-                    ? const Center(child: Text('No applications'))
+                    ? EmptyState(
+                        icon: Icons.assignment_outlined,
+                        title: 'No applications',
+                        message: _filter == null
+                            ? 'New admission applications will appear here.'
+                            : 'No applications match "${admissionStatusLabel(_filter!)}".',
+                        ctaLabel: 'New Application',
+                        onCtaPressed: _openNewApplication,
+                      )
                     : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 88),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
                         itemCount: visible.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final application = visible[index];
-                          return Card(
-                            child: ListTile(
-                              title: Text(application.studentName),
-                              subtitle: Text(
-                                'Class ${application.targetClassId} · Applied '
-                                '${application.appliedAt.toLocal().toString().split(' ').first}',
-                              ),
-                              trailing: Chip(
-                                label: Text(
-                                  admissionStatusLabel(application.status),
+                          return AppCard(
+                            onTap: () => _openReview(application),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        application.studentName,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textPrimary(
+                                            context,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Class ${application.targetClassId} · Applied '
+                                        '${application.appliedAt.toLocal().toString().split(' ').first}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary(
+                                            context,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              onTap: () => _openReview(application),
+                                const SizedBox(width: 8),
+                                StatusBadge(
+                                  label: admissionStatusLabel(
+                                    application.status,
+                                  ),
+                                  color: _statusColor(
+                                    context,
+                                    application.status,
+                                  ),
+                                ),
+                              ],
                             ),
                           );
                         },
