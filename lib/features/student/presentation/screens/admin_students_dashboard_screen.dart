@@ -325,6 +325,17 @@ class _AdminStudentsViewState extends State<_AdminStudentsView> {
         context,
         roleLabel: 'Students',
         showHeaderActions: false,
+        // Applicant/Pending Admission chips above surface applications
+        // inline, but AdmissionsListScreen (full list + its own "New
+        // Application" entry for website-style applicants) has no other
+        // reachable entry point in the live app.
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.how_to_reg_rounded),
+            tooltip: 'Admissions',
+            onPressed: () => context.push('/staff/admin/admissions'),
+          ),
+        ],
       ),
       // Add Student registers directly (no application/review step) - that
       // flow is reserved for applicants coming through the public website,
