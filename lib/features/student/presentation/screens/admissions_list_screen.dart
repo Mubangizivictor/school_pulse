@@ -7,6 +7,8 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import '../../domain/entities/admission_application.dart';
 import '../../domain/entities/student_enums.dart';
 import '../bloc/admission_bloc.dart';
@@ -190,15 +192,36 @@ class _AdmissionsListViewState extends State<_AdmissionsListView> {
                                         ),
                                       ),
                                       const SizedBox(height: 4),
-                                      Text(
-                                        'Class ${application.targetClassId} · Applied '
-                                        '${application.appliedAt.toLocal().toString().split(' ').first}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.textSecondary(
-                                            context,
-                                          ),
-                                        ),
+                                      StreamBuilder<List<SchoolClass>>(
+                                        stream: sl<StructureRepository>()
+                                            .watchClasses(widget.schoolId),
+                                        builder: (context, snap) {
+                                          final classes =
+                                              snap.data ??
+                                              const <SchoolClass>[];
+                                          final match = classes
+                                              .where(
+                                                (c) =>
+                                                    c.id ==
+                                                    application.targetClassId,
+                                              )
+                                              .toList();
+                                          final className = match.isNotEmpty
+                                              ? match.first.name
+                                              : (classes.isEmpty
+                                                    ? 'Loading…'
+                                                    : 'Unknown class');
+                                          return Text(
+                                            'Class $className · Applied '
+                                            '${application.appliedAt.toLocal().toString().split(' ').first}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: AppColors.textSecondary(
+                                                context,
+                                              ),
+                                            ),
+                                          );
+                                        },
                                       ),
                                     ],
                                   ),

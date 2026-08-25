@@ -6,6 +6,8 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import '../../domain/entities/admission_application.dart';
 import '../../domain/entities/student_enums.dart';
 import '../../domain/services/admission_service.dart';
@@ -299,13 +301,41 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
                   Divider(color: AppColors.border(context)),
                   _InfoRow('Gender', application.gender.name),
                   Divider(color: AppColors.border(context)),
-                  _InfoRow('Target class', application.targetClassId),
+                  StreamBuilder<List<SchoolClass>>(
+                    stream: sl<StructureRepository>().watchClasses(
+                      application.schoolId,
+                    ),
+                    builder: (context, snap) {
+                      final classes = snap.data ?? const <SchoolClass>[];
+                      final match = classes
+                          .where((c) => c.id == application.targetClassId)
+                          .toList();
+                      final label = match.isNotEmpty
+                          ? match.first.name
+                          : (classes.isEmpty ? 'Loading…' : 'Unknown class');
+                      return _InfoRow('Target class', label);
+                    },
+                  ),
                   if (application.targetStreamId != null) ...[
                     Divider(color: AppColors.border(context)),
                     _InfoRow('Stream', application.targetStreamId!),
                   ],
                   Divider(color: AppColors.border(context)),
-                  _InfoRow('Academic year', application.academicYearId),
+                  StreamBuilder<List<AcademicYear>>(
+                    stream: sl<StructureRepository>().watchAcademicYears(
+                      application.schoolId,
+                    ),
+                    builder: (context, snap) {
+                      final years = snap.data ?? const <AcademicYear>[];
+                      final match = years
+                          .where((y) => y.id == application.academicYearId)
+                          .toList();
+                      final label = match.isNotEmpty
+                          ? match.first.name
+                          : (years.isEmpty ? 'Loading…' : 'Unknown year');
+                      return _InfoRow('Academic year', label);
+                    },
+                  ),
                   if (application.previousSchool != null) ...[
                     Divider(color: AppColors.border(context)),
                     _InfoRow('Previous school', application.previousSchool!),
