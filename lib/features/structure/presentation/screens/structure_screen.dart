@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:school_pulse/design_system/app_components.dart';
 import '../bloc/structure_bloc.dart';
@@ -442,12 +443,18 @@ class _ReviewRow {
   final int stepIndex;
   final bool requiresSetup;
 
+  /// When set, tapping this row navigates directly to this route instead of
+  /// jumping to [stepIndex] within the wizard - used for destinations (e.g.
+  /// Fee plans) that live outside the linear wizard step sequence.
+  final String? routePath;
+
   const _ReviewRow({
     required this.label,
     required this.icon,
     this.count,
     required this.stepIndex,
     this.requiresSetup = false,
+    this.routePath,
   });
 }
 
@@ -497,6 +504,15 @@ class _Review extends StatelessWidget {
         icon: Icons.menu_book_outlined,
         count: state.subjects.length,
         stepIndex: 6,
+      ),
+      // Fee plans are configured on their own screen
+      // (structure/academics/fee-structures), not a linear wizard step, so
+      // this row navigates directly via routePath rather than onJump.
+      const _ReviewRow(
+        label: 'Fee plans',
+        icon: Icons.receipt_long_outlined,
+        stepIndex: 6,
+        routePath: '/staff/admin/structure/academics/fee-structures',
       ),
     ];
 
@@ -745,7 +761,9 @@ class _ReviewCategory extends StatelessWidget {
                   const Icon(Icons.chevron_right_rounded),
                 ],
               ),
-              onTap: () => onJump(rows[i].stepIndex),
+              onTap: () => rows[i].routePath != null
+                  ? context.push(rows[i].routePath!)
+                  : onJump(rows[i].stepIndex),
             ),
           ],
         ],
