@@ -1360,7 +1360,10 @@ Future<void> init() async {
   // queue", which is what web already did before this feature existed.
   if (!kIsWeb) {
     sl.registerLazySingleton<MessageOutboxService>(
-      () => createMessageOutboxService(isar: sl(), repository: sl()),
+      () => createMessageOutboxService(
+        isar: sl<Isar>(),
+        repository: sl<MessagesRepository>(),
+      ),
     );
   }
   sl.registerFactory<ConversationBloc>(

@@ -512,7 +512,6 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
       child: Material(
         color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
