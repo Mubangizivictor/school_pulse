@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../../../student/domain/entities/student.dart';
@@ -50,6 +51,27 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     );
   }
 
+  /// The `issueStudentIdentity` callable above already validated the caller
+  /// belongs to this student's school using a fresh Admin SDK read - the
+  /// client read right after it is client-rules-gated and re-checks the
+  /// same tenancy via the caller's cached ID token. A token restored on app
+  /// launch (or shortly after a role/school change) can briefly disagree
+  /// with what the callable just proved server-side, surfacing as a
+  /// spurious permission-denied on an otherwise-authorized read. One forced
+  /// token refresh + retry clears that window without weakening the rule.
+  Future<DocumentSnapshot<Map<String, dynamic>>> _getStudentDocWithTokenRefresh(
+    String studentId,
+  ) async {
+    final ref = firestore.collection('students').doc(studentId);
+    try {
+      return await ref.get();
+    } on FirebaseException catch (e) {
+      if (e.code != 'permission-denied') rethrow;
+      await FirebaseAuth.instance.currentUser?.getIdToken(true);
+      return ref.get();
+    }
+  }
+
   /// Canonical identity bootstrap.
   ///
   /// The callable validates the authenticated staff member and the Student
@@ -73,10 +95,7 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
       );
       final returned = StudentIdentityModel.fromFirestore(identityData);
 
-      final studentDoc = await firestore
-          .collection('students')
-          .doc(studentId)
-          .get();
+      final studentDoc = await _getStudentDocWithTokenRefresh(studentId);
       if (!studentDoc.exists) {
         return Left(
           ServerFailure('Student record not found while preparing identity.'),
