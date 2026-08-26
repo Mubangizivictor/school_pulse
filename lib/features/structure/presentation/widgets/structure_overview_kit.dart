@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/app_theme.dart' show SemanticColors;
 
 /// The horizontal pill tab row at the top of the Structure hub - a filled
 /// primary pill for the active category, outlined pills for the rest.
@@ -252,12 +253,13 @@ class StructureAttentionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final warning = Theme.of(context).extension<SemanticColors>()!.warning;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.black,
+        color: warning.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black),
+        border: Border.all(color: warning),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -265,14 +267,10 @@ class StructureAttentionCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: Colors.black,
+              color: warning.withValues(alpha: 0.16),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.info_outline,
-              color: Colors.black,
-              size: 15,
-            ),
+            child: Icon(Icons.info_outline, color: warning, size: 15),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -281,8 +279,8 @@ class StructureAttentionCard extends StatelessWidget {
               children: [
                 Text(
                   '$pendingCount item${pendingCount == 1 ? '' : 's'} need attention',
-                  style: const TextStyle(
-                    color: Colors.black,
+                  style: TextStyle(
+                    color: warning,
                     fontWeight: FontWeight.w700,
                     fontSize: 12.5,
                   ),
@@ -290,24 +288,29 @@ class StructureAttentionCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   'Some parts of your structure need to be completed.',
-                  style: TextStyle(color: Colors.black, fontSize: 10.5),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 10.5,
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
           Material(
-            color: Colors.black,
+            color: warning,
             borderRadius: BorderRadius.circular(9),
             child: InkWell(
               borderRadius: BorderRadius.circular(9),
               onTap: onReview,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 child: Text(
                   'Review now',
                   style: TextStyle(
-                    color: Colors.black,
+                    color: warning.computeLuminance() > 0.5
+                        ? Colors.black
+                        : Colors.white,
                     fontWeight: FontWeight.w700,
                     fontSize: 11,
                   ),

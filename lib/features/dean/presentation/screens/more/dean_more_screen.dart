@@ -222,7 +222,7 @@ class _LogoutRow extends StatelessWidget {
           vertical: AppSpacing.l,
         ),
         decoration: BoxDecoration(
-          color: AppColors.danger(context),
+          color: AppColors.danger(context).withValues(alpha: 0.12),
           borderRadius: AppRadius.large,
           border: Border.all(color: AppColors.danger(context)),
         ),

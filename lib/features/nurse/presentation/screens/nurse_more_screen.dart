@@ -316,7 +316,7 @@ class _MoreRow extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: data.color,
+          color: data.color.withValues(alpha: 0.16),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(data.icon, color: data.color, size: 20),

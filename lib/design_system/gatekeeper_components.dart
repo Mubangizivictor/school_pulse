@@ -38,7 +38,13 @@ class GatekeeperActionTile extends StatelessWidget {
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                child: Icon(icon, color: color, size: 34),
+                child: Icon(
+                  icon,
+                  color: color.computeLuminance() > 0.5
+                      ? Colors.black
+                      : Colors.white,
+                  size: 34,
+                ),
               ),
               const SizedBox(height: 12),
               Text(
@@ -195,7 +201,7 @@ class GatekeeperStatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color,
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
+import 'package:school_pulse/design_system/app_theme.dart' show SemanticColors;
 import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -611,10 +612,14 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: selected ? _color : Colors.transparent,
+                color: selected
+                    ? _color.withValues(alpha: 0.14)
+                    : Colors.transparent,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: selected ? _color : Colors.black,
+                  color: selected
+                      ? _color
+                      : Theme.of(context).colorScheme.outlineVariant,
                   width: selected ? 2 : 1,
                 ),
               ),
@@ -639,7 +644,10 @@ class _DesignationFormScreenState extends State<DesignationFormScreen> {
                 color: swatch,
                 shape: BoxShape.circle,
                 border: selected
-                    ? Border.all(color: Colors.black, width: 3)
+                    ? Border.all(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        width: 3,
+                      )
                     : null,
               ),
               child: selected
@@ -1140,7 +1148,9 @@ class _RecordDetailsShell extends StatelessWidget {
                 value: 'delete',
                 child: Text(
                   deleteLabel,
-                  style: const TextStyle(color: Colors.black),
+                  style: TextStyle(
+                    color: Theme.of(context).extension<SemanticColors>()!.error,
+                  ),
                 ),
               ),
             ],
@@ -1156,7 +1166,7 @@ class _RecordDetailsShell extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: color,
+                  color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 26),

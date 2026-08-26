@@ -571,7 +571,7 @@ class StructureRecordCard extends StatelessWidget {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: color,
+                    color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(9),
                   ),
                   child: Icon(icon, color: color, size: 19),

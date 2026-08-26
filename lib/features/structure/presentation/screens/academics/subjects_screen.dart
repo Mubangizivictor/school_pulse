@@ -264,7 +264,7 @@ class _Summary extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 20,
-          backgroundColor: color,
+          backgroundColor: color.withValues(alpha: 0.12),
           child: Icon(icon, color: color, size: 20),
         ),
         const SizedBox(height: 7),
@@ -342,7 +342,7 @@ class _Card extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color,
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(

@@ -743,7 +743,13 @@ class _NfcCircleState extends State<_NfcCircle>
               color: widget.color,
               border: Border.all(color: widget.color, width: 2),
             ),
-            child: Icon(Icons.wifi_tethering, color: widget.color, size: 64),
+            child: Icon(
+              Icons.wifi_tethering,
+              color: widget.color.computeLuminance() > 0.5
+                  ? Colors.black
+                  : Colors.white,
+              size: 64,
+            ),
           ),
         );
       },

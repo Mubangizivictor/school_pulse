@@ -308,7 +308,7 @@ class _QuickAccessTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: item.color,
+              color: item.color.withValues(alpha: 0.12),
               borderRadius: AppRadius.medium,
             ),
             child: Icon(item.icon, color: item.color, size: 16),
@@ -445,7 +445,7 @@ class _CriticalAttentionRow extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color,
+                color: color.withValues(alpha: 0.12),
                 borderRadius: AppRadius.medium,
               ),
               child: Icon(Icons.error, color: color, size: 16),
@@ -554,7 +554,7 @@ class _ActivityRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color,
+              color: color.withValues(alpha: 0.12),
               borderRadius: AppRadius.medium,
             ),
             child: Icon(Icons.info_outline_rounded, color: color, size: 16),

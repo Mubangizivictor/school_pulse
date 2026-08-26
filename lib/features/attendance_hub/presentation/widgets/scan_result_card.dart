@@ -79,7 +79,9 @@ class _ScanResultCardState extends State<ScanResultCard> {
                     : widget.isDuplicate
                     ? Icons.info_outline
                     : Icons.check_rounded,
-                color: color,
+                color: color.computeLuminance() > 0.5
+                    ? Colors.black
+                    : Colors.white,
                 size: 44,
               ),
             ),

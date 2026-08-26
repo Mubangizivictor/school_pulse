@@ -682,7 +682,7 @@ class _DashboardStatCardState extends State<DashboardStatCard>
               Container(
                 padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
-                  color: widget.color,
+                  color: widget.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: ScaleTransition(
@@ -802,7 +802,10 @@ class _AnalyticalStatCardState extends State<AnalyticalStatCard>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [widget.color, widget.color],
+            colors: [
+              widget.color.withValues(alpha: 0.10),
+              widget.color.withValues(alpha: 0.04),
+            ],
           ),
         ),
         child: Row(
@@ -810,7 +813,7 @@ class _AnalyticalStatCardState extends State<AnalyticalStatCard>
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: widget.color,
+                color: widget.color.withValues(alpha: 0.16),
                 shape: BoxShape.circle,
               ),
               child: ScaleTransition(
@@ -1016,7 +1019,7 @@ class QuickActionGrid extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: item.color,
+                  color: item.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(item.icon, color: item.color, size: 20),

@@ -199,7 +199,7 @@ class _GridTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: item.color,
+                color: item.color.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(item.icon, color: item.color, size: 22),
@@ -244,7 +244,7 @@ class _MoreRow extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: item.color,
+                color: item.color.withValues(alpha: 0.12),
                 borderRadius: AppRadius.medium,
               ),
               child: Icon(item.icon, color: item.color, size: 20),
@@ -285,7 +285,7 @@ class _LogoutRow extends StatelessWidget {
           vertical: AppSpacing.l,
         ),
         decoration: BoxDecoration(
-          color: AppColors.danger(context),
+          color: AppColors.danger(context).withValues(alpha: 0.12),
           borderRadius: AppRadius.large,
           border: Border.all(color: AppColors.danger(context)),
         ),

@@ -33,7 +33,7 @@ class AcademicsNavCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color,
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 22),
@@ -54,12 +54,18 @@ class AcademicsNavCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 12.5, color: Colors.black),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: Colors.black),
+          Icon(
+            Icons.chevron_right,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ],
       ),
     );
@@ -103,7 +109,7 @@ class AcademicsListCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color,
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -121,7 +127,9 @@ class AcademicsListCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
                     decoration: isActive ? null : TextDecoration.lineThrough,
-                    color: isActive ? null : Colors.black,
+                    color: isActive
+                        ? null
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 if (subtitle.isNotEmpty) ...[
@@ -129,7 +137,10 @@ class AcademicsListCard extends StatelessWidget {
                   Text(
                     subtitle,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12.5, color: Colors.black),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],
@@ -138,11 +149,17 @@ class AcademicsListCard extends StatelessWidget {
           if (trailingLabel != null) ...[
             Text(
               trailingLabel!,
-              style: TextStyle(fontSize: 12, color: Colors.black),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(width: 6),
           ],
-          Icon(Icons.chevron_right, color: Colors.black),
+          Icon(
+            Icons.chevron_right,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ],
       ),
     );
@@ -219,7 +236,7 @@ class AcademicsStatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color,
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -415,7 +432,7 @@ class AcademicsListScaffold extends StatelessWidget {
                 if (subtitle != null) ...[
                   Text(
                     subtitle!,
-                    style: TextStyle(fontSize: 13, color: Colors.black),
+                    style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -477,7 +494,7 @@ class AcademicsFormScaffold extends StatelessWidget {
                   if (subtitle != null) ...[
                     Text(
                       subtitle!,
-                      style: TextStyle(fontSize: 13, color: Colors.black),
+                      style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(height: 20),
                   ],

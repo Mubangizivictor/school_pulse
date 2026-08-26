@@ -82,16 +82,14 @@ class _TaskDormitoryAssignmentScreenState
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: (dorm['type'] == 'Boys'
-                                ? AppColors.electricBlue
-                                : Colors.black),
+                            color: AppColors.primary(
+                              context,
+                            ).withValues(alpha: 0.12),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.home_work_outlined,
-                            color: dorm['type'] == 'Boys'
-                                ? AppColors.electricBlue
-                                : Colors.black,
+                            color: AppColors.primary(context),
                             size: 20,
                           ),
                         ),

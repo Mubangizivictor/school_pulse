@@ -518,7 +518,7 @@ class BoardingSecondaryMetricsRow extends StatelessWidget {
                 height: 38,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: metric.color,
+                  color: metric.color.withValues(alpha: 0.12),
                 ),
                 child: Icon(metric.icon, size: 18, color: metric.color),
               ),
@@ -976,7 +976,7 @@ class _AlertTile extends StatelessWidget {
               height: 34,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: alert.color,
+                color: alert.color.withValues(alpha: 0.12),
               ),
               child: Icon(alert.icon, size: 18, color: alert.color),
             ),

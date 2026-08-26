@@ -74,7 +74,7 @@ class DocumentsScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.m),
                   decoration: BoxDecoration(
-                    color: AppColors.primary(context),
+                    color: AppColors.primary(context).withValues(alpha: 0.12),
                     borderRadius: AppRadius.medium,
                   ),
                   child: Icon(doc.icon, color: AppColors.primary(context)),
