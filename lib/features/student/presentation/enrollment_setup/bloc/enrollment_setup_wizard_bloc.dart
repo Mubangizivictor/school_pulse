@@ -24,6 +24,7 @@ import 'package:school_pulse/features/verification/domain/repositories/nfc_crede
 import 'package:school_pulse/features/verification/domain/repositories/permission_evaluator.dart';
 import 'package:school_pulse/features/finance/domain/repositories/finance_repository.dart';
 import 'package:school_pulse/features/finance/domain/entities/student_financial_account.dart';
+import 'package:school_pulse/features/finance/domain/repositories/fee_billing_repository.dart';
 import 'enrollment_setup_wizard_event.dart';
 import 'enrollment_setup_wizard_state.dart';
 
@@ -45,6 +46,7 @@ class EnrollmentSetupWizardBloc
   final EnrollmentAuditService? auditService;
   final NotificationSendService? notificationSender;
   final FinanceRepository? financeRepository;
+  final FeeBillingRepository? feeBillingRepository;
 
   /// Bitmask of steps (0..7) whose data has been successfully persisted at
   /// least once. Not part of [EnrollmentSetupWizardState.props] directly -
@@ -65,6 +67,7 @@ class EnrollmentSetupWizardBloc
     this.auditService,
     this.notificationSender,
     this.financeRepository,
+    this.feeBillingRepository,
   }) : super(const EnrollmentSetupWizardState()) {
     on<WizardStarted>(_onWizardStarted);
     on<WizardNextStep>(_onNextStep);
@@ -79,6 +82,7 @@ class EnrollmentSetupWizardBloc
     on<AdmissionDetailsUpdated>(_onAdmissionDetailsUpdated);
     on<AcademicPlacementUpdated>(_onAcademicPlacementUpdated);
     on<FinanceDetailsUpdated>(_onFinanceDetailsUpdated);
+    on<FeePlanMatchUpdated>(_onFeePlanMatchUpdated);
     on<ScholarshipAwardRequested>(_onScholarshipAwardRequested);
     on<HouseSelected>(_onHouseSelected);
     on<DormitoryAssignmentRequested>(_onDormitoryAssignmentRequested);
@@ -667,6 +671,29 @@ class EnrollmentSetupWizardBloc
     );
   }
 
+  /// Records the result of `findMatchingFeePlan` for the review step and
+  /// eventual `issueStudentBill` call. Unlike [_onFinanceDetailsUpdated],
+  /// this never writes into the legacy fee_structures/student_financials
+  /// collections - a matched (or absent) fee plan is a read-only snapshot
+  /// until activation actually issues a bill.
+  void _onFeePlanMatchUpdated(
+    FeePlanMatchUpdated event,
+    Emitter<EnrollmentSetupWizardState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        matchedFeePlanId: event.planId,
+        clearMatchedFeePlanId: event.planId == null,
+        matchedFeePlanVersionId: event.versionId,
+        matchedFeePlanName: event.planName,
+        matchedFeePlanTotalUgx: event.totalUgx,
+        clearMatchedFeePlanTotalUgx: event.totalUgx == null,
+        matchedFeePlanLines: event.lines,
+        billingPending: event.billingPending,
+      ),
+    );
+  }
+
   Future<void> _onScholarshipAwardRequested(
     ScholarshipAwardRequested event,
     Emitter<EnrollmentSetupWizardState> emit,
@@ -930,6 +957,15 @@ class EnrollmentSetupWizardBloc
 
     emit(state.copyWith(isActivating: true, clearError: true));
 
+    // Deliberately omits feeStructureId/totalBilled: new enrolments no
+    // longer write through the legacy free-text financial-initialization
+    // path (InitializeStudentFinancials / student_financials collection).
+    // enrollStudent() only calls that usecase when both are non-null, so
+    // leaving them unset here is what retires it for this path - the
+    // usecase itself is left intact for any other legacy caller. Billing
+    // for this student instead happens via issueStudentBill below, driven
+    // by state.matchedFeePlanId from the Finance step's findMatchingFeePlan
+    // call.
     final result = await admissionService.enrollStudent(
       state.studentId!,
       schoolId: state.schoolId,
@@ -937,8 +973,6 @@ class EnrollmentSetupWizardBloc
       studentCode: state.studentCode,
       academicYear: state.academicYearId,
       term: state.term,
-      feeStructureId: state.feeStructureId,
-      totalBilled: state.totalBilled,
     );
 
     final failure = result.fold((f) => f, (_) => null);
@@ -947,12 +981,49 @@ class EnrollmentSetupWizardBloc
       return;
     }
 
-    emit(state.copyWith(isActivating: false, activated: true));
-
     auditService?.record(
       schoolId: state.schoolId,
       action: 'enrollment_activated',
       studentId: state.studentId,
+    );
+
+    // Issue the bill only when a published fee plan actually matched during
+    // the Finance step - a billingPending student is a real, allowed state
+    // (see EnrollmentSetupWizardState.billingPending) and simply gets no
+    // bill yet. The idempotency key mirrors the backend's own default
+    // ('${studentId}_${planId}') exactly so a retry of this same activation
+    // (e.g. app restarted after this call failed) can never create a
+    // duplicate bill - issueStudentBill's transaction is a no-op if a bill
+    // with this id already exists. Done before emitting `activated: true` so
+    // any billing-failure message lands in the same state as activation
+    // succeeding - the UI pops on `activated`, so an emit after that point
+    // would never be seen.
+    String? billingInfoMessage;
+    final billing = feeBillingRepository;
+    final matchedPlanId = state.matchedFeePlanId;
+    if (billing != null && matchedPlanId != null && state.studentId != null) {
+      final billResult = await billing.issueStudentBill(
+        schoolId: state.schoolId,
+        studentId: state.studentId!,
+        planId: matchedPlanId,
+        idempotencyKey: '${state.studentId}_$matchedPlanId',
+      );
+      final billFailure = billResult.fold((f) => f, (_) => null);
+      if (billFailure != null) {
+        // Best-effort: activation itself already succeeded and must not be
+        // rolled back for a billing hiccup.
+        billingInfoMessage =
+            'Student activated, but billing could not be issued yet '
+            '(${billFailure.message}). Retry from the student account.';
+      }
+    }
+
+    emit(
+      state.copyWith(
+        isActivating: false,
+        activated: true,
+        infoMessage: billingInfoMessage,
+      ),
     );
 
     // Only notify the parent if one was actually linked during the wizard -

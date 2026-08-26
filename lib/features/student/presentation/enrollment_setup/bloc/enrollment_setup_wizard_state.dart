@@ -1,7 +1,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
-import 'enrollment_setup_wizard_event.dart' show GuardianDraft;
+import 'enrollment_setup_wizard_event.dart'
+    show GuardianDraft, FeePlanLineData;
 
 const int kWizardStepCount = 12;
 
@@ -54,11 +55,27 @@ class EnrollmentSetupWizardState extends Equatable {
   final String? streamId;
   final String academicYearId;
 
-  // Step 7 (was 3)
+  // Step 7 (was 3) - legacy free-text fee-structure fields. Kept for read
+  // compatibility with older code paths (see AdmissionService.enrollStudent)
+  // but no longer written by this wizard for new enrolments - the matched
+  // fee-plan fields below are the source of truth going forward.
   final String? feeStructureId;
   final String? term;
   final double? totalBilled;
   final bool hasScholarshipAward;
+
+  // Fee-plan match (from the `findMatchingFeePlan` callable). Immutable
+  // published-plan snapshot data only - never a client-typed amount. A null
+  // matchedFeePlanId with billingPending true means no published plan
+  // matched this learner's year/term/class/category yet; the wizard must
+  // still let activation proceed (see EnrollmentSetupWizardState.canActivate)
+  // and surface this plainly in the Review step.
+  final String? matchedFeePlanId;
+  final String? matchedFeePlanVersionId;
+  final String? matchedFeePlanName;
+  final int? matchedFeePlanTotalUgx;
+  final List<FeePlanLineData> matchedFeePlanLines;
+  final bool billingPending;
 
   // Step 4
   final String? houseId;
@@ -121,6 +138,12 @@ class EnrollmentSetupWizardState extends Equatable {
     this.term,
     this.totalBilled,
     this.hasScholarshipAward = false,
+    this.matchedFeePlanId,
+    this.matchedFeePlanVersionId,
+    this.matchedFeePlanName,
+    this.matchedFeePlanTotalUgx,
+    this.matchedFeePlanLines = const [],
+    this.billingPending = true,
     this.houseId,
     this.hostelId,
     this.roomId,
@@ -189,6 +212,14 @@ class EnrollmentSetupWizardState extends Equatable {
     String? term,
     double? totalBilled,
     bool? hasScholarshipAward,
+    String? matchedFeePlanId,
+    bool clearMatchedFeePlanId = false,
+    String? matchedFeePlanVersionId,
+    String? matchedFeePlanName,
+    int? matchedFeePlanTotalUgx,
+    bool clearMatchedFeePlanTotalUgx = false,
+    List<FeePlanLineData>? matchedFeePlanLines,
+    bool? billingPending,
     String? houseId,
     String? hostelId,
     String? roomId,
@@ -243,6 +274,20 @@ class EnrollmentSetupWizardState extends Equatable {
       term: term ?? this.term,
       totalBilled: totalBilled ?? this.totalBilled,
       hasScholarshipAward: hasScholarshipAward ?? this.hasScholarshipAward,
+      matchedFeePlanId: clearMatchedFeePlanId
+          ? null
+          : (matchedFeePlanId ?? this.matchedFeePlanId),
+      matchedFeePlanVersionId: clearMatchedFeePlanId
+          ? null
+          : (matchedFeePlanVersionId ?? this.matchedFeePlanVersionId),
+      matchedFeePlanName: clearMatchedFeePlanId
+          ? null
+          : (matchedFeePlanName ?? this.matchedFeePlanName),
+      matchedFeePlanTotalUgx: clearMatchedFeePlanTotalUgx
+          ? null
+          : (matchedFeePlanTotalUgx ?? this.matchedFeePlanTotalUgx),
+      matchedFeePlanLines: matchedFeePlanLines ?? this.matchedFeePlanLines,
+      billingPending: billingPending ?? this.billingPending,
       houseId: houseId ?? this.houseId,
       hostelId: hostelId ?? this.hostelId,
       roomId: roomId ?? this.roomId,
@@ -298,6 +343,12 @@ class EnrollmentSetupWizardState extends Equatable {
     term,
     totalBilled,
     hasScholarshipAward,
+    matchedFeePlanId,
+    matchedFeePlanVersionId,
+    matchedFeePlanName,
+    matchedFeePlanTotalUgx,
+    matchedFeePlanLines,
+    billingPending,
     houseId,
     hostelId,
     roomId,

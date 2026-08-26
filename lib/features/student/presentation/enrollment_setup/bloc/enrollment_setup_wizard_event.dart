@@ -246,6 +246,62 @@ class FinanceDetailsUpdated extends EnrollmentSetupWizardEvent {
   ];
 }
 
+/// One line item from a matched, published fee-plan version (see
+/// `functions/student_fee_billing.js` `findMatchingFeePlan`). Amounts are
+/// always integer UGX - this is a read-only display/audit snapshot, never
+/// something the wizard can edit.
+class FeePlanLineData extends Equatable {
+  final String chargeId;
+  final String name;
+  final int amountUgx;
+  final bool required;
+  final String? serviceKey;
+
+  const FeePlanLineData({
+    required this.chargeId,
+    required this.name,
+    required this.amountUgx,
+    this.required = true,
+    this.serviceKey,
+  });
+
+  @override
+  List<Object?> get props => [chargeId, name, amountUgx, required, serviceKey];
+}
+
+/// Replaces the legacy [FinanceDetailsUpdated] free-text path for new
+/// enrolments: carries the result of calling `findMatchingFeePlan` (a
+/// published plan match, or none - billing pending) rather than a
+/// client-typed amount. See enrollment_setup_wizard_screen.dart's
+/// `_FinanceStep`.
+class FeePlanMatchUpdated extends EnrollmentSetupWizardEvent {
+  final String? planId;
+  final String? versionId;
+  final String? planName;
+  final int? totalUgx;
+  final List<FeePlanLineData> lines;
+  final bool billingPending;
+
+  const FeePlanMatchUpdated({
+    this.planId,
+    this.versionId,
+    this.planName,
+    this.totalUgx,
+    this.lines = const [],
+    required this.billingPending,
+  });
+
+  @override
+  List<Object?> get props => [
+    planId,
+    versionId,
+    planName,
+    totalUgx,
+    lines,
+    billingPending,
+  ];
+}
+
 class ScholarshipAwardRequested extends EnrollmentSetupWizardEvent {
   final UserEntity operatorUser;
   final ScholarshipAwardType type;
