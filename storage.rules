@@ -12,23 +12,13 @@ service firebase.storage {
          firestore.get(/databases/(default)/documents/institution_memberships/$(request.auth.uid + '_' + institutionId)).data.status == 'active')
       );
     }
-    // Mirrors firestore.rules' isSameSchool, which was widened to also
-    // accept an active institution_memberships doc (2026-08-26, commit
-    // 59ca27e9) so a School-workspace admin operating under a membership
-    // rather than users/{uid}.schoolId isn't denied on tenant-scoped
-    // writes. Every Storage function gating a school-tenant path should
-    // use isActiveInstitutionMember, not the narrower isSameSchool, so the
-    // two rule sets never drift out of sync again the way
-    // canManageInstitutionBranding did (Firestore writes to
-    // institution_profile succeeded while the actual logo/badge file
-    // upload was still denied for the same membership-based admin).
+    // Any active member of the institution (not just a fixed role list) can
+    // manage institution branding — role-based gating on top of tenant
+    // membership was dropped so this can't drift out of sync with who the
+    // Flutter app actually lets attempt the upload. Fine-grained role
+    // restrictions belong to the SaaS-owner tier, not per-tenant assets.
     function canManageInstitutionBranding(schoolId) {
-      return request.auth != null && isActiveInstitutionMember(schoolId) &&
-        (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role
-          in ['schoolAdmin', 'headTeacher', 'deputyHead', 'director'] ||
-         ('roles' in firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data &&
-          firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles.hasAny(
-            ['schoolAdmin', 'headTeacher', 'deputyHead', 'director'])));
+      return isActiveInstitutionMember(schoolId);
     }
 
     match /school_assets/{fileName} {

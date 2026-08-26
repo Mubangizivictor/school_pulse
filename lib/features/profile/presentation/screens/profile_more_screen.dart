@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/core/user_roles.dart';
+import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
@@ -30,118 +31,235 @@ class _MorePage extends StatelessWidget {
   const _MorePage({required this.user});
   final UserEntity user;
 
+  List<Widget> get _accountRows => [
+    _Row(
+      icon: Icons.person_outline,
+      title: 'Profile',
+      subtitle: 'Photo, name and contact details',
+      onTap: (context) => context.push('/staff/more/edit-profile'),
+    ),
+    _Row(
+      icon: Icons.shield_outlined,
+      title: 'Security',
+      subtitle: 'Password and sign-in methods',
+      onTap: (context) => context.push('/staff/more/security-privacy'),
+    ),
+    _MembershipRow(user: user),
+  ];
+
+  List<Widget> get _preferenceRows => [
+    _Row(
+      icon: Icons.notifications_none_outlined,
+      title: 'Notifications',
+      value: 'Manage',
+      onTap: (context) =>
+          context.push('/staff/more/notification-preferences'),
+    ),
+    _AppearanceRow(user: user),
+    _Row(
+      icon: Icons.cloud_outlined,
+      title: 'Offline & storage',
+      value: 'Manage',
+      onTap: (context) => context.push('/staff/more/offline-data'),
+    ),
+    const _Row(
+      icon: Icons.language_outlined,
+      title: 'Language & region',
+      value: 'English · Uganda',
+      onTap: null,
+    ),
+  ];
+
+  List<Widget> get _supportRows => [
+    _Row(
+      icon: Icons.help_outline,
+      title: 'Help centre',
+      onTap: (context) => context.push('/staff/more/help-center'),
+    ),
+    _Row(
+      icon: Icons.headset_mic_outlined,
+      title: 'Contact support',
+      onTap: (context) => context.push('/staff/more/help-center'),
+    ),
+    _Row(
+      icon: Icons.info_outline,
+      title: 'About School Pulse',
+      value: 'v1.0.0',
+      onTap: (context) => context.push('/staff/more/about'),
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 96),
-        children: [
-          Row(
-            children: [
-              const Text(
-                'More',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+      child: ResponsiveBuilder(
+        builder: (context, layout) => layout == ResponsiveLayout.mobile
+            ? _MobileMore(
+                user: user,
+                accountRows: _accountRows,
+                preferenceRows: _preferenceRows,
+                supportRows: _supportRows,
+              )
+            : _WideMore(
+                user: user,
+                layout: layout,
+                accountRows: _accountRows,
+                preferenceRows: _preferenceRows,
+                supportRows: _supportRows,
               ),
-              const Spacer(),
-              IconButton(
-                onPressed: () => context.push('/staff/more/security-privacy'),
-                icon: const Icon(Icons.settings_outlined, size: 22),
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          _IdentityRow(user: user),
-          const SizedBox(height: 30),
-          _Section(
-            title: 'ACCOUNT',
-            children: [
-              _Row(
-                icon: Icons.person_outline,
-                title: 'Profile',
-                subtitle: 'Photo, name and contact details',
-                onTap: () => context.push('/staff/more/edit-profile'),
-              ),
-              _Row(
-                icon: Icons.shield_outlined,
-                title: 'Security',
-                subtitle: 'Password and sign-in methods',
-                onTap: () => context.push('/staff/more/security-privacy'),
-              ),
-              _MembershipRow(user: user),
-            ],
-          ),
-          const SizedBox(height: 26),
-          _Section(
-            title: 'PREFERENCES',
-            children: [
-              _Row(
-                icon: Icons.notifications_none_outlined,
-                title: 'Notifications',
-                value: 'Manage',
-                onTap: () =>
-                    context.push('/staff/more/notification-preferences'),
-              ),
-              _AppearanceRow(user: user),
-              _Row(
-                icon: Icons.cloud_outlined,
-                title: 'Offline & storage',
-                value: 'Manage',
-                onTap: () => context.push('/staff/more/offline-data'),
-              ),
-              const _Row(
-                icon: Icons.language_outlined,
-                title: 'Language & region',
-                value: 'English · Uganda',
-                onTap: null,
-              ),
-            ],
-          ),
-          const SizedBox(height: 26),
-          _Section(
-            title: 'SUPPORT',
-            children: [
-              _Row(
-                icon: Icons.help_outline,
-                title: 'Help centre',
-                onTap: () => context.push('/staff/more/help-center'),
-              ),
-              _Row(
-                icon: Icons.headset_mic_outlined,
-                title: 'Contact support',
-                onTap: () => context.push('/staff/more/help-center'),
-              ),
-              _Row(
-                icon: Icons.info_outline,
-                title: 'About School Pulse',
-                value: 'v1.0.0',
-                onTap: () => context.push('/staff/more/about'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          OutlinedButton.icon(
-            onPressed: () => _signOut(context, user),
-            icon: const Icon(Icons.logout_outlined, size: 20),
-            label: const Text('Sign out'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _ink(context),
-              side: BorderSide(color: _ink(context)),
-              padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 18),
-              alignment: Alignment.centerLeft,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-        ],
       ),
     ),
   );
 }
 
-class _IdentityRow extends StatelessWidget {
+class _MobileMore extends StatelessWidget {
+  const _MobileMore({
+    required this.user,
+    required this.accountRows,
+    required this.preferenceRows,
+    required this.supportRows,
+  });
+  final UserEntity user;
+  final List<Widget> accountRows, preferenceRows, supportRows;
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.fromLTRB(20, 24, 20, 96),
+    children: [
+      Row(
+        children: [
+          const Text(
+            'More',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          ),
+          const Spacer(),
+          IconButton(
+            onPressed: () => context.push('/staff/more/security-privacy'),
+            icon: const Icon(Icons.settings_outlined, size: 22),
+          ),
+        ],
+      ),
+      const SizedBox(height: 22),
+      _IdentityRow(user: user),
+      const SizedBox(height: 30),
+      _Section(title: 'ACCOUNT', children: accountRows),
+      const SizedBox(height: 26),
+      _Section(title: 'PREFERENCES', children: preferenceRows),
+      const SizedBox(height: 26),
+      _Section(title: 'SUPPORT', children: supportRows),
+      const SizedBox(height: 24),
+      OutlinedButton.icon(
+        onPressed: () => _signOut(context, user),
+        icon: const Icon(Icons.logout_outlined, size: 20),
+        label: const Text('Sign out'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _ink(context),
+          side: BorderSide(color: _ink(context)),
+          padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 18),
+          alignment: Alignment.centerLeft,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+/// Desktop (>=1024) and tablet (600-1023) layout: same rows/callbacks as
+/// mobile, arranged as a bounded profile card plus a two-column section grid.
+class _WideMore extends StatelessWidget {
+  const _WideMore({
+    required this.user,
+    required this.layout,
+    required this.accountRows,
+    required this.preferenceRows,
+    required this.supportRows,
+  });
+  final UserEntity user;
+  final ResponsiveLayout layout;
+  final List<Widget> accountRows, preferenceRows, supportRows;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = layout == ResponsiveLayout.desktop;
+    final left = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Section(title: 'ACCOUNT', children: accountRows),
+        const SizedBox(height: 24),
+        _Section(title: 'SUPPORT', children: supportRows),
+      ],
+    );
+    final right = _Section(title: 'PREFERENCES', children: preferenceRows);
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        isDesktop ? 32 : 20,
+        24,
+        isDesktop ? 32 : 20,
+        48,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1120),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text(
+                    'More',
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+                  ),
+                  const Spacer(),
+                  Tooltip(
+                    message: 'Settings',
+                    child: IconButton(
+                      onPressed: () =>
+                          context.push('/staff/more/security-privacy'),
+                      icon: const Icon(Icons.settings_outlined, size: 22),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _IdentityRow(user: user),
+              const SizedBox(height: 28),
+              if (isDesktop)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: left),
+                    const SizedBox(width: 24),
+                    Expanded(child: right),
+                  ],
+                )
+              else ...[
+                left,
+                const SizedBox(height: 24),
+                right,
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IdentityRow extends StatefulWidget {
   const _IdentityRow({required this.user});
   final UserEntity user;
+
+  @override
+  State<_IdentityRow> createState() => _IdentityRowState();
+}
+
+class _IdentityRowState extends State<_IdentityRow> {
+  bool _photoLoadFailed = false;
+
+  UserEntity get user => widget.user;
+
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: () => context.push('/staff/more/edit-profile'),
@@ -158,10 +276,15 @@ class _IdentityRow extends StatelessWidget {
             radius: 22,
             backgroundColor: _paper(context),
             foregroundColor: _ink(context),
-            backgroundImage: user.photoUrl == null
+            backgroundImage: user.photoUrl == null || _photoLoadFailed
                 ? null
                 : NetworkImage(user.photoUrl!),
-            child: user.photoUrl == null
+            onBackgroundImageError: user.photoUrl == null || _photoLoadFailed
+                ? null
+                : (_, _) {
+                    if (mounted) setState(() => _photoLoadFailed = true);
+                  },
+            child: user.photoUrl == null || _photoLoadFailed
                 ? Text(
                     _initials(user.name),
                     style: const TextStyle(fontSize: 15),
@@ -220,7 +343,7 @@ class _MembershipRow extends StatelessWidget {
             icon: Icons.domain_outlined,
             title: 'Switch school',
             subtitle: 'Choose another organisation',
-            onTap: () => InstitutionSwitcherSheet.show(context),
+            onTap: (context) => InstitutionSwitcherSheet.show(context),
           );
         },
       );
@@ -241,7 +364,7 @@ class _AppearanceRow extends StatelessWidget {
       icon: Icons.brightness_6_outlined,
       title: 'Appearance',
       value: label,
-      onTap: () => _appearancePicker(context, theme),
+      onTap: (context) => _appearancePicker(context, theme),
     );
   }
 }
@@ -285,10 +408,10 @@ class _Row extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? subtitle, value;
-  final VoidCallback? onTap;
+  final void Function(BuildContext context)? onTap;
   @override
   Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
+    onTap: onTap == null ? null : () => onTap!(context),
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       child: Row(

@@ -30,6 +30,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _saving = false;
   bool _uploadingPhoto = false;
   String? _photoUrl;
+  bool _photoLoadFailed = false;
 
   static final _phoneInputFormatter = TextInputFormatter.withFunction(
     (oldValue, newValue) =>
@@ -87,10 +88,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   CircleAvatar(
                     radius: 64,
                     backgroundColor: AppColors.primary(context),
-                    backgroundImage: _photoUrl?.isNotEmpty == true
+                    backgroundImage:
+                        _photoUrl?.isNotEmpty == true && !_photoLoadFailed
                         ? NetworkImage(_photoUrl!)
                         : null,
-                    child: _photoUrl?.isNotEmpty == true
+                    onBackgroundImageError:
+                        _photoUrl?.isNotEmpty == true && !_photoLoadFailed
+                        ? (_, _) {
+                            if (mounted) {
+                              setState(() => _photoLoadFailed = true);
+                            }
+                          }
+                        : null,
+                    child: _photoUrl?.isNotEmpty == true && !_photoLoadFailed
                         ? null
                         : Text(
                             _initials(user.name),
@@ -241,7 +251,40 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         SettableMetadata(contentType: 'image/jpeg'),
       );
       final url = await reference.getDownloadURL();
-      if (mounted) setState(() => _photoUrl = url);
+      if (!mounted) return;
+      setState(() {
+        _photoUrl = url;
+        _photoLoadFailed = false;
+      });
+
+      final authState = context.read<AuthBloc>().state;
+      if (authState is AuthAuthenticated) {
+        final updated = UserEntity(
+          id: authState.user.id,
+          staffCode: authState.user.staffCode,
+          name: authState.user.name,
+          email: authState.user.email,
+          schoolId: authState.user.schoolId,
+          schoolName: authState.user.schoolName,
+          phoneNumber: authState.user.phoneNumber,
+          roles: authState.user.roles,
+          photoUrl: url,
+          studentIds: authState.user.studentIds,
+          studentId: authState.user.studentId,
+          assignedClass: authState.user.assignedClass,
+          subjects: authState.user.subjects,
+          isActive: authState.user.isActive,
+          deactivationReason: authState.user.deactivationReason,
+          mustChangePassword: authState.user.mustChangePassword,
+          mfaEnabled: authState.user.mfaEnabled,
+        );
+        final result = await sl<AuthRepository>().updateProfile(updated);
+        if (!mounted) return;
+        result.fold(
+          (failure) => _showPhotoError(failure.message),
+          (_) => context.read<AuthBloc>().add(AuthCheckRequested()),
+        );
+      }
     } on FirebaseException catch (e) {
       _showPhotoError(e.message ?? 'Could not upload the profile picture.');
     } catch (_) {

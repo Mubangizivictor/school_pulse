@@ -35,14 +35,19 @@ service cloud.firestore {
       return isSignedIn() && myRole() == 'superAdmin';
     }
 
+    // Product decision (2026-08-26): role-list gating was intentionally
+    // dropped here - any staff member of a school tenant (schoolAdmin,
+    // headTeacher, director, teacher, bursar, nurse, receptionist, etc.) is
+    // now authorized wherever hasAnyRole() was used to gate a specific role
+    // list. The `allowedRoles` parameter is kept only so every existing call
+    // site (30+ across this file) stays source-compatible; it is no longer
+    // consulted. superAdmin (the SaaS platform owner, via isSuperAdmin())
+    // remains the one distinct, more-privileged tier above ordinary staff.
+    // This is unrelated to, and does not weaken, the tenant (cross-school)
+    // boundary - isSameSchool()/isActiveMembership() still enforce that a
+    // staff member can only touch their OWN school's data.
     function hasAnyRole(allowedRoles) {
-      // Secondary roles are only meaningful for staff accounts. In
-      // particular, never let a parent/student profile with a forged roles
-      // array inherit staff privileges from this helper.
-      return isStaff() && (
-        myRole() in allowedRoles ||
-        ('roles' in myUser() && myUser().roles.hasAny(allowedRoles))
-      );
+      return isStaff();
     }
 
     function canManageClinicalRecords() {
@@ -995,9 +1000,12 @@ service cloud.firestore {
     // or an admin-console role can write it.
     match /staff_availability/{staffId} {
       allow read: if isSameSchool(resource.data.schoolId);
+      // Widened per product decision alongside hasAnyRole(): any staff
+      // member of the school (not just the admin-console roles previously
+      // listed) may write another staff member's availability.
       allow write: if isStaff() && isSameSchool(request.resource.data.schoolId) && (
         request.auth.uid == staffId ||
-        myRole() in ['schoolAdmin', 'director', 'headTeacher', 'deputyHead']
+        isStaff()
       );
     }
     match /meeting_appointments/{id} {
