@@ -443,9 +443,17 @@ service cloud.firestore {
     // actually enrolled anyone, in any school, ever. Gated the same as the
     // admission_applications status-transition edit above, since minting a
     // sequence number is part of that same permissioned action.
+    // NOTE: `receiptNumber` is deliberately excluded from this counterId ==
+    // 'receiptNumber' check - Firestore rules use union semantics (a path
+    // matching multiple `match` blocks is allowed if ANY block allows it,
+    // not "most specific wins"), so without this exclusion the wildcard
+    // read/write below would silently reopen the receipt-number sequence
+    // that the dedicated schools/{schoolId}/counters/receiptNumber block
+    // further down (allow read, write: if false) is supposed to lock down
+    // entirely.
     match /schools/{schoolId}/counters/{counterId} {
-      allow read: if isStaff() && isSameSchool(schoolId);
-      allow write: if isSameSchool(schoolId) && (
+      allow read: if counterId != 'receiptNumber' && isStaff() && isSameSchool(schoolId);
+      allow write: if counterId != 'receiptNumber' && isSameSchool(schoolId) && (
         hasEnrollmentPermission(schoolId, 'admission.enroll') ||
         hasEnrollmentPermission(schoolId, 'admission.application.review')
       );
