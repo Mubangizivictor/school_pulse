@@ -5,8 +5,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/create_relationship.dart';
+import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft.dart';
 import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft_local_data_source.dart';
-import 'package:school_pulse/features/student/data/enrollment_setup/models/enrollment_setup_draft_isar.dart';
 import 'package:school_pulse/features/student/domain/enrollment_setup/entities/dormitory_assignment.dart';
 import 'package:school_pulse/features/student/domain/enrollment_setup/entities/scholarship_award.dart';
 import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
@@ -28,13 +28,13 @@ class MockStudentRepository extends Mock implements StudentRepository {}
 /// a fake than to stub call-by-call with mocktail.
 class FakeEnrollmentSetupDraftLocalDataSource
     implements EnrollmentSetupDraftLocalDataSource {
-  final Map<String, EnrollmentSetupDraftIsar> _store = {};
+  final Map<String, EnrollmentSetupDraft> _store = {};
   int saveCount = 0;
 
   String _key(String schoolId, String studentId) => '$schoolId::$studentId';
 
   @override
-  Future<EnrollmentSetupDraftIsar?> getDraft({
+  Future<EnrollmentSetupDraft?> getDraft({
     required String schoolId,
     required String studentId,
   }) async => _store[_key(schoolId, studentId)];
@@ -49,14 +49,11 @@ class FakeEnrollmentSetupDraftLocalDataSource
     required Map<String, dynamic> stateJson,
   }) async {
     saveCount++;
-    _store[_key(schoolId, studentId)] = EnrollmentSetupDraftIsar()
-      ..studentId = studentId
-      ..schoolId = schoolId
-      ..applicationId = applicationId
-      ..currentStep = currentStep
-      ..completedStepsMask = completedStepsMask
-      ..stateJson = '{}'
-      ..updatedAt = DateTime.now();
+    _store[_key(schoolId, studentId)] = EnrollmentSetupDraft(
+      currentStep: currentStep,
+      completedStepsMask: completedStepsMask,
+      stateJson: '{}',
+    );
   }
 
   @override

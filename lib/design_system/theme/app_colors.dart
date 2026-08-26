@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// A deliberately quiet monochrome palette.
+/// Black/white/grey as the primary identity, with real semantic colors
+/// (green/amber/red) layered on top purely for status meaning - active vs.
+/// revoked, success vs. danger, warnings. Chrome, surfaces, and typography
+/// stay monochrome; only status indicators (badges, alerts) use hue.
 ///
 /// The legacy names remain as compatibility aliases while feature code
-/// migrates to semantic accessors.  Neutral greys are intentional: they keep
-/// outlines, secondary text and disabled controls from competing with the
-/// content while retaining the black-and-white School Pulse identity.
+/// migrates to semantic accessors.
 class AppColors {
   AppColors._();
 
@@ -22,14 +23,36 @@ class AppColors {
   static const Color grey900 = Color(0xFF121212);
   static const Color transparent = Colors.transparent;
 
+  // Real semantic hues - success (green), warning (amber), danger (red),
+  // info (blue) - one value per brightness, calibrated for AA contrast
+  // against bgLight/bgDark respectively.
+  static const Color successLight = Color(0xFF1E8E3E);
+  static const Color successDark = Color(0xFF4CAF6D);
+  static const Color warningLight = Color(0xFFB25E00);
+  static const Color warningDark = Color(0xFFE0A64B);
+  static const Color dangerLight = Color(0xFFD03434);
+  static const Color dangerDark = Color(0xFFE5605F);
+  static const Color infoLight = Color(0xFF3A6EA5);
+  static const Color infoDark = Color(0xFF7CA7D8);
+  // Tinted surfaces for status banners/chips - a very light/dark wash of
+  // the same hue, so a filled badge never fights the monochrome background.
+  static const Color successSurfaceLight = Color(0xFFE6F4EA);
+  static const Color successSurfaceDark = Color(0xFF16301F);
+  static const Color warningSurfaceLight = Color(0xFFFCEEDC);
+  static const Color warningSurfaceDark = Color(0xFF3A2A12);
+  static const Color dangerSurfaceLight = Color(0xFFFBE7E7);
+  static const Color dangerSurfaceDark = Color(0xFF3A1919);
+  static const Color infoSurfaceLight = Color(0xFFE8F0F9);
+  static const Color infoSurfaceDark = Color(0xFF1B2A38);
+
   static const Color deepNavy = black, midnightNavy = black, royalBlue = black;
   static const Color electricBlue = black, brightCyan = black, iceBlue = white;
   static const Color pureWhite = white,
       goldenYellow = black,
       brightOrange = black;
   static const Color deepOrange = black,
-      successGreen = black,
-      emeraldGreen = black;
+      successGreen = successLight,
+      emeraldGreen = successLight;
   static const Color bgLight = grey25,
       surfaceLight = white,
       borderLight = grey300;
@@ -68,13 +91,24 @@ class AppColors {
       _dark(context) ? textMutedDark : textMutedLight;
   static Color border(BuildContext context) =>
       _dark(context) ? borderDark : borderLight;
-  static Color success(BuildContext context) => textPrimary(context);
-  static Color successSurface(BuildContext context) => background(context);
-  static Color warning(BuildContext context) => textPrimary(context);
-  static Color danger(BuildContext context) => textPrimary(context);
-  static Color error = black;
-  static Color errorRed = black;
-  static Color information(BuildContext context) => textPrimary(context);
+  static Color success(BuildContext context) =>
+      _dark(context) ? successDark : successLight;
+  static Color successSurface(BuildContext context) =>
+      _dark(context) ? successSurfaceDark : successSurfaceLight;
+  static Color warning(BuildContext context) =>
+      _dark(context) ? warningDark : warningLight;
+  static Color warningSurface(BuildContext context) =>
+      _dark(context) ? warningSurfaceDark : warningSurfaceLight;
+  static Color danger(BuildContext context) =>
+      _dark(context) ? dangerDark : dangerLight;
+  static Color dangerSurface(BuildContext context) =>
+      _dark(context) ? dangerSurfaceDark : dangerSurfaceLight;
+  static Color error = dangerLight;
+  static Color errorRed = dangerLight;
+  static Color information(BuildContext context) =>
+      _dark(context) ? infoDark : infoLight;
+  static Color informationSurface(BuildContext context) =>
+      _dark(context) ? infoSurfaceDark : infoSurfaceLight;
   static Color disabled(BuildContext context) =>
       _dark(context) ? disabledDark : disabledLight;
   static Color focus(BuildContext context) => textPrimary(context);

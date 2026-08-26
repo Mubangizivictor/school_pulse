@@ -134,19 +134,18 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: scheme.surface,
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: scheme.outline, width: 1),
+        border: Border.all(color: color, width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 12, color: scheme.onSurface),
+            Icon(icon, size: 12, color: color),
             const SizedBox(width: 4),
           ],
           Flexible(
@@ -156,7 +155,7 @@ class StatusBadge extends StatelessWidget {
                 label.toUpperCase(),
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: scheme.onSurface,
+                  color: color,
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.5,

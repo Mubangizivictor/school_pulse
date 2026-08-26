@@ -80,13 +80,14 @@ import 'package:school_pulse/features/messages/data/repositories/messages_reposi
 import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
 import 'package:school_pulse/features/messages/presentation/bloc/conversation_bloc.dart';
 import 'package:school_pulse/features/messages/domain/services/message_outbox_service.dart';
-import 'package:school_pulse/features/messages/data/services/message_outbox_service_impl.dart';
+import 'package:school_pulse/features/messages/data/services/message_outbox_service_factory.dart';
 import 'package:school_pulse/features/finance/domain/services/finance_service.dart';
 import 'package:school_pulse/features/student/domain/services/admission_service.dart';
 import 'package:school_pulse/features/student/domain/services/enrollment_audit_service.dart';
 import 'package:school_pulse/features/student/domain/services/document_service.dart';
 import 'package:school_pulse/features/student/domain/enrollment_setup/repositories/enrollment_setup_repository.dart';
 import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft_local_data_source.dart';
+import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft_local_data_source_factory.dart';
 import 'package:school_pulse/features/student/data/enrollment_setup/repositories/enrollment_setup_repository_impl.dart';
 import 'package:school_pulse/features/student/presentation/enrollment_setup/bloc/enrollment_setup_wizard_bloc.dart';
 import 'package:school_pulse/features/student/domain/services/parent_linking_service.dart';
@@ -775,7 +776,7 @@ Future<void> init() async {
   // Local (Isar) resume-draft cache for the wizard - null on web, matching
   // every other Isar-backed local cache's degradation pattern there.
   sl.registerLazySingleton<EnrollmentSetupDraftLocalDataSource>(
-    () => EnrollmentSetupDraftLocalDataSourceImpl(
+    () => createEnrollmentSetupDraftLocalDataSource(
       isar: kIsWeb ? null : sl<Isar>(),
     ),
   );
@@ -1359,7 +1360,7 @@ Future<void> init() async {
   // queue", which is what web already did before this feature existed.
   if (!kIsWeb) {
     sl.registerLazySingleton<MessageOutboxService>(
-      () => MessageOutboxServiceImpl(isar: sl(), repository: sl()),
+      () => createMessageOutboxService(isar: sl(), repository: sl()),
     );
   }
   sl.registerFactory<ConversationBloc>(

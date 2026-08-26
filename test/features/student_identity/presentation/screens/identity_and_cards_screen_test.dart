@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/network/network_info.dart';
+import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
@@ -94,7 +95,10 @@ Widget _wrap(
     ],
   );
 
-  return MaterialApp.router(routerConfig: router);
+  return MaterialApp.router(
+    theme: AppTheme.light(),
+    routerConfig: router,
+  );
 }
 
 /// Scans the whole widget tree for any Text widget whose data contains

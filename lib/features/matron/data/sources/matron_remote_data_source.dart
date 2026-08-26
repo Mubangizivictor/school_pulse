@@ -7,8 +7,7 @@ import 'package:school_pulse/features/matron/domain/entities/matron_entities.dar
 import 'package:school_pulse/features/matron/domain/repositories/matron_repository.dart';
 import 'package:school_pulse/features/matron/domain/entities/boarding_entities.dart'
     as legacy;
-import 'package:school_pulse/features/shared/boarding/data/models/boarding_attendance_isar.dart'
-    show buildBoardingAttendanceRecordId;
+import 'package:school_pulse/features/shared/boarding/data/models/boarding_attendance_record_id.dart';
 
 /// Girls' boarding is always scoped to this gender so Matron never reads or
 /// writes a boys' (Patron) dormitory/student record, even though both

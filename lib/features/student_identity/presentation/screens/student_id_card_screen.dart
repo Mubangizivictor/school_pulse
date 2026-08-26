@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import 'package:school_pulse/core/network/network_info.dart';
+import 'package:school_pulse/design_system/app_theme.dart' show SemanticColors;
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/features/structure/domain/entities/institution_profile.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
@@ -57,11 +58,9 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen>
 
   @override
   Widget build(BuildContext context) {
+    final semantic = Theme.of(context).extension<SemanticColors>()!;
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
         title: const Text('Student ID Card'),
         actions: [
           BlocBuilder<StudentIdentityBloc, StudentIdentityState>(
@@ -77,7 +76,11 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen>
                       ? Icons.verified_rounded
                       : (revoked ? Icons.block_rounded : null) ??
                             Icons.verified_outlined,
-                  color: active ? Colors.black : Colors.black38,
+                  color: active
+                      ? semantic.success
+                      : (revoked
+                            ? semantic.error
+                            : Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               );
             },
@@ -484,28 +487,31 @@ class _OfflineBanner extends StatelessWidget {
   const _OfflineBanner();
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-    decoration: BoxDecoration(
-      color: const Color(0xFFF2F2F2),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Colors.black12),
-    ),
-    child: const Row(
-      children: [
-        Icon(Icons.cloud_off_rounded, size: 18, color: Colors.black),
-        SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            "You're offline — print/download still work, but replacing or "
-            'revoking a credential requires a connection.',
-            style: TextStyle(fontSize: 12, color: Colors.black87),
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.cloud_off_rounded, size: 18, color: scheme.onSurface),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              "You're offline — print/download still work, but replacing or "
+              'revoking a credential requires a connection.',
+              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _FrontBackSelector extends StatelessWidget {
@@ -514,28 +520,41 @@ class _FrontBackSelector extends StatelessWidget {
   const _FrontBackSelector({required this.showFront, required this.onChanged});
 
   @override
-  Widget build(BuildContext context) => Container(
-    height: 44,
-    padding: const EdgeInsets.all(3),
-    decoration: BoxDecoration(
-      color: const Color(0xFFF2F2F2),
-      borderRadius: BorderRadius.circular(22),
-    ),
-    child: Row(
-      children: [
-        Expanded(child: _segment('Front', showFront, () => onChanged(true))),
-        Expanded(child: _segment('Back', !showFront, () => onChanged(false))),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _segment(context, 'Front', showFront, () => onChanged(true)),
+          ),
+          Expanded(
+            child: _segment(context, 'Back', !showFront, () => onChanged(false)),
+          ),
+        ],
+      ),
+    );
+  }
 
-  Widget _segment(String label, bool selected, VoidCallback onTap) {
+  Widget _segment(
+    BuildContext context,
+    String label,
+    bool selected,
+    VoidCallback onTap,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
-          color: selected ? Colors.black : Colors.transparent,
+          color: selected ? scheme.onSurface : Colors.transparent,
           borderRadius: BorderRadius.circular(19),
         ),
         alignment: Alignment.center,
@@ -545,14 +564,14 @@ class _FrontBackSelector extends StatelessWidget {
             Icon(
               selected ? Icons.check_rounded : Icons.crop_free_rounded,
               size: 16,
-              color: selected ? Colors.white : Colors.black54,
+              color: selected ? scheme.surface : scheme.onSurfaceVariant,
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 fontWeight: FontWeight.w700,
-                color: selected ? Colors.white : Colors.black54,
+                color: selected ? scheme.surface : scheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -577,22 +596,19 @@ class _MessageState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: Colors.black45),
+            Icon(icon, size: 48, color: scheme.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 16),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: Colors.black),
-                onPressed: onAction,
-                child: Text(actionLabel!),
-              ),
+              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
             ],
           ],
         ),
@@ -1120,6 +1136,8 @@ class _CardActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
+    final scheme = Theme.of(context).colorScheme;
+    final color = enabled ? scheme.onSurface : scheme.onSurfaceVariant;
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 3),
@@ -1127,24 +1145,19 @@ class _CardActionTile extends StatelessWidget {
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
-            side: BorderSide(color: enabled ? Colors.black26 : Colors.black12),
+            side: BorderSide(
+              color: enabled ? scheme.outline : scheme.outlineVariant,
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                color: enabled ? Colors.black : Colors.black26,
-                size: 22,
-              ),
+              Icon(icon, color: color, size: 22),
               const SizedBox(height: 4),
               Text(
                 label,
                 maxLines: 1,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: enabled ? Colors.black : Colors.black26,
-                ),
+                style: TextStyle(fontSize: 10, color: color),
               ),
             ],
           ),
@@ -1164,17 +1177,20 @@ class _CardStatusPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final revoked =
         identity.nfcStatus == 'revoked' || identity.qrCredentialStatus == 'revoked';
+    final scheme = Theme.of(context).colorScheme;
+    final semantic = Theme.of(context).extension<SemanticColors>()!;
+    final statusColor = revoked ? semantic.error : semantic.success;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black12),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Row(
         children: [
           Icon(
             revoked ? Icons.block_rounded : Icons.verified_user_outlined,
-            color: Colors.black,
+            color: statusColor,
             size: 32,
           ),
           const SizedBox(width: 12),
@@ -1193,18 +1209,19 @@ class _CardStatusPanel extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     'Issued ${DateFormat('d MMM yyyy').format(identity.issuedAt!)}',
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                    style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
                   ),
                 ],
                 const SizedBox(height: 6),
                 GestureDetector(
                   onTap: onViewHistory,
-                  child: const Text(
+                  child: Text(
                     'View card history',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       decoration: TextDecoration.underline,
+                      color: scheme.onSurface,
                     ),
                   ),
                 ),
@@ -1214,14 +1231,14 @@ class _CardStatusPanel extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: revoked ? Colors.white : Colors.black,
-              border: revoked ? Border.all(color: Colors.black) : null,
+              color: statusColor.withValues(alpha: 0.14),
+              border: Border.all(color: statusColor),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               revoked ? 'REVOKED' : 'ACTIVE',
               style: TextStyle(
-                color: revoked ? Colors.black : Colors.white,
+                color: statusColor,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
               ),

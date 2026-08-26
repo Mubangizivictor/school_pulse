@@ -12,7 +12,10 @@ import 'package:school_pulse/features/messages/domain/services/message_outbox_se
 
 const _uuid = Uuid();
 
-class MessageOutboxServiceImpl implements MessageOutboxService {
+MessageOutboxService create({required dynamic isar, required MessagesRepository repository}) =>
+    MessageOutboxServiceMobile(isar: isar as Isar, repository: repository);
+
+class MessageOutboxServiceMobile implements MessageOutboxService {
   final Isar isar;
   final MessagesRepository repository;
 
@@ -20,7 +23,7 @@ class MessageOutboxServiceImpl implements MessageOutboxService {
   /// racing the lifecycle gate's poll) attempting the same row twice.
   bool _draining = false;
 
-  MessageOutboxServiceImpl({required this.isar, required this.repository});
+  MessageOutboxServiceMobile({required this.isar, required this.repository});
 
   @override
   Future<String> enqueueText({

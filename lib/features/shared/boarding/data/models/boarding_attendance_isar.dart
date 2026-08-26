@@ -1,22 +1,8 @@
 import 'package:isar/isar.dart';
 
-part 'boarding_attendance_isar.g.dart';
+export 'boarding_attendance_record_id.dart' show buildBoardingAttendanceRecordId;
 
-/// Deterministic offline-duplicate-detection id: one boarder can only have
-/// one attendance record per (school, dormitory, session type, day) - the
-/// same identity Firestore should enforce, mirroring
-/// `attendance_hub`'s `buildAttendanceRecordId` pattern.
-String buildBoardingAttendanceRecordId({
-  required String schoolId,
-  required String dormitoryId,
-  required String type,
-  required DateTime date,
-  required String studentId,
-}) {
-  final day =
-      '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-  return '$schoolId|$dormitoryId|$type|$day|$studentId';
-}
+part 'boarding_attendance_isar.g.dart';
 
 /// Local-first cache for Patron/Matron boarding roll-call marks: every Roll
 /// Call save lands here immediately, then a push to `boarding_attendance` is

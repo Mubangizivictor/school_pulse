@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:school_pulse/core/network/network_info.dart';
+import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/relationships/domain/entities/parent_student_relationship.dart';
 import 'package:school_pulse/features/relationships/domain/repositories/relationship_repository.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
@@ -104,6 +105,7 @@ Widget _wrap({
   when(() => structureBloc.state).thenReturn(const StructureState());
 
   return MaterialApp(
+    theme: AppTheme.light(),
     home: MultiBlocProvider(
       providers: [
         BlocProvider<StudentIdentityBloc>.value(value: bloc),

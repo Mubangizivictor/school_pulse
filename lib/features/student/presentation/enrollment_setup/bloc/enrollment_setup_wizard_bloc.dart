@@ -5,8 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
 import 'package:school_pulse/features/relationships/domain/entities/relationship_enums.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/create_relationship.dart';
+import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft.dart';
 import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft_local_data_source.dart';
-import 'package:school_pulse/features/student/data/enrollment_setup/models/enrollment_setup_draft_isar.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
 import 'package:school_pulse/features/student/domain/enrollment_setup/entities/dormitory_assignment.dart';
@@ -337,11 +337,11 @@ class EnrollmentSetupWizardBloc
     );
 
     // Resume from a local draft if one exists for this student+school
-    // (see EnrollmentSetupDraftIsar - device-local only, not a security
+    // (see EnrollmentSetupDraft - device-local only, not a security
     // boundary; Firestore rules remain the real tenant isolation). Keyed by
     // studentId+schoolId rather than auth uid so the same draft survives a
     // logout/login by any operator with wizard access to this student.
-    EnrollmentSetupDraftIsar? draft;
+    EnrollmentSetupDraft? draft;
     final ds = draftLocalDataSource;
     if (ds != null) {
       draft = await ds.getDraft(

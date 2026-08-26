@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/app_theme.dart' show SemanticColors;
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/injection_container.dart';
@@ -362,7 +363,9 @@ class _SchoolIdCard extends StatelessWidget {
           const SizedBox(height: 14),
           StatusBadge(
             label: _issued ? 'ID card issued' : 'Not yet issued',
-            color: scheme.onSurface,
+            color: _issued
+                ? Theme.of(context).extension<SemanticColors>()!.success
+                : scheme.onSurfaceVariant,
             icon: _issued ? Icons.check_circle_outline : Icons.remove_circle_outline,
           ),
           if (_issued && identity.issuedAt != null) ...[
@@ -470,7 +473,9 @@ class _QrCredentialCard extends StatelessWidget {
           if (_issued)
             StatusBadge(
               label: _active ? 'Active' : 'Revoked',
-              color: scheme.onSurface,
+              color: _active
+                  ? Theme.of(context).extension<SemanticColors>()!.success
+                  : Theme.of(context).extension<SemanticColors>()!.error,
               icon: _active
                   ? Icons.check_circle_outline
                   : Icons.block_outlined,
@@ -478,7 +483,7 @@ class _QrCredentialCard extends StatelessWidget {
           else
             StatusBadge(
               label: 'Not yet issued',
-              color: scheme.onSurface,
+              color: scheme.onSurfaceVariant,
               icon: Icons.remove_circle_outline,
             ),
           const SizedBox(height: 8),
@@ -688,7 +693,11 @@ class _NfcCardState extends State<_NfcCard> with NfcScanFlowMixin {
               'revoked' => 'Revoked',
               _ => 'No active card',
             },
-            color: scheme.onSurface,
+            color: switch (status) {
+              'active' => Theme.of(context).extension<SemanticColors>()!.success,
+              'revoked' => Theme.of(context).extension<SemanticColors>()!.error,
+              _ => scheme.onSurfaceVariant,
+            },
             icon: switch (status) {
               'active' => Icons.check_circle_outline,
               'revoked' => Icons.block_outlined,
