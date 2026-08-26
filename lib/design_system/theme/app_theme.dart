@@ -15,8 +15,17 @@ class AppTheme {
 
   static ThemeData _build(Brightness brightness) {
     final dark = brightness == Brightness.dark;
-    final background = dark ? AppColors.black : AppColors.white;
-    final foreground = dark ? AppColors.white : AppColors.black;
+    final background = dark ? AppColors.bgDark : AppColors.bgLight;
+    final surface = dark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final surfaceMuted = dark
+        ? AppColors.elevatedSurfaceDark
+        : AppColors.grey50;
+    final foreground = dark ? AppColors.textPrimaryDark : AppColors.black;
+    final secondaryText = dark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+    final mutedText = dark ? AppColors.textMutedDark : AppColors.textMutedLight;
+    final outlineColor = dark ? AppColors.borderDark : AppColors.borderLight;
     final scheme = ColorScheme(
       brightness: brightness,
       primary: foreground,
@@ -25,28 +34,28 @@ class AppTheme {
       onSecondary: background,
       error: foreground,
       onError: background,
-      surface: background,
+      surface: surface,
       onSurface: foreground,
-      surfaceContainerHighest: background,
-      onSurfaceVariant: foreground,
-      outline: foreground,
-      outlineVariant: foreground,
+      surfaceContainerHighest: surfaceMuted,
+      onSurfaceVariant: secondaryText,
+      outline: outlineColor,
+      outlineVariant: outlineColor,
       shadow: Colors.transparent,
       scrim: Colors.transparent,
       inverseSurface: foreground,
       onInverseSurface: background,
       inversePrimary: background,
-      primaryContainer: foreground,
-      onPrimaryContainer: background,
-      secondaryContainer: foreground,
-      onSecondaryContainer: background,
+      primaryContainer: surfaceMuted,
+      onPrimaryContainer: foreground,
+      secondaryContainer: surfaceMuted,
+      onSecondaryContainer: foreground,
       tertiary: foreground,
       onTertiary: background,
       tertiaryContainer: foreground,
       onTertiaryContainer: background,
     );
     final text = _textTheme(foreground);
-    final outline = BorderSide(color: foreground);
+    final outline = BorderSide(color: outlineColor);
     final shape = RoundedRectangleBorder(borderRadius: AppRadius.medium);
     return ThemeData(
       useMaterial3: true,
@@ -54,7 +63,7 @@ class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: background,
       canvasColor: background,
-      disabledColor: foreground,
+      disabledColor: dark ? AppColors.disabledDark : AppColors.disabledLight,
       shadowColor: Colors.transparent,
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
@@ -72,7 +81,7 @@ class AppTheme {
         iconTheme: IconThemeData(color: foreground),
       ),
       cardTheme: CardThemeData(
-        color: background,
+        color: surface,
         elevation: 0,
         shadowColor: Colors.transparent,
         margin: EdgeInsets.zero,
@@ -81,13 +90,17 @@ class AppTheme {
           side: outline,
         ),
       ),
-      dividerTheme: DividerThemeData(color: foreground, thickness: 1, space: 1),
+      dividerTheme: DividerThemeData(
+        color: outlineColor,
+        thickness: 1,
+        space: 1,
+      ),
       iconTheme: IconThemeData(color: foreground),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: background,
-        labelStyle: TextStyle(color: foreground),
-        hintStyle: TextStyle(color: foreground),
+        fillColor: surface,
+        labelStyle: TextStyle(color: secondaryText),
+        hintStyle: TextStyle(color: mutedText),
         prefixIconColor: foreground,
         suffixIconColor: foreground,
         border: OutlineInputBorder(
@@ -100,11 +113,11 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadius.medium,
-          borderSide: BorderSide(color: foreground, width: 2),
+          borderSide: BorderSide(color: foreground, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadius.medium,
-          borderSide: BorderSide(color: foreground, width: 2),
+          borderSide: BorderSide(color: foreground, width: 1.5),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -141,8 +154,8 @@ class AppTheme {
         shape: shape,
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: background,
-        disabledColor: background,
+        backgroundColor: surface,
+        disabledColor: surfaceMuted,
         selectedColor: foreground,
         secondarySelectedColor: foreground,
         labelStyle: TextStyle(color: foreground),
@@ -166,14 +179,14 @@ class AppTheme {
       ),
       radioTheme: RadioThemeData(fillColor: WidgetStatePropertyAll(foreground)),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: background,
+        backgroundColor: surface,
         selectedItemColor: foreground,
         unselectedItemColor: foreground,
         elevation: 0,
         type: BottomNavigationBarType.fixed,
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: background,
+        backgroundColor: surface,
         selectedIconTheme: IconThemeData(color: background),
         selectedLabelTextStyle: TextStyle(color: background),
         unselectedIconTheme: IconThemeData(color: foreground),
@@ -196,7 +209,7 @@ class AppTheme {
         ),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: background,
+        backgroundColor: surface,
         elevation: 0,
         modalElevation: 0,
         shadowColor: Colors.transparent,
@@ -213,7 +226,7 @@ class AppTheme {
         behavior: SnackBarBehavior.floating,
       ),
       popupMenuTheme: PopupMenuThemeData(
-        color: background,
+        color: surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shape: RoundedRectangleBorder(side: outline),
@@ -227,24 +240,24 @@ class AppTheme {
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: foreground,
-        linearTrackColor: background,
-        circularTrackColor: background,
+        linearTrackColor: surfaceMuted,
+        circularTrackColor: surfaceMuted,
       ),
       listTileTheme: ListTileThemeData(
         iconColor: foreground,
         textColor: foreground,
-        tileColor: background,
+        tileColor: surface,
         selectedColor: background,
         selectedTileColor: foreground,
       ),
       tabBarTheme: TabBarThemeData(
         labelColor: foreground,
-        unselectedLabelColor: foreground,
+        unselectedLabelColor: secondaryText,
         indicatorColor: foreground,
-        dividerColor: foreground,
+        dividerColor: outlineColor,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: background,
+        backgroundColor: surface,
         indicatorColor: foreground,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
@@ -273,7 +286,7 @@ class AppTheme {
       ),
       timePickerTheme: TimePickerThemeData(
         backgroundColor: background,
-        dialBackgroundColor: background,
+        dialBackgroundColor: surfaceMuted,
         dialHandColor: foreground,
         dialTextColor: foreground,
         hourMinuteColor: background,

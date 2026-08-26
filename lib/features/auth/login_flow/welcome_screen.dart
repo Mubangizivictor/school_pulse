@@ -312,7 +312,6 @@ class _BackgroundPainter extends CustomPainter {
     final dotPaint = Paint()..color = accent;
     const spacing = 26.0;
     for (double y = 0; y < size.height; y += spacing) {
-      final fade = (1.0 - (y / size.height)).clamp(0.0, 1.0);
       dotPaint.color = accent;
       for (double x = 0; x < size.width; x += spacing) {
         canvas.drawCircle(Offset(x, y), 1.0, dotPaint);
@@ -658,7 +657,7 @@ class _RoleCardState extends State<_RoleCard> {
                                       ),
                                       child: Icon(
                                         widget.icon,
-                                        color: Colors.white,
+                                        color: Colors.black,
                                         size: 33,
                                       ),
                                     ),
@@ -843,6 +842,7 @@ class _FeatureItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textColor = AppColors.textPrimary(context);
+    final iconForeground = Theme.of(context).colorScheme.surface;
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
@@ -854,7 +854,7 @@ class _FeatureItem extends StatelessWidget {
             color: textColor,
             border: Border.all(color: textColor),
           ),
-          child: Icon(icon, color: textColor, size: 26),
+          child: Icon(icon, color: iconForeground, size: 26),
         ),
         const SizedBox(height: 12),
         Text(

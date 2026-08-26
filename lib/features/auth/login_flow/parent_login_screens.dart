@@ -321,7 +321,6 @@ class _ParentPortalHelpCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final accent = AppColors.textPrimary(context);
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -334,7 +333,11 @@ class _ParentPortalHelpCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline_rounded, color: accent, size: 34),
+          Icon(
+            Icons.info_outline_rounded,
+            color: theme.colorScheme.surface,
+            size: 34,
+          ),
           const SizedBox(width: AppSpacing.x2l),
           Expanded(
             child: Column(
@@ -343,7 +346,7 @@ class _ParentPortalHelpCard extends StatelessWidget {
                 Text(
                   "Don't have a code?",
                   style: AppTypography.bodyLarge.copyWith(
-                    color: accent,
+                    color: theme.colorScheme.surface,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -351,7 +354,7 @@ class _ParentPortalHelpCard extends StatelessWidget {
                 Text(
                   "Please contact your school's\nadministration office.",
                   style: AppTypography.bodyMedium.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: theme.colorScheme.surface,
                     height: 1.45,
                   ),
                 ),
@@ -359,7 +362,11 @@ class _ParentPortalHelpCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.l),
-          Icon(Icons.support_agent_rounded, color: accent, size: 36),
+          Icon(
+            Icons.support_agent_rounded,
+            color: theme.colorScheme.surface,
+            size: 36,
+          ),
         ],
       ),
     );
@@ -462,10 +469,18 @@ class _ParentPortalPrivacyNote extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Icon(Icons.shield_outlined, color: accent, size: 34),
+              Icon(
+                Icons.shield_outlined,
+                color: theme.colorScheme.surface,
+                size: 34,
+              ),
               Positioned(
                 top: 23,
-                child: Icon(Icons.lock_rounded, color: accent, size: 13),
+                child: Icon(
+                  Icons.lock_rounded,
+                  color: theme.colorScheme.surface,
+                  size: 13,
+                ),
               ),
             ],
           ),

@@ -124,29 +124,33 @@ class StudentProfileDataSource {
     required String schoolId,
     required DateTime since,
   }) async {
+    // Do not make the learner profile unusable while a composite index is
+    // building. A single learner has a bounded attendance history, so read
+    // that learner's records through Firestore's automatic equality index and
+    // apply the small date window/order locally.
     final snapshot = await _firestore
         .collection('schools')
         .doc(schoolId)
         .collection('attendance_records')
         .where('personId', isEqualTo: studentId)
-        .where(
-          'date',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(
-            DateTime(since.year, since.month, since.day),
-          ),
-        )
-        .orderBy('date', descending: true)
         .get();
-    return snapshot.docs.map((doc) {
-      final data = doc.data();
-      return StudentAttendanceEvent(
-        id: doc.id,
-        date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
-        status: data['status'] as String? ?? 'unknown',
-        sessionType: data['sessionType'] as String? ?? '',
-        scopeName: data['scopeName'] as String? ?? '',
-      );
-    }).toList();
+    final cutoff = DateTime(since.year, since.month, since.day);
+    final events =
+        snapshot.docs
+            .map((doc) {
+              final data = doc.data();
+              return StudentAttendanceEvent(
+                id: doc.id,
+                date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+                status: data['status'] as String? ?? 'unknown',
+                sessionType: data['sessionType'] as String? ?? '',
+                scopeName: data['scopeName'] as String? ?? '',
+              );
+            })
+            .where((event) => !event.date.isBefore(cutoff))
+            .toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
+    return events;
   }
 
   /// Audit-log entries about one learner, newest first.

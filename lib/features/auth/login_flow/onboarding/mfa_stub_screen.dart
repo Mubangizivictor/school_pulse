@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/login_flow/onboarding/onboarding_step_scaffold.dart';
 
@@ -19,7 +18,7 @@ class MfaStubScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
     return OnboardingStepScaffold(
       title: 'Multi-Factor Authentication',
       subtitle: mfaRequired
@@ -31,25 +30,19 @@ class MfaStubScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.l),
         decoration: BoxDecoration(
-          color: (isDark ? AppColors.surfaceDark : AppColors.borderLight),
+          color: colors.onSurface,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: [
-            Icon(
-              Icons.shield_outlined,
-              color: isDark ? Colors.white : AppColors.textSecondaryLight,
-            ),
+            Icon(Icons.shield_outlined, color: colors.surface),
             const SizedBox(width: AppSpacing.m),
             Expanded(
               child: Text(
                 mfaRequired
                     ? 'MFA policy: required by your institution'
                     : 'MFA policy: not required',
-                style: TextStyle(
-                  color: isDark ? Colors.white : AppColors.textSecondaryLight,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: colors.surface, fontSize: 13),
               ),
             ),
           ],

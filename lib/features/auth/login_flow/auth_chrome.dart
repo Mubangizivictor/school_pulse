@@ -395,7 +395,7 @@ class AuthField extends StatelessWidget {
   final String label;
   final String hint;
   final IconData icon;
-  final Color accent;
+  final Color foreground;
   final TextEditingController controller;
   final bool isPassword;
   final TextInputType keyboardType;
@@ -408,7 +408,7 @@ class AuthField extends StatelessWidget {
     required this.label,
     required this.hint,
     required this.icon,
-    required this.accent,
+    required this.foreground,
     required this.controller,
     this.isPassword = false,
     this.keyboardType = TextInputType.text,
@@ -419,15 +419,13 @@ class AuthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: AppTypography.titleSmall.copyWith(
-            color: colorScheme.onSurface,
+            color: foreground,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -437,14 +435,12 @@ class AuthField extends StatelessWidget {
           obscureText: isPassword,
           keyboardType: keyboardType,
           textCapitalization: textCapitalization,
-          style: AppTypography.bodyLarge.copyWith(color: colorScheme.onSurface),
+          style: AppTypography.bodyLarge.copyWith(color: foreground),
           decoration: InputDecoration(
             hintText: hint,
             errorText: errorText,
-            hintStyle: AppTypography.bodyLarge.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-            prefixIcon: Icon(icon, color: accent),
+            hintStyle: AppTypography.bodyLarge.copyWith(color: foreground),
+            prefixIcon: Icon(icon, color: foreground),
             suffixIcon: suffix,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.l,
@@ -452,15 +448,15 @@ class AuthField extends StatelessWidget {
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: accent),
+              borderSide: BorderSide(color: foreground),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: accent, width: 1.6),
+              borderSide: BorderSide(color: foreground, width: 1.6),
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: accent),
+              borderSide: BorderSide(color: foreground),
             ),
           ),
         ),

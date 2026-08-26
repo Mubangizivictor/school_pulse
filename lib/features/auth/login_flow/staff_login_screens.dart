@@ -271,7 +271,10 @@ class _StaffPortalField extends StatelessWidget {
                       color: accent,
                       borderRadius: BorderRadius.circular(9),
                     ),
-                    child: Icon(icon, color: accent, size: 23),
+                    // The glyph sits on the solid foreground badge, so it
+                    // must use the matching surface colour. Reusing `accent`
+                    // here made the icon disappear in the monochrome theme.
+                    child: Icon(icon, color: colors.surface, size: 23),
                   ),
                 ),
               ),
@@ -374,7 +377,11 @@ class _StaffPrivacyNote extends StatelessWidget {
             width: 50,
             height: 50,
             decoration: BoxDecoration(shape: BoxShape.circle, color: accent),
-            child: Icon(Icons.lock_outline_rounded, color: accent, size: 26),
+            child: Icon(
+              Icons.lock_outline_rounded,
+              color: colors.surface,
+              size: 26,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

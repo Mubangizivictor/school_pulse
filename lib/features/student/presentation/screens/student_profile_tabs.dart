@@ -503,7 +503,18 @@ class _AttendanceTabState extends State<AttendanceTab> {
             EmptyState(
               icon: Icons.error_outline_rounded,
               title: 'Could not load attendance',
-              message: '${snapshot.error}',
+              message:
+                  'Attendance is temporarily unavailable. Please try again.',
+              ctaLabel: 'Retry',
+              onCtaPressed: () => setState(() {
+                _future = _dataSource.getAttendance(
+                  studentId: widget.student.id,
+                  schoolId: widget.student.schoolId,
+                  since: DateTime.now().subtract(
+                    const Duration(days: _windowDays),
+                  ),
+                );
+              }),
             ),
           ]);
         }

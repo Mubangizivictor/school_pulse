@@ -35,8 +35,6 @@ class PlatformOwnerAccessScreen extends StatefulWidget {
 }
 
 class _PlatformOwnerAccessScreenState extends State<PlatformOwnerAccessScreen> {
-  static const _accent = AppColors.brightCyan;
-
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscure = true;
@@ -199,7 +197,7 @@ class _PlatformOwnerAccessScreenState extends State<PlatformOwnerAccessScreen> {
                                   label: 'Email Address',
                                   hint: 'Enter email',
                                   icon: Icons.mail_outline_rounded,
-                                  accent: _accent,
+                                  foreground: AppColors.textPrimaryDark,
                                   controller: _emailController,
                                   keyboardType: TextInputType.emailAddress,
                                 ),
@@ -208,7 +206,7 @@ class _PlatformOwnerAccessScreenState extends State<PlatformOwnerAccessScreen> {
                                   label: 'Password',
                                   hint: '••••••••',
                                   icon: Icons.lock_outline_rounded,
-                                  accent: _accent,
+                                  foreground: AppColors.textPrimaryDark,
                                   controller: _passwordController,
                                   isPassword: _obscure,
                                   suffix: IconButton(
@@ -285,10 +283,10 @@ class _OwnerBadge extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: AppColors.surfaceDark,
-          border: Border.all(color: AppColors.brightCyan, width: 1.6),
+          border: Border.all(color: AppColors.textPrimaryDark, width: 1.6),
           boxShadow: [
             BoxShadow(
-              color: AppColors.brightCyan,
+              color: AppColors.textPrimaryDark,
               blurRadius: 28,
               spreadRadius: 2,
             ),
@@ -296,7 +294,7 @@ class _OwnerBadge extends StatelessWidget {
         ),
         child: const Icon(
           Icons.shield_moon_outlined,
-          color: AppColors.brightCyan,
+          color: AppColors.textPrimaryDark,
           size: 36,
         ),
       ),

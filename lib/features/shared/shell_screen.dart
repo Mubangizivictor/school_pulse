@@ -556,6 +556,15 @@ class StaffShell extends StatelessWidget {
     ];
 
     final isDirector = _isDirector(context);
+    final location = GoRouterState.of(context).uri.path;
+    // Directory/profile are focused record-management routes. They own their
+    // own compact navigation and must not lose vertical space to the global
+    // Home/Work/School/More navigation bar on a phone.
+    final isStudentRecordRoute =
+        location.startsWith('/staff/admin/students') ||
+        // Direct enrolment owns its complete-screen navigation and draft
+        // warning. The shell navigation must not remain visible beneath it.
+        location.startsWith('/staff/admin/admissions/register');
 
     final destinations = isDirector
         ? directorDestinations
@@ -684,7 +693,8 @@ class StaffShell extends StatelessWidget {
               !isDeanSection &&
               !isBursarSection &&
               !isNurseSection &&
-              !isStructureWizardSection)
+              !isStructureWizardSection &&
+              !isStudentRecordRoute)
           ? Container(
               decoration: BoxDecoration(
                 border: Border(

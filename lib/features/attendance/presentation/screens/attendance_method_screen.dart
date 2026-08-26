@@ -254,9 +254,9 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                 color: AppColors.primary(context),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.analytics_rounded,
-                color: Colors.white,
+                color: AppColors.background(context),
                 size: 24,
               ),
             ),
@@ -323,25 +323,25 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
               children: [
                 _StatColumn(
                   icon: Icons.groups_rounded,
-                  color: Colors.black,
+                  color: AppColors.primary(context),
                   value: total ?? 0,
                   label: 'Total Students',
                 ),
                 _StatColumn(
                   icon: Icons.check_circle_rounded,
-                  color: Colors.black,
+                  color: AppColors.primary(context),
                   value: _presentCount,
                   label: 'Present',
                 ),
                 _StatColumn(
                   icon: Icons.cancel_rounded,
-                  color: Colors.black,
+                  color: AppColors.primary(context),
                   value: _absentCount,
                   label: 'Absent',
                 ),
                 _StatColumn(
                   icon: Icons.access_time_filled_rounded,
-                  color: Colors.black,
+                  color: AppColors.primary(context),
                   value: _lateCount,
                   label: 'Late',
                 ),
@@ -451,7 +451,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                             ),
                             child: Icon(
                               Icons.people_alt_rounded,
-                              color: AppColors.primary(context),
+                              color: AppColors.background(context),
                               size: 18,
                             ),
                           ),
@@ -511,7 +511,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                 _MethodCard(
                   title: 'NFC Scan',
                   subtitle: 'Mark attendance using NFC card',
-                  accentColor: Colors.black,
+                  accentColor: AppColors.primary(context),
                   icon: Icons.sensors_rounded,
                   badgeIcon: Icons.shield_rounded,
                   badgeLabel: 'Fast & Secure',
@@ -522,7 +522,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                 _MethodCard(
                   title: 'QR Code Scanner',
                   subtitle: 'Scan student QR code',
-                  accentColor: Colors.black,
+                  accentColor: AppColors.primary(context),
                   icon: Icons.qr_code_2_rounded,
                   badgeIcon: Icons.shield_rounded,
                   badgeLabel: 'Quick & Easy',
@@ -533,7 +533,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                 _MethodCard(
                   title: 'Manual Attendance',
                   subtitle: 'Mark attendance manually',
-                  accentColor: Colors.black,
+                  accentColor: AppColors.primary(context),
                   icon: Icons.assignment_turned_in_rounded,
                   badgeIcon: Icons.shield_rounded,
                   badgeLabel: 'Full Control',
@@ -562,7 +562,7 @@ class _AttendanceMethodScreenState extends State<AttendanceMethodScreen> {
                 _MethodCard(
                   title: 'Previous Attendances',
                   subtitle: 'View and manage past records',
-                  accentColor: Colors.black,
+                  accentColor: AppColors.primary(context),
                   icon: Icons.history_rounded,
                   badgeIcon: Icons.bar_chart_rounded,
                   badgeLabel: 'History & Reports',
@@ -664,6 +664,7 @@ class _Badge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final foreground = AppColors.background(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -673,12 +674,12 @@ class _Badge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 11),
+          Icon(icon, color: foreground, size: 11),
           const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
-              color: color,
+              color: foreground,
               fontWeight: FontWeight.w600,
               fontSize: 10.5,
             ),
@@ -730,7 +731,7 @@ class _MethodCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: accentColor,
               ),
-              child: Icon(icon, color: accentColor, size: 18),
+              child: Icon(icon, color: AppColors.background(context), size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -795,9 +796,9 @@ class _IntegrationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color iconColor = AppColors.textMuted(context);
+    final Color iconColor = AppColors.primary(context);
     final Color statusColor = linked
-        ? Colors.black
+        ? AppColors.primary(context)
         : AppColors.textMuted(context);
     return InkWell(
       onTap: onTap,
@@ -821,7 +822,7 @@ class _IntegrationCard extends StatelessWidget {
               ),
               child: Icon(
                 Icons.description_rounded,
-                color: iconColor,
+                color: AppColors.background(context),
                 size: 18,
               ),
             ),
@@ -851,7 +852,7 @@ class _IntegrationCard extends StatelessWidget {
                   _Badge(
                     icon: badgeIcon,
                     label: badgeLabel,
-                    color: Colors.black,
+                    color: AppColors.primary(context),
                   ),
                 ],
               ),

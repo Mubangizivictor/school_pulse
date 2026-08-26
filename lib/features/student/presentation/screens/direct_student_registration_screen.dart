@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import 'package:school_pulse/injection_container.dart';
@@ -340,7 +341,13 @@ class _DirectStudentRegistrationScreenState
     },
     child: Scaffold(
       appBar: AppBar(
-        title: Text(_step < 0 ? 'Add a learner' : 'Enrol learner'),
+        title: Text(
+          _step < 0 ? 'Add a learner' : 'Enrol learner',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         actions: [
           if (_step >= 0)
             TextButton(
@@ -353,15 +360,19 @@ class _DirectStudentRegistrationScreenState
     ),
   );
   Widget _choice() => Padding(
-    padding: const EdgeInsets.all(20),
+    padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Choose how this learner enters the school.',
-          style: Theme.of(context).textTheme.headlineSmall,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontSize: 26,
+            height: 1.14,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 14),
         _choiceCard(
           'Direct enrolment',
           'Create an active learner record now',
@@ -369,7 +380,7 @@ class _DirectStudentRegistrationScreenState
           true,
           () => setState(() => _step = 0),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         _choiceCard(
           'Admission application',
           'Capture an application for review before enrolment',
@@ -391,29 +402,88 @@ class _DirectStudentRegistrationScreenState
     IconData icon,
     bool selected,
     VoidCallback onTap,
-  ) => Card(
-    color: selected ? Colors.black : null,
-    child: ListTile(
-      onTap: onTap,
-      contentPadding: const EdgeInsets.all(20),
-      leading: Icon(icon, size: 34, color: selected ? Colors.white : null),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: selected ? Colors.white : null,
+  ) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final fill = selected
+        ? (dark ? AppColors.white : AppColors.black)
+        : Theme.of(context).colorScheme.surface;
+    final ink = selected
+        ? (dark ? AppColors.black : AppColors.white)
+        : Theme.of(context).colorScheme.onSurface;
+    final muted = selected
+        ? (dark ? AppColors.grey700 : AppColors.grey200)
+        : Theme.of(context).colorScheme.onSurfaceVariant;
+    final outline = selected
+        ? fill
+        : Theme.of(context).colorScheme.outlineVariant;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$title. $sub',
+      child: Material(
+        color: fill,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: outline),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            height: 116,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(icon, size: 29, color: ink),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: ink,
+                                fontSize: 21,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          sub,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: muted,
+                                fontSize: 15,
+                                height: 1.25,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    selected
+                        ? Icons.check_circle_outline_rounded
+                        : Icons.circle_outlined,
+                    color: ink,
+                    size: 26,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
-      subtitle: Text(
-        sub,
-        style: TextStyle(color: selected ? Colors.white70 : null),
-      ),
-      trailing: Icon(
-        selected ? Icons.check_circle_outline : Icons.circle_outlined,
-        color: selected ? Colors.white : null,
-      ),
-    ),
-  );
+    );
+  }
+
   Widget _flow() => Form(
     key: _form,
     child: Column(
@@ -971,16 +1041,21 @@ class _Notice extends StatelessWidget {
   const _Notice(this.text);
   @override
   Widget build(BuildContext c) => Container(
-    padding: const EdgeInsets.all(12),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     decoration: BoxDecoration(
       border: Border.all(),
       borderRadius: BorderRadius.circular(12),
     ),
     child: Row(
       children: [
-        const Icon(Icons.info_outline),
+        const Icon(Icons.info_outline, size: 22),
         const SizedBox(width: 8),
-        Expanded(child: Text(text)),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(c).textTheme.bodyMedium?.copyWith(fontSize: 15),
+          ),
+        ),
       ],
     ),
   );
