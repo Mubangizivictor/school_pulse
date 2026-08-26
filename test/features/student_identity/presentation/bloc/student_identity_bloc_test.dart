@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
+import 'package:school_pulse/features/student/domain/services/enrollment_audit_service.dart';
 import 'package:school_pulse/features/student_identity/domain/entities/student_identity.dart';
 import 'package:school_pulse/features/student_identity/domain/repositories/student_identity_repository.dart';
 import 'package:school_pulse/features/student_identity/domain/services/nfc_credential_service.dart';
@@ -18,11 +19,15 @@ class MockStudentIdentityRepository extends Mock
 class MockNfcCredentialRepository extends Mock
     implements NfcCredentialRepository {}
 
+class MockEnrollmentAuditService extends Mock
+    implements EnrollmentAuditService {}
+
 void main() {
   late StudentIdentityBloc bloc;
   late MockStudentIdentityRepository repository;
   late MockNfcCredentialRepository nfcCredentialRepository;
   late NfcCredentialService nfcCredentialService;
+  late MockEnrollmentAuditService auditService;
 
   const schoolId = 'school-1';
   const studentId = 'student-1';
@@ -44,6 +49,7 @@ void main() {
   setUp(() {
     repository = MockStudentIdentityRepository();
     nfcCredentialRepository = MockNfcCredentialRepository();
+    auditService = MockEnrollmentAuditService();
     nfcCredentialService = NfcCredentialService(
       nfcCredentialRepository: nfcCredentialRepository,
       studentIdentityRepository: repository,
@@ -51,6 +57,7 @@ void main() {
     bloc = StudentIdentityBloc(
       repository: repository,
       nfcCredentialService: nfcCredentialService,
+      auditService: auditService,
     );
 
     when(
@@ -63,8 +70,12 @@ void main() {
       ),
     ).thenAnswer((_) async => const Right(cardUid));
     when(
-      () => repository.updateNfcStatus(any(), any()),
-    ).thenAnswer((_) async => const Right(null));
+      () => auditService.recordIdentityPreview(
+        schoolId: any(named: 'schoolId'),
+        studentId: any(named: 'studentId'),
+        kind: any(named: 'kind'),
+      ),
+    ).thenAnswer((_) async {});
   });
 
   tearDown(() => bloc.close());
@@ -78,14 +89,26 @@ void main() {
       ),
       expect: () => [
         StudentIdentityLoading(),
-        const StudentIdentityLoaded(identity, assignedCardUid: cardUid),
+        // The bloc treats a found card + non-revoked identity as active,
+        // even before any explicit AssignNfcCardEvent runs.
+        const StudentIdentityLoaded(
+          StudentIdentity(
+            studentId: studentId,
+            schoolId: schoolId,
+            uniqueSystemId: uniqueSystemId,
+            schoolStudentId: 'MH-2026-000001',
+            qrCodeData: uniqueSystemId,
+            nfcStatus: 'active',
+          ),
+          assignedCardUid: cardUid,
+        ),
       ],
     );
   });
 
   group('AssignNfcCardEvent', () {
     blocTest<StudentIdentityBloc, StudentIdentityState>(
-      'assigns the card, marks nfcStatus active, and re-emits the refreshed identity',
+      'assigns the card and re-emits the refreshed identity as active',
       build: () {
         when(
           () => nfcCredentialRepository.assign(
@@ -108,18 +131,22 @@ void main() {
       ),
       expect: () => [
         const StudentIdentityActionSuccess(
-          'Card assigned',
-          identity,
+          'Card assigned and ready for attendance',
+          StudentIdentity(
+            studentId: studentId,
+            schoolId: schoolId,
+            uniqueSystemId: uniqueSystemId,
+            schoolStudentId: 'MH-2026-000001',
+            qrCodeData: uniqueSystemId,
+            nfcStatus: 'active',
+          ),
           assignedCardUid: cardUid,
         ),
       ],
-      verify: (_) {
-        verify(() => repository.updateNfcStatus(studentId, 'active')).called(1);
-      },
     );
 
     blocTest<StudentIdentityBloc, StudentIdentityState>(
-      'emits an error and never touches nfcStatus when the underlying assign fails',
+      'emits an error when the underlying assign fails',
       build: () {
         when(
           () => nfcCredentialRepository.assign(
@@ -141,21 +168,20 @@ void main() {
         ),
       ),
       expect: () => [const StudentIdentityError('already assigned')],
-      verify: (_) {
-        verifyNever(() => repository.updateNfcStatus(any(), any()));
-      },
     );
   });
 
   group('RevokeNfcCardEvent', () {
     blocTest<StudentIdentityBloc, StudentIdentityState>(
-      'revokes the card and marks nfcStatus revoked',
+      'revokes the card, passing studentId so the server-authoritative path '
+      'is used, and re-emits the refreshed identity as revoked',
       build: () {
         when(
           () => nfcCredentialRepository.revoke(
             credentialValue: any(named: 'credentialValue'),
             schoolId: any(named: 'schoolId'),
             reason: any(named: 'reason'),
+            studentId: any(named: 'studentId'),
           ),
         ).thenAnswer((_) async => const Right(null));
         return bloc;
@@ -171,13 +197,25 @@ void main() {
       expect: () => [
         const StudentIdentityActionSuccess(
           'Card revoked',
-          identity,
+          StudentIdentity(
+            studentId: studentId,
+            schoolId: schoolId,
+            uniqueSystemId: uniqueSystemId,
+            schoolStudentId: 'MH-2026-000001',
+            qrCodeData: uniqueSystemId,
+            nfcStatus: 'revoked',
+          ),
           assignedCardUid: cardUid,
         ),
       ],
       verify: (_) {
         verify(
-          () => repository.updateNfcStatus(studentId, 'revoked'),
+          () => nfcCredentialRepository.revoke(
+            credentialValue: cardUid,
+            schoolId: schoolId,
+            reason: 'lost',
+            studentId: studentId,
+          ),
         ).called(1);
       },
     );
@@ -185,12 +223,14 @@ void main() {
 
   group('ReactivateNfcCardEvent', () {
     blocTest<StudentIdentityBloc, StudentIdentityState>(
-      'reactivates the card and marks nfcStatus active',
+      'reactivates the card, passing studentId so the server-authoritative '
+      'path is used, and re-emits the refreshed identity as active',
       build: () {
         when(
           () => nfcCredentialRepository.reactivate(
             credentialValue: any(named: 'credentialValue'),
             schoolId: any(named: 'schoolId'),
+            studentId: any(named: 'studentId'),
           ),
         ).thenAnswer((_) async => const Right(null));
         return bloc;
@@ -205,12 +245,49 @@ void main() {
       expect: () => [
         const StudentIdentityActionSuccess(
           'Card reactivated',
-          identity,
+          StudentIdentity(
+            studentId: studentId,
+            schoolId: schoolId,
+            uniqueSystemId: uniqueSystemId,
+            schoolStudentId: 'MH-2026-000001',
+            qrCodeData: uniqueSystemId,
+            nfcStatus: 'active',
+          ),
           assignedCardUid: cardUid,
         ),
       ],
       verify: (_) {
-        verify(() => repository.updateNfcStatus(studentId, 'active')).called(1);
+        verify(
+          () => nfcCredentialRepository.reactivate(
+            credentialValue: cardUid,
+            schoolId: schoolId,
+            studentId: studentId,
+          ),
+        ).called(1);
+      },
+    );
+  });
+
+  group('RecordIdentityPreviewedEvent', () {
+    blocTest<StudentIdentityBloc, StudentIdentityState>(
+      'fires the audit call and never emits a state (fire-and-forget)',
+      build: () => bloc,
+      act: (bloc) => bloc.add(
+        const RecordIdentityPreviewedEvent(
+          studentId: studentId,
+          schoolId: schoolId,
+          kind: 'school_id',
+        ),
+      ),
+      expect: () => <StudentIdentityState>[],
+      verify: (_) {
+        verify(
+          () => auditService.recordIdentityPreview(
+            schoolId: schoolId,
+            studentId: studentId,
+            kind: 'school_id',
+          ),
+        ).called(1);
       },
     );
   });

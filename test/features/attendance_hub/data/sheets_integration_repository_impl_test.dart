@@ -135,4 +135,44 @@ void main() {
       ).called(1);
     },
   );
+
+  test(
+    'exportRoster calls exportStudentRosterToSheets and returns studentCount',
+    () async {
+      final result = _MockResult();
+      when(() => result.data).thenReturn({'studentCount': 42});
+      when(() => callable.call()).thenAnswer((_) async => result);
+
+      final either = await repository.exportRoster(schoolId);
+
+      expect(either.isRight(), isTrue);
+      either.fold((_) => fail('expected Right'), (count) {
+        expect(count, 42);
+      });
+      verify(
+        () => functions.httpsCallable('exportStudentRosterToSheets'),
+      ).called(1);
+    },
+  );
+
+  test(
+    'exportRoster maps a not_connected error to the friendly connect-first message',
+    () async {
+      when(() => callable.call()).thenThrow(
+        FirebaseFunctionsException(
+          message: 'no token doc',
+          code: 'failed-precondition',
+          details: {'reason': 'not_connected'},
+        ),
+      );
+
+      final either = await repository.exportRoster(schoolId);
+
+      expect(either.isLeft(), isTrue);
+      either.fold(
+        (failure) => expect(failure.message, 'Connect Google Sheets first.'),
+        (_) => fail('expected Left'),
+      );
+    },
+  );
 }

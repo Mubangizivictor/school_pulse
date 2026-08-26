@@ -76,6 +76,68 @@ test('issueIdentityInTransaction skips on a schoolId mismatch without '
   assert.equal(calls.set, 0);
 });
 
+test('maskCredentialValue keeps only the last 4 characters, so a raw card '
+  + 'UID or QR token segment can never be reconstructed from a history/audit '
+  + 'row', () => {
+  assert.equal(__test__.maskCredentialValue('CARD-SUPER-SECRET-001'), '••••-001');
+  assert.equal(__test__.maskCredentialValue('AB'), '••••AB');
+  assert.equal(__test__.maskCredentialValue(''), null);
+  assert.equal(__test__.maskCredentialValue(null), null);
+  assert.equal(__test__.maskCredentialValue(undefined), null);
+});
+
+test('recordCredentialLifecycleEvent writes one credential_history doc and '
+  + 'one audit_events doc, both server-actor-derived, never containing the '
+  + 'raw credential value', () => {
+  const writes = [];
+  const makeRef = (kind) => ({
+    __kind: kind,
+    id: `${kind}-generated-id`,
+    collection: () => makeCollection(kind),
+  });
+  function makeCollection(kind) {
+    return { doc: () => makeRef(kind) };
+  }
+  const fakeDb = {
+    collection: (name) => ({
+      doc: () => makeRef(name === 'schools' ? 'schools-scoped' : 'institutions-scoped'),
+    }),
+  };
+  const fakeTx = {
+    set: (ref, data) => { writes.push({ ref, data }); },
+  };
+
+  __test__.recordCredentialLifecycleEvent(fakeTx, fakeDb, {
+    schoolId: 'schoolA',
+    studentId: 'student-1',
+    identityDocumentId: 'identity-doc-1',
+    credentialType: 'nfc',
+    credentialValue: 'CARD-SUPER-SECRET-001',
+    action: 'nfc_revoked',
+    auditAction: 'identity_nfc_revoked',
+    reason: 'lost',
+    actorUid: 'staff-uid-1',
+  });
+
+  assert.equal(writes.length, 2);
+  for (const write of writes) {
+    const serialized = JSON.stringify(write.data);
+    assert.ok(!serialized.includes('CARD-SUPER-SECRET-001'),
+      'raw credential value must never appear in a history/audit write');
+  }
+  const historyWrite = writes.find((w) => w.data.action === 'nfc_revoked');
+  assert.ok(historyWrite, 'expected a credential_history write');
+  assert.equal(historyWrite.data.credentialValueMasked, '••••-001');
+  assert.equal(historyWrite.data.actorId, 'staff-uid-1');
+  assert.equal(historyWrite.data.reason, 'lost');
+
+  const auditWrite = writes.find((w) => w.data.action === 'identity_nfc_revoked');
+  assert.ok(auditWrite, 'expected an audit_events write');
+  assert.equal(auditWrite.data.actorId, 'staff-uid-1');
+  assert.equal(auditWrite.data.targetId, 'student-1');
+  assert.equal(auditWrite.data.moduleKey, 'student_identity');
+});
+
 test('issueIdentityInTransaction writes the QR credential with '
   + 'identityId=studentId (the canonical students/{id} document ID), not '
   + 'StudentIdentity.uniqueSystemId - the contract Attendance/IdentityResolver '

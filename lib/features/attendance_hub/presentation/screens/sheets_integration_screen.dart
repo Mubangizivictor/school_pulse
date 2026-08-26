@@ -28,6 +28,7 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
   bool _syncing = false;
   bool _resyncing = false;
   bool _connecting = false;
+  bool _exportingRoster = false;
   Timer? _connectPollTimer;
 
   String get _schoolId {
@@ -207,6 +208,19 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
     );
   }
 
+  Future<void> _exportRoster() async {
+    setState(() => _exportingRoster = true);
+    final result = await _repo.exportRoster(_schoolId);
+    if (!mounted) return;
+    setState(() => _exportingRoster = false);
+    result.fold(
+      (failure) => _showMessage(failure.message),
+      (count) => _showMessage(
+        'Exported $count student${count == 1 ? '' : 's'} to the Student Roster sheet',
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final needsReauth =
@@ -360,6 +374,20 @@ class _SheetsIntegrationScreenState extends State<SheetsIntegrationScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Text('Resync Attendance'),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.m),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: _exportingRoster ? null : _exportRoster,
+                      child: _exportingRoster
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Export Roster to Sheets'),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.m),

@@ -2621,6 +2621,14 @@ exports.syncAttendanceToSheetsNow = attendanceSheetsFunctions.syncAttendanceToSh
 exports.resyncAttendanceToSheets = attendanceSheetsFunctions.resyncAttendanceToSheets;
 exports.exportAttendanceSessionToSheets = attendanceSheetsFunctions.exportAttendanceSessionToSheets;
 
+/**
+ * Student roster/identity -> Google Sheets export. Manual-only, reuses the
+ * same per-school OAuth connection and spreadsheet as attendance_sheets.js
+ * (a second worksheet tab, not a second Google account grant).
+ */
+const rosterSheetsFunctions = require("./roster_sheets");
+exports.exportStudentRosterToSheets = rosterSheetsFunctions.exportStudentRosterToSheets;
+
 // The integration control plane owns safe tenant configuration and audit
 // metadata. Provider credentials remain in server-side secret storage.
 const integrationCenterFunctions = require("./integration_center");
@@ -2671,6 +2679,12 @@ const studentCredentialFunctions = require("./student_credentials");
 exports.issueStudentIdentity = studentCredentialFunctions.issueStudentIdentity;
 exports.regenerateStudentQrCredential = studentCredentialFunctions.regenerateStudentQrCredential;
 exports.assignNfcCredential = studentCredentialFunctions.assignNfcCredential;
+// Close the "only assign is server-enforced" gap: replace/revoke/reactivate
+// now go through the same transactional, audited path as assign, instead of
+// the old client-direct-write to schools/{schoolId}/credentials.
+exports.replaceNfcCredential = studentCredentialFunctions.replaceNfcCredential;
+exports.revokeNfcCredential = studentCredentialFunctions.revokeNfcCredential;
+exports.reactivateNfcCredential = studentCredentialFunctions.reactivateNfcCredential;
 // Server-side legacy-credential resolver/migration for cards issued before
 // credential.identityId was canonicalized to students/{studentId}.
 exports.resolveStudentCredential = studentCredentialFunctions.resolveStudentCredential;

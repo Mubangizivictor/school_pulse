@@ -77,7 +77,7 @@ class _AdminStudentProfileScreenState extends State<AdminStudentProfileScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Student Profile'),
+      title: const Text('Learner'),
       actions: [
         FutureBuilder<Either<Failure, Student>>(
           future: _future,
@@ -168,37 +168,7 @@ class _ProfileState extends State<_Profile>
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
         child: _Header(widget.student),
       ),
-      DecoratedBox(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          border: Border.symmetric(
-            horizontal: BorderSide(
-              color: Theme.of(context).colorScheme.outlineVariant,
-            ),
-          ),
-        ),
-        // Nine tabs never fit a phone width evenly, so the bar scrolls
-        // horizontally rather than crushing every label - icons are dropped
-        // here too, since text-only tabs stay readable at this density.
-        child: TabBar(
-          controller: _tabs,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          indicatorSize: TabBarIndicatorSize.label,
-          dividerColor: Colors.transparent,
-          tabs: const [
-            Tab(text: 'Overview'),
-            Tab(text: 'Guardians'),
-            Tab(text: 'Academics'),
-            Tab(text: 'Attendance'),
-            Tab(text: 'Fees'),
-            Tab(text: 'Documents'),
-            Tab(text: 'Services'),
-            Tab(text: 'Identity'),
-            Tab(text: 'History'),
-          ],
-        ),
-      ),
+      _ProfileTabStrip(controller: _tabs),
       Expanded(
         child: TabBarView(
           controller: _tabs,
@@ -221,7 +191,10 @@ class _ProfileState extends State<_Profile>
             // same one the standalone route provides.
             BlocProvider(
               create: (_) => di.sl<StudentIdentityBloc>(),
-              child: IdentityAndCardsBody(student: widget.student),
+              child: IdentityAndCardsBody(
+                student: widget.student,
+                canMutate: widget.canMutate,
+              ),
             ),
             HistoryTab(student: widget.student),
           ],
@@ -229,6 +202,140 @@ class _ProfileState extends State<_Profile>
       ),
     ],
   );
+}
+
+/// A full nine-item scrolling tab bar leaves half-visible words on phones.
+/// Keep the three primary profile areas immediately visible and put the
+/// remaining enabled areas in an explicit, labelled menu.  On wide layouts
+/// all tabs remain available in the conventional horizontal strip.
+class _ProfileTabStrip extends StatefulWidget {
+  final TabController controller;
+  const _ProfileTabStrip({required this.controller});
+
+  @override
+  State<_ProfileTabStrip> createState() => _ProfileTabStripState();
+}
+
+class _ProfileTabStripState extends State<_ProfileTabStrip> {
+  static const _labels = [
+    'Overview', 'Guardians', 'Academics', 'Attendance', 'Fees',
+    'Documents', 'Services', 'Identity', 'History',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onTabChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onTabChanged);
+    super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (mounted && !widget.controller.indexIsChanging) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border.symmetric(
+          horizontal: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth >= 620) {
+            return TabBar(
+              controller: widget.controller,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              indicatorSize: TabBarIndicatorSize.label,
+              dividerColor: Colors.transparent,
+              tabs: [for (final label in _labels) Tab(text: label)],
+            );
+          }
+
+          return SizedBox(
+            height: 52,
+            child: Row(
+              children: [
+                _primaryTab('Overview', StudentProfileTab.overview),
+                _primaryTab('Guardians', StudentProfileTab.guardians),
+                _primaryTab('Fees', StudentProfileTab.fees),
+                _moreMenu(),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _primaryTab(String label, int index) => Expanded(
+    child: Semantics(
+      selected: widget.controller.index == index,
+      button: true,
+      label: '$label tab',
+      child: InkWell(
+        onTap: () => widget.controller.animateTo(index),
+        child: Center(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontWeight: widget.controller.index == index
+                  ? FontWeight.w700
+                  : FontWeight.w500,
+              decoration: widget.controller.index == index
+                  ? TextDecoration.underline
+                  : TextDecoration.none,
+              decorationThickness: 2,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  Widget _moreMenu() {
+    final index = widget.controller.index;
+    final label = index > StudentProfileTab.fees ? _labels[index] : 'More';
+    return PopupMenuButton<int>(
+      tooltip: 'More learner sections',
+      onSelected: (value) => widget.controller.animateTo(value),
+      itemBuilder: (_) => [
+        for (var i = StudentProfileTab.academics;
+            i < StudentProfileTab.count;
+            i++)
+          if (i != StudentProfileTab.fees)
+            CheckedPopupMenuItem<int>(
+              value: i,
+              checked: index == i,
+              child: Text(_labels[i]),
+            ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 72),
+              child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+            const Icon(Icons.expand_more, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _Scroll extends StatelessWidget {
@@ -258,97 +365,87 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final semantic = theme.extension<SemanticColors>()!;
-    return AppCard(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 42,
-            backgroundColor: theme.colorScheme.primaryContainer,
-            backgroundImage: student.photoUrl?.isNotEmpty == true
-                ? NetworkImage(student.photoUrl!)
-                : null,
-            child: student.photoUrl?.isNotEmpty == true
-                ? null
-                : Text(
-                    _initials(student.name),
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.w800,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 38,
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          backgroundImage: student.photoUrl?.isNotEmpty == true
+              ? NetworkImage(student.photoUrl!)
+              : null,
+          child: student.photoUrl?.isNotEmpty == true
+              ? null
+              : Text(
+                  _initials(student.name),
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                student.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _readableStudentNumber(student),
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 7),
+              StatusBadge(
+                label: _status(student.status),
+                color: _statusColor(semantic, student.status),
+              ),
+              const SizedBox(height: 8),
+              BlocBuilder<StructureBloc, StructureState>(
+                builder: (context, s) {
+                  final c = s.classes
+                      .where((x) => x.id == student.classId)
+                      .firstOrNull
+                      ?.name;
+                  final stream = s.streams
+                      .where((x) => x.id == student.streamId)
+                      .firstOrNull
+                      ?.name;
+                  final year = s.academicYears
+                      .where((x) => x.id == student.academicYearId)
+                      .firstOrNull
+                      ?.name;
+                  final label = [
+                    c,
+                    stream,
+                    year,
+                  ].whereType<String>().where((x) => x.isNotEmpty).join(' · ');
+                  return Text(
+                    label.isEmpty ? _level(student.level) : label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
-                  ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  student.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                StatusBadge(
-                  label: _status(student.status),
-                  color: _statusColor(semantic, student.status),
-                ),
-                const SizedBox(height: 10),
-                _HeaderLine(Icons.badge_outlined, student.studentCode),
-                const SizedBox(height: 6),
-                BlocBuilder<StructureBloc, StructureState>(
-                  builder: (context, s) {
-                    final c = s.classes
-                        .where((x) => x.id == student.classId)
-                        .firstOrNull
-                        ?.name;
-                    final stream = s.streams
-                        .where((x) => x.id == student.streamId)
-                        .firstOrNull
-                        ?.name;
-                    final label = [c, stream].whereType<String>().join(' • ');
-                    return _HeaderLine(
-                      Icons.school_outlined,
-                      label.isEmpty ? _level(student.level) : label,
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeaderLine extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _HeaderLine(this.icon, this.text);
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Icon(
-        icon,
-        size: 17,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-      const SizedBox(width: 8),
-      Expanded(
-        child: Text(
-          text,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  );
+                },
+              ),
+            ],
           ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 class _Overview extends StatelessWidget {
@@ -377,7 +474,11 @@ class _InfoCard extends StatelessWidget {
           'Previous School',
           student.previousSchool!,
         ),
-      _InfoRow(Icons.badge_outlined, 'Admission No.', student.admissionNumber),
+      _InfoRow(
+        Icons.badge_outlined,
+        'Student number',
+        _readableStudentNumber(student),
+      ),
       _InfoRow(Icons.school_outlined, 'Education Level', _level(student.level)),
       _InfoRow(
         Icons.verified_outlined,
@@ -693,7 +794,7 @@ class ActionsSheet extends StatelessWidget {
   }
 
   Future<void> _export() => Share.share(
-    'Student record\n\nName: ${student.name}\nStudent code: ${student.studentCode}\nAdmission number: ${student.admissionNumber}\nDate of birth: ${DateFormat('dd MMM yyyy').format(student.dateOfBirth)}\nStatus: ${_status(student.status)}',
+    'Student record\n\nName: ${student.name}\nStudent number: ${_readableStudentNumber(student)}\nDate of birth: ${DateFormat('dd MMM yyyy').format(student.dateOfBirth)}\nStatus: ${_status(student.status)}',
   );
 }
 
@@ -760,6 +861,16 @@ String _initials(String value) {
       ? '?'
       : (p.length == 1 ? p.first[0] : '${p.first[0]}${p.last[0]}')
             .toUpperCase();
+}
+
+/// Older records may still have a UUID-derived code.  It is an internal
+/// implementation detail, never a student-facing admission number.
+String _readableStudentNumber(Student student) {
+  final candidate = student.admissionNumber.trim().isNotEmpty
+      ? student.admissionNumber.trim()
+      : student.studentCode.trim();
+  final humanNumber = RegExp(r'^[A-Z]{2,12}-\d{4}-\d{3,}$');
+  return humanNumber.hasMatch(candidate) ? candidate : 'Number pending';
 }
 
 String _gender(Gender value) => switch (value) {

@@ -1939,8 +1939,19 @@ describe('NFC credential lifecycle', () => {
     };
   }
 
-  test('an authorised School Admin can register a new credential', async () => {
-    await assertSucceeds(setDoc(
+  // Every mutation path (assign/replace/revoke/reactivate/regenerateQr) now
+  // goes through a Cloud Function transaction (functions/student_credentials.js)
+  // that also records a credential_history + audit_events row - see
+  // assignNfcCredential/replaceNfcCredential/revokeNfcCredential/
+  // reactivateNfcCredential. Cloud Functions use the Admin SDK, which
+  // bypasses these rules entirely, so no legitimate write path is closed by
+  // denying all client writes here - only the previously-unaudited direct-
+  // write shortcut is. This whole describe block asserts NO client, of any
+  // role, can write these collections directly anymore.
+
+  test('no client, not even an authorised School Admin, can register a new '
+    + 'credential directly - only assignNfcCredential can', async () => {
+    await assertFails(setDoc(
       doc(dbFor('adminA'), 'schools/schoolA/credentials/CARDA999'),
       newCredential(),
     ));
@@ -1953,65 +1964,54 @@ describe('NFC credential lifecycle', () => {
     ));
   });
 
-  test('an ordinary Class Teacher cannot replace a credential '
-    + '(revoke the old one or write the new one)', async () => {
+  test('no client can replace a credential (revoke the old one or write '
+    + 'the new one) - only replaceNfcCredential can', async () => {
     await assertFails(updateDoc(
-      doc(dbFor('teacherA'), 'schools/schoolA/credentials/CARDA001'),
-      { status: 'revoked', updatedAt: new Date().toISOString() },
+      doc(dbFor('adminA'), 'schools/schoolA/credentials/CARDA001'),
+      { status: 'replaced', updatedAt: new Date().toISOString() },
     ));
     await assertFails(setDoc(
-      doc(dbFor('teacherA'), 'schools/schoolA/credentials/CARDA999'),
+      doc(dbFor('adminA'), 'schools/schoolA/credentials/CARDA999'),
       newCredential({ identityId: 'SP-STUDENT-A' }),
     ));
   });
 
-  test('an ordinary Class Teacher cannot revoke a credential', async () => {
+  test('no client can revoke a credential - only revokeNfcCredential can', async () => {
     await assertFails(updateDoc(
-      doc(dbFor('teacherA'), 'schools/schoolA/credentials/CARDA001'),
+      doc(dbFor('adminA'), 'schools/schoolA/credentials/CARDA001'),
       { status: 'revoked', updatedAt: new Date().toISOString() },
     ));
     await assertFails(setDoc(
-      doc(dbFor('teacherA'), 'schools/schoolA/revoked_credentials/CARDA001'),
+      doc(dbFor('adminA'), 'schools/schoolA/revoked_credentials/CARDA001'),
       { credentialValue: 'CARDA001', schoolId: 'schoolA', revokedAt: new Date().toISOString(), reason: 'lost' },
     ));
   });
 
-  test('an ordinary Class Teacher cannot reactivate a revoked credential', async () => {
+  test('no client can reactivate a revoked credential - only '
+    + 'reactivateNfcCredential can', async () => {
     await assertFails(updateDoc(
-      doc(dbFor('teacherA'), 'schools/schoolA/credentials/CARDA002'),
+      doc(dbFor('adminA'), 'schools/schoolA/credentials/CARDA002'),
       { status: 'active', updatedAt: new Date().toISOString() },
     ));
   });
 
-  test('unauthorised staff cannot mark a card lost (revoke with a "lost" reason '
-    + 'is still a revoke - no separate lost-card document type exists)', async () => {
-    await assertFails(updateDoc(
-      doc(dbFor('teacherA'), 'schools/schoolA/credentials/CARDA001'),
-      { status: 'revoked', updatedAt: new Date().toISOString() },
-    ));
-  });
-
-  test('a credential-manage grant delegated via role_permission_overrides '
-    + '(not just an admin-tier role) can perform the supported lifecycle actions', async () => {
+  test('a role_permission_overrides credential-manage grant does not '
+    + 'restore direct write access either - the callable-only gate applies '
+    + 'to every role uniformly, not just ordinary staff', async () => {
     const db = dbFor('credentialManagerA');
-    await assertSucceeds(setDoc(doc(db, 'schools/schoolA/credentials/CARDA999'), newCredential()));
-    await assertSucceeds(updateDoc(
-      doc(db, 'schools/schoolA/credentials/CARDA999'),
+    await assertFails(setDoc(doc(db, 'schools/schoolA/credentials/CARDA999'), newCredential()));
+    await assertFails(updateDoc(
+      doc(db, 'schools/schoolA/credentials/CARDA002'),
       { status: 'revoked', updatedAt: new Date().toISOString() },
     ));
-    await assertSucceeds(setDoc(
+    await assertFails(setDoc(
       doc(db, 'schools/schoolA/revoked_credentials/CARDA999'),
       { credentialValue: 'CARDA999', schoolId: 'schoolA', revokedAt: new Date().toISOString(), reason: 'lost' },
     ));
-    // Reuse-after-revocation: reassigning CARDA002 (already 'revoked') to a
-    // different student is the one case identityId is allowed to change.
-    await assertSucceeds(updateDoc(
-      doc(db, 'schools/schoolA/credentials/CARDA002'),
-      { identityId: 'SP-STUDENT-BRAND-NEW', status: 'active', updatedAt: new Date().toISOString() },
-    ));
   });
 
-  test('School A admin cannot write or overwrite a School B credential', async () => {
+  test('School A admin cannot read or write a School B credential', async () => {
+    await assertFails(getDoc(doc(dbFor('adminA'), 'schools/schoolB/credentials/CARDB001')));
     await assertFails(updateDoc(
       doc(dbFor('adminA'), 'schools/schoolB/credentials/CARDB001'),
       { status: 'revoked', updatedAt: new Date().toISOString() },
@@ -2023,34 +2023,18 @@ describe('NFC credential lifecycle', () => {
   });
 
   test('a School A teacher cannot read or write School B credential mappings', async () => {
-    await assertFails(getDoc(doc(dbFor('teacherA'), 'schools/schoolB/credentials/CARDB001')));
+    // otherTeacherA (not teacherA, who holds a real active School B
+    // membership for the multi-school-workspace tests elsewhere in this
+    // file) has no School B access at all.
+    await assertFails(getDoc(doc(dbFor('otherTeacherA'), 'schools/schoolB/credentials/CARDB001')));
     await assertFails(setDoc(
-      doc(dbFor('teacherA'), 'schools/schoolB/credentials/CARDB999'),
+      doc(dbFor('otherTeacherA'), 'schools/schoolB/credentials/CARDB999'),
       newCredential({ credentialValue: 'CARDB999', schoolId: 'schoolB' }),
     ));
   });
 
-  test('a malicious update cannot move an active credential from one student to another '
-    + 'without going through revoke first', async () => {
-    await assertFails(updateDoc(
-      doc(dbFor('adminA'), 'schools/schoolA/credentials/CARDA001'),
-      { identityId: 'SP-STUDENT-HIJACKED', updatedAt: new Date().toISOString() },
-    ));
-  });
-
-  test('a malformed credential status is rejected', async () => {
-    await assertFails(setDoc(
-      doc(dbFor('adminA'), 'schools/schoolA/credentials/CARDA998'),
-      newCredential({ credentialValue: 'CARDA998', status: 'super-active' }),
-    ));
-    await assertFails(updateDoc(
-      doc(dbFor('adminA'), 'schools/schoolA/credentials/CARDA001'),
-      { status: 'disabled-ish', updatedAt: new Date().toISOString() },
-    ));
-  });
-
-  test('credential documents are never deleted - revoke is a status change, '
-    + 'history must survive', async () => {
+  test('credential documents are never deleted by any client - revoke is a '
+    + 'status change made server-side, history must survive', async () => {
     await assertFails(deleteDoc(doc(dbFor('adminA'), 'schools/schoolA/credentials/CARDA001')));
   });
 
@@ -2070,8 +2054,8 @@ describe('NFC credential lifecycle', () => {
     await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/revoked_credentials/CARDA003')));
   });
 
-  test('a QR-typed credential is gated by the same credential-manage rule '
-    + 'as NFC - credentialType is just a field, not a separate rule path', async () => {
+  test('a QR-typed credential is denied the same client-write path as NFC - '
+    + 'credentialType is just a field, not a separate rule path', async () => {
     const qrCredential = {
       credentialValue: 'SPQR1TOKENAAA', credentialType: 'qr', identityId: 'SP-STUDENT-NEW',
       identityType: 'student', schoolId: 'schoolA', status: 'active',
@@ -2081,13 +2065,78 @@ describe('NFC credential lifecycle', () => {
       doc(dbFor('teacherA'), 'schools/schoolA/credentials/SPQR1TOKENAAA'),
       qrCredential,
     ));
-    await assertSucceeds(setDoc(
+    await assertFails(setDoc(
       doc(dbFor('adminA'), 'schools/schoolA/credentials/SPQR1TOKENAAA'),
       qrCredential,
     ));
     // Same read-for-attendance-use exception NFC gets: a teacher may read
     // an unfamiliar QR credential mapping purely to resolve a scan.
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/credentials/SPQR1TOKENAAA'), qrCredential);
+    });
     await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/credentials/SPQR1TOKENAAA')));
+  });
+
+  // The append-only history collection the new callables write to - never
+  // client-writable, staff-readable for the Identity tab's "Card history"
+  // view.
+  describe('credential_history (append-only, callable-only)', () => {
+    function historyEntry(overrides = {}) {
+      return {
+        schoolId: 'schoolA', studentId: 'studentA', identityDocumentId: 'identity-1',
+        credentialType: 'nfc', credentialValueMasked: '••••A001', action: 'nfc_assigned',
+        reason: null, actorId: 'adminA', createdAt: new Date().toISOString(),
+        ...overrides,
+      };
+    }
+
+    test('no client can write a credential_history entry directly, even an '
+      + 'authorised School Admin - only the Cloud Functions can', async () => {
+      await assertFails(setDoc(
+        doc(dbFor('adminA'), 'schools/schoolA/credential_history/hist1'),
+        historyEntry(),
+      ));
+    });
+
+    test('a same-school staff member can read credential_history entries', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(
+          doc(context.firestore(), 'schools/schoolA/credential_history/hist1'),
+          historyEntry(),
+        );
+      });
+      await assertSucceeds(
+        getDoc(doc(dbFor('teacherA'), 'schools/schoolA/credential_history/hist1')),
+      );
+    });
+
+    test('a School A teacher cannot read School B credential_history entries', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(
+          doc(context.firestore(), 'schools/schoolB/credential_history/hist1'),
+          historyEntry({ schoolId: 'schoolB' }),
+        );
+      });
+      // otherTeacherA (not teacherA, who holds a real active School B
+      // membership elsewhere in this file) has no School B access at all.
+      await assertFails(
+        getDoc(doc(dbFor('otherTeacherA'), 'schools/schoolB/credential_history/hist1')),
+      );
+    });
+
+    test('credential_history entries are never deleted or updated by any client', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await setDoc(
+          doc(context.firestore(), 'schools/schoolA/credential_history/hist1'),
+          historyEntry(),
+        );
+      });
+      await assertFails(deleteDoc(doc(dbFor('adminA'), 'schools/schoolA/credential_history/hist1')));
+      await assertFails(updateDoc(
+        doc(dbFor('adminA'), 'schools/schoolA/credential_history/hist1'),
+        { reason: 'tampered' },
+      ));
+    });
   });
 });
 

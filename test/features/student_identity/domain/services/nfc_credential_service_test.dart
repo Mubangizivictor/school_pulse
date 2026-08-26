@@ -31,49 +31,21 @@ void main() {
       nfcCredentialRepository: nfcCredentialRepository,
       studentIdentityRepository: studentIdentityRepository,
     );
-
-    when(
-      () => studentIdentityRepository.updateNfcStatus(any(), any()),
-    ).thenAnswer((_) async => const Right(null));
   });
 
   group('assignToStudent', () {
-    test('assigns the card then marks the identity nfcStatus active', () async {
-      when(
-        () => nfcCredentialRepository.assign(
-          credentialValue: cardUid,
-          identityId: uniqueSystemId,
-          identityType: 'student',
-          schoolId: schoolId,
-          studentId: studentId,
-        ),
-      ).thenAnswer((_) async => const Right(null));
-
-      final result = await service.assignToStudent(
-        cardUid: cardUid,
-        studentId: studentId,
-        uniqueSystemId: uniqueSystemId,
-        schoolId: schoolId,
-      );
-
-      expect(result.isRight(), true);
-      verify(
-        () => studentIdentityRepository.updateNfcStatus(studentId, 'active'),
-      ).called(1);
-    });
-
     test(
-      'propagates the failure and never touches nfcStatus when assign fails',
+      'assigns the card via the repository, keyed by canonical Student.id',
       () async {
         when(
           () => nfcCredentialRepository.assign(
-            credentialValue: any(named: 'credentialValue'),
-            identityId: any(named: 'identityId'),
-            identityType: any(named: 'identityType'),
-            schoolId: any(named: 'schoolId'),
-            studentId: any(named: 'studentId'),
+            credentialValue: cardUid,
+            identityId: studentId,
+            identityType: 'student',
+            schoolId: schoolId,
+            studentId: studentId,
           ),
-        ).thenAnswer((_) async => Left(ServerFailure('already assigned')));
+        ).thenAnswer((_) async => const Right(null));
 
         final result = await service.assignToStudent(
           cardUid: cardUid,
@@ -82,12 +54,39 @@ void main() {
           schoolId: schoolId,
         );
 
-        expect(result, Left(ServerFailure('already assigned')));
-        verifyNever(
-          () => studentIdentityRepository.updateNfcStatus(any(), any()),
-        );
+        expect(result.isRight(), true);
+        verify(
+          () => nfcCredentialRepository.assign(
+            credentialValue: cardUid,
+            identityId: studentId,
+            identityType: 'student',
+            schoolId: schoolId,
+            studentId: studentId,
+          ),
+        ).called(1);
       },
     );
+
+    test('propagates the failure when assign fails', () async {
+      when(
+        () => nfcCredentialRepository.assign(
+          credentialValue: any(named: 'credentialValue'),
+          identityId: any(named: 'identityId'),
+          identityType: any(named: 'identityType'),
+          schoolId: any(named: 'schoolId'),
+          studentId: any(named: 'studentId'),
+        ),
+      ).thenAnswer((_) async => Left(ServerFailure('already assigned')));
+
+      final result = await service.assignToStudent(
+        cardUid: cardUid,
+        studentId: studentId,
+        uniqueSystemId: uniqueSystemId,
+        schoolId: schoolId,
+      );
+
+      expect(result, Left(ServerFailure('already assigned')));
+    });
 
     test(
       'resolves and names the conflicting student when the card is already '
@@ -144,9 +143,6 @@ void main() {
           failure.message,
           'This card is already registered to Jane Achieng.',
         );
-        verifyNever(
-          () => studentIdentityRepository.updateNfcStatus(any(), any()),
-        );
       },
     );
 
@@ -190,87 +186,100 @@ void main() {
   });
 
   group('revokeForStudent', () {
-    test(
-      'revokes the card then marks the identity nfcStatus revoked',
-      () async {
-        when(
-          () => nfcCredentialRepository.revoke(
-            credentialValue: any(named: 'credentialValue'),
-            schoolId: any(named: 'schoolId'),
-            reason: any(named: 'reason'),
-          ),
-        ).thenAnswer((_) async => const Right(null));
-
-        final result = await service.revokeForStudent(
-          cardUid: cardUid,
-          studentId: studentId,
+    test('revokes the card via the repository, passing studentId through so '
+        'the server-authoritative revokeNfcCredential path can be used', () async {
+      when(
+        () => nfcCredentialRepository.revoke(
+          credentialValue: cardUid,
           schoolId: schoolId,
           reason: 'lost',
-        );
+          studentId: studentId,
+        ),
+      ).thenAnswer((_) async => const Right(null));
 
-        expect(result.isRight(), true);
-        verify(
-          () => studentIdentityRepository.updateNfcStatus(studentId, 'revoked'),
-        ).called(1);
-      },
-    );
+      final result = await service.revokeForStudent(
+        cardUid: cardUid,
+        studentId: studentId,
+        schoolId: schoolId,
+        reason: 'lost',
+      );
+
+      expect(result.isRight(), true);
+      verify(
+        () => nfcCredentialRepository.revoke(
+          credentialValue: cardUid,
+          schoolId: schoolId,
+          reason: 'lost',
+          studentId: studentId,
+        ),
+      ).called(1);
+    });
   });
 
   group('reactivateForStudent', () {
-    test(
-      'reactivates the card then marks the identity nfcStatus active',
-      () async {
-        when(
-          () => nfcCredentialRepository.reactivate(
-            credentialValue: any(named: 'credentialValue'),
-            schoolId: any(named: 'schoolId'),
-          ),
-        ).thenAnswer((_) async => const Right(null));
-
-        final result = await service.reactivateForStudent(
-          cardUid: cardUid,
-          studentId: studentId,
+    test('reactivates the card via the repository, passing studentId through '
+        'so the server-authoritative reactivateNfcCredential path can be used',
+        () async {
+      when(
+        () => nfcCredentialRepository.reactivate(
+          credentialValue: cardUid,
           schoolId: schoolId,
-        );
+          studentId: studentId,
+        ),
+      ).thenAnswer((_) async => const Right(null));
 
-        expect(result.isRight(), true);
-        verify(
-          () => studentIdentityRepository.updateNfcStatus(studentId, 'active'),
-        ).called(1);
-      },
-    );
+      final result = await service.reactivateForStudent(
+        cardUid: cardUid,
+        studentId: studentId,
+        schoolId: schoolId,
+      );
+
+      expect(result.isRight(), true);
+      verify(
+        () => nfcCredentialRepository.reactivate(
+          credentialValue: cardUid,
+          schoolId: schoolId,
+          studentId: studentId,
+        ),
+      ).called(1);
+    });
   });
 
   group('replaceForStudent', () {
-    test(
-      'replaces the card then marks the identity nfcStatus active',
-      () async {
-        when(
-          () => nfcCredentialRepository.replace(
-            oldCredentialValue: any(named: 'oldCredentialValue'),
-            newCredentialValue: any(named: 'newCredentialValue'),
-            identityId: any(named: 'identityId'),
-            identityType: any(named: 'identityType'),
-            schoolId: any(named: 'schoolId'),
-            reason: any(named: 'reason'),
-            studentId: any(named: 'studentId'),
-          ),
-        ).thenAnswer((_) async => const Right(null));
+    test('replaces the card via the repository', () async {
+      when(
+        () => nfcCredentialRepository.replace(
+          oldCredentialValue: any(named: 'oldCredentialValue'),
+          newCredentialValue: any(named: 'newCredentialValue'),
+          identityId: any(named: 'identityId'),
+          identityType: any(named: 'identityType'),
+          schoolId: any(named: 'schoolId'),
+          reason: any(named: 'reason'),
+          studentId: any(named: 'studentId'),
+        ),
+      ).thenAnswer((_) async => const Right(null));
 
-        final result = await service.replaceForStudent(
-          oldCardUid: 'OLD',
-          newCardUid: 'NEW',
-          studentId: studentId,
-          uniqueSystemId: uniqueSystemId,
+      final result = await service.replaceForStudent(
+        oldCardUid: 'OLD',
+        newCardUid: 'NEW',
+        studentId: studentId,
+        uniqueSystemId: uniqueSystemId,
+        schoolId: schoolId,
+        reason: 'damaged',
+      );
+
+      expect(result.isRight(), true);
+      verify(
+        () => nfcCredentialRepository.replace(
+          oldCredentialValue: 'OLD',
+          newCredentialValue: 'NEW',
+          identityId: studentId,
+          identityType: 'student',
           schoolId: schoolId,
           reason: 'damaged',
-        );
-
-        expect(result.isRight(), true);
-        verify(
-          () => studentIdentityRepository.updateNfcStatus(studentId, 'active'),
-        ).called(1);
-      },
-    );
+          studentId: studentId,
+        ),
+      ).called(1);
+    });
   });
 }

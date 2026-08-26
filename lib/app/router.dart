@@ -134,8 +134,7 @@ import 'package:school_pulse/features/student/domain/entities/admission_applicat
 import 'package:school_pulse/features/student/presentation/screens/admission_review_screen.dart';
 import 'package:school_pulse/features/student/presentation/enrollment_setup/screens/enrollment_setup_wizard_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/admissions_list_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/admin_students_dashboard_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/admin_students_list_screen.dart';
+import 'package:school_pulse/features/student/presentation/screens/admin_student_directory_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/admin_student_profile_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/admin_student_documents_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/student_portal_codes_screen.dart';
@@ -2216,11 +2215,20 @@ final router = GoRouter(
                 }
                 return null;
               },
-              builder: (context, state) => const AdminStudentsDashboardScreen(),
+              // Students is a working directory, not a dashboard. The
+              // dashboard remains available from its own workspace entry;
+              // this route deliberately matches the compact learner list.
+              builder: (context, state) => const AdminStudentDirectoryScreen(),
               routes: [
                 GoRoute(
                   path: 'list',
-                  builder: (context, state) => const AdminStudentsListScreen(),
+                  builder: (context, state) =>
+                      const AdminStudentDirectoryScreen(),
+                ),
+                GoRoute(
+                  path: 'directory',
+                  builder: (context, state) =>
+                      const AdminStudentDirectoryScreen(),
                 ),
                 GoRoute(
                   path: ':id',
@@ -2248,6 +2256,7 @@ final router = GoRouter(
                         create: (_) => di.sl<StudentIdentityBloc>(),
                         child: IdentityAndCardsScreen(
                           student: state.extra as Student,
+                          canMutate: true,
                         ),
                       ),
                     ),

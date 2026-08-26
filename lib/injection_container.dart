@@ -170,6 +170,7 @@ import 'package:school_pulse/features/auth/data/repositories/staff_identity_repo
 import 'package:school_pulse/features/auth/domain/services/staff_nfc_credential_service.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/staff_identity_bloc.dart';
 import 'package:school_pulse/features/student_identity/domain/services/id_card_service.dart';
+import 'package:school_pulse/features/student_identity/domain/services/primary_guardian_lookup_service.dart';
 import 'package:school_pulse/features/auth/domain/services/staff_id_card_service.dart';
 import 'package:school_pulse/features/student_identity/domain/services/id_generator_service.dart';
 import 'package:school_pulse/features/student_identity/domain/services/nfc_credential_service.dart';
@@ -804,6 +805,12 @@ Future<void> init() async {
   // "type IdCardService is not registered" the moment anyone pressed it.
   sl.registerLazySingleton(() => IdCardService());
   sl.registerLazySingleton(() => StaffIdCardService());
+  sl.registerLazySingleton(
+    () => PrimaryGuardianLookupService(
+      relationshipRepository: sl(),
+      studentRepository: sl(),
+    ),
+  );
 
   sl.registerLazySingleton<StudentIdentityRepository>(
     () => StudentIdentityRepositoryImpl(
@@ -821,7 +828,11 @@ Future<void> init() async {
   // via context.read<StudentIdentityBloc>() - that screen would have
   // thrown a ProviderNotFoundException the moment anyone navigated to it.
   sl.registerFactory(
-    () => StudentIdentityBloc(repository: sl(), nfcCredentialService: sl()),
+    () => StudentIdentityBloc(
+      repository: sl(),
+      nfcCredentialService: sl(),
+      auditService: sl(),
+    ),
   );
 
   // Staff Identity (ID card + NFC) - mirrors the student registrations

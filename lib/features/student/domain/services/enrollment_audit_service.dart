@@ -42,4 +42,22 @@ class EnrollmentAuditService {
       debugPrint('EnrollmentAuditService.record failed for $action: $e\n$st');
     }
   }
+
+  /// Records that a student's School ID or QR credential was previewed or
+  /// printed - the one Identity tab credential action with no natural Cloud
+  /// Function to hook into, since viewing/printing a PDF is a pure
+  /// client-side render with no server state change alongside it. [kind] is
+  /// 'school_id' or 'qr'.
+  Future<void> recordIdentityPreview({
+    required String schoolId,
+    required String studentId,
+    required String kind,
+  }) {
+    return record(
+      schoolId: schoolId,
+      action: 'identity_school_id_previewed',
+      studentId: studentId,
+      metadata: {'kind': kind},
+    );
+  }
 }

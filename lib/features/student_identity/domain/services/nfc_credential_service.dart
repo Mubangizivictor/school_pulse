@@ -92,6 +92,7 @@ class NfcCredentialService {
       credentialValue: cardUid,
       schoolId: schoolId,
       reason: reason,
+      studentId: studentId,
     );
   }
 
@@ -115,6 +116,7 @@ class NfcCredentialService {
     return nfcCredentialRepository.reactivate(
       credentialValue: cardUid,
       schoolId: schoolId,
+      studentId: studentId,
     );
   }
 }

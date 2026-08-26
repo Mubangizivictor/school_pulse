@@ -19,6 +19,19 @@ test('enrollment audit action allow-list only accepts known actions', () => {
   assert.ok(!api.__test__.allowedActions.has('made_up_action'));
 });
 
+test('enrollment audit action allow-list includes the Identity tab actions '
+  + 'added for the credential lifecycle redesign', () => {
+  assert.ok(api.__test__.allowedActions.has('identity_school_id_previewed'));
+  assert.ok(api.__test__.allowedActions.has('identity_nfc_replaced'));
+  assert.ok(api.__test__.allowedActions.has('identity_nfc_revoked'));
+  assert.ok(api.__test__.allowedActions.has('identity_nfc_reactivated'));
+  assert.ok(api.__test__.allowedActions.has('identity_qr_replaced'));
+  // Issue/assign cases reuse the existing enrollment_* ids rather than
+  // duplicating near-identical new ones.
+  assert.ok(!api.__test__.allowedActions.has('identity_nfc_assigned'));
+  assert.ok(!api.__test__.allowedActions.has('identity_qr_issued'));
+});
+
 test('enrollment audit redaction removes nested secrets before persistence', () => {
   const result = api.__test__.redact({
     password: 'nope',

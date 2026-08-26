@@ -68,7 +68,17 @@ service cloud.firestore {
     // from one school can never read/write another school's bookings even
     // if they guess a document id.
     function isSameSchool(schoolId) {
-      return isSignedIn() && myUser().schoolId == schoolId;
+      // A staff member's active school can be their home school or an active
+      // institution membership.  The latter is used by the School workspace
+      // and must be honoured here; otherwise a legitimate School Admin sees
+      // permission-denied on tenant-scoped records such as guardians.
+      // superAdmin is the platform-owner role and deliberately has the same
+      // operational cross-tenant access as the server-admin console.
+      return isSignedIn() && (
+        isSuperAdmin() ||
+        myUser().schoolId == schoolId ||
+        isActiveMembership(schoolId)
+      );
     }
 
     // Subscription write-lock. accessMode is server-authoritative (written
@@ -1164,14 +1174,34 @@ service cloud.firestore {
     }
     // NFC credential lifecycle (assign/replace/revoke/reactivate) - the
     // cross-device sync counterpart to CachedCredentialIsar/
-    // RevokedCredentialIsar. NfcCredentialRepositoryImpl pushes here on
-    // every change; IdentityResolverImpl falls back to reading here when
-    // a card was never scanned on this device before.
+    // RevokedCredentialIsar. NfcCredentialRepositoryImpl reads here when a
+    // card was never scanned on this device before.
+    //
+    // Write access was previously isStaff() && isSameSchool - any staff
+    // member could write these docs directly, but only assignNfcCredential
+    // went through a server transaction; replace/revoke/reactivate were
+    // unaudited client-direct-writes. Now that student_credentials.js has
+    // replaceNfcCredential/revokeNfcCredential/reactivateNfcCredential
+    // callables for every mutation (each recording a credential_history +
+    // audit_events row in the same transaction), direct client writes are
+    // denied entirely - every mutation must go through a Cloud Function.
     match /schools/{schoolId}/credentials/{id} {
-      allow read, write: if isStaff() && isSameSchool(schoolId);
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow write: if false;
     }
     match /schools/{schoolId}/revoked_credentials/{id} {
-      allow read, write: if isStaff() && isSameSchool(schoolId);
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow write: if false;
+    }
+    // Append-only credential lifecycle history, written exclusively by
+    // student_credentials.js's recordCredentialLifecycleEvent() inside the
+    // same transaction as each credential mutation. Never contains a raw
+    // credential value - only a masked reference - so it's safe for any
+    // staff member of the school to read for the Identity tab's card
+    // history view.
+    match /schools/{schoolId}/credential_history/{id} {
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow write: if false;
     }
     // Verification engine's own audit trail (Phase 1). This match block
     // was missing even though VerificationEventRecorderImpl has pushed to

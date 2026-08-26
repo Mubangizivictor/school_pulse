@@ -168,4 +168,16 @@ class SheetsIntegrationRepositoryImpl implements SheetsIntegrationRepository {
       return Left(_mapError(e));
     }
   }
+
+  @override
+  Future<Either<Failure, int>> exportRoster(String schoolId) async {
+    try {
+      final callable = functions.httpsCallable('exportStudentRosterToSheets');
+      final result = await callable.call();
+      final data = Map<String, dynamic>.from(result.data as Map);
+      return Right(data['studentCount'] as int? ?? 0);
+    } catch (e) {
+      return Left(_mapError(e));
+    }
+  }
 }

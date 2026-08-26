@@ -29,6 +29,19 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     "enrollment_nfc_registered",
     "enrollment_card_generated",
     "enrollment_activated",
+    // Identity tab (post-enrollment) credential lifecycle actions. Most
+    // mutation events (assign/replace/revoke/reactivate/regenerate) are
+    // written server-side by student_credentials.js directly, inside the
+    // same transaction as the mutation - these ids exist here only so that
+    // shared recordCredentialLifecycleEvent()/audit_events consumers see one
+    // consistent action vocabulary. "previewed" is the one action with no
+    // natural Cloud Function to hook into (viewing/printing a PDF is a pure
+    // client action), so it alone is recorded via this callable instead.
+    "identity_school_id_previewed",
+    "identity_nfc_replaced",
+    "identity_nfc_revoked",
+    "identity_nfc_reactivated",
+    "identity_qr_replaced",
   ]);
 
   function text(value, key, max = 2000, required = false) {

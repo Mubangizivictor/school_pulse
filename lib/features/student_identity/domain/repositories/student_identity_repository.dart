@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
+import '../entities/credential_history_entry.dart';
 import '../entities/student_identity.dart';
 import '../../../student/domain/entities/student.dart';
 
@@ -24,9 +25,12 @@ abstract class StudentIdentityRepository {
     StudentIdentity identity,
   );
 
-  // NFC lifecycle
-  Future<Either<Failure, void>> updateNfcStatus(
-    String studentId,
-    String nfcStatus,
-  );
+  /// Reads the append-only credential lifecycle history for one student's
+  /// identity, newest first. Backed by
+  /// schools/{schoolId}/credential_history, written exclusively by
+  /// Cloud Functions - never contains a raw credential value.
+  Future<Either<Failure, List<CredentialHistoryEntry>>> getCredentialHistory({
+    required String studentId,
+    required String schoolId,
+  });
 }

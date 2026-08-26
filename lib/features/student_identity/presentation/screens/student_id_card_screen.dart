@@ -3,19 +3,30 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:school_pulse/core/theme_provider.dart';
+
+import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
+import 'package:school_pulse/features/structure/domain/entities/institution_profile.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
+import 'package:school_pulse/features/teacher/domain/entities/student_guardian_contact.dart';
+import 'package:school_pulse/injection_container.dart';
 
 import '../../../student/domain/entities/student.dart';
 import '../../domain/entities/student_identity.dart';
 import '../../domain/services/id_card_service.dart';
+import '../../domain/services/primary_guardian_lookup_service.dart';
 import '../bloc/student_identity_bloc.dart';
 import '../bloc/student_identity_event.dart';
 import '../bloc/student_identity_state.dart';
+import '../widgets/card_history_sheet.dart';
+import '../widgets/nfc_scan_flow_mixin.dart';
 
+/// Portrait Student ID Card preview - Front (photo/details) and Back
+/// (QR + non-transferable notice), matching the school's branded template.
+/// Monochrome (black/white/grey) throughout, no color.
 class StudentIdCardScreen extends StatefulWidget {
   final Student student;
 
@@ -25,8 +36,11 @@ class StudentIdCardScreen extends StatefulWidget {
   State<StudentIdCardScreen> createState() => _StudentIdCardScreenState();
 }
 
-class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
+class _StudentIdCardScreenState extends State<StudentIdCardScreen>
+    with NfcScanFlowMixin {
   bool _showFront = true;
+  bool? _isOnline;
+
   @override
   void initState() {
     super.initState();
@@ -36,28 +50,34 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
         schoolId: widget.student.schoolId,
       ),
     );
+    sl<NetworkInfo>().isConnected.then((connected) {
+      if (mounted) setState(() => _isOnline = connected);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         title: const Text('Student ID Card'),
         actions: [
           BlocBuilder<StudentIdentityBloc, StudentIdentityState>(
             builder: (context, state) {
-              final blocked =
+              final revoked =
                   state is StudentIdentityLoaded &&
                   state.identity.nfcStatus == 'revoked';
-              final active = state is StudentIdentityLoaded && !blocked;
-              return IconButton(
-                tooltip: active ? 'Card active' : 'Card unavailable',
-                onPressed: null,
-                icon: Icon(
-                  blocked ? Icons.block_rounded : Icons.verified_rounded,
-                  color: active
-                      ? Colors.black
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
+              final active = state is StudentIdentityLoaded && !revoked;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Icon(
+                  active
+                      ? Icons.verified_rounded
+                      : (revoked ? Icons.block_rounded : null) ??
+                            Icons.verified_outlined,
+                  color: active ? Colors.black : Colors.black38,
                 ),
               );
             },
@@ -77,37 +97,63 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
           }
         },
         builder: (context, state) {
-          if (state is StudentIdentityLoading) {
+          if (state is StudentIdentityLoading ||
+              state is StudentIdentityInitial) {
             return const Center(child: SchoolPulseLoader());
           }
 
+          if (state is StudentIdentityError) {
+            final denied = state.message.toLowerCase().contains(
+              'permission',
+            );
+            return _MessageState(
+              icon: denied
+                  ? Icons.lock_outline_rounded
+                  : Icons.error_outline_rounded,
+              message: denied
+                  ? 'You do not have permission to view this card.'
+                  : state.message,
+              actionLabel: denied ? null : 'Try Again',
+              onAction: denied
+                  ? null
+                  : () => context.read<StudentIdentityBloc>().add(
+                      LoadStudentIdentityEvent(
+                        widget.student.id,
+                        schoolId: widget.student.schoolId,
+                      ),
+                    ),
+            );
+          }
+
           if (state is StudentIdentityLoaded) {
+            final identity = state.identity;
+            final noCard = identity.qrCodeData.isEmpty;
+            if (noCard) {
+              return _MessageState(
+                icon: Icons.badge_outlined,
+                message: 'No identity has been issued for this learner yet.',
+                actionLabel: 'Issue ID',
+                onAction: () => context.read<StudentIdentityBloc>().add(
+                  GenerateStudentIdentityEvent(widget.student),
+                ),
+              );
+            }
+
             return SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SegmentedButton<bool>(
-                    segments: const [
-                      ButtonSegment(
-                        value: true,
-                        icon: Icon(Icons.badge_outlined),
-                        label: Text('Front'),
-                      ),
-                      ButtonSegment(
-                        value: false,
-                        icon: Icon(Icons.badge_outlined),
-                        label: Text('Back'),
-                      ),
-                    ],
-                    selected: {_showFront},
-                    onSelectionChanged: (values) =>
-                        setState(() => _showFront = values.first),
+                  if (_isOnline == false) const _OfflineBanner(),
+                  if (_isOnline == false) const SizedBox(height: 16),
+                  _FrontBackSelector(
+                    showFront: _showFront,
+                    onChanged: (value) => setState(() => _showFront = value),
                   ),
                   const SizedBox(height: 18),
                   _IdCardPreview(
                     student: widget.student,
-                    identity: state.identity,
+                    identity: identity,
                     showFront: _showFront,
                   ),
                   const SizedBox(height: 24),
@@ -116,84 +162,76 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
                       _CardActionTile(
                         label: 'Download',
                         icon: Icons.download_outlined,
-                        color: Colors.black,
-                        onPressed: () => _shareIdCard(context, state.identity),
-                      ),
-                      _CardActionTile(
-                        label: 'Share',
-                        icon: Icons.share_outlined,
-                        color: Colors.black,
-                        onPressed: () => _shareIdCard(context, state.identity),
+                        onPressed: _isOnline == false
+                            ? null
+                            : () => _downloadIdCard(context, identity),
                       ),
                       _CardActionTile(
                         label: 'Print',
                         icon: Icons.print_outlined,
-                        color: Colors.black,
-                        onPressed: () => _printIdCard(context, state.identity),
+                        onPressed: _isOnline == false
+                            ? null
+                            : () => _printIdCard(context, identity),
                       ),
                       _CardActionTile(
                         label: 'Replace',
-                        icon: Icons.badge_outlined,
-                        color: Colors.black,
-                        onPressed: () => _confirmCardAction(
-                          context,
-                          title: 'Replace this card?',
-                          onConfirm: () => context
-                              .read<StudentIdentityBloc>()
-                              .add(RegenerateQrCredentialEvent(state.identity)),
-                        ),
+                        icon: Icons.autorenew_rounded,
+                        onPressed: _isOnline == false
+                            ? null
+                            : () => _handleReplace(
+                                context,
+                                identity,
+                                state.assignedCardUid,
+                              ),
                       ),
                       _CardActionTile(
                         label: 'Revoke',
                         icon: Icons.shield_outlined,
-                        color: Colors.black,
-                        onPressed: () => _confirmCardAction(
-                          context,
-                          title: 'Revoke this card?',
-                          onConfirm: () =>
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Card revocation requested.'),
-                                ),
+                        onPressed: _isOnline == false
+                            ? null
+                            : () => _handleRevoke(
+                                context,
+                                identity,
+                                state.assignedCardUid,
                               ),
-                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
-                  const _CardStatusPanel(),
+                  _CardStatusPanel(
+                    identity: identity,
+                    onViewHistory: () => CardHistorySheet.show(
+                      context,
+                      studentId: widget.student.id,
+                      schoolId: widget.student.schoolId,
+                    ),
+                  ),
                 ],
               ),
             );
           }
 
-          if (state is StudentIdentityError) {
-            return _IdentityErrorState(
-              message: state.message,
-              onRetry: () => context.read<StudentIdentityBloc>().add(
-                GenerateStudentIdentityEvent(widget.student),
-              ),
-            );
-          }
-
-          return Center(
-            child: FilledButton.icon(
-              onPressed: () => context.read<StudentIdentityBloc>().add(
-                GenerateStudentIdentityEvent(widget.student),
-              ),
-              icon: const Icon(Icons.badge_outlined),
-              label: const Text('Generate Student ID'),
-            ),
-          );
+          return const SizedBox.shrink();
         },
       ),
     );
   }
 
+  // ---------------------------------------------------------------------
+  // Export actions
+  // ---------------------------------------------------------------------
+
   Future<void> _printIdCard(
     BuildContext context,
     StudentIdentity identity,
   ) async {
+    context.read<StudentIdentityBloc>().add(
+      RecordIdentityPreviewedEvent(
+        studentId: widget.student.id,
+        schoolId: widget.student.schoolId,
+        kind: 'school_id_print',
+      ),
+    );
     try {
       await GetIt.I<IdCardService>().printIdCard(
         await _cardPdf(context, identity),
@@ -206,10 +244,17 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
     }
   }
 
-  Future<void> _shareIdCard(
+  Future<void> _downloadIdCard(
     BuildContext context,
     StudentIdentity identity,
   ) async {
+    context.read<StudentIdentityBloc>().add(
+      RecordIdentityPreviewedEvent(
+        studentId: widget.student.id,
+        schoolId: widget.student.schoolId,
+        kind: 'school_id_download',
+      ),
+    );
     try {
       await GetIt.I<IdCardService>().shareIdCard(
         await _cardPdf(context, identity),
@@ -218,45 +263,13 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
     } catch (error) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to share ID card: $error')),
+          SnackBar(content: Text('Failed to save ID card: $error')),
         );
       }
     }
   }
 
-  Future<void> _confirmCardAction(
-    BuildContext context, {
-    required String title,
-    required VoidCallback onConfirm,
-  }) async {
-    final confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: () => Navigator.pop(sheetContext, true),
-                child: const Text('Confirm'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(sheetContext, false),
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (confirmed == true && context.mounted) onConfirm();
-  }
-
-  Future<Uint8List> _cardPdf(BuildContext context, StudentIdentity identity) {
+  Future<Uint8List> _cardPdf(BuildContext context, StudentIdentity identity) async {
     final structure = context.read<StructureBloc>().state;
     final className =
         structure.classes
@@ -276,10 +289,14 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
             .firstOrNull
             ?.name ??
         '';
-    final branding = context.read<ThemeProvider>().branding;
-    final schoolName = branding?.schoolName.isNotEmpty == true
-        ? branding!.schoolName
-        : (context.read<ThemeProvider>().config?.schoolName ?? 'School');
+    final profile = structure.institutionProfile;
+    final schoolName = profile.displayName.isNotEmpty
+        ? profile.displayName
+        : 'School';
+
+    final photoBytes = await _fetchImageBytes(widget.student.photoUrl);
+    final logoBytes = await _fetchImageBytes(profile.logoUrl);
+
     return GetIt.I<IdCardService>().generateIdCardPdf(
       schoolName: schoolName,
       studentName: widget.student.name,
@@ -287,18 +304,276 @@ class _StudentIdCardScreenState extends State<StudentIdCardScreen> {
       studentId: widget.student.studentCode,
       className: className,
       stream: stream,
-      uniqueSystemId: '',
+      uniqueSystemId: identity.uniqueSystemId,
       academicYear: year,
       qrCodeData: identity.qrCodeData,
+      schoolLogoBytes: logoBytes,
+      studentPhotoBytes: photoBytes,
+    );
+  }
+
+  Future<Uint8List?> _fetchImageBytes(String? url) async {
+    if (url == null || url.isEmpty) return null;
+    try {
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) return response.bodyBytes;
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Replace / Revoke
+  // ---------------------------------------------------------------------
+
+  Future<void> _handleReplace(
+    BuildContext context,
+    StudentIdentity identity,
+    String? assignedCardUid,
+  ) async {
+    if (assignedCardUid == null) {
+      // No NFC card on file - only the QR credential can be replaced.
+      await _confirmReplaceQr(context, identity);
+      return;
+    }
+
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.qr_code_2_rounded),
+              title: const Text('Replace QR credential'),
+              subtitle: const Text('Issues a new QR code for this student'),
+              onTap: () => Navigator.pop(sheetContext, 'qr'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.nfc),
+              title: const Text('Replace NFC card'),
+              subtitle: const Text('Scan a new physical card'),
+              onTap: () => Navigator.pop(sheetContext, 'nfc'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !context.mounted) return;
+
+    if (choice == 'qr') {
+      await _confirmReplaceQr(context, identity);
+    } else {
+      await _replaceNfcCard(context, identity, assignedCardUid);
+    }
+  }
+
+  Future<void> _confirmReplaceQr(
+    BuildContext context,
+    StudentIdentity identity,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Replace QR credential?'),
+        content: const Text(
+          'The current QR code will stop working immediately and a new one '
+          'will be issued. The previous credential\'s history is preserved.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Replace'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      context.read<StudentIdentityBloc>().add(
+        RegenerateQrCredentialEvent(identity),
+      );
+    }
+  }
+
+  Future<void> _replaceNfcCard(
+    BuildContext context,
+    StudentIdentity identity,
+    String oldCardUid,
+  ) async {
+    final reason = await pickReasonAndConfirm(actionLabel: 'Replace');
+    if (reason == null || !mounted) return;
+    final newUid = await scanCard(
+      'Hold the replacement card near the top edge of your physical iPhone.',
+      schoolId: widget.student.schoolId,
+    );
+    if (newUid == null || !context.mounted) return;
+    context.read<StudentIdentityBloc>().add(
+      ReplaceNfcCardEvent(
+        oldCardUid: oldCardUid,
+        newCardUid: newUid,
+        studentId: widget.student.id,
+        uniqueSystemId: identity.uniqueSystemId,
+        schoolId: widget.student.schoolId,
+        reason: reason,
+      ),
+    );
+  }
+
+  Future<void> _handleRevoke(
+    BuildContext context,
+    StudentIdentity identity,
+    String? assignedCardUid,
+  ) async {
+    if (assignedCardUid == null) {
+      // No NFC card assigned - there is no standalone QR-revoke callable;
+      // "revoking" the QR is achieved by replacing it (old one marked
+      // 'replaced', immediately inactive).
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Revoke QR credential?'),
+          content: const Text(
+            'This student has no NFC card on file, so revoking invalidates '
+            'the current QR code by issuing a new one - the old QR stops '
+            'working immediately. This cannot be undone, but history is '
+            'preserved.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Revoke'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true && context.mounted) {
+        context.read<StudentIdentityBloc>().add(
+          RegenerateQrCredentialEvent(identity),
+        );
+      }
+      return;
+    }
+
+    final reason = await pickReasonAndConfirm(actionLabel: 'Revoke');
+    if (reason == null || !context.mounted) return;
+    context.read<StudentIdentityBloc>().add(
+      RevokeNfcCardEvent(
+        cardUid: assignedCardUid,
+        studentId: widget.student.id,
+        schoolId: widget.student.schoolId,
+        reason: reason,
+      ),
     );
   }
 }
 
-class _IdentityErrorState extends StatelessWidget {
-  const _IdentityErrorState({required this.message, required this.onRetry});
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner();
 
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF2F2F2),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.black12),
+    ),
+    child: const Row(
+      children: [
+        Icon(Icons.cloud_off_rounded, size: 18, color: Colors.black),
+        SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            "You're offline — print/download still work, but replacing or "
+            'revoking a credential requires a connection.',
+            style: TextStyle(fontSize: 12, color: Colors.black87),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _FrontBackSelector extends StatelessWidget {
+  final bool showFront;
+  final ValueChanged<bool> onChanged;
+  const _FrontBackSelector({required this.showFront, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 44,
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF2F2F2),
+      borderRadius: BorderRadius.circular(22),
+    ),
+    child: Row(
+      children: [
+        Expanded(child: _segment('Front', showFront, () => onChanged(true))),
+        Expanded(child: _segment('Back', !showFront, () => onChanged(false))),
+      ],
+    ),
+  );
+
+  Widget _segment(String label, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
+          color: selected ? Colors.black : Colors.transparent,
+          borderRadius: BorderRadius.circular(19),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              selected ? Icons.check_rounded : Icons.crop_free_rounded,
+              size: 16,
+              color: selected ? Colors.white : Colors.black54,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: selected ? Colors.white : Colors.black54,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MessageState extends StatelessWidget {
+  final IconData icon;
   final String message;
-  final VoidCallback onRetry;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _MessageState({
+    required this.icon,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -308,11 +583,17 @@ class _IdentityErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 48),
+            Icon(icon, size: 48, color: Colors.black45),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onRetry, child: const Text('Try Again')),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 16),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: Colors.black),
+                onPressed: onAction,
+                child: Text(actionLabel!),
+              ),
+            ],
           ],
         ),
       ),
@@ -320,7 +601,10 @@ class _IdentityErrorState extends StatelessWidget {
   }
 }
 
-class _IdCardPreview extends StatelessWidget {
+// ---------------------------------------------------------------------------
+// CARD PREVIEW
+// ---------------------------------------------------------------------------
+class _IdCardPreview extends StatefulWidget {
   const _IdCardPreview({
     required this.student,
     required this.identity,
@@ -332,66 +616,75 @@ class _IdCardPreview extends StatelessWidget {
   final bool showFront;
 
   @override
+  State<_IdCardPreview> createState() => _IdCardPreviewState();
+}
+
+class _IdCardPreviewState extends State<_IdCardPreview> {
+  late Future<StudentGuardianContact?> _guardianFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _guardianFuture = sl<PrimaryGuardianLookupService>()
+        .getPrimaryGuardian(
+          schoolId: widget.student.schoolId,
+          studentId: widget.student.id,
+        )
+        .then((result) => result.fold((_) => null, (contact) => contact));
+  }
+
+  @override
   Widget build(BuildContext context) {
     final structure = context.watch<StructureBloc>().state;
     final profile = structure.institutionProfile;
-    final branding = context.watch<ThemeProvider>().branding;
     final schoolName = profile.displayName.isNotEmpty
         ? profile.displayName
-        : (branding?.schoolName.isNotEmpty == true
-              ? branding!.schoolName
-              : (context.watch<ThemeProvider>().config?.schoolName ??
-                    'School'));
+        : 'School';
     final className =
         structure.classes
-            .where((item) => item.id == student.classId)
+            .where((item) => item.id == widget.student.classId)
             .firstOrNull
             ?.name ??
-        'Class unavailable';
+        '';
     final stream =
         structure.streams
-            .where((item) => item.id == student.streamId)
+            .where((item) => item.id == widget.student.streamId)
             .firstOrNull
             ?.name ??
         '';
     final year =
         structure.academicYears
-            .where((item) => item.id == student.academicYearId)
+            .where((item) => item.id == widget.student.academicYearId)
             .firstOrNull
             ?.name ??
         '';
-    final logoUrl = profile.logoUrl.isNotEmpty
-        ? profile.logoUrl
-        : branding?.logoUrl;
-    final contact = [
-      profile.phone,
-      profile.email,
-    ].where((item) => item.isNotEmpty).join('  •  ');
 
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 340),
+        constraints: const BoxConstraints(maxWidth: 320),
         child: AspectRatio(
-          aspectRatio: 540 / 856,
-          child: showFront
-              ? _MetallicStudentIdFront(
-                  student: student,
-                  schoolName: schoolName,
-                  motto: profile.motto.isNotEmpty
-                      ? profile.motto
-                      : 'Knowledge  •  Integrity  •  Service',
-                  logoUrl: logoUrl,
-                  classAndStream: [
-                    className,
-                    stream,
-                  ].where((item) => item.isNotEmpty).join(' • '),
-                  academicYear: year,
+          aspectRatio: 0.62,
+          child: widget.showFront
+              ? FutureBuilder<StudentGuardianContact?>(
+                  future: _guardianFuture,
+                  builder: (context, snapshot) => _IdCardFront(
+                    student: widget.student,
+                    identity: widget.identity,
+                    profile: profile,
+                    schoolName: schoolName,
+                    classAndStream: [
+                      className,
+                      stream,
+                    ].where((item) => item.isNotEmpty).join(' · '),
+                    academicYear: year,
+                    guardianName: snapshot.data?.name,
+                  ),
                 )
-              : _MetallicStudentIdBack(
+              : _IdCardBack(
+                  student: widget.student,
+                  identity: widget.identity,
+                  profile: profile,
                   schoolName: schoolName,
-                  logoUrl: logoUrl,
-                  contact: contact,
-                  qrCodeData: identity.qrCodeData,
                 ),
         ),
       ),
@@ -399,441 +692,124 @@ class _IdCardPreview extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// PALETTE — matches the Victor High School reference design exactly.
-// ---------------------------------------------------------------------------
-const _navy = Colors.black;
-const _teal = Colors.black;
-const _gold = Colors.black;
-const _goldBright = Colors.black;
-const _ivory = Colors.black;
+class _CardChrome extends StatelessWidget {
+  final Widget headerContent;
+  final Widget body;
+  final String footerText;
 
-const _cardGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [_navy, _teal],
-);
-
-class _MetallicStudentIdFront extends StatelessWidget {
-  const _MetallicStudentIdFront({
-    required this.student,
-    required this.schoolName,
-    required this.motto,
-    required this.logoUrl,
-    required this.classAndStream,
-    required this.academicYear,
+  const _CardChrome({
+    required this.headerContent,
+    required this.body,
+    required this.footerText,
   });
-
-  final Student student;
-  final String schoolName;
-  final String motto;
-  final String? logoUrl;
-  final String classAndStream;
-  final String academicYear;
-
-  @override
-  Widget build(BuildContext context) => _CardShell(
-    child: Column(
-      children: [
-        _Crest(logoUrl: logoUrl, size: 48),
-        const SizedBox(height: 8),
-        Text(
-          schoolName.toUpperCase(),
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.playfairDisplay(
-            color: _goldBright,
-            fontSize: 17,
-            height: 1,
-            fontWeight: FontWeight.w700,
-            letterSpacing: .6,
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          motto,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.cormorant(
-            color: _ivory,
-            fontStyle: FontStyle.italic,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 16),
-        _Avatar(photoUrl: student.photoUrl),
-        const SizedBox(height: 14),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Flexible(
-              child: Text(
-                student.name.toUpperCase(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.playfairDisplay(
-                  color: _goldBright,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: .5,
-                ),
-              ),
-            ),
-            if (classAndStream.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _gold,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: _gold),
-                ),
-                child: Text(
-                  classAndStream,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    color: _goldBright,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 12),
-        _DetailRow(
-          icon: Icons.badge_outlined,
-          label: 'Student Code',
-          value: student.studentCode,
-        ),
-        _divider(),
-        _DetailRow(
-          icon: Icons.description_outlined,
-          label: 'Admission No.',
-          value: student.admissionNumber,
-        ),
-        _divider(),
-        _DetailRow(
-          icon: Icons.calendar_today_outlined,
-          label: 'Academic Year',
-          value: academicYear,
-        ),
-        const Spacer(),
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            Text(
-              'Official Student Identity Card',
-              style: GoogleFonts.cormorant(
-                color: _ivory,
-                fontStyle: FontStyle.italic,
-                fontSize: 12,
-              ),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: _SealBadge(initials: _initialsOf(schoolName)),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-
-  static Widget _divider() => Container(height: 1, color: _ivory);
-}
-
-class _MetallicStudentIdBack extends StatelessWidget {
-  const _MetallicStudentIdBack({
-    required this.schoolName,
-    required this.logoUrl,
-    required this.contact,
-    required this.qrCodeData,
-  });
-
-  final String schoolName;
-  final String? logoUrl;
-  final String contact;
-  final String qrCodeData;
-
-  @override
-  Widget build(BuildContext context) => _CardShell(
-    child: Column(
-      children: [
-        Row(
-          children: [
-            _Crest(logoUrl: logoUrl, size: 26),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                schoolName.toUpperCase(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.playfairDisplay(
-                  color: _goldBright,
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Container(height: 1, color: _gold),
-        const SizedBox(height: 14),
-        Text(
-          'Scan to Verify Student',
-          style: GoogleFonts.inter(
-            color: _goldBright,
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _gold, width: 1.6),
-          ),
-          child: qrCodeData.isNotEmpty
-              ? QrImageView(
-                  data: qrCodeData,
-                  size: 140,
-                  backgroundColor: Colors.white,
-                  eyeStyle: const QrEyeStyle(
-                    eyeShape: QrEyeShape.square,
-                    color: _navy,
-                  ),
-                  dataModuleStyle: const QrDataModuleStyle(
-                    dataModuleShape: QrDataModuleShape.square,
-                    color: _navy,
-                  ),
-                )
-              : const SizedBox(
-                  width: 140,
-                  height: 140,
-                  child: Icon(Icons.qr_code_2_outlined, size: 96, color: _navy),
-                ),
-        ),
-        const SizedBox(height: 14),
-        Text(
-          'Keep this card with you. It is non-transferable and remains the property of $schoolName',
-          textAlign: TextAlign.center,
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.inter(color: _ivory, fontSize: 10.5, height: 1.4),
-        ),
-        const Spacer(),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _StatusPill(
-              icon: Icons.check_circle_outline,
-              label: 'Identity\nVerified',
-            ),
-            const SizedBox(width: 10),
-            _StatusPill(
-              icon: Icons.vpn_key_outlined,
-              label: 'Authorized\nAccess',
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        if (contact.isNotEmpty)
-          Text(
-            contact,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(color: _ivory, fontSize: 10),
-          ),
-        const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 9),
-          decoration: const BoxDecoration(
-            color: _gold,
-            borderRadius: BorderRadius.all(Radius.circular(999)),
-          ),
-          child: Text(
-            'NON-TRANSFERABLE',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              color: _navy,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              letterSpacing: .5,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-// ---------------------------------------------------------------------------
-// SHARED: card shell with gradient + gold double-line frame + circuit tracery
-// ---------------------------------------------------------------------------
-class _CardShell extends StatelessWidget {
-  const _CardShell({required this.child});
-  final Widget child;
 
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(20),
-      gradient: _cardGradient,
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black,
-          blurRadius: 30,
-          offset: const Offset(0, 18),
-        ),
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: Colors.black12),
+      boxShadow: const [
+        BoxShadow(color: Colors.black12, blurRadius: 16, offset: Offset(0, 8)),
       ],
     ),
-    child: Stack(
+    clipBehavior: Clip.antiAlias,
+    child: Column(
       children: [
-        Positioned.fill(child: CustomPaint(painter: _CircuitPainter())),
-        Positioned.fill(
+        Container(
+          width: double.infinity,
+          color: Colors.black,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          child: headerContent,
+        ),
+        Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: _gold, width: 1.4),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(3),
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: _gold, width: .8),
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                ),
-              ),
-            ),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+            child: body,
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
-          child: child,
+        Container(
+          width: double.infinity,
+          color: Colors.black,
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          child: Text(
+            footerText,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: .4,
+            ),
+          ),
         ),
       ],
     ),
   );
 }
 
-class _CircuitPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = _gold
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
-    final nodePaint = Paint()..color = _gold;
-
-    void corner(Offset origin, bool flipX, bool flipY) {
-      final sx = flipX ? -1.0 : 1.0;
-      final sy = flipY ? -1.0 : 1.0;
-      final path = Path()
-        ..moveTo(origin.dx, origin.dy + 40 * sy)
-        ..lineTo(origin.dx, origin.dy + 12 * sy)
-        ..lineTo(origin.dx + 12 * sx, origin.dy)
-        ..lineTo(origin.dx + 40 * sx, origin.dy);
-      canvas.drawPath(path, paint);
-      canvas.drawRect(
-        Rect.fromCenter(
-          center: Offset(origin.dx + 40 * sx, origin.dy),
-          width: 5,
-          height: 5,
-        ),
-        nodePaint,
-      );
-      canvas.drawRect(
-        Rect.fromCenter(
-          center: Offset(origin.dx, origin.dy + 40 * sy),
-          width: 5,
-          height: 5,
-        ),
-        nodePaint,
-      );
-    }
-
-    corner(const Offset(18, 18), false, false);
-    corner(Offset(size.width - 18, 18), true, false);
-    corner(Offset(18, size.height - 18), false, true);
-    corner(Offset(size.width - 18, size.height - 18), true, true);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-// ---------------------------------------------------------------------------
-// CREST — shield containing a torch, flanked by laurel leaves (line-art gold)
-// ---------------------------------------------------------------------------
-class _Crest extends StatelessWidget {
-  const _Crest({required this.logoUrl, required this.size});
+class _SchoolCrest extends StatelessWidget {
   final String? logoUrl;
   final double size;
+  const _SchoolCrest({required this.logoUrl, this.size = 44});
 
   @override
   Widget build(BuildContext context) => SizedBox(
     width: size,
     height: size,
     child: logoUrl?.isNotEmpty == true
-        ? ClipOval(child: Image.network(logoUrl!, fit: BoxFit.cover))
+        ? ClipOval(
+            child: Image.network(
+              logoUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => CustomPaint(painter: _CrestPainter()),
+            ),
+          )
         : CustomPaint(painter: _CrestPainter()),
   );
 }
 
+/// Simple monochrome line-art crest (open book + laurel), single black
+/// stroke - no gradients, no color, matching the mockup's clean mark.
 class _CrestPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final gold = Paint()
-      ..color = _goldBright
+    final stroke = Paint()
+      ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
+      ..strokeWidth = 1.4
       ..strokeCap = StrokeCap.round;
-
     final w = size.width, h = size.height;
 
-    final shield = Path()
-      ..moveTo(w * 0.5, h * 0.08)
-      ..lineTo(w * 0.82, h * 0.2)
-      ..lineTo(w * 0.82, h * 0.55)
-      ..cubicTo(w * 0.82, h * 0.8, w * 0.65, h * 0.92, w * 0.5, h * 0.98)
-      ..cubicTo(w * 0.35, h * 0.92, w * 0.18, h * 0.8, w * 0.18, h * 0.55)
-      ..lineTo(w * 0.18, h * 0.2)
-      ..close();
-    canvas.drawPath(shield, gold);
+    canvas.drawCircle(Offset(w / 2, h / 2), w / 2 - 1, stroke);
 
-    final torch = Path()
-      ..moveTo(w * 0.5, h * 0.22)
-      ..quadraticBezierTo(w * 0.58, h * 0.3, w * 0.5, h * 0.4)
-      ..quadraticBezierTo(w * 0.42, h * 0.3, w * 0.5, h * 0.22)
-      ..moveTo(w * 0.5, h * 0.4)
-      ..lineTo(w * 0.5, h * 0.75);
-    canvas.drawPath(torch, gold);
+    final book = Path()
+      ..moveTo(w * 0.28, h * 0.36)
+      ..lineTo(w * 0.5, h * 0.3)
+      ..lineTo(w * 0.72, h * 0.36)
+      ..lineTo(w * 0.72, h * 0.62)
+      ..lineTo(w * 0.5, h * 0.56)
+      ..lineTo(w * 0.28, h * 0.62)
+      ..close();
+    canvas.drawPath(book, stroke);
+    canvas.drawLine(
+      Offset(w * 0.5, h * 0.3),
+      Offset(w * 0.5, h * 0.56),
+      stroke,
+    );
 
     for (final side in [-1, 1]) {
-      for (var i = 0; i < 3; i++) {
-        final yBase = h * (0.45 + i * 0.13);
+      for (var i = 0; i < 2; i++) {
+        final yBase = h * (0.68 + i * 0.1);
         final leaf = Path()
           ..moveTo(w * 0.5 + side * 2, yBase)
           ..quadraticBezierTo(
-            w * 0.5 + side * (14 + i * 2),
-            yBase + 4,
-            w * 0.5 + side * (22 + i * 2),
-            yBase - 3,
+            w * 0.5 + side * (10 + i * 2),
+            yBase + 3,
+            w * 0.5 + side * (16 + i * 2),
+            yBase - 2,
           );
-        canvas.drawPath(leaf, gold);
+        canvas.drawPath(leaf, stroke);
       }
     }
   }
@@ -842,76 +818,254 @@ class _CrestPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-String _initialsOf(String schoolName) {
-  final words = schoolName
-      .split(RegExp(r'\s+'))
-      .where((word) => word.isNotEmpty);
-  final initials = words.map((word) => word[0].toUpperCase()).join();
-  return initials.isEmpty
-      ? 'S'
-      : (initials.length > 4 ? initials.substring(0, 4) : initials);
-}
+class _IdCardFront extends StatelessWidget {
+  const _IdCardFront({
+    required this.student,
+    required this.identity,
+    required this.profile,
+    required this.schoolName,
+    required this.classAndStream,
+    required this.academicYear,
+    required this.guardianName,
+  });
 
-class _SealBadge extends StatelessWidget {
-  const _SealBadge({required this.initials});
-  final String initials;
+  final Student student;
+  final StudentIdentity identity;
+  final InstitutionProfile profile;
+  final String schoolName;
+  final String classAndStream;
+  final String academicYear;
+  final String? guardianName;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 34,
-    height: 34,
-    decoration: const BoxDecoration(
-      shape: BoxShape.circle,
-      gradient: RadialGradient(colors: [Colors.black, Colors.black]),
-      border: Border.fromBorderSide(BorderSide(color: Colors.white)),
+  Widget build(BuildContext context) => _CardChrome(
+    footerText: 'Official student identity card',
+    headerContent: Text(
+      schoolName.toUpperCase(),
+      textAlign: TextAlign.center,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 14,
+        fontWeight: FontWeight.w800,
+        letterSpacing: .6,
+      ),
     ),
-    child: Center(
-      child: Text(
-        initials,
-        style: GoogleFonts.playfairDisplay(
-          color: _navy,
-          fontSize: 8,
-          fontWeight: FontWeight.w700,
-        ),
+    body: SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Column(
+        children: [
+          _SchoolCrest(logoUrl: profile.logoUrl, size: 40),
+          const SizedBox(height: 4),
+          Text(
+            profile.motto.isNotEmpty
+                ? profile.motto
+                : 'Knowledge · Integrity · Service',
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 10,
+              color: Colors.black54,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _LearnerAvatar(photoUrl: student.photoUrl),
+          const SizedBox(height: 10),
+          Text(
+            student.name,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          if (classAndStream.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.black26),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                classAndStream,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          _DataRow(
+            icon: Icons.person_outline_rounded,
+            label: 'Student No.',
+            value: student.studentCode,
+          ),
+          _DataRow(
+            icon: Icons.badge_outlined,
+            label: 'Admission No.',
+            value: student.admissionNumber,
+          ),
+          _DataRow(
+            icon: Icons.calendar_today_outlined,
+            label: 'Date of Birth',
+            value: DateFormat('d MMM yyyy').format(student.dateOfBirth),
+          ),
+          if (guardianName != null && guardianName!.isNotEmpty)
+            _DataRow(
+              icon: Icons.people_outline_rounded,
+              label: 'Guardian',
+              value: guardianName!,
+            ),
+          if (academicYear.isNotEmpty)
+            _DataRow(
+              icon: Icons.school_outlined,
+              label: 'Academic Year',
+              value: academicYear,
+            ),
+          _DataRow(
+            icon: Icons.wifi_rounded,
+            label: 'Tap for school use',
+            value: identity.nfcStatus == 'active'
+                ? 'NFC enabled'
+                : 'NFC not set up',
+          ),
+        ],
       ),
     ),
   );
 }
 
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.photoUrl});
+class _IdCardBack extends StatelessWidget {
+  const _IdCardBack({
+    required this.student,
+    required this.identity,
+    required this.profile,
+    required this.schoolName,
+  });
+
+  final Student student;
+  final StudentIdentity identity;
+  final InstitutionProfile profile;
+  final String schoolName;
+
+  @override
+  Widget build(BuildContext context) => _CardChrome(
+    footerText: 'NON-TRANSFERABLE',
+    headerContent: Text(
+      schoolName.toUpperCase(),
+      textAlign: TextAlign.center,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 14,
+        fontWeight: FontWeight.w800,
+        letterSpacing: .6,
+      ),
+    ),
+    body: Column(
+      children: [
+        const SizedBox(height: 4),
+        _SchoolCrest(logoUrl: profile.logoUrl, size: 36),
+        const SizedBox(height: 12),
+        const Text(
+          'Scan to verify learner',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.black12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: identity.qrCodeData.isNotEmpty
+              ? QrImageView(
+                  data: identity.qrCodeData,
+                  size: 148,
+                  backgroundColor: Colors.white,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: Colors.black,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: Colors.black,
+                  ),
+                )
+              : const SizedBox(
+                  width: 148,
+                  height: 148,
+                  child: Icon(
+                    Icons.qr_code_2_outlined,
+                    size: 96,
+                    color: Colors.black26,
+                  ),
+                ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          student.studentCode,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        ),
+        const Spacer(),
+        Text(
+          'This card is non-transferable. Please return to $schoolName if found.',
+          textAlign: TextAlign.center,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 10.5, color: Colors.black54),
+        ),
+        const SizedBox(height: 12),
+      ],
+    ),
+  );
+}
+
+class _LearnerAvatar extends StatelessWidget {
+  const _LearnerAvatar({required this.photoUrl});
   final String? photoUrl;
 
   @override
   Widget build(BuildContext context) => Container(
-    width: 118,
-    height: 118,
-    padding: const EdgeInsets.all(4),
+    width: 84,
+    height: 84,
+    padding: const EdgeInsets.all(2),
     decoration: const BoxDecoration(
       shape: BoxShape.circle,
-      border: Border.fromBorderSide(BorderSide(color: _gold, width: 2)),
+      border: Border.fromBorderSide(BorderSide(color: Colors.black, width: 1.5)),
     ),
-    child: Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: _gold, width: 1),
-        gradient: const LinearGradient(
-          colors: [Colors.black, Colors.black],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: ClipOval(
-        child: photoUrl?.isNotEmpty == true
-            ? Image.network(photoUrl!, fit: BoxFit.cover)
-            : const Icon(Icons.person_rounded, size: 54, color: Colors.white),
-      ),
+    child: ClipOval(
+      child: photoUrl?.isNotEmpty == true
+          ? Image.network(
+              photoUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => const _AvatarFallback(),
+            )
+          : const _AvatarFallback(),
     ),
   );
 }
 
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({
+class _AvatarFallback extends StatelessWidget {
+  const _AvatarFallback();
+  @override
+  Widget build(BuildContext context) => Container(
+    color: const Color(0xFFF2F2F2),
+    child: const Icon(Icons.person_rounded, size: 44, color: Colors.black38),
+  );
+}
+
+class _DataRow extends StatelessWidget {
+  const _DataRow({
     required this.icon,
     required this.label,
     required this.value,
@@ -925,7 +1079,7 @@ class _DetailRow extends StatelessWidget {
     padding: const EdgeInsets.symmetric(vertical: 5),
     child: Row(
       children: [
-        Icon(icon, size: 16, color: _gold),
+        Icon(icon, size: 15, color: Colors.black45),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -933,55 +1087,18 @@ class _DetailRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: GoogleFonts.inter(
-                  color: _ivory,
-                  fontSize: 9.5,
-                  letterSpacing: .4,
-                ),
+                style: const TextStyle(fontSize: 10, color: Colors.black45),
               ),
               Text(
                 value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  color: _ivory,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.icon, required this.label});
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    decoration: BoxDecoration(
-      color: _gold,
-      borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: _gold),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 15, color: _goldBright),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            color: _ivory,
-            fontSize: 9.5,
-            fontWeight: FontWeight.w600,
-            height: 1.2,
           ),
         ),
       ],
@@ -993,83 +1110,125 @@ class _CardActionTile extends StatelessWidget {
   const _CardActionTile({
     required this.label,
     required this.icon,
-    required this.color,
     required this.onPressed,
   });
 
   final String label;
   final IconData icon;
-  final Color color;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
-  Widget build(BuildContext context) => Expanded(
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 3),
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
-          side: BorderSide(color: Colors.white),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 23),
-            const SizedBox(height: 4),
-            Text(label, maxLines: 1, style: const TextStyle(fontSize: 10)),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-class _CardStatusPanel extends StatelessWidget {
-  const _CardStatusPanel();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Colors.white),
-    ),
-    child: Row(
-      children: [
-        const Icon(Icons.verified_user_outlined, color: Colors.black, size: 32),
-        const SizedBox(width: 12),
-        const Expanded(
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3),
+        child: OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
+            side: BorderSide(color: enabled ? Colors.black26 : Colors.black12),
+          ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Card Status',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              Icon(
+                icon,
+                color: enabled ? Colors.black : Colors.black26,
+                size: 22,
               ),
-              SizedBox(height: 8),
-              Text('Issued on 12 May 2026', style: TextStyle(fontSize: 12)),
-              SizedBox(height: 4),
-              Text('Issued by Admin User', style: TextStyle(fontSize: 12)),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: enabled ? Colors.black : Colors.black26,
+                ),
+              ),
             ],
           ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
+      ),
+    );
+  }
+}
+
+class _CardStatusPanel extends StatelessWidget {
+  const _CardStatusPanel({required this.identity, required this.onViewHistory});
+
+  final StudentIdentity identity;
+  final VoidCallback onViewHistory;
+
+  @override
+  Widget build(BuildContext context) {
+    final revoked =
+        identity.nfcStatus == 'revoked' || identity.qrCredentialStatus == 'revoked';
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            revoked ? Icons.block_rounded : Icons.verified_user_outlined,
             color: Colors.black,
-            borderRadius: BorderRadius.circular(20),
+            size: 32,
           ),
-          child: const Text(
-            'ACTIVE',
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  revoked ? 'Card revoked' : 'Card active',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (identity.issuedAt != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Issued ${DateFormat('d MMM yyyy').format(identity.issuedAt!)}',
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
+                ],
+                const SizedBox(height: 6),
+                GestureDetector(
+                  onTap: onViewHistory,
+                  child: const Text(
+                    'View card history',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
-    ),
-  );
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: revoked ? Colors.white : Colors.black,
+              border: revoked ? Border.all(color: Colors.black) : null,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              revoked ? 'REVOKED' : 'ACTIVE',
+              style: TextStyle(
+                color: revoked ? Colors.black : Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

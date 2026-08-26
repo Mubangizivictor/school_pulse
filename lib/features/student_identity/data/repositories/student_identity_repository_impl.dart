@@ -4,6 +4,7 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../../../student/domain/entities/student.dart';
 import '../../../student/data/models/student_model.dart';
+import '../../domain/entities/credential_history_entry.dart';
 import '../../domain/entities/student_identity.dart';
 import '../../domain/repositories/student_identity_repository.dart';
 import '../models/student_identity_model.dart';
@@ -100,6 +101,9 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
         schoolStudentId: returned.schoolStudentId,
         qrCodeData: returned.qrCodeData,
         nfcStatus: returned.nfcStatus,
+        qrCredentialStatus: returned.qrCredentialStatus,
+        issuedAt: returned.issuedAt,
+        lastPrintedAt: returned.lastPrintedAt,
       );
 
       await localCache.save(student: student, identity: model);
@@ -181,6 +185,9 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
         schoolStudentId: identity.schoolStudentId,
         qrCodeData: newQrCodeData,
         nfcStatus: identity.nfcStatus,
+        qrCredentialStatus: 'active',
+        issuedAt: identity.issuedAt,
+        lastPrintedAt: identity.lastPrintedAt,
       );
       await _cacheQrCredential(updated);
       return Right(updated);
@@ -230,6 +237,9 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
                   schoolStudentId: identity.schoolStudentId,
                   qrCodeData: identity.qrCodeData,
                   nfcStatus: identity.nfcStatus,
+                  qrCredentialStatus: identity.qrCredentialStatus,
+                  issuedAt: identity.issuedAt,
+                  lastPrintedAt: identity.lastPrintedAt,
                 );
           await localCache.save(student: student, identity: model);
           await _cacheQrCredential(model);
@@ -280,13 +290,36 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateNfcStatus(
-    String studentId,
-    String nfcStatus,
-  ) async {
-    // NFC lifecycle persistence belongs to the secure credential service /
-    // Cloud Function. Client-side writes to top-level student_identities are
-    // intentionally avoided because that collection is not a client write API.
-    return const Right(null);
+  Future<Either<Failure, List<CredentialHistoryEntry>>> getCredentialHistory({
+    required String studentId,
+    required String schoolId,
+  }) async {
+    try {
+      final snapshot = await firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('credential_history')
+          .where('studentId', isEqualTo: studentId)
+          .orderBy('createdAt', descending: true)
+          .limit(50)
+          .get();
+      return Right(
+        snapshot.docs.map((doc) {
+          final data = doc.data();
+          final createdAt = data['createdAt'];
+          return CredentialHistoryEntry(
+            action: data['action'] as String? ?? 'unknown',
+            credentialType: data['credentialType'] as String? ?? '',
+            reason: data['reason'] as String?,
+            createdAt: createdAt is Timestamp
+                ? createdAt.toDate()
+                : DateTime.now(),
+            actorNameSnapshot: data['actorNameSnapshot'] as String?,
+          );
+        }).toList(),
+      );
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 }

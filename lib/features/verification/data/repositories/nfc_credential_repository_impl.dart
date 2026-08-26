@@ -64,6 +64,92 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     }
   }
 
+  Future<Either<Failure, void>?> _replaceServerSide({
+    required String oldCardUid,
+    required String newCardUid,
+    required String? studentId,
+    required String reason,
+  }) async {
+    if (functions == null || studentId == null) return null;
+    if (!await networkInfo.isConnected) return null;
+    try {
+      await functions!.httpsCallable('replaceNfcCredential').call<Map<String, dynamic>>({
+        'cardUid': oldCardUid,
+        'newCardUid': newCardUid,
+        'studentId': studentId,
+        'reason': reason,
+      });
+      return const Right(null);
+    } on FirebaseFunctionsException catch (e) {
+      if (e.code == 'already-exists') {
+        final details = e.details is Map ? e.details as Map : const {};
+        return Left(
+          DuplicateCredentialFailure(
+            conflictingIdentityId:
+                details['conflictingIdentityId'] as String? ?? '',
+            conflictingIdentityType:
+                details['conflictingIdentityType'] as String? ?? 'student',
+          ),
+        );
+      }
+      return Left(
+        ServerFailure(
+          e.message ?? 'NFC card replacement failed on the server (${e.code}).',
+        ),
+      );
+    } catch (e) {
+      return Left(ServerFailure('NFC card replacement failed: $e'));
+    }
+  }
+
+  Future<Either<Failure, void>?> _revokeServerSide({
+    required String cardUid,
+    required String? studentId,
+    required String reason,
+  }) async {
+    if (functions == null || studentId == null) return null;
+    if (!await networkInfo.isConnected) return null;
+    try {
+      await functions!.httpsCallable('revokeNfcCredential').call<Map<String, dynamic>>({
+        'cardUid': cardUid,
+        'studentId': studentId,
+        'reason': reason,
+      });
+      return const Right(null);
+    } on FirebaseFunctionsException catch (e) {
+      return Left(
+        ServerFailure(
+          e.message ?? 'NFC card revocation failed on the server (${e.code}).',
+        ),
+      );
+    } catch (e) {
+      return Left(ServerFailure('NFC card revocation failed: $e'));
+    }
+  }
+
+  Future<Either<Failure, void>?> _reactivateServerSide({
+    required String cardUid,
+    required String? studentId,
+  }) async {
+    if (functions == null || studentId == null) return null;
+    if (!await networkInfo.isConnected) return null;
+    try {
+      await functions!.httpsCallable('reactivateNfcCredential').call<Map<String, dynamic>>({
+        'cardUid': cardUid,
+        'studentId': studentId,
+      });
+      return const Right(null);
+    } on FirebaseFunctionsException catch (e) {
+      return Left(
+        ServerFailure(
+          e.message ?? 'NFC card reactivation failed on the server (${e.code}).',
+        ),
+      );
+    } catch (e) {
+      return Left(ServerFailure('NFC card reactivation failed: $e'));
+    }
+  }
+
   @override
   Future<Either<Failure, void>> assign({
     required String credentialValue,
@@ -107,6 +193,10 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
       // A server-confirmed assignment is authoritative. This intentionally
       // overwrites old local entries that used StudentIdentity.uniqueSystemId
       // so existing test cards migrate cleanly to canonical Student.id.
+      // Firestore rules deny direct client writes to credentials/
+      // revoked_credentials (every mutation now goes through a Cloud
+      // Function), so only the local Isar cache is updated here - it is a
+      // read-side mirror for offline scan resolution, not a write path.
       await localDataSource.deleteRevocation(credentialValue, schoolId);
       final credential = CachedCredential(
         credentialValue: credentialValue,
@@ -118,8 +208,6 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
         updatedAt: DateTime.now(),
       );
       await localDataSource.cacheCredential(credential);
-      await _pushCredential(credential);
-      await _pushRevocationDeleted(schoolId, credentialValue);
       return const Right(null);
     } catch (e) {
       return Left(CacheFailure(e.toString()));
@@ -137,22 +225,54 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     String? studentId,
     String? staffId,
   }) async {
-    final revokeResult = await revoke(
-      credentialValue: oldCredentialValue,
-      schoolId: schoolId,
-      reason: reason,
-    );
-    return revokeResult.fold(
-      Left.new,
-      (_) => assign(
-        credentialValue: newCredentialValue,
-        identityId: identityId,
-        identityType: identityType,
+    try {
+      if (identityType == 'student' && studentId != null) {
+        final serverResult = await _replaceServerSide(
+          oldCardUid: oldCredentialValue,
+          newCardUid: newCredentialValue,
+          studentId: studentId,
+          reason: reason,
+        );
+        if (serverResult != null) {
+          if (serverResult.isLeft()) return serverResult;
+          await localDataSource.deleteRevocation(oldCredentialValue, schoolId);
+          await localDataSource.cacheCredential(
+            CachedCredential(
+              credentialValue: newCredentialValue,
+              credentialType: 'nfc',
+              identityId: identityId,
+              identityType: identityType,
+              schoolId: schoolId,
+              status: 'active',
+              updatedAt: DateTime.now(),
+            ),
+          );
+          return const Right(null);
+        }
+      }
+
+      // Offline or non-student identity: fall back to the local
+      // revoke-then-assign orchestration so the device's own gate keeps
+      // working without connectivity.
+      final revokeResult = await revoke(
+        credentialValue: oldCredentialValue,
         schoolId: schoolId,
-        studentId: studentId,
-        staffId: staffId,
-      ),
-    );
+        reason: reason,
+      );
+      return revokeResult.fold(
+        Left.new,
+        (_) => assign(
+          credentialValue: newCredentialValue,
+          identityId: identityId,
+          identityType: identityType,
+          schoolId: schoolId,
+          studentId: studentId,
+          staffId: staffId,
+        ),
+      );
+    } catch (e) {
+      return Left(CacheFailure(e.toString()));
+    }
   }
 
   @override
@@ -160,8 +280,20 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     required String credentialValue,
     required String schoolId,
     required String reason,
+    String? studentId,
   }) async {
     try {
+      if (studentId != null) {
+        final serverResult = await _revokeServerSide(
+          cardUid: credentialValue,
+          studentId: studentId,
+          reason: reason,
+        );
+        if (serverResult != null && serverResult.isLeft()) {
+          return serverResult;
+        }
+      }
+
       final existing = await localDataSource.findCredential(
         credentialValue,
         schoolId,
@@ -170,17 +302,16 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
         existing.status = 'revoked';
         existing.updatedAt = DateTime.now();
         await localDataSource.cacheCredential(existing);
-        await _pushCredential(existing);
       }
 
-      final revocation = RevokedCredential(
-        credentialValue: credentialValue,
-        schoolId: schoolId,
-        revokedAt: DateTime.now(),
-        reason: reason,
+      await localDataSource.saveRevocation(
+        RevokedCredential(
+          credentialValue: credentialValue,
+          schoolId: schoolId,
+          revokedAt: DateTime.now(),
+          reason: reason,
+        ),
       );
-      await localDataSource.saveRevocation(revocation);
-      await _pushRevocation(revocation);
       return const Right(null);
     } catch (e) {
       return Left(CacheFailure(e.toString()));
@@ -191,13 +322,24 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
   Future<Either<Failure, void>> reactivate({
     required String credentialValue,
     required String schoolId,
+    String? studentId,
   }) async {
     try {
+      if (studentId != null) {
+        final serverResult = await _reactivateServerSide(
+          cardUid: credentialValue,
+          studentId: studentId,
+        );
+        if (serverResult != null && serverResult.isLeft()) {
+          return serverResult;
+        }
+      }
+
       final existing = await localDataSource.findCredential(
         credentialValue,
         schoolId,
       );
-      if (existing == null) {
+      if (existing == null && studentId == null) {
         return Left(
           ServerFailure(
             'No prior mapping found for this card - assign it instead.',
@@ -206,11 +348,11 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
       }
 
       await localDataSource.deleteRevocation(credentialValue, schoolId);
-      existing.status = 'active';
-      existing.updatedAt = DateTime.now();
-      await localDataSource.cacheCredential(existing);
-      await _pushCredential(existing);
-      await _pushRevocationDeleted(schoolId, credentialValue);
+      if (existing != null) {
+        existing.status = 'active';
+        existing.updatedAt = DateTime.now();
+        await localDataSource.cacheCredential(existing);
+      }
       return const Right(null);
     } catch (e) {
       return Left(CacheFailure(e.toString()));
@@ -231,58 +373,5 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     } catch (e) {
       return Left(CacheFailure(e.toString()));
     }
-  }
-
-  Future<void> _pushCredential(CachedCredential credential) async {
-    if (!await networkInfo.isConnected) return;
-    try {
-      await firestore
-          .collection('schools')
-          .doc(credential.schoolId)
-          .collection('credentials')
-          .doc(credential.credentialValue)
-          .set({
-            'credentialValue': credential.credentialValue,
-            'credentialType': credential.credentialType,
-            'identityId': credential.identityId,
-            'identityType': credential.identityType,
-            'schoolId': credential.schoolId,
-            'status': credential.status,
-            'updatedAt': credential.updatedAt.toIso8601String(),
-            'credentialVersion': credential.credentialVersion,
-          }, SetOptions(merge: true));
-    } catch (_) {}
-  }
-
-  Future<void> _pushRevocation(RevokedCredential revocation) async {
-    if (!await networkInfo.isConnected) return;
-    try {
-      await firestore
-          .collection('schools')
-          .doc(revocation.schoolId)
-          .collection('revoked_credentials')
-          .doc(revocation.credentialValue)
-          .set({
-            'credentialValue': revocation.credentialValue,
-            'schoolId': revocation.schoolId,
-            'revokedAt': revocation.revokedAt.toIso8601String(),
-            'reason': revocation.reason,
-          });
-    } catch (_) {}
-  }
-
-  Future<void> _pushRevocationDeleted(
-    String schoolId,
-    String credentialValue,
-  ) async {
-    if (!await networkInfo.isConnected) return;
-    try {
-      await firestore
-          .collection('schools')
-          .doc(schoolId)
-          .collection('revoked_credentials')
-          .doc(credentialValue)
-          .delete();
-    } catch (_) {}
   }
 }
