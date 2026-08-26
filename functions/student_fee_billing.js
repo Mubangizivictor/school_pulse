@@ -5,6 +5,20 @@
  * bills are immutable snapshots; corrections use adjustments, never rewrites.
  */
 module.exports = ({ admin, onCall, HttpsError }) => {
+  // Bug fixed here: this factory used to assign onto the bare `exports`
+  // identifier, which inside this arrow function resolves to THIS FILE's
+  // own module-level exports object (a closure reference), not something
+  // handed back to the caller - and the factory had no explicit `return`,
+  // so `require("./student_fee_billing")({...})` always evaluated to
+  // undefined. index.js's `Object.assign(exports, require(...)(...))`
+  // therefore silently no-op'd (Object.assign ignores undefined/null
+  // sources without throwing), meaning publishFeePlan/findMatchingFeePlan/
+  // issueStudentBill were never actually exported as callable Cloud
+  // Functions despite compiling and passing static review. Caught by the
+  // new emulator integration test in
+  // test/student_fee_billing.emulator.test.cjs, which calls these exports
+  // directly and failed with "is not a function" until this was fixed.
+  const api = {};
   const db = admin.firestore();
   const serverTime = () => admin.firestore.FieldValue.serverTimestamp();
 
@@ -82,7 +96,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     });
   }
 
-  exports.publishFeePlan = onCall(async (request) => {
+  api.publishFeePlan = onCall(async (request) => {
     const data = request.data || {};
     const schoolId = asText(data.schoolId);
     const caller = await callerForSchool(request, schoolId);
@@ -128,7 +142,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
 
   // Read-only matching endpoint for the enrolment review. It returns only a
   // published plan/version and never accepts a client-provided price.
-  exports.findMatchingFeePlan = onCall(async (request) => {
+  api.findMatchingFeePlan = onCall(async (request) => {
     const data = request.data || {};
     const schoolId = asText(data.schoolId);
     await callerForSchool(request, schoolId);
@@ -165,7 +179,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     };
   });
 
-  exports.issueStudentBill = onCall(async (request) => {
+  api.issueStudentBill = onCall(async (request) => {
     const data = request.data || {};
     const schoolId = asText(data.schoolId);
     const caller = await callerForSchool(request, schoolId);
@@ -249,7 +263,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     return `RCT-${String(next).padStart(6, "0")}`;
   }
 
-  exports.applyBillAdjustment = onCall(async (request) => {
+  api.applyBillAdjustment = onCall(async (request) => {
     const data = request.data || {};
     const schoolId = asText(data.schoolId);
     const caller = await callerForFinance(request, schoolId);
@@ -316,7 +330,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     return result;
   });
 
-  exports.recordStudentPayment = onCall(async (request) => {
+  api.recordStudentPayment = onCall(async (request) => {
     const data = request.data || {};
     const schoolId = asText(data.schoolId);
     const caller = await callerForFinance(request, schoolId);
@@ -388,7 +402,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
   // on the bill accordingly. Reversals are gated by the same finance-only
   // role set as callerForFinance - deliberately not widened, since undoing
   // recorded money is at least as sensitive as recording it.
-  exports.reverseStudentPayment = onCall(async (request) => {
+  api.reverseStudentPayment = onCall(async (request) => {
     const data = request.data || {};
     const schoolId = asText(data.schoolId);
     const caller = await callerForFinance(request, schoolId);
@@ -447,4 +461,6 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     });
     return result;
   });
+
+  return api;
 };
