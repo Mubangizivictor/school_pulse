@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:school_pulse/design_system/app_components.dart';
 import '../bloc/structure_bloc.dart';
@@ -442,12 +443,19 @@ class _ReviewRow {
   final int stepIndex;
   final bool requiresSetup;
 
+  /// Overrides the default `onJump(stepIndex)` behaviour with a direct
+  /// navigation (e.g. a GoRouter push) instead of a wizard-step jump. Used
+  /// by rows - like Fee Plans - that live outside this linear setup wizard
+  /// entirely, so they need a real route rather than a step index.
+  final VoidCallback? onTap;
+
   const _ReviewRow({
     required this.label,
     required this.icon,
     this.count,
-    required this.stepIndex,
+    this.stepIndex = -1,
     this.requiresSetup = false,
+    this.onTap,
   });
 }
 
@@ -497,6 +505,17 @@ class _Review extends StatelessWidget {
         icon: Icons.menu_book_outlined,
         count: state.subjects.length,
         stepIndex: 6,
+      ),
+      // Fee Plans lives outside this linear setup wizard (it's an ongoing
+      // management surface, not a one-time setup step), so it navigates via
+      // a real route rather than a wizard-step index. This is the Structure
+      // hub's entry point into the Fee Plan Builder - school admin never
+      // has to go through a Bursar-prefixed screen to configure billing.
+      _ReviewRow(
+        label: 'Fee plans',
+        icon: Icons.receipt_long_outlined,
+        onTap: () =>
+            context.push('/staff/admin/structure/academics/fee-structures'),
       ),
     ];
 
@@ -745,7 +764,7 @@ class _ReviewCategory extends StatelessWidget {
                   const Icon(Icons.chevron_right_rounded),
                 ],
               ),
-              onTap: () => onJump(rows[i].stepIndex),
+              onTap: rows[i].onTap ?? () => onJump(rows[i].stepIndex),
             ),
           ],
         ],
