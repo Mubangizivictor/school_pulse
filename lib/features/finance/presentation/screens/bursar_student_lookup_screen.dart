@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -159,6 +160,17 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
                   ),
                 ),
               if (_view != null) _BursarViewCard(view: _view!),
+              if (_selectedStudent != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push(
+                      '/staff/bursar/student/${_selectedStudent!.id}/bills',
+                    ),
+                    icon: const Icon(Icons.receipt_long_outlined),
+                    label: const Text('View issued bills'),
+                  ),
+                ),
             ],
           ],
         ),

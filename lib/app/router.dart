@@ -177,6 +177,7 @@ import 'package:school_pulse/features/shared/tasks/domain/entities/mock_tasks.da
 import 'package:school_pulse/features/lesson_plans/presentation/lesson_plans_screen.dart';
 import 'package:school_pulse/features/finance/presentation/shell/bursar_shell.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_student_lookup_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/student_billing/student_bills_screen.dart';
 import 'package:school_pulse/features/nurse/presentation/shell/nurse_shell.dart';
 import 'package:school_pulse/features/health/presentation/screens/nurse_student_lookup_screen.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
@@ -1143,6 +1144,19 @@ final router = GoRouter(
             GoRoute(
               path: 'lookup',
               builder: (context, state) => const BursarStudentLookupScreen(),
+            ),
+            GoRoute(
+              path: 'student/:studentId/bills',
+              builder: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                final schoolId = auth is AuthAuthenticated
+                    ? auth.user.schoolId
+                    : '';
+                return StudentBillsScreen(
+                  schoolId: schoolId,
+                  studentId: state.pathParameters['studentId']!,
+                );
+              },
             ),
           ],
         ),
