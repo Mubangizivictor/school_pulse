@@ -2469,3 +2469,168 @@ describe('admission_applications: enrollment-follow-up visibility/role checks '
     }));
   });
 });
+
+describe('Fee-plan/billing backend (functions/student_fee_billing.js): '
+  + 'fee_plans/fee_catalogue (Phase 1) and bills/adjustments/payments (Phase 2)',
+  () => {
+    async function seedPublishedPlan() {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        await setDoc(doc(db, 'schools/schoolA/fee_plans/planA'), {
+          schoolId: 'schoolA', name: 'Term 1 Fees',
+          selector: {
+            academicYearId: 'year1', termId: 'term1', classId: 'classA',
+            studentCategory: 'day',
+          },
+          status: 'published', currency: 'UGX', latestVersion: 1,
+          currentVersionId: 'v1',
+        });
+        await setDoc(doc(db, 'schools/schoolA/fee_plans/planA/versions/v1'), {
+          schoolId: 'schoolA', planId: 'planA', version: 1, status: 'published',
+          currency: 'UGX', lines: [{ chargeId: 'tuition', name: 'Tuition', amountUgx: 500000, required: true }],
+          totalUgx: 500000,
+        });
+      });
+    }
+
+    async function seedBill() {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        await setDoc(doc(db, 'schools/schoolA/student_accounts/studentA'), {
+          schoolId: 'schoolA', studentId: 'studentA', currency: 'UGX', lastBillId: 'billA',
+        });
+        await setDoc(doc(db, 'schools/schoolA/student_accounts/studentA/bills/billA'), {
+          schoolId: 'schoolA', studentId: 'studentA', billId: 'billA', status: 'open',
+          currency: 'UGX', planId: 'planA', planVersionId: 'v1',
+          issuedTotalUgx: 500000, paidTotalUgx: 0, adjustmentTotalUgx: 0, balanceUgx: 500000,
+          lines: [{ chargeId: 'tuition', name: 'Tuition', amountUgx: 500000, required: true }],
+        });
+        await setDoc(
+          doc(db, 'schools/schoolA/student_accounts/studentA/bills/billA/adjustments/adjA'),
+          { schoolId: 'schoolA', studentId: 'studentA', billId: 'billA', type: 'discount', amountUgx: 50000, reason: 'sibling discount', approverId: 'bursarA' },
+        );
+        await setDoc(
+          doc(db, 'schools/schoolA/student_accounts/studentA/bills/billA/payments/payA'),
+          { schoolId: 'schoolA', studentId: 'studentA', billId: 'billA', status: 'recorded', method: 'cash', amountUgx: 200000, receiptNumber: 'RCT-000001', recordedBy: 'bursarA' },
+        );
+
+        await setDoc(doc(db, 'schools/schoolB/student_accounts/studentOther'), {
+          schoolId: 'schoolB', studentId: 'studentOther', currency: 'UGX',
+        });
+        await setDoc(doc(db, 'schools/schoolB/student_accounts/studentOther/bills/billB'), {
+          schoolId: 'schoolB', studentId: 'studentOther', billId: 'billB', status: 'open',
+          currency: 'UGX', planId: 'planB', planVersionId: 'v1',
+          issuedTotalUgx: 300000, paidTotalUgx: 0, adjustmentTotalUgx: 0, balanceUgx: 300000,
+          lines: [],
+        });
+      });
+    }
+
+    test('fee_plans: same-school staff can read, cross-school staff cannot', async () => {
+      await seedPublishedPlan();
+      await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/fee_plans/planA')));
+      await assertFails(getDoc(doc(dbFor('bursarB'), 'schools/schoolA/fee_plans/planA')));
+    });
+
+    test('fee_plans: a client cannot mutate lines/status of a published plan '
+      + 'directly, only flip status to archived with no other field changed', async () => {
+      await seedPublishedPlan();
+      await assertFails(updateDoc(doc(dbFor('bursarA'), 'schools/schoolA/fee_plans/planA'), {
+        latestVersion: 99,
+      }));
+      await assertFails(updateDoc(doc(dbFor('bursarA'), 'schools/schoolA/fee_plans/planA'), {
+        status: 'archived', latestVersion: 99,
+      }));
+      await assertSucceeds(updateDoc(doc(dbFor('bursarA'), 'schools/schoolA/fee_plans/planA'), {
+        status: 'archived',
+      }));
+    });
+
+    test('fee_plans/versions: read-only for every client, including the '
+      + 'owning school\'s finance staff - no client write path exists', async () => {
+      await seedPublishedPlan();
+      await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/fee_plans/planA/versions/v1')));
+      await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/fee_plans/planA/versions/v2'), {
+        version: 2, totalUgx: 1,
+      }));
+    });
+
+    test('fee_catalogue: tenant-scoped staff read/write, cross-school denied', async () => {
+      await assertSucceeds(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/fee_catalogue/tuition'), {
+        schoolId: 'schoolA', name: 'Tuition',
+      }));
+      await assertFails(setDoc(doc(dbFor('bursarB'), 'schools/schoolA/fee_catalogue/hacked'), {
+        schoolId: 'schoolA', name: 'Hacked',
+      }));
+    });
+
+    test('student_accounts/bills: same-school staff can read, no client can '
+      + 'ever write (issuance is callable-only)', async () => {
+      await seedBill();
+      await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/student_accounts/studentA')));
+      await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/student_accounts/studentA/bills/billA')));
+      await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/student_accounts/studentA/bills/fakeBill'), {
+        schoolId: 'schoolA', studentId: 'studentA', issuedTotalUgx: 1, balanceUgx: 0,
+      }));
+      await assertFails(updateDoc(doc(dbFor('bursarA'), 'schools/schoolA/student_accounts/studentA/bills/billA'), {
+        balanceUgx: 0,
+      }));
+    });
+
+    test('student_accounts/bills: cross-school staff cannot read another '
+      + 'school\'s bill', async () => {
+      await seedBill();
+      await assertFails(getDoc(doc(dbFor('bursarB'), 'schools/schoolA/student_accounts/studentA/bills/billA')));
+      await assertFails(getDoc(doc(dbFor('bursarA'), 'schools/schoolB/student_accounts/studentOther/bills/billB')));
+    });
+
+    test('student_accounts/bills: a linked parent (isParentOf) can read their '
+      + 'own child\'s bill; an unrelated parent cannot - parent isolation', async () => {
+      await seedBill();
+      await assertSucceeds(getDoc(doc(dbFor('parentA'), 'schools/schoolA/student_accounts/studentA')));
+      await assertSucceeds(getDoc(doc(dbFor('parentA'), 'schools/schoolA/student_accounts/studentA/bills/billA')));
+      // parentOtherA is linked to studentOther, not studentA - must not see
+      // this family's bill even though both parents are in the same school.
+      await assertFails(getDoc(doc(dbFor('parentOtherA'), 'schools/schoolA/student_accounts/studentA/bills/billA')));
+      // A student cannot read their own bill either (only isStaff/isParentOf
+      // are granted here, isMe is deliberately not included for billing).
+      await assertFails(getDoc(doc(dbFor('studentUserA'), 'schools/schoolA/student_accounts/studentA/bills/billA')));
+    });
+
+    test('bills/adjustments and bills/payments: same read pattern as the bill '
+      + 'itself (staff or the linked parent only), no client write', async () => {
+      await seedBill();
+      await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/student_accounts/studentA/bills/billA/adjustments/adjA')));
+      await assertSucceeds(getDoc(doc(dbFor('parentA'), 'schools/schoolA/student_accounts/studentA/bills/billA/payments/payA')));
+      await assertFails(getDoc(doc(dbFor('parentOtherA'), 'schools/schoolA/student_accounts/studentA/bills/billA/adjustments/adjA')));
+      await assertFails(getDoc(doc(dbFor('bursarB'), 'schools/schoolA/student_accounts/studentA/bills/billA/payments/payA')));
+      await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/student_accounts/studentA/bills/billA/adjustments/fakeAdj'), {
+        type: 'discount', amountUgx: 999999999, approverId: 'bursarA',
+      }));
+      await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/student_accounts/studentA/bills/billA/payments/fakePay'), {
+        method: 'cash', amountUgx: 999999999, receiptNumber: 'RCT-FORGED',
+      }));
+      // Even the payment's own recordedBy staff member cannot edit it after
+      // the fact - correction is a reversal (a new record), never a rewrite.
+      await assertFails(updateDoc(doc(dbFor('bursarA'), 'schools/schoolA/student_accounts/studentA/bills/billA/payments/payA'), {
+        amountUgx: 1,
+      }));
+    });
+
+    test('counters/receiptNumber: denied to every client, including the '
+      + 'owning school\'s finance staff and the SaaS owner', async () => {
+      await assertFails(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/counters/receiptNumber')));
+      await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/counters/receiptNumber'), {
+        value: 999999,
+      }));
+      await assertFails(getDoc(doc(dbFor('ownerA'), 'schools/schoolA/counters/receiptNumber')));
+    });
+
+    test('audit_events: denied to every client (no rule block - Firestore\'s '
+      + 'default-deny) - confirms it was never weakened by this change', async () => {
+      await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/audit_events/fake'), {
+        action: 'forged', actorId: 'bursarA',
+      }));
+      await assertFails(getDoc(doc(dbFor('ownerA'), 'schools/schoolA/audit_events/fake')));
+    });
+  });
