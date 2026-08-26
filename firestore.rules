@@ -2052,7 +2052,19 @@ service cloud.firestore {
       allow delete: if false;
     }
     match /subscription_plans/{id} {
-      allow read, write: if isSuperAdmin();
+      // Shared catalog data, not tenant-scoped. Any signed-in staff member
+      // (across any school) needs read access - SubscriptionRepository's
+      // watchAvailablePlans() is called from the ordinary school-admin
+      // subscription screen, not just the superAdmin console. Only the
+      // platform owner may write; there is no client write path for plan
+      // authoring today (managed by superAdmin/platform tooling only).
+      allow read: if isStaff();
+      allow write: if isSuperAdmin();
+    }
+    match /subscription_addons/{id} {
+      // Same shared-catalog shape as subscription_plans above.
+      allow read: if isStaff();
+      allow write: if isSuperAdmin();
     }
     match /school_admin_invitations/{id} {
       // Holds a plaintext temporary password until a Cloud Function
@@ -2953,6 +2965,69 @@ service cloud.firestore {
           && grantsPermission(schoolId, resource.data.roleAssignmentId,
                               'subject.resource.upload')
         ));
+    }
+
+    // `institutions/{institutionId}` is the same tenant boundary as
+    // `schools/{schoolId}` elsewhere in this file - institutionId here is
+    // literally the caller's users/{uid}.schoolId (see
+    // SubscriptionRepository._currentSchoolId(), which resolves schoolId and
+    // passes it straight into these paths as institutionId). isSameSchool()
+    // is reused unchanged; there is no separate "institution" concept.
+    //
+    // Data Management job collections: written only by the
+    // requestDataOperation callable (Admin SDK, bypasses rules). Read is
+    // scoped to the same admin set the UI route gates to
+    // (schoolAdmin/headTeacher/director - see /staff/admin/data-management
+    // in router.dart), not all staff.
+    match /institutions/{institutionId}/import_jobs/{jobId} {
+      allow read: if isSameSchool(institutionId) &&
+        hasAnyRole(['schoolAdmin', 'headTeacher', 'director']);
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/export_jobs/{jobId} {
+      allow read: if isSameSchool(institutionId) &&
+        hasAnyRole(['schoolAdmin', 'headTeacher', 'director']);
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/migration_jobs/{jobId} {
+      allow read: if isSameSchool(institutionId) &&
+        hasAnyRole(['schoolAdmin', 'headTeacher', 'director']);
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/data_quality_runs/{jobId} {
+      allow read: if isSameSchool(institutionId) &&
+        hasAnyRole(['schoolAdmin', 'headTeacher', 'director']);
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/restore_requests/{jobId} {
+      allow read: if isSameSchool(institutionId) &&
+        hasAnyRole(['schoolAdmin', 'headTeacher', 'director']);
+      allow write: if false;
+    }
+
+    // Subscription/billing data: written only by backend callables (Admin
+    // SDK, bypasses rules) - requestSubscriptionChange /
+    // requestSubscriptionUsageRefresh. Read is any staff of the tenant,
+    // matching the subscription screen's broader staff-facing role gate.
+    match /institutions/{institutionId}/subscription/current {
+      allow read: if isSameSchool(institutionId) && isStaff();
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/usage_metrics/{docId} {
+      allow read: if isSameSchool(institutionId) && isStaff();
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/saas_invoices/{docId} {
+      allow read: if isSameSchool(institutionId) && isStaff();
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/saas_receipts/{docId} {
+      allow read: if isSameSchool(institutionId) && isStaff();
+      allow write: if false;
+    }
+    match /institutions/{institutionId}/subscription_history/{docId} {
+      allow read: if isSameSchool(institutionId) && isStaff();
+      allow write: if false;
     }
   }
 }
