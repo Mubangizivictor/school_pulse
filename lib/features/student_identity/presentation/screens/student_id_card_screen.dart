@@ -708,6 +708,13 @@ class _IdCardPreviewState extends State<_IdCardPreview> {
   }
 }
 
+/// The card's own brand accent - a deep indigo, not pure black, so the
+/// physical card reads as designed rather than a plain black-and-white
+/// printout. Deliberately restrained (one hue, no gradients) per "add
+/// colors if you want but nothing crazy."
+const _cardAccent = Color(0xFF1B2A6B);
+const _cardAccentSoft = Color(0xFFE9EBF7);
+
 class _CardChrome extends StatelessWidget {
   final Widget headerContent;
   final Widget body;
@@ -723,10 +730,10 @@ class _CardChrome extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(20),
       border: Border.all(color: Colors.black12),
       boxShadow: const [
-        BoxShadow(color: Colors.black12, blurRadius: 16, offset: Offset(0, 8)),
+        BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 10)),
       ],
     ),
     clipBehavior: Clip.antiAlias,
@@ -734,20 +741,21 @@ class _CardChrome extends StatelessWidget {
       children: [
         Container(
           width: double.infinity,
-          color: Colors.black,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          color: _cardAccent,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
           child: headerContent,
         ),
+        Container(width: double.infinity, height: 3, color: _cardAccentSoft),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
             child: body,
           ),
         ),
         Container(
           width: double.infinity,
-          color: Colors.black,
-          padding: const EdgeInsets.symmetric(vertical: 9),
+          color: _cardAccent,
+          padding: const EdgeInsets.symmetric(vertical: 10),
           child: Text(
             footerText,
             textAlign: TextAlign.center,
@@ -755,7 +763,7 @@ class _CardChrome extends StatelessWidget {
               color: Colors.white,
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              letterSpacing: .4,
+              letterSpacing: .5,
             ),
           ),
         ),
@@ -854,108 +862,175 @@ class _IdCardFront extends StatelessWidget {
   final String? guardianName;
 
   @override
-  Widget build(BuildContext context) => _CardChrome(
-    footerText: 'Official student identity card',
-    headerContent: Text(
-      schoolName.toUpperCase(),
-      textAlign: TextAlign.center,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: const TextStyle(
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
         color: Colors.white,
-        fontSize: 14,
-        fontWeight: FontWeight.w800,
-        letterSpacing: .6,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.black12),
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 10)),
+        ],
       ),
-    ),
-    body: SingleChildScrollView(
-      physics: const NeverScrollableScrollPhysics(),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          _SchoolCrest(logoUrl: profile.logoUrl, size: 40),
-          const SizedBox(height: 4),
-          Text(
-            profile.motto.isNotEmpty
-                ? profile.motto
-                : 'Knowledge · Integrity · Service',
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Colors.black54,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-          const SizedBox(height: 14),
-          _LearnerAvatar(photoUrl: student.photoUrl),
-          const SizedBox(height: 10),
-          Text(
-            student.name,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          if (classAndStream.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.black26),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                classAndStream,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+          // Header band with crest + school name, and the photo overlapping
+          // the seam below it - the classic ID-card composition, rather
+          // than everything stacked in one flat column.
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.topCenter,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [_cardAccent, Color(0xFF2C3F8F)],
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _SchoolCrest(logoUrl: profile.logoUrl, size: 28),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            schoolName.toUpperCase(),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: .6,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      profile.motto.isNotEmpty
+                          ? profile.motto
+                          : 'Knowledge · Integrity · Service',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.white.withValues(alpha: 0.75),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          _DataRow(
-            icon: Icons.person_outline_rounded,
-            label: 'Student No.',
-            value: student.studentCode,
+              Positioned(
+                top: 58,
+                child: _LearnerAvatar(photoUrl: student.photoUrl),
+              ),
+            ],
           ),
-          _DataRow(
-            icon: Icons.badge_outlined,
-            label: 'Admission No.',
-            value: student.admissionNumber,
-          ),
-          _DataRow(
-            icon: Icons.calendar_today_outlined,
-            label: 'Date of Birth',
-            value: DateFormat('d MMM yyyy').format(student.dateOfBirth),
-          ),
-          if (guardianName != null && guardianName!.isNotEmpty)
-            _DataRow(
-              icon: Icons.people_outline_rounded,
-              label: 'Guardian',
-              value: guardianName!,
+          const SizedBox(height: 40),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
+                Text(
+                  student.name.isNotEmpty ? student.name : 'Unnamed learner',
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (classAndStream.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _cardAccentSoft,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      classAndStream,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: _cardAccent,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                _DataGrid(
+                  rows: [
+                    _DataCell(
+                      icon: Icons.person_outline_rounded,
+                      label: 'Student No.',
+                      value: student.studentCode,
+                    ),
+                    _DataCell(
+                      icon: Icons.badge_outlined,
+                      label: 'Admission No.',
+                      value: student.admissionNumber,
+                    ),
+                    _DataCell(
+                      icon: Icons.calendar_today_outlined,
+                      label: 'Date of Birth',
+                      value: DateFormat('d MMM yyyy').format(student.dateOfBirth),
+                    ),
+                    if (guardianName != null && guardianName!.isNotEmpty)
+                      _DataCell(
+                        icon: Icons.people_outline_rounded,
+                        label: 'Guardian',
+                        value: guardianName!,
+                      ),
+                    if (academicYear.isNotEmpty)
+                      _DataCell(
+                        icon: Icons.school_outlined,
+                        label: 'Academic Year',
+                        value: academicYear,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                _NfcPill(active: identity.nfcStatus == 'active'),
+                const SizedBox(height: 14),
+              ],
             ),
-          if (academicYear.isNotEmpty)
-            _DataRow(
-              icon: Icons.school_outlined,
-              label: 'Academic Year',
-              value: academicYear,
+          ),
+          Container(
+            width: double.infinity,
+            color: _cardAccent,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: const Text(
+              'Official student identity card',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: .5,
+              ),
             ),
-          _DataRow(
-            icon: Icons.wifi_rounded,
-            label: 'Tap for school use',
-            value: identity.nfcStatus == 'active'
-                ? 'NFC enabled'
-                : 'NFC not set up',
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _IdCardBack extends StatelessWidget {
@@ -974,34 +1049,45 @@ class _IdCardBack extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _CardChrome(
     footerText: 'NON-TRANSFERABLE',
-    headerContent: Text(
-      schoolName.toUpperCase(),
-      textAlign: TextAlign.center,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 14,
-        fontWeight: FontWeight.w800,
-        letterSpacing: .6,
-      ),
+    headerContent: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _SchoolCrest(logoUrl: profile.logoUrl, size: 26),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            schoolName.toUpperCase(),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              letterSpacing: .6,
+            ),
+          ),
+        ),
+      ],
     ),
     body: Column(
       children: [
-        const SizedBox(height: 4),
-        _SchoolCrest(logoUrl: profile.logoUrl, size: 36),
-        const SizedBox(height: 12),
-        const Text(
+        const SizedBox(height: 6),
+        Text(
           'Scan to verify learner',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: _cardAccent,
+          ),
         ),
         const SizedBox(height: 14),
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(color: Colors.black12),
-            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _cardAccentSoft, width: 2),
+            borderRadius: BorderRadius.circular(14),
           ),
           child: identity.qrCodeData.isNotEmpty
               ? QrImageView(
@@ -1010,7 +1096,7 @@ class _IdCardBack extends StatelessWidget {
                   backgroundColor: Colors.white,
                   eyeStyle: const QrEyeStyle(
                     eyeShape: QrEyeShape.square,
-                    color: Colors.black,
+                    color: _cardAccent,
                   ),
                   dataModuleStyle: const QrDataModuleStyle(
                     dataModuleShape: QrDataModuleShape.square,
@@ -1027,10 +1113,21 @@ class _IdCardBack extends StatelessWidget {
                   ),
                 ),
         ),
-        const SizedBox(height: 10),
-        Text(
-          student.studentCode,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+          decoration: BoxDecoration(
+            color: _cardAccentSoft,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            student.studentCode.isNotEmpty ? student.studentCode : '—',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: _cardAccent,
+            ),
+          ),
         ),
         const Spacer(),
         Text(
@@ -1054,10 +1151,13 @@ class _LearnerAvatar extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: 84,
     height: 84,
-    padding: const EdgeInsets.all(2),
+    padding: const EdgeInsets.all(3),
     decoration: const BoxDecoration(
       shape: BoxShape.circle,
-      border: Border.fromBorderSide(BorderSide(color: Colors.black, width: 1.5)),
+      color: Colors.white,
+      boxShadow: [
+        BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 3)),
+      ],
     ),
     child: ClipOval(
       child: photoUrl?.isNotEmpty == true
@@ -1075,13 +1175,40 @@ class _AvatarFallback extends StatelessWidget {
   const _AvatarFallback();
   @override
   Widget build(BuildContext context) => Container(
-    color: const Color(0xFFF2F2F2),
-    child: const Icon(Icons.person_rounded, size: 44, color: Colors.black38),
+    color: _cardAccentSoft,
+    child: const Icon(Icons.person_rounded, size: 44, color: _cardAccent),
   );
 }
 
-class _DataRow extends StatelessWidget {
-  const _DataRow({
+/// Two-column grid of labeled facts, replacing the old single-column stack
+/// so the card reads as a designed layout rather than a plain list -
+/// mirrors how a real printed ID card groups fields.
+class _DataGrid extends StatelessWidget {
+  const _DataGrid({required this.rows});
+  final List<_DataCell> rows;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF7F8FC),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: Colors.black12),
+    ),
+    child: Column(
+      children: [
+        for (var i = 0; i < rows.length; i++) ...[
+          rows[i],
+          if (i < rows.length - 1)
+            const Divider(height: 14, color: Colors.black12),
+        ],
+      ],
+    ),
+  );
+}
+
+class _DataCell extends StatelessWidget {
+  const _DataCell({
     required this.icon,
     required this.label,
     required this.value,
@@ -1091,30 +1218,78 @@ class _DataRow extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 5),
+  Widget build(BuildContext context) => Row(
+    children: [
+      Container(
+        width: 26,
+        height: 26,
+        decoration: const BoxDecoration(
+          color: _cardAccentSoft,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, size: 13, color: _cardAccent),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(fontSize: 9.5, color: Colors.black45),
+            ),
+            Text(
+              value.isNotEmpty ? value : '—',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: value.isNotEmpty ? Colors.black87 : Colors.black38,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+class _NfcPill extends StatelessWidget {
+  const _NfcPill({required this.active});
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: active ? const Color(0xFFE6F4EA) : const Color(0xFFF2F2F2),
+      borderRadius: BorderRadius.circular(10),
+    ),
     child: Row(
       children: [
-        Icon(icon, size: 15, color: Colors.black45),
-        const SizedBox(width: 10),
+        Icon(
+          Icons.wifi_rounded,
+          size: 15,
+          color: active ? const Color(0xFF1E8E3E) : Colors.black45,
+        ),
+        const SizedBox(width: 8),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(fontSize: 10, color: Colors.black45),
-              ),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+          child: Text(
+            'Tap for school use',
+            style: TextStyle(
+              fontSize: 11,
+              color: active ? const Color(0xFF1E8E3E) : Colors.black45,
+            ),
+          ),
+        ),
+        Text(
+          active ? 'NFC enabled' : 'NFC not set up',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: active ? const Color(0xFF1E8E3E) : Colors.black45,
           ),
         ),
       ],

@@ -12,8 +12,18 @@ service firebase.storage {
          firestore.get(/databases/(default)/documents/institution_memberships/$(request.auth.uid + '_' + institutionId)).data.status == 'active')
       );
     }
+    // Mirrors firestore.rules' isSameSchool, which was widened to also
+    // accept an active institution_memberships doc (2026-08-26, commit
+    // 59ca27e9) so a School-workspace admin operating under a membership
+    // rather than users/{uid}.schoolId isn't denied on tenant-scoped
+    // writes. Every Storage function gating a school-tenant path should
+    // use isActiveInstitutionMember, not the narrower isSameSchool, so the
+    // two rule sets never drift out of sync again the way
+    // canManageInstitutionBranding did (Firestore writes to
+    // institution_profile succeeded while the actual logo/badge file
+    // upload was still denied for the same membership-based admin).
     function canManageInstitutionBranding(schoolId) {
-      return request.auth != null && isSameSchool(schoolId) &&
+      return request.auth != null && isActiveInstitutionMember(schoolId) &&
         (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role
           in ['schoolAdmin', 'headTeacher', 'deputyHead', 'director'] ||
          ('roles' in firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data &&
@@ -26,14 +36,14 @@ service firebase.storage {
       allow write: if request.auth != null;
     }
     match /schools/{schoolId}/school_assets/{fileName} {
-      allow read: if isSameSchool(schoolId);
-      allow write: if isSameSchool(schoolId)
+      allow read: if isActiveInstitutionMember(schoolId);
+      allow write: if isActiveInstitutionMember(schoolId)
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
-      allow delete: if isSameSchool(schoolId);
+      allow delete: if isActiveInstitutionMember(schoolId);
     }
     match /institutions/{institutionId}/branding/{assetType}/{fileName} {
-      allow read: if isSameSchool(institutionId);
+      allow read: if isActiveInstitutionMember(institutionId);
       allow write: if canManageInstitutionBranding(institutionId)
         && assetType in ['logo', 'badge', 'splash', 'banners']
         && request.resource.size < 10 * 1024 * 1024

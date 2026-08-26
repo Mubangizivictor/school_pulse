@@ -557,14 +557,17 @@ class StaffShell extends StatelessWidget {
 
     final isDirector = _isDirector(context);
     final location = GoRouterState.of(context).uri.path;
-    // Directory/profile are focused record-management routes. They own their
-    // own compact navigation and must not lose vertical space to the global
-    // Home/Work/School/More navigation bar on a phone.
-    final isStudentRecordRoute =
-        location.startsWith('/staff/admin/students') ||
-        // Direct enrolment owns its complete-screen navigation and draft
-        // warning. The shell navigation must not remain visible beneath it.
-        location.startsWith('/staff/admin/admissions/register');
+    // Direct enrolment owns its complete-screen navigation and draft
+    // warning header/footer, so it keeps its own full-screen treatment -
+    // the persistent nav would visually compete with its Save/Continue
+    // controls. Student profile/record routes (Overview, Guardians,
+    // Identity, ID card, etc.) previously had the same treatment, but the
+    // nav is now kept persistent there too per product decision - the
+    // "School" destination already highlights correctly on those routes
+    // (see isSchoolWorkspaceRoute above).
+    final isDirectEnrolmentRoute = location.startsWith(
+      '/staff/admin/admissions/register',
+    );
 
     final destinations = isDirector
         ? directorDestinations
@@ -694,7 +697,7 @@ class StaffShell extends StatelessWidget {
               !isBursarSection &&
               !isNurseSection &&
               !isStructureWizardSection &&
-              !isStudentRecordRoute)
+              !isDirectEnrolmentRoute)
           ? Container(
               decoration: BoxDecoration(
                 border: Border(

@@ -343,10 +343,9 @@ class _DirectStudentRegistrationScreenState
       appBar: AppBar(
         title: Text(
           _step < 0 ? 'Add a learner' : 'Enrol learner',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
         actions: [
           if (_step >= 0)
@@ -359,41 +358,46 @@ class _DirectStudentRegistrationScreenState
       body: _step < 0 ? _choice() : _flow(),
     ),
   );
-  Widget _choice() => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Choose how this learner enters the school.',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontSize: 26,
-            height: 1.14,
-            fontWeight: FontWeight.w700,
-          ),
+  Widget _choice() => Center(
+    child: SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Choose how this learner enters the school.',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                height: 1.2,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 14),
+            _choiceCard(
+              'Direct enrolment',
+              'Create an active learner record now',
+              Icons.person_add_alt_1_outlined,
+              true,
+              () => setState(() => _step = 0),
+            ),
+            const SizedBox(height: 10),
+            _choiceCard(
+              'Admission application',
+              'Capture an application for review before enrolment',
+              Icons.description_outlined,
+              false,
+              () => context.push(
+                '/staff/admin/admissions/new',
+                extra: widget.schoolId,
+              ),
+            ),
+            const SizedBox(height: 18),
+            const _Notice('You can save a draft at any stage.'),
+          ],
         ),
-        const SizedBox(height: 14),
-        _choiceCard(
-          'Direct enrolment',
-          'Create an active learner record now',
-          Icons.person_add_alt_1_outlined,
-          true,
-          () => setState(() => _step = 0),
-        ),
-        const SizedBox(height: 10),
-        _choiceCard(
-          'Admission application',
-          'Capture an application for review before enrolment',
-          Icons.description_outlined,
-          false,
-          () => context.push(
-            '/staff/admin/admissions/new',
-            extra: widget.schoolId,
-          ),
-        ),
-        const Spacer(),
-        const _Notice('You can save a draft at any stage.'),
-      ],
+      ),
     ),
   );
   Widget _choiceCard(
@@ -430,53 +434,43 @@ class _DirectStudentRegistrationScreenState
         ),
         child: InkWell(
           onTap: onTap,
-          child: SizedBox(
-            height: 116,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(
-                children: [
-                  Icon(icon, size: 29, color: ink),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(
-                                color: ink,
-                                fontSize: 21,
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          sub,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: muted,
-                                fontSize: 15,
-                                height: 1.25,
-                              ),
-                        ),
-                      ],
-                    ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Icon(icon, size: 22, color: ink),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleSmall
+                            ?.copyWith(color: ink, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        sub,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: muted, height: 1.25),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    selected
-                        ? Icons.check_circle_outline_rounded
-                        : Icons.circle_outlined,
-                    color: ink,
-                    size: 26,
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  selected
+                      ? Icons.check_circle_outline_rounded
+                      : Icons.circle_outlined,
+                  color: ink,
+                  size: 20,
+                ),
+              ],
             ),
           ),
         ),
