@@ -11,6 +11,7 @@
     "test:report-card-engine:emulator": "firebase emulators:exec --only firestore --project demo-report-card-engine-test \"node --test test/report_card_engine.emulator.test.cjs\"",
     "test:report-card-workflow:emulator": "firebase emulators:exec --only firestore --project demo-report-card-workflow-test \"node --test test/report_card_approval_workflow.emulator.test.cjs\"",
     "test:report-card-bursar:emulator": "firebase emulators:exec --only firestore --project demo-report-card-bursar-test \"node --test test/report_card_bursar_release.emulator.test.cjs\"",
+    "test:student-fee-billing:emulator": "firebase emulators:exec --only firestore --project demo-student-fee-billing-test \"node --test test/student_fee_billing.emulator.test.cjs\"",
     "logs": "firebase functions:log",
     "deploy": "firebase deploy --only functions"
   },
