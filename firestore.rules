@@ -1215,9 +1215,9 @@ service cloud.firestore {
     // plan/version mutation goes through publishFeePlan (admin SDK, bypasses
     // rules) - the one client-writable exception is flipping an already-
     // published plan's status to 'archived', which touches no other field
-    // and doesn't affect the immutable version snapshots. Bills, payments
-    // and adjustments (schools/{schoolId}/student_accounts/**) are
-    // deliberately NOT covered here - that's a later phase.
+    // and doesn't affect the immutable version snapshots. Bills, adjustments
+    // and payments (schools/{schoolId}/student_accounts/**) are covered
+    // further below (Phase 2 of this backend).
     match /schools/{schoolId}/fee_plans/{planId} {
       allow read: if isStaff() && isSameSchool(schoolId);
       allow update: if isStaff() && isSameSchool(schoolId) &&
@@ -1238,6 +1238,40 @@ service cloud.firestore {
     // plain tenant-scoped staff read/write rather than a callable.
     match /schools/{schoolId}/fee_catalogue/{chargeId} {
       allow read, write: if isStaff() && isSameSchool(schoolId);
+    }
+    // Student billing (issueStudentBill/applyBillAdjustment/
+    // recordStudentPayment/reverseStudentPayment in
+    // functions/student_fee_billing.js). Every write is callable-only via
+    // the admin SDK, which bypasses these rules entirely - `allow write: if
+    // false` here is what actually enforces "bills/adjustments/payments are
+    // immutable snapshots, corrected only by compensating records" from the
+    // client side. Reads are the school's own staff, or a parent linked to
+    // that specific studentId (isParentOf, same helper the rest of this
+    // file already uses for other student-scoped parent reads) - never a
+    // parent reading another family's bill.
+    match /schools/{schoolId}/student_accounts/{studentId} {
+      allow read: if isSameSchool(schoolId) && (isStaff() || isParentOf(studentId));
+      allow write: if false;
+    }
+    match /schools/{schoolId}/student_accounts/{studentId}/bills/{billId} {
+      allow read: if isSameSchool(schoolId) && (isStaff() || isParentOf(studentId));
+      allow write: if false;
+    }
+    match /schools/{schoolId}/student_accounts/{studentId}/bills/{billId}/adjustments/{adjustmentId} {
+      allow read: if isSameSchool(schoolId) && (isStaff() || isParentOf(studentId));
+      allow write: if false;
+    }
+    match /schools/{schoolId}/student_accounts/{studentId}/bills/{billId}/payments/{paymentId} {
+      allow read: if isSameSchool(schoolId) && (isStaff() || isParentOf(studentId));
+      allow write: if false;
+    }
+    // Server-side receipt-number counter (nextReceiptNumber). Never read or
+    // written by any client - the admin SDK bypasses this rule entirely, so
+    // `allow read, write: if false` both keeps the sequence tamper-proof
+    // and stops a client from ever fishing the next receipt number out
+    // ahead of a real payment.
+    match /schools/{schoolId}/counters/receiptNumber {
+      allow read, write: if false;
     }
     // Verification engine's own audit trail (Phase 1). This match block
     // was missing even though VerificationEventRecorderImpl has pushed to
