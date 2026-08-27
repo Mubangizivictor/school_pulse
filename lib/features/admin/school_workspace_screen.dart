@@ -58,6 +58,12 @@ class _SchoolWorkspace extends StatelessWidget {
       title: 'Operations',
       rows: [
         _Row(
+          icon: Icons.receipt_long_outlined,
+          title: 'Fee plans',
+          subtitle: 'Set up fee catalogue and published plans',
+          route: '/staff/admin/structure/academics/fee-structures',
+        ),
+        _Row(
           icon: Icons.account_balance_wallet_outlined,
           title: 'Fees & finance',
           subtitle: 'Collections, invoices and reports',
