@@ -1,6 +1,32 @@
 {
   "indexes": [
     {
+      "collectionGroup": "fee_plans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "selector.academicYearId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "selector.termId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "selector.classId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "selector.studentCategory",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "classes",
       "queryScope": "COLLECTION",
       "fields": [

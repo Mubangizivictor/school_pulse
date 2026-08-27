@@ -59,7 +59,7 @@ import 'package:school_pulse/features/structure/presentation/screens/structure_w
 import 'package:school_pulse/features/structure/presentation/screens/academics/levels_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/years_terms_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/classes_streams_screen.dart';
-import 'package:school_pulse/features/finance/presentation/screens/fee_configuration_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/fee_plan_builder/fee_plan_builder_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/subjects_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/subject_class_assignments_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/departments_screen.dart';
@@ -177,6 +177,7 @@ import 'package:school_pulse/features/shared/tasks/domain/entities/mock_tasks.da
 import 'package:school_pulse/features/lesson_plans/presentation/lesson_plans_screen.dart';
 import 'package:school_pulse/features/finance/presentation/shell/bursar_shell.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_student_lookup_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/student_billing/student_bills_screen.dart';
 import 'package:school_pulse/features/nurse/presentation/shell/nurse_shell.dart';
 import 'package:school_pulse/features/health/presentation/screens/nurse_student_lookup_screen.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
@@ -1144,6 +1145,19 @@ final router = GoRouter(
               path: 'lookup',
               builder: (context, state) => const BursarStudentLookupScreen(),
             ),
+            GoRoute(
+              path: 'student/:studentId/bills',
+              builder: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                final schoolId = auth is AuthAuthenticated
+                    ? auth.user.schoolId
+                    : '';
+                return StudentBillsScreen(
+                  schoolId: schoolId,
+                  studentId: state.pathParameters['studentId']!,
+                );
+              },
+            ),
           ],
         ),
         GoRoute(
@@ -1946,8 +1960,14 @@ final router = GoRouter(
                     ),
                     GoRoute(
                       path: 'fee-structures',
-                      builder: (context, state) =>
-                          const FeeConfigurationScreen(),
+                      // Phase 1: the new Fee Plan Builder (immutable
+                      // published fee-plan versions, integer UGX) replaces
+                      // the legacy FeeConfigurationScreen here. School admin
+                      // reaches this from Structure > Academics > Fee Plans
+                      // without going through any Bursar-prefixed screen.
+                      // FeeConfigurationScreen itself is left in place for
+                      // any other legacy caller/read path.
+                      builder: (context, state) => const FeePlanBuilderScreen(),
                     ),
                     GoRoute(
                       path: 'subjects',

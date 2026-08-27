@@ -255,6 +255,12 @@ import 'package:school_pulse/features/finance/data/repositories/finance_reposito
 import 'package:school_pulse/features/finance/data/datasources/bursar_report_release_remote_data_source.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/report_release/bursar_report_release_bloc.dart';
 import 'package:school_pulse/features/finance/data/datasources/finance_remote_data_source.dart';
+import 'package:school_pulse/features/finance/domain/repositories/fee_billing_repository.dart';
+import 'package:school_pulse/features/finance/data/repositories/fee_billing_repository_impl.dart';
+import 'package:school_pulse/features/finance/domain/repositories/fee_catalogue_repository.dart';
+import 'package:school_pulse/features/finance/data/repositories/fee_catalogue_repository_impl.dart';
+import 'package:school_pulse/features/finance/domain/repositories/student_billing_repository.dart';
+import 'package:school_pulse/features/finance/data/repositories/student_billing_repository_impl.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
 
 // Games
@@ -794,6 +800,7 @@ Future<void> init() async {
       auditService: sl(),
       notificationSender: sl(),
       financeRepository: sl(),
+      feeBillingRepository: sl(),
     ),
   );
 
@@ -1151,6 +1158,26 @@ Future<void> init() async {
 
   sl.registerLazySingleton<FinanceRemoteDataSource>(
     () => FinanceRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  // Fee-plan/billing backend (functions/student_fee_billing.js) - immutable
+  // published plans + idempotent bill issuance. See enrollment_setup_wizard
+  // (Finance step) and the Fee Plan Builder for callers.
+  sl.registerLazySingleton<FeeBillingRepository>(
+    () => FeeBillingRepositoryImpl(firestore: sl(), functions: sl()),
+  );
+
+  // Fee catalogue - reusable named charges, not money-authoritative, so
+  // plain tenant-scoped Firestore read/write (no callable needed).
+  sl.registerLazySingleton<FeeCatalogueRepository>(
+    () => FeeCatalogueRepositoryImpl(firestore: sl()),
+  );
+
+  // Student billing (Phase 2): bills/adjustments/payments/reversals.
+  // Read-only from the client except via callable - see
+  // applyBillAdjustment/recordStudentPayment/reverseStudentPayment.
+  sl.registerLazySingleton<StudentBillingRepository>(
+    () => StudentBillingRepositoryImpl(firestore: sl(), functions: sl()),
   );
 
   // Features - Games

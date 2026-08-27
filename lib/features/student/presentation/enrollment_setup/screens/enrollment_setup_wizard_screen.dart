@@ -25,9 +25,8 @@ import 'package:school_pulse/features/student/domain/enrollment_setup/repositori
 import 'package:school_pulse/features/structure/domain/repositories/teaching_assignment_repository.dart';
 import 'package:school_pulse/features/structure/domain/repositories/curriculum_assignment_repository.dart';
 import 'package:school_pulse/features/teacher/domain/services/academic_calendar_service.dart';
-import 'package:school_pulse/features/finance/domain/repositories/finance_repository.dart';
-import 'package:school_pulse/features/finance/domain/entities/fee_structure.dart'
-    as fin;
+import 'package:school_pulse/features/finance/domain/repositories/fee_billing_repository.dart';
+import 'package:school_pulse/features/finance/domain/entities/fee_plan.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
 import '../bloc/enrollment_setup_wizard_bloc.dart';
@@ -138,7 +137,11 @@ class _WizardView extends StatelessWidget {
         }
         if (state.activated) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Student activated successfully.')),
+            SnackBar(
+              content: Text(
+                state.infoMessage ?? 'Student activated successfully.',
+              ),
+            ),
           );
           Navigator.of(context).pop(true);
         }
@@ -1524,86 +1527,80 @@ class _FinanceStep extends StatefulWidget {
 }
 
 class _FinanceStepState extends State<_FinanceStep> {
-  String? _selectedFeeStructureId;
-  final _termController = TextEditingController();
-  final _totalBilledController = TextEditingController();
-  bool _manualEntry = false;
-
-  // Discount applied on top of the matched fee structure's total.
-  final _discountValueController = TextEditingController();
-  bool _discountIsPercentage = true;
-
-  late Future<Either<Failure, List<fin.FeeStructure>>> _structuresFuture;
-
-  // The term the school admin has flagged current in Structure > Academics.
-  // Resolved once so the manual fallback can pre-fill it and the fee
-  // structure filter can reconcile against it.
+  // The current academic period (year+term) the school admin has flagged in
+  // Structure > Academics, resolved once so the fee-plan match query is
+  // scoped to it exactly like the backend expects.
   late Future<AcademicPeriod> _currentPeriodFuture;
 
-  // Guards the auto-apply of a single unambiguous match so it fires once
-  // per resolved structure list, not on every rebuild.
-  bool _autoApplied = false;
+  // Guards a single findMatchingFeePlan call per resolved period so it
+  // doesn't refire on every rebuild.
+  Future<Either<Failure, MatchedFeePlan?>>? _matchFuture;
+  String? _matchedForKey;
 
   @override
   void initState() {
     super.initState();
-    _selectedFeeStructureId = widget.state.feeStructureId;
-    _termController.text = widget.state.term ?? '';
-    _totalBilledController.text = widget.state.totalBilled?.toString() ?? '';
-    _structuresFuture = sl<FinanceRepository>().getFeeStructures(
-      widget.state.schoolId,
-    );
     _currentPeriodFuture = sl<AcademicCalendarService>().getCurrentPeriod(
       widget.state.schoolId,
     );
   }
 
-  @override
-  void dispose() {
-    _termController.dispose();
-    _totalBilledController.dispose();
-    _discountValueController.dispose();
-    super.dispose();
-  }
+  /// Maps the wizard's boarding-type selection to the studentCategory string
+  /// `findMatchingFeePlan`/`publishFeePlan` key their selector on. Defaults
+  /// to 'day' (the backend's own default) when boarding type isn't set yet
+  /// - matching AdmissionService's existing 'day' fallback behaviour.
+  String _studentCategory(EnrollmentSetupWizardState state) =>
+      state.boardingType?.name ?? 'day';
 
-  double _computeDiscount(double baseAmount) {
-    final value = double.tryParse(_discountValueController.text.trim()) ?? 0;
-    if (value <= 0) return 0;
-    return _discountIsPercentage ? baseAmount * value / 100 : value;
-  }
+  void _lookupMatch(EnrollmentSetupWizardState state, AcademicPeriod period) {
+    final key =
+        '${period.academicYearId}|${period.termId}|${state.classId}|${_studentCategory(state)}';
+    if (_matchedForKey == key) return;
+    _matchedForKey = key;
 
-  void _emitFromStructure(fin.FeeStructure structure) {
-    final discount = _computeDiscount(structure.totalAmount);
-    final finalTotal = (structure.totalAmount - discount).clamp(
-      0,
-      structure.totalAmount,
-    );
-    context.read<EnrollmentSetupWizardBloc>().add(
-      FinanceDetailsUpdated(
-        feeStructureId: structure.id,
-        term: structure.term,
-        totalBilled: finalTotal.toDouble(),
-        itemizedBreakdown: {
-          for (final item in structure.items) item.categoryName: item.amount,
-        },
-        discountAmount: discount,
-        discountPercentage: _discountIsPercentage
-            ? double.tryParse(_discountValueController.text.trim())
-            : null,
-      ),
-    );
-  }
+    if (!period.hasYear || !period.hasTerm || state.classId.isEmpty) {
+      _matchFuture = Future.value(const Right(null));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<EnrollmentSetupWizardBloc>().add(
+          const FeePlanMatchUpdated(billingPending: true),
+        );
+      });
+      return;
+    }
 
-  void _emitManual() {
-    context.read<EnrollmentSetupWizardBloc>().add(
-      FinanceDetailsUpdated(
-        feeStructureId: _selectedFeeStructureId,
-        term: _termController.text.trim().isEmpty
-            ? null
-            : _termController.text.trim(),
-        totalBilled: double.tryParse(_totalBilledController.text.trim()),
-      ),
+    final future = sl<FeeBillingRepository>().findMatchingFeePlan(
+      schoolId: state.schoolId,
+      academicYearId: period.academicYearId,
+      termId: period.termId,
+      classId: state.classId,
+      studentCategory: _studentCategory(state),
     );
+    _matchFuture = future;
+    future.then((result) {
+      if (!mounted) return;
+      final match = result.fold((_) => null, (m) => m);
+      context.read<EnrollmentSetupWizardBloc>().add(
+        FeePlanMatchUpdated(
+          planId: match?.planId,
+          versionId: match?.versionId,
+          planName: match?.name,
+          totalUgx: match?.totalUgx,
+          lines: (match?.lines ?? const [])
+              .map(
+                (l) => FeePlanLineData(
+                  chargeId: l.chargeId,
+                  name: l.name,
+                  amountUgx: l.amountUgx,
+                  required: l.required,
+                  serviceKey: l.serviceKey,
+                ),
+              )
+              .toList(),
+          billingPending: match == null,
+        ),
+      );
+    });
   }
 
   @override
@@ -1612,328 +1609,53 @@ class _FinanceStepState extends State<_FinanceStep> {
     return FutureBuilder<AcademicPeriod>(
       future: _currentPeriodFuture,
       builder: (context, periodSnapshot) {
-        final currentTermName = periodSnapshot.data?.termName ?? '';
-        return _buildWithCurrentTerm(context, state, currentTermName);
-      },
-    );
-  }
-
-  Widget _buildWithCurrentTerm(
-    BuildContext context,
-    EnrollmentSetupWizardState state,
-    String currentTermName,
-  ) {
-    return FutureBuilder(
-      future: _structuresFuture,
-      builder: (context, snapshot) {
-        final structures =
-            snapshot.data?.fold((_) => const <fin.FeeStructure>[], (v) => v) ??
-            const <fin.FeeStructure>[];
-        final filtered = structures.where((s) {
-          final matchesYear = s.academicYear == state.academicYearId;
-          final matchesType = state.boardingType == null
-              ? true
-              : s.studentCategory.toLowerCase() ==
-                    state.boardingType!.name.toLowerCase();
-          final matchesClass = s.classId == null || s.classId == state.classId;
-          return matchesYear && matchesType && matchesClass;
-        }).toList();
-
-        if (!_autoApplied &&
-            _selectedFeeStructureId == null &&
-            filtered.length == 1) {
-          _autoApplied = true;
-          final onlyMatch = filtered.first;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            setState(() => _selectedFeeStructureId = onlyMatch.id);
-            _emitFromStructure(onlyMatch);
-          });
+        final period = periodSnapshot.data;
+        if (period == null) {
+          return const Center(child: SchoolPulseLoader());
         }
-
-        final fin.FeeStructure? selected = filtered
-            .where((s) => s.id == _selectedFeeStructureId)
-            .firstOrNull;
-
-        if (filtered.isEmpty || _manualEntry) {
-          return _manualFallback(context, filtered.isEmpty, currentTermName);
-        }
-
-        final termMismatch =
-            selected != null &&
-            currentTermName.isNotEmpty &&
-            selected.term.trim().toLowerCase() !=
-                currentTermName.trim().toLowerCase();
-
-        return StreamBuilder<List<AcademicYear>>(
-          stream: sl<StructureRepository>().watchAcademicYears(state.schoolId),
-          builder: (context, yearSnap) {
-            final years = yearSnap.data ?? const <AcademicYear>[];
-            String yearLabel(String academicYearId) {
-              final match = years.where((y) => y.id == academicYearId);
-              return match.isNotEmpty
-                  ? match.first.name
-                  : (years.isEmpty ? 'Loading…' : 'Unknown year');
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SectionHeader(title: 'Fee Structure'),
-                if (currentTermName.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      'Current term: $currentTermName',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                if (termMismatch)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      'Selected fee structure is for ${selected.term}, not the '
-                      'current term ($currentTermName). Double-check this is '
-                      'the intended structure.',
-                      style: TextStyle(color: AppColors.warning(context)),
-                    ),
-                  ),
-                AppCard(
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      for (final s in filtered) ...[
-                        RadioListTile<String>(
-                          value: s.id,
-                          groupValue: _selectedFeeStructureId,
-                          title: Text(
-                            s.name,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          subtitle: Text(
-                            '${CurrencyFormatter.ugx(s.totalAmount)} • '
-                            '${s.studentCategory} • ${s.term} ${yearLabel(s.academicYear)}',
-                          ),
-                          onChanged: (v) {
-                            setState(() => _selectedFeeStructureId = v);
-                            final match = filtered
-                                .where((f) => f.id == v)
-                                .firstOrNull;
-                            if (match != null) _emitFromStructure(match);
-                          },
-                        ),
-                        if (s != filtered.last) const Divider(height: 1),
-                      ],
-                    ],
-                  ),
-                ),
-                if (selected != null) ...[
-                  const SizedBox(height: 16),
-                  const SectionHeader(title: 'Itemized Breakdown'),
-                  AppCard(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (final item in selected.items)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 3),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(item.categoryName),
-                                  Text(CurrencyFormatter.ugx(item.amount)),
-                                ],
-                              ),
-                            ),
-                          const Divider(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Subtotal',
-                                style: TextStyle(fontWeight: FontWeight.w600),
-                              ),
-                              Text(CurrencyFormatter.ugx(selected.totalAmount)),
-                            ],
-                          ),
-                          Builder(
-                            builder: (context) {
-                              final discount = _computeDiscount(
-                                selected.totalAmount,
-                              );
-                              if (discount <= 0) return const SizedBox.shrink();
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text('Discount'),
-                                    Text(
-                                      '- ${CurrencyFormatter.ugx(discount)}',
-                                      style: TextStyle(
-                                        color: AppColors.success(context),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                          const Divider(height: 20),
-                          Builder(
-                            builder: (context) {
-                              final discount = _computeDiscount(
-                                selected.totalAmount,
-                              );
-                              final finalTotal =
-                                  (selected.totalAmount - discount).clamp(
-                                    0,
-                                    selected.totalAmount,
-                                  );
-                              return Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'Total billed',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  Text(
-                                    CurrencyFormatter.ugx(
-                                      finalTotal.toDouble(),
-                                    ),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const SectionHeader(title: 'Apply Discount / Scholarship'),
-                  AppCard(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _discountValueController,
-                            keyboardType: TextInputType.number,
-                            onChanged: (_) => _emitFromStructure(selected),
-                            decoration: const InputDecoration(
-                              labelText: 'Value',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ChoiceChip(
-                          label: const Text('%'),
-                          selected: _discountIsPercentage,
-                          onSelected: (_) {
-                            setState(() => _discountIsPercentage = true);
-                            _emitFromStructure(selected);
-                          },
-                        ),
-                        const SizedBox(width: 4),
-                        ChoiceChip(
-                          label: const Text('Amount'),
-                          selected: !_discountIsPercentage,
-                          onSelected: (_) {
-                            setState(() => _discountIsPercentage = false);
-                            _emitFromStructure(selected);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => setState(() => _manualEntry = true),
-                  child: const Text('Enter fees manually instead'),
-                ),
-              ],
-            );
+        _lookupMatch(state, period);
+        return FutureBuilder<Either<Failure, MatchedFeePlan?>>(
+          future: _matchFuture,
+          builder: (context, matchSnapshot) {
+            final loading = !matchSnapshot.hasData;
+            final match = matchSnapshot.data?.fold((_) => null, (m) => m);
+            return _buildContent(context, state, period, loading, match);
           },
         );
       },
     );
   }
 
-  Widget _manualFallback(
+  Widget _buildContent(
     BuildContext context,
-    bool noStructuresFound,
-    String currentTermName,
+    EnrollmentSetupWizardState state,
+    AcademicPeriod period,
+    bool loading,
+    MatchedFeePlan? match,
   ) {
-    final state = widget.state;
-    if (currentTermName.isNotEmpty && _termController.text.trim().isEmpty) {
-      _termController.text = currentTermName;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _emitManual();
-      });
-    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Fee Structure'),
-        if (noStructuresFound) ...[
-          EmptyState(
-            icon: Icons.receipt_long_outlined,
-            title: 'No matching fee structures',
-            message:
-                'No fee structure configured for this class/type/year. Set '
-                'one up in Structure > Academics > Fee Structures, then '
-                'return to this step. You can also enter billing manually '
-                'below.',
-            ctaLabel: 'Open Fee Structures',
-            onCtaPressed: () =>
-                context.push('/staff/admin/structure/academics/fee-structures'),
+        const SectionHeader(title: 'Fee Plan'),
+        if (period.termName.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Current term: ${period.termName}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ),
-          const SizedBox(height: 16),
-        ],
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: _termController,
-                onChanged: (_) => _emitManual(),
-                decoration: const InputDecoration(
-                  labelText: 'Term',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _totalBilledController,
-                keyboardType: TextInputType.number,
-                onChanged: (_) => _emitManual(),
-                decoration: const InputDecoration(
-                  labelText: 'Total billed',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              if (!noStructuresFound) ...[
-                const SizedBox(height: 4),
-                TextButton(
-                  onPressed: () => setState(() => _manualEntry = false),
-                  child: const Text('Back to matching fee structures'),
-                ),
-              ],
-            ],
-          ),
-        ),
+        if (loading)
+          const AppCard(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: SchoolPulseLoader()),
+            ),
+          )
+        else if (match == null)
+          _billingPendingCard(context)
+        else
+          _matchedPlanCard(context, match),
         const SizedBox(height: 20),
         const SectionHeader(title: 'Scholarship / Discount'),
         if (state.hasScholarshipAward)
@@ -1948,6 +1670,97 @@ class _FinanceStepState extends State<_FinanceStep> {
             onPressed: () => _showScholarshipDialog(context),
           ),
       ],
+    );
+  }
+
+  Widget _billingPendingCard(BuildContext context) {
+    return AppCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.hourglass_top_outlined,
+                  color: AppColors.warning(context),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Billing pending',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'No published fee plan matches this class, term and student '
+              'category yet. You can continue enrolling this student - '
+              'billing will stay pending and visible on Review until a fee '
+              'plan is published for this selection in Structure > '
+              'Academics > Fee Plans.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            SecondaryButton(
+              label: 'Open Fee Plans',
+              icon: Icons.receipt_long_outlined,
+              onPressed: () =>
+                  context.push('/staff/admin/structure/academics/fee-structures'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _matchedPlanCard(BuildContext context, MatchedFeePlan match) {
+    return AppCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              match.name,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 12),
+            for (final line in match.lines)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: Text(line.name)),
+                    Text(CurrencyFormatter.ugx(line.amountUgx.toDouble())),
+                  ],
+                ),
+              ),
+            const Divider(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Total billed',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  CurrencyFormatter.ugx(match.totalUgx.toDouble()),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -2632,6 +2445,38 @@ class _ReviewStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SectionHeader(title: 'Billing'),
+        AppCard(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(
+                  state.billingPending
+                      ? Icons.hourglass_top_outlined
+                      : Icons.check_circle_outline,
+                  color: state.billingPending
+                      ? AppColors.warning(context)
+                      : AppColors.success(context),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    state.billingPending
+                        ? 'Billing pending - no published fee plan matched '
+                              'this class/term/category. Activation will '
+                              'still proceed; a bill can be issued once a '
+                              'fee plan is published.'
+                        : '${state.matchedFeePlanName ?? 'Fee plan'} - '
+                              '${CurrencyFormatter.ugx((state.matchedFeePlanTotalUgx ?? 0).toDouble())} '
+                              'will be billed on activation.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
         const SectionHeader(title: 'Required'),
         _checklistCard(context, required),
         const SizedBox(height: 20),

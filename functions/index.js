@@ -11,6 +11,7 @@ const { renderReportCardPdf } = require("./report_card_pdf");
 admin.initializeApp();
 const supportAuditFunctions = require("./support_audit")({ admin, onCall, HttpsError });
 const enrollmentAuditFunctions = require("./enrollment_audit")({ admin, onCall, HttpsError });
+Object.assign(exports, require("./student_fee_billing")({ admin, onCall, HttpsError }));
 
 /**
  * Enqueue a templated transactional email for the `public_functions`

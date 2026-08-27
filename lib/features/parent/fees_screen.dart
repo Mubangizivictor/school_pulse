@@ -8,9 +8,13 @@ import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dar
 import 'package:school_pulse/features/finance/presentation/bloc/finance_event.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_state.dart';
 import 'package:school_pulse/features/finance/domain/entities/fee_item.dart';
+import 'package:school_pulse/features/finance/domain/entities/student_bill.dart';
+import 'package:school_pulse/features/finance/domain/repositories/student_billing_repository.dart';
+import 'package:school_pulse/features/finance/presentation/screens/student_billing/student_bills_screen.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
 import 'package:school_pulse/features/parent/widgets/student_app_bar.dart';
+import 'package:school_pulse/injection_container.dart';
 
 class FeesScreen extends StatefulWidget {
   const FeesScreen({super.key});
@@ -52,7 +56,39 @@ class _FeesScreenState extends State<FeesScreen>
 
   @override
   Widget build(BuildContext context) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    final studentState = context.watch<SelectedStudentBloc>().state;
+
+    // Prefer the real, immutable bill snapshot backend over the legacy
+    // FeeItem/FinanceBloc mock stream: once a bill has actually been issued
+    // for this child (functions/student_fee_billing.js), that's the source
+    // of truth, and parents must never be shown stale legacy fee data
+    // alongside or instead of it. Falls back to the legacy view only when
+    // no real bill exists yet for this student.
+    if (studentState is SelectedStudentLoaded) {
+      return Scaffold(
+        appBar: const StudentAppBar(title: 'Fees'),
+        body: StreamBuilder<List<StudentBill>>(
+          stream: sl<StudentBillingRepository>().watchBills(
+            studentState.student.schoolId,
+            studentState.student.id,
+          ),
+          builder: (context, billSnapshot) {
+            final bills = billSnapshot.data;
+            if (bills != null && bills.isNotEmpty) {
+              return StudentBillsScreen(
+                schoolId: studentState.student.schoolId,
+                studentId: studentState.student.id,
+                embedded: true,
+              );
+            }
+            return _LegacyFeesView(
+              fadeAnimation: _fadeAnimation,
+              onRetry: _fetchData,
+            );
+          },
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: const StudentAppBar(title: 'Fees'),
@@ -62,109 +98,125 @@ class _FeesScreenState extends State<FeesScreen>
             context.read<FinanceBloc>().add(FetchFees(state.student.id));
           }
         },
-        child: BlocBuilder<FinanceBloc, FinanceState>(
-          builder: (context, state) {
-            if (state is FinanceLoading || state is FinanceInitial) {
-              return ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  const Skeleton(height: 160),
-                  const SizedBox(height: 24),
-                  const Skeleton(height: 24, width: 150),
-                  const SizedBox(height: 12),
-                  ...List.generate(
-                    3,
-                    (index) => const Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Skeleton(height: 70),
+        child: _LegacyFeesView(fadeAnimation: _fadeAnimation, onRetry: _fetchData),
+      ),
+    );
+  }
+}
+
+/// The legacy FeeItem/FinanceBloc-backed view, shown only while no real bill
+/// has been issued yet for the selected student. Not touched functionally -
+/// only extracted out so FeesScreen can decide, per student, whether to show
+/// this or the new StudentBillsScreen.
+class _LegacyFeesView extends StatelessWidget {
+  final Animation<double> fadeAnimation;
+  final VoidCallback onRetry;
+
+  const _LegacyFeesView({required this.fadeAnimation, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    return BlocBuilder<FinanceBloc, FinanceState>(
+      builder: (context, state) {
+        if (state is FinanceLoading || state is FinanceInitial) {
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              const Skeleton(height: 160),
+              const SizedBox(height: 24),
+              const Skeleton(height: 24, width: 150),
+              const SizedBox(height: 12),
+              ...List.generate(
+                3,
+                (index) => const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Skeleton(height: 70),
+                ),
+              ),
+            ],
+          );
+        } else if (state is FinanceError) {
+          return EmptyState(
+            icon: Icons.cloud_off,
+            title: 'Could not load fees',
+            message: state.message,
+            ctaLabel: 'Retry',
+            onCtaPressed: onRetry,
+          );
+        } else if (state is FinanceLoaded) {
+          final feeItems = state.fees;
+          final totalBalance = feeItems
+              .where((item) => item.status != FeeStatus.paid)
+              .fold(0.0, (sum, item) => sum + item.amount);
+
+          final hasOverdue = feeItems.any(
+            (item) => item.status == FeeStatus.overdue,
+          );
+
+          return FadeTransition(
+            opacity: fadeAnimation,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                FadeInSlide(
+                  duration: const Duration(milliseconds: 600),
+                  child: AppCard(
+                    child: Column(
+                      children: [
+                        Text(
+                          'Current Balance',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        AnimatedNumberText(
+                          value: totalBalance,
+                          prefix: 'UGX ',
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: hasOverdue
+                                    ? semanticColors.error
+                                    : semanticColors.warning,
+                              ),
+                        ),
+                        const SizedBox(height: 24),
+                        PrimaryButton(
+                          label: 'Pay Now',
+                          onPressed: () => context.push('/parent/fees/pay'),
+                        ),
+                        const SizedBox(height: 12),
+                        SecondaryButton(
+                          label: 'Query Balance',
+                          icon: Icons.chat_bubble_outline,
+                          onPressed: () => context.push('/parent/messages'),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              );
-            } else if (state is FinanceError) {
-              return EmptyState(
-                icon: Icons.cloud_off,
-                title: 'Could not load fees',
-                message: state.message,
-                ctaLabel: 'Retry',
-                onCtaPressed: _fetchData,
-              );
-            } else if (state is FinanceLoaded) {
-              final feeItems = state.fees;
-              final totalBalance = feeItems
-                  .where((item) => item.status != FeeStatus.paid)
-                  .fold(0.0, (sum, item) => sum + item.amount);
-
-              final hasOverdue = feeItems.any(
-                (item) => item.status == FeeStatus.overdue,
-              );
-
-              return FadeTransition(
-                opacity: _fadeAnimation,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    FadeInSlide(
-                      duration: const Duration(milliseconds: 600),
-                      child: AppCard(
-                        child: Column(
-                          children: [
-                            Text(
-                              'Current Balance',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 8),
-                            AnimatedNumberText(
-                              value: totalBalance,
-                              prefix: 'UGX ',
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: hasOverdue
-                                        ? semanticColors.error
-                                        : semanticColors.warning,
-                                  ),
-                            ),
-                            const SizedBox(height: 24),
-                            PrimaryButton(
-                              label: 'Pay Now',
-                              onPressed: () => context.push('/parent/fees/pay'),
-                            ),
-                            const SizedBox(height: 12),
-                            SecondaryButton(
-                              label: 'Query Balance',
-                              icon: Icons.chat_bubble_outline,
-                              onPressed: () => context.push('/parent/messages'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    FadeInSlide(
-                      delay: const Duration(milliseconds: 200),
-                      child: SectionHeader(
-                        title: 'Fee Breakdown',
-                        actionLabel: 'History',
-                        onActionPressed: () =>
-                            context.push('/parent/fees/history'),
-                      ),
-                    ),
-                    ...feeItems.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final item = entry.value;
-                      return FadeInSlide(
-                        delay: Duration(milliseconds: 300 + (index * 100)),
-                        child: _buildFeeItemRow(context, item, semanticColors),
-                      );
-                    }),
-                  ],
                 ),
-              );
-            }
-            return const SizedBox.shrink();
-          },
-        ),
-      ),
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 200),
+                  child: SectionHeader(
+                    title: 'Fee Breakdown',
+                    actionLabel: 'History',
+                    onActionPressed: () => context.push('/parent/fees/history'),
+                  ),
+                ),
+                ...feeItems.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final item = entry.value;
+                  return FadeInSlide(
+                    delay: Duration(milliseconds: 300 + (index * 100)),
+                    child: _buildFeeItemRow(context, item, semanticColors),
+                  );
+                }),
+              ],
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 
