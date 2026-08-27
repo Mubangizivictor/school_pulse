@@ -98,6 +98,11 @@ class _StaffListPageState extends State<StaffListPage> {
           title: 'Staff',
           actions: [
             IconButton(
+              icon: const Icon(Icons.vpn_key_outlined),
+              tooltip: 'Parent access codes',
+              onPressed: () => context.push('/staff/admin/users/access-codes'),
+            ),
+            IconButton(
               icon: const Icon(Icons.filter_list),
               onPressed: () => _openFilters(context),
             ),

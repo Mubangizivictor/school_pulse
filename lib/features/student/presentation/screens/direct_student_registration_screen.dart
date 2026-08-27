@@ -43,6 +43,8 @@ class _DirectStudentRegistrationScreenState
   late String _draftId;
   late String _studentId;
   int _step = -1;
+  String _selectedPath = 'direct';
+  bool _draftPersisted = false;
   bool _saving = false, _enrolling = false, _consent = false, _override = false;
   bool _submittedCurrentStep = false;
   final _firstInvalidKey = GlobalKey();
@@ -130,52 +132,6 @@ class _DirectStudentRegistrationScreenState
               );
             });
         });
-    _offerResume();
-  }
-
-  Future<void> _offerResume() async {
-    final auth = context.read<AuthBloc>().state;
-    if (auth is! AuthAuthenticated) return;
-    final q = await _db
-        .collection('direct_enrolment_drafts')
-        .where('schoolId', isEqualTo: widget.schoolId)
-        .where('createdBy', isEqualTo: auth.user.id)
-        .where('status', isEqualTo: 'draft')
-        .limit(1)
-        .get();
-    if (!mounted || q.docs.isEmpty) return;
-    final draft = q.docs.single;
-    final learner = Map<String, dynamic>.from(draft.data()['learner'] ?? {});
-    final hasContent =
-        (learner['firstNames'] as String?)?.trim().isNotEmpty == true ||
-        (learner['surname'] as String?)?.trim().isNotEmpty == true ||
-        ((draft.data()['step'] as int?) ?? 0) > 0;
-    if (!hasContent) {
-      await draft.reference.delete();
-      return;
-    }
-    final yes = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Resume saved enrolment?'),
-        content: const Text('A direct-enrolment draft is waiting.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c, false),
-            child: const Text('Start new'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(c, true),
-            child: const Text('Resume'),
-          ),
-        ],
-      ),
-    );
-    if (yes == true && mounted) {
-      _load(draft);
-    } else if (yes == false) {
-      await draft.reference.delete();
-    }
   }
 
   void _load(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -184,6 +140,7 @@ class _DirectStudentRegistrationScreenState
     final p = Map<String, dynamic>.from(d['placement'] ?? {});
     setState(() {
       _draftId = doc.id;
+      _draftPersisted = true;
       _studentId = d['studentId'] as String? ?? _studentId;
       _step = (d['step'] as int?) ?? 0;
       _first.text = l['firstNames'] ?? '';
@@ -277,29 +234,58 @@ class _DirectStudentRegistrationScreenState
   Future<void> _save({bool quiet = false}) async {
     final auth = context.read<AuthBloc>().state;
     if (auth is! AuthAuthenticated) return;
+    // Choosing a route starts only an in-memory wizard. A saved draft must
+    // contain an actual learner signal or progress beyond the first step.
+    if (!_isMeaningfulDraft) {
+      if (!quiet && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Enter learner information before saving a draft.'),
+          ),
+        );
+      }
+      return;
+    }
     setState(() => _saving = true);
+    if (!quiet && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Saving…'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
     try {
       await _db.collection('direct_enrolment_drafts').doc(_draftId).set({
         ..._data,
         'createdBy': auth.user.id,
         'updatedAt': FieldValue.serverTimestamp(),
-        'createdAt': FieldValue.serverTimestamp(),
+        if (!_draftPersisted) 'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+      _draftPersisted = true;
       if (!quiet && mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Draft saved')));
+        ).showSnackBar(const SnackBar(content: Text('Saved just now')));
     } on FirebaseException catch (e) {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not save draft: ${e.message ?? e.code}'),
+            content: Text('Unable to save — Retry (${e.message ?? e.code})'),
           ),
         );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
+
+  bool get _isMeaningfulDraft =>
+      _first.text.trim().isNotEmpty ||
+      _middle.text.trim().isNotEmpty ||
+      _last.text.trim().isNotEmpty ||
+      _dob.text.trim().isNotEmpty ||
+      _guardians.isNotEmpty ||
+      _step > 0;
 
   bool get _guardianOk =>
       _guardians.isNotEmpty || (_override && _overrideReason.trim().isNotEmpty);
@@ -465,9 +451,6 @@ class _DirectStudentRegistrationScreenState
           });
       final v = Map<String, dynamic>.from(r.data as Map);
       if (!mounted) return;
-      await _db.collection('direct_enrolment_drafts').doc(_draftId).set({
-        'status': 'enrolled',
-      }, SetOptions(merge: true));
       final billingWarning = v['billingWarning'] as String?;
       if (billingWarning != null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -603,12 +586,33 @@ class _DirectStudentRegistrationScreenState
     child: Scaffold(
       appBar: AppBar(
         title: Text(
-          _step < 0 ? 'Add a learner' : 'Enrol learner',
+          _step < 0 ? 'Add learner' : 'Enrol learner',
           style: Theme.of(
             context,
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
         actions: [
+          if (_step < 0)
+            IconButton(
+              tooltip: 'Help',
+              icon: const Icon(Icons.help_outline_rounded),
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Adding a learner'),
+                  content: const Text(
+                    'Choose direct enrolment for learners already accepted by the school. '
+                    'Choose an admission application for prospective learners. You can save meaningful progress and resume it later.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Got it'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           if (_step >= 0)
             TextButton(
               onPressed: _saving ? null : _save,
@@ -619,57 +623,104 @@ class _DirectStudentRegistrationScreenState
       body: _step < 0 ? _choice() : _flow(),
     ),
   );
-  Widget _choice() => Center(
-    child: SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 440),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'How would you like to add the learner?',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                height: 1.2,
-                fontWeight: FontWeight.w700,
+  Widget _choice() {
+    final auth = context.read<AuthBloc>().state;
+    final uid = auth is AuthAuthenticated ? auth.user.id : null;
+    return SafeArea(
+      top: false,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            children: [
+              _academicContext(),
+              const SizedBox(height: 20),
+              Text(
+                'Choose an enrolment path',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontSize: 26,
+                  height: 1.12,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            const SizedBox(height: 14),
-            _choiceCard(
-              'Direct enrolment',
-              'Enrol the learner directly into your school.',
-              Icons.person_add_alt_1_outlined,
-              true,
-              () => setState(() => _step = 0),
-            ),
-            const SizedBox(height: 10),
-            _choiceCard(
-              'Admission application',
-              'Invite the learner to apply for admission to your school.',
-              Icons.description_outlined,
-              false,
-              () => context.push(
-                '/staff/admin/admissions/new',
-                extra: widget.schoolId,
+              const SizedBox(height: 8),
+              Text(
+                'Select the option that best matches this learner’s status.\nYou can save your progress and return anytime.',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontSize: 17,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  height: 1.28,
+                ),
               ),
-            ),
-            const SizedBox(height: 18),
-            const _Notice(
-              'Save as draft anytime. Your progress is saved so you can continue later.',
-            ),
-          ],
+              const SizedBox(height: 16),
+              _choiceCard(
+                'Direct enrolment',
+                'Create an active learner record now',
+                Icons.person_add_alt_1_outlined,
+                _selectedPath == 'direct',
+                () => setState(() => _selectedPath = 'direct'),
+                forWhom: 'For learners already accepted by the school',
+                estimate: 'About 7 minutes',
+              ),
+              const SizedBox(height: 12),
+              _choiceCard(
+                'Admission application',
+                'Collect an application for review before enrolment',
+                Icons.description_outlined,
+                _selectedPath == 'admission',
+                () => setState(() => _selectedPath = 'admission'),
+                forWhom: 'For prospective learners',
+                estimate: 'About 3 minutes',
+              ),
+              if (uid != null) ...[
+                const SizedBox(height: 24),
+                _draftSection(uid),
+              ],
+              const SizedBox(height: 20),
+              _whatYouNeed(),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(58),
+                  backgroundColor: Theme.of(context).colorScheme.onSurface,
+                  foregroundColor: Theme.of(context).colorScheme.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  if (_selectedPath == 'direct') {
+                    setState(() => _step = 0);
+                  } else {
+                    context.push(
+                      '/staff/admin/admissions/new',
+                      extra: widget.schoolId,
+                    );
+                  }
+                },
+                icon: const Icon(Icons.arrow_forward_rounded),
+                label: Text(
+                  'Continue with ${_selectedPath == 'direct' ? 'direct enrolment' : 'admission application'}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
+
   Widget _choiceCard(
     String title,
     String sub,
     IconData icon,
     bool selected,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    required String forWhom,
+    required String estimate,
+  }) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final fill = selected
         ? (dark ? AppColors.white : AppColors.black)
@@ -698,43 +749,68 @@ class _DirectStudentRegistrationScreenState
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(icon, size: 22, color: ink),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+                Row(
+                  children: [
+                    Icon(icon, size: 27, color: ink),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
                         title,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: ink,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontSize: 21,
+                              color: ink,
+                              fontWeight: FontWeight.w800,
+                            ),
                       ),
-                      const SizedBox(height: 2),
+                    ),
+                    Icon(
+                      selected
+                          ? Icons.check_circle_outline_rounded
+                          : Icons.circle_outlined,
+                      color: ink,
+                      size: 27,
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 41, top: 5),
+                  child: Text(
+                    sub,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 16,
+                      color: muted,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 41, top: 12),
+                  child: Text(
+                    '•  $forWhom',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(fontSize: 15, color: ink),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 41, top: 12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.access_time_rounded, size: 21, color: ink),
+                      const SizedBox(width: 10),
                       Text(
-                        sub,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: muted,
-                          height: 1.25,
+                        estimate,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 16,
+                          color: ink,
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  selected
-                      ? Icons.check_circle_outline_rounded
-                      : Icons.circle_outlined,
-                  color: ink,
-                  size: 20,
                 ),
               ],
             ),
@@ -743,6 +819,298 @@ class _DirectStudentRegistrationScreenState
       ),
     );
   }
+
+  Widget _academicContext() {
+    final year =
+        _years.where((item) => item.isCurrent).firstOrNull?.name ??
+        'Academic year';
+    final term =
+        _terms.where((item) => item.isCurrent).firstOrNull?.name ??
+        'Current term';
+    return OutlinedButton.icon(
+      onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Academic context is set in School structure.'),
+        ),
+      ),
+      icon: const Icon(Icons.calendar_month_outlined),
+      label: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '$year · $term · Main campus',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const Text('Change', style: TextStyle(fontWeight: FontWeight.w700)),
+          const Icon(Icons.chevron_right_rounded),
+        ],
+      ),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(68),
+        alignment: Alignment.centerLeft,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    );
+  }
+
+  bool _isResumable(Map<String, dynamic> data) {
+    if (data['status'] != 'draft') return false;
+    final learner = Map<String, dynamic>.from(data['learner'] ?? const {});
+    return (learner['firstNames'] as String? ?? '').trim().isNotEmpty ||
+        (learner['surname'] as String? ?? '').trim().isNotEmpty ||
+        ((data['step'] as num?)?.toInt() ?? 0) > 0;
+  }
+
+  Widget _draftSection(String uid) =>
+      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: _db
+            .collection('direct_enrolment_drafts')
+            .where('schoolId', isEqualTo: widget.schoolId)
+            .where('createdBy', isEqualTo: uid)
+            .where('status', isEqualTo: 'draft')
+            .snapshots(),
+        builder: (context, snapshot) {
+          final drafts =
+              (snapshot.data?.docs ??
+                      const <QueryDocumentSnapshot<Map<String, dynamic>>>[])
+                  .where((doc) => _isResumable(doc.data()))
+                  .toList()
+                ..sort(
+                  (a, b) =>
+                      _draftDate(b.data()).compareTo(_draftDate(a.data())),
+                );
+          if (drafts.isEmpty) return const SizedBox.shrink();
+          final latest = drafts.first;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'In progress',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 12),
+              _resumeRow(latest),
+              if (drafts.length >= 2) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => _showAllDrafts(drafts),
+                  icon: const Icon(Icons.folder_open_outlined),
+                  label: Text('View all drafts (${drafts.length})'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(54),
+                    alignment: Alignment.centerLeft,
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
+      );
+
+  DateTime _draftDate(Map<String, dynamic> data) =>
+      (data['updatedAt'] as Timestamp?)?.toDate() ??
+      (data['createdAt'] as Timestamp?)?.toDate() ??
+      DateTime.fromMillisecondsSinceEpoch(0);
+
+  Widget _resumeRow(QueryDocumentSnapshot<Map<String, dynamic>> draft) {
+    final learner = Map<String, dynamic>.from(
+      draft.data()['learner'] ?? const {},
+    );
+    final name = '${learner['firstNames'] ?? ''} ${learner['surname'] ?? ''}'
+        .trim();
+    return OutlinedButton(
+      onPressed: () => _load(draft),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(78),
+        alignment: Alignment.centerLeft,
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.access_time_rounded),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  name.isEmpty ? 'Resume draft' : 'Resume draft · $name',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Last saved ${_savedLabel(_draftDate(draft.data()))}',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded),
+        ],
+      ),
+    );
+  }
+
+  String _savedLabel(DateTime time) {
+    final now = DateTime.now();
+    if (now.difference(time).inDays == 0)
+      return 'today at ${TimeOfDay.fromDateTime(time).format(context)}';
+    return '${now.difference(time).inDays} days ago';
+  }
+
+  Future<void> _showAllDrafts(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> drafts,
+  ) async => showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (sheetContext) => SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(
+            'In progress',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 12),
+          for (final draft in drafts)
+            ListTile(
+              leading: const Icon(Icons.access_time_rounded),
+              title: Text(_draftName(draft.data())),
+              subtitle: Text(
+                'Last saved ${_savedLabel(_draftDate(draft.data()))}',
+              ),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _load(draft);
+              },
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline_rounded),
+                tooltip: 'Discard draft',
+                onPressed: () => _confirmDiscard(draft, sheetContext),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+
+  String _draftName(Map<String, dynamic> data) {
+    final learner = Map<String, dynamic>.from(data['learner'] ?? const {});
+    final name = '${learner['firstNames'] ?? ''} ${learner['surname'] ?? ''}'
+        .trim();
+    return name.isEmpty ? 'Untitled enrolment draft' : name;
+  }
+
+  Future<void> _confirmDiscard(
+    QueryDocumentSnapshot<Map<String, dynamic>> draft,
+    BuildContext sheetContext,
+  ) async {
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard draft?'),
+        content: const Text(
+          'This removes the saved progress and cannot be resumed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep draft'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+    if (discard == true) {
+      await draft.reference.set({
+        'status': 'cancelled',
+        'cancelledAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      if (sheetContext.mounted) Navigator.pop(sheetContext);
+    }
+  }
+
+  Widget _whatYouNeed() => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'What you’ll need',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 20),
+          _need(
+            Icons.person_outline,
+            'Learner details',
+            'Full name, date of birth, and other learner information',
+          ),
+          _need(
+            Icons.phone_outlined,
+            'Guardian contact',
+            'Parent/guardian details and communication preferences',
+          ),
+          _need(
+            Icons.account_balance_outlined,
+            'Placement information',
+            'Grade/Year level and programme preferences',
+          ),
+          _need(
+            Icons.verified_user_outlined,
+            'Consent & documents',
+            'Authorisations and supporting documents (if applicable)',
+          ),
+          const Divider(height: 30),
+          _need(
+            Icons.lock_outline,
+            'Your information is secure',
+            'Handled in accordance with our privacy policy.',
+          ),
+        ],
+      ),
+    ),
+  );
+  Widget _need(IconData icon, String title, String detail) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+              Text(
+                detail,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget _flow() => Form(
     key: _form,

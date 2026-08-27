@@ -6,8 +6,16 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:intl/intl.dart';
+import 'package:school_pulse/features/parent/presentation/bloc/parent_timetable_bloc.dart';
+import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
+import 'package:school_pulse/features/student/presentation/bloc/student_homework_bloc.dart';
+import 'package:school_pulse/features/student/presentation/bloc/student_homework_event.dart';
+import 'package:school_pulse/features/student/presentation/bloc/student_homework_state.dart';
+import 'package:school_pulse/features/teacher/domain/entities/homework.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 class AcademicsScreen extends StatefulWidget {
   const AcademicsScreen({super.key});
@@ -19,11 +27,15 @@ class AcademicsScreen extends StatefulWidget {
 class _AcademicsScreenState extends State<AcademicsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late final ParentTimetableBloc _timetableBloc;
+  late final StudentHomeworkBloc _homeworkBloc;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _timetableBloc = di.sl<ParentTimetableBloc>();
+    _homeworkBloc = di.sl<StudentHomeworkBloc>();
     _loadData();
   }
 
@@ -31,14 +43,13 @@ class _AcademicsScreenState extends State<AcademicsScreen>
     final authState = context.read<AuthBloc>().state;
     if (authState is AuthAuthenticated) {
       final selectedStudentState = context.read<SelectedStudentBloc>().state;
-      String? studentId;
+      Student? student;
 
       if (selectedStudentState is SelectedStudentLoaded) {
-        studentId = selectedStudentState.student.id;
-      } else {
-        studentId = authState.user.studentIds.firstOrNull;
+        student = selectedStudentState.student;
       }
 
+      final studentId = student?.id ?? authState.user.studentIds.firstOrNull;
       if (studentId != null) {
         context.read<AcademicBloc>().add(
           GetAcademicRecordsRequested(studentId: studentId),
@@ -47,83 +58,139 @@ class _AcademicsScreenState extends State<AcademicsScreen>
           GetAttendanceRecordsRequested(studentId: studentId),
         );
       }
+
+      if (student != null && student.classId.isNotEmpty) {
+        _timetableBloc.add(
+          ParentTimetableRequested(
+            schoolId: student.schoolId,
+            academicYearId: student.academicYearId,
+            classId: student.classId,
+            streamId: student.streamId,
+          ),
+        );
+        _homeworkBloc.add(
+          LoadStudentHomework(student.schoolId, student.className),
+        );
+      }
     }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _timetableBloc.close();
+    _homeworkBloc.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.white,
-      appBar: AppBar(
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: _timetableBloc),
+        BlocProvider.value(value: _homeworkBloc),
+      ],
+      child: Scaffold(
         backgroundColor: AppColors.white,
-        elevation: 0,
-        centerTitle: false,
-        title: const Text(
-          'Learn',
-          style: TextStyle(
-            color: AppColors.black,
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.5,
+        appBar: AppBar(
+          backgroundColor: AppColors.white,
+          elevation: 0,
+          centerTitle: false,
+          title: const Text(
+            'Learn',
+            style: TextStyle(
+              color: AppColors.black,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
+            ),
+          ),
+          bottom: TabBar(
+            controller: _tabController,
+            indicatorColor: AppColors.black,
+            labelColor: AppColors.black,
+            unselectedLabelColor: AppColors.grey500,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+            indicatorWeight: 3,
+            tabs: const [
+              Tab(text: 'Homework'),
+              Tab(text: 'Progress'),
+              Tab(text: 'Timetable'),
+            ],
           ),
         ),
-        bottom: TabBar(
+        body: TabBarView(
           controller: _tabController,
-          indicatorColor: AppColors.black,
-          labelColor: AppColors.black,
-          unselectedLabelColor: AppColors.grey500,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-          indicatorWeight: 3,
-          tabs: const [
-            Tab(text: 'Homework'),
-            Tab(text: 'Progress'),
-            Tab(text: 'Timetable'),
+          children: [
+            _buildHomeworkTab(),
+            _buildProgressTab(),
+            _buildTimetableTab(),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildHomeworkTab(),
-          _buildProgressTab(),
-          _buildTimetableTab(),
-        ],
       ),
     );
   }
 
   Widget _buildHomeworkTab() {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        _buildHomeworkItem(
-          subject: 'Mathematics',
-          title: 'Algebraic Expressions',
-          dueDate: 'Tomorrow',
-          status: 'Pending',
-        ),
-        const SizedBox(height: 12),
-        _buildHomeworkItem(
-          subject: 'English',
-          title: 'Creative Writing - The Lost City',
-          dueDate: 'Fri, 17 Nov',
-          status: 'Pending',
-        ),
-        const SizedBox(height: 12),
-        _buildHomeworkItem(
-          subject: 'Science',
-          title: 'Photosynthesis Lab Report',
-          dueDate: 'Submitted',
-          status: 'Completed',
-          isCompleted: true,
-        ),
-      ],
+    return BlocBuilder<StudentHomeworkBloc, StudentHomeworkState>(
+      builder: (context, state) {
+        if (state is StudentHomeworkLoading ||
+            state is StudentHomeworkInitial) {
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            children: const [
+              Skeleton(height: 76, borderRadius: 16),
+              SizedBox(height: 12),
+              Skeleton(height: 76, borderRadius: 16),
+              SizedBox(height: 12),
+              Skeleton(height: 76, borderRadius: 16),
+            ],
+          );
+        }
+
+        if (state is StudentHomeworkError) {
+          return EmptyState(
+            icon: Icons.cloud_off,
+            title: 'Could not load homework',
+            message: state.message,
+          );
+        }
+
+        final list = state is StudentHomeworkLoaded
+            ? List<Homework>.from(state.homeworkList)
+            : <Homework>[];
+        list.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+
+        if (list.isEmpty) {
+          return const EmptyState(
+            icon: Icons.assignment_turned_in_outlined,
+            title: 'No homework',
+            message: 'No homework has been set for this class yet.',
+          );
+        }
+
+        final now = DateTime.now();
+        return ListView.separated(
+          padding: const EdgeInsets.all(20),
+          itemCount: list.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final homework = list[index];
+            final isOverdue = homework.dueDate.isBefore(
+              DateTime(now.year, now.month, now.day),
+            );
+            return _buildHomeworkItem(
+              subject: homework.subject,
+              title: homework.title,
+              dueDate: DateFormat('EEE, d MMM').format(homework.dueDate),
+              isOverdue: isOverdue,
+            );
+          },
+        );
+      },
     );
   }
 
@@ -131,13 +198,11 @@ class _AcademicsScreenState extends State<AcademicsScreen>
     required String subject,
     required String title,
     required String dueDate,
-    required String status,
-    bool isCompleted = false,
+    bool isOverdue = false,
   }) {
     return AppCard(
       padding: const EdgeInsets.all(16),
       showShadow: false,
-      color: isCompleted ? AppColors.grey50 : AppColors.white,
       child: Row(
         children: [
           Expanded(
@@ -155,28 +220,29 @@ class _AcademicsScreenState extends State<AcademicsScreen>
                 const SizedBox(height: 4),
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    decoration: isCompleted ? TextDecoration.lineThrough : null,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  isCompleted ? 'Done' : 'Due $dueDate',
+                  isOverdue ? 'Overdue · was due $dueDate' : 'Due $dueDate',
                   style: TextStyle(
                     fontSize: 13,
-                    color: isCompleted ? AppColors.successLight : AppColors.black,
+                    color: isOverdue ? AppColors.black : AppColors.grey500,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
-          if (!isCompleted)
-            const Icon(Icons.radio_button_unchecked_rounded, color: AppColors.grey300)
-          else
-            const Icon(Icons.check_circle_rounded, color: AppColors.successLight),
+          Icon(
+            isOverdue
+                ? Icons.error_outline_rounded
+                : Icons.radio_button_unchecked_rounded,
+            color: isOverdue ? AppColors.black : AppColors.grey300,
+          ),
         ],
       ),
     );
@@ -251,30 +317,130 @@ class _AcademicsScreenState extends State<AcademicsScreen>
     );
   }
 
+  static const _weekdays = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+
+  String? _selectedDay;
+
   Widget _buildTimetableTab() {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        const Text(
-          'TODAY\'S SCHEDULE',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.2,
-            color: AppColors.grey500,
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildTimetableItem('08:00 - 09:30', 'Mathematics', 'Room 204'),
-        _buildTimetableItem('09:30 - 10:00', 'Break', 'Cafeteria'),
-        _buildTimetableItem('10:00 - 11:30', 'English Literature', 'Main Hall'),
-        _buildTimetableItem('11:30 - 13:00', 'Lunch', 'Cafeteria'),
-        _buildTimetableItem('13:00 - 14:30', 'Physical Education', 'Sports Field'),
-      ],
+    return BlocBuilder<ParentTimetableBloc, ParentTimetableState>(
+      builder: (context, state) {
+        if (state.isLoading) {
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            children: const [
+              Skeleton(height: 60, borderRadius: 12),
+              SizedBox(height: 12),
+              Skeleton(height: 60, borderRadius: 12),
+              SizedBox(height: 12),
+              Skeleton(height: 60, borderRadius: 12),
+            ],
+          );
+        }
+
+        if (state.errorMessage != null) {
+          return EmptyState(
+            icon: Icons.cloud_off,
+            title: 'Could not load timetable',
+            message: state.errorMessage!,
+          );
+        }
+
+        if (!state.hasPublishedTimetable) {
+          return const EmptyState(
+            icon: Icons.calendar_view_week_outlined,
+            title: 'Timetable not published yet',
+            message:
+                'Check back once the school publishes this class\'s timetable.',
+          );
+        }
+
+        final days = state.days.isEmpty
+            ? _weekdays.take(6).toList()
+            : (List<String>.from(state.days)..sort(
+                (a, b) => _weekdays.indexOf(a).compareTo(_weekdays.indexOf(b)),
+              ));
+        final today = _weekdays[DateTime.now().weekday - 1];
+        final selected =
+            _selectedDay ?? (days.contains(today) ? today : days.first);
+        final entries = state.entriesFor(selected);
+
+        return Column(
+          children: [
+            const SizedBox(height: 12),
+            _buildDaySelector(days, selected),
+            Expanded(
+              child: entries.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No lessons scheduled for $selected.',
+                        style: const TextStyle(color: AppColors.grey500),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(20),
+                      itemCount: entries.length,
+                      itemBuilder: (context, index) =>
+                          _buildTimetableItem(entries[index]),
+                    ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildTimetableItem(String time, String subject, String location) {
+  Widget _buildDaySelector(List<String> days, String selected) {
+    return SizedBox(
+      height: 44,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: days.length,
+        itemBuilder: (context, index) {
+          final day = days[index];
+          final isSelected = day == selected;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedDay = day),
+            child: Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.black : AppColors.grey100,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Center(
+                child: Text(
+                  day.substring(0, 3).toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: isSelected ? AppColors.white : AppColors.grey500,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTimetableItem(ParentTimetableEntry entry) {
+    final subject = entry.lesson.subjectName.isNotEmpty
+        ? entry.lesson.subjectName
+        : entry.slot.name;
+    final location = entry.lesson.roomName?.isNotEmpty == true
+        ? entry.lesson.roomName!
+        : '';
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 20.0),
       child: Row(
@@ -283,7 +449,7 @@ class _AcademicsScreenState extends State<AcademicsScreen>
           SizedBox(
             width: 90,
             child: Text(
-              time,
+              '${entry.slot.startTime} - ${entry.slot.endTime}',
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -291,11 +457,7 @@ class _AcademicsScreenState extends State<AcademicsScreen>
               ),
             ),
           ),
-          Container(
-            width: 2,
-            height: 40,
-            color: AppColors.grey200,
-          ),
+          Container(width: 2, height: 40, color: AppColors.grey200),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -303,12 +465,19 @@ class _AcademicsScreenState extends State<AcademicsScreen>
               children: [
                 Text(
                   subject,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                Text(
-                  location,
-                  style: const TextStyle(fontSize: 13, color: AppColors.grey500),
-                ),
+                if (location.isNotEmpty)
+                  Text(
+                    location,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.grey500,
+                    ),
+                  ),
               ],
             ),
           ),

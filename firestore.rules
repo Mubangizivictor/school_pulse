@@ -506,18 +506,19 @@ service cloud.firestore {
     }
 
     // A direct enrolment draft contains only non-clinical working data and
-    // is editable only by its creator (or an enrolment-authorised staff
-    // member). Activation itself is server-only via directEnrolLearner.
+    // is editable only by its creator. Activation itself is server-only via
+    // directEnrolLearner, so a client can never mark a draft as completed.
     match /direct_enrolment_drafts/{draftId} {
       allow read: if isStaff() && isSameSchool(resource.data.schoolId) &&
-        (resource.data.createdBy == request.auth.uid ||
-          hasEnrollmentPermission(resource.data.schoolId, 'admission.enroll'));
+        resource.data.createdBy == request.auth.uid;
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
-        request.resource.data.createdBy == request.auth.uid && schoolCanWrite(request.resource.data.schoolId);
+        request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.status == 'draft' && schoolCanWrite(request.resource.data.schoolId);
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
         resource.data.schoolId == request.resource.data.schoolId &&
-        (resource.data.createdBy == request.auth.uid ||
-          hasEnrollmentPermission(resource.data.schoolId, 'admission.enroll')) &&
+        resource.data.createdBy == request.auth.uid &&
+        request.resource.data.createdBy == resource.data.createdBy &&
+        request.resource.data.status in ['draft', 'cancelled'] &&
         schoolCanWrite(resource.data.schoolId);
       allow delete: if false;
     }

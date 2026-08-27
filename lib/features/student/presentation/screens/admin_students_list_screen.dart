@@ -301,8 +301,10 @@ class _AdminStudentsListViewState extends State<_AdminStudentsListView> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () =>
-            context.push('/staff/admin/admissions/new', extra: widget.schoolId),
+        onPressed: () => context.push(
+          '/staff/admin/admissions/register',
+          extra: widget.schoolId,
+        ),
         icon: const Icon(Icons.person_add_alt_1),
         label: const Text('Add Student'),
       ),

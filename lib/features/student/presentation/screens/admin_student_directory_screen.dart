@@ -124,16 +124,13 @@ class _DirectoryState extends State<_Directory> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      toolbarHeight: 96,
+      toolbarHeight: 64,
       centerTitle: true,
-      title: const Text(
-        'Students',
-        style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
-      ),
-      leadingWidth: 72,
+      title: const Text('Students'),
+      leadingWidth: 56,
       leading: IconButton(
         tooltip: 'Back',
-        icon: const Icon(Icons.arrow_back_ios_new, size: 30),
+        icon: const Icon(Icons.arrow_back_ios_new),
         onPressed: () {
           if (context.canPop()) {
             context.pop();
@@ -147,9 +144,9 @@ class _DirectoryState extends State<_Directory> {
           padding: const EdgeInsets.only(right: 8),
           child: IconButton(
             tooltip: 'Enrol learner',
-            icon: const Icon(Icons.add, size: 31),
+            icon: const Icon(Icons.add),
             style: IconButton.styleFrom(
-              minimumSize: const Size(58, 58),
+              minimumSize: const Size(44, 44),
               side: BorderSide(color: Theme.of(context).colorScheme.outline),
               shape: const CircleBorder(),
             ),
@@ -197,7 +194,7 @@ class _DirectoryState extends State<_Directory> {
                     ),
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 140),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 132),
                       children: [
                         _searchBox(),
                         const SizedBox(height: 12),
@@ -248,7 +245,7 @@ class _DirectoryState extends State<_Directory> {
     onChanged: _onSearch,
     textInputAction: TextInputAction.search,
     decoration: InputDecoration(
-      prefixIcon: const Icon(Icons.search, size: 30),
+      prefixIcon: const Icon(Icons.search),
       suffixIcon: _guardianLoading
           ? const Padding(
               padding: EdgeInsets.all(12),
@@ -260,11 +257,10 @@ class _DirectoryState extends State<_Directory> {
             )
           : null,
       hintText: 'Search learners',
-      hintStyle: const TextStyle(fontSize: 18),
-      contentPadding: const EdgeInsets.symmetric(vertical: 23),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
+      contentPadding: const EdgeInsets.symmetric(vertical: 15),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
       ),
     ),
@@ -278,7 +274,7 @@ class _DirectoryState extends State<_Directory> {
       _boarding != null;
 
   Widget _filters(StructureState s) => SizedBox(
-    height: 56,
+    height: 48,
     child: ListView(
       scrollDirection: Axis.horizontal,
       children: [
@@ -320,7 +316,7 @@ class _DirectoryState extends State<_Directory> {
           tooltip: 'Filter settings',
           icon: const Icon(Icons.tune),
           style: IconButton.styleFrom(
-            minimumSize: const Size(56, 56),
+            minimumSize: const Size(48, 48),
             side: BorderSide(color: Theme.of(context).colorScheme.outline),
             shape: const CircleBorder(),
           ),
@@ -373,23 +369,16 @@ class _DirectoryState extends State<_Directory> {
               ? '$label filter'
               : '$label: $selectedLabel. Tap to change or clear.',
           child: Container(
-            constraints: const BoxConstraints(minHeight: 56),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            constraints: const BoxConstraints(minHeight: 48),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
               border: Border.all(color: Theme.of(context).colorScheme.outline),
-              borderRadius: BorderRadius.circular(17),
+              borderRadius: BorderRadius.circular(15),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  selectedLabel,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text(selectedLabel, overflow: TextOverflow.ellipsis),
                 const SizedBox(width: 6),
                 const Icon(Icons.keyboard_arrow_down, size: 19),
               ],
@@ -446,10 +435,10 @@ class _DirectoryState extends State<_Directory> {
     final number = _studentNumber(s);
     return ListTile(
       onTap: () => context.push('/staff/admin/students/${s.id}'),
-      contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 4),
-      minVerticalPadding: 14,
+      contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+      minVerticalPadding: 8,
       leading: CircleAvatar(
-        radius: 39,
+        radius: 27,
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         backgroundImage: s.photoUrl?.isNotEmpty == true
             ? NetworkImage(s.photoUrl!)
@@ -458,21 +447,25 @@ class _DirectoryState extends State<_Directory> {
             ? null
             : Text(
                 _initials(s.name),
-                style: const TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
       ),
       title: Text(
         s.name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+        style: const TextStyle(fontWeight: FontWeight.w700),
       ),
-      subtitle: Text(
-        '$number\n$c${stream == null ? '' : ' · $stream'}',
-        style: const TextStyle(fontSize: 16, height: 1.7),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(number, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(
+            '$c${stream == null ? '' : ' · $stream'}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
       isThreeLine: true,
       trailing: Row(
@@ -546,14 +539,14 @@ class _Pill extends StatelessWidget {
   const _Pill(this.label);
   @override
   Widget build(BuildContext c) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
     decoration: BoxDecoration(
       border: Border.all(color: Theme.of(c).colorScheme.outline),
-      borderRadius: BorderRadius.circular(9),
+      borderRadius: BorderRadius.circular(7),
     ),
     child: Text(
       label,
-      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
     ),
   );
 }

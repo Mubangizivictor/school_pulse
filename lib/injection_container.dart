@@ -413,6 +413,7 @@ import 'package:school_pulse/features/teacher/domain/services/subject_audit_serv
 import 'package:school_pulse/features/teacher/domain/services/subject_sync_service.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_dashboard/class_teacher_dashboard_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_timetable/class_timetable_bloc.dart';
+import 'package:school_pulse/features/parent/presentation/bloc/parent_timetable_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/teacher_timetable/teacher_timetable_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_history_bloc.dart';
@@ -1650,6 +1651,17 @@ Future<void> init() async {
   // visits would leak the previous visit's listeners.
   sl.registerFactory(
     () => ClassTimetableBloc(
+      timetableRepository: sl(),
+      structureRepository: sl(),
+    ),
+  );
+
+  // Factory, not a singleton: parent-facing counterpart of
+  // ClassTimetableBloc, also holds live stream subscriptions tied to one
+  // BlocProvider's lifetime (Home tab and Learn tab's Timetable sub-tab
+  // each provide their own instance).
+  sl.registerFactory(
+    () => ParentTimetableBloc(
       timetableRepository: sl(),
       structureRepository: sl(),
     ),

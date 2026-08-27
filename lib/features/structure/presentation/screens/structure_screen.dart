@@ -951,8 +951,15 @@ class _InstitutionProfileStep extends StatelessWidget {
                             child: LinearProgressIndicator(
                               value: 1,
                               minHeight: 5,
-                              backgroundColor: Colors.black,
-                              color: i == 0 ? Colors.black : Colors.black,
+                              // The active step is solid; the remaining
+                              // segments stay visible without reading as
+                              // completed progress.
+                              backgroundColor: Colors.black.withValues(
+                                alpha: 0.2,
+                              ),
+                              color: i == 0
+                                  ? Colors.black
+                                  : Colors.black.withValues(alpha: 0.2),
                             ),
                           ),
                         ),

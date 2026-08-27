@@ -414,6 +414,19 @@ exports.directEnrolLearner = onCall(async (request) => {
     }
     const draft = draftSnap.data();
     if (!draft.schoolId || draft.schoolId !== actor.schoolId) throw new HttpsError("permission-denied", "This draft belongs to another school.");
+    if (draft.createdBy !== request.auth.uid) throw new HttpsError("permission-denied", "This draft belongs to another user.");
+    // An already-finalised draft may be retried after a dropped client
+    // response. It must already point at a real learner; otherwise only a
+    // draft status is allowed through to the finaliser.
+    if (draft.status === "enrolled") {
+      const enrolledId = String(draft.enrolledStudentId || draft.studentId || "");
+      const enrolledStudent = enrolledId ? await tx.get(db.collection("students").doc(enrolledId)) : null;
+      if (!enrolledStudent?.exists || enrolledStudent.data().schoolId !== draft.schoolId) {
+        throw new HttpsError("failed-precondition", "This completed draft is invalid.");
+      }
+      return { studentId: enrolledId, studentNumber: enrolledStudent.data().admissionNumber, status: enrolledStudent.data().status, alreadyEnrolled: true, schoolId: draft.schoolId };
+    }
+    if (draft.status !== "draft") throw new HttpsError("failed-precondition", "This draft is no longer available for enrolment.");
     const learner = draft.learner || {}, placement = draft.placement || {};
     if (!String(learner.firstNames || "").trim() || !String(learner.surname || "").trim() || !String(learner.dateOfBirth || "").trim()) {
       throw new HttpsError("failed-precondition", "Learner legal names and date of birth are required.");

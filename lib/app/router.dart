@@ -46,6 +46,7 @@ import 'package:school_pulse/features/teacher/presentation/screens/class_activit
 import 'package:school_pulse/features/teacher/presentation/screens/class_teacher_tasks_screen.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/presentation/pages/user_management_page.dart';
+import 'package:school_pulse/features/admin/presentation/screens/access_codes_screen.dart';
 import 'package:school_pulse/features/admin/presentation/pages/staff_list_page.dart';
 import 'package:school_pulse/features/admin/presentation/pages/staff_detail_screen.dart';
 import 'package:school_pulse/features/admin/presentation/add_staff_wizard/add_staff_wizard_page.dart';
@@ -934,6 +935,12 @@ final router = GoRouter(
           builder: (context, state) => const CalendarHomeScreen(),
         ),
         GoRoute(
+          path: '/parent/announcements/:id',
+          builder: (context, state) => AnnouncementDetailScreen(
+            announcementId: state.pathParameters['id'] ?? '',
+          ),
+        ),
+        GoRoute(
           path: '/parent/boarding',
           builder: (context, state) => ParentModuleGuard(
             isAllowed: (v) => v.boarding,
@@ -1806,13 +1813,9 @@ final router = GoRouter(
                 ),
               ],
             ),
-            // Parent/guardian contacts are searched from the existing
-            // school-wide directory until a dedicated parent directory is
-            // introduced. Keeping this as a separate route lets the Parents
-            // navigation destination remain selected.
             GoRoute(
               path: 'parents',
-              builder: (context, state) => const AdminStudentDirectoryScreen(),
+              builder: (context, state) => const AccessCodesScreen(),
             ),
             GoRoute(
               path: 'users',
@@ -1821,6 +1824,10 @@ final router = GoRouter(
                 GoRoute(
                   path: 'overview',
                   builder: (context, state) => const UserManagementPage(),
+                ),
+                GoRoute(
+                  path: 'access-codes',
+                  builder: (context, state) => const AccessCodesScreen(),
                 ),
                 GoRoute(
                   path: 'add-staff',
