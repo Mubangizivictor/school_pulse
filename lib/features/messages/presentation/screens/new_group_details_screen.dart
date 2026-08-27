@@ -65,10 +65,11 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
           onPressed: () => context.pop(),
         ),
         title: Text(
-          _screenTitle,
+          _screenTitle.toUpperCase(),
           style: AppTypography.titleLarge.copyWith(
             color: colors.onSurface,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
           ),
         ),
       ),
@@ -95,10 +96,9 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                         height: 100,
                         width: 100,
                         decoration: BoxDecoration(
-                          color: colors.surfaceContainerHigh,
-                          shape: BoxShape.circle,
+                          color: colors.surface,
                           border: Border.all(
-                            color: colors.outlineVariant,
+                            color: colors.onSurface,
                             width: 1,
                           ),
                           image: _photo != null
@@ -110,10 +110,10 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                         ),
                         child: _photo != null
                             ? null
-                            : const Icon(
+                            : Icon(
                                 Icons.camera_alt_outlined,
                                 size: 40,
-                                color: AppColors.electricBlue,
+                                color: colors.onSurface,
                               ),
                       ),
                       Positioned(
@@ -121,14 +121,14 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                         right: 0,
                         child: Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: AppColors.electricBlue,
-                            shape: BoxShape.circle,
+                          decoration: BoxDecoration(
+                            color: colors.onSurface,
+                            border: Border.all(color: colors.surface, width: 1),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.add,
                             size: 20,
-                            color: Colors.white,
+                            color: colors.surface,
                           ),
                         ),
                       ),
@@ -138,10 +138,12 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                _photo == null ? 'Add Group Photo' : 'Change Group Photo',
+                (_photo == null ? 'Add Group Photo' : 'Change Group Photo')
+                    .toUpperCase(),
                 style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.electricBlue,
-                  fontWeight: FontWeight.bold,
+                  color: colors.onSurface,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.1,
                 ),
               ),
               const SizedBox(height: AppSpacing.x3l),
@@ -203,40 +205,40 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
         AppSpacing.l,
         AppSpacing.m,
       ),
-      child: DecoratedBox(
+      child: Container(
+        padding: const EdgeInsets.only(top: AppSpacing.m),
         decoration: BoxDecoration(
           color: colors.surface,
-          border: Border(top: BorderSide(color: colors.outlineVariant)),
+          border: Border(top: BorderSide(color: colors.onSurface, width: 1)),
         ),
-        child: Padding(
-          padding: const EdgeInsets.only(top: AppSpacing.m),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _canCreate ? () => _create(user) : null,
-              icon: _creating
-                  ? SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: colors.onPrimary,
-                      ),
-                    )
-                  : const Icon(Icons.check_circle_outline_rounded),
-              label: Text(_creating ? 'Creating…' : _createLabel),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colors.primary,
-                foregroundColor: colors.onPrimary,
-                disabledBackgroundColor: colors.surfaceContainerHigh,
-                disabledForegroundColor: colors.onSurfaceVariant,
-                minimumSize: const Size.fromHeight(56),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                textStyle: AppTypography.titleMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _canCreate ? () => _create(user) : null,
+            icon: _creating
+                ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colors.onPrimary,
+                    ),
+                  )
+                : const Icon(Icons.check_circle_outline_rounded),
+            label: Text((_creating ? 'Creating…' : _createLabel).toUpperCase()),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colors.onSurface,
+              foregroundColor: colors.surface,
+              disabledBackgroundColor: colors.surfaceContainerHigh,
+              disabledForegroundColor: colors.onSurfaceVariant,
+              minimumSize: const Size.fromHeight(56),
+              elevation: 0,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.zero,
+              ),
+              textStyle: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
               ),
             ),
           ),
@@ -295,58 +297,70 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
   void _pickType() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.zero,
       ),
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final option in [
-              ChatType.group,
-              ChatType.broadcast,
-              ChatType.channel,
-            ])
-              ListTile(
-                title: Text(
-                  option == ChatType.group
-                      ? 'Private Group'
-                      : option == ChatType.broadcast
-                      ? 'Broadcast List'
-                      : 'Announcement Channel',
-                  style: TextStyle(
-                    color: Theme.of(sheetContext).colorScheme.onSurface,
-                  ),
-                ),
-                subtitle: Text(
-                  option == ChatType.group
-                      ? 'Everyone can see and reply to each other'
-                      : option == ChatType.broadcast
-                      ? 'One-way messages to many recipients'
-                      : 'An announcement feed only admins post to',
-                  style: TextStyle(
-                    color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
-                    fontSize: 12,
-                  ),
-                ),
-                trailing: _type == option
-                    ? const Icon(
-                        Icons.check_circle,
-                        color: AppColors.electricBlue,
-                      )
-                    : null,
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  setState(() {
-                    _type = option;
-                    _policy = _type == ChatType.group
-                        ? MessagePolicy.everyone
-                        : MessagePolicy.adminsOnly;
-                  });
-                },
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(
+                color: Theme.of(sheetContext).colorScheme.onSurface,
+                width: 1,
               ),
-          ],
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final option in [
+                ChatType.group,
+                ChatType.broadcast,
+                ChatType.channel,
+              ])
+                ListTile(
+                  title: Text(
+                    (option == ChatType.group
+                            ? 'Private Group'
+                            : option == ChatType.broadcast
+                                ? 'Broadcast List'
+                                : 'Announcement Channel')
+                        .toUpperCase(),
+                    style: TextStyle(
+                      color: Theme.of(sheetContext).colorScheme.onSurface,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  subtitle: Text(
+                    option == ChatType.group
+                        ? 'Everyone can see and reply to each other'
+                        : option == ChatType.broadcast
+                            ? 'One-way messages to many recipients'
+                            : 'An announcement feed only admins post to',
+                    style: TextStyle(
+                      color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                  trailing: _type == option
+                      ? Icon(
+                          Icons.check_circle,
+                          color: Theme.of(sheetContext).colorScheme.onSurface,
+                        )
+                      : null,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    setState(() {
+                      _type = option;
+                      _policy = _type == ChatType.group
+                          ? MessagePolicy.everyone
+                          : MessagePolicy.adminsOnly;
+                    });
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -355,36 +369,48 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
   void _pickPolicy() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.zero,
       ),
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final option in MessagePolicy.values)
-              ListTile(
-                title: Text(
-                  option == MessagePolicy.everyone
-                      ? 'All Members'
-                      : 'Admins Only',
-                  style: TextStyle(
-                    color: Theme.of(sheetContext).colorScheme.onSurface,
-                  ),
-                ),
-                trailing: _policy == option
-                    ? const Icon(
-                        Icons.check_circle,
-                        color: AppColors.electricBlue,
-                      )
-                    : null,
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  setState(() => _policy = option);
-                },
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(
+                color: Theme.of(sheetContext).colorScheme.onSurface,
+                width: 1,
               ),
-          ],
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final option in MessagePolicy.values)
+                ListTile(
+                  title: Text(
+                    (option == MessagePolicy.everyone
+                            ? 'All Members'
+                            : 'Admins Only')
+                        .toUpperCase(),
+                    style: TextStyle(
+                      color: Theme.of(sheetContext).colorScheme.onSurface,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  trailing: _policy == option
+                      ? Icon(
+                          Icons.check_circle,
+                          color: Theme.of(sheetContext).colorScheme.onSurface,
+                        )
+                      : null,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    setState(() => _policy = option);
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -448,43 +474,49 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
     required TextEditingController controller,
     int maxLines = 1,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          label.toUpperCase(),
           style: AppTypography.labelMedium.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.bold,
+            color: colors.onSurface,
+            fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           maxLines: maxLines,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+          style: TextStyle(color: colors.onSurface),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              color: colors.onSurfaceVariant,
             ),
             filled: true,
-            fillColor: Theme.of(context).colorScheme.surfaceContainerLow,
+            fillColor: colors.surface,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.zero,
               borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.outlineVariant,
+                color: colors.onSurface,
+                width: 1,
               ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.zero,
               borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.outlineVariant,
+                color: colors.onSurface,
+                width: 1,
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.electricBlue),
+              borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(
+                color: colors.onSurface,
+                width: 2,
+              ),
             ),
             contentPadding: const EdgeInsets.all(16),
           ),
@@ -494,13 +526,13 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
   }
 
   Widget _buildSectionLabel(BuildContext context, String label) => Text(
-    label,
-    style: AppTypography.labelMedium.copyWith(
-      color: Theme.of(context).colorScheme.primary,
-      fontWeight: FontWeight.bold,
-      letterSpacing: 1.1,
-    ),
-  );
+        label.toUpperCase(),
+        style: AppTypography.labelMedium.copyWith(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.2,
+        ),
+      );
 
   Widget _buildSettingTile(
     BuildContext context,
@@ -509,49 +541,49 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
     String value, {
     VoidCallback? onTap,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        color: colors.surface,
+        border: Border.all(color: colors.onSurface, width: 1),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(8),
+            color: colors.onSurface,
+            border: Border.all(color: colors.onSurface, width: 1),
           ),
           child: Icon(
             icon,
-            color: Theme.of(context).colorScheme.primary,
+            color: colors.surface,
             size: 20,
           ),
         ),
         title: Text(
-          title,
+          title.toUpperCase(),
           style: AppTypography.titleSmall.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
+            color: colors.onSurface,
+            fontWeight: FontWeight.w900,
           ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              value,
+              value.toUpperCase(),
               style: AppTypography.bodySmall.copyWith(
-                color: AppColors.electricBlue,
-                fontWeight: FontWeight.w600,
+                color: colors.onSurface,
+                fontWeight: FontWeight.w900,
               ),
             ),
             const SizedBox(width: 4),
             Icon(
               Icons.chevron_right,
               size: 20,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              color: colors.onSurface,
             ),
           ],
         ),

@@ -123,7 +123,6 @@ class _FeesScreenState extends State<FeesScreen> {
           const SizedBox(height: 24),
           PrimaryButton(
             label: 'Pay Now',
-            color: AppColors.white,
             onPressed: () => context.push('/parent/payments/pay'),
           ),
         ],

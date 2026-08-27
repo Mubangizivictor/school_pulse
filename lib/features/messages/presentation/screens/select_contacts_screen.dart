@@ -122,12 +122,13 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
                 controller: _searchController,
                 autofocus: true,
                 style: AppTypography.bodyLarge.copyWith(
-                  color: AppColors.textPrimary(context),
+                  color: colors.onSurface,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Search contacts...',
+                  hintText: 'SEARCH CONTACTS...',
                   hintStyle: AppTypography.bodyLarge.copyWith(
-                    color: AppColors.textMuted(context),
+                    color: colors.onSurfaceVariant,
+                    fontWeight: FontWeight.w900,
                   ),
                   border: InputBorder.none,
                 ),
@@ -136,11 +137,18 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(_titleForType(), style: AppTypography.titleLarge),
                   Text(
-                    '${_selectedIds.length} of ${_contacts.length} selected',
+                    _titleForType().toUpperCase(),
+                    style: AppTypography.titleLarge.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  Text(
+                    '${_selectedIds.length} OF ${_contacts.length} SELECTED'
+                        .toUpperCase(),
                     style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.textMuted(context),
+                      color: colors.onSurfaceVariant,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                 ],
@@ -172,9 +180,9 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
                 height: 100,
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
                 decoration: BoxDecoration(
-                  color: colors.surfaceContainerLow,
+                  color: colors.surface,
                   border: Border(
-                    bottom: BorderSide(color: colors.outlineVariant),
+                    bottom: BorderSide(color: colors.onSurface, width: 1),
                   ),
                 ),
                 child: ListView.builder(
@@ -194,20 +202,21 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
                               Container(
                                 padding: const EdgeInsets.all(2),
                                 decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: AppColors.electricBlue,
-                                    width: 2,
+                                    color: colors.onSurface,
+                                    width: 1,
                                   ),
                                 ),
-                                child: CircleAvatar(
-                                  radius: 25,
-                                  backgroundColor: AppColors.electricBlue,
+                                child: Container(
+                                  height: 50,
+                                  width: 50,
+                                  color: colors.onSurface,
+                                  alignment: Alignment.center,
                                   child: Text(
-                                    contact.initials,
-                                    style: const TextStyle(
-                                      color: AppColors.electricBlue,
-                                      fontWeight: FontWeight.bold,
+                                    contact.initials.toUpperCase(),
+                                    style: TextStyle(
+                                      color: colors.surface,
+                                      fontWeight: FontWeight.w900,
                                     ),
                                   ),
                                 ),
@@ -221,14 +230,15 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
                                   ),
                                   child: Container(
                                     padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.black,
-                                      shape: BoxShape.circle,
+                                    decoration: BoxDecoration(
+                                      color: colors.onSurface,
+                                      border: Border.all(
+                                          color: colors.surface, width: 1),
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.close,
                                       size: 10,
-                                      color: Colors.white,
+                                      color: colors.surface,
                                     ),
                                   ),
                                 ),
@@ -237,9 +247,9 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            contact.name.split(' ').first,
+                            contact.name.split(' ').first.toUpperCase(),
                             style: AppTypography.labelSmall.copyWith(
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w900,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -275,56 +285,56 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
         AppSpacing.m,
         AppSpacing.m,
       ),
-      child: DecoratedBox(
+      child: Container(
+        padding: const EdgeInsets.only(top: AppSpacing.m),
         decoration: BoxDecoration(
           color: colors.surface,
-          border: Border(top: BorderSide(color: colors.outlineVariant)),
+          border: Border(top: BorderSide(color: colors.onSurface, width: 1)),
         ),
-        child: Padding(
-          padding: const EdgeInsets.only(top: AppSpacing.m),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: enabled ? () => _continue(user) : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colors.primary,
-                foregroundColor: colors.onPrimary,
-                disabledBackgroundColor: colors.surfaceContainerHigh,
-                disabledForegroundColor: colors.onSurfaceVariant,
-                minimumSize: const Size.fromHeight(56),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                elevation: 0,
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: enabled ? () => _continue(user) : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colors.onSurface,
+              foregroundColor: colors.surface,
+              disabledBackgroundColor: colors.surfaceContainerHigh,
+              disabledForegroundColor: colors.onSurfaceVariant,
+              minimumSize: const Size.fromHeight(56),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.zero,
               ),
-              child: _creating
-                  ? SizedBox(
-                      height: 22,
-                      width: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: colors.onPrimary,
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          widget.isGroupSelection
-                              ? Icons.arrow_forward_rounded
-                              : Icons.chat_bubble_rounded,
-                          size: 19,
-                        ),
-                        const SizedBox(width: AppSpacing.s),
-                        Text(
-                          widget.isGroupSelection ? 'Continue' : 'Start chat',
-                          style: AppTypography.titleMedium.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+              elevation: 0,
             ),
+            child: _creating
+                ? SizedBox(
+                    height: 22,
+                    width: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colors.onPrimary,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        widget.isGroupSelection
+                            ? Icons.arrow_forward_rounded
+                            : Icons.chat_bubble_rounded,
+                        size: 19,
+                      ),
+                      const SizedBox(width: AppSpacing.s),
+                      Text(
+                        (widget.isGroupSelection ? 'Continue' : 'Start chat')
+                            .toUpperCase(),
+                        style: AppTypography.titleMedium.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ),
       ),
@@ -394,40 +404,47 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
               width: 104,
               height: 104,
               decoration: BoxDecoration(
-                color: colors.primaryContainer,
-                shape: BoxShape.circle,
-                border: Border.all(color: colors.outlineVariant),
+                color: colors.surface,
+                border: Border.all(color: colors.onSurface, width: 1),
               ),
               child: Icon(
                 widget.isGroupSelection
                     ? Icons.group_add_outlined
                     : Icons.person_search_outlined,
                 size: 46,
-                color: colors.primary,
+                color: colors.onSurface,
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
             Text(
-              'No contacts yet',
+              'NO CONTACTS YET',
               style: AppTypography.titleLarge.copyWith(
                 color: colors.onSurface,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w900,
               ),
             ),
             const SizedBox(height: AppSpacing.s),
             Text(
-              'No one else in your school has an account yet. Once they join, they will appear here automatically.',
+              'No one else in your school has an account yet. Once they join, they will appear here automatically.'
+                  .toUpperCase(),
               textAlign: TextAlign.center,
               style: AppTypography.bodyMedium.copyWith(
-                color: colors.onSurfaceVariant,
+                color: colors.onSurface,
                 height: 1.45,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: AppSpacing.l),
             TextButton.icon(
               onPressed: _load,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Refresh contacts'),
+              label: Text(
+                'REFRESH CONTACTS',
+                style: TextStyle(
+                  color: colors.onSurface,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
           ],
         ),
@@ -487,6 +504,7 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
   }
 
   Widget _buildSectionHeader(String title) {
+    final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.m,
@@ -495,10 +513,11 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
         AppSpacing.s,
       ),
       child: Text(
-        title,
+        title.toUpperCase(),
         style: AppTypography.labelSmall.copyWith(
-          color: AppColors.textMuted(context),
+          color: colors.onSurface,
           letterSpacing: 1.2,
+          fontWeight: FontWeight.w900,
         ),
       ),
     );
@@ -506,71 +525,70 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
 
   Widget _buildContactTile(MessageContact contact) {
     final isSelected = _selectedIds.contains(contact.id);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
-      child: Material(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: isSelected
-              ? const BorderSide(color: AppColors.electricBlue)
-              : BorderSide.none,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border.all(
+          color: colors.onSurface,
+          width: isSelected ? 2 : 1,
         ),
-        child: ListTile(
-          leading: CircleAvatar(
-            radius: 22,
-            backgroundColor: AppColors.electricBlue,
-            child: Text(
-              contact.initials,
-              style: const TextStyle(
-                color: AppColors.electricBlue,
-                fontWeight: FontWeight.bold,
-              ),
+      ),
+      child: ListTile(
+        leading: Container(
+          height: 44,
+          width: 44,
+          color: colors.onSurface,
+          alignment: Alignment.center,
+          child: Text(
+            contact.initials.toUpperCase(),
+            style: TextStyle(
+              color: colors.surface,
+              fontWeight: FontWeight.w900,
             ),
           ),
-          title: Text(
-            contact.name,
-            style: AppTypography.titleSmall.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+        ),
+        title: Text(
+          contact.name.toUpperCase(),
+          style: AppTypography.titleSmall.copyWith(
+            fontWeight: FontWeight.w900,
           ),
-          subtitle: Text(
-            _roleLabel(contact.role),
-            style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textMuted(context),
-            ),
+        ),
+        subtitle: Text(
+          _roleLabel(contact.role).toUpperCase(),
+          style: AppTypography.bodySmall.copyWith(
+            color: colors.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
           ),
-          trailing: Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isSelected ? AppColors.electricBlue : Colors.black,
-                width: 2,
-              ),
-              color: isSelected ? AppColors.electricBlue : Colors.transparent,
+        ),
+        trailing: Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: colors.onSurface,
+              width: 2,
             ),
-            child: isSelected
-                ? const Icon(Icons.check, size: 16, color: Colors.white)
-                : null,
+            color: isSelected ? colors.onSurface : Colors.transparent,
           ),
-          onTap: () {
-            setState(() {
-              if (isSelected) {
-                _selectedIds.remove(contact.id);
-              } else {
-                if (!widget.isGroupSelection) {
-                  _selectedIds.clear();
-                }
-                _selectedIds.add(contact.id);
+          child: isSelected
+              ? Icon(Icons.check, size: 16, color: colors.surface)
+              : null,
+        ),
+        onTap: () {
+          setState(() {
+            if (isSelected) {
+              _selectedIds.remove(contact.id);
+            } else {
+              if (!widget.isGroupSelection) {
+                _selectedIds.clear();
               }
-            });
-          },
-        ),
+              _selectedIds.add(contact.id);
+            }
+          });
+        },
       ),
     );
   }

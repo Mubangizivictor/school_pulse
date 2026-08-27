@@ -58,10 +58,11 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
       backgroundColor: colors.surface,
       appBar: AppBar(
         title: Text(
-          'Chat Settings',
+          'CHAT SETTINGS',
           style: AppTypography.titleLarge.copyWith(
             color: colors.onSurface,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
           ),
         ),
         backgroundColor: Colors.transparent,
@@ -217,21 +218,39 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     required String done,
     bool destructive = false,
   }) async {
+    final colors = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: Text(body),
+        backgroundColor: colors.surface,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        title: Text(
+          title.toUpperCase(),
+          style: TextStyle(fontWeight: FontWeight.w900, color: colors.onSurface),
+        ),
+        content: Text(
+          body.toUpperCase(),
+          style: TextStyle(fontWeight: FontWeight.w700, color: colors.onSurface),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(
+              'CANCEL',
+              style: TextStyle(
+                color: colors.onSurface,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(
-              confirmLabel,
-              style: TextStyle(color: destructive ? Colors.black : null),
+              confirmLabel.toUpperCase(),
+              style: TextStyle(
+                color: colors.onSurface,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],
@@ -250,13 +269,14 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
+    final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, AppSpacing.l, 8, AppSpacing.s),
       child: Text(
         title.toUpperCase(),
         style: AppTypography.labelMedium.copyWith(
-          color: AppColors.electricBlue,
-          fontWeight: FontWeight.bold,
+          color: colors.onSurface,
+          fontWeight: FontWeight.w900,
           letterSpacing: 1.2,
         ),
       ),
@@ -272,28 +292,29 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     Color? titleColor,
     VoidCallback? onTap,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        color: colors.surface,
+        border: Border.all(color: colors.onSurface, width: 1),
       ),
       child: ListTile(
         onTap: onTap,
         leading: leading,
         title: Text(
-          title,
+          title.toUpperCase(),
           style: AppTypography.bodyLarge.copyWith(
-            color: titleColor ?? Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
+            color: titleColor ?? colors.onSurface,
+            fontWeight: FontWeight.w900,
           ),
         ),
         subtitle: subtitle != null
             ? Text(
-                subtitle,
+                subtitle.toUpperCase(),
                 style: AppTypography.bodySmall.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: colors.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
                 ),
               )
             : null,
@@ -309,47 +330,49 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        color: colors.surface,
+        border: Border.all(color: colors.onSurface, width: 1),
       ),
       child: SwitchListTile(
         title: Text(
-          title,
+          title.toUpperCase(),
           style: AppTypography.bodyLarge.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
+            color: colors.onSurface,
+            fontWeight: FontWeight.w900,
           ),
         ),
         subtitle: Text(
-          subtitle,
+          subtitle.toUpperCase(),
           style: AppTypography.bodySmall.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            color: colors.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
           ),
         ),
         value: value,
         onChanged: onChanged,
-        activeThumbColor: AppColors.electricBlue,
+        activeColor: colors.onSurface,
+        activeTrackColor: colors.onSurface.withOpacity(0.5),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
     );
   }
 
   void _showFontSizeDialog() {
+    final colors = Theme.of(context).colorScheme;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: Theme.of(
-          dialogContext,
-        ).colorScheme.surfaceContainerHigh,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: colors.surface,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         title: Text(
-          'Font size',
+          'FONT SIZE',
           style: AppTypography.titleLarge.copyWith(
-            color: Theme.of(dialogContext).colorScheme.onSurface,
+            color: colors.onSurface,
+            fontWeight: FontWeight.w900,
           ),
         ),
         content: Column(
@@ -357,15 +380,16 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
           children: ChatPreferences.fontSizes.map((size) {
             return ListTile(
               title: Text(
-                size,
+                size.toUpperCase(),
                 style: TextStyle(
-                  color: Theme.of(dialogContext).colorScheme.onSurface,
+                  color: colors.onSurface,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
               trailing: _fontSize == size
-                  ? const Icon(
+                  ? Icon(
                       Icons.check_circle,
-                      color: AppColors.electricBlue,
+                      color: colors.onSurface,
                     )
                   : null,
               onTap: () async {

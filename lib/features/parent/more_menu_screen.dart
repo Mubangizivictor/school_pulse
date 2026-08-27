@@ -103,7 +103,6 @@ class MoreMenuScreen extends StatelessWidget {
               const SizedBox(height: 40),
               SecondaryButton(
                 label: 'Log Out',
-                color: AppColors.dangerLight,
                 onPressed: () {
                   context.read<AuthBloc>().add(LogoutPressed());
                   context.go('/welcome');

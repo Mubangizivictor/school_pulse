@@ -138,7 +138,10 @@ class ChatListTile extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.white : AppColors.black,
-                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: isDark ? AppColors.black : AppColors.white,
+                        width: 1,
+                      ),
                     ),
                     child: Text(
                       chat.unreadCount.toString(),

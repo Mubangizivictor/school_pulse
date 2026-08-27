@@ -69,21 +69,21 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'Messages',
+          'MESSAGES',
           style: AppTypography.headlineMedium.copyWith(
-            color: isDark ? AppColors.white : AppColors.black,
+            color: colors.onSurface,
             fontWeight: FontWeight.w900,
-            letterSpacing: -0.5,
+            letterSpacing: 1.2,
           ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/messages/new'),
         tooltip: 'New message',
-        backgroundColor: AppColors.primary(context),
-        foregroundColor: isDark ? AppColors.black : AppColors.white,
+        backgroundColor: colors.onSurface,
+        foregroundColor: colors.surface,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         child: const Icon(Icons.edit_square),
       ),
       body: MessagingUserBuilder(
@@ -166,9 +166,11 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                                 Expanded(
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      color: inboxSurface,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(color: inboxBorder),
+                                      color: colors.surface,
+                                      border: Border.all(
+                                        color: colors.onSurface,
+                                        width: 1,
+                                      ),
                                     ),
                                     clipBehavior: Clip.antiAlias,
                                     child: content,
@@ -207,27 +209,25 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
         label: 'Search messages',
         child: InkWell(
           onTap: () => context.push('/messages/search'),
-          borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: border),
+              color: colors.surface,
+              border: Border.all(color: colors.onSurface, width: 1),
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.search,
-                  color: isDark ? AppColors.grey500 : AppColors.grey700,
+                  color: colors.onSurface,
                   size: 20,
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Search messages',
+                  'SEARCH MESSAGES',
                   style: AppTypography.bodyLarge.copyWith(
-                    color: isDark ? AppColors.grey500 : AppColors.grey700,
-                    fontWeight: FontWeight.w600,
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
               ],
@@ -355,105 +355,113 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
     UserEntity user,
     ChatConversation chat,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? AppColors.grey900 : AppColors.white,
+      backgroundColor: colors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.zero,
       ),
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.m),
-              child: Text(
-                chat.title,
-                style: AppTypography.titleMedium.copyWith(
-                  color: isDark ? AppColors.white : AppColors.black,
-                  fontWeight: FontWeight.w900,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(color: colors.onSurface, width: 1),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.m),
+                child: Text(
+                  chat.title.toUpperCase(),
+                  style: AppTypography.titleMedium.copyWith(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
-            ),
-            ListTile(
-              leading: Icon(
-                chat.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                color: isDark ? AppColors.white : AppColors.black,
-              ),
-              title: Text(
-                chat.isPinned ? 'Unpin' : 'Pin to top',
-                style: TextStyle(
-                  color: isDark ? AppColors.white : AppColors.black,
-                  fontWeight: FontWeight.w600,
+              ListTile(
+                leading: Icon(
+                  chat.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                  color: colors.onSurface,
                 ),
-              ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                context.messagingBloc.add(
-                  ConversationPinnedSet(chat.id, !chat.isPinned),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                chat.isMuted
-                    ? Icons.notifications_off
-                    : Icons.notifications_none,
-                color: isDark ? AppColors.white : AppColors.black,
-              ),
-              title: Text(
-                chat.isMuted ? 'Unmute' : 'Mute',
-                style: TextStyle(
-                  color: isDark ? AppColors.white : AppColors.black,
-                  fontWeight: FontWeight.w600,
+                title: Text(
+                  (chat.isPinned ? 'Unpin' : 'Pin to top').toUpperCase(),
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  context.messagingBloc.add(
+                    ConversationPinnedSet(chat.id, !chat.isPinned),
+                  );
+                },
               ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                context.messagingBloc.add(
-                  ConversationMutedSet(chat.id, !chat.isMuted),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.archive_outlined,
-                color: isDark ? AppColors.white : AppColors.black,
-              ),
-              title: Text(
-                'Archive',
-                style: TextStyle(
-                  color: isDark ? AppColors.white : AppColors.black,
-                  fontWeight: FontWeight.w600,
+              ListTile(
+                leading: Icon(
+                  chat.isMuted
+                      ? Icons.notifications_off
+                      : Icons.notifications_none,
+                  color: colors.onSurface,
                 ),
-              ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                context.messagingBloc.add(
-                  ConversationArchivedSet(chat.id, true),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.delete_outline,
-                color: AppColors.danger(context),
-              ),
-              title: Text(
-                chat.type == ChatType.direct ? 'Delete chat' : 'Exit group',
-                style: TextStyle(
-                  color: AppColors.danger(context),
-                  fontWeight: FontWeight.w600,
+                title: Text(
+                  (chat.isMuted ? 'Unmute' : 'Mute').toUpperCase(),
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  context.messagingBloc.add(
+                    ConversationMutedSet(chat.id, !chat.isMuted),
+                  );
+                },
               ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                context.messagingBloc.add(ConversationLeaveRequested(chat.id));
-              },
-            ),
-            const SizedBox(height: AppSpacing.s),
-          ],
+              ListTile(
+                leading: Icon(
+                  Icons.archive_outlined,
+                  color: colors.onSurface,
+                ),
+                title: Text(
+                  'ARCHIVE',
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  context.messagingBloc.add(
+                    ConversationArchivedSet(chat.id, true),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.delete_outline,
+                  color: colors.onSurface,
+                ),
+                title: Text(
+                  (chat.type == ChatType.direct ? 'Delete chat' : 'Exit group')
+                      .toUpperCase(),
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  context.messagingBloc.add(ConversationLeaveRequested(chat.id));
+                },
+              ),
+              const SizedBox(height: AppSpacing.s),
+            ],
+          ),
         ),
       ),
     );
@@ -506,33 +514,34 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             Container(
               padding: const EdgeInsets.all(40),
               decoration: BoxDecoration(
-                color: isDark ? Colors.black : colors.surfaceContainerHigh,
-                shape: BoxShape.circle,
+                color: colors.surface,
                 border: Border.all(
-                  color: isDark ? Colors.black : colors.outlineVariant,
+                  color: colors.onSurface,
+                  width: 1,
                 ),
               ),
               child: Icon(
                 Icons.chat_bubble_outline_rounded,
                 size: 80,
-                color: AppColors.black,
+                color: colors.onSurface,
               ),
             ),
             const SizedBox(height: 32),
             Text(
-              'No Conversations Yet',
+              'NO CONVERSATIONS YET',
               style: AppTypography.headlineSmall.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
+                color: colors.onSurface,
                 fontWeight: FontWeight.w900,
               ),
             ),
             const SizedBox(height: 12),
             Text(
-              'Stay connected with teachers, parents, and school staff. Start a new conversation below.',
+              'STAY CONNECTED WITH TEACHERS, PARENTS, AND SCHOOL STAFF. START A NEW CONVERSATION BELOW.',
               textAlign: TextAlign.center,
               style: AppTypography.bodyMedium.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: colors.onSurface,
                 height: 1.5,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 40),
@@ -541,16 +550,16 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               child: ElevatedButton(
                 onPressed: () => context.push('/messages/new'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.black,
-                  foregroundColor: Colors.white,
+                  backgroundColor: colors.onSurface,
+                  foregroundColor: colors.surface,
                   padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.zero,
                   ),
                   elevation: 0,
                 ),
                 child: const Text(
-                  'Start Messaging',
+                  'START MESSAGING',
                   style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
                 ),
               ),
@@ -596,10 +605,10 @@ class _MessagingTipsPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Messaging tips',
+            'MESSAGING TIPS',
             style: AppTypography.titleMedium.copyWith(
               color: colors.onSurface,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 16),
@@ -612,13 +621,13 @@ class _MessagingTipsPanel extends StatelessWidget {
                   height: 36,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.black : colors.surfaceContainerHigh,
-                    shape: BoxShape.circle,
+                    color: colors.surface,
                     border: Border.all(
-                      color: isDark ? Colors.black : colors.outlineVariant,
+                      color: colors.onSurface,
+                      width: 1,
                     ),
                   ),
-                  child: Icon(tip.$1, size: 18, color: colors.onSurfaceVariant),
+                  child: Icon(tip.$1, size: 18, color: colors.onSurface),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -626,18 +635,19 @@ class _MessagingTipsPanel extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        tip.$2,
+                        tip.$2.toUpperCase(),
                         style: AppTypography.bodyMedium.copyWith(
                           color: colors.onSurface,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        tip.$3,
+                        tip.$3.toUpperCase(),
                         style: AppTypography.bodySmall.copyWith(
-                          color: colors.onSurfaceVariant,
+                          color: colors.onSurface,
                           height: 1.4,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -666,31 +676,24 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
-        label: Text(label),
+        label: Text(label.toUpperCase()),
         selected: isSelected,
         onSelected: (_) => onTap?.call(),
-        selectedColor: isDark ? AppColors.white : AppColors.black,
-        backgroundColor: Colors.transparent,
+        selectedColor: colors.onSurface,
+        backgroundColor: colors.surface,
         labelStyle: TextStyle(
-          color: isSelected
-              ? (isDark ? AppColors.black : AppColors.white)
-              : (isDark ? AppColors.grey500 : AppColors.grey700),
-          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+          color: isSelected ? colors.surface : colors.onSurface,
+          fontWeight: FontWeight.w900,
           fontSize: 13,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.zero,
           side: BorderSide(
-            color: isSelected
-                ? AppColors.black
-                : isDark
-                    ? AppColors.grey850
-                    : AppColors.grey200,
+            color: colors.onSurface,
             width: isSelected ? 2 : 1,
           ),
         ),

@@ -636,6 +636,7 @@ class MessageBubble extends StatelessWidget {
     int total,
   ) {
     final chosen = message.myPollVote == index;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     // Bar fills proportionally once anyone has voted.
     final share = total == 0 ? 0.0 : votes / total;
 
@@ -652,8 +653,8 @@ class MessageBubble extends StatelessWidget {
               child: Container(
                 height: 34,
                 decoration: BoxDecoration(
-                  color: message.isMe ? Colors.white : AppColors.electricBlue,
-                  borderRadius: BorderRadius.circular(10),
+                  color: message.isMe ? Colors.white : (isDark ? Colors.white : Colors.black),
+                  borderRadius: BorderRadius.zero,
                 ),
               ),
             ),
@@ -726,13 +727,15 @@ class MessageBubble extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: GestureDetector(
         onTap: () => _openImage(context),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: _accent(context), width: 1),
+          ),
           child: Image.network(
             message.mediaUrl!,
             width: 220,
             fit: BoxFit.cover,
-            loadingBuilder: (context, child, progress) => progress == null
+          loadingBuilder: (context, child, progress) => progress == null
                 ? child
                 : const SizedBox(
                     width: 220,
@@ -891,15 +894,19 @@ class _VoiceNoteBubbleState extends State<VoiceNoteBubble> {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = widget.onDark ? Colors.white : AppColors.electricBlue;
-    final muted = widget.onDark ? Colors.white : AppColors.textMuted(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final foreground = widget.onDark ? Colors.black : (isDark ? Colors.white : Colors.black);
+    final muted = widget.onDark ? AppColors.grey700 : AppColors.textMuted(context);
 
     return Container(
       width: 220,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: widget.onDark ? Colors.white : Colors.black,
-        borderRadius: BorderRadius.circular(10),
+        color: widget.onDark ? Colors.white : (isDark ? AppColors.grey900 : AppColors.grey50),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.black,
+          width: 1,
+        ),
       ),
       child: StreamBuilder<PlayerState>(
         stream: _player.playerStateStream,

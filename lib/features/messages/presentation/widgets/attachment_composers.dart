@@ -259,7 +259,7 @@ class _EventComposerSheetState extends State<EventComposerSheet> {
               surface: Colors.white,
               onSurface: Colors.black,
             ),
-            dialogTheme: const DialogTheme(
+            dialogTheme: const DialogThemeData(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.zero,
               ),
@@ -284,7 +284,7 @@ class _EventComposerSheetState extends State<EventComposerSheet> {
               surface: Colors.white,
               onSurface: Colors.black,
             ),
-            dialogTheme: const DialogTheme(
+            dialogTheme: const DialogThemeData(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.zero,
               ),
