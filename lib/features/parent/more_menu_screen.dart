@@ -193,7 +193,10 @@ class _MenuTile extends StatelessWidget {
         title,
         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
-      trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.grey300),
+      trailing: const Icon(
+        Icons.chevron_right_rounded,
+        color: AppColors.grey300,
+      ),
       onTap: onTap,
     );
   }

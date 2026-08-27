@@ -74,7 +74,12 @@ class _FeesScreenState extends State<FeesScreen> {
                     const Divider(height: 32),
                     _buildFeeRow('Transport', 'UGX 300,000', 'Unpaid'),
                     const Divider(height: 32),
-                    _buildFeeRow('Lunch Program', 'UGX 150,000', 'Paid', isPaid: true),
+                    _buildFeeRow(
+                      'Lunch Program',
+                      'UGX 150,000',
+                      'Paid',
+                      isPaid: true,
+                    ),
                   ],
                 ),
               ),
@@ -89,9 +94,17 @@ class _FeesScreenState extends State<FeesScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              _buildTransactionItem('School Fees Payment', '12 Oct 2023', 'UGX 500,000'),
+              _buildTransactionItem(
+                'School Fees Payment',
+                '12 Oct 2023',
+                'UGX 500,000',
+              ),
               const SizedBox(height: 12),
-              _buildTransactionItem('Uniform Purchase', '05 Oct 2023', 'UGX 120,000'),
+              _buildTransactionItem(
+                'Uniform Purchase',
+                '05 Oct 2023',
+                'UGX 120,000',
+              ),
             ],
           );
         },
@@ -109,7 +122,11 @@ class _FeesScreenState extends State<FeesScreen> {
         children: [
           const Text(
             'Total Outstanding',
-            style: TextStyle(color: AppColors.grey300, fontSize: 14, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: AppColors.grey300,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -130,7 +147,12 @@ class _FeesScreenState extends State<FeesScreen> {
     );
   }
 
-  Widget _buildFeeRow(String label, String amount, String status, {bool isPaid = false}) {
+  Widget _buildFeeRow(
+    String label,
+    String amount,
+    String status, {
+    bool isPaid = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -171,7 +193,10 @@ class _FeesScreenState extends State<FeesScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
               ),
               Text(
                 date,

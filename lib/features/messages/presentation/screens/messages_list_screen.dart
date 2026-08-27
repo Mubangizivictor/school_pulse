@@ -139,7 +139,11 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
 
                 if (layout == ResponsiveLayout.mobile) {
                   return Column(
-                    children: [searchBar, filterRow, Expanded(child: content)],
+                    children: [
+                      searchBar,
+                      filterRow,
+                      Expanded(child: content),
+                    ],
                   );
                 }
 
@@ -202,6 +206,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
 
   Widget _buildSearchBar(BuildContext context, Color surface, Color border) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Semantics(
@@ -217,11 +222,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.search,
-                  color: colors.onSurface,
-                  size: 20,
-                ),
+                Icon(Icons.search, color: colors.onSurface, size: 20),
                 const SizedBox(width: 12),
                 Text(
                   'SEARCH MESSAGES',
@@ -359,15 +360,11 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: colors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.zero,
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       builder: (sheetContext) => SafeArea(
         child: Container(
           decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(color: colors.onSurface, width: 1),
-            ),
+            border: Border(top: BorderSide(color: colors.onSurface, width: 1)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -423,10 +420,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                 },
               ),
               ListTile(
-                leading: Icon(
-                  Icons.archive_outlined,
-                  color: colors.onSurface,
-                ),
+                leading: Icon(Icons.archive_outlined, color: colors.onSurface),
                 title: Text(
                   'ARCHIVE',
                   style: TextStyle(
@@ -442,10 +436,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                 },
               ),
               ListTile(
-                leading: Icon(
-                  Icons.delete_outline,
-                  color: colors.onSurface,
-                ),
+                leading: Icon(Icons.delete_outline, color: colors.onSurface),
                 title: Text(
                   (chat.type == ChatType.direct ? 'Delete chat' : 'Exit group')
                       .toUpperCase(),
@@ -456,7 +447,9 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                 ),
                 onTap: () {
                   Navigator.pop(sheetContext);
-                  context.messagingBloc.add(ConversationLeaveRequested(chat.id));
+                  context.messagingBloc.add(
+                    ConversationLeaveRequested(chat.id),
+                  );
                 },
               ),
               const SizedBox(height: AppSpacing.s),
@@ -509,62 +502,59 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: isWide ? 420 : double.infinity),
           child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(40),
-              decoration: BoxDecoration(
-                color: colors.surface,
-                border: Border.all(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(40),
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  border: Border.all(color: colors.onSurface, width: 1),
+                ),
+                child: Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  size: 80,
                   color: colors.onSurface,
-                  width: 1,
                 ),
               ),
-              child: Icon(
-                Icons.chat_bubble_outline_rounded,
-                size: 80,
-                color: colors.onSurface,
+              const SizedBox(height: 32),
+              Text(
+                'NO CONVERSATIONS YET',
+                style: AppTypography.headlineSmall.copyWith(
+                  color: colors.onSurface,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-            ),
-            const SizedBox(height: 32),
-            Text(
-              'NO CONVERSATIONS YET',
-              style: AppTypography.headlineSmall.copyWith(
-                color: colors.onSurface,
-                fontWeight: FontWeight.w900,
+              const SizedBox(height: 12),
+              Text(
+                'STAY CONNECTED WITH TEACHERS, PARENTS, AND SCHOOL STAFF. START A NEW CONVERSATION BELOW.',
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: colors.onSurface,
+                  height: 1.5,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'STAY CONNECTED WITH TEACHERS, PARENTS, AND SCHOOL STAFF. START A NEW CONVERSATION BELOW.',
-              textAlign: TextAlign.center,
-              style: AppTypography.bodyMedium.copyWith(
-                color: colors.onSurface,
-                height: 1.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 40),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => context.push('/messages/new'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colors.onSurface,
-                  foregroundColor: colors.surface,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.zero,
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => context.push('/messages/new'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.onSurface,
+                    foregroundColor: colors.surface,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.zero,
+                    ),
+                    elevation: 0,
                   ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  'START MESSAGING',
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                  child: const Text(
+                    'START MESSAGING',
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
           ),
         ),
       ),
@@ -622,10 +612,7 @@ class _MessagingTipsPanel extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: colors.surface,
-                    border: Border.all(
-                      color: colors.onSurface,
-                      width: 1,
-                    ),
+                    border: Border.all(color: colors.onSurface, width: 1),
                   ),
                   child: Icon(tip.$1, size: 18, color: colors.onSurface),
                 ),
@@ -692,10 +679,7 @@ class _FilterChip extends StatelessWidget {
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.zero,
-          side: BorderSide(
-            color: colors.onSurface,
-            width: isSelected ? 2 : 1,
-          ),
+          side: BorderSide(color: colors.onSurface, width: isSelected ? 2 : 1),
         ),
         showCheckmark: false,
       ),

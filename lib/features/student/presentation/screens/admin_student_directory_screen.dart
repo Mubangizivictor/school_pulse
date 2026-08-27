@@ -45,6 +45,7 @@ class _DirectoryState extends State<_Directory> {
   Set<String> _guardianHits = const {};
   bool _guardianLoading = false;
   int _page = 0;
+  _DirectorySort _sort = _DirectorySort.recentlyAdded;
   Timer? _debounce;
   static const _pageSize = 40;
   @override
@@ -73,8 +74,9 @@ class _DirectoryState extends State<_Directory> {
           schoolId: widget.schoolId,
           phone: value,
         );
-        if (mounted && _query == value.trim())
+        if (mounted && _query == value.trim()) {
           setState(() => _guardianHits = hits);
+        }
       } catch (_) {}
       if (mounted) setState(() => _guardianLoading = false);
     });
@@ -108,19 +110,51 @@ class _DirectoryState extends State<_Directory> {
           (_status == null || s.status == _status) &&
           (_boarding == null || s.boardingType == _boarding);
     }).toList();
-    result.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    // The roster's source order is retained for the default “Recently added”
+    // view. Student does not expose a created timestamp, so inventing one here
+    // would make the sort misleading. Alphabetical sorting remains available.
+    if (_sort == _DirectorySort.name) {
+      result.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
+    }
     return result;
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Students'),
+      toolbarHeight: 96,
+      centerTitle: true,
+      title: const Text(
+        'Students',
+        style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
+      ),
+      leadingWidth: 72,
+      leading: IconButton(
+        tooltip: 'Back',
+        icon: const Icon(Icons.arrow_back_ios_new, size: 30),
+        onPressed: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/staff/admin');
+          }
+        },
+      ),
       actions: [
-        IconButton(
-          tooltip: 'Enrol learner',
-          icon: const Icon(Icons.add),
-          onPressed: _enrol,
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: IconButton(
+            tooltip: 'Enrol learner',
+            icon: const Icon(Icons.add, size: 31),
+            style: IconButton.styleFrom(
+              minimumSize: const Size(58, 58),
+              side: BorderSide(color: Theme.of(context).colorScheme.outline),
+              shape: const CircleBorder(),
+            ),
+            onPressed: _enrol,
+          ),
         ),
       ],
     ),
@@ -128,18 +162,22 @@ class _DirectoryState extends State<_Directory> {
       onPressed: _enrol,
       icon: const Icon(Icons.person_add_alt_1),
       label: const Text('Enrol learner'),
+      shape: const StadiumBorder(),
+      extendedPadding: const EdgeInsets.symmetric(horizontal: 22),
     ),
     body: BlocBuilder<StudentsBloc, StudentsState>(
       builder: (context, state) {
-        if (state is StudentsLoading)
-          return const Center(child: CircularProgressIndicator());
-        if (state is StudentsError)
+        if (state is StudentsLoading) {
+          return const _DirectoryLoading();
+        }
+        if (state is StudentsError) {
           return _StateMessage(
             'Could not load learners',
             state.message,
             'Retry',
             _load,
           );
+        }
         final all = state is StudentsLoaded
             ? state.students
             : const <Student>[];
@@ -147,36 +185,45 @@ class _DirectoryState extends State<_Directory> {
           builder: (context, structure) {
             final list = _filtered(all);
             final shown = list.take((_page + 1) * _pageSize).toList();
-            return RefreshIndicator(
-              onRefresh: () async => _load(),
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 92),
-                children: [
-                  _searchBox(),
-                  const SizedBox(height: 10),
-                  _filters(structure),
-                  const SizedBox(height: 14),
-                  Text('${list.length} learner${list.length == 1 ? '' : 's'}'),
-                  const SizedBox(height: 10),
-                  if (list.isEmpty)
-                    _StateMessage(
-                      'No learners found',
-                      'Try a different search or clear the filters.',
-                      'Clear filters',
-                      _clear,
-                    )
-                  else
-                    Card(
-                      child: Column(
-                        children: [
+            return LayoutBuilder(
+              builder: (context, constraints) => RefreshIndicator(
+                onRefresh: () async => _load(),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth >= 900
+                          ? 860
+                          : double.infinity,
+                    ),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 140),
+                      children: [
+                        _searchBox(),
+                        const SizedBox(height: 12),
+                        _filters(structure),
+                        const SizedBox(height: 20),
+                        _listHeader(list.length),
+                        const SizedBox(height: 6),
+                        if (list.isEmpty)
+                          _StateMessage(
+                            _query.isNotEmpty
+                                ? 'No search results'
+                                : 'No learners found',
+                            _query.isNotEmpty
+                                ? 'Try another name, learner number, or guardian phone.'
+                                : 'Enrol a learner or adjust the filters to see results.',
+                            _hasCriteria ? 'Clear filters' : 'Enrol learner',
+                            _hasCriteria ? _clear : _enrol,
+                          )
+                        else ...[
                           for (var i = 0; i < shown.length; i++) ...[
                             _row(shown[i], structure),
-                            if (i < shown.length - 1) const Divider(height: 1),
+                            const Divider(height: 1, thickness: .6),
                           ],
                           if (shown.length < list.length)
                             Padding(
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.only(top: 12),
                               child: OutlinedButton(
                                 onPressed: () => setState(() => _page++),
                                 child: Text(
@@ -185,9 +232,10 @@ class _DirectoryState extends State<_Directory> {
                               ),
                             ),
                         ],
-                      ),
+                      ],
                     ),
-                ],
+                  ),
+                ),
               ),
             );
           },
@@ -200,7 +248,7 @@ class _DirectoryState extends State<_Directory> {
     onChanged: _onSearch,
     textInputAction: TextInputAction.search,
     decoration: InputDecoration(
-      prefixIcon: const Icon(Icons.search),
+      prefixIcon: const Icon(Icons.search, size: 30),
       suffixIcon: _guardianLoading
           ? const Padding(
               padding: EdgeInsets.all(12),
@@ -212,118 +260,180 @@ class _DirectoryState extends State<_Directory> {
             )
           : null,
       hintText: 'Search learners',
-      border: const OutlineInputBorder(),
+      hintStyle: const TextStyle(fontSize: 18),
+      contentPadding: const EdgeInsets.symmetric(vertical: 23),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+      ),
     ),
   );
-  Widget _filters(StructureState s) => LayoutBuilder(
-    builder: (context, constraints) {
-      final width = constraints.maxWidth > 540
-          ? 170.0
-          : (constraints.maxWidth - 8) / 2;
-      return Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          _select(
-            'Academic year',
-            _year,
-            [
-              const DropdownMenuItem(value: null, child: Text('All years')),
-              ...s.academicYears.map(
-                (x) => DropdownMenuItem(value: x.id, child: Text(x.name)),
-              ),
-            ],
-            (x) => setState(() => _year = x),
-            width,
+  bool get _hasCriteria =>
+      _query.isNotEmpty ||
+      _year != null ||
+      _classId != null ||
+      _stream != null ||
+      _status != null ||
+      _boarding != null;
+
+  Widget _filters(StructureState s) => SizedBox(
+    height: 56,
+    child: ListView(
+      scrollDirection: Axis.horizontal,
+      children: [
+        _select('Academic year', _year, [
+          const DropdownMenuItem(value: null, child: Text('All years')),
+          ...s.academicYears.map(
+            (x) => DropdownMenuItem(value: x.id, child: Text(x.name)),
           ),
-          _select(
-            'Class',
-            _classId,
-            [
-              const DropdownMenuItem(value: null, child: Text('All classes')),
-              ...s.classes.map(
-                (x) => DropdownMenuItem(value: x.id, child: Text(x.name)),
-              ),
-            ],
-            (x) => setState(() => _classId = x),
-            width,
+        ], (x) => setState(() => _year = x)),
+        _select('Class', _classId, [
+          const DropdownMenuItem(value: null, child: Text('All classes')),
+          ...s.classes.map(
+            (x) => DropdownMenuItem(value: x.id, child: Text(x.name)),
           ),
-          _select(
-            'Stream',
-            _stream,
-            [
-              const DropdownMenuItem(value: null, child: Text('All streams')),
-              ...s.streams
-                  .where((x) => _classId == null || x.classId == _classId)
-                  .map(
-                    (x) => DropdownMenuItem(value: x.id, child: Text(x.name)),
-                  ),
-            ],
-            (x) => setState(() => _stream = x),
-            width,
+        ], (x) => setState(() => _classId = x)),
+        _select('Stream', _stream, [
+          const DropdownMenuItem(value: null, child: Text('All streams')),
+          ...s.streams
+              .where((x) => _classId == null || x.classId == _classId)
+              .map((x) => DropdownMenuItem(value: x.id, child: Text(x.name))),
+        ], (x) => setState(() => _stream = x)),
+        _select('Status', _status, [
+          const DropdownMenuItem(value: null, child: Text('All statuses')),
+          ...StudentStatus.values.map(
+            (x) => DropdownMenuItem(value: x, child: Text(_statusName(x))),
           ),
-          _select(
-            'Status',
-            _status,
-            [
-              const DropdownMenuItem(value: null, child: Text('All statuses')),
-              ...StudentStatus.values.map(
-                (x) => DropdownMenuItem(value: x, child: Text(_statusName(x))),
-              ),
-            ],
-            (x) => setState(() => _status = x),
-            width,
+        ], (x) => setState(() => _status = x)),
+        _select('Day / boarding', _boarding, [
+          const DropdownMenuItem(value: null, child: Text('Day / boarding')),
+          ...StudentBoardingType.values.map(
+            (x) => DropdownMenuItem(
+              value: x,
+              child: Text(x.name == 'boarding' ? 'Boarding' : 'Day'),
+            ),
           ),
-          _select(
-            'Day / boarding',
-            _boarding,
-            [
-              const DropdownMenuItem(
-                value: null,
-                child: Text('Day / boarding'),
-              ),
-              ...StudentBoardingType.values.map(
-                (x) => DropdownMenuItem(
-                  value: x,
-                  child: Text(x.name == 'boarding' ? 'Boarding' : 'Day'),
-                ),
-              ),
-            ],
-            (x) => setState(() => _boarding = x),
-            width,
+        ], (x) => setState(() => _boarding = x)),
+        const SizedBox(width: 8),
+        IconButton(
+          tooltip: 'Filter settings',
+          icon: const Icon(Icons.tune),
+          style: IconButton.styleFrom(
+            minimumSize: const Size(56, 56),
+            side: BorderSide(color: Theme.of(context).colorScheme.outline),
+            shape: const CircleBorder(),
           ),
-        ],
-      );
-    },
+          onPressed: _openFilterSettings,
+        ),
+      ],
+    ),
   );
+
   Widget _select<T>(
     String label,
     T? value,
     List<DropdownMenuItem<T?>> items,
     ValueChanged<T?> changed,
-    double width,
-  ) => SizedBox(
-    width: width,
-    child: Semantics(
-      label: label,
-      child: DropdownButtonFormField<T?>(
-        value: value,
-        isExpanded: true,
-        isDense: true,
-        decoration: InputDecoration(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 12,
-          ),
-          border: const OutlineInputBorder(),
-        ),
-        items: items,
-        onChanged: (x) {
-          changed(x);
+  ) {
+    final selectedLabel = value == null
+        ? label
+        : items
+                  .where((item) => item.value == value)
+                  .map((item) => (item.child as Text).data ?? label)
+                  .firstOrNull ??
+              label;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: PopupMenuButton<T?>(
+        tooltip: '$label filter',
+        onSelected: (next) {
+          changed(next);
           setState(() => _page = 0);
         },
+        itemBuilder: (_) => [
+          if (value != null)
+            PopupMenuItem<T?>(
+              onTap: () {
+                changed(null);
+                setState(() => _page = 0);
+              },
+              child: Text('Clear $label'),
+            ),
+          ...items
+              .where((item) => item.value != null)
+              .map(
+                (item) =>
+                    PopupMenuItem<T?>(value: item.value, child: item.child),
+              ),
+        ],
+        child: Semantics(
+          button: true,
+          label: value == null
+              ? '$label filter'
+              : '$label: $selectedLabel. Tap to change or clear.',
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 56),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              border: Border.all(color: Theme.of(context).colorScheme.outline),
+              borderRadius: BorderRadius.circular(17),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  selectedLabel,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.keyboard_arrow_down, size: 19),
+              ],
+            ),
+          ),
+        ),
       ),
-    ),
+    );
+  }
+
+  Widget _listHeader(int count) => Row(
+    children: [
+      Expanded(
+        child: Text(
+          '$count learner${count == 1 ? '' : 's'}',
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ),
+      PopupMenuButton<_DirectorySort>(
+        tooltip: 'Sort learners',
+        initialValue: _sort,
+        onSelected: (sort) => setState(() => _sort = sort),
+        itemBuilder: (_) => const [
+          PopupMenuItem(
+            value: _DirectorySort.recentlyAdded,
+            child: Text('Recently added'),
+          ),
+          PopupMenuItem(value: _DirectorySort.name, child: Text('Name A–Z')),
+        ],
+        child: Semantics(
+          button: true,
+          label: 'Sort: ${_sort.label}',
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_sort.label),
+              const Icon(Icons.keyboard_arrow_down),
+            ],
+          ),
+        ),
+      ),
+    ],
   );
   Widget _row(Student s, StructureState state) {
     final c =
@@ -336,16 +446,34 @@ class _DirectoryState extends State<_Directory> {
     final number = _studentNumber(s);
     return ListTile(
       onTap: () => context.push('/staff/admin/students/${s.id}'),
-      dense: true,
-      minVerticalPadding: 11,
+      contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 4),
+      minVerticalPadding: 14,
       leading: CircleAvatar(
+        radius: 39,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         backgroundImage: s.photoUrl?.isNotEmpty == true
             ? NetworkImage(s.photoUrl!)
             : null,
-        child: s.photoUrl?.isNotEmpty == true ? null : Text(_initials(s.name)),
+        child: s.photoUrl?.isNotEmpty == true
+            ? null
+            : Text(
+                _initials(s.name),
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
       ),
-      title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-      subtitle: Text('$number\n$c${stream == null ? '' : ' · $stream'}'),
+      title: Text(
+        s.name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text(
+        '$number\n$c${stream == null ? '' : ' · $stream'}',
+        style: const TextStyle(fontSize: 16, height: 1.7),
+      ),
       isThreeLine: true,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -358,9 +486,59 @@ class _DirectoryState extends State<_Directory> {
   }
 
   void _enrol() {
-    if (widget.schoolId.isNotEmpty)
+    if (widget.schoolId.isNotEmpty) {
       context.push('/staff/admin/admissions/register', extra: widget.schoolId);
+    }
   }
+
+  void _openFilterSettings() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Filter settings',
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _hasCriteria
+                    ? 'Individual filter chips can be changed or cleared.'
+                    : 'Choose a filter chip to narrow the learner list.',
+              ),
+              const SizedBox(height: 20),
+              if (_hasCriteria)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+                      _clear();
+                    },
+                    icon: const Icon(Icons.clear),
+                    label: const Text('Clear all filters'),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _DirectorySort { recentlyAdded, name }
+
+extension on _DirectorySort {
+  String get label => switch (this) {
+    _DirectorySort.recentlyAdded => 'Recently added',
+    _DirectorySort.name => 'Name A–Z',
+  };
 }
 
 class _Pill extends StatelessWidget {
@@ -368,14 +546,14 @@ class _Pill extends StatelessWidget {
   const _Pill(this.label);
   @override
   Widget build(BuildContext c) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
     decoration: BoxDecoration(
       border: Border.all(color: Theme.of(c).colorScheme.outline),
-      borderRadius: BorderRadius.circular(7),
+      borderRadius: BorderRadius.circular(9),
     ),
     child: Text(
       label,
-      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
     ),
   );
 }
@@ -398,6 +576,83 @@ class _StateMessage extends StatelessWidget {
         OutlinedButton(onPressed: onAction, child: Text(action)),
       ],
     ),
+  );
+}
+
+class _DirectoryLoading extends StatelessWidget {
+  const _DirectoryLoading();
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.all(16),
+    children: [
+      const SizedBox(height: 4),
+      Container(
+        height: 52,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      const SizedBox(height: 14),
+      SizedBox(
+        height: 48,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: 5,
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
+          itemBuilder: (_, _) => Container(
+            width: 108,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(15),
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(height: 24),
+      for (var index = 0; index < 6; index++)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 25,
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FractionallySizedBox(
+                      widthFactor: .58,
+                      child: Container(
+                        height: 14,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    FractionallySizedBox(
+                      widthFactor: .38,
+                      child: Container(
+                        height: 11,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+    ],
   );
 }
 
@@ -432,7 +687,5 @@ String _studentNumber(Student student) {
   final candidate = student.admissionNumber.trim().isNotEmpty
       ? student.admissionNumber.trim()
       : student.studentCode.trim();
-  return RegExp(r'^[A-Z]{2,12}-\d{4}-\d{3,}$').hasMatch(candidate)
-      ? candidate
-      : 'Number pending';
+  return candidate.isEmpty ? 'ID pending' : candidate;
 }

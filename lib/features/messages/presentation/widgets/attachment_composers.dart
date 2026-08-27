@@ -119,9 +119,7 @@ class _PollComposerSheetState extends State<PollComposerSheet> {
                 color: AppColors.textMuted(context),
               ),
               hintText: 'Which day suits the class trip?',
-              border: const OutlineInputBorder(
-                borderRadius: BorderRadius.zero,
-              ),
+              border: const OutlineInputBorder(borderRadius: BorderRadius.zero),
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -167,7 +165,11 @@ class _PollComposerSheetState extends State<PollComposerSheet> {
             OutlinedButton.icon(
               onPressed: () =>
                   setState(() => _options.add(TextEditingController())),
-              icon: Icon(Icons.add, size: 18, color: AppColors.textPrimary(context)),
+              icon: Icon(
+                Icons.add,
+                size: 18,
+                color: AppColors.textPrimary(context),
+              ),
               label: Text(
                 'ADD OPTION',
                 style: AppTypography.labelLarge.copyWith(
@@ -180,7 +182,10 @@ class _PollComposerSheetState extends State<PollComposerSheet> {
                   borderRadius: BorderRadius.zero,
                 ),
                 side: BorderSide(color: AppColors.border(context)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
           const SizedBox(height: AppSpacing.xl),
@@ -260,9 +265,7 @@ class _EventComposerSheetState extends State<EventComposerSheet> {
               onSurface: Colors.black,
             ),
             dialogTheme: const DialogThemeData(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.zero,
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
             ),
           ),
           child: child!,
@@ -285,9 +288,7 @@ class _EventComposerSheetState extends State<EventComposerSheet> {
               onSurface: Colors.black,
             ),
             dialogTheme: const DialogThemeData(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.zero,
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
             ),
           ),
           child: child!,
@@ -328,16 +329,18 @@ class _EventComposerSheetState extends State<EventComposerSheet> {
                 color: AppColors.textMuted(context),
               ),
               hintText: 'PTA meeting',
-              border: const OutlineInputBorder(
-                borderRadius: BorderRadius.zero,
-              ),
+              border: const OutlineInputBorder(borderRadius: BorderRadius.zero),
             ),
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: AppSpacing.l),
           OutlinedButton.icon(
             onPressed: _pickDateTime,
-            icon: Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.textPrimary(context)),
+            icon: Icon(
+              Icons.calendar_today_outlined,
+              size: 18,
+              color: AppColors.textPrimary(context),
+            ),
             label: Text(
               DateFormat('EEE, d MMM y • h:mm a').format(_start),
               style: AppTypography.bodyMedium.copyWith(
@@ -368,9 +371,7 @@ class _EventComposerSheetState extends State<EventComposerSheet> {
                 color: AppColors.textMuted(context),
               ),
               hintText: 'Assembly hall',
-              border: const OutlineInputBorder(
-                borderRadius: BorderRadius.zero,
-              ),
+              border: const OutlineInputBorder(borderRadius: BorderRadius.zero),
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
@@ -450,10 +451,11 @@ class _ContactPickerSheetState extends State<ContactPickerSheet> {
               hintStyle: AppTypography.bodyMedium.copyWith(
                 color: AppColors.textMuted(context),
               ),
-              prefixIcon: Icon(Icons.search, color: AppColors.textPrimary(context)),
-              border: const OutlineInputBorder(
-                borderRadius: BorderRadius.zero,
+              prefixIcon: Icon(
+                Icons.search,
+                color: AppColors.textPrimary(context),
               ),
+              border: const OutlineInputBorder(borderRadius: BorderRadius.zero),
             ),
             onChanged: (value) => setState(() => _query = value),
           ),
@@ -482,7 +484,10 @@ class _ContactPickerSheetState extends State<ContactPickerSheet> {
                 return Container(
                   decoration: BoxDecoration(
                     border: Border(
-                      bottom: BorderSide(color: AppColors.border(context), width: 0.5),
+                      bottom: BorderSide(
+                        color: AppColors.border(context),
+                        width: 0.5,
+                      ),
                     ),
                   ),
                   child: ListTile(
@@ -495,7 +500,10 @@ class _ContactPickerSheetState extends State<ContactPickerSheet> {
                       height: 40,
                       decoration: BoxDecoration(
                         color: AppColors.textPrimary(context),
-                        border: Border.all(color: AppColors.textPrimary(context), width: 1),
+                        border: Border.all(
+                          color: AppColors.textPrimary(context),
+                          width: 1,
+                        ),
                       ),
                       alignment: Alignment.center,
                       child: Text(
@@ -515,8 +523,9 @@ class _ContactPickerSheetState extends State<ContactPickerSheet> {
                     ),
                     subtitle: Text(
                       (role.isEmpty
-                          ? contact.role
-                          : UserRoleDisplay.name(role.first)).toUpperCase(),
+                              ? contact.role
+                              : UserRoleDisplay.name(role.first))
+                          .toUpperCase(),
                       style: AppTypography.bodySmall.copyWith(
                         color: AppColors.textMuted(context),
                         fontWeight: FontWeight.w700,
