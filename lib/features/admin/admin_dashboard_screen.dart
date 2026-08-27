@@ -77,12 +77,12 @@ class _MobileHome extends StatelessWidget {
             _ContextRow(user: user),
             const SizedBox(height: 32),
             _AttentionSection(user: user),
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
+            const _PinnedSection(),
+            const SizedBox(height: 24),
             _GlanceSection(user: user),
             const SizedBox(height: 32),
             _ContinueWorking(user: user),
-            const SizedBox(height: 32),
-            _PinnedSection(user: user),
           ],
         ),
       ),
@@ -119,23 +119,12 @@ class _WideHome extends StatelessWidget {
               _ContextRow(user: user),
               const SizedBox(height: 28),
               _AttentionSection(user: user),
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
+              const _PinnedSection(),
+              const SizedBox(height: 24),
               _GlanceSection(user: user),
               const SizedBox(height: 28),
-              if (isDesktop)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(flex: 3, child: _ContinueWorking(user: user)),
-                    const SizedBox(width: 24),
-                    Expanded(flex: 4, child: _PinnedSection(user: user)),
-                  ],
-                )
-              else ...[
-                _ContinueWorking(user: user),
-                const SizedBox(height: 28),
-                _PinnedSection(user: user),
-              ],
+              _ContinueWorking(user: user),
             ],
           ),
         ),
@@ -545,58 +534,23 @@ class _ActionCard extends StatelessWidget {
 }
 
 class _PinnedSection extends StatelessWidget {
-  const _PinnedSection({required this.user});
-  final UserEntity user;
+  const _PinnedSection();
+
+  static const _shortcutIds = ['school', 'attendance'];
+
   @override
-  Widget build(
-    BuildContext context,
-  ) => StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-    stream: FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.id)
-        .collection('dashboard_preferences')
-        .doc(user.schoolId)
-        .snapshots(),
-    builder: (context, snapshot) {
-      final ids =
-          ((snapshot.data?.data()?['pinned'] as List?)
-                      ?.whereType<String>()
-                      .toList() ??
-                  _defaults(user))
-              .where(
-                (id) =>
-                    _catalog.containsKey(id) && _allowed(_catalog[id]!, user),
-              )
-              .take(4)
-              .toList();
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
         children: [
-          Row(
-            children: [
-              Text(
-                'Pinned',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () => _editPins(context, user, ids),
-                child: Text('Edit', style: TextStyle(color: _ink(context))),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (ids.isEmpty)
-            const Text('Pin frequently used permitted modules.')
-          else
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: ids.map((id) => _Pin(shortcut: _catalog[id]!)).toList(),
-            ),
+          for (var index = 0; index < _shortcutIds.length; index++) ...[
+            if (index > 0) const SizedBox(width: 8),
+            Expanded(child: _Pin(shortcut: _catalog[_shortcutIds[index]]!)),
+          ],
         ],
-      );
-    },
+      ),
+    ],
   );
 }
 
@@ -605,98 +559,29 @@ class _Pin extends StatelessWidget {
   final _Shortcut shortcut;
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 180,
+    height: 92,
     child: OutlinedButton(
       onPressed: () => context.push(shortcut.route),
       style: OutlinedButton.styleFrom(
         foregroundColor: _ink(context),
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.all(12),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.all(8),
         side: BorderSide(color: _ink(context)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      child: Row(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(shortcut.icon, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              shortcut.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13),
-            ),
+          const SizedBox(height: 6),
+          Text(
+            shortcut.label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           ),
-          const Icon(Icons.chevron_right, size: 16),
         ],
-      ),
-    ),
-  );
-}
-
-Future<void> _editPins(
-  BuildContext context,
-  UserEntity user,
-  List<String> selected,
-) async {
-  var values = List<String>.of(selected);
-  await showModalBottomSheet<void>(
-    context: context,
-    builder: (sheetContext) => StatefulBuilder(
-      builder: (context, setState) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Edit pinned shortcuts',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-              ),
-              ..._catalog.entries
-                  .where((entry) => _allowed(entry.value, user))
-                  .map(
-                    (entry) => CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      activeColor: _ink(context),
-                      value: values.contains(entry.key),
-                      title: Text(entry.value.label),
-                      onChanged: (checked) => setState(() {
-                        if (checked == true && values.length < 4) {
-                          values.add(entry.key);
-                        }
-                        if (checked == false) {
-                          values.remove(entry.key);
-                        }
-                      }),
-                    ),
-                  ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(user.id)
-                        .collection('dashboard_preferences')
-                        .doc(user.schoolId)
-                        .set({
-                          'schoolId': user.schoolId,
-                          'pinned': values,
-                          'updatedAt': FieldValue.serverTimestamp(),
-                        }, SetOptions(merge: true));
-                    if (context.mounted) Navigator.pop(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _ink(context),
-                    foregroundColor: _paper(context),
-                  ),
-                  child: const Text('Save'),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     ),
   );
@@ -828,19 +713,19 @@ class _Shortcut {
 }
 
 const _catalog = <String, _Shortcut>{
-  'learners': _Shortcut(
-    'learners',
-    'Learners',
-    'Manage learners and admissions',
-    Icons.people_outline,
-    '/staff/admin/students',
+  'work': _Shortcut(
+    'work',
+    'Work',
+    'Review tasks and approvals',
+    Icons.assignment_outlined,
+    '/staff/work',
   ),
-  'staff': _Shortcut(
-    'staff',
-    'Staff',
-    'Manage staff',
-    Icons.badge_outlined,
-    '/staff/admin/users',
+  'parents': _Shortcut(
+    'parents',
+    'Parents',
+    'Find parent and guardian contacts',
+    Icons.family_restroom_outlined,
+    '/staff/admin/students',
   ),
   'attendance': _Shortcut(
     'attendance',
@@ -858,16 +743,12 @@ const _catalog = <String, _Shortcut>{
   ),
   'school': _Shortcut(
     'school',
-    'Finish school setup',
-    'Complete recommended setup tasks',
+    'School structure',
+    'Manage school structure and setup',
     Icons.school_outlined,
     '/staff/admin/structure',
   ),
 };
-List<String> _defaults(UserEntity user) =>
-    _catalog.keys.where((id) => _allowed(_catalog[id]!, user)).take(4).toList();
-bool _allowed(_Shortcut shortcut, UserEntity user) =>
-    shortcut.id != 'finance' || _canSeeFinance(user);
 bool _canSeeFinance(UserEntity user) => user.roles.any(
   (role) =>
       role == UserRole.schoolAdmin ||

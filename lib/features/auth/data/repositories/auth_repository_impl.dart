@@ -159,6 +159,11 @@ class AuthRepositoryImpl implements AuthRepository {
     String? campusId,
     String? employmentType,
     DateTime? dateJoined,
+    String? idempotencyKey,
+    bool forcePasswordChange = false,
+    bool sendLoginDetailsViaEmail = false,
+    Map<String, dynamic>? staffData,
+    Map<String, dynamic>? roleConfigs,
   }) async {
     try {
       final temporaryPassword = await remoteDataSource.createStaffAccount(
@@ -175,6 +180,11 @@ class AuthRepositoryImpl implements AuthRepository {
         campusId: campusId,
         employmentType: employmentType,
         dateJoined: dateJoined,
+        idempotencyKey: idempotencyKey,
+        forcePasswordChange: forcePasswordChange,
+        sendLoginDetailsViaEmail: sendLoginDetailsViaEmail,
+        staffData: staffData,
+        roleConfigs: roleConfigs,
       );
       return Right(temporaryPassword);
     } on AuthFailure catch (e) {

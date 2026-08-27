@@ -1655,7 +1655,7 @@ class _FinanceStepState extends State<_FinanceStep> {
         else if (match == null)
           _billingPendingCard(context)
         else
-          _matchedPlanCard(context, match),
+          _matchedPlanCard(context, state, match),
         const SizedBox(height: 20),
         const SectionHeader(title: 'Scholarship / Discount'),
         if (state.hasScholarshipAward)
@@ -1719,7 +1719,13 @@ class _FinanceStepState extends State<_FinanceStep> {
     );
   }
 
-  Widget _matchedPlanCard(BuildContext context, MatchedFeePlan match) {
+  Widget _matchedPlanCard(
+    BuildContext context,
+    EnrollmentSetupWizardState state,
+    MatchedFeePlan match,
+  ) {
+    final requiredLines = match.lines.where((l) => l.required);
+    final optionalLines = match.lines.where((l) => !l.required);
     return AppCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1733,7 +1739,7 @@ class _FinanceStepState extends State<_FinanceStep> {
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
-            for (final line in match.lines)
+            for (final line in requiredLines)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
@@ -1744,6 +1750,35 @@ class _FinanceStepState extends State<_FinanceStep> {
                   ],
                 ),
               ),
+            if (optionalLines.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Optional add-ons',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              for (final line in optionalLines)
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  dense: true,
+                  value: state.selectedFeeAddOnIds.contains(line.chargeId),
+                  title: Text(line.name),
+                  subtitle: Text(CurrencyFormatter.ugx(line.amountUgx.toDouble())),
+                  onChanged: (checked) {
+                    final updated = Set<String>.from(state.selectedFeeAddOnIds);
+                    if (checked ?? false) {
+                      updated.add(line.chargeId);
+                    } else {
+                      updated.remove(line.chargeId);
+                    }
+                    context.read<EnrollmentSetupWizardBloc>().add(
+                      SelectedFeeAddOnsUpdated(updated),
+                    );
+                  },
+                ),
+            ],
             const Divider(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1753,7 +1788,7 @@ class _FinanceStepState extends State<_FinanceStep> {
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 Text(
-                  CurrencyFormatter.ugx(match.totalUgx.toDouble()),
+                  CurrencyFormatter.ugx(state.billedFeeTotalUgx.toDouble()),
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ],

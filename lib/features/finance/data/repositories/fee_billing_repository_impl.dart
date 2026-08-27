@@ -85,6 +85,7 @@ class FeeBillingRepositoryImpl implements FeeBillingRepository {
     required String studentId,
     required String planId,
     String? idempotencyKey,
+    List<String> selectedOptionalLineIds = const [],
   }) async {
     try {
       final callable = functions.httpsCallable('issueStudentBill');
@@ -93,6 +94,7 @@ class FeeBillingRepositoryImpl implements FeeBillingRepository {
         'studentId': studentId,
         'planId': planId,
         'idempotencyKey': idempotencyKey ?? '${studentId}_$planId',
+        'selectedOptionalLineIds': selectedOptionalLineIds,
       });
       return Right(result.data['billId'] as String);
     } on FirebaseFunctionsException catch (e) {

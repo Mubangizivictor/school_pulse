@@ -12,6 +12,7 @@ admin.initializeApp();
 const supportAuditFunctions = require("./support_audit")({ admin, onCall, HttpsError });
 const enrollmentAuditFunctions = require("./enrollment_audit")({ admin, onCall, HttpsError });
 Object.assign(exports, require("./student_fee_billing")({ admin, onCall, HttpsError }));
+Object.assign(exports, require("./staff_payroll_structure")({ admin, onCall, HttpsError }));
 
 /**
  * Enqueue a templated transactional email for the `public_functions`
@@ -470,9 +471,38 @@ exports.directEnrolLearner = onCall(async (request) => {
     audit("guardian_changed", { count: guardians.length });
     if (overrideReason) audit("guardian_override", { reason: overrideReason });
     for (const doc of docs) audit("document_uploaded", { documentId: doc.id, name: doc.name });
-    return { studentId, studentNumber, status, alreadyEnrolled: false };
+    return { studentId, studentNumber, status, alreadyEnrolled: false, schoolId: draft.schoolId };
   });
-  return response;
+
+  // Best-effort, outside the enrolment transaction: a billing hiccup must
+  // never roll back an already-created student. Mirrors the same pattern in
+  // the 12-step enrolment wizard's activation flow (EnrollmentSetupWizardBloc).
+  let billingWarning = null;
+  const feePlanId = String(request.data?.feePlanId || "");
+  if (!response.alreadyEnrolled && feePlanId) {
+    try {
+      const selectedOptionalLineIds = Array.isArray(request.data?.selectedOptionalLineIds)
+        ? request.data.selectedOptionalLineIds : [];
+      const billResult = await exports.issueStudentBillCore({
+        schoolId: response.schoolId, studentId: response.studentId, planId: feePlanId,
+        idempotencyKey: `${response.studentId}_${feePlanId}`,
+        selectedOptionalLineIds, actorUid: request.auth.uid,
+      });
+      const bursary = request.data?.bursary;
+      if (bursary && Number(bursary.amount) > 0) {
+        await exports.applyBillAdjustmentCore({
+          schoolId: response.schoolId, studentId: response.studentId, billId: billResult.billId,
+          type: "scholarship", reason: String(bursary.reason || "Bursary awarded at enrolment"),
+          amountUgx: bursary.isPercentage ? undefined : Math.round(Number(bursary.amount)),
+          percentage: bursary.isPercentage ? Number(bursary.amount) : undefined,
+          actorUid: request.auth.uid,
+        });
+      }
+    } catch (e) {
+      billingWarning = e.message || "Billing could not be issued yet. Retry from the student account.";
+    }
+  }
+  return { ...response, billingWarning };
 });
 
 // Staff code shape mirrors the student code convention (prefix + year +
@@ -504,6 +534,10 @@ exports.createStaffAccount = onCall(async (request) => {
   const {
     name, email, assignedClass, subjects, academicYearId,
     departmentId, designationId, campusId, employmentType, dateJoined,
+    gender, phoneNumber, alternatePhone, address, nationality,
+    emergencyContact, roleConfigs, idempotencyKey,
+    forcePasswordChange = false, sendLoginDetailsViaEmail = false,
+    selectedPayComponentIds,
   } = request.data || {};
   // Accept the current multi-role `roles` array, falling back to a legacy
   // singular `role` from any older client build still calling this.
@@ -564,6 +598,25 @@ exports.createStaffAccount = onCall(async (request) => {
   }
 
   const db = admin.firestore();
+  if (typeof idempotencyKey !== "string" || !/^[A-Za-z0-9_-]{16,128}$/.test(idempotencyKey)) {
+    throw new HttpsError("invalid-argument", "A valid enrolment request key is required.");
+  }
+  // Stored before duplicate-email detection. A completed retry returns this
+  // result and cannot create another Auth user, profile, assignment or email.
+  const requestRef = db.collection("schools").doc(schoolId)
+    .collection("staff_enrolment_requests").doc(idempotencyKey);
+  const priorRequest = await requestRef.get();
+  if (priorRequest.exists && priorRequest.data().status === "completed") {
+    return { uid: priorRequest.data().uid, staffCode: priorRequest.data().staffCode,
+      setupEmailQueued: priorRequest.data().setupEmailQueued === true, replayed: true };
+  }
+  if (priorRequest.exists && priorRequest.data().uid) {
+    const existingProfile = await db.collection("users").doc(priorRequest.data().uid).get();
+    if (existingProfile.exists) {
+      return { uid: priorRequest.data().uid, staffCode: existingProfile.data().staffCode,
+        setupEmailQueued: priorRequest.data().setupEmailQueued === true, replayed: true };
+    }
+  }
 
   // Duplicate-email guard ahead of Auth user creation: auth/email-already-
   // exists is still handled below as a fallback (e.g. a race, or an Auth
@@ -578,6 +631,21 @@ exports.createStaffAccount = onCall(async (request) => {
     .get();
   if (!existingByEmail.empty) {
     throw new HttpsError("already-exists", "An account with this email already exists.");
+  }
+
+  const campusDocs = await db.collection("campuses").where("schoolId", "==", schoolId).where("isActive", "==", true).get();
+  let resolvedCampusId = campusId || null;
+  if (campusDocs.size === 1) resolvedCampusId = campusDocs.docs[0].id;
+  if (campusDocs.size > 1 && !resolvedCampusId) {
+    throw new HttpsError("invalid-argument", "Select a campus for this school.");
+  }
+  if (resolvedCampusId && !campusDocs.docs.some((doc) => doc.id === resolvedCampusId)) {
+    throw new HttpsError("invalid-argument", "Selected campus does not belong to this school.");
+  }
+  if (!designationId) throw new HttpsError("invalid-argument", "Designation is required.");
+  const designation = await db.collection("staff_designations").doc(designationId).get();
+  if (!designation.exists || designation.data().schoolId !== schoolId) {
+    throw new HttpsError("invalid-argument", "Selected designation does not belong to this school.");
   }
 
   // The canonical staff_role_assignments row is the only thing the teacher
@@ -664,6 +732,10 @@ exports.createStaffAccount = onCall(async (request) => {
       password: temporaryPassword,
       displayName: name.trim(),
     });
+    // Persist the created uid before any Firestore batch/email work. This
+    // turns a network retry after Auth success into a recoverable replay.
+    await requestRef.set({ status: "auth_created", uid: userRecord.uid,
+      createdAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
   } catch (err) {
     if (err.code === "auth/email-already-exists") {
       throw new HttpsError("already-exists", "An account with this email already exists.");
@@ -680,16 +752,24 @@ exports.createStaffAccount = onCall(async (request) => {
       schoolId,
       staffCode,
       studentIds: [],
-      mustChangePassword: true,
+      mustChangePassword: forcePasswordChange === true,
+      setupRequired: forcePasswordChange === true,
+      sendLoginDetailsViaEmail: sendLoginDetailsViaEmail === true,
       createdBy: auth.uid,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       ...(assignedClass ? { assignedClass } : {}),
       ...(Array.isArray(subjects) ? { subjects } : {}),
       ...(departmentId ? { departmentId } : {}),
       ...(designationId ? { designationId } : {}),
-      ...(campusId ? { campusId } : {}),
+      ...(resolvedCampusId ? { campusId: resolvedCampusId } : {}),
       ...(employmentType ? { employmentType } : {}),
       ...(dateJoined ? { dateJoined: new Date(dateJoined) } : {}),
+      ...(gender ? { gender } : {}),
+      ...(phoneNumber ? { phoneNumber } : {}),
+      ...(alternatePhone ? { alternatePhone } : {}),
+      ...(address ? { address } : {}),
+      ...(nationality ? { nationality } : {}),
+      ...(emergencyContact && typeof emergencyContact === "object" ? { emergencyContact } : {}),
     };
     const batch = db.batch();
     batch.set(db.collection("users").doc(userRecord.uid), userData);
@@ -764,6 +844,7 @@ exports.createStaffAccount = onCall(async (request) => {
       if (!responsibilityType || responsibilityType === "classTeacher" || responsibilityType === "subjectTeacher") {
         continue;
       }
+      const config = roleConfigs && roleConfigs[role] || {};
       batch.set(assignmentsRef.doc(), {
         schoolId,
         staffId: userRecord.uid,
@@ -775,6 +856,13 @@ exports.createStaffAccount = onCall(async (request) => {
         permissionScope: {
           permissions: RESPONSIBILITY_DEFAULT_PERMISSIONS[responsibilityType] || [],
           termIds: [],
+          // Omitted means unrestricted; an explicitly supplied empty/null
+          // scope is retained as configured rather than widened silently.
+          ...(Object.prototype.hasOwnProperty.call(config, "departmentId") ? { departmentId: config.departmentId } : {}),
+          ...(Object.prototype.hasOwnProperty.call(config, "facilityId") ? { facilityId: config.facilityId } : {}),
+          ...(Object.prototype.hasOwnProperty.call(config, "routeId") ? { routeId: config.routeId } : {}),
+          ...(Object.prototype.hasOwnProperty.call(config, "dormitoryWing") ? { dormitoryWing: config.dormitoryWing } : {}),
+          ...(Object.prototype.hasOwnProperty.call(config, "approvalScope") ? { approvalScope: config.approvalScope } : {}),
         },
         assignedBy: auth.uid,
         assignedAt: now,
@@ -790,20 +878,55 @@ exports.createStaffAccount = onCall(async (request) => {
     throw new HttpsError("internal", err.message || "Failed to save the staff profile.");
   }
 
-  // Best-effort: the account exists and is usable even if this email never
-  // sends (the temp password is also returned to the caller/admin UI).
-  await enqueueTransactionalEmail({
-    eventId: `staff_account_created_${userRecord.uid}`,
-    templateId: "staff_account_created",
-    to: email.trim(),
-    data: {
-      schoolName: schoolDoc.exists ? (schoolDoc.data().name || "") : "",
-      email: email.trim(),
-      roleLabel: roles[0],
-    },
-  }).catch((err) => console.error("staff_account_created email enqueue failed", userRecord.uid, err));
+  let setupEmailQueued = false;
+  if (sendLoginDetailsViaEmail) {
+    try {
+      const setupLink = await admin.auth().generatePasswordResetLink(email.trim());
+      await enqueueTransactionalEmail({
+        eventId: `staff_setup_${schoolId}_${idempotencyKey}`,
+        templateId: "staff_account_created",
+        to: email.trim(),
+        data: { schoolName: schoolDoc.exists ? (schoolDoc.data().name || "") : "", roleLabel: roles[0], setupLink, email: email.trim() },
+      });
+      setupEmailQueued = true;
+    } catch (err) {
+      console.error("staff setup email enqueue failed", userRecord.uid, err);
+    }
+  }
+  await requestRef.set({ status: "completed", uid: userRecord.uid, staffCode,
+    setupEmailQueued, emailQueuedAt: setupEmailQueued ? admin.firestore.FieldValue.serverTimestamp() : null,
+    createdAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 
-  return { uid: userRecord.uid, temporaryPassword };
+  // Best-effort, outside the staff-creation transaction: a pay-structure
+  // lookup hiccup must never roll back an already-created staff account.
+  // Mirrors the same pattern in directEnrolLearner's fee-billing hook.
+  // Persists which optional pay components this staff member opted into
+  // (e.g. responsibility allowance) so the existing payroll module
+  // (functions has no separate "issue pay" callable yet - see
+  // lib/features/hr/) can read them back when generating a pay run.
+  if (designationId) {
+    try {
+      const structures = await db.collection(`schools/${schoolId}/salary_structures`)
+        .where("status", "==", "published")
+        .where("selector.designationId", "==", designationId)
+        .limit(1)
+        .get();
+      if (!structures.empty) {
+        const structure = structures.docs[0].data();
+        await db.doc(`users/${userRecord.uid}`).set({
+          payStructure: {
+            structureId: structures.docs[0].id,
+            versionId: structure.currentVersionId,
+            selectedOptionalComponentIds: Array.isArray(selectedPayComponentIds) ? selectedPayComponentIds : [],
+          },
+        }, { merge: true });
+      }
+    } catch (err) {
+      console.error("staff pay-structure lookup failed", userRecord.uid, err);
+    }
+  }
+
+  return { uid: userRecord.uid, staffCode, setupEmailQueued };
 });
 
 // Resets a staff member's Firebase Auth password to a new random temporary
@@ -1091,13 +1214,21 @@ exports.recordSecurityLoginFailure = onCall(async (request) => {
   const schoolId = user.data().schoolId;
   if (!schoolId) return { recorded: true };
   const events = db.collection("schools").doc(schoolId).collection("security_events");
-  await events.add({ institutionId: schoolId, schoolId, userId: user.id, loginIdentifierHash: hash, success: false, failureReasonCategory: "authentication_failed", type: "Login failure", riskLevel: "low", timestamp: admin.firestore.FieldValue.serverTimestamp() });
+  // Imported from the dedicated firestore submodule rather than read as
+  // `admin.firestore.FieldValue`: under `firebase emulators:start`,
+  // `admin.firestore` (the static attached to the `firestore()` accessor
+  // function) has been observed to have no own properties at all, even
+  // though `admin.firestore()` itself works - so the inline property read
+  // throws "Cannot read properties of undefined" (repros deterministically
+  // in this multi-codebase project's emulator, never seen in production).
+  const { FieldValue } = require("firebase-admin/firestore");
+  await events.add({ institutionId: schoolId, schoolId, userId: user.id, loginIdentifierHash: hash, success: false, failureReasonCategory: "authentication_failed", type: "Login failure", riskLevel: "low", timestamp: FieldValue.serverTimestamp() });
   const since = admin.firestore.Timestamp.fromMillis(Date.now() - 15 * 60 * 1000);
   const recent = await events.where("userId", "==", user.id).where("type", "==", "Login failure").where("timestamp", ">=", since).get();
   if (recent.size >= 5) {
     await admin.auth().updateUser(user.id, { disabled: true });
-    await user.ref.set({ isActive: false, securityStatus: "locked", lockedAt: admin.firestore.FieldValue.serverTimestamp(), lockReason: "Repeated failed login attempts" }, { merge: true });
-    await events.add({ institutionId: schoolId, schoolId, userId: user.id, type: "Account locked", riskLevel: "high", reason: "Five failed logins within 15 minutes", timestamp: admin.firestore.FieldValue.serverTimestamp() });
+    await user.ref.set({ isActive: false, securityStatus: "locked", lockedAt: FieldValue.serverTimestamp(), lockReason: "Repeated failed login attempts" }, { merge: true });
+    await events.add({ institutionId: schoolId, schoolId, userId: user.id, type: "Account locked", riskLevel: "high", reason: "Five failed logins within 15 minutes", timestamp: FieldValue.serverTimestamp() });
   }
   return { recorded: true };
 });

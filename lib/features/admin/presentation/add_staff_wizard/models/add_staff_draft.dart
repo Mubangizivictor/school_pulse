@@ -54,6 +54,11 @@ class AddStaffDraft {
   String alternatePhone = '';
   String address = '';
   String nationality = '';
+  String emergencyContactName = '';
+  String emergencyContactRelationship = '';
+  String emergencyContactPhone = '';
+  String emergencyContactAlternatePhone = '';
+  String? idempotencyKey;
 
   // Step 5: Employment Information
   String employmentType = 'Permanent';
@@ -67,6 +72,14 @@ class AddStaffDraft {
   String? designationId;
   String? campusId;
   DateTime dateJoined = DateTime.now();
+
+  // Pay Structure step (inserted right after Employment Information, since
+  // the matched salary structure is keyed on designationId set there).
+  // chargeIds of the matched structure's optional (non-required) pay
+  // components the admin opted into for this staff member, e.g.
+  // responsibility allowance. Required components are always paid and are
+  // never part of this set.
+  Set<String> selectedPayComponentIds = {};
 
   // Step 6: Roles
   Set<UserRole> selectedRoles = {};
@@ -107,6 +120,11 @@ class AddStaffDraft {
     'alternatePhone': alternatePhone,
     'address': address,
     'nationality': nationality,
+    'emergencyContactName': emergencyContactName,
+    'emergencyContactRelationship': emergencyContactRelationship,
+    'emergencyContactPhone': emergencyContactPhone,
+    'emergencyContactAlternatePhone': emergencyContactAlternatePhone,
+    'idempotencyKey': idempotencyKey,
     'employmentType': employmentType,
     'department': department,
     'departmentId': departmentId,
@@ -114,6 +132,7 @@ class AddStaffDraft {
     'designationId': designationId,
     'campusId': campusId,
     'dateJoined': dateJoined.toIso8601String(),
+    'selectedPayComponentIds': selectedPayComponentIds.toList(),
     'selectedRoles': selectedRoles.map((r) => r.name).toList(),
     'roleConfigs': roleConfigs.map((k, v) => MapEntry(k.name, v.toJson())),
     'forcePasswordChange': forcePasswordChange,
@@ -131,6 +150,13 @@ class AddStaffDraft {
       ..alternatePhone = json['alternatePhone'] as String? ?? ''
       ..address = json['address'] as String? ?? ''
       ..nationality = json['nationality'] as String? ?? ''
+      ..emergencyContactName = json['emergencyContactName'] as String? ?? ''
+      ..emergencyContactRelationship =
+          json['emergencyContactRelationship'] as String? ?? ''
+      ..emergencyContactPhone = json['emergencyContactPhone'] as String? ?? ''
+      ..emergencyContactAlternatePhone =
+          json['emergencyContactAlternatePhone'] as String? ?? ''
+      ..idempotencyKey = json['idempotencyKey'] as String?
       ..employmentType = json['employmentType'] as String? ?? 'Permanent'
       ..department = json['department'] as String? ?? ''
       ..departmentId = json['departmentId'] as String?
@@ -142,7 +168,12 @@ class AddStaffDraft {
           : DateTime.now()
       ..forcePasswordChange = json['forcePasswordChange'] as bool? ?? true
       ..sendLoginDetailsViaEmail =
-          json['sendLoginDetailsViaEmail'] as bool? ?? true;
+          json['sendLoginDetailsViaEmail'] as bool? ?? true
+      ..selectedPayComponentIds =
+          (json['selectedPayComponentIds'] as List<dynamic>?)
+              ?.cast<String>()
+              .toSet() ??
+          {};
 
     final roleNames =
         (json['selectedRoles'] as List<dynamic>?)?.cast<String>() ?? [];

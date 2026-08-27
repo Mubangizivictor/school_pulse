@@ -144,6 +144,10 @@ class _Step04EmploymentInfoState extends State<Step04EmploymentInfo> {
                         .toList()
                       ..sort((a, b) => a.order.compareTo(b.order));
                 if (campuses.length <= 1) {
+                  if (campuses.length == 1 &&
+                      draft.campusId != campuses.first.id) {
+                    draft.campusId = campuses.first.id;
+                  }
                   // No meaningful choice to make for a single-campus school.
                   return const SizedBox.shrink();
                 }
@@ -154,7 +158,7 @@ class _Step04EmploymentInfoState extends State<Step04EmploymentInfo> {
                         ? draft.campusId
                         : null,
                     decoration: const InputDecoration(
-                      labelText: 'Campus',
+                      labelText: 'Campus *',
                       prefixIcon: Icon(Icons.location_city_outlined),
                     ),
                     items: campuses
@@ -169,7 +173,51 @@ class _Step04EmploymentInfoState extends State<Step04EmploymentInfo> {
                       draft.campusId = v;
                       controller.notifyDraftChanged();
                     },
+                    // Multiple active campuses means there's a real choice to
+                    // make; block submission until one is explicitly picked
+                    // rather than silently leaving campusId null.
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Required' : null,
                   ),
+                );
+              },
+            ),
+            const SizedBox(height: 14),
+            StreamBuilder<List<StaffDesignation>>(
+              stream: _structureRepository.watchDesignations(schoolId),
+              builder: (context, snapshot) {
+                final designations =
+                    (snapshot.data ?? const [])
+                        .where((d) => !d.isArchived)
+                        .toList()
+                      ..sort((a, b) => a.name.compareTo(b.name));
+                return DropdownButtonFormField<String>(
+                  initialValue:
+                      designations.any((d) => d.id == draft.designationId)
+                      ? draft.designationId
+                      : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Designation *',
+                    prefixIcon: Icon(Icons.assignment_ind_outlined),
+                  ),
+                  items: designations
+                      .map(
+                        (d) =>
+                            DropdownMenuItem(value: d.id, child: Text(d.name)),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    final picked = designations
+                        .where((d) => d.id == value)
+                        .firstOrNull;
+                    if (picked != null) {
+                      draft.designationId = picked.id;
+                      draft.designation = picked.name;
+                      controller.notifyDraftChanged();
+                    }
+                  },
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Required' : null,
                 );
               },
             ),

@@ -1988,6 +1988,23 @@ service cloud.firestore {
     }
 
     // ---- SaaS Owner / Platform layer -----------------------------------
+    // Public hostname directory. It contains a deliberately minimal branding
+    // projection only; do not add contact, subscription, users, or arbitrary
+    // school fields here. A portal boot performs one direct document read.
+    match /portal_domains/{hostname} {
+      allow get: if resource.data.status == 'active';
+      allow list, create, update, delete: if false;
+    }
+    // Requests include ownership/audit data and are never public. School
+    // admins can read only requests for their own school; activation is a
+    // callable-function/Admin-SDK operation, not a client write.
+    match /portal_domain_requests/{hostname} {
+      allow read: if isSuperAdmin() || (isSignedIn() && resource.data.schoolId == myUser().schoolId);
+      allow write: if false;
+    }
+    match /portal_slug_reservations/{slug} {
+      allow read, write: if false;
+    }
     // These collections back the super_admin feature (school registry,
     // billing, audit trail). Only the seeded platform-owner account may
     // touch them; no school-scoped role gets any access, by design - this

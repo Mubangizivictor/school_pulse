@@ -1,4 +1,13 @@
 const admin = require('firebase-admin');
+// `admin.firestore.FieldValue` (the static attached to the `firestore()`
+// accessor function) has been observed to be missing under
+// `firebase emulators:start` specifically - `admin.firestore` resolves to a
+// bare function with no own properties there, even though `admin.firestore()`
+// itself works fine (repros deterministically in this multi-codebase
+// project, not in a plain `node -e` require of this module; never seen in
+// production). Importing FieldValue from the dedicated firestore submodule
+// sidesteps relying on that static ever being attached.
+const { FieldValue } = require('firebase-admin/firestore');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
@@ -27,7 +36,7 @@ async function ownerRateLimit(ownerUid, bucket, limit) {
       count: count + 1,
       ownerUid,
       bucket,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
     return true;
   });
@@ -82,7 +91,7 @@ async function recordFailure(ownerUid, bucket) {
       bucket,
       failureCount,
       cooldownUntilMs: Date.now() + cooldownMs,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
   });
 }
@@ -93,7 +102,7 @@ async function recordSuccess(ownerUid, bucket) {
     bucket,
     failureCount: 0,
     cooldownUntilMs: 0,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
 }
 

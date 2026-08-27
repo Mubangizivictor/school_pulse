@@ -41,6 +41,10 @@ class _Step03ContactInfoState extends State<Step03ContactInfo> {
   late final TextEditingController _altPhone;
   late final TextEditingController _address;
   late final TextEditingController _nationality;
+  late final TextEditingController _emergencyName;
+  late final TextEditingController _emergencyRelationship;
+  late final TextEditingController _emergencyPhone;
+  late final TextEditingController _emergencyAltPhone;
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -54,6 +58,14 @@ class _Step03ContactInfoState extends State<Step03ContactInfo> {
     _nationality = TextEditingController(
       text: draft.nationality.isEmpty ? 'Ugandan' : draft.nationality,
     );
+    _emergencyName = TextEditingController(text: draft.emergencyContactName);
+    _emergencyRelationship = TextEditingController(
+      text: draft.emergencyContactRelationship,
+    );
+    _emergencyPhone = TextEditingController(text: draft.emergencyContactPhone);
+    _emergencyAltPhone = TextEditingController(
+      text: draft.emergencyContactAlternatePhone,
+    );
   }
 
   @override
@@ -63,6 +75,10 @@ class _Step03ContactInfoState extends State<Step03ContactInfo> {
     _altPhone.dispose();
     _address.dispose();
     _nationality.dispose();
+    _emergencyName.dispose();
+    _emergencyRelationship.dispose();
+    _emergencyPhone.dispose();
+    _emergencyAltPhone.dispose();
     super.dispose();
   }
 
@@ -85,6 +101,11 @@ class _Step03ContactInfoState extends State<Step03ContactInfo> {
           draft.alternatePhone = _altPhone.text.trim();
           draft.address = _address.text.trim();
           draft.nationality = _nationality.text.trim();
+          draft.emergencyContactName = _emergencyName.text.trim();
+          draft.emergencyContactRelationship = _emergencyRelationship.text
+              .trim();
+          draft.emergencyContactPhone = _emergencyPhone.text.trim();
+          draft.emergencyContactAlternatePhone = _emergencyAltPhone.text.trim();
           controller.next();
         },
       ),
@@ -113,6 +134,45 @@ class _Step03ContactInfoState extends State<Step03ContactInfo> {
                 }
                 return null;
               },
+            ),
+            const SizedBox(height: 22),
+            const Text(
+              'Emergency Contact (optional)',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: _emergencyName,
+              decoration: const InputDecoration(labelText: 'Name'),
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _emergencyRelationship,
+              decoration: const InputDecoration(labelText: 'Relationship'),
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _emergencyPhone,
+              keyboardType: TextInputType.phone,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(_phoneCharPattern),
+              ],
+              decoration: const InputDecoration(labelText: 'Phone'),
+              validator: (v) => (v?.trim().isNotEmpty ?? false)
+                  ? _validatePhone(v, required: false)
+                  : null,
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _emergencyAltPhone,
+              keyboardType: TextInputType.phone,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(_phoneCharPattern),
+              ],
+              decoration: const InputDecoration(labelText: 'Alternative phone'),
+              validator: (v) => (v?.trim().isNotEmpty ?? false)
+                  ? _validatePhone(v, required: false)
+                  : null,
             ),
             const SizedBox(height: 14),
             TextFormField(

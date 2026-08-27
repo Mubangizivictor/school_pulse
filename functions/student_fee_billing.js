@@ -179,14 +179,15 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     };
   });
 
-  api.issueStudentBill = onCall(async (request) => {
-    const data = request.data || {};
-    const schoolId = asText(data.schoolId);
-    const caller = await callerForSchool(request, schoolId);
-    const studentId = asText(data.studentId);
-    const planId = asText(data.planId);
+  // Shared by the `issueStudentBill` callable and other backend flows (e.g.
+  // `directEnrolLearner` in index.js) that need to issue a bill as part of a
+  // larger operation without going through the callable HTTP protocol.
+  async function issueStudentBillCore({ schoolId, studentId, planId, idempotencyKey, selectedOptionalLineIds: rawSelectedIds, actorUid }) {
     if (!studentId || !planId) throw new HttpsError("invalid-argument", "studentId and planId are required.");
-    const billId = asText(data.idempotencyKey, 180) || `${studentId}_${planId}`;
+    const selectedOptionalLineIds = new Set(
+      Array.isArray(rawSelectedIds) ? rawSelectedIds.map((id) => asText(id, 160)) : []
+    );
+    const billId = asText(idempotencyKey, 180) || `${studentId}_${planId}`;
     const studentRef = db.doc(`students/${studentId}`);
     const planRef = db.doc(`schools/${schoolId}/fee_plans/${planId}`);
     const billRef = db.doc(`schools/${schoolId}/student_accounts/${studentId}/bills/${billId}`);
@@ -203,24 +204,48 @@ module.exports = ({ admin, onCall, HttpsError }) => {
       const student = studentSnap.data();
       const selector = version.selector || {};
       if (student.classId !== selector.classId) throw new HttpsError("failed-precondition", "The fee plan does not match the student's class.");
+      const planLines = Array.isArray(version.lines) ? version.lines : [];
+      const validOptionalIds = new Set(planLines.filter((line) => line.required === false).map((line) => line.chargeId));
+      for (const id of selectedOptionalLineIds) {
+        if (!validOptionalIds.has(id)) throw new HttpsError("invalid-argument", "One of the selected fee add-ons is not part of this fee plan.");
+      }
+      const billedLines = planLines.filter((line) => line.required !== false || selectedOptionalLineIds.has(line.chargeId));
+      const billedTotalUgx = billedLines.reduce((sum, line) => sum + line.amountUgx, 0);
       tx.set(billRef, {
         schoolId, studentId, billId, status: "open", currency: "UGX",
         planId, planVersionId: versionRef.id, academicYearId: selector.academicYearId,
         termId: selector.termId, classId: selector.classId,
-        issuedTotalUgx: version.totalUgx, paidTotalUgx: 0, adjustmentTotalUgx: 0,
-        balanceUgx: version.totalUgx, lines: version.lines, issuedAt: serverTime(),
-        issuedBy: caller.uid, createdAt: serverTime(), updatedAt: serverTime(),
+        issuedTotalUgx: billedTotalUgx, paidTotalUgx: 0, adjustmentTotalUgx: 0,
+        balanceUgx: billedTotalUgx, lines: billedLines,
+        selectedOptionalLineIds: Array.from(selectedOptionalLineIds),
+        issuedAt: serverTime(),
+        issuedBy: actorUid, createdAt: serverTime(), updatedAt: serverTime(),
       });
       tx.set(db.doc(`schools/${schoolId}/student_accounts/${studentId}`), {
         schoolId, studentId, currency: "UGX", lastBillId: billId,
-        updatedAt: serverTime(), updatedBy: caller.uid,
+        updatedAt: serverTime(), updatedBy: actorUid,
       }, { merge: true });
       tx.set(db.collection("schools").doc(schoolId).collection("audit_events").doc(), {
-        action: "student_bill_issued", actorId: caller.uid, studentId, billId, planId,
+        action: "student_bill_issued", actorId: actorUid, studentId, billId, planId,
         occurredAt: serverTime(),
       });
     });
     return { billId };
+  }
+  api.issueStudentBillCore = issueStudentBillCore;
+
+  api.issueStudentBill = onCall(async (request) => {
+    const data = request.data || {};
+    const schoolId = asText(data.schoolId);
+    const caller = await callerForSchool(request, schoolId);
+    return issueStudentBillCore({
+      schoolId,
+      studentId: asText(data.studentId),
+      planId: asText(data.planId),
+      idempotencyKey: data.idempotencyKey,
+      selectedOptionalLineIds: data.selectedOptionalLineIds,
+      actorUid: caller.uid,
+    });
   });
 
   // ---------------------------------------------------------------------
@@ -263,27 +288,23 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     return `RCT-${String(next).padStart(6, "0")}`;
   }
 
-  api.applyBillAdjustment = onCall(async (request) => {
-    const data = request.data || {};
-    const schoolId = asText(data.schoolId);
-    const caller = await callerForFinance(request, schoolId);
-    const studentId = asText(data.studentId);
-    const billId = asText(data.billId);
+  // Shared by the `applyBillAdjustment` callable and other backend flows
+  // (e.g. `directEnrolLearner` in index.js applying a bursary awarded during
+  // enrolment) that need to record an adjustment without the callable HTTP
+  // protocol.
+  async function applyBillAdjustmentCore({ schoolId, studentId, billId, type, reason, evidenceReference, amountUgx: rawAmountUgx, percentage: rawPercentage, actorUid }) {
     if (!studentId || !billId) throw new HttpsError("invalid-argument", "studentId and billId are required.");
-    const type = asText(data.type, 40);
     if (!ADJUSTMENT_TYPES.includes(type)) {
       throw new HttpsError("invalid-argument", `type must be one of: ${ADJUSTMENT_TYPES.join(", ")}.`);
     }
-    const reason = asText(data.reason, 500);
     if (!reason) throw new HttpsError("invalid-argument", "reason is required.");
-    const evidenceReference = asText(data.evidenceReference, 500) || null;
-    const hasAmount = data.amountUgx !== undefined && data.amountUgx !== null;
-    const hasPercentage = data.percentage !== undefined && data.percentage !== null;
+    const hasAmount = rawAmountUgx !== undefined && rawAmountUgx !== null;
+    const hasPercentage = rawPercentage !== undefined && rawPercentage !== null;
     if (hasAmount === hasPercentage) {
       throw new HttpsError("invalid-argument", "Provide exactly one of amountUgx or percentage.");
     }
     if (hasPercentage) {
-      const percentage = Number(data.percentage);
+      const percentage = Number(rawPercentage);
       if (!Number.isFinite(percentage) || percentage <= 0 || percentage > 100) {
         throw new HttpsError("invalid-argument", "percentage must be a number between 0 (exclusive) and 100.");
       }
@@ -296,8 +317,8 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     const result = await db.runTransaction(async (tx) => {
       const { billRef, bill } = await loadBillForWrite(tx, schoolId, studentId, billId);
       const amountUgx = hasAmount
-        ? asMoney(data.amountUgx, "amountUgx")
-        : Math.round((Number(data.percentage) / 100) * Number(bill.issuedTotalUgx || 0));
+        ? asMoney(rawAmountUgx, "amountUgx")
+        : Math.round((Number(rawPercentage) / 100) * Number(bill.issuedTotalUgx || 0));
 
       const newAdjustmentTotal = Number(bill.adjustmentTotalUgx || 0) + amountUgx;
       const newBalance = Number(bill.issuedTotalUgx || 0) - newAdjustmentTotal - Number(bill.paidTotalUgx || 0);
@@ -311,21 +332,38 @@ module.exports = ({ admin, onCall, HttpsError }) => {
       const ref = adjustmentRef;
       tx.set(ref, {
         schoolId, studentId, billId, adjustmentId: ref.id, type, amountUgx,
-        percentage: hasPercentage ? Number(data.percentage) : null,
-        reason, evidenceReference,
+        percentage: hasPercentage ? Number(rawPercentage) : null,
+        reason, evidenceReference: evidenceReference || null,
         // approverId is captured server-side from the authenticated caller -
         // never trust a client-supplied approver for who authorized money
         // leaving the books.
-        approverId: caller.uid, createdAt: serverTime(),
+        approverId: actorUid, createdAt: serverTime(),
       });
       tx.update(billRef, {
         adjustmentTotalUgx: newAdjustmentTotal, balanceUgx: newBalance, updatedAt: serverTime(),
       });
       tx.set(db.collection("schools").doc(schoolId).collection("audit_events").doc(), {
-        action: "bill_adjustment_applied", actorId: caller.uid, studentId, billId,
+        action: "bill_adjustment_applied", actorId: actorUid, studentId, billId,
         adjustmentId: ref.id, type, amountUgx, occurredAt: serverTime(),
       });
       return { adjustmentId: ref.id, amountUgx, balanceUgx: newBalance };
+    });
+    return result;
+  }
+  api.applyBillAdjustmentCore = applyBillAdjustmentCore;
+
+  api.applyBillAdjustment = onCall(async (request) => {
+    const data = request.data || {};
+    const schoolId = asText(data.schoolId);
+    const caller = await callerForFinance(request, schoolId);
+    const studentId = asText(data.studentId);
+    const billId = asText(data.billId);
+    const type = asText(data.type, 40);
+    const reason = asText(data.reason, 500);
+    const evidenceReference = asText(data.evidenceReference, 500) || null;
+    const result = await applyBillAdjustmentCore({
+      schoolId, studentId, billId, type, reason, evidenceReference,
+      amountUgx: data.amountUgx, percentage: data.percentage, actorUid: caller.uid,
     });
     return result;
   });

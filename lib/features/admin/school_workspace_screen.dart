@@ -64,10 +64,10 @@ class _SchoolWorkspace extends StatelessWidget {
           route: '/staff/admin/structure/academics/fee-structures',
         ),
         _Row(
-          icon: Icons.account_balance_wallet_outlined,
-          title: 'Fees & finance',
-          subtitle: 'Collections, invoices and reports',
-          route: '/staff/bursar',
+          icon: Icons.payments_outlined,
+          title: 'Salary structures',
+          subtitle: 'Set up pay component catalogue and published structures',
+          route: '/staff/admin/structure/people/salary-structures',
         ),
         _Row(
           icon: Icons.schedule_outlined,

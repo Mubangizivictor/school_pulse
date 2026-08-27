@@ -116,23 +116,6 @@ class StaffShell extends StatelessWidget {
           loc.startsWith('/staff/tasks');
     }
 
-    // The "School" destination is a workspace, not a single route: it opens
-    // the hub at '/staff/school' and every institution-management screen it
-    // links into (Structure & calendar, Learners, People, Fees, Facilities,
-    // Data management) so the tab stays highlighted while the admin is
-    // anywhere inside that workspace, matching how Work/More already track
-    // their own sub-routes.
-    bool isSchoolWorkspaceRoute(String loc) {
-      return loc.startsWith('/staff/school') ||
-          loc.startsWith('/staff/structure') ||
-          loc.startsWith('/staff/admin/structure') ||
-          loc.startsWith('/staff/admin/students') ||
-          loc.startsWith('/staff/admin/admissions') ||
-          loc.startsWith('/staff/admin/users') ||
-          loc.startsWith('/staff/admin/data-management') ||
-          loc.startsWith('/staff/bursar');
-    }
-
     if (_isDirector(context)) {
       if (location.startsWith('/staff/director/approvals')) return 1;
       if (location.startsWith('/staff/director/reports')) return 3;
@@ -141,9 +124,13 @@ class StaffShell extends StatelessWidget {
     }
 
     if (_isAdmin(context)) {
-      if (location.startsWith('/staff/work')) return 1;
-      if (isSchoolWorkspaceRoute(location)) return 2;
-      if (isMoreSubRoute(location)) return 3;
+      if (location.startsWith('/staff/admin/students') ||
+          location.startsWith('/staff/admin/admissions')) {
+        return 1;
+      }
+      if (location.startsWith('/staff/admin/users')) return 2;
+      if (location.startsWith('/staff/admin/parents')) return 3;
+      if (isMoreSubRoute(location)) return 4;
       if (location.startsWith('/staff/admin')) return 0;
       return 0;
     }
@@ -226,12 +213,15 @@ class StaffShell extends StatelessWidget {
           context.go(_homePath(context));
           break;
         case 1:
-          context.go('/staff/work');
+          context.go('/staff/admin/students');
           break;
         case 2:
-          context.go('/staff/school');
+          context.go('/staff/admin/users');
           break;
         case 3:
+          context.go('/staff/admin/parents');
+          break;
+        case 4:
           context.go('/staff/more');
           break;
       }
@@ -438,14 +428,19 @@ class StaffShell extends StatelessWidget {
         label: 'Home',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.assignment_outlined, size: 24),
-        selectedIcon: Icon(Icons.assignment_rounded, size: 24),
-        label: 'Work',
+        icon: Icon(Icons.people_outline_rounded, size: 24),
+        selectedIcon: Icon(Icons.people_rounded, size: 24),
+        label: 'Students',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.school_outlined, size: 24),
-        selectedIcon: Icon(Icons.school_rounded, size: 24),
-        label: 'School',
+        icon: Icon(Icons.badge_outlined, size: 24),
+        selectedIcon: Icon(Icons.badge_rounded, size: 24),
+        label: 'Staff',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.family_restroom_outlined, size: 24),
+        selectedIcon: Icon(Icons.family_restroom_rounded, size: 24),
+        label: 'Parents',
       ),
       const NavigationDestination(
         icon: Icon(Icons.grid_view_outlined, size: 24),
@@ -563,9 +558,7 @@ class StaffShell extends StatelessWidget {
     // the persistent nav would visually compete with its Save/Continue
     // controls. Student profile/record routes (Overview, Guardians,
     // Identity, ID card, etc.) previously had the same treatment, but the
-    // nav is now kept persistent there too per product decision - the
-    // "School" destination already highlights correctly on those routes
-    // (see isSchoolWorkspaceRoute above).
+    // nav is now kept persistent there too per product decision.
     final isDirectEnrolmentRoute = location.startsWith(
       '/staff/admin/admissions/register',
     );

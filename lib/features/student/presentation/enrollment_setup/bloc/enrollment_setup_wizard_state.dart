@@ -77,6 +77,11 @@ class EnrollmentSetupWizardState extends Equatable {
   final List<FeePlanLineData> matchedFeePlanLines;
   final bool billingPending;
 
+  // chargeIds of the matched plan's optional (non-required) lines the
+  // learner opted into, e.g. meals or transport. Required lines are always
+  // billed and never appear here.
+  final Set<String> selectedFeeAddOnIds;
+
   // Step 4
   final String? houseId;
   final String? hostelId;
@@ -144,6 +149,7 @@ class EnrollmentSetupWizardState extends Equatable {
     this.matchedFeePlanTotalUgx,
     this.matchedFeePlanLines = const [],
     this.billingPending = true,
+    this.selectedFeeAddOnIds = const {},
     this.houseId,
     this.hostelId,
     this.roomId,
@@ -163,6 +169,12 @@ class EnrollmentSetupWizardState extends Equatable {
 
   bool get isLastStep => currentStep == kWizardStepCount - 1;
   bool get isFirstStep => currentStep == 0;
+
+  /// Required lines plus whichever optional lines (meals, transport, etc.)
+  /// the learner opted into - the amount that will actually be billed.
+  int get billedFeeTotalUgx => matchedFeePlanLines
+      .where((line) => line.required || selectedFeeAddOnIds.contains(line.chargeId))
+      .fold(0, (sum, line) => sum + line.amountUgx);
 
   /// Required-for-activation checklist. Boarding/House and clubs/NFC are
   /// intentionally excluded - see the wizard spec's Review step.
@@ -220,6 +232,7 @@ class EnrollmentSetupWizardState extends Equatable {
     bool clearMatchedFeePlanTotalUgx = false,
     List<FeePlanLineData>? matchedFeePlanLines,
     bool? billingPending,
+    Set<String>? selectedFeeAddOnIds,
     String? houseId,
     String? hostelId,
     String? roomId,
@@ -288,6 +301,7 @@ class EnrollmentSetupWizardState extends Equatable {
           : (matchedFeePlanTotalUgx ?? this.matchedFeePlanTotalUgx),
       matchedFeePlanLines: matchedFeePlanLines ?? this.matchedFeePlanLines,
       billingPending: billingPending ?? this.billingPending,
+      selectedFeeAddOnIds: selectedFeeAddOnIds ?? this.selectedFeeAddOnIds,
       houseId: houseId ?? this.houseId,
       hostelId: hostelId ?? this.hostelId,
       roomId: roomId ?? this.roomId,
@@ -349,6 +363,7 @@ class EnrollmentSetupWizardState extends Equatable {
     matchedFeePlanTotalUgx,
     matchedFeePlanLines,
     billingPending,
+    selectedFeeAddOnIds,
     houseId,
     hostelId,
     roomId,

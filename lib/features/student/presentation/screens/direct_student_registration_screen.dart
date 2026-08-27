@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,7 +12,10 @@ import 'package:uuid/uuid.dart';
 
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/finance/domain/entities/fee_plan.dart';
+import 'package:school_pulse/features/finance/domain/repositories/fee_billing_repository.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import 'package:school_pulse/injection_container.dart';
@@ -60,7 +64,25 @@ class _DirectStudentRegistrationScreenState
       _house = TextEditingController(),
       _support = TextEditingController();
   final List<Map<String, dynamic>> _guardians = [], _documents = [];
-  StreamSubscription? _yearsSub, _classesSub, _streamsSub, _schoolSub;
+  StreamSubscription? _yearsSub, _classesSub, _streamsSub, _termsSub;
+  StreamSubscription? _schoolSub;
+  List<AcademicTerm> _terms = [];
+
+  // Fees step state. The matched plan is a read-only snapshot from
+  // `findMatchingFeePlan` (see enrollment_setup_wizard_screen.dart's
+  // `_FinanceStep` for the same pattern) - never a client-typed amount.
+  MatchedFeePlan? _feePlanMatch;
+  bool _feePlanLoading = false;
+  String? _feePlanMatchedKey;
+  final Set<String> _selectedFeeAddOnIds = {};
+  bool _bursaryEnabled = false;
+  final _bursaryReason = TextEditingController();
+  final _bursaryAmount = TextEditingController();
+  bool _bursaryIsPercentage = true;
+
+  int get _feeBilledTotalUgx => (_feePlanMatch?.lines ?? const [])
+      .where((l) => l.required || _selectedFeeAddOnIds.contains(l.chargeId))
+      .fold(0, (sum, l) => sum + l.amountUgx);
 
   @override
   void initState() {
@@ -80,6 +102,9 @@ class _DirectStudentRegistrationScreenState
     });
     _streamsSub = _repo.watchStreams(widget.schoolId).listen((v) {
       if (mounted) setState(() => _allStreams = v);
+    });
+    _termsSub = _repo.watchAcademicTerms(widget.schoolId).listen((v) {
+      if (mounted) setState(() => _terms = v.where((x) => !x.isArchived).toList());
     });
     _schoolSub = _db
         .collection('schools')
@@ -107,6 +132,16 @@ class _DirectStudentRegistrationScreenState
         .limit(1)
         .get();
     if (!mounted || q.docs.isEmpty) return;
+    final draft = q.docs.single;
+    final learner = Map<String, dynamic>.from(draft.data()['learner'] ?? {});
+    final hasContent =
+        (learner['firstNames'] as String?)?.trim().isNotEmpty == true ||
+        (learner['surname'] as String?)?.trim().isNotEmpty == true ||
+        ((draft.data()['step'] as int?) ?? 0) > 0;
+    if (!hasContent) {
+      await draft.reference.delete();
+      return;
+    }
     final yes = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
@@ -124,7 +159,11 @@ class _DirectStudentRegistrationScreenState
         ],
       ),
     );
-    if (yes == true && mounted) _load(q.docs.single);
+    if (yes == true && mounted) {
+      _load(draft);
+    } else if (yes == false) {
+      await draft.reference.delete();
+    }
   }
 
   void _load(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -162,6 +201,17 @@ class _DirectStudentRegistrationScreenState
           ),
         );
       _consent = d['consentAcknowledged'] == true;
+      final fees = Map<String, dynamic>.from(d['fees'] ?? {});
+      _selectedFeeAddOnIds
+        ..clear()
+        ..addAll(List<String>.from(fees['selectedOptionalLineIds'] ?? []));
+      final bursary = fees['bursary'] as Map<String, dynamic>?;
+      _bursaryEnabled = bursary != null;
+      if (bursary != null) {
+        _bursaryReason.text = bursary['reason'] ?? '';
+        _bursaryAmount.text = '${bursary['amount'] ?? ''}';
+        _bursaryIsPercentage = bursary['isPercentage'] ?? true;
+      }
     });
   }
 
@@ -198,6 +248,17 @@ class _DirectStudentRegistrationScreenState
     'documents': _documents,
     'consentAcknowledged': _consent,
     'guardianOverride': _override ? {'reason': _overrideReason} : null,
+    'fees': {
+      'planId': _feePlanMatch?.planId,
+      'selectedOptionalLineIds': _selectedFeeAddOnIds.toList(),
+      'bursary': _bursaryEnabled
+          ? {
+              'reason': _bursaryReason.text.trim(),
+              'amount': double.tryParse(_bursaryAmount.text.trim()) ?? 0,
+              'isPercentage': _bursaryIsPercentage,
+            }
+          : null,
+    },
   };
   Future<void> _save({bool quiet = false}) async {
     final auth = context.read<AuthBloc>().state;
@@ -238,7 +299,7 @@ class _DirectStudentRegistrationScreenState
                   _previousClass.text.trim().isNotEmpty)),
     1 => _guardianOk,
     2 => _year != null && _class != null && _term.text.trim().isNotEmpty,
-    4 => _consent,
+    5 => _consent,
     _ => true,
   };
   Future<bool> _leave() async {
@@ -272,21 +333,58 @@ class _DirectStudentRegistrationScreenState
     }
     await _save(quiet: true);
     if (!mounted) return;
-    if (_step == 5) return _enrol();
+    if (_step == 6) return _enrol();
     setState(() => _step++);
+  }
+
+  // A long multi-step form can outlast the cached ID token; force a refresh
+  // before the call instead of letting a stale token surface as a confusing
+  // "unauthenticated" failure after all the data entry. This can fail
+  // transiently on a flaky connection (very plausible mid-form), so retry a
+  // few times before concluding the user is actually signed out - a single
+  // network hiccup here must never be reported to the user as "your session
+  // expired," since the real Firebase session is untouched.
+  Future<void> _refreshIdTokenWithRetry() async {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      try {
+        await user.getIdToken(true);
+        return;
+      } catch (_) {
+        if (attempt == 2) rethrow;
+        await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+      }
+    }
   }
 
   Future<void> _enrol() async {
     setState(() => _enrolling = true);
     try {
+      await _refreshIdTokenWithRetry();
       final r = await FirebaseFunctions.instance
           .httpsCallable('directEnrolLearner')
-          .call({'draftId': _draftId});
+          .call({
+            'draftId': _draftId,
+            if (_feePlanMatch != null) 'feePlanId': _feePlanMatch!.planId,
+            'selectedOptionalLineIds': _selectedFeeAddOnIds.toList(),
+            if (_bursaryEnabled) 'bursary': {
+              'reason': _bursaryReason.text.trim(),
+              'amount': double.tryParse(_bursaryAmount.text.trim()) ?? 0,
+              'isPercentage': _bursaryIsPercentage,
+            },
+          });
       final v = Map<String, dynamic>.from(r.data as Map);
       if (!mounted) return;
       await _db.collection('direct_enrolment_drafts').doc(_draftId).set({
         'status': 'enrolled',
       }, SetOptions(merge: true));
+      final billingWarning = v['billingWarning'] as String?;
+      if (billingWarning != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Learner enrolled, but billing: $billingWarning')),
+        );
+      }
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -303,7 +401,20 @@ class _DirectStudentRegistrationScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              e.message ?? 'Enrolment failed. The draft is still saved.',
+              e.code == 'unauthenticated'
+                  ? (FirebaseAuth.instance.currentUser == null
+                        ? 'Your session expired. Sign in again — your progress is saved as a draft.'
+                        : 'Could not verify your sign-in — check your connection and try again. Your progress is saved as a draft.')
+                  : e.message ?? 'Enrolment failed. The draft is still saved.',
+            ),
+          ),
+        );
+    } catch (_) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not verify your sign-in — check your connection and try again. Your progress is saved as a draft.',
             ),
           ),
         );
@@ -314,7 +425,7 @@ class _DirectStudentRegistrationScreenState
 
   @override
   void dispose() {
-    for (final x in [_yearsSub, _classesSub, _streamsSub, _schoolSub]) {
+    for (final x in [_yearsSub, _classesSub, _streamsSub, _termsSub, _schoolSub]) {
       x?.cancel();
     }
     for (final x in [
@@ -327,10 +438,61 @@ class _DirectStudentRegistrationScreenState
       _transport,
       _house,
       _support,
+      _bursaryReason,
+      _bursaryAmount,
     ]) {
       x.dispose();
     }
     super.dispose();
+  }
+
+  String get _studentCategory => _boarding == 'Boarding learner' ? 'boarding' : 'day';
+
+  Future<void> _lookupFeePlan() async {
+    final year = _year, cls = _class;
+    if (year == null || cls == null) return;
+    final termId = _termIdFor(year);
+    final key = '${year.id}|$termId|${cls.id}|$_studentCategory';
+    if (_feePlanMatchedKey == key) return;
+    _feePlanMatchedKey = key;
+    if (termId == null) {
+      setState(() {
+        _feePlanMatch = null;
+        _selectedFeeAddOnIds.clear();
+        _feePlanLoading = false;
+      });
+      return;
+    }
+    setState(() => _feePlanLoading = true);
+    final result = await sl<FeeBillingRepository>().findMatchingFeePlan(
+      schoolId: widget.schoolId,
+      academicYearId: year.id,
+      termId: termId,
+      classId: cls.id,
+      studentCategory: _studentCategory,
+    );
+    if (!mounted) return;
+    setState(() {
+      _feePlanMatch = result.fold((_) => null, (m) => m);
+      _selectedFeeAddOnIds.clear();
+      _feePlanLoading = false;
+    });
+  }
+
+  // `_term` is a free-text field on this wizard (unlike the structured
+  // AcademicTerm picker in the 12-step enrollment wizard), so there is no
+  // guaranteed termId to hand `findMatchingFeePlan`. Best-effort: match it
+  // against this school's real terms for the selected year by name.
+  String? _termIdFor(AcademicYear year) {
+    final typed = _term.text.trim().toLowerCase();
+    return _terms
+        .where(
+          (t) =>
+              t.academicYearId == year.id &&
+              (t.name.toLowerCase() == typed || t.isCurrent),
+        )
+        .firstOrNull
+        ?.id;
   }
 
   @override
@@ -489,32 +651,33 @@ class _DirectStudentRegistrationScreenState
             children: [_body()],
           ),
         ),
-        Container(
-          decoration: const BoxDecoration(border: Border(top: BorderSide())),
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              OutlinedButton(
-                onPressed: () =>
-                    setState(() => _step = _step == 0 ? -1 : _step - 1),
-                child: const Text('Back'),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _enrolling ? null : _next,
-                  child: Text(
-                    _enrolling
-                        ? 'Enrolling…'
-                        : _step == 5
-                        ? 'Enrol learner'
-                        : _step == 3
-                        ? 'Skip for now'
-                        : 'Continue',
+        SafeArea(
+          top: false,
+          child: Container(
+            decoration: const BoxDecoration(border: Border(top: BorderSide())),
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                OutlinedButton(
+                  onPressed: () =>
+                      setState(() => _step = _step == 0 ? -1 : _step - 1),
+                  child: const Text('Back'),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _enrolling ? null : _next,
+                    child: Text(
+                      _enrolling
+                          ? 'Enrolling…'
+                          : _step == 6
+                          ? 'Enrol learner'
+                          : 'Continue',
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -525,7 +688,8 @@ class _DirectStudentRegistrationScreenState
     1 => _guardianPage(),
     2 => _placement(),
     3 => _services(),
-    4 => _documentsPage(),
+    4 => _fees(),
+    5 => _documentsPage(),
     _ => _review(),
   };
   Widget _details() => _section(
@@ -665,8 +829,11 @@ class _DirectStudentRegistrationScreenState
         _select('Day or boarding status', _boarding, const [
           'Day learner',
           'Boarding learner',
-        ], (v) => setState(() => _boarding = v!)),
-      if (_enabled('transport'))
+        ], (v) => setState(() {
+          _boarding = v!;
+          if (_boarding != 'Day learner') _transport.clear();
+        })),
+      if (_enabled('transport') && _boarding == 'Day learner')
         _field(_transport, 'Transport route (optional)'),
       if (_enabled('houses')) _field(_house, 'House (optional)'),
       if (_enabled('studentSupport')) ...[
@@ -688,44 +855,225 @@ class _DirectStudentRegistrationScreenState
         ),
     ],
   );
-  Widget _documentsPage() => _section(
-    'Documents & consent',
-    'Requirements are configured by your school. Files may be completed later where policy permits.',
-    [
-      if (_documents.isEmpty)
-        const _Notice(
-          'No files uploaded yet. Missing-document status is checked at enrolment.',
-        ),
-      ..._documents.map(
-        (d) => Card(
-          child: ListTile(
-            leading: const Icon(Icons.insert_drive_file_outlined),
-            title: Text(d['name']),
-            subtitle: Text(
-              d['status'] == 'uploading' ? 'Uploading…' : 'Uploaded',
+  Widget _fees() {
+    // Build-time trigger (not just on step transition) so a lookup that
+    // couldn't resolve a termId yet (terms/years/classes still streaming
+    // in) retries automatically on the next rebuild instead of being
+    // permanently cached against a null result.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _lookupFeePlan());
+    final match = _feePlanMatch;
+    final required = (match?.lines ?? const []).where((l) => l.required);
+    final optional = (match?.lines ?? const []).where((l) => !l.required);
+    return _section('Fees', 'Set up this learner\'s fee plan.', [
+      if (_feePlanLoading)
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Center(child: CircularProgressIndicator()),
+        )
+      else if (match == null)
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _Notice(
+              'No published fee plan matches this class, term and '
+              'day/boarding status yet. You can continue enrolling - '
+              'billing will stay pending until a fee plan is published in '
+              'Structure > Academics > Fee Plans.',
             ),
-            trailing: IconButton(
-              tooltip: 'Remove',
-              onPressed: () => setState(() => _documents.remove(d)),
-              icon: const Icon(Icons.delete_outline),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () =>
+                  context.push('/staff/admin/structure/academics/fee-structures'),
+              icon: const Icon(Icons.receipt_long_outlined),
+              label: const Text('Open Fee Plans'),
+            ),
+          ],
+        )
+      else ...[
+        Text(match.name, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        for (final line in required)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: Text(line.name)),
+                Text(CurrencyFormatter.ugx(line.amountUgx.toDouble())),
+              ],
+            ),
+          ),
+        if (optional.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Optional add-ons',
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          for (final line in optional)
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              dense: true,
+              value: _selectedFeeAddOnIds.contains(line.chargeId),
+              title: Text(line.name),
+              subtitle: Text(CurrencyFormatter.ugx(line.amountUgx.toDouble())),
+              onChanged: (checked) => setState(() {
+                if (checked ?? false) {
+                  _selectedFeeAddOnIds.add(line.chargeId);
+                } else {
+                  _selectedFeeAddOnIds.remove(line.chargeId);
+                }
+              }),
+            ),
+        ],
+        const Divider(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Total billed', style: TextStyle(fontWeight: FontWeight.w700)),
+            Text(
+              CurrencyFormatter.ugx(_feeBilledTotalUgx.toDouble()),
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+      ],
+      const Divider(height: 32),
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        value: _bursaryEnabled,
+        onChanged: (v) => setState(() => _bursaryEnabled = v),
+        title: const Text('Award bursary / discount'),
+        subtitle: const Text('Reduces this learner\'s billed fees.'),
+      ),
+      if (_bursaryEnabled) ...[
+        _select('Type', _bursaryIsPercentage ? 'Percentage' : 'Fixed amount', const [
+          'Percentage',
+          'Fixed amount',
+        ], (v) => setState(() => _bursaryIsPercentage = v == 'Percentage')),
+        const SizedBox(height: 8),
+        _field(
+          _bursaryAmount,
+          _bursaryIsPercentage ? 'Discount (%)' : 'Discount (UGX)',
+          type: TextInputType.number,
+        ),
+        const SizedBox(height: 8),
+        _field(_bursaryReason, 'Reason', lines: 2),
+      ],
+    ]);
+  }
+
+  Widget _documentsPage() {
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+    final error = Theme.of(context).colorScheme.error;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Documents & consent',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Requirements are configured by your school. Files may be completed later where policy permits.',
+          style: TextStyle(color: onSurfaceVariant),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Supporting files',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                if (_documents.isEmpty)
+                  const _Notice(
+                    'No files uploaded yet. Missing-document status is checked at enrolment.',
+                  )
+                else
+                  ..._documents.map(
+                    (d) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.insert_drive_file_outlined),
+                        title: Text(d['name']),
+                        subtitle: Text(
+                          d['status'] == 'uploading'
+                              ? 'Uploading…'
+                              : 'Uploaded',
+                        ),
+                        trailing: IconButton(
+                          tooltip: 'Remove',
+                          onPressed: () =>
+                              setState(() => _documents.remove(d)),
+                          icon: const Icon(Icons.delete_outline),
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                OutlinedButton.icon(
+                  onPressed: _upload,
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('Upload document'),
+                ),
+              ],
             ),
           ),
         ),
-      ),
-      OutlinedButton.icon(
-        onPressed: _upload,
-        icon: const Icon(Icons.upload_file),
-        label: const Text('Upload document'),
-      ),
-      CheckboxListTile(
-        contentPadding: EdgeInsets.zero,
-        value: _consent,
-        onChanged: (v) => setState(() => _consent = v ?? false),
-        title: const Text('Privacy and guardian consent acknowledged'),
-      ),
-      if (!_consent) const Text('Consent acknowledgement is required.'),
-    ],
-  );
+        const SizedBox(height: 16),
+        Card(
+          color: _consent
+              ? null
+              : error.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.06),
+          shape: RoundedRectangleBorder(
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
+            side: BorderSide(color: _consent ? Theme.of(context).dividerColor : error),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Privacy and guardian consent',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _consent
+                            ? 'Acknowledged.'
+                            : 'Required before this learner can be enrolled.',
+                        style: TextStyle(
+                          color: _consent ? onSurfaceVariant : error,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Switch(
+                  value: _consent,
+                  onChanged: (v) => setState(() => _consent = v),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
   Widget _review() => _section(
     'Review & enrol',
     'Check the record before creating the learner.',
@@ -751,6 +1099,17 @@ class _DirectStudentRegistrationScreenState
         'Services',
         _boarding,
         _transport.text.isEmpty ? 'No transport selected' : _transport.text,
+      ),
+      _summary(
+        'Fees',
+        _feePlanMatch == null
+            ? 'Billing pending'
+            : CurrencyFormatter.ugx(_feeBilledTotalUgx.toDouble()),
+        _feePlanMatch == null
+            ? 'No fee plan matched yet'
+            : _bursaryEnabled
+            ? 'Bursary/discount will be applied'
+            : _feePlanMatch!.name,
       ),
       _summary(
         'Documents',
@@ -1009,15 +1368,15 @@ class _Progress extends StatelessWidget {
   Widget build(BuildContext c) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text('Step $step of 6'),
+      Text('Step $step of 7'),
       const SizedBox(height: 8),
       Row(
         children: List.generate(
-          6,
+          7,
           (i) => Expanded(
             child: Container(
               height: 7,
-              margin: EdgeInsets.only(right: i == 5 ? 0 : 5),
+              margin: EdgeInsets.only(right: i == 6 ? 0 : 5),
               decoration: BoxDecoration(
                 color: i < step ? Colors.black : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(9),

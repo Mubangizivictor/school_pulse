@@ -75,6 +75,11 @@ class School extends Equatable {
   final String? classificationOther;
   final List<InstitutionDivision> divisions;
   final String? displayLabel;
+  final String slug;
+  final String portalSubdomain;
+  final List<String> customDomains;
+  final Map<String, dynamic> branding;
+  final String domainStatus;
 
   /// Server-written subscription access state ('full' | 'readOnly' |
   /// 'blocked'). Null on schools not yet touched by the Cloud Functions that
@@ -100,6 +105,11 @@ class School extends Equatable {
     this.classificationOther,
     this.divisions = const [],
     this.displayLabel,
+    this.slug = '',
+    this.portalSubdomain = '',
+    this.customDomains = const [],
+    this.branding = const {},
+    this.domainStatus = 'pending',
     this.accessMode,
   });
 
@@ -122,6 +132,11 @@ class School extends Equatable {
     divisions,
     displayLabel,
     accessMode,
+    slug,
+    portalSubdomain,
+    customDomains,
+    branding,
+    domainStatus,
   ];
 
   School copyWith({
@@ -139,6 +154,11 @@ class School extends Equatable {
     List<InstitutionDivision>? divisions,
     String? displayLabel,
     String? accessMode,
+    String? slug,
+    String? portalSubdomain,
+    List<String>? customDomains,
+    Map<String, dynamic>? branding,
+    String? domainStatus,
   }) {
     return School(
       id: id,
@@ -158,6 +178,11 @@ class School extends Equatable {
       divisions: divisions ?? this.divisions,
       displayLabel: displayLabel ?? this.displayLabel,
       accessMode: accessMode ?? this.accessMode,
+      slug: slug ?? this.slug,
+      portalSubdomain: portalSubdomain ?? this.portalSubdomain,
+      customDomains: customDomains ?? this.customDomains,
+      branding: branding ?? this.branding,
+      domainStatus: domainStatus ?? this.domainStatus,
     );
   }
 }

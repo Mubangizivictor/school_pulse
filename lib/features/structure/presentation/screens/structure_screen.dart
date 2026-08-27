@@ -549,6 +549,15 @@ class _Review extends StatelessWidget {
         stepIndex: 10,
         requiresSetup: state.gradingSystems.isEmpty,
       ),
+      // Salary Structures lives outside this linear setup wizard (it's an
+      // ongoing management surface, same as Fee Plans), so it navigates via
+      // a real route rather than a wizard-step index.
+      const _ReviewRow(
+        label: 'Salary structures',
+        icon: Icons.payments_outlined,
+        stepIndex: 8,
+        routePath: '/staff/admin/structure/people/salary-structures',
+      ),
     ];
 
     final facilities = [

@@ -24,7 +24,7 @@ import 'package:school_pulse/features/structure/presentation/bloc/role_assignmen
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
 import 'package:school_pulse/features/structure/presentation/screens/assign_staff_role_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/people_forms_screen.dart'
-    show staffDesignationIcon, staffDesignationColor;
+    show staffDesignationIcon;
 import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
@@ -110,7 +110,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen>
               bottom: TabBar(
                 controller: _tabController,
                 tabs: const [
-                  Tab(text: 'Profile'),
+                  Tab(text: 'Overview'),
                   Tab(text: 'Roles & Responsibilities'),
                 ],
               ),
@@ -183,108 +183,316 @@ class _ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final structure = context.watch<StructureBloc>().state;
+    final department = structure.departments
+        .where((item) => item.id == user.departmentId)
+        .firstOrNull
+        ?.name;
+    final designation = structure.designations
+        .where((item) => item.id == user.designationId)
+        .firstOrNull
+        ?.name;
+    final campus = structure.campuses
+        .where((item) => item.id == user.campusId)
+        .firstOrNull
+        ?.name;
+    final roleLabel =
+        designation ??
+        (user.roles.isNotEmpty ? UserRoleDisplay.name(user.roles.first) : null);
+    final emergency = user.emergencyContact;
+    final contactRows = <_DetailRowData>[
+      _DetailRowData(Icons.email_outlined, 'Email', user.email),
+      if (_hasValue(user.phoneNumber))
+        _DetailRowData(
+          Icons.phone_outlined,
+          'Primary phone',
+          user.phoneNumber!,
+        ),
+      if (_hasValue(user.alternatePhone))
+        _DetailRowData(
+          Icons.phone_android_outlined,
+          'Alternate phone',
+          user.alternatePhone!,
+        ),
+    ];
+    final employmentRows = <_DetailRowData>[
+      if (_hasValue(campus ?? user.schoolName))
+        _DetailRowData(
+          Icons.location_city_outlined,
+          'Campus',
+          campus ?? user.schoolName!,
+        ),
+      if (_hasValue(department))
+        _DetailRowData(Icons.account_tree_outlined, 'Department', department!),
+      if (_hasValue(designation))
+        _DetailRowData(Icons.badge_outlined, 'Designation', designation!),
+      if (_hasValue(user.employmentType))
+        _DetailRowData(
+          Icons.work_outline,
+          'Employment type',
+          user.employmentType!,
+        ),
+      _DetailRowData(
+        user.isActive ? Icons.check_circle_outline : Icons.cancel_outlined,
+        'Employment status',
+        user.isActive ? 'Active' : 'Inactive',
+      ),
+    ];
+    final emergencyRows = <_DetailRowData>[
+      if (emergency != null && _hasValue(emergency.name))
+        _DetailRowData(Icons.person_outline, 'Name', emergency.name),
+      if (emergency != null && _hasValue(emergency.relationship))
+        _DetailRowData(
+          Icons.people_outline,
+          'Relationship',
+          emergency.relationship,
+        ),
+      if (emergency != null && _hasValue(emergency.phoneNumber))
+        _DetailRowData(Icons.phone_outlined, 'Phone', emergency.phoneNumber),
+    ];
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Column(
-              children: [
-                AvatarInitials(name: user.name, size: 80),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 96),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1040),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _IdentityHeader(user: user, roleLabel: roleLabel),
+              const SizedBox(height: 20),
+              AppCard(
+                color: Colors.white,
+                showShadow: false,
+                borderColor: const Color(0xFFD8D8D8),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final wide = constraints.maxWidth >= 700;
+                    final contact = _InformationSection(
+                      title: 'Contact',
+                      icon: Icons.phone_outlined,
+                      rows: contactRows,
+                    );
+                    final employment = _InformationSection(
+                      title: 'Employment',
+                      icon: Icons.work_outline,
+                      rows: employmentRows,
+                    );
+                    return wide
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: contact),
+                              const SizedBox(width: 28),
+                              Expanded(child: employment),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              contact,
+                              const Divider(height: 32),
+                              employment,
+                            ],
+                          );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              _AccountOnboardingCard(user: user, onChanged: onChanged),
+              if (emergencyRows.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                Text(
-                  user.name,
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                AppCard(
+                  color: Colors.white,
+                  showShadow: false,
+                  borderColor: const Color(0xFFD8D8D8),
+                  child: _InformationSection(
+                    title: 'Emergency contact',
+                    icon: Icons.contact_emergency_outlined,
+                    rows: emergencyRows,
                   ),
-                ),
-                Text(
-                  user.staffCode ?? '',
-                  style: TextStyle(color: AppColors.textMuted(context)),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  alignment: WrapAlignment.center,
-                  children: user.roles
-                      .map(
-                        (r) => StatusBadge(
-                          label: UserRoleDisplay.name(r),
-                          color: AppColors.primary(context),
-                        ),
-                      )
-                      .toList(),
                 ),
               ],
-            ),
+            ],
           ),
-          const SizedBox(height: 20),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Personal Information',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary(context),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _InfoRow(
-                  icon: Icons.email_outlined,
-                  label: 'Email',
-                  value: user.email,
-                ),
-                _InfoRow(
-                  icon: Icons.phone_outlined,
-                  label: 'Phone',
-                  value: user.phoneNumber ?? '—',
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Employment Information',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary(context),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _InfoRow(
-                  icon: Icons.apartment_outlined,
-                  label: 'School',
-                  value: user.schoolName ?? '—',
-                ),
-                if (user.assignedClass != null)
-                  _InfoRow(
-                    icon: Icons.meeting_room_outlined,
-                    label: 'Assigned Class',
-                    value: user.assignedClass!,
-                  ),
-                _InfoRow(
-                  icon: Icons.circle,
-                  label: 'Status',
-                  value: user.isActive ? 'Active' : 'Inactive',
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          _AccountOnboardingCard(user: user, onChanged: onChanged),
-        ],
+        ),
       ),
     );
   }
+
+  static bool _hasValue(String? value) =>
+      value != null && value.trim().isNotEmpty;
+}
+
+class _IdentityHeader extends StatelessWidget {
+  const _IdentityHeader({required this.user, required this.roleLabel});
+  final UserModel user;
+  final String? roleLabel;
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label:
+        '${user.name}, ${user.isActive ? 'active' : 'inactive'} staff member',
+    child: Row(
+      children: [
+        _StaffAvatar(user: user),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                user.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black,
+                ),
+              ),
+              if (user.staffCode?.isNotEmpty == true)
+                Text(
+                  user.staffCode!,
+                  style: const TextStyle(
+                    color: Color(0xFF666666),
+                    fontSize: 15,
+                  ),
+                ),
+              const SizedBox(height: 7),
+              Wrap(
+                spacing: 10,
+                runSpacing: 7,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  if (roleLabel != null) _BlackPill(label: roleLabel!),
+                  _StatusLabel(
+                    active: user.isActive,
+                    pending: user.mustChangePassword,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _StaffAvatar extends StatelessWidget {
+  const _StaffAvatar({required this.user});
+  final UserModel user;
+  @override
+  Widget build(BuildContext context) {
+    final fallback = AvatarInitials(
+      name: user.name,
+      size: 72,
+      ringColor: Colors.black,
+    );
+    if (user.photoUrl == null || user.photoUrl!.trim().isEmpty) return fallback;
+    return Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.black, width: 1.5),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.network(
+        user.photoUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => fallback,
+      ),
+    );
+  }
+}
+
+class _BlackPill extends StatelessWidget {
+  const _BlackPill({required this.label});
+  final String label;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: const BoxDecoration(
+      color: Colors.black,
+      borderRadius: BorderRadius.all(Radius.circular(18)),
+    ),
+    child: Text(
+      label.toUpperCase(),
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
+}
+
+class _StatusLabel extends StatelessWidget {
+  const _StatusLabel({required this.active, required this.pending});
+  final bool active;
+  final bool pending;
+  @override
+  Widget build(BuildContext context) {
+    final label = !active
+        ? 'Inactive'
+        : pending
+        ? 'Pending setup'
+        : 'Active';
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: const BoxDecoration(
+            color: Colors.black,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 7),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
+}
+
+class _DetailRowData {
+  const _DetailRowData(this.icon, this.label, this.value);
+  final IconData icon;
+  final String label;
+  final String value;
+}
+
+class _InformationSection extends StatelessWidget {
+  const _InformationSection({
+    required this.title,
+    required this.icon,
+    required this.rows,
+  });
+  final String title;
+  final IconData icon;
+  final List<_DetailRowData> rows;
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Icon(icon, size: 21, color: Colors.black),
+          const SizedBox(width: 10),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: Colors.black,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 14),
+      ...rows.map(
+        (row) => _InfoRow(icon: row.icon, label: row.label, value: row.value),
+      ),
+    ],
+  );
 }
 
 /// Onboarding/account-lifecycle state plus the two admin actions that only
@@ -321,22 +529,8 @@ class _AccountOnboardingCardState extends State<_AccountOnboardingCard> {
       (failure) => ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(failure.message))),
-      (tempPassword) => showDialog<void>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Password reset'),
-          content: SelectableText(
-            'New temporary password:\n$tempPassword\n\n'
-            'Share this with ${widget.user.name} through a secure channel. '
-            "They'll be asked to set their own password on next login.",
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Done'),
-            ),
-          ],
-        ),
+      (_) => ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password reset request completed.')),
       ),
     );
   }
@@ -394,60 +588,108 @@ class _AccountOnboardingCardState extends State<_AccountOnboardingCard> {
   Widget build(BuildContext context) {
     final canManage = _canManage(context);
     return AppCard(
+      color: Colors.white,
+      showShadow: false,
+      borderColor: const Color(0xFFD8D8D8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Account & Onboarding',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(context),
-            ),
+          Row(
+            children: [
+              const Icon(Icons.shield_outlined, color: Colors.black),
+              const SizedBox(width: 10),
+              Text(
+                'Account access',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          _InfoRow(
-            icon: Icons.verified_user_outlined,
-            label: 'Onboarding',
-            value: widget.user.mustChangePassword
-                ? 'Pending first login (temporary password not yet changed)'
-                : 'Complete',
-          ),
-          _InfoRow(
-            icon: Icons.lock_reset_outlined,
-            label: 'Password',
-            value: widget.user.mustChangePassword
-                ? 'Temporary - must be changed at next login'
-                : 'Set by staff member',
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                widget.user.isActive
+                    ? Icons.check_circle_outline
+                    : Icons.cancel_outlined,
+                color: Colors.black,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      !widget.user.isActive
+                          ? 'Account inactive'
+                          : widget.user.mustChangePassword
+                          ? 'Setup pending'
+                          : 'Account active',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      !widget.user.isActive
+                          ? 'This staff member cannot sign in.'
+                          : widget.user.mustChangePassword
+                          ? 'The staff member has not completed account setup yet.'
+                          : 'Account access is active.',
+                      style: TextStyle(color: AppColors.textMuted(context)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           if (canManage) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                OutlinedButton.icon(
+            if (widget.user.isActive) ...[
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton.icon(
                   onPressed: _working ? null : _resetPassword,
-                  icon: const Icon(Icons.lock_reset_outlined, size: 18),
-                  label: const Text('Reset Password'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: _working ? null : _toggleActive,
-                  icon: Icon(
-                    widget.user.isActive
-                        ? Icons.block_outlined
-                        : Icons.check_circle_outline,
-                    size: 18,
-                  ),
+                  icon: const Icon(Icons.send_outlined),
                   label: Text(
-                    widget.user.isActive ? 'Deactivate' : 'Reactivate',
+                    widget.user.mustChangePassword
+                        ? 'Send password setup link'
+                        : 'Send password reset link',
                   ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: widget.user.isActive
-                        ? AppColors.danger(context)
-                        : AppColors.success(context),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
                   ),
                 ),
-              ],
+              ),
+            ],
+            const SizedBox(height: 10),
+            const Divider(),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                onPressed: _working ? null : _toggleActive,
+                icon: Icon(
+                  widget.user.isActive
+                      ? Icons.person_off_outlined
+                      : Icons.person_add_alt_1_outlined,
+                ),
+                label: Text(
+                  widget.user.isActive
+                      ? 'Deactivate staff account'
+                      : 'Reactivate staff account',
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.black,
+                  minimumSize: const Size.fromHeight(44),
+                  alignment: Alignment.centerLeft,
+                ),
+              ),
             ),
           ],
         ],
@@ -903,57 +1145,96 @@ class _RoleCard extends StatelessWidget {
     final icon = role != null
         ? staffDesignationIcon(role!.iconName)
         : Icons.badge_outlined;
-    final color = role != null
-        ? staffDesignationColor(role!.colorHex)
-        : Theme.of(context).colorScheme.primary;
     final label = role?.name ?? assignment.displayLabel;
-    final scope = assignment.scopeSummaryLabel;
+    final scopes = <String>[
+      if (assignment.campusId.isNotEmpty) 'Campus scope configured',
+      if (assignment.departmentId?.isNotEmpty == true ||
+          assignment.permissionScope.departmentId?.isNotEmpty == true)
+        'Department scope configured',
+      if (assignment.className?.isNotEmpty == true)
+        'Class: ${assignment.className}${assignment.streamName?.isNotEmpty == true ? ' ${assignment.streamName}' : ''}',
+      if (assignment.subjectName?.isNotEmpty == true)
+        'Subject: ${assignment.subjectName}',
+      if (assignment.houseId?.isNotEmpty == true)
+        'House / dormitory scope configured',
+      if (assignment.permissionScope.termIds.isNotEmpty)
+        'Term approval scope configured',
+      if (assignment.permissionScope.permissions.isNotEmpty)
+        'Approval scope: ${assignment.permissionScope.permissions.length} permission${assignment.permissionScope.permissions.length == 1 ? '' : 's'}',
+      ...assignment.extraScope.entries.map(
+        (entry) => '${_scopeName(entry.key)}: ${entry.value}',
+      ),
+    ];
 
     return AppCard(
-      child: Row(
+      color: Colors.white,
+      showShadow: false,
+      borderColor: const Color(0xFFD8D8D8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2F2F2),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                if (scope.isNotEmpty)
-                  Text(scope, style: Theme.of(context).textTheme.labelSmall),
-              ],
-            ),
-          ),
-          if (isPrimary)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(6),
+                child: Icon(icon, color: Colors.black, size: 20),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              if (isPrimary) const _BlackPill(label: 'Primary'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Designation: ${role?.name ?? assignment.roleType.label}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (scopes.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 5),
               child: Text(
-                'Primary',
-                style: TextStyle(
-                  color: color,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
+                'Whole-school scope',
+                style: TextStyle(fontSize: 12, color: Color(0xFF666666)),
+              ),
+            )
+          else
+            ...scopes.map(
+              (scope) => Padding(
+                padding: const EdgeInsets.only(top: 5),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.arrow_right, size: 17),
+                    Expanded(
+                      child: Text(scope, style: const TextStyle(fontSize: 12)),
+                    ),
+                  ],
                 ),
               ),
             ),
         ],
       ),
     );
+  }
+
+  static String _scopeName(String key) {
+    final words = key
+        .replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(1)}')
+        .replaceAll('Id', '')
+        .trim();
+    return words.isEmpty
+        ? 'Scope'
+        : '${words[0].toUpperCase()}${words.substring(1)}';
   }
 }
 

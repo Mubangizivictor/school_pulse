@@ -453,12 +453,27 @@ class _LineEditorState extends State<_LineEditor> {
               },
             ),
           ),
-          Checkbox(
-            value: widget.draft.required,
-            onChanged: (v) {
-              setState(() => widget.draft.required = v ?? true);
-              widget.onChanged();
-            },
+          Tooltip(
+            message: widget.draft.required
+                ? 'Required: always billed'
+                : 'Optional: parent/staff chooses this at enrollment '
+                      '(e.g. meals, transport)',
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Checkbox(
+                  value: widget.draft.required,
+                  onChanged: (v) {
+                    setState(() => widget.draft.required = v ?? true);
+                    widget.onChanged();
+                  },
+                ),
+                Text(
+                  'Required',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
           ),
           if (widget.onRemove != null)
             IconButton(

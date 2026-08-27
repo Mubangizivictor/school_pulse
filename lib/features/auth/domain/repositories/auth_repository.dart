@@ -60,6 +60,11 @@ abstract class AuthRepository {
     String? campusId,
     String? employmentType,
     DateTime? dateJoined,
+    String? idempotencyKey,
+    bool forcePasswordChange,
+    bool sendLoginDetailsViaEmail,
+    Map<String, dynamic>? staffData,
+    Map<String, dynamic>? roleConfigs,
   });
   Future<Either<Failure, void>> completePasswordReset(String newPassword);
   Future<Either<Failure, List<UserEntity>>> getStaffMembers(String schoolId);

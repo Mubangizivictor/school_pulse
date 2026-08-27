@@ -302,6 +302,18 @@ class FeePlanMatchUpdated extends EnrollmentSetupWizardEvent {
   ];
 }
 
+/// Toggles which optional lines (meals, transport, etc.) on the matched fee
+/// plan the learner opted into. Required lines are always billed and are
+/// never part of this set.
+class SelectedFeeAddOnsUpdated extends EnrollmentSetupWizardEvent {
+  final Set<String> selectedFeeAddOnIds;
+
+  const SelectedFeeAddOnsUpdated(this.selectedFeeAddOnIds);
+
+  @override
+  List<Object?> get props => [selectedFeeAddOnIds];
+}
+
 class ScholarshipAwardRequested extends EnrollmentSetupWizardEvent {
   final UserEntity operatorUser;
   final ScholarshipAwardType type;

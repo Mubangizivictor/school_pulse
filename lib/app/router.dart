@@ -60,6 +60,7 @@ import 'package:school_pulse/features/structure/presentation/screens/academics/l
 import 'package:school_pulse/features/structure/presentation/screens/academics/years_terms_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/classes_streams_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/fee_plan_builder/fee_plan_builder_screen.dart';
+import 'package:school_pulse/features/hr/presentation/screens/salary_structure_builder/salary_structure_builder_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/subjects_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/subject_class_assignments_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/departments_screen.dart';
@@ -270,6 +271,7 @@ import 'package:school_pulse/features/super_admin/presentation/pages/help_suppor
 import 'package:school_pulse/features/super_admin/presentation/pages/submit_support_request_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/support_ticket_conversation_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/contact_about_screen.dart';
+import 'package:school_pulse/features/portal/domain/portal_runtime.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/privacy_policy_screen.dart';
 import 'package:school_pulse/features/games/presentation/screens/games_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/shell/dean_shell.dart';
@@ -445,6 +447,18 @@ final router = GoRouter(
     // the redirect re-evaluates automatically once AuthBloc emits its
     // real Authenticated/Unauthenticated state.
     if (authState is AuthLoading) return null;
+
+    // Host selection is not authorization. A valid portal hostname must
+    // still match the authenticated user's home tenant, preventing a user
+    // from carrying a School A session into School B's URL (including via a
+    // hand-crafted deep link). Platform owners use the root console only.
+    final portalTenant = PortalRuntime.tenant;
+    if (portalTenant != null &&
+        authState is AuthAuthenticated &&
+        (authState.user.role == UserRole.superAdmin ||
+            authState.user.schoolId != portalTenant.schoolId)) {
+      return '/welcome';
+    }
 
     // A Firebase session alone is never enough to render a tenant route.
     // The branding state is loaded only by /school-splash after the
@@ -1791,6 +1805,14 @@ final router = GoRouter(
                 ),
               ],
             ),
+            // Parent/guardian contacts are searched from the existing
+            // school-wide directory until a dedicated parent directory is
+            // introduced. Keeping this as a separate route lets the Parents
+            // navigation destination remain selected.
+            GoRoute(
+              path: 'parents',
+              builder: (context, state) => const AdminStudentDirectoryScreen(),
+            ),
             GoRoute(
               path: 'users',
               builder: (context, state) => const StaffListPage(),
@@ -2038,6 +2060,18 @@ final router = GoRouter(
                 GoRoute(
                   path: 'people',
                   builder: (context, state) => const PeopleStructureScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'salary-structures',
+                      // Salary Structure Builder (immutable published
+                      // structure versions, integer UGX, keyed by staff
+                      // designation) - mirrors the Fee Plan Builder pattern
+                      // for payroll. Reached from Structure > People >
+                      // Salary Structures.
+                      builder: (context, state) =>
+                          const SalaryStructureBuilderScreen(),
+                    ),
+                  ],
                 ),
                 GoRoute(
                   path: 'assessment',

@@ -259,6 +259,10 @@ import 'package:school_pulse/features/finance/domain/repositories/fee_billing_re
 import 'package:school_pulse/features/finance/data/repositories/fee_billing_repository_impl.dart';
 import 'package:school_pulse/features/finance/domain/repositories/fee_catalogue_repository.dart';
 import 'package:school_pulse/features/finance/data/repositories/fee_catalogue_repository_impl.dart';
+import 'package:school_pulse/features/hr/domain/repositories/salary_structure_repository.dart';
+import 'package:school_pulse/features/hr/data/repositories/salary_structure_repository_impl.dart';
+import 'package:school_pulse/features/hr/domain/repositories/pay_component_catalogue_repository.dart';
+import 'package:school_pulse/features/hr/data/repositories/pay_component_catalogue_repository_impl.dart';
 import 'package:school_pulse/features/finance/domain/repositories/student_billing_repository.dart';
 import 'package:school_pulse/features/finance/data/repositories/student_billing_repository_impl.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
@@ -1171,6 +1175,19 @@ Future<void> init() async {
   // plain tenant-scoped Firestore read/write (no callable needed).
   sl.registerLazySingleton<FeeCatalogueRepository>(
     () => FeeCatalogueRepositoryImpl(firestore: sl()),
+  );
+
+  // Salary-structure backend (functions/staff_payroll_structure.js) -
+  // immutable published pay structures keyed by designation. See the Add
+  // Staff wizard's Pay Structure step and the Salary Structure Builder.
+  sl.registerLazySingleton<SalaryStructureRepository>(
+    () => SalaryStructureRepositoryImpl(firestore: sl(), functions: sl()),
+  );
+
+  // Pay component catalogue - reusable named pay components, not
+  // money-authoritative, so plain tenant-scoped Firestore read/write.
+  sl.registerLazySingleton<PayComponentCatalogueRepository>(
+    () => PayComponentCatalogueRepositoryImpl(firestore: sl()),
   );
 
   // Student billing (Phase 2): bills/adjustments/payments/reversals.

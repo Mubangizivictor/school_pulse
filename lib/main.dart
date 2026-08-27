@@ -1,7 +1,10 @@
 import 'dart:async';
 
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:school_pulse/features/notifications/notification_coordinator.dart';
@@ -77,6 +80,10 @@ import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.d
 import 'package:school_pulse/features/super_admin/presentation/bloc/super_admin_bloc.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_event.dart';
 import 'package:school_pulse/features/branding/presentation/screens/branding_initializer.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:school_pulse/features/portal/data/portal_tenant_resolver.dart';
+import 'package:school_pulse/features/portal/domain/portal_runtime.dart';
+import 'package:school_pulse/features/portal/presentation/portal_not_found_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -91,6 +98,23 @@ void main() async {
     } else {
       rethrow;
     }
+  }
+
+  // Local Firebase Emulator Suite wiring, opt-in only via
+  // `--dart-define=USE_FIREBASE_EMULATOR=true` (e.g. `flutter run -d chrome
+  // --dart-define=USE_FIREBASE_EMULATOR=true`). Never active in a normal
+  // build/run - production always talks to the real project.
+  const useEmulator = bool.fromEnvironment('USE_FIREBASE_EMULATOR');
+  if (useEmulator) {
+    const host = 'localhost';
+    await FirebaseAuth.instance.useAuthEmulator(host, 9099);
+    FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
+    await FirebaseStorage.instance.useStorageEmulator(host, 9199);
+    FirebaseFunctions.instanceFor(
+      region: 'europe-west1',
+    ).useFunctionsEmulator(host, 5001);
+    FirebaseFunctions.instance.useFunctionsEmulator(host, 5001);
+    debugPrint('Using Firebase Emulator Suite at $host');
   }
 
   // App Check: monitoring-only for now, deliberately NOT enforced
@@ -152,10 +176,24 @@ void main() async {
     if (kDebugMode) debugPrint('ThemeProvider initialization failed: $e');
   }
 
+  // Resolve only the public directory projection before any authenticated
+  // route builds. This avoids a hostname ever causing a read of schools/{id}.
+  PortalResolution portal;
+  try {
+    portal = await PortalTenantResolver(FirebaseFirestore.instance).resolve();
+  } catch (_) {
+    portal = const PortalResolution.notFound();
+  }
+  if (portal.kind == PortalResolutionKind.tenant) {
+    PortalRuntime.tenant = portal.tenant;
+    themeProvider.updateBranding(portal.tenant!.branding);
+  }
   runApp(
     ChangeNotifierProvider.value(
       value: themeProvider,
-      child: const SchoolPulseApp(),
+      child: portal.kind == PortalResolutionKind.notFound
+          ? const PortalNotFoundScreen()
+          : const SchoolPulseApp(),
     ),
   );
 }

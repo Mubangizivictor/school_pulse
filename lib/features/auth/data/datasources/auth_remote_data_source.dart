@@ -66,9 +66,10 @@ abstract class AuthRemoteDataSource {
 
   /// Calls the `createStaffAccount` Cloud Function, which verifies the
   /// caller is a school administrator before provisioning the Firebase Auth
-  /// account and Firestore profile with the Admin SDK. Returns the
-  /// generated temporary password for the admin to hand to the new staff
-  /// member.
+  /// account and Firestore profile with the Admin SDK. No plaintext password
+  /// is generated or returned - the new staff member sets their own password
+  /// via a Firebase password-reset action link (emailed to them when
+  /// [sendLoginDetailsViaEmail] is true). Returns the created staffCode.
   Future<String> createStaffAccount({
     required String name,
     required String email,
@@ -83,6 +84,11 @@ abstract class AuthRemoteDataSource {
     String? campusId,
     String? employmentType,
     DateTime? dateJoined,
+    String? idempotencyKey,
+    bool forcePasswordChange = false,
+    bool sendLoginDetailsViaEmail = false,
+    Map<String, dynamic>? staffData,
+    Map<String, dynamic>? roleConfigs,
   });
 
   /// Sets a new password for the currently signed-in user and clears their
@@ -494,6 +500,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     String? campusId,
     String? employmentType,
     DateTime? dateJoined,
+    String? idempotencyKey,
+    bool forcePasswordChange = false,
+    bool sendLoginDetailsViaEmail = false,
+    Map<String, dynamic>? staffData,
+    Map<String, dynamic>? roleConfigs,
   }) async {
     try {
       final callable = functions.httpsCallable('createStaffAccount');
@@ -511,8 +522,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'campusId': campusId,
         'employmentType': employmentType,
         'dateJoined': dateJoined?.toIso8601String(),
+        'idempotencyKey': idempotencyKey,
+        'forcePasswordChange': forcePasswordChange,
+        'sendLoginDetailsViaEmail': sendLoginDetailsViaEmail,
+        ...?staffData,
+        'roleConfigs': roleConfigs,
       });
-      return result.data['temporaryPassword'] as String;
+      // The callable never emails or returns a plaintext password (it
+      // provisions the account via a Firebase password-reset action link
+      // instead - see createStaffAccount in functions/index.js). The
+      // staffCode is the only meaningful identifier it returns; callers
+      // that need uid/setupEmailQueued look those up separately (see
+      // AddStaffWizardController._lookupStaffCodeAndUid).
+      return (result.data['staffCode'] as String?) ?? '';
     } catch (e) {
       // Staff identities, their tenant membership, and their initial
       // credential must be created together by the privileged callable.

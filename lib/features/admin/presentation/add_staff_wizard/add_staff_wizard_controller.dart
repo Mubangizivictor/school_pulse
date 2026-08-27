@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/user_roles.dart';
@@ -18,6 +19,7 @@ enum WizardStep {
   personalInfo,
   contactInfo,
   employmentInfo,
+  payStructure,
   selectRoles,
   configureRole,
   rolesSummary,
@@ -35,6 +37,7 @@ int stepNumberFor(WizardStep step) {
     WizardStep.personalInfo,
     WizardStep.contactInfo,
     WizardStep.employmentInfo,
+    WizardStep.payStructure,
     WizardStep.selectRoles,
     WizardStep.configureRole,
     WizardStep.rolesSummary,
@@ -47,7 +50,7 @@ int stepNumberFor(WizardStep step) {
   return i == -1 ? 1 : i + 1;
 }
 
-const int kWizardTotalSteps = 10;
+const int kWizardTotalSteps = 11;
 
 /// Holds the Add Staff wizard's accumulating draft, current step, and the
 /// submit() call that actually creates the account. A plain ChangeNotifier
@@ -75,6 +78,9 @@ class AddStaffWizardController extends ChangeNotifier {
 
   bool submitting = false;
   String? submitError;
+  // Deprecated: no plaintext password is ever generated or returned by
+  // createStaffAccount - kept only so any external reference doesn't break
+  // the build. Always null after submit(); not read by step_12_success.
   String? resultTempPassword;
   String? resultStaffCode;
   String? resultUid;
@@ -122,6 +128,9 @@ class AddStaffWizardController extends ChangeNotifier {
         _step = WizardStep.employmentInfo;
         break;
       case WizardStep.employmentInfo:
+        _step = WizardStep.payStructure;
+        break;
+      case WizardStep.payStructure:
         _step = WizardStep.selectRoles;
         break;
       case WizardStep.selectRoles:
@@ -170,6 +179,9 @@ class AddStaffWizardController extends ChangeNotifier {
         _step = WizardStep.contactInfo;
         break;
       case WizardStep.selectRoles:
+        _step = WizardStep.payStructure;
+        break;
+      case WizardStep.payStructure:
         _step = WizardStep.employmentInfo;
         break;
       case WizardStep.configureRole:
@@ -260,6 +272,12 @@ class AddStaffWizardController extends ChangeNotifier {
         ..alternatePhone = restored.alternatePhone
         ..address = restored.address
         ..nationality = restored.nationality
+        ..emergencyContactName = restored.emergencyContactName
+        ..emergencyContactRelationship = restored.emergencyContactRelationship
+        ..emergencyContactPhone = restored.emergencyContactPhone
+        ..emergencyContactAlternatePhone =
+            restored.emergencyContactAlternatePhone
+        ..idempotencyKey = restored.idempotencyKey
         ..employmentType = restored.employmentType
         ..department = restored.department
         ..departmentId = restored.departmentId
@@ -349,6 +367,27 @@ class AddStaffWizardController extends ChangeNotifier {
         campusId: draft.campusId,
         employmentType: draft.employmentType,
         dateJoined: draft.dateJoined,
+        idempotencyKey: draft.idempotencyKey ??= const Uuid().v4(),
+        forcePasswordChange: draft.forcePasswordChange,
+        sendLoginDetailsViaEmail: draft.sendLoginDetailsViaEmail,
+        staffData: {
+          'gender': draft.gender,
+          'phoneNumber': draft.phoneNumber,
+          'alternatePhone': draft.alternatePhone,
+          'address': draft.address,
+          'nationality': draft.nationality,
+          'selectedPayComponentIds': draft.selectedPayComponentIds.toList(),
+          if (draft.emergencyContactName.trim().isNotEmpty)
+            'emergencyContact': {
+              'name': draft.emergencyContactName.trim(),
+              'relationship': draft.emergencyContactRelationship.trim(),
+              'phone': draft.emergencyContactPhone.trim(),
+              'alternatePhone': draft.emergencyContactAlternatePhone.trim(),
+            },
+        },
+        roleConfigs: draft.roleConfigs.map(
+          (key, value) => MapEntry(key.name, value.toJson()),
+        ),
       ),
     );
 
@@ -361,8 +400,10 @@ class AddStaffWizardController extends ChangeNotifier {
       return result;
     }
 
-    final tempPassword = result.fold((_) => null, (p) => p);
-    resultTempPassword = tempPassword;
+    // result's payload is the staffCode (no plaintext password is ever
+    // generated) - resultStaffCode/resultUid come from the authoritative
+    // Firestore lookup below instead, so the callable's return value here
+    // isn't otherwise needed.
     resultStaffCode = await _lookupStaffCodeAndUid();
     await clearDraft();
 
@@ -394,14 +435,20 @@ class AddStaffWizardController extends ChangeNotifier {
   }
 
   Future<void> logAudit() async {
-    await di.sl<AuditRepository>().logAction(
-      schoolId: schoolId,
-      title: 'Staff Account Created',
-      description:
-          '${draft.fullName} was added as ${draft.selectedRoles.map(UserRoleDisplay.name).join(', ')}.',
-      iconName: 'person_add',
-      colorHex: 'FF2196F3',
-      userId: adminUid,
-    );
+    try {
+      await di.sl<AuditRepository>().logAction(
+        schoolId: schoolId,
+        title: 'Staff Account Created',
+        description:
+            '${draft.fullName} was added as ${draft.selectedRoles.map(UserRoleDisplay.name).join(', ')}.',
+        iconName: 'person_add',
+        colorHex: 'FF2196F3',
+        userId: adminUid,
+      );
+    } catch (error, stackTrace) {
+      // Creation is already committed; retain diagnostics without exposing
+      // Firebase internals to the administrator or turning success into fail.
+      debugPrint('Staff enrolment audit failed: $error\n$stackTrace');
+    }
   }
 }

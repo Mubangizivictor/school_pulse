@@ -69,9 +69,15 @@ class StaffDocumentsUploader {
   /// edit_profile_screen.dart, then merges the resulting URL onto
   /// users/{uid}.photoUrl. Best-effort: a failure here doesn't affect the
   /// already-created staff account.
-  Future<bool> uploadPhoto({required String uid, required File photo}) async {
+  Future<bool> uploadPhoto({
+    required String schoolId,
+    required String uid,
+    required File photo,
+  }) async {
     try {
-      final reference = storage.ref('profile_photos/$uid/profile.jpg');
+      final reference = storage.ref(
+        'schools/$schoolId/staff/$uid/profile/profile.jpg',
+      );
       await reference.putFile(
         photo,
         SettableMetadata(contentType: 'image/jpeg'),

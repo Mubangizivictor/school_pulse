@@ -139,7 +139,9 @@ class Step11ReviewConfirm extends StatelessWidget {
                   style: TextStyle(color: AppColors.textSecondary(context)),
                 ),
                 Text(
-                  'Temporary password generated on creation',
+                  draft.sendLoginDetailsViaEmail
+                      ? 'A password setup link will be emailed to this address'
+                      : 'No login email will be sent — share setup access with this staff member directly',
                   style: TextStyle(color: AppColors.textSecondary(context)),
                 ),
               ],
@@ -167,6 +169,7 @@ class Step11ReviewConfirm extends StatelessWidget {
       String? photoWarning;
       if (controller.draft.photo != null) {
         final ok = await uploader.uploadPhoto(
+          schoolId: controller.schoolId,
           uid: uid,
           photo: controller.draft.photo!,
         );
@@ -183,7 +186,7 @@ class Step11ReviewConfirm extends StatelessWidget {
       if (context.mounted &&
           (photoWarning != null || failedDocuments.isNotEmpty)) {
         final parts = [
-          if (photoWarning != null) photoWarning,
+          ?photoWarning,
           if (failedDocuments.isNotEmpty)
             '${failedDocuments.length} document(s) failed to upload',
         ];

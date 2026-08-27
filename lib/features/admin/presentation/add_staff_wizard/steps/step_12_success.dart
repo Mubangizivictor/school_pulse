@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'package:school_pulse/design_system/app_components.dart';
@@ -64,37 +63,19 @@ class Step12Success extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Temporary Password',
+                      'Account setup',
                       style: TextStyle(
                         color: AppColors.textMuted(context),
                         fontSize: 12,
                       ),
                     ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            controller.resultTempPassword ?? '—',
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        if (controller.resultTempPassword != null)
-                          IconButton(
-                            icon: const Icon(Icons.copy, size: 18),
-                            onPressed: () => Clipboard.setData(
-                              ClipboardData(
-                                text: controller.resultTempPassword!,
-                              ),
-                            ),
-                          ),
-                      ],
+                    Text(
+                      'A secure password-setup link is sent only when selected. No password is displayed or emailed.',
+                      style: TextStyle(color: AppColors.textPrimary(context)),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'The staff member will be required to change this password on first login.',
+                      'Password setup and first-login requirements follow the options selected during enrolment.',
                       style: TextStyle(
                         color: AppColors.textMuted(context),
                         fontSize: 11,

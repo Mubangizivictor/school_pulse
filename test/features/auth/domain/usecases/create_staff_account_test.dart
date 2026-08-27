@@ -35,6 +35,11 @@ void main() {
           campusId: any(named: 'campusId'),
           employmentType: any(named: 'employmentType'),
           dateJoined: any(named: 'dateJoined'),
+          idempotencyKey: any(named: 'idempotencyKey'),
+          forcePasswordChange: any(named: 'forcePasswordChange'),
+          sendLoginDetailsViaEmail: any(named: 'sendLoginDetailsViaEmail'),
+          staffData: any(named: 'staffData'),
+          roleConfigs: any(named: 'roleConfigs'),
         ),
       ).thenAnswer((_) async => const Right('temp-pass'));
 
@@ -50,6 +55,11 @@ void main() {
           campusId: 'campus-1',
           employmentType: 'Permanent',
           dateJoined: dateJoined,
+          idempotencyKey: null,
+          forcePasswordChange: false,
+          sendLoginDetailsViaEmail: false,
+          staffData: null,
+          roleConfigs: null,
         ),
       );
 
@@ -69,6 +79,11 @@ void main() {
           campusId: 'campus-1',
           employmentType: 'Permanent',
           dateJoined: dateJoined,
+          idempotencyKey: null,
+          forcePasswordChange: false,
+          sendLoginDetailsViaEmail: false,
+          staffData: null,
+          roleConfigs: null,
         ),
       ).called(1);
     },

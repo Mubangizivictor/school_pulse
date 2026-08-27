@@ -144,3 +144,6 @@ When answering a School Pulse question:
 
 This document is a working overview, not a substitute for the source code.
 Keep it updated after major product or architecture changes.
+# Portal domains (2026-08)
+
+The Flutter web SPA is multi-host, not multi-deployment. `portal_domains/{hostname}` is the only unauthenticated tenant lookup and has a safe branding projection; `schools/{id}` stays private. `app/router.dart` additionally requires a portal hostname to match the authenticated user's home `schoolId`. Onboarding, slug reservation, custom-domain verification/activation, and audit logs are server-side callables in `public_functions/portal_domains.js`.

@@ -133,6 +133,13 @@ async function seed() {
         // No accessMode field - the fail-open default case: a school this
         // rules deploy hasn't touched yet must still be fully writable.
       }),
+      setDoc(doc(db, 'portal_domains', 'greena.schoolpulse.ug'), {
+        schoolId: 'schoolA', slug: 'greena', schoolName: 'School A',
+        status: 'active', primaryColor: '#123456',
+      }),
+      setDoc(doc(db, 'portal_domains', 'suspended.schoolpulse.ug'), {
+        schoolId: 'schoolB', slug: 'suspended', schoolName: 'School B', status: 'suspended',
+      }),
       setDoc(doc(db, 'schools', 'schoolB'), {
         name: 'School B', status: 'active', enabledFeatures: [],
         contactEmail: 'admin@schoolb.example', subscription: { price: 4200 },
@@ -409,6 +416,15 @@ describe('school contact directory', () => {
 });
 
 describe('SaaS owner / platform layer', () => {
+  test('portal directory exposes only active mappings and is never client writable', async () => {
+    const anonymous = testEnv.unauthenticatedContext().firestore();
+    await assertSucceeds(getDoc(doc(anonymous, 'portal_domains', 'greena.schoolpulse.ug')));
+    await assertFails(getDoc(doc(anonymous, 'portal_domains', 'suspended.schoolpulse.ug')));
+    await assertFails(setDoc(doc(dbFor('adminA'), 'portal_domains', 'forged.schoolpulse.ug'), {
+      schoolId: 'schoolB', status: 'active', schoolName: 'Forged',
+    }));
+  });
+
   test('any signed-in user can read a school profile, but only the owner can write it', async () => {
     await assertSucceeds(getDoc(doc(dbFor('adminA'), 'schools', 'schoolA')));
     await assertSucceeds(getDoc(doc(dbFor('ownerA'), 'schools', 'schoolA')));

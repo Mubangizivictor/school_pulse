@@ -106,24 +106,28 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
     String adminEmail,
     String adminPassword,
   ) async {
-    // schools/{id} is the sole institution tenant source of truth as of
-    // Phase 1 (classification/divisions/displayLabel live on this doc). The
-    // legacy tenants/{tenantId} doc is deprecated in place - no new writes
-    // go there; existing docs are left untouched, not migrated.
-    await firestore.collection('schools').doc(school.id).set(school.toJson());
-
-    // Manual owner provisioning remains available for schools that did not
-    // start on the public website. The invitation is consumed server-side;
-    // the plaintext temporary password is never readable from the client.
-    await firestore.collection('school_admin_invitations').add({
-      'email': adminEmail,
-      'schoolId': school.id,
-      'tenantId': school.tenantId,
-      'tempPassword': adminPassword,
-      'role': 'schoolAdmin',
-      'createdAt': FieldValue.serverTimestamp(),
-      'status': 'pending',
-    });
+    // Tenant creation, slug reservation, membership provisioning, and audit
+    // logging must be one Admin-SDK transaction. In particular, never write
+    // an invitation containing a password from this client path.
+    final slug = school.slug.isNotEmpty
+        ? school.slug
+        : school.tenantId.toLowerCase();
+    try {
+      await _ownerFunctions.httpsCallable('createSchoolPortal').call({
+        'schoolName': school.name,
+        'slug': slug,
+        'adminEmail': adminEmail,
+        'planId': school.subscriptionPlanId,
+        'branding': {
+          ...school.branding,
+          'address': school.address,
+          'phone': school.contactPhone,
+          'email': school.contactEmail,
+        },
+      });
+    } on FirebaseFunctionsException catch (e) {
+      throw StateError(e.message ?? 'Unable to create the school portal.');
+    }
   }
 
   @override

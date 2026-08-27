@@ -42,11 +42,16 @@ abstract class FeeBillingRepository {
   /// [planId]. Safe to retry with the same [idempotencyKey] - the backend's
   /// bill doc id defaults to `idempotencyKey ?? '${studentId}_${planId}'`,
   /// so retries never create a duplicate bill.
+  /// [selectedOptionalLineIds] are the `chargeId`s of the plan's non-required
+  /// lines (e.g. meals, transport) the student opted into. Required lines are
+  /// always billed; the backend re-validates the selection and recomputes
+  /// the total server-side rather than trusting a client-provided amount.
   Future<Either<Failure, String>> issueStudentBill({
     required String schoolId,
     required String studentId,
     required String planId,
     String? idempotencyKey,
+    List<String> selectedOptionalLineIds = const [],
   });
 
   /// Direct Firestore reads for the Fee Plan Builder - listing/streaming is

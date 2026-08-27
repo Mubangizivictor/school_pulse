@@ -8,6 +8,7 @@ import 'add_staff_wizard_controller.dart';
 import 'steps/step_02_personal_info.dart';
 import 'steps/step_03_contact_info.dart';
 import 'steps/step_04_employment_info.dart';
+import 'steps/step_04b_pay_structure.dart';
 import 'steps/step_05_select_roles.dart';
 import 'steps/step_06_configure_role.dart';
 import 'steps/step_07_roles_summary.dart';
@@ -97,6 +98,8 @@ class _AddStaffWizardPageState extends State<AddStaffWizardPage> {
         return const Step03ContactInfo();
       case WizardStep.employmentInfo:
         return const Step04EmploymentInfo();
+      case WizardStep.payStructure:
+        return const Step04bPayStructure();
       case WizardStep.selectRoles:
         return const Step05SelectRoles();
       case WizardStep.configureRole:

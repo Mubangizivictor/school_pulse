@@ -388,6 +388,25 @@ class _FeeCatalogueTab extends StatelessWidget {
     }
   }
 
+  // Common charge types on a typical Ugandan school fees structure -
+  // presets to speed up catalogue setup, not an exhaustive or mandatory
+  // list. Admins can still type any custom name.
+  static const _presetCharges = <(String name, String serviceKey)>[
+    ('Tuition', 'tuition'),
+    ('Meals / Lunch', 'meals'),
+    ('Boarding Fee', 'boarding'),
+    ('Transport', 'transport'),
+    ('Development Fund', 'development'),
+    ('PTA Fund', 'pta'),
+    ('Examination Fee', 'exams'),
+    ('Uniform', 'uniform'),
+    ('Medical / Insurance', 'medical'),
+    ('ICT / Computer Fee', 'ict'),
+    ('Activity / Sports Fee', 'activities'),
+    ('Library Fee', 'library'),
+    ('Caution Money / Deposit', 'caution_money'),
+  ];
+
   void _openAddDialog(BuildContext context) {
     final nameController = TextEditingController();
     final serviceKeyController = TextEditingController();
@@ -395,9 +414,32 @@ class _FeeCatalogueTab extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('New Fee Charge'),
-        content: Column(
+        content: SizedBox(
+          width: 420,
+          child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              'Common charges',
+              style: Theme.of(dialogContext).textTheme.labelLarge,
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final preset in _presetCharges)
+                  ActionChip(
+                    label: Text(preset.$1),
+                    onPressed: () {
+                      nameController.text = preset.$1;
+                      serviceKeyController.text = preset.$2;
+                    },
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
             TextField(
               controller: nameController,
               decoration: const InputDecoration(
@@ -412,6 +454,7 @@ class _FeeCatalogueTab extends StatelessWidget {
               ),
             ),
           ],
+          ),
         ),
         actions: [
           TextButton(

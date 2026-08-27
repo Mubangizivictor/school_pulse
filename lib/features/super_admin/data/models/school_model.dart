@@ -19,6 +19,11 @@ class SchoolModel extends School {
     super.divisions,
     super.displayLabel,
     super.accessMode,
+    super.slug,
+    super.portalSubdomain,
+    super.customDomains,
+    super.branding,
+    super.domainStatus,
   });
 
   factory SchoolModel.fromJson(Map<String, dynamic> json) {
@@ -52,6 +57,11 @@ class SchoolModel extends School {
           .toList(),
       displayLabel: json['displayLabel'] as String?,
       accessMode: json['accessMode'] as String?,
+      slug: json['slug'] as String? ?? '',
+      portalSubdomain: json['portalSubdomain'] as String? ?? '',
+      customDomains: List<String>.from(json['customDomains'] ?? const []),
+      branding: Map<String, dynamic>.from(json['branding'] ?? const {}),
+      domainStatus: json['domainStatus'] as String? ?? 'pending',
     );
   }
 
@@ -97,6 +107,11 @@ class SchoolModel extends School {
       'divisions': divisions.map(_divisionToJson).toList(),
       'displayLabel': displayLabel,
       if (accessMode != null) 'accessMode': accessMode,
+      'slug': slug,
+      'portalSubdomain': portalSubdomain,
+      'customDomains': customDomains,
+      'branding': branding,
+      'domainStatus': domainStatus,
     };
   }
 }

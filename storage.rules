@@ -5,6 +5,26 @@ service firebase.storage {
       return request.auth != null &&
         firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.schoolId == schoolId;
     }
+    function isSchoolStaffAdmin(schoolId) {
+      return isSameSchool(schoolId) &&
+        (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['director', 'headTeacher', 'schoolAdmin', 'hrOfficer'] ||
+         (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles is list &&
+          firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles.hasAny(['director', 'headTeacher', 'schoolAdmin', 'hrOfficer'])));
+    }
+    function isStaffOwner(schoolId, staffUid) {
+      return isSameSchool(schoolId) && request.auth.uid == staffUid;
+    }
+    function isSafeStaffImage() {
+      return request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/(png|jpe?g|webp)');
+    }
+    function isSafeStaffDocument() {
+      return request.resource.size < 25 * 1024 * 1024 &&
+        (request.resource.contentType.matches('image/(png|jpe?g|webp)') ||
+         request.resource.contentType == 'application/pdf' ||
+         request.resource.contentType == 'application/msword' ||
+         request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.*'));
+    }
     function isActiveInstitutionMember(institutionId) {
       return request.auth != null && (
         isSameSchool(institutionId) ||
@@ -47,6 +67,19 @@ service firebase.storage {
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
       allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+    // Staff onboarding writes here after the callable has created users/{uid}.
+    // The path itself carries the tenant; never authorize it by a client
+    // supplied school id or by a broad authenticated-user check.
+    match /schools/{schoolId}/staff/{staffUid}/profile/{fileName} {
+      allow read: if isSchoolStaffAdmin(schoolId) || isStaffOwner(schoolId, staffUid);
+      allow create, update: if (isSchoolStaffAdmin(schoolId) || isStaffOwner(schoolId, staffUid)) && isSafeStaffImage();
+      allow delete: if isSchoolStaffAdmin(schoolId) || isStaffOwner(schoolId, staffUid);
+    }
+    match /schools/{schoolId}/staff/{staffUid}/documents/{fileName} {
+      allow read: if isSchoolStaffAdmin(schoolId) || isStaffOwner(schoolId, staffUid);
+      allow create, update: if (isSchoolStaffAdmin(schoolId) || isStaffOwner(schoolId, staffUid)) && isSafeStaffDocument();
+      allow delete: if isSchoolStaffAdmin(schoolId) || isStaffOwner(schoolId, staffUid);
     }
     function isConversationParticipant(conversationId) {
       return request.auth != null &&

@@ -83,6 +83,7 @@ class EnrollmentSetupWizardBloc
     on<AcademicPlacementUpdated>(_onAcademicPlacementUpdated);
     on<FinanceDetailsUpdated>(_onFinanceDetailsUpdated);
     on<FeePlanMatchUpdated>(_onFeePlanMatchUpdated);
+    on<SelectedFeeAddOnsUpdated>(_onSelectedFeeAddOnsUpdated);
     on<ScholarshipAwardRequested>(_onScholarshipAwardRequested);
     on<HouseSelected>(_onHouseSelected);
     on<DormitoryAssignmentRequested>(_onDormitoryAssignmentRequested);
@@ -690,8 +691,16 @@ class EnrollmentSetupWizardBloc
         clearMatchedFeePlanTotalUgx: event.totalUgx == null,
         matchedFeePlanLines: event.lines,
         billingPending: event.billingPending,
+        selectedFeeAddOnIds: const {},
       ),
     );
+  }
+
+  void _onSelectedFeeAddOnsUpdated(
+    SelectedFeeAddOnsUpdated event,
+    Emitter<EnrollmentSetupWizardState> emit,
+  ) {
+    emit(state.copyWith(selectedFeeAddOnIds: event.selectedFeeAddOnIds));
   }
 
   Future<void> _onScholarshipAwardRequested(
@@ -1007,6 +1016,7 @@ class EnrollmentSetupWizardBloc
         studentId: state.studentId!,
         planId: matchedPlanId,
         idempotencyKey: '${state.studentId}_$matchedPlanId',
+        selectedOptionalLineIds: state.selectedFeeAddOnIds.toList(),
       );
       final billFailure = billResult.fold((f) => f, (_) => null);
       if (billFailure != null) {
