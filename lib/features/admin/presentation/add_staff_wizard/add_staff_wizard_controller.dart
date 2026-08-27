@@ -13,46 +13,38 @@ import 'package:school_pulse/features/admin/presentation/add_staff_wizard/models
 import 'package:school_pulse/features/auth/domain/usecases/create_staff_account.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
-/// Internal wizard steps, in order. The wizard begins directly with the
-/// new-staff form; importing and rehiring are not available in this flow.
-enum WizardStep {
-  personalInfo,
-  contactInfo,
-  employmentInfo,
-  payStructure,
-  selectRoles,
-  configureRole,
-  rolesSummary,
-  accessPreview,
-  loginSecurity,
-  documents,
-  reviewConfirm,
-  success,
+/// The five visible wizard stages, matching the reference design's stepper:
+/// Profile -> Work -> Roles -> Access -> Review. `success` is a sixth,
+/// unlabeled state reached only after a successful submit from `review`.
+enum WizardStage { profile, work, roles, access, review, success }
+
+const List<WizardStage> kWizardStages = [
+  WizardStage.profile,
+  WizardStage.work,
+  WizardStage.roles,
+  WizardStage.access,
+  WizardStage.review,
+];
+
+const List<String> kWizardStageLabels = [
+  'Profile',
+  'Work',
+  'Roles',
+  'Access',
+  'Review',
+];
+
+int stageIndexFor(WizardStage stage) {
+  final i = kWizardStages.indexOf(stage);
+  return i == -1 ? 0 : i;
 }
 
-/// Maps a WizardStep to its "Step N of 10" label, matching the reference
-/// design (Select Method and Success aren't counted).
-int stepNumberFor(WizardStep step) {
-  const numbered = [
-    WizardStep.personalInfo,
-    WizardStep.contactInfo,
-    WizardStep.employmentInfo,
-    WizardStep.payStructure,
-    WizardStep.selectRoles,
-    WizardStep.configureRole,
-    WizardStep.rolesSummary,
-    WizardStep.accessPreview,
-    WizardStep.loginSecurity,
-    WizardStep.documents,
-    WizardStep.reviewConfirm,
-  ];
-  final i = numbered.indexOf(step);
-  return i == -1 ? 1 : i + 1;
-}
+/// Sub-position within the Roles stage, which - like the reference design's
+/// "Role 1 of 2" screen - internally holds three screens: pick roles,
+/// configure each selected role one at a time, then a summary.
+enum RolesSubStep { select, configure, summary }
 
-const int kWizardTotalSteps = 11;
-
-/// Holds the Add Staff wizard's accumulating draft, current step, and the
+/// Holds the Add Staff wizard's accumulating draft, current stage, and the
 /// submit() call that actually creates the account. A plain ChangeNotifier
 /// (not bloc) to match the imperative StatefulWidget+Either.fold convention
 /// already used for staff creation in user_management_page.dart.
@@ -68,11 +60,14 @@ class AddStaffWizardController extends ChangeNotifier {
   });
 
   final AddStaffDraft draft = AddStaffDraft();
-  WizardStep _step = WizardStep.personalInfo;
-  WizardStep get step => _step;
+  WizardStage _stage = WizardStage.profile;
+  WizardStage get stage => _stage;
 
-  /// When configuring roles one at a time (Step 6), this is the role
-  /// currently being configured.
+  RolesSubStep _rolesSubStep = RolesSubStep.select;
+  RolesSubStep get rolesSubStep => _rolesSubStep;
+
+  /// When configuring roles one at a time within the Roles stage, this is
+  /// the role currently being configured.
   int _configureRoleIndex = 0;
   int get configureRoleIndex => _configureRoleIndex;
 
@@ -80,7 +75,7 @@ class AddStaffWizardController extends ChangeNotifier {
   String? submitError;
   // Deprecated: no plaintext password is ever generated or returned by
   // createStaffAccount - kept only so any external reference doesn't break
-  // the build. Always null after submit(); not read by step_12_success.
+  // the build. Always null after submit(); not read by the success screen.
   String? resultTempPassword;
   String? resultStaffCode;
   String? resultUid;
@@ -113,118 +108,113 @@ class AddStaffWizardController extends ChangeNotifier {
     UserRole.hrOfficer,
   };
 
-  void goTo(WizardStep step) {
-    _step = step;
+  void goToStage(WizardStage stage) {
+    _stage = stage;
+    if (stage == WizardStage.roles) _rolesSubStep = RolesSubStep.select;
     notifyListeners();
     _persistDraft();
   }
 
   void next() {
-    switch (_step) {
-      case WizardStep.personalInfo:
-        _step = WizardStep.contactInfo;
+    switch (_stage) {
+      case WizardStage.profile:
+        _stage = WizardStage.work;
         break;
-      case WizardStep.contactInfo:
-        _step = WizardStep.employmentInfo;
+      case WizardStage.work:
+        _stage = WizardStage.roles;
+        _rolesSubStep = RolesSubStep.select;
         break;
-      case WizardStep.employmentInfo:
-        _step = WizardStep.payStructure;
+      case WizardStage.roles:
+        _rolesNext();
         break;
-      case WizardStep.payStructure:
-        _step = WizardStep.selectRoles;
+      case WizardStage.access:
+        _stage = WizardStage.review;
         break;
-      case WizardStep.selectRoles:
+      case WizardStage.review:
+        _stage = WizardStage.success;
+        break;
+      case WizardStage.success:
+        break;
+    }
+    notifyListeners();
+    _persistDraft();
+  }
+
+  void _rolesNext() {
+    switch (_rolesSubStep) {
+      case RolesSubStep.select:
         _configureRoleIndex = 0;
-        _step = rolesNeedingConfig.isNotEmpty
-            ? WizardStep.configureRole
-            : WizardStep.rolesSummary;
+        _rolesSubStep = rolesNeedingConfig.isNotEmpty
+            ? RolesSubStep.configure
+            : RolesSubStep.summary;
         break;
-      case WizardStep.configureRole:
+      case RolesSubStep.configure:
         if (_configureRoleIndex < rolesNeedingConfig.length - 1) {
           _configureRoleIndex++;
         } else {
-          _step = WizardStep.rolesSummary;
+          _rolesSubStep = RolesSubStep.summary;
         }
         break;
-      case WizardStep.rolesSummary:
-        _step = WizardStep.accessPreview;
-        break;
-      case WizardStep.accessPreview:
-        _step = WizardStep.loginSecurity;
-        break;
-      case WizardStep.loginSecurity:
-        _step = WizardStep.documents;
-        break;
-      case WizardStep.documents:
-        _step = WizardStep.reviewConfirm;
-        break;
-      case WizardStep.reviewConfirm:
-        _step = WizardStep.success;
-        break;
-      case WizardStep.success:
+      case RolesSubStep.summary:
+        _stage = WizardStage.access;
         break;
     }
-    notifyListeners();
-    _persistDraft();
   }
 
   void back() {
-    switch (_step) {
-      case WizardStep.personalInfo:
+    switch (_stage) {
+      case WizardStage.profile:
         break;
-      case WizardStep.contactInfo:
-        _step = WizardStep.personalInfo;
+      case WizardStage.work:
+        _stage = WizardStage.profile;
         break;
-      case WizardStep.employmentInfo:
-        _step = WizardStep.contactInfo;
+      case WizardStage.roles:
+        _rolesBack();
         break;
-      case WizardStep.selectRoles:
-        _step = WizardStep.payStructure;
+      case WizardStage.access:
+        _stage = WizardStage.roles;
+        _rolesSubStep = RolesSubStep.summary;
         break;
-      case WizardStep.payStructure:
-        _step = WizardStep.employmentInfo;
+      case WizardStage.review:
+        _stage = WizardStage.access;
         break;
-      case WizardStep.configureRole:
-        if (_configureRoleIndex > 0) {
-          _configureRoleIndex--;
-        } else {
-          _step = WizardStep.selectRoles;
-        }
-        break;
-      case WizardStep.rolesSummary:
-        _step = rolesNeedingConfig.isNotEmpty
-            ? WizardStep.configureRole
-            : WizardStep.selectRoles;
-        if (_step == WizardStep.configureRole) {
-          _configureRoleIndex = rolesNeedingConfig.length - 1;
-        }
-        break;
-      case WizardStep.accessPreview:
-        _step = WizardStep.rolesSummary;
-        break;
-      case WizardStep.loginSecurity:
-        _step = WizardStep.accessPreview;
-        break;
-      case WizardStep.documents:
-        _step = WizardStep.loginSecurity;
-        break;
-      case WizardStep.reviewConfirm:
-        _step = WizardStep.documents;
-        break;
-      case WizardStep.success:
+      case WizardStage.success:
         break;
     }
     notifyListeners();
     _persistDraft();
   }
 
-  /// Jump back into Step 6 to edit a specific role's config, from the Roles
-  /// Summary screen's "Edit" links.
+  void _rolesBack() {
+    switch (_rolesSubStep) {
+      case RolesSubStep.select:
+        _stage = WizardStage.work;
+        break;
+      case RolesSubStep.configure:
+        if (_configureRoleIndex > 0) {
+          _configureRoleIndex--;
+        } else {
+          _rolesSubStep = RolesSubStep.select;
+        }
+        break;
+      case RolesSubStep.summary:
+        if (rolesNeedingConfig.isNotEmpty) {
+          _rolesSubStep = RolesSubStep.configure;
+          _configureRoleIndex = rolesNeedingConfig.length - 1;
+        } else {
+          _rolesSubStep = RolesSubStep.select;
+        }
+        break;
+    }
+  }
+
+  /// Jump back into role configuration to edit a specific role, from the
+  /// Roles Summary screen's "Edit" links.
   void editRole(UserRole role) {
     final idx = rolesNeedingConfig.indexOf(role);
     if (idx == -1) return;
     _configureRoleIndex = idx;
-    _step = WizardStep.configureRole;
+    _rolesSubStep = RolesSubStep.configure;
     notifyListeners();
   }
 
