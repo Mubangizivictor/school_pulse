@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
@@ -74,146 +75,205 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.edit_square, color: colors.onSurface),
-            onPressed: () => context.push('/messages/new'),
-          ),
-        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/messages/new'),
+        tooltip: 'New message',
+        child: const Icon(Icons.edit_square),
       ),
       body: MessagingUserBuilder(
         builder: (context, user) => BlocBuilder<MessagingBloc, MessagingState>(
           bloc: context.messagingBloc,
           builder: (context, state) {
             final conversations = state.conversations;
-            return Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: InkWell(
-                    onTap: () => context.push('/messages/search'),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
+            _reconcileArchivedIfNeeded(conversations);
+            return ResponsiveBuilder(
+              builder: (context, layout) {
+                final searchBar = _buildSearchBar(
+                  context,
+                  inboxSurface,
+                  inboxBorder,
+                );
+                final filterRow = _buildFilterRow(context, conversations);
+                final content = Builder(
+                  builder: (context) {
+                    if (state.conversationsError != null) {
+                      return _buildError(state.conversationsError!);
+                    }
+                    if (conversations == null) {
+                      return const Center(child: SchoolPulseLoader());
+                    }
+                    final visible = _applyFilter(conversations);
+                    if (visible.isEmpty) {
+                      return _buildEmptyState(
+                        isWide: layout != ResponsiveLayout.mobile,
+                      );
+                    }
+                    return ListView.builder(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 14,
+                        vertical: 8,
                       ),
-                      decoration: BoxDecoration(
-                        color: inboxSurface,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: inboxBorder),
+                      itemCount: visible.length,
+                      itemBuilder: (context, index) {
+                        final chat = visible[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: ChatListTile(
+                            chat: chat,
+                            onTap: () =>
+                                context.push('/messages/chat/${chat.id}'),
+                            onLongPress: () =>
+                                _showChatActions(context, user, chat),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+
+                if (layout == ResponsiveLayout.mobile) {
+                  return Column(
+                    children: [searchBar, filterRow, Expanded(child: content)],
+                  );
+                }
+
+                final isDesktop = layout == ResponsiveLayout.desktop;
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1280),
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        isDesktop ? 32 : 20,
+                        20,
+                        isDesktop ? 32 : 20,
+                        24,
                       ),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.search,
-                            color: colors.onSurfaceVariant,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Search messages',
-                            style: AppTypography.bodyLarge.copyWith(
-                              color: colors.onSurfaceVariant,
+                          Expanded(
+                            child: Column(
+                              children: [
+                                searchBar,
+                                filterRow,
+                                const SizedBox(height: 8),
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: inboxSurface,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: inboxBorder),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: content,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                          if (isDesktop) ...[
+                            const SizedBox(width: 24),
+                            const _MessagingTipsPanel(),
+                          ],
                         ],
                       ),
                     ),
                   ),
-                ),
-                SizedBox(
-                  height: 48,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: [
-                      _FilterChip(
-                        label: 'All',
-                        isSelected: _filter == _InboxFilter.all,
-                        onTap: () => setState(() => _filter = _InboxFilter.all),
-                      ),
-                      _FilterChip(
-                        label: 'Unread',
-                        isSelected: _filter == _InboxFilter.unread,
-                        onTap: () =>
-                            setState(() => _filter = _InboxFilter.unread),
-                      ),
-                      _FilterChip(
-                        label: 'Groups',
-                        isSelected: _filter == _InboxFilter.groups,
-                        onTap: () =>
-                            setState(() => _filter = _InboxFilter.groups),
-                      ),
-                      _FilterChip(
-                        label: 'Official',
-                        isSelected: _filter == _InboxFilter.official,
-                        onTap: () =>
-                            setState(() => _filter = _InboxFilter.official),
-                      ),
-                      _FilterChip(
-                        label: 'Archived',
-                        isSelected: false,
-                        onTap: () => context.push('/messages/archived'),
-                      ),
-                      // Only appears when something is actually waiting,
-                      // so the chip row stays as short as it was for
-                      // most people.
-                      if (_pendingRequests(conversations) > 0)
-                        _FilterChip(
-                          label:
-                              'Requests (${_pendingRequests(conversations)})',
-                          isSelected: false,
-                          onTap: () => context.push('/messages/requests'),
-                        ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Builder(
-                    builder: (context) {
-                      if (state.conversationsError != null) {
-                        return _buildError(state.conversationsError!);
-                      }
-                      if (conversations == null) {
-                        return const Center(child: SchoolPulseLoader());
-                      }
-
-                      _reconcileArchived(conversations);
-                      final visible = _applyFilter(conversations);
-                      if (visible.isEmpty) {
-                        return _buildEmptyState();
-                      }
-                      return ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        itemCount: visible.length,
-                        itemBuilder: (context, index) {
-                          final chat = visible[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: ChatListTile(
-                              chat: chat,
-                              onTap: () =>
-                                  context.push('/messages/chat/${chat.id}'),
-                              onLongPress: () =>
-                                  _showChatActions(context, user, chat),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
+                );
+              },
             );
           },
         ),
+      ),
+    );
+  }
+
+  void _reconcileArchivedIfNeeded(List<ChatConversation>? conversations) {
+    if (conversations != null) _reconcileArchived(conversations);
+  }
+
+  Widget _buildSearchBar(BuildContext context, Color surface, Color border) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Semantics(
+        button: true,
+        label: 'Search messages',
+        child: InkWell(
+          onTap: () => context.push('/messages/search'),
+          borderRadius: BorderRadius.circular(16),
+          focusColor: colors.primary.withValues(alpha: 0.08),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: border),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.search, color: colors.onSurfaceVariant, size: 22),
+                const SizedBox(width: 12),
+                Text(
+                  'Search messages',
+                  style: AppTypography.bodyLarge.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterRow(
+    BuildContext context,
+    List<ChatConversation>? conversations,
+  ) {
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          _FilterChip(
+            label: 'All',
+            isSelected: _filter == _InboxFilter.all,
+            onTap: () => setState(() => _filter = _InboxFilter.all),
+          ),
+          _FilterChip(
+            label: 'Unread',
+            isSelected: _filter == _InboxFilter.unread,
+            onTap: () => setState(() => _filter = _InboxFilter.unread),
+          ),
+          _FilterChip(
+            label: 'Groups',
+            isSelected: _filter == _InboxFilter.groups,
+            onTap: () => setState(() => _filter = _InboxFilter.groups),
+          ),
+          _FilterChip(
+            label: 'Official',
+            isSelected: _filter == _InboxFilter.official,
+            onTap: () => setState(() => _filter = _InboxFilter.official),
+          ),
+          _FilterChip(
+            label: 'Archived',
+            isSelected: false,
+            onTap: () => context.push('/messages/archived'),
+          ),
+          // Only appears when something is actually waiting,
+          // so the chip row stays as short as it was for
+          // most people.
+          if (_pendingRequests(conversations) > 0)
+            _FilterChip(
+              label: 'Requests (${_pendingRequests(conversations)})',
+              isSelected: false,
+              onTap: () => context.push('/messages/requests'),
+            ),
+        ],
       ),
     );
   }
@@ -381,13 +441,15 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState({bool isWide = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x3l),
-        child: Column(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isWide ? 420 : double.infinity),
+          child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
@@ -443,7 +505,98 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               ),
             ),
           ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// Wide-viewport (desktop) side panel: static guidance only, no live data,
+/// no new message actions - matches the reference "Messaging tips" panel.
+class _MessagingTipsPanel extends StatelessWidget {
+  const _MessagingTipsPanel();
+
+  static const _tips = [
+    (
+      Icons.groups_outlined,
+      'Stay in the loop',
+      'Communicate with staff, parents, and teachers in one place.',
+    ),
+    (
+      Icons.notifications_none,
+      'Never miss important updates',
+      'Check unread messages and enable notifications.',
+    ),
+    (
+      Icons.verified_user_outlined,
+      'Keep conversations organized',
+      'Use groups and filters to find what you need quickly.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return SizedBox(
+      width: 260,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Messaging tips',
+            style: AppTypography.titleMedium.copyWith(
+              color: colors.onSurface,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          for (final tip in _tips) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.black : colors.surfaceContainerHigh,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark ? Colors.black : colors.outlineVariant,
+                    ),
+                  ),
+                  child: Icon(tip.$1, size: 18, color: colors.onSurfaceVariant),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tip.$2,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: colors.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        tip.$3,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: colors.onSurfaceVariant,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
+        ],
       ),
     );
   }

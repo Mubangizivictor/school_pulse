@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
+import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -91,10 +92,13 @@ class _OfflineBanner extends StatelessWidget {
 /// Shared chrome so every state (signed-out, loading, loaded) looks
 /// identical to the reference: back arrow, title, unread badge, overflow
 /// menu, search field, and quick-filter chip row.
+enum _NotificationMenuAction { markAllRead, delete }
+
 class _NotificationScaffold extends StatelessWidget {
   final Widget body;
   final int unreadCount;
   final VoidCallback? onMarkAllRead;
+  final VoidCallback? onDeleteRead;
   final String basePath;
   final bool canCompose;
 
@@ -102,6 +106,7 @@ class _NotificationScaffold extends StatelessWidget {
     required this.body,
     required this.unreadCount,
     required this.onMarkAllRead,
+    this.onDeleteRead,
     this.basePath = '/staff/notifications',
     this.canCompose = false,
   });
@@ -137,10 +142,51 @@ class _NotificationScaffold extends StatelessWidget {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () => context.push('$basePath/center'),
-          ),
+          if (ResponsiveBuilder.isMobile(context))
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.m),
+              child: PopupMenuButton<_NotificationMenuAction>(
+                icon: const Icon(Icons.more_vert),
+                tooltip: 'Notification actions',
+                onSelected: (action) {
+                  switch (action) {
+                    case _NotificationMenuAction.markAllRead:
+                      onMarkAllRead?.call();
+                    case _NotificationMenuAction.delete:
+                      onDeleteRead?.call();
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: _NotificationMenuAction.markAllRead,
+                    enabled: onMarkAllRead != null,
+                    child: const Text('Mark all as read'),
+                  ),
+                  PopupMenuItem(
+                    value: _NotificationMenuAction.delete,
+                    enabled: onDeleteRead != null,
+                    child: const Text('Delete'),
+                  ),
+                ],
+              ),
+            )
+          else ...[
+            TextButton.icon(
+              onPressed: onMarkAllRead,
+              icon: const Icon(Icons.done_all, size: 18),
+              label: const Text('Mark all as read'),
+            ),
+            const SizedBox(width: AppSpacing.s),
+            TextButton.icon(
+              onPressed: onDeleteRead,
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: const Text('Delete'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.danger(context),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.l),
+          ],
         ],
       ),
       body: body,
@@ -148,7 +194,13 @@ class _NotificationScaffold extends StatelessWidget {
           ? FloatingActionButton(
               onPressed: () => context.push('$basePath/add'),
               backgroundColor: AppColors.primary(context),
-              child: const Icon(Icons.add, color: AppColors.pureWhite),
+              tooltip: 'Add notification',
+              child: Icon(
+                Icons.add,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black
+                    : Colors.white,
+              ),
             )
           : null,
     );
@@ -184,6 +236,9 @@ class _NotificationListViewState extends State<_NotificationListView> {
     return BlocBuilder<NotificationCenterBloc, NotificationCenterState>(
       builder: (context, state) {
         final bloc = context.read<NotificationCenterBloc>();
+        final readItems = state.items
+            .where((n) => n.status != NotificationStatus.unread)
+            .toList();
         return _NotificationScaffold(
           unreadCount: state.unreadCount,
           basePath: _basePath,
@@ -191,18 +246,86 @@ class _NotificationListViewState extends State<_NotificationListView> {
           onMarkAllRead: state.unreadCount > 0
               ? () => bloc.add(const NotificationAllMarkedRead())
               : null,
-          body: Column(
-            children: [
-              _buildSearchBar(context),
-              if (state.isOffline) const _OfflineBanner(),
-              Expanded(
-                child: state.status == NotificationCenterStatus.loading
-                    ? const Center(child: SchoolPulseLoader())
-                    : state.status == NotificationCenterStatus.failure
-                    ? _buildError(context, bloc)
-                    : _buildSectionedList(context, state, bloc),
-              ),
-            ],
+          onDeleteRead: readItems.isEmpty
+              ? null
+              : () {
+                  for (final item in readItems) {
+                    bloc.add(NotificationDeleted(item.id));
+                  }
+                },
+          body: ResponsiveBuilder(
+            builder: (context, layout) {
+              final searchBar = _buildSearchBar(context);
+              final offlineBanner = state.isOffline
+                  ? const _OfflineBanner()
+                  : null;
+              final list = state.status == NotificationCenterStatus.loading
+                  ? const Center(child: SchoolPulseLoader())
+                  : state.status == NotificationCenterStatus.failure
+                  ? _buildError(context, bloc)
+                  : _buildSectionedList(context, state, bloc);
+
+              if (layout == ResponsiveLayout.mobile) {
+                return Column(
+                  children: [
+                    searchBar,
+                    ?offlineBanner,
+                    Expanded(child: list),
+                  ],
+                );
+              }
+
+              final isDesktop = layout == ResponsiveLayout.desktop;
+              final colors = Theme.of(context).colorScheme;
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final panelSurface = isDark
+                  ? Colors.black
+                  : colors.surfaceContainerHigh;
+              final panelBorder = isDark ? Colors.black : colors.outlineVariant;
+
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1280),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      isDesktop ? 32 : 20,
+                      12,
+                      isDesktop ? 32 : 20,
+                      24,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              searchBar,
+                              ?offlineBanner,
+                              const SizedBox(height: 8),
+                              Expanded(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: panelSurface,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(color: panelBorder),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: list,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isDesktop) ...[
+                          const SizedBox(width: 24),
+                          _NotificationSettingsPanel(basePath: _basePath),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         );
       },
@@ -280,6 +403,8 @@ class _NotificationListViewState extends State<_NotificationListView> {
     NotificationCenterBloc bloc,
   ) {
     if (state.items.isEmpty) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final colors = Theme.of(context).colorScheme;
       // Still wrapped in a refresh indicator: an empty list is exactly when a
       // user is most likely to pull down expecting something to appear.
       return RefreshIndicator(
@@ -287,18 +412,45 @@ class _NotificationListViewState extends State<_NotificationListView> {
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            const SizedBox(height: 120),
-            Icon(
-              Icons.notifications_none,
-              size: 48,
-              color: AppColors.textMuted(context),
+            const SizedBox(height: 96),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.black : colors.surfaceContainerHigh,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isDark ? Colors.black : colors.outlineVariant,
+                  ),
+                ),
+                child: Icon(
+                  Icons.notifications_none,
+                  size: 64,
+                  color: AppColors.textMuted(context),
+                ),
+              ),
             ),
-            const SizedBox(height: AppSpacing.l),
+            const SizedBox(height: AppSpacing.xl),
             Center(
               child: Text(
-                'No notifications found',
-                style: AppTypography.bodyLarge.copyWith(
-                  color: AppColors.textSecondary(context),
+                "You're all caught up",
+                style: AppTypography.headlineSmall.copyWith(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                child: Text(
+                  'No notifications found. Updates about your school will appear here.',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondary(context),
+                    height: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -625,4 +777,127 @@ class _NotificationTileState extends State<_NotificationTile> {
 
 extension on NotificationItem {
   bool get hasAction => actions.isNotEmpty;
+}
+
+/// Wide-viewport (desktop) side panel: links only to destinations that
+/// actually exist (Preferences, which also surfaces Quiet hours inline).
+/// No invented settings, no fake values.
+class _NotificationSettingsPanel extends StatelessWidget {
+  final String basePath;
+
+  const _NotificationSettingsPanel({required this.basePath});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: 260,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Notification settings',
+            style: AppTypography.titleMedium.copyWith(
+              color: colors.onSurface,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _SettingsRow(
+            icon: Icons.notifications_none,
+            title: 'Preferences',
+            subtitle: 'Manage how and when you get notified, including quiet hours.',
+            onTap: () => context.push('/staff/more/notification-preferences'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _SettingsRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Semantics(
+      button: true,
+      label: '$title. $subtitle',
+      child: Tooltip(
+        message: subtitle,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          focusColor: colors.primary.withValues(alpha: 0.08),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.black : colors.surfaceContainerHigh,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark ? Colors.black : colors.outlineVariant,
+                    ),
+                  ),
+                  child: Icon(icon, size: 18, color: colors.onSurfaceVariant),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: colors.onSurface,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right,
+                            size: 18,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: colors.onSurfaceVariant,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

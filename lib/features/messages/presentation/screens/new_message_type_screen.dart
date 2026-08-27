@@ -37,28 +37,28 @@ class NewMessageTypeScreen extends StatelessWidget {
               icon: Icons.person_add_outlined,
               title: 'New Chat',
               subtitle: 'Start a one-on-one conversation',
-              color: AppColors.electricBlue,
+              color: AppColors.information(context),
               onTap: () => context.push('/messages/new/contacts'),
             ),
             _TypeTile(
               icon: Icons.group_add_outlined,
               title: 'New Group',
               subtitle: 'Create a group conversation',
-              color: AppColors.emeraldGreen,
+              color: AppColors.success(context),
               onTap: () => context.push('/messages/new/group'),
             ),
             _TypeTile(
               icon: Icons.campaign_outlined,
               title: 'New Broadcast',
               subtitle: 'Send a message to many recipients',
-              color: AppColors.goldenYellow,
+              color: AppColors.warning(context),
               onTap: () => context.push('/messages/new/broadcast'),
             ),
             _TypeTile(
               icon: Icons.grid_view_outlined,
               title: 'New Channel',
               subtitle: 'Create an announcement channel',
-              color: AppColors.brightCyan,
+              color: AppColors.primary(context),
               onTap: () => context.push('/messages/new/channel'),
             ),
             const SizedBox(height: AppSpacing.l),
@@ -152,6 +152,9 @@ class _TypeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = color.computeLuminance() > 0.5
+        ? Colors.black
+        : Colors.white;
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.s),
       decoration: BoxDecoration(
@@ -166,8 +169,14 @@ class _TypeTile extends StatelessWidget {
         ),
         leading: Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          child: Icon(icon, color: color, size: 24),
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            ),
+          ),
+          child: Icon(icon, color: iconColor, size: 24),
         ),
         title: Text(
           title,

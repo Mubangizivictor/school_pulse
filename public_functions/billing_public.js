@@ -4,7 +4,7 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
-const WEBSITE_ORIGIN = 'https://schoolpulse.victorbee.com';
+const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
 // Enterprise is intentionally absent here: this endpoint only ever serves
 // the 3 public/self-service plans (isPublic/isActive filter below already
 // excludes it), so no fallback for it can ever be reached in this file's

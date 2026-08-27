@@ -4,13 +4,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
-import 'package:school_pulse/design_system/components/pulse_logo.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/institution/presentation/screens/institution_switcher_sheet.dart';
 import 'package:school_pulse/features/auth/presentation/widgets/role_switcher_sheet.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
+import 'package:school_pulse/features/branding/presentation/widgets/school_badge.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
 import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
@@ -598,14 +599,54 @@ class StaffShell extends StatelessWidget {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                       vertical: AppSpacing.x4l,
+                      horizontal: MediaQuery.of(context).size.width > 1200
+                          ? AppSpacing.l
+                          : 0,
                     ),
-                    child: PulseLogo(
-                      size: 40,
-                      variant: MediaQuery.of(context).size.width > 1200
-                          ? PulseLogoVariant.full
-                          : PulseLogoVariant.shield,
+                    child: Builder(
+                      builder: (context) {
+                        final isExpanded =
+                            MediaQuery.of(context).size.width > 1200;
+                        final brandingState = context
+                            .watch<BrandingBloc>()
+                            .state;
+                        final branding = brandingState is BrandingLoaded
+                            ? brandingState.branding
+                            : null;
+                        final authState = context.watch<AuthBloc>().state;
+                        final schoolName = authState is AuthAuthenticated
+                            ? authState.user.schoolName
+                            : null;
+                        final badge = SchoolBadge(
+                          badgeUrl: branding?.badgeUrl ?? branding?.logoUrl,
+                          size: 40,
+                        );
+                        if (!isExpanded ||
+                            schoolName == null ||
+                            schoolName.isEmpty) {
+                          return badge;
+                        }
+                        return Row(
+                          children: [
+                            badge,
+                            const SizedBox(width: AppSpacing.m),
+                            Expanded(
+                              child: Text(
+                                schoolName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.start,
+                                style: AppTypography.labelLarge.copyWith(
+                                  color: AppColors.primary(context),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                   Expanded(
@@ -626,11 +667,13 @@ class StaffShell extends StatelessWidget {
                             color: AppColors.primary(context),
                             fontWeight: FontWeight.bold,
                           ),
+                      useIndicator: true,
+                      indicatorColor: AppColors.primary(context),
                       unselectedIconTheme: IconThemeData(
                         color: AppColors.textMuted(context),
                       ),
                       selectedIconTheme: IconThemeData(
-                        color: AppColors.primary(context),
+                        color: AppColors.background(context),
                       ),
                       destinations: destinations
                           .map(
@@ -655,14 +698,6 @@ class StaffShell extends StatelessWidget {
                         onPressed: () => RoleSwitcherSheet.show(context),
                       ),
                     ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.m),
-                    child: IconButton(
-                      icon: const Icon(Icons.swap_horiz_rounded),
-                      tooltip: 'Switch Institution',
-                      onPressed: () => InstitutionSwitcherSheet.show(context),
-                    ),
-                  ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.x3l),
                     child: _LogoutButton(

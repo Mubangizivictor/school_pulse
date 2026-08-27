@@ -4,7 +4,7 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
-const WEBSITE_ORIGIN = 'https://schoolpulse.victorbee.com';
+const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
 const USER_AGENT = 'SchoolPulse-Registration/1.0 (contact: support@schoolpulse.victorbee.com)';
 const CACHE_COLLECTION = '_public_geocode_cache';

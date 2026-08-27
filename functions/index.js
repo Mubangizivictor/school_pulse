@@ -4231,7 +4231,7 @@ exports.signReportCardAsHeadteacher = onCall(async (request) => {
 // Report Card PDF + QR verification, and Bursar-controlled financial access.
 // ---------------------------------------------------------------------------
 
-const VERIFICATION_ORIGIN = "https://school-pulse-3d95b.web.app/verify-report";
+const VERIFICATION_ORIGIN = "https://schoolpulseapp.com/verify-report";
 const BURSAR_ROLES = ["bursar", "director", "schoolAdmin"];
 
 function reportCardVerificationUrl(token) {

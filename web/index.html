@@ -25,7 +25,7 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="icon" type="image/png" href="assets/assets/loading_icon/loading_for_dark_mode.png">
 
   <title>school_pulse</title>
   <link rel="manifest" href="manifest.json">
@@ -110,6 +110,20 @@
       document.getElementById("splash-branding")?.remove();
       document.body.style.background = "transparent";
     }
+
+    // Flutter adds its view after the engine has initialized.  Remove the
+    // static native splash at that point so a dark-mode browser is never
+    // left showing a black page over a running app.
+    const splashObserver = new MutationObserver(() => {
+      if (document.querySelector('flutter-view, flt-glass-pane')) {
+        removeSplashFromWeb();
+        splashObserver.disconnect();
+      }
+    });
+    splashObserver.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
   </script>
 </head>
 <body>

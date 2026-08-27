@@ -35,14 +35,34 @@ target 'Runner' do
   end
 end
 
+# Only the Google ML Kit / mobile_scanner dependency chain ships no arm64
+# slice for the iOS Simulator. Every other pod (isar_flutter_libs included -
+# its xcframework is a genuine arm64+x86_64 fat binary) links fine natively
+# on an Apple Silicon simulator. Scoping the exclusion to just these targets
+# avoids forcing unrelated pods like isar down the x86_64/Rosetta path,
+# which broke `Library 'isar' not found` link errors on iPhone 16/17
+# Pro Max simulators.
+ARM64_SIMULATOR_EXCLUDED_TARGETS = %w[
+  GoogleMLKit
+  MLKitBarcodeScanning
+  MLKitCommon
+  MLKitVision
+  MLImage
+  GoogleToolboxForMac
+  GoogleDataTransport
+  GoogleUtilities
+  GTMSessionFetcher
+  nanopb
+  PromisesObjC
+  mobile_scanner
+].freeze
+
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
 
-    # Google ML Kit pods (pulled in by mobile_scanner) ship no arm64 slice
-    # for the iOS Simulator, so Apple Silicon simulator builds (e.g. iPhone
-    # 17 Pro Max) fail to link. Build those pods as x86_64 (via Rosetta)
-    # for simulator destinations only; device builds are unaffected.
+    next unless ARM64_SIMULATOR_EXCLUDED_TARGETS.any? { |name| target.name.start_with?(name) }
+
     target.build_configurations.each do |config|
       config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
     end

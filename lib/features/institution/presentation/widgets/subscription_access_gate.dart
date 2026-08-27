@@ -32,7 +32,7 @@ class SubscriptionAccessGate extends StatefulWidget {
 
 class _SubscriptionAccessGateState extends State<SubscriptionAccessGate> {
   static final Uri _paymentPortal = Uri.parse(
-    'https://schoolpulse.victorbee.com/payment',
+    'https://schoolpulseapp.com/payment',
   );
 
   Timer? _clock;
@@ -107,7 +107,7 @@ class _SubscriptionAccessGateState extends State<SubscriptionAccessGate> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Could not open the School Pulse payment portal. Visit schoolpulse.victorbee.com/payment.',
+            'Could not open the School Pulse payment portal. Visit schoolpulseapp.com/payment.',
           ),
         ),
       );

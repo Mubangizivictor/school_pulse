@@ -5,11 +5,11 @@
 
 const SENDER = 'School Pulse <notifications@schoolpulse.victorbee.com>';
 const SUPPORT_EMAIL = 'support@schoolpulse.victorbee.com';
-const WEBSITE_ORIGIN = 'https://schoolpulse.victorbee.com';
+const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
 const STATUS_URL = `${WEBSITE_ORIGIN}/application-status`;
 
-// Per-category senders, all under the already-verified schoolpulse.victorbee.com
-// domain — no new domain/DNS configuration. Falls back to the general
+// Per-category senders remain under the already-verified
+// schoolpulse.victorbee.com email domain. Falls back to the general
 // `notifications@` sender (SENDER) for any templateId not listed below.
 const SENDER_BY_TEMPLATE = {
   application_received: 'School Pulse <applications@schoolpulse.victorbee.com>',

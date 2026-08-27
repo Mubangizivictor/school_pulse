@@ -3,7 +3,7 @@ const admin = require('firebase-admin');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
-const WEBSITE_ORIGIN = 'https://schoolpulse.victorbee.com';
+const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
 const ACTIVE_APPLICATION_STATUSES = new Set(['pending_review', 'approved']);
 
 function cors(req, res) {

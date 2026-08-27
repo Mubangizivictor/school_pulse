@@ -4,7 +4,7 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
-const WEBSITE_ORIGIN = 'https://schoolpulse.victorbee.com';
+const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
 const CORE_MODULES = ['Students', 'Attendance', 'Academics', 'Administration'];
 const ALLOWED_MODULES = new Set([
   ...CORE_MODULES,

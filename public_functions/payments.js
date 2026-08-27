@@ -6,8 +6,8 @@ const { requirePlatformOwner, OwnerAuthorizationError } = require('./vendor/owne
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
-const WEBSITE_ORIGIN = 'https://schoolpulse.victorbee.com';
-const APP_URL = 'https://school-pulse-3d95b.web.app';
+const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
+const APP_URL = WEBSITE_ORIGIN;
 const CORE_MODULES = ['Students', 'Attendance', 'Academics', 'Administration'];
 const MODULE_MAP = {
   Students: 'students',

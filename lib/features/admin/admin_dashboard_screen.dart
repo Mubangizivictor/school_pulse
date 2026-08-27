@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_bloc.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_event.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_state.dart';
@@ -46,30 +47,96 @@ class _AdminHome extends StatelessWidget {
               (state) => state is! AdminDashboardLoading,
             );
           },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
-                child: Column(
+          child: ResponsiveBuilder(
+            builder: (context, layout) => layout == ResponsiveLayout.mobile
+                ? _MobileHome(user: user)
+                : _WideHome(user: user, layout: layout),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileHome extends StatelessWidget {
+  const _MobileHome({required this.user});
+  final UserEntity user;
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _Header(user: user),
+            const SizedBox(height: 28),
+            _ContextRow(user: user),
+            const SizedBox(height: 32),
+            _AttentionSection(user: user),
+            const SizedBox(height: 32),
+            _GlanceSection(user: user),
+            const SizedBox(height: 32),
+            _ContinueWorking(user: user),
+            const SizedBox(height: 32),
+            _PinnedSection(user: user),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// Desktop (>=1024) and tablet (600-1023) layout: two-column body with the
+/// same sections/callbacks as mobile, just rearranged for wider viewports.
+class _WideHome extends StatelessWidget {
+  const _WideHome({required this.user, required this.layout});
+  final UserEntity user;
+  final ResponsiveLayout layout;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = layout == ResponsiveLayout.desktop;
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(
+        isDesktop ? 32 : 20,
+        24,
+        isDesktop ? 32 : 20,
+        48,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Header(user: user),
+              const SizedBox(height: 8),
+              _ContextRow(user: user),
+              const SizedBox(height: 28),
+              _AttentionSection(user: user),
+              const SizedBox(height: 28),
+              _GlanceSection(user: user),
+              const SizedBox(height: 28),
+              if (isDesktop)
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _Header(user: user),
-                    const SizedBox(height: 28),
-                    _ContextRow(user: user),
-                    const SizedBox(height: 32),
-                    _AttentionSection(user: user),
-                    const SizedBox(height: 32),
-                    _GlanceSection(user: user),
-                    const SizedBox(height: 32),
-                    _ContinueWorking(user: user),
-                    const SizedBox(height: 32),
-                    _PinnedSection(user: user),
+                    Expanded(flex: 3, child: _ContinueWorking(user: user)),
+                    const SizedBox(width: 24),
+                    Expanded(flex: 4, child: _PinnedSection(user: user)),
                   ],
-                ),
-              ),
-            ),
+                )
+              else ...[
+                _ContinueWorking(user: user),
+                const SizedBox(height: 28),
+                _PinnedSection(user: user),
+              ],
+            ],
           ),
         ),
       ),

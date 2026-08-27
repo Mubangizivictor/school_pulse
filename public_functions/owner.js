@@ -5,10 +5,9 @@ const { requirePlatformOwner, OwnerAuthorizationError } = require('./vendor/owne
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
-// Use the Firebase Hosting URL as the reliable app fallback. Once the
-// app.schoolpulse.victorbee.com custom domain is verified on this same
-// Hosting site, we can switch this constant without changing tenant data.
-const APP_URL = 'https://school-pulse-3d95b.web.app';
+// This custom domain is attached to the same Firebase Hosting site as the
+// app, so generated tenant links remain on the public School Pulse domain.
+const APP_URL = 'https://schoolpulseapp.com';
 const CORE_MODULES = ['Students', 'Attendance', 'Academics', 'Administration'];
 const MODULE_MAP = {
   Students: 'students',

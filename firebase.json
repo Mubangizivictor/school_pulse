@@ -59,6 +59,13 @@
         }
       },
       {
+        "source": "/verify-report",
+        "function": {
+          "functionId": "verifyReportCard",
+          "region": "us-central1"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

@@ -45,7 +45,7 @@ async function test(name, fn) {
   });
   await test('creates an opaque public verification URL', () => {
     const url = verificationUrl('A'.repeat(32));
-    assert.equal(url, 'https://school-pulse-3d95b.web.app/verify?token=' + 'A'.repeat(32));
+    assert.equal(url, 'https://schoolpulseapp.com/verify?token=' + 'A'.repeat(32));
     assert.doesNotMatch(url, /internal-payment-id/);
   });
   await test('renders a real PDF with the official reference and QR verification payload', async () => {

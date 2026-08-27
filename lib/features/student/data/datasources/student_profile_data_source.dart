@@ -67,10 +67,17 @@ class StudentProfileDataSource {
     required String studentId,
     required String schoolId,
   }) async {
-    final doc = await _firestore
-        .collection('student_guardians')
-        .doc(studentId)
-        .get();
+    DocumentSnapshot<Map<String, dynamic>> doc;
+    try {
+      doc = await _firestore.collection('student_guardians').doc(studentId).get();
+    } on FirebaseException catch (e) {
+      // Firestore rules evaluate `resource.data.*` against a null `resource`
+      // when the doc doesn't exist yet (e.g. a draft learner never finalised
+      // through the enrolment callable), which surfaces as permission-denied
+      // rather than not-found. Treat that the same as "no guardians yet".
+      if (e.code == 'permission-denied') return const [];
+      rethrow;
+    }
     final data = doc.data();
     if (data == null) return const [];
     if (data['schoolId'] != schoolId) return const [];

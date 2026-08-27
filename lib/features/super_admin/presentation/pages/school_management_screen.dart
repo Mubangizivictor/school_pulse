@@ -658,7 +658,7 @@ class _ApplicationList extends StatelessWidget {
         icon: Icons.inbox_outlined,
         title: 'No school applications',
         message:
-            'Applications submitted from schoolpulse.victorbee.com will appear here automatically.',
+            'Applications submitted from schoolpulseapp.com will appear here automatically.',
       );
     }
     return RefreshIndicator(

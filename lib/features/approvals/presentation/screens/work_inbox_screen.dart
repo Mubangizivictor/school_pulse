@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/features/approvals/data/repositories/approval_repository.dart';
 import 'package:school_pulse/features/approvals/domain/entities/approval_models.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
@@ -67,79 +68,42 @@ class _WorkInboxScreenState extends State<WorkInboxScreen> {
                       a.resolvedAt ?? a.createdAt,
                     ),
                   );
+            final awaitingApproval = selected
+                .where(
+                  (r) =>
+                      r.currentStatus == ApprovalStatus.pending ||
+                      r.currentStatus == ApprovalStatus.inReview,
+                )
+                .length;
             return RefreshIndicator(
               color: _ink(context),
               onRefresh: () async => setState(() {}),
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 96),
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Work',
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Your tasks and approvals',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: _ink(context),
-                              ),
-                            ),
-                          ],
-                        ),
+              child: ResponsiveBuilder(
+                builder: (context, layout) => layout == ResponsiveLayout.mobile
+                    ? _MobileWork(
+                        filter: _filter,
+                        onFilterChanged: (value) =>
+                            setState(() => _filter = value),
+                        onFilterTap: () => _filterSheet(context),
+                        selected: selected,
+                        attention: attention,
+                        scheduled: scheduled,
+                        completed: completed,
+                      )
+                    : _WideWork(
+                        layout: layout,
+                        filter: _filter,
+                        onFilterChanged: (value) =>
+                            setState(() => _filter = value),
+                        onFilterTap: () => _filterSheet(context),
+                        selected: selected,
+                        attention: attention,
+                        scheduled: scheduled,
+                        completed: completed,
+                        openCount: selected.length,
+                        dueTodayCount: scheduled.length,
+                        awaitingApprovalCount: awaitingApproval,
                       ),
-                      OutlinedButton(
-                        onPressed: () => _filterSheet(context),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: _ink(context),
-                          side: BorderSide(color: _ink(context)),
-                        ),
-                        child: const Icon(Icons.tune, size: 18),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 26),
-                  Row(
-                    children: [
-                      Text(
-                        '${selected.length} open',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const Spacer(),
-                      _Filters(
-                        selected: _filter,
-                        onChanged: (value) => setState(() => _filter = value),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  if (selected.isEmpty)
-                    const _AllClear()
-                  else ...[
-                    _Group(title: 'Needs attention', items: attention),
-                    if (scheduled.isNotEmpty)
-                      _Group(title: 'Scheduled for today', items: scheduled),
-                    if (completed.isNotEmpty)
-                      _Group(
-                        title: 'Recently completed',
-                        items: completed.take(5).toList(),
-                        completed: true,
-                      ),
-                  ],
-                ],
               ),
             );
           },
@@ -168,6 +132,275 @@ class _WorkInboxScreenState extends State<WorkInboxScreen> {
             )
             .toList(),
       ),
+    ),
+  );
+}
+
+class _MobileWork extends StatelessWidget {
+  const _MobileWork({
+    required this.filter,
+    required this.onFilterChanged,
+    required this.onFilterTap,
+    required this.selected,
+    required this.attention,
+    required this.scheduled,
+    required this.completed,
+  });
+  final _Filter filter;
+  final ValueChanged<_Filter> onFilterChanged;
+  final VoidCallback onFilterTap;
+  final List<ApprovalRequest> selected;
+  final List<ApprovalRequest> attention;
+  final List<ApprovalRequest> scheduled;
+  final List<ApprovalRequest> completed;
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: const EdgeInsets.fromLTRB(20, 24, 20, 96),
+    children: [
+      Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Work',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Your tasks and approvals',
+                  style: TextStyle(fontSize: 13, color: _ink(context)),
+                ),
+              ],
+            ),
+          ),
+          OutlinedButton(
+            onPressed: onFilterTap,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _ink(context),
+              side: BorderSide(color: _ink(context)),
+            ),
+            child: const Icon(Icons.tune, size: 18),
+          ),
+        ],
+      ),
+      const SizedBox(height: 26),
+      Row(
+        children: [
+          Text(
+            '${selected.length} open',
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+          const Spacer(),
+          _Filters(selected: filter, onChanged: onFilterChanged),
+        ],
+      ),
+      const SizedBox(height: 32),
+      if (selected.isEmpty)
+        const _AllClear()
+      else ...[
+        _Group(title: 'Needs attention', items: attention),
+        if (scheduled.isNotEmpty)
+          _Group(title: 'Scheduled for today', items: scheduled),
+        if (completed.isNotEmpty)
+          _Group(
+            title: 'Recently completed',
+            items: completed.take(5).toList(),
+            completed: true,
+          ),
+      ],
+    ],
+  );
+}
+
+/// Desktop (>=1024) and tablet (600-1023) layout: same data/callbacks as
+/// mobile, arranged as a bounded workspace with summary cards up top.
+class _WideWork extends StatelessWidget {
+  const _WideWork({
+    required this.layout,
+    required this.filter,
+    required this.onFilterChanged,
+    required this.onFilterTap,
+    required this.selected,
+    required this.attention,
+    required this.scheduled,
+    required this.completed,
+    required this.openCount,
+    required this.dueTodayCount,
+    required this.awaitingApprovalCount,
+  });
+  final ResponsiveLayout layout;
+  final _Filter filter;
+  final ValueChanged<_Filter> onFilterChanged;
+  final VoidCallback onFilterTap;
+  final List<ApprovalRequest> selected;
+  final List<ApprovalRequest> attention;
+  final List<ApprovalRequest> scheduled;
+  final List<ApprovalRequest> completed;
+  final int openCount;
+  final int dueTodayCount;
+  final int awaitingApprovalCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = layout == ResponsiveLayout.desktop;
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(
+        isDesktop ? 32 : 20,
+        24,
+        isDesktop ? 32 : 20,
+        48,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Work',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tasks and approvals',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: _ink(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  OutlinedButton(
+                    onPressed: onFilterTap,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _ink(context),
+                      side: BorderSide(color: _ink(context)),
+                      minimumSize: const Size(44, 44),
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Icon(Icons.tune, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  _Filters(selected: filter, onChanged: onFilterChanged),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: [
+                  _SummaryCard(
+                    icon: Icons.assignment_outlined,
+                    value: openCount,
+                    label: 'Open',
+                  ),
+                  _SummaryCard(
+                    icon: Icons.schedule_outlined,
+                    value: dueTodayCount,
+                    label: 'Due today',
+                  ),
+                  _SummaryCard(
+                    icon: Icons.verified_outlined,
+                    value: awaitingApprovalCount,
+                    label: 'Awaiting approval',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  border: Border.all(color: _ink(context)),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: selected.isEmpty
+                    ? const _AllClear()
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _Group(title: 'Needs attention', items: attention),
+                          if (scheduled.isNotEmpty)
+                            _Group(
+                              title: 'Scheduled for today',
+                              items: scheduled,
+                            ),
+                          if (completed.isNotEmpty)
+                            _Group(
+                              title: 'Recently completed',
+                              items: completed.take(5).toList(),
+                              completed: true,
+                            ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+  final IconData icon;
+  final int value;
+  final String label;
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 220,
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      border: Border.all(color: _ink(context)),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            border: Border.all(color: _ink(context)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 20),
+        ),
+        const SizedBox(width: 14),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$value',
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+            ),
+            Text(label, style: TextStyle(fontSize: 13, color: _ink(context))),
+          ],
+        ),
+      ],
     ),
   );
 }
