@@ -210,6 +210,7 @@ class _Stage01ProfileState extends State<Stage01Profile> {
                                 ? 'Required'
                                 : null,
                           ),
+                          required: true,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -225,6 +226,7 @@ class _Stage01ProfileState extends State<Stage01Profile> {
                                 ? 'Required'
                                 : null,
                           ),
+                          required: true,
                         ),
                       ),
                     ],
@@ -243,6 +245,7 @@ class _Stage01ProfileState extends State<Stage01Profile> {
                               ? 'Required'
                               : null,
                         ),
+                        required: true,
                       ),
                       const SizedBox(height: 16),
                       _labeledField(
@@ -256,6 +259,7 @@ class _Stage01ProfileState extends State<Stage01Profile> {
                               ? 'Required'
                               : null,
                         ),
+                        required: true,
                       ),
                     ],
                   ),
@@ -350,6 +354,7 @@ class _Stage01ProfileState extends State<Stage01Profile> {
                   return null;
                 },
               ),
+              required: true,
             ),
             const SizedBox(height: 16),
             _labeledField(
@@ -363,6 +368,7 @@ class _Stage01ProfileState extends State<Stage01Profile> {
                 decoration: const InputDecoration(hintText: 'Phone number'),
                 validator: (v) => _validatePhone(v, required: true),
               ),
+              required: true,
             ),
             const SizedBox(height: 16),
             _labeledField(
@@ -421,19 +427,29 @@ class _Stage01ProfileState extends State<Stage01Profile> {
     );
   }
 
-  Widget _labeledField(String label, Widget field) {
+  Widget _labeledField(String label, Widget field, {bool required = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 6),
           child: Builder(
-            builder: (context) => Text(
-              label,
-              style: TextStyle(
-                color: AppColors.textPrimary(context),
-                fontWeight: FontWeight.w600,
-                fontSize: 13.5,
+            builder: (context) => RichText(
+              text: TextSpan(
+                text: label,
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12.5,
+                ),
+                children: required
+                    ? [
+                        TextSpan(
+                          text: ' *',
+                          style: TextStyle(color: AppColors.danger(context)),
+                        ),
+                      ]
+                    : const [],
               ),
             ),
           ),
@@ -754,7 +770,7 @@ class _DocumentRow extends StatelessWidget {
                     style: TextStyle(
                       color: AppColors.textPrimary(context),
                       fontWeight: FontWeight.w600,
-                      fontSize: 13.5,
+                      fontSize: 12.5,
                     ),
                   ),
                   Text(

@@ -205,6 +205,7 @@ class _Stage02WorkState extends State<Stage02Work> {
                     validator: (v) =>
                         (v == null || v.isEmpty) ? 'Required' : null,
                   ),
+                  required: true,
                 );
               },
             ),
@@ -248,6 +249,7 @@ class _Stage02WorkState extends State<Stage02Work> {
                     validator: (value) =>
                         value == null || value.isEmpty ? 'Required' : null,
                   ),
+                  required: true,
                 );
               },
             ),
@@ -389,7 +391,7 @@ class _Stage02WorkState extends State<Stage02Work> {
     );
   }
 
-  Widget _labeledField(String label, Widget field) {
+  Widget _labeledField(String label, Widget field, {bool required = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Column(
@@ -398,12 +400,22 @@ class _Stage02WorkState extends State<Stage02Work> {
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Builder(
-              builder: (context) => Text(
-                label,
-                style: TextStyle(
-                  color: AppColors.textPrimary(context),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13.5,
+              builder: (context) => RichText(
+                text: TextSpan(
+                  text: label,
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12.5,
+                  ),
+                  children: required
+                      ? [
+                          TextSpan(
+                            text: ' *',
+                            style: TextStyle(color: AppColors.danger(context)),
+                          ),
+                        ]
+                      : const [],
                 ),
               ),
             ),
@@ -604,7 +616,7 @@ class _CampusRow extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textPrimary(context),
               fontWeight: FontWeight.w600,
-              fontSize: 13.5,
+              fontSize: 12.5,
             ),
           ),
           const SizedBox(height: 6),

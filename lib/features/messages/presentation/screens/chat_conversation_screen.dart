@@ -274,20 +274,31 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           ),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.electricBlue,
-                backgroundImage: conversation.avatarUrl != null
-                    ? NetworkImage(conversation.avatarUrl!)
-                    : null,
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.grey850 : AppColors.grey100,
+                  border: Border.all(
+                    color: isDark ? AppColors.borderDark : AppColors.black,
+                    width: 1,
+                  ),
+                  image: conversation.avatarUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(conversation.avatarUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                alignment: Alignment.center,
                 child: conversation.avatarUrl != null
                     ? null
                     : Text(
                         _initials(conversation.title),
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black,
                           fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
               ),
@@ -298,7 +309,10 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                   children: [
                     Text(
                       conversation.title,
-                      style: AppTypography.titleMedium.copyWith(fontSize: 16),
+                      style: AppTypography.titleMedium.copyWith(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -306,6 +320,8 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                       conversation.subtitle ?? '',
                       style: AppTypography.labelSmall.copyWith(
                         color: AppColors.textMuted(context),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -463,32 +479,52 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
     return InkWell(
       onTap: () => context.push('/messages/pinned'),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        color: isDark ? AppColors.electricBlue : Colors.black,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.grey850 : AppColors.grey50,
+          border: Border(
+            bottom: BorderSide(
+              color: isDark ? AppColors.borderDark : AppColors.grey200,
+            ),
+          ),
+        ),
         child: Row(
           children: [
-            const Icon(Icons.push_pin, size: 14, color: AppColors.electricBlue),
+            Icon(
+              Icons.push_pin,
+              size: 14,
+              color: isDark ? AppColors.white : AppColors.black,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pinned: ${conversation.pinnedMessageContent}',
+                    'Pinned Message',
                     style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.electricBlue,
-                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.white : AppColors.black,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 10,
                     ),
+                  ),
+                  Text(
+                    conversation.pinnedMessageContent ?? '',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textMuted(context),
+                      fontSize: 12,
+                    ),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
             IconButton(
-              icon: const Icon(
+              icon: Icon(
                 Icons.close,
                 size: 16,
-                color: AppColors.electricBlue,
+                color: AppColors.textMuted(context),
               ),
               onPressed: () => context.read<ConversationBloc>().add(
                 ConversationMessagePinnedSet(
@@ -554,7 +590,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
         color: isDark ? AppColors.bgDark : Colors.white,
         border: Border(
           top: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            color: isDark ? AppColors.borderDark : AppColors.grey200,
           ),
         ),
       ),
@@ -571,10 +607,10 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.add_circle_outline,
-                      color: AppColors.electricBlue,
-                      size: 28,
+                      color: isDark ? AppColors.white : AppColors.black,
+                      size: 24,
                     ),
                     onPressed: () =>
                         _showAttachmentMenu(context, user, conversation),
@@ -587,13 +623,12 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                       ),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? AppColors.surfaceDark
-                            : AppColors.bgLight,
-                        borderRadius: BorderRadius.circular(24),
+                            ? AppColors.grey850
+                            : AppColors.grey50,
                         border: Border.all(
                           color: isDark
                               ? AppColors.borderDark
-                              : AppColors.borderLight,
+                              : AppColors.grey200,
                         ),
                       ),
                       child: TextField(
@@ -609,22 +644,21 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                             ? (_) => _send(user, conversation)
                             : null,
                         textCapitalization: TextCapitalization.sentences,
-                        style: TextStyle(
+                        style: AppTypography.bodyMedium.copyWith(
                           color: isDark ? Colors.white : Colors.black,
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Type a message...',
-                          hintStyle: TextStyle(
-                            color: Colors.black,
-                            fontSize: 14,
+                          hintStyle: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.textMuted(context),
                           ),
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
                           suffixIcon: Icon(
                             Icons.emoji_emotions_outlined,
-                            color: Colors.black,
+                            color: isDark ? AppColors.white : AppColors.black,
                             size: 20,
                           ),
                         ),
@@ -634,14 +668,20 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                   const SizedBox(width: AppSpacing.s),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
-                    child: CircleAvatar(
-                      radius: 22,
-                      backgroundColor: AppColors.electricBlue,
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.white : AppColors.black,
+                        border: Border.all(
+                          color: isDark ? AppColors.white : AppColors.black,
+                        ),
+                      ),
                       child: IconButton(
                         icon: Icon(
                           _composerHadText ? Icons.send : Icons.mic,
-                          color: Colors.white,
-                          size: 20,
+                          color: isDark ? AppColors.black : AppColors.white,
+                          size: 18,
                         ),
                         onPressed: _composerHadText
                             ? () => _send(user, conversation)
@@ -668,10 +708,15 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
         vertical: AppSpacing.s,
       ),
       decoration: BoxDecoration(
-        color: AppColors.electricBlue,
-        borderRadius: BorderRadius.circular(12),
+        color: isDark ? AppColors.grey850 : AppColors.grey50,
         border: Border(
-          left: BorderSide(color: AppColors.electricBlue, width: 3),
+          left: BorderSide(
+            color: isDark ? AppColors.white : AppColors.black,
+            width: 3,
+          ),
+          bottom: BorderSide(
+            color: isDark ? AppColors.borderDark : AppColors.grey200,
+          ),
         ),
       ),
       child: Row(
@@ -679,7 +724,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           Icon(
             isEditing ? Icons.edit_outlined : Icons.reply,
             size: 16,
-            color: AppColors.electricBlue,
+            color: isDark ? AppColors.white : AppColors.black,
           ),
           const SizedBox(width: AppSpacing.s),
           Expanded(
@@ -691,8 +736,8 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                       ? 'Editing message'
                       : 'Replying to ${draft.senderName}',
                   style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.electricBlue,
-                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.white : AppColors.black,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
                 Text(
@@ -707,7 +752,11 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close, size: 16),
+            icon: Icon(
+              Icons.close,
+              size: 16,
+              color: AppColors.textMuted(context),
+            ),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
             onPressed: () => setState(() {
@@ -1184,16 +1233,19 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
     return Row(
       children: [
         IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.black),
+          icon: Icon(
+            Icons.delete_outline,
+            color: isDark ? AppColors.white : AppColors.black,
+          ),
           tooltip: 'Discard',
           onPressed: () => _stopRecording(send: false),
         ),
         const SizedBox(width: 4),
         Container(
-          width: 10,
-          height: 10,
-          decoration: const BoxDecoration(
-            color: Colors.black,
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: AppColors.danger(context),
             shape: BoxShape.circle,
           ),
         ),
@@ -1203,17 +1255,24 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
             'Recording  ${formatClipDuration(_recordedFor)}',
             style: AppTypography.bodyMedium.copyWith(
               color: isDark ? Colors.white : Colors.black,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ),
         Padding(
           padding: const EdgeInsets.only(bottom: 4),
-          child: CircleAvatar(
-            radius: 22,
-            backgroundColor: AppColors.electricBlue,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.white : AppColors.black,
+            ),
             child: IconButton(
-              icon: const Icon(Icons.send, color: Colors.white, size: 20),
+              icon: Icon(
+                Icons.send,
+                color: isDark ? AppColors.black : AppColors.white,
+                size: 18,
+              ),
               onPressed: () => _stopRecording(
                 send: true,
                 user: user,
@@ -1269,8 +1328,11 @@ class AttachmentsMenu extends StatelessWidget {
       margin: const EdgeInsets.all(AppSpacing.m),
       padding: const EdgeInsets.all(AppSpacing.l),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: isDark ? AppColors.bgDark : Colors.white,
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.black,
+          width: 1,
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1283,49 +1345,41 @@ class AttachmentsMenu extends StatelessWidget {
               _AttachmentItem(
                 icon: Icons.image,
                 kind: AttachmentKind.photos,
-                color: Colors.black,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.camera_alt,
                 kind: AttachmentKind.camera,
-                color: Colors.black,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.insert_drive_file,
                 kind: AttachmentKind.document,
-                color: Colors.black,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.headset,
                 kind: AttachmentKind.audio,
-                color: Colors.black,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.location_on,
                 kind: AttachmentKind.location,
-                color: Colors.black,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.person,
                 kind: AttachmentKind.contact,
-                color: Colors.black,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.poll,
                 kind: AttachmentKind.poll,
-                color: Colors.black,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.event,
                 kind: AttachmentKind.event,
-                color: Colors.black,
                 onSelected: onSelected,
               ),
             ],
@@ -1333,7 +1387,13 @@ class AttachmentsMenu extends StatelessWidget {
           const SizedBox(height: AppSpacing.m),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
         ],
       ),
@@ -1344,18 +1404,17 @@ class AttachmentsMenu extends StatelessWidget {
 class _AttachmentItem extends StatelessWidget {
   final IconData icon;
   final AttachmentKind kind;
-  final Color color;
   final ValueChanged<AttachmentKind>? onSelected;
 
   const _AttachmentItem({
     required this.icon,
     required this.kind,
-    required this.color,
     this.onSelected,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onSelected == null ? null : () => onSelected!(kind),
       child: Column(
@@ -1364,13 +1423,22 @@ class _AttachmentItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(12),
+              color: isDark ? AppColors.white : AppColors.black,
             ),
-            child: Icon(icon, color: color),
+            child: Icon(
+              icon,
+              color: isDark ? AppColors.black : AppColors.white,
+              size: 20,
+            ),
           ),
-          const SizedBox(height: 4),
-          Text(kind.label, style: const TextStyle(fontSize: 10)),
+          const SizedBox(height: 6),
+          Text(
+            kind.label,
+            style: AppTypography.labelSmall.copyWith(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ],
       ),
     );
@@ -1399,19 +1467,22 @@ class _ForwardSheetState extends State<_ForwardSheet> {
         maxHeight: MediaQuery.of(context).size.height * 0.7,
       ),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: isDark ? AppColors.bgDark : Colors.white,
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.black,
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Forward to',
+            'FORWARD TO',
             style: AppTypography.titleMedium.copyWith(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: AppSpacing.s),
+          const SizedBox(height: AppSpacing.m),
           Flexible(
             child: ListView.builder(
               shrinkWrap: true,
@@ -1420,14 +1491,31 @@ class _ForwardSheetState extends State<_ForwardSheet> {
                 final chat = widget.conversations[index];
                 final selected = _selected.contains(chat.id);
                 return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.electricBlue,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.grey850 : AppColors.grey100,
+                      border: Border.all(
+                        color: isDark ? AppColors.borderDark : AppColors.black,
+                      ),
+                    ),
+                    alignment: Alignment.center,
                     child: Text(
                       chat.title.isEmpty ? '?' : chat.title[0].toUpperCase(),
-                      style: const TextStyle(color: AppColors.electricBlue),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
-                  title: Text(chat.title, style: AppTypography.titleSmall),
+                  title: Text(
+                    chat.title,
+                    style: AppTypography.titleSmall.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   subtitle: Text(
                     chat.subtitle ?? '',
                     style: AppTypography.bodySmall.copyWith(
@@ -1436,9 +1524,9 @@ class _ForwardSheetState extends State<_ForwardSheet> {
                   ),
                   trailing: Icon(
                     selected
-                        ? Icons.check_circle
-                        : Icons.radio_button_unchecked,
-                    color: selected ? AppColors.electricBlue : Colors.black,
+                        ? Icons.check_box
+                        : Icons.check_box_outline_blank,
+                    color: isDark ? Colors.white : Colors.black,
                   ),
                   onTap: () => setState(() {
                     selected
@@ -1449,7 +1537,7 @@ class _ForwardSheetState extends State<_ForwardSheet> {
               },
             ),
           ),
-          const SizedBox(height: AppSpacing.s),
+          const SizedBox(height: AppSpacing.m),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -1457,17 +1545,15 @@ class _ForwardSheetState extends State<_ForwardSheet> {
                   ? null
                   : () => Navigator.pop(context, _selected.toList()),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.electricBlue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                backgroundColor: isDark ? AppColors.white : AppColors.black,
+                foregroundColor: isDark ? AppColors.black : AppColors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: const RoundedRectangleBorder(),
                 elevation: 0,
               ),
               child: const Text(
-                'Forward',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                'FORWARD',
+                style: TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
           ),

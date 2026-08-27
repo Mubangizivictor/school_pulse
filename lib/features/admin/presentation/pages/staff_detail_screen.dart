@@ -91,8 +91,8 @@ class _StaffDetailScreenState extends State<StaffDetailScreen>
                   ? null
                   : [
                       IconButton(
-                        icon: const Icon(Icons.badge_outlined),
-                        tooltip: 'Staff ID Card',
+                        icon: const Icon(Icons.qr_code_2_outlined),
+                        tooltip: 'Staff ID and QR code',
                         onPressed: () => Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) => BlocProvider(
@@ -790,8 +790,6 @@ class _RolesTabState extends State<_RolesTab> {
           StaffDesignation? roleFor(StaffRoleAssignment a) =>
               designations.where((d) => d.id == a.roleDefinitionId).firstOrNull;
 
-          final primary = assignments.where((a) => a.isPrimary).firstOrNull;
-
           final missingClassTeacher =
               widget.staff.roles.contains(UserRole.classTeacher) &&
               !assignments.any(
@@ -827,7 +825,7 @@ class _RolesTabState extends State<_RolesTab> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Account Roles',
+                    '${assignments.length} active role${assignments.length == 1 ? '' : 's'}',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary(context),
@@ -849,7 +847,7 @@ class _RolesTabState extends State<_RolesTab> {
                       return TextButton.icon(
                         onPressed: _editAccountRoles,
                         icon: const Icon(Icons.edit_outlined, size: 16),
-                        label: const Text('Edit'),
+                        label: const Text('Edit role'),
                       );
                     },
                   ),
@@ -890,63 +888,28 @@ class _RolesTabState extends State<_RolesTab> {
                 spacing: 8,
                 runSpacing: 8,
                 children: widget.staff.roles
-                    .map(
-                      (r) => StatusBadge(
-                        label: UserRoleDisplay.name(r),
-                        color: AppColors.primary(context),
-                      ),
-                    )
+                    .map((r) => _BlackPill(label: UserRoleDisplay.name(r)))
                     .toList(),
               ),
               const SizedBox(height: 28),
               const Divider(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               Text(
-                'Class / Subject Assignments',
+                'Teaching assignments',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary(context),
                 ),
               ),
               Text(
-                '${_firstNameOrFallback(widget.staff.name)} has '
-                '${assignments.length} active assignment'
-                '${assignments.length == 1 ? '' : 's'}',
-                style: Theme.of(context).textTheme.labelSmall,
+                'Access limited to assigned classes and subjects.',
+                style: const TextStyle(color: Color(0xFF555555)),
               ),
               const SizedBox(height: 16),
-              if (primary != null) ...[
-                Text(
-                  'PRIMARY ROLE',
-                  style: TextStyle(
-                    color: AppColors.primary(context),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                    letterSpacing: .6,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _RoleCard(
-                  assignment: primary,
-                  role: roleFor(primary),
-                  isPrimary: true,
-                ),
-                const SizedBox(height: 20),
-              ],
-              Text(
-                'ALL ACTIVE ROLES',
-                style: TextStyle(
-                  color: AppColors.primary(context),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                  letterSpacing: .6,
-                ),
-              ),
-              const SizedBox(height: 8),
               if (assignments.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('No active roles assigned yet.'),
+                  child: Text('No teaching responsibilities assigned yet.'),
                 )
               else
                 ...assignments.map(
@@ -966,8 +929,8 @@ class _RolesTabState extends State<_RolesTab> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openAssign,
         icon: const Icon(Icons.add),
-        label: const Text('Assign New Role'),
-        backgroundColor: AppColors.primary(context),
+        label: const Text('Assign role'),
+        backgroundColor: Colors.black,
         foregroundColor: Colors.white,
       ),
     );
@@ -1145,7 +1108,11 @@ class _RoleCard extends StatelessWidget {
     final icon = role != null
         ? staffDesignationIcon(role!.iconName)
         : Icons.badge_outlined;
-    final label = role?.name ?? assignment.displayLabel;
+    final isTeaching =
+        assignment.subjectId != null || assignment.classId != null;
+    final label = isTeaching
+        ? assignment.displayLabel
+        : role?.name ?? assignment.displayLabel;
     final scopes = <String>[
       if (assignment.campusId.isNotEmpty) 'Campus scope configured',
       if (assignment.departmentId?.isNotEmpty == true ||
@@ -1196,7 +1163,7 @@ class _RoleCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Designation: ${role?.name ?? assignment.roleType.label}',
+            '${role?.name ?? assignment.roleType.label}${assignment.campusId.isNotEmpty ? ' · Campus scope' : ''}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           if (scopes.isEmpty)

@@ -6,12 +6,14 @@ import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/finance/domain/entities/fee_plan.dart';
@@ -42,6 +44,8 @@ class _DirectStudentRegistrationScreenState
   late String _studentId;
   int _step = -1;
   bool _saving = false, _enrolling = false, _consent = false, _override = false;
+  bool _submittedCurrentStep = false;
+  final _firstInvalidKey = GlobalKey();
   String _entry = 'New admission',
       _sex = 'Female',
       _nationality = 'Ugandan',
@@ -54,7 +58,9 @@ class _DirectStudentRegistrationScreenState
   List<SchoolClass> _classes = [];
   List<ClassStream> _allStreams = [];
   Map<String, dynamic> _modules = {};
+  List<Map<String, dynamic>> _documentRequirements = const [];
   final _first = TextEditingController(),
+      _middle = TextEditingController(),
       _last = TextEditingController(),
       _dob = TextEditingController(),
       _previousSchool = TextEditingController(),
@@ -63,6 +69,7 @@ class _DirectStudentRegistrationScreenState
       _transport = TextEditingController(),
       _house = TextEditingController(),
       _support = TextEditingController();
+  final _guardianSearch = TextEditingController();
   final List<Map<String, dynamic>> _guardians = [], _documents = [];
   StreamSubscription? _yearsSub, _classesSub, _streamsSub, _termsSub;
   StreamSubscription? _schoolSub;
@@ -104,7 +111,8 @@ class _DirectStudentRegistrationScreenState
       if (mounted) setState(() => _allStreams = v);
     });
     _termsSub = _repo.watchAcademicTerms(widget.schoolId).listen((v) {
-      if (mounted) setState(() => _terms = v.where((x) => !x.isArchived).toList());
+      if (mounted)
+        setState(() => _terms = v.where((x) => !x.isArchived).toList());
     });
     _schoolSub = _db
         .collection('schools')
@@ -112,11 +120,15 @@ class _DirectStudentRegistrationScreenState
         .snapshots()
         .listen((v) {
           if (mounted)
-            setState(
-              () => _modules = Map<String, dynamic>.from(
-                v.data()?['modules'] ?? {},
-              ),
-            );
+            setState(() {
+              final data = v.data() ?? const <String, dynamic>{};
+              _modules = Map<String, dynamic>.from(data['modules'] ?? {});
+              _documentRequirements = List<Map<String, dynamic>>.from(
+                (data['enrolmentPolicy']?['documentRequirements'] as List? ??
+                        const [])
+                    .map((item) => Map<String, dynamic>.from(item as Map)),
+              );
+            });
         });
     _offerResume();
   }
@@ -175,6 +187,7 @@ class _DirectStudentRegistrationScreenState
       _studentId = d['studentId'] as String? ?? _studentId;
       _step = (d['step'] as int?) ?? 0;
       _first.text = l['firstNames'] ?? '';
+      _middle.text = l['middleName'] ?? '';
       _last.text = l['surname'] ?? '';
       _dob.text = l['dateOfBirth'] ?? '';
       _entry = l['entryType'] ?? _entry;
@@ -222,6 +235,7 @@ class _DirectStudentRegistrationScreenState
     'step': _step,
     'learner': {
       'firstNames': _first.text.trim(),
+      'middleName': _middle.text.trim(),
       'surname': _last.text.trim(),
       'dateOfBirth': _dob.text.trim(),
       'sex': _sex,
@@ -289,19 +303,83 @@ class _DirectStudentRegistrationScreenState
 
   bool get _guardianOk =>
       _guardians.isNotEmpty || (_override && _overrideReason.trim().isNotEmpty);
+  bool get _canUseGuardianOverride {
+    final state = context.read<AuthBloc>().state;
+    if (state is! AuthAuthenticated) return false;
+    return state.user.roles.any(
+      (role) => const {
+        UserRole.schoolAdmin,
+        UserRole.director,
+        UserRole.headTeacher,
+        UserRole.deputyHead,
+        UserRole.admissions,
+        UserRole.registrar,
+      }.contains(role),
+    );
+  }
+
+  String? _dateOfBirthError(String? value) {
+    final raw = value?.trim() ?? '';
+    if (raw.isEmpty) return 'Date of birth is required';
+    final parts = raw.split('/');
+    if (parts.length != 3) return 'Enter date as DD/MM/YYYY';
+    final day = int.tryParse(parts[0]),
+        month = int.tryParse(parts[1]),
+        year = int.tryParse(parts[2]);
+    if (day == null || month == null || year == null)
+      return 'Enter a valid date of birth';
+    final date = DateTime(year, month, day);
+    if (date.year != year || date.month != month || date.day != day)
+      return 'Enter a valid date of birth';
+    final now = DateTime.now();
+    if (date.isAfter(now)) return 'Date of birth must be in the past';
+    var age = now.year - date.year;
+    if (DateTime(now.year, date.month, date.day).isAfter(now)) age--;
+    return age < 3 || age > 18
+        ? 'Learner age must be between 3 and 18 years'
+        : null;
+  }
+
   bool get _valid => switch (_step) {
     0 =>
       _first.text.trim().isNotEmpty &&
           _last.text.trim().isNotEmpty &&
-          _dob.text.trim().isNotEmpty &&
+          _dateOfBirthError(_dob.text) == null &&
           (_entry != 'Transfer' ||
               (_previousSchool.text.trim().isNotEmpty &&
                   _previousClass.text.trim().isNotEmpty)),
     1 => _guardianOk,
     2 => _year != null && _class != null && _term.text.trim().isNotEmpty,
-    5 => _consent,
+    3 =>
+      (!_enabled('transport') ||
+              _boarding != 'Day learner' ||
+              _transport.text.trim().isNotEmpty) &&
+          (!_enabled('houses') ||
+              _boarding != 'Boarding learner' ||
+              _house.text.trim().isNotEmpty),
+    5 => _consent && _requiredDocumentsComplete,
+    6 => _allRequiredComplete,
     _ => true,
   };
+  bool get _requiredDocumentsComplete => _documentRequirements
+      .where((requirement) => requirement['required'] == true)
+      .every(
+        (requirement) => _documents.any(
+          (document) =>
+              document['status'] == 'uploaded' &&
+              document['requirementId'] == requirement['id'],
+        ),
+      );
+  bool get _allRequiredComplete =>
+      _first.text.trim().isNotEmpty &&
+      _last.text.trim().isNotEmpty &&
+      _dateOfBirthError(_dob.text) == null &&
+      _guardianOk &&
+      _year != null &&
+      _class != null &&
+      _term.text.trim().isNotEmpty &&
+      _consent &&
+      _requiredDocumentsComplete;
   Future<bool> _leave() async {
     await _save(quiet: true);
     if (!mounted) return true;
@@ -327,10 +405,20 @@ class _DirectStudentRegistrationScreenState
 
   Future<void> _next() async {
     if (!_valid) {
+      setState(() => _submittedCurrentStep = true);
       _form.currentState?.validate();
-      setState(() {});
+      await Future<void>.delayed(Duration.zero);
+      final invalid = _firstInvalidKey.currentContext;
+      if (invalid != null) {
+        await Scrollable.ensureVisible(
+          invalid,
+          duration: const Duration(milliseconds: 250),
+          alignment: .15,
+        );
+      }
       return;
     }
+    setState(() => _submittedCurrentStep = false);
     await _save(quiet: true);
     if (!mounted) return;
     if (_step == 6) return _enrol();
@@ -368,11 +456,12 @@ class _DirectStudentRegistrationScreenState
             'draftId': _draftId,
             if (_feePlanMatch != null) 'feePlanId': _feePlanMatch!.planId,
             'selectedOptionalLineIds': _selectedFeeAddOnIds.toList(),
-            if (_bursaryEnabled) 'bursary': {
-              'reason': _bursaryReason.text.trim(),
-              'amount': double.tryParse(_bursaryAmount.text.trim()) ?? 0,
-              'isPercentage': _bursaryIsPercentage,
-            },
+            if (_bursaryEnabled)
+              'bursary': {
+                'reason': _bursaryReason.text.trim(),
+                'amount': double.tryParse(_bursaryAmount.text.trim()) ?? 0,
+                'isPercentage': _bursaryIsPercentage,
+              },
           });
       final v = Map<String, dynamic>.from(r.data as Map);
       if (!mounted) return;
@@ -382,7 +471,9 @@ class _DirectStudentRegistrationScreenState
       final billingWarning = v['billingWarning'] as String?;
       if (billingWarning != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Learner enrolled, but billing: $billingWarning')),
+          SnackBar(
+            content: Text('Learner enrolled, but billing: $billingWarning'),
+          ),
         );
       }
       Navigator.pushReplacement(
@@ -425,7 +516,13 @@ class _DirectStudentRegistrationScreenState
 
   @override
   void dispose() {
-    for (final x in [_yearsSub, _classesSub, _streamsSub, _termsSub, _schoolSub]) {
+    for (final x in [
+      _yearsSub,
+      _classesSub,
+      _streamsSub,
+      _termsSub,
+      _schoolSub,
+    ]) {
       x?.cancel();
     }
     for (final x in [
@@ -438,6 +535,7 @@ class _DirectStudentRegistrationScreenState
       _transport,
       _house,
       _support,
+      _guardianSearch,
       _bursaryReason,
       _bursaryAmount,
     ]) {
@@ -446,7 +544,8 @@ class _DirectStudentRegistrationScreenState
     super.dispose();
   }
 
-  String get _studentCategory => _boarding == 'Boarding learner' ? 'boarding' : 'day';
+  String get _studentCategory =>
+      _boarding == 'Boarding learner' ? 'boarding' : 'day';
 
   Future<void> _lookupFeePlan() async {
     final year = _year, cls = _class;
@@ -530,7 +629,7 @@ class _DirectStudentRegistrationScreenState
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Choose how this learner enters the school.',
+              'How would you like to add the learner?',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 height: 1.2,
                 fontWeight: FontWeight.w700,
@@ -539,7 +638,7 @@ class _DirectStudentRegistrationScreenState
             const SizedBox(height: 14),
             _choiceCard(
               'Direct enrolment',
-              'Create an active learner record now',
+              'Enrol the learner directly into your school.',
               Icons.person_add_alt_1_outlined,
               true,
               () => setState(() => _step = 0),
@@ -547,7 +646,7 @@ class _DirectStudentRegistrationScreenState
             const SizedBox(height: 10),
             _choiceCard(
               'Admission application',
-              'Capture an application for review before enrolment',
+              'Invite the learner to apply for admission to your school.',
               Icons.description_outlined,
               false,
               () => context.push(
@@ -556,7 +655,9 @@ class _DirectStudentRegistrationScreenState
               ),
             ),
             const SizedBox(height: 18),
-            const _Notice('You can save a draft at any stage.'),
+            const _Notice(
+              'Save as draft anytime. Your progress is saved so you can continue later.',
+            ),
           ],
         ),
       ),
@@ -609,17 +710,20 @@ class _DirectStudentRegistrationScreenState
                     children: [
                       Text(
                         title,
-                        style: Theme.of(context).textTheme.titleSmall
-                            ?.copyWith(color: ink, fontWeight: FontWeight.w700),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: ink,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         sub,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: muted, height: 1.25),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: muted,
+                          height: 1.25,
+                        ),
                       ),
                     ],
                   ),
@@ -648,7 +752,10 @@ class _DirectStudentRegistrationScreenState
         Expanded(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-            children: [_body()],
+            children: [
+              if (_submittedCurrentStep) _ErrorSummary(step: _step + 1),
+              _body(),
+            ],
           ),
         ),
         SafeArea(
@@ -659,8 +766,10 @@ class _DirectStudentRegistrationScreenState
             child: Row(
               children: [
                 OutlinedButton(
-                  onPressed: () =>
-                      setState(() => _step = _step == 0 ? -1 : _step - 1),
+                  onPressed: () => setState(() {
+                    _submittedCurrentStep = false;
+                    _step = _step == 0 ? -1 : _step - 1;
+                  }),
                   child: const Text('Back'),
                 ),
                 const SizedBox(width: 12),
@@ -698,17 +807,24 @@ class _DirectStudentRegistrationScreenState
     [
       _field(
         _first,
-        'First names',
+        'First name',
         required: true,
         caps: TextCapitalization.words,
       ),
-      _field(_last, 'Surname', required: true, caps: TextCapitalization.words),
+      _field(_middle, 'Middle name (optional)', caps: TextCapitalization.words),
+      _field(
+        _last,
+        'Last name',
+        required: true,
+        caps: TextCapitalization.words,
+      ),
       _field(
         _dob,
         'Date of birth',
         required: true,
         type: TextInputType.datetime,
         hint: 'DD/MM/YYYY',
+        dateOfBirth: true,
       ),
       _select('Sex', _sex, const [
         'Female',
@@ -733,8 +849,13 @@ class _DirectStudentRegistrationScreenState
   );
   Widget _guardianPage() => _section(
     'Parent or guardian',
-    'At least one adult contact is needed to activate a learner.',
+    'At least one parent or guardian is required to activate enrolment.',
     [
+      _field(
+        _guardianSearch,
+        'Search existing guardians',
+        hint: 'Search by name, email or phone',
+      ),
       ..._guardians.map(
         (g) => Card(
           child: ListTile(
@@ -758,21 +879,22 @@ class _DirectStudentRegistrationScreenState
         icon: const Icon(Icons.search),
         label: const Text('Find existing family'),
       ),
-      SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        value: _override,
-        onChanged: (v) => setState(() => _override = v),
-        title: const Text('Authorised staff override'),
-        subtitle: const Text('A reason is required and will be audited.'),
-      ),
-      if (_override)
+      if (_canUseGuardianOverride) ...[
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _override,
+          onChanged: (v) => setState(() => _override = v),
+          title: const Text('Authorised override'),
+          subtitle: const Text(
+            'Use only when a guardian cannot be linked. This is recorded in the audit log.',
+          ),
+        ),
+      ],
+      if (_override && _canUseGuardianOverride)
         TextFormField(
           initialValue: _overrideReason,
           onChanged: (v) => _overrideReason = v,
-          decoration: const InputDecoration(
-            labelText: 'Override reason',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Reason for override *'),
           validator: (v) => _override && (v == null || v.trim().isEmpty)
               ? 'Override reason is required'
               : null,
@@ -812,6 +934,7 @@ class _DirectStudentRegistrationScreenState
         _stream ?? 'No stream',
         ['No stream', ..._streams.map((x) => x.name)],
         (v) => setState(() => _stream = v == 'No stream' ? null : v),
+        required: false,
       ),
       _field(_term, 'Entry term', required: true),
       if ((_class?.capacity ?? 0) > 0)
@@ -823,19 +946,22 @@ class _DirectStudentRegistrationScreenState
   bool _enabled(String key) => _modules.isEmpty || _modules[key] == true;
   Widget _services() => _section(
     'Support & services',
-    'Optional — record only what applies.',
+    'Tell us about support or services this learner needs.',
     [
       if (_enabled('boarding'))
-        _select('Day or boarding status', _boarding, const [
-          'Day learner',
-          'Boarding learner',
-        ], (v) => setState(() {
-          _boarding = v!;
-          if (_boarding != 'Day learner') _transport.clear();
-        })),
+        _select(
+          'Day or boarding status',
+          _boarding,
+          const ['Day learner', 'Boarding learner'],
+          (v) => setState(() {
+            _boarding = v!;
+            if (_boarding != 'Day learner') _transport.clear();
+          }),
+        ),
       if (_enabled('transport') && _boarding == 'Day learner')
-        _field(_transport, 'Transport route (optional)'),
-      if (_enabled('houses')) _field(_house, 'House (optional)'),
+        _field(_transport, 'Transport route', required: true),
+      if (_enabled('houses') && _boarding == 'Boarding learner')
+        _field(_house, 'House / dormitory', required: true),
       if (_enabled('studentSupport')) ...[
         _field(
           _support,
@@ -882,34 +1008,86 @@ class _DirectStudentRegistrationScreenState
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
-              onPressed: () =>
-                  context.push('/staff/admin/structure/academics/fee-structures'),
+              onPressed: () => context.push(
+                '/staff/admin/structure/academics/fee-structures',
+              ),
               icon: const Icon(Icons.receipt_long_outlined),
               label: const Text('Open Fee Plans'),
             ),
           ],
         )
       else ...[
+        Text(
+          'Select required fee plan *',
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        const SizedBox(height: 4),
         Text(match.name, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        for (final line in required)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(child: Text(line.name)),
-                Text(CurrencyFormatter.ugx(line.amountUgx.toDouble())),
-              ],
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant,
             ),
+            borderRadius: BorderRadius.circular(12),
           ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Plan summary',
+                style: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              for (final line in required)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(child: Text(line.name)),
+                      Text(CurrencyFormatter.ugx(line.amountUgx.toDouble())),
+                    ],
+                  ),
+                ),
+              const Divider(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Subtotal',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    CurrencyFormatter.ugx(
+                      required
+                          .fold<int>(0, (s, l) => s + l.amountUgx)
+                          .toDouble(),
+                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
         if (optional.isNotEmpty) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Text(
-            'Optional add-ons',
+            'Optional services',
             style: Theme.of(
               context,
             ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          Text(
+            'Select any additional services you would like to add.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           for (final line in optional)
             CheckboxListTile(
@@ -928,14 +1106,21 @@ class _DirectStudentRegistrationScreenState
               }),
             ),
         ],
-        const Divider(height: 24),
+        const Divider(height: 32),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Total billed', style: TextStyle(fontWeight: FontWeight.w700)),
+            Text(
+              'Total billed',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
             Text(
               CurrencyFormatter.ugx(_feeBilledTotalUgx.toDouble()),
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -949,10 +1134,12 @@ class _DirectStudentRegistrationScreenState
         subtitle: const Text('Reduces this learner\'s billed fees.'),
       ),
       if (_bursaryEnabled) ...[
-        _select('Type', _bursaryIsPercentage ? 'Percentage' : 'Fixed amount', const [
-          'Percentage',
-          'Fixed amount',
-        ], (v) => setState(() => _bursaryIsPercentage = v == 'Percentage')),
+        _select(
+          'Type',
+          _bursaryIsPercentage ? 'Percentage' : 'Fixed amount',
+          const ['Percentage', 'Fixed amount'],
+          (v) => setState(() => _bursaryIsPercentage = v == 'Percentage'),
+        ),
         const SizedBox(height: 8),
         _field(
           _bursaryAmount,
@@ -992,7 +1179,31 @@ class _DirectStudentRegistrationScreenState
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
-                if (_documents.isEmpty)
+                if (_documentRequirements.isNotEmpty) ...[
+                  Text(
+                    'Required documents',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  for (final requirement in _documentRequirements.where(
+                    (r) => r['required'] == true,
+                  ))
+                    _documentRequirementRow(requirement),
+                  const SizedBox(height: 12),
+                  if (_documentRequirements.any(
+                    (r) => r['required'] != true,
+                  )) ...[
+                    Text(
+                      'Optional documents',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    for (final requirement in _documentRequirements.where(
+                      (r) => r['required'] != true,
+                    ))
+                      _documentRequirementRow(requirement),
+                  ],
+                ] else if (_documents.isEmpty)
                   const _Notice(
                     'No files uploaded yet. Missing-document status is checked at enrolment.',
                   )
@@ -1011,8 +1222,7 @@ class _DirectStudentRegistrationScreenState
                         ),
                         trailing: IconButton(
                           tooltip: 'Remove',
-                          onPressed: () =>
-                              setState(() => _documents.remove(d)),
+                          onPressed: () => setState(() => _documents.remove(d)),
                           icon: const Icon(Icons.delete_outline),
                         ),
                       ),
@@ -1020,7 +1230,7 @@ class _DirectStudentRegistrationScreenState
                   ),
                 const SizedBox(height: 4),
                 OutlinedButton.icon(
-                  onPressed: _upload,
+                  onPressed: () => _upload(),
                   icon: const Icon(Icons.upload_file),
                   label: const Text('Upload document'),
                 ),
@@ -1030,12 +1240,11 @@ class _DirectStudentRegistrationScreenState
         ),
         const SizedBox(height: 16),
         Card(
-          color: _consent
-              ? null
-              : error.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.06),
           shape: RoundedRectangleBorder(
             borderRadius: const BorderRadius.all(Radius.circular(12)),
-            side: BorderSide(color: _consent ? Theme.of(context).dividerColor : error),
+            side: BorderSide(
+              color: _consent ? Theme.of(context).dividerColor : error,
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -1052,20 +1261,16 @@ class _DirectStudentRegistrationScreenState
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _consent
-                            ? 'Acknowledged.'
-                            : 'Required before this learner can be enrolled.',
-                        style: TextStyle(
-                          color: _consent ? onSurfaceVariant : error,
-                        ),
+                        'I consent to the enrolment of this learner and confirm that the information provided is true and correct. We collect and use personal information in accordance with the Privacy Notice for Learner Enrolment.',
+                        style: TextStyle(color: onSurfaceVariant),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 12),
-                Switch(
+                Checkbox(
                   value: _consent,
-                  onChanged: (v) => setState(() => _consent = v),
+                  onChanged: (v) => setState(() => _consent = v ?? false),
                 ),
               ],
             ),
@@ -1074,73 +1279,186 @@ class _DirectStudentRegistrationScreenState
       ],
     );
   }
-  Widget _review() => _section(
-    'Review & enrol',
-    'Check the record before creating the learner.',
-    [
-      _summary(
-        'Learner',
-        '${_first.text} ${_last.text}',
-        '${_dob.text} · $_entry',
+
+  Widget _documentRequirementRow(Map<String, dynamic> requirement) {
+    final uploaded = _documents
+        .where((d) => d['requirementId'] == requirement['id'])
+        .firstOrNull;
+    final required = requirement['required'] == true;
+    final types =
+        (requirement['allowedTypes'] as List?)?.join(', ') ?? 'PDF, JPG or PNG';
+    final limit = requirement['maxSizeMb'] ?? 10;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        uploaded == null
+            ? Icons.description_outlined
+            : Icons.check_circle_outline,
       ),
-      _summary(
-        'Guardian',
-        _guardians.isEmpty
-            ? 'Authorised override'
-            : _guardians.map((x) => x['name']).join(', '),
-        _override ? _overrideReason : 'Primary/contact consent recorded',
+      title: Text(
+        '${requirement['name'] ?? 'Document'}${required ? ' *' : ' (optional)'}',
       ),
-      _summary(
-        'Academic placement',
-        '${_class?.name ?? 'Not selected'} · ${_year?.name ?? ''}',
-        _term.text,
+      subtitle: Text(
+        uploaded == null
+            ? '${required ? 'Missing — required' : 'Not uploaded'}\n$types up to $limit MB'
+            : '${uploaded['name']} · Uploaded',
       ),
-      _summary(
-        'Services',
-        _boarding,
-        _transport.text.isEmpty ? 'No transport selected' : _transport.text,
+      isThreeLine: true,
+      trailing: OutlinedButton(
+        onPressed: () => _upload(requirement: requirement),
+        child: Text(uploaded == null ? 'Upload' : 'Replace'),
       ),
-      _summary(
-        'Fees',
-        _feePlanMatch == null
-            ? 'Billing pending'
-            : CurrencyFormatter.ugx(_feeBilledTotalUgx.toDouble()),
-        _feePlanMatch == null
-            ? 'No fee plan matched yet'
-            : _bursaryEnabled
-            ? 'Bursary/discount will be applied'
-            : _feePlanMatch!.name,
-      ),
-      _summary(
-        'Documents',
-        _consent ? 'Consent confirmed' : 'Consent missing',
-        '${_documents.length} file(s) uploaded',
-      ),
-      const _Notice(
-        'A duplicate-safe student number is issued when enrolment is confirmed. Fee setup does not block enrolment.',
-      ),
-    ],
-  );
+    );
+  }
+
+  Widget _review() {
+    final missing = <String>[
+      if (_first.text.trim().isEmpty ||
+          _last.text.trim().isEmpty ||
+          _dateOfBirthError(_dob.text) != null)
+        'Learner details are incomplete',
+      if (!_guardianOk) 'Parent/guardian is incomplete',
+      if (_year == null || _class == null || _term.text.trim().isEmpty)
+        'Academic placement is incomplete',
+      if (!_consent) 'Guardian consent is required',
+      if (!_requiredDocumentsComplete) 'A required document is missing',
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Review & enrol',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Check your information before you enrol.',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (missing.isNotEmpty)
+          Semantics(
+            liveRegion: true,
+            child: Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                border: Border.all(color: Theme.of(context).colorScheme.error),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Some required information is missing',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  for (final m in missing)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 32, top: 2),
+                      child: Text(
+                        '• $m',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        _summary(
+          'Learner',
+          '${_first.text} ${_last.text}',
+          '${_dob.text} · $_entry',
+          complete:
+              _first.text.trim().isNotEmpty &&
+              _last.text.trim().isNotEmpty &&
+              _dateOfBirthError(_dob.text) == null,
+        ),
+        _summary(
+          'Parent/guardian',
+          _guardians.isEmpty
+              ? 'Authorised override'
+              : _guardians.map((x) => x['name']).join(', '),
+          _override ? _overrideReason : 'Primary/contact consent recorded',
+          complete: _guardianOk,
+        ),
+        _summary(
+          'Academic placement',
+          '${_class?.name ?? 'Not selected'} · ${_year?.name ?? ''}',
+          _term.text,
+          complete:
+              _year != null && _class != null && _term.text.trim().isNotEmpty,
+        ),
+        _summary(
+          'Support & services',
+          _boarding,
+          _transport.text.isEmpty ? 'No transport selected' : _transport.text,
+          complete: true,
+        ),
+        _summary(
+          'Fees',
+          _feePlanMatch == null
+              ? 'Billing pending'
+              : CurrencyFormatter.ugx(_feeBilledTotalUgx.toDouble()),
+          _feePlanMatch == null
+              ? 'No fee plan matched yet'
+              : _bursaryEnabled
+              ? 'Bursary/discount will be applied'
+              : _feePlanMatch!.name,
+          complete: true,
+        ),
+        _summary(
+          'Documents & consent',
+          _consent ? 'Consent confirmed' : 'Consent missing',
+          '${_documents.length} file(s) uploaded',
+          complete: _consent && _requiredDocumentsComplete,
+        ),
+        const SizedBox(height: 8),
+        const _Notice(
+          'After you confirm, a duplicate-safe learner ID is generated. Fee setup does not block enrolment.',
+        ),
+      ],
+    );
+  }
+
   Widget _section(String title, String sub, List<Widget> items) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(title, style: Theme.of(context).textTheme.headlineMedium),
-      const SizedBox(height: 6),
+      Text(
+        title,
+        style: Theme.of(
+          context,
+        ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+      ),
+      const SizedBox(height: 4),
       Text(
         sub,
         style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
-      const SizedBox(height: 16),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              for (final item in items) ...[item, const SizedBox(height: 12)],
-            ],
-          ),
-        ),
-      ),
+      const SizedBox(height: 20),
+      for (final item in items) ...[item, const SizedBox(height: 16)],
     ],
   );
   Widget _field(
@@ -1151,31 +1469,54 @@ class _DirectStudentRegistrationScreenState
     String? hint,
     int lines = 1,
     TextCapitalization caps = TextCapitalization.none,
-  }) => TextFormField(
-    controller: c,
-    keyboardType: type,
-    maxLines: lines,
-    textCapitalization: caps,
-    decoration: InputDecoration(
-      labelText: label,
-      hintText: hint,
-      border: const OutlineInputBorder(),
+    bool dateOfBirth = false,
+  }) => Container(
+    key: identical(c, _first) ? _firstInvalidKey : null,
+    child: TextFormField(
+      controller: c,
+      keyboardType: type,
+      maxLines: lines,
+      textCapitalization: caps,
+      decoration: InputDecoration(
+        labelText: required ? '$label *' : label,
+        hintText: hint,
+        suffixIcon: dateOfBirth
+            ? const Icon(Icons.calendar_today_outlined)
+            : null,
+      ),
+      onTap: dateOfBirth
+          ? () async {
+              final now = DateTime.now();
+              final selected = await showDatePicker(
+                context: context,
+                initialDate: DateTime(now.year - 8),
+                firstDate: DateTime(now.year - 100),
+                lastDate: now,
+              );
+              if (selected != null)
+                c.text =
+                    '${selected.day.toString().padLeft(2, '0')}/${selected.month.toString().padLeft(2, '0')}/${selected.year}';
+            }
+          : null,
+      validator: dateOfBirth
+          ? _dateOfBirthError
+          : required
+          ? (v) => v == null || v.trim().isEmpty ? '$label is required' : null
+          : null,
+      autovalidateMode: _submittedCurrentStep
+          ? AutovalidateMode.always
+          : AutovalidateMode.onUserInteraction,
     ),
-    validator: required
-        ? (v) => v == null || v.trim().isEmpty ? '$label is required' : null
-        : null,
   );
   Widget _select(
     String label,
     String value,
     List<String> values,
-    ValueChanged<String?> changed,
-  ) => DropdownButtonFormField<String>(
+    ValueChanged<String?> changed, {
+    bool required = true,
+  }) => DropdownButtonFormField<String>(
     value: values.contains(value) ? value : values.first,
-    decoration: InputDecoration(
-      labelText: label,
-      border: const OutlineInputBorder(),
-    ),
+    decoration: InputDecoration(labelText: required ? '$label *' : label),
     items: values
         .map((x) => DropdownMenuItem(value: x, child: Text(x)))
         .toList(),
@@ -1186,29 +1527,96 @@ class _DirectStudentRegistrationScreenState
     T? value,
     List<T> values,
     String Function(T) labelOf,
-    ValueChanged<T?> changed,
-  ) => DropdownButtonFormField<T>(
+    ValueChanged<T?> changed, {
+    bool required = true,
+  }) => DropdownButtonFormField<T>(
     value: value,
-    decoration: InputDecoration(
-      labelText: label,
-      border: const OutlineInputBorder(),
-    ),
+    decoration: InputDecoration(labelText: required ? '$label *' : label),
     items: values
         .map((x) => DropdownMenuItem(value: x, child: Text(labelOf(x))))
         .toList(),
     onChanged: changed,
-    validator: (x) => x == null ? '$label is required' : null,
+    validator: required ? (x) => x == null ? '$label is required' : null : null,
   );
-  Widget _summary(String title, String value, String detail) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-    subtitle: Text('$value\n$detail'),
-  );
+  Widget _summary(
+    String title,
+    String value,
+    String detail, {
+    required bool complete,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
+      ),
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        onTap: () => setState(() {
+          _submittedCurrentStep = false;
+          _step = switch (title) {
+            'Learner' => 0,
+            'Parent/guardian' => 1,
+            'Academic placement' => 2,
+            'Support & services' => 3,
+            'Fees' => 4,
+            _ => 5,
+          };
+        }),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: Text('$value\n$detail'),
+        isThreeLine: true,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              complete ? Icons.check_circle_outline : Icons.error_outline,
+              size: 18,
+              color: complete ? scheme.primary : scheme.error,
+            ),
+            const SizedBox(width: 6),
+            Text(complete ? 'Complete' : 'Incomplete'),
+            const SizedBox(width: 8),
+            const Text('Edit'),
+            const Icon(Icons.chevron_right, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static const _phoneCodes = ['+256', '+254', '+255', '+250', '+44', '+1'];
+
+  String? _phoneError(String digits) {
+    if (digits.isEmpty) return 'Phone number is required';
+    if (!RegExp(r'^[0-9]+$').hasMatch(digits))
+      return 'Enter a valid phone number';
+    if (digits.length < 7 || digits.length > 12) {
+      return 'Enter a valid phone number';
+    }
+    return null;
+  }
+
+  String? _emailError(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return null;
+    final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(trimmed);
+    return ok ? null : 'Enter a valid email address';
+  }
+
   Future<void> _guardian(Map<String, dynamic>? old) async {
     final n = TextEditingController(text: old?['name']),
         r = TextEditingController(text: old?['relationship']),
-        p = TextEditingController(text: old?['phone']),
         e = TextEditingController(text: old?['email']);
+    final oldPhone = (old?['phone'] as String?) ?? '';
+    var code = _phoneCodes.firstWhere(
+      (c) => oldPhone.startsWith(c),
+      orElse: () => '+256',
+    );
+    final p = TextEditingController(
+      text: oldPhone.startsWith(code)
+          ? oldPhone.substring(code.length).trim()
+          : oldPhone,
+    );
     bool primary = old?['primary'] == true, pickup = old?['pickup'] == true;
     final v = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -1223,9 +1631,47 @@ class _DirectStudentRegistrationScreenState
                 const SizedBox(height: 8),
                 _field(r, 'Relationship', required: true),
                 const SizedBox(height: 8),
-                _field(p, 'Phone', required: true, type: TextInputType.phone),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 92,
+                      child: DropdownButtonFormField<String>(
+                        value: code,
+                        decoration: const InputDecoration(labelText: 'Code *'),
+                        items: _phoneCodes
+                            .map(
+                              (x) => DropdownMenuItem(value: x, child: Text(x)),
+                            )
+                            .toList(),
+                        onChanged: (x) => setD(() => code = x ?? code),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        controller: p,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        decoration: const InputDecoration(labelText: 'Phone *'),
+                        validator: (v) => _phoneError(v?.trim() ?? ''),
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 8),
-                _field(e, 'Email', type: TextInputType.emailAddress),
+                TextFormField(
+                  controller: e,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'Email (optional)',
+                  ),
+                  validator: (v) => _emailError(v ?? ''),
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                ),
                 SwitchListTile(
                   title: const Text('Primary contact'),
                   value: primary,
@@ -1248,12 +1694,13 @@ class _DirectStudentRegistrationScreenState
               onPressed: () {
                 if (n.text.trim().isNotEmpty &&
                     r.text.trim().isNotEmpty &&
-                    p.text.trim().isNotEmpty)
+                    _phoneError(p.text.trim()) == null &&
+                    _emailError(e.text) == null)
                   Navigator.pop(c, {
                     'id': old?['id'] ?? _uuid.v4(),
                     'name': n.text.trim(),
                     'relationship': r.text.trim(),
-                    'phone': p.text.trim(),
+                    'phone': '$code${p.text.trim()}',
                     'email': e.text.trim(),
                     'primary': primary,
                     'pickup': pickup,
@@ -1319,7 +1766,7 @@ class _DirectStudentRegistrationScreenState
       );
   }
 
-  Future<void> _upload() async {
+  Future<void> _upload({Map<String, dynamic>? requirement}) async {
     final picked = await FilePicker.pickFiles(withData: true);
     final f = picked?.files.single;
     if (f?.bytes == null) return;
@@ -1328,6 +1775,7 @@ class _DirectStudentRegistrationScreenState
       'name': f!.name,
       'status': 'uploading',
       'size': f.size,
+      if (requirement != null) 'requirementId': requirement['id'],
     };
     setState(() => _documents.add(doc));
     try {
@@ -1362,30 +1810,94 @@ class _DirectStudentRegistrationScreenState
 }
 
 class _Progress extends StatelessWidget {
+  static const _labels = [
+    'Learner',
+    'Guardian',
+    'Placement',
+    'Support',
+    'Fees',
+    'Documents',
+    'Review',
+  ];
   final int step;
   const _Progress(this.step);
   @override
-  Widget build(BuildContext c) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text('Step $step of 7'),
-      const SizedBox(height: 8),
-      Row(
-        children: List.generate(
-          7,
-          (i) => Expanded(
-            child: Container(
-              height: 7,
-              margin: EdgeInsets.only(right: i == 6 ? 0 : 5),
-              decoration: BoxDecoration(
-                color: i < step ? Colors.black : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(9),
+  Widget build(BuildContext c) {
+    final scheme = Theme.of(c).colorScheme;
+    return Semantics(
+      label: 'Step $step of 7: ${_labels[step - 1]}',
+      child: Row(
+        children: List.generate(7, (i) {
+          final index = i + 1;
+          final done = index < step;
+          final current = index == step;
+          final fill = done || current
+              ? (current ? scheme.onSurface : scheme.onSurface)
+              : Colors.transparent;
+          final circle = Container(
+            width: 26,
+            height: 26,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: current || done ? fill : Colors.transparent,
+              border: Border.all(
+                color: current || done ? fill : scheme.outlineVariant,
               ),
             ),
-          ),
-        ),
+            child: done
+                ? Icon(Icons.check, size: 14, color: scheme.surface)
+                : Text(
+                    '$index',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: current ? scheme.surface : scheme.onSurfaceVariant,
+                    ),
+                  ),
+          );
+          return i == 6
+              ? circle
+              : Expanded(
+                  child: Row(
+                    children: [
+                      circle,
+                      Expanded(
+                        child: Container(
+                          height: 1,
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          color: done
+                              ? scheme.onSurface
+                              : scheme.outlineVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+        }),
       ),
-    ],
+    );
+  }
+}
+
+class _ErrorSummary extends StatelessWidget {
+  final int step;
+  const _ErrorSummary({required this.step});
+  @override
+  Widget build(BuildContext context) => Semantics(
+    liveRegion: true,
+    child: Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.error),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        'Please correct the required information in step $step before continuing.',
+        style: TextStyle(color: Theme.of(context).colorScheme.error),
+      ),
+    ),
   );
 }
 

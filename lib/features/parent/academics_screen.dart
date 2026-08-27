@@ -3,15 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/features/academic/domain/entities/attendance_record.dart';
-import 'package:school_pulse/features/attendance_summary/domain/attendance_summary.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
-
-import 'package:school_pulse/features/parent/widgets/student_app_bar.dart';
 
 class AcademicsScreen extends StatefulWidget {
   const AcademicsScreen({super.key});
@@ -22,19 +18,12 @@ class AcademicsScreen extends StatefulWidget {
 
 class _AcademicsScreenState extends State<AcademicsScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-    _controller.forward();
-
+    _tabController = TabController(length: 3, vsync: this);
     _loadData();
   }
 
@@ -47,7 +36,6 @@ class _AcademicsScreenState extends State<AcademicsScreen>
       if (selectedStudentState is SelectedStudentLoaded) {
         studentId = selectedStudentState.student.id;
       } else {
-        // Fallback to first student if available in user entity
         studentId = authState.user.studentIds.firstOrNull;
       }
 
@@ -64,192 +52,92 @@ class _AcademicsScreenState extends State<AcademicsScreen>
 
   @override
   void dispose() {
-    _controller.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const StudentAppBar(title: 'Academics'),
-      body: BlocBuilder<AcademicBloc, AcademicState>(
-        builder: (context, state) {
-          if (state is AcademicLoading || state is AcademicInitial) {
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                const Skeleton(height: 140),
-                const SizedBox(height: 24),
-                const Skeleton(height: 180),
-                const SizedBox(height: 24),
-                const Skeleton(height: 24, width: 150),
-                const SizedBox(height: 12),
-                ...List.generate(
-                  4,
-                  (index) => const Padding(
-                    padding: EdgeInsets.only(bottom: 8),
-                    child: Skeleton(height: 60),
-                  ),
-                ),
-              ],
-            );
-          } else if (state is AcademicError) {
-            return EmptyState(
-              icon: Icons.cloud_off,
-              title: 'Could not load academics',
-              message: state.message,
-              ctaLabel: 'Retry',
-              onCtaPressed: _loadData,
-            );
-          } else if (state is AcademicLoaded) {
-            final records = state.academicRecords;
-            final attendance = state.attendanceRecords;
-
-            final avgScore = records.isEmpty
-                ? 0.0
-                : records.map((r) => r.score).reduce((a, b) => a + b) /
-                      records.length;
-            // Strictly "present" only, matching parent/home_screen.dart's
-            // reading of the same records (late counts as an absence here).
-            final attendanceSummary = AttendanceRateCalculator.summarize(
-              attendance.map(
-                (r) => r.status == StudentStatus.present
-                    ? MarkClassification.present
-                    : MarkClassification.unauthorisedAbsent,
-              ),
-            );
-            final attendanceRate = attendanceSummary.ratePercent ?? 0.0;
-
-            final subjectData = {for (var r in records) r.subject: r.score};
-
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  FadeInSlide(
-                    duration: const Duration(milliseconds: 600),
-                    child: _buildSummaryCard(context, avgScore, attendanceRate),
-                  ),
-                  const SizedBox(height: 24),
-                  if (subjectData.isNotEmpty) ...[
-                    FadeInSlide(
-                      delay: const Duration(milliseconds: 200),
-                      child: PerformanceBarChart(data: subjectData),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                  FadeInSlide(
-                    delay: const Duration(milliseconds: 300),
-                    child: SectionHeader(title: 'Subject Marks'),
-                  ),
-                  ...records.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final record = entry.value;
-                    return FadeInSlide(
-                      delay: Duration(milliseconds: 400 + (index * 50)),
-                      child: _buildSubjectRow(context, record),
-                    );
-                  }),
-                  FadeInSlide(
-                    delay: const Duration(milliseconds: 600),
-                    child: SectionHeader(
-                      title: 'Attendance History',
-                      actionLabel: 'Full History',
-                      onActionPressed: () =>
-                          context.push('/parent/academics/attendance'),
-                    ),
-                  ),
-                  FadeInSlide(
-                    delay: const Duration(milliseconds: 700),
-                    child: _buildAttendanceMiniMap(context, attendance),
-                  ),
-                ],
-              ),
-            );
-          }
-          return const SizedBox.shrink();
-        },
+      backgroundColor: AppColors.white,
+      appBar: AppBar(
+        backgroundColor: AppColors.white,
+        elevation: 0,
+        centerTitle: false,
+        title: const Text(
+          'Learn',
+          style: TextStyle(
+            color: AppColors.black,
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.5,
+          ),
+        ),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppColors.black,
+          labelColor: AppColors.black,
+          unselectedLabelColor: AppColors.grey500,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+          indicatorWeight: 3,
+          tabs: const [
+            Tab(text: 'Homework'),
+            Tab(text: 'Progress'),
+            Tab(text: 'Timetable'),
+          ],
+        ),
       ),
-    );
-  }
-
-  Widget _buildSummaryCard(
-    BuildContext context,
-    double avg,
-    double attendance,
-  ) {
-    return AppCard(
-      child: Column(
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStat(
-                'Average',
-                avg,
-                context,
-                suffix: '%',
-                decimalPlaces: 1,
-              ),
-              _buildStat('Attendance', attendance, context, suffix: '%'),
-            ],
-          ),
-          const Divider(height: 32),
-          Row(
-            children: [
-              Expanded(
-                child: SecondaryButton(
-                  label: 'Report Card',
-                  onPressed: () =>
-                      context.push('/parent/academics/report-card'),
-                  icon: Icons.assignment_outlined,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SecondaryButton(
-                  label: 'Contact Teacher',
-                  onPressed: () => context.push('/parent/messages'),
-                  icon: Icons.chat_bubble_outline,
-                ),
-              ),
-            ],
-          ),
+          _buildHomeworkTab(),
+          _buildProgressTab(),
+          _buildTimetableTab(),
         ],
       ),
     );
   }
 
-  Widget _buildStat(
-    String label,
-    double value,
-    BuildContext context, {
-    String suffix = '',
-    String prefix = '',
-    int decimalPlaces = 0,
-  }) {
-    return Column(
+  Widget _buildHomeworkTab() {
+    return ListView(
+      padding: const EdgeInsets.all(20),
       children: [
-        AnimatedNumberText(
-          value: value,
-          prefix: prefix,
-          suffix: suffix,
-          decimalPlaces: decimalPlaces,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppColors.primary(context),
-          ),
+        _buildHomeworkItem(
+          subject: 'Mathematics',
+          title: 'Algebraic Expressions',
+          dueDate: 'Tomorrow',
+          status: 'Pending',
         ),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 12),
+        _buildHomeworkItem(
+          subject: 'English',
+          title: 'Creative Writing - The Lost City',
+          dueDate: 'Fri, 17 Nov',
+          status: 'Pending',
+        ),
+        const SizedBox(height: 12),
+        _buildHomeworkItem(
+          subject: 'Science',
+          title: 'Photosynthesis Lab Report',
+          dueDate: 'Submitted',
+          status: 'Completed',
+          isCompleted: true,
+        ),
       ],
     );
   }
 
-  Widget _buildSubjectRow(BuildContext context, dynamic record) {
+  Widget _buildHomeworkItem({
+    required String subject,
+    required String title,
+    required String dueDate,
+    required String status,
+    bool isCompleted = false,
+  }) {
     return AppCard(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.all(16),
+      showShadow: false,
+      color: isCompleted ? AppColors.grey50 : AppColors.white,
       child: Row(
         children: [
           Expanded(
@@ -257,88 +145,175 @@ class _AcademicsScreenState extends State<AcademicsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  record.subject,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  subject,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.grey500,
+                  ),
                 ),
+                const SizedBox(height: 4),
                 Text(
-                  record.grade ?? 'Not graded',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    decoration: isCompleted ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isCompleted ? 'Done' : 'Due $dueDate',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isCompleted ? AppColors.successLight : AppColors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
           ),
-          Row(
-            children: [
-              AnimatedNumberText(
-                value: record.score,
-                suffix: '%',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                record.trend >= 0 ? Icons.trending_up : Icons.trending_down,
-                color: record.trend >= 0
-                    ? AppColors.success(context)
-                    : AppColors.danger(context),
-                size: 20,
-              ),
-            ],
-          ),
+          if (!isCompleted)
+            const Icon(Icons.radio_button_unchecked_rounded, color: AppColors.grey300)
+          else
+            const Icon(Icons.check_circle_rounded, color: AppColors.successLight),
         ],
       ),
     );
   }
 
-  Widget _buildAttendanceMiniMap(
-    BuildContext context,
-    List<AttendanceRecord> records,
-  ) {
-    // Show last 14 days
-    return AppCard(
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: records.take(14).map((r) {
-          Color color;
-          switch (r.status) {
-            case StudentStatus.present:
-              color = AppColors.success(context);
-              break;
-            case StudentStatus.absent:
-              color = AppColors.danger(context);
-              break;
-            case StudentStatus.late:
-              color = AppColors.warning(context);
-              break;
-          }
-          return Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: color),
-            ),
-            child: Center(
-              child: Icon(_getStatusIcon(r.status), size: 12, color: color),
-            ),
-          );
-        }).toList(),
-      ),
+  Widget _buildProgressTab() {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const Text(
+          'TERM 3 PERFORMANCE',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
+            color: AppColors.grey500,
+          ),
+        ),
+        const SizedBox(height: 16),
+        AppCard(
+          padding: const EdgeInsets.all(20),
+          showShadow: false,
+          child: Column(
+            children: [
+              _buildProgressRow('Mathematics', 0.85, 'A'),
+              const Divider(height: 32),
+              _buildProgressRow('English', 0.78, 'B+'),
+              const Divider(height: 32),
+              _buildProgressRow('Science', 0.92, 'A+'),
+              const Divider(height: 32),
+              _buildProgressRow('History', 0.65, 'C'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        PrimaryButton(
+          label: 'View Full Report Card',
+          onPressed: () => context.push('/parent/learn/report-card'),
+        ),
+      ],
     );
   }
 
-  IconData _getStatusIcon(StudentStatus status) {
-    switch (status) {
-      case StudentStatus.present:
-        return Icons.check;
-      case StudentStatus.absent:
-        return Icons.close;
-      case StudentStatus.late:
-        return Icons.access_time;
-    }
+  Widget _buildProgressRow(String subject, double value, String grade) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: Text(
+            subject,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+          ),
+        ),
+        Expanded(
+          flex: 4,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: value,
+              backgroundColor: AppColors.grey100,
+              color: AppColors.black,
+              minHeight: 8,
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Text(
+          grade,
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTimetableTab() {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const Text(
+          'TODAY\'S SCHEDULE',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
+            color: AppColors.grey500,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildTimetableItem('08:00 - 09:30', 'Mathematics', 'Room 204'),
+        _buildTimetableItem('09:30 - 10:00', 'Break', 'Cafeteria'),
+        _buildTimetableItem('10:00 - 11:30', 'English Literature', 'Main Hall'),
+        _buildTimetableItem('11:30 - 13:00', 'Lunch', 'Cafeteria'),
+        _buildTimetableItem('13:00 - 14:30', 'Physical Education', 'Sports Field'),
+      ],
+    );
+  }
+
+  Widget _buildTimetableItem(String time, String subject, String location) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(
+              time,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.grey500,
+              ),
+            ),
+          ),
+          Container(
+            width: 2,
+            height: 40,
+            color: AppColors.grey200,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  subject,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  location,
+                  style: const TextStyle(fontSize: 13, color: AppColors.grey500),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

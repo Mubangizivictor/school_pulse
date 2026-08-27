@@ -178,9 +178,6 @@ service cloud.firestore {
         (request.auth.uid == uid && (
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword']) &&
            request.resource.data.mustChangePassword == false) ||
-          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentIds']) &&
-           resource.data.role == 'parent' &&
-           request.resource.data.studentIds.size() > resource.data.studentIds.size()) ||
           // Two-Factor Auth toggle in Security & Privacy - a user may only
           // flip their own mfaEnabled flag, nothing else in the same write.
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mfaEnabled'])) ||
@@ -371,13 +368,19 @@ service cloud.firestore {
     // immutable after creation so a code cannot be reassigned to another
     // tenant by an update.
     match /parent_access_codes/{code} {
-      allow get: if true;
+      allow get: if isStaff() && isSameSchool(resource.data.schoolId);
       allow list: if isStaff() && isSameSchool(resource.data.schoolId);
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
         request.resource.data.schoolId == resource.data.schoolId;
       allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
+
+    // Secure invitations are server-only: callers receive only the one raw
+    // code returned at generation, never a readable code record or hash.
+    match /parent_access_code_invites/{inviteId} { allow read, write: if false; }
+    match /parent_access_code_attempts/{attemptId} { allow read, write: if false; }
+    match /parent_learner_links/{linkId} { allow read, write: if false; }
 
     // Pre-login students look themselves up by code before they have a
     // session, same as parent_access_codes. All mutations (provision, PIN

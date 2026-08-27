@@ -24,113 +24,143 @@ class ChatListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return ListTile(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.m,
-        vertical: 4,
-      ),
-      leading: Stack(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: isDark
-                ? AppColors.surfaceContainerHigh(context)
-                : Colors.black,
-            backgroundImage: chat.avatarUrl != null
-                ? NetworkImage(chat.avatarUrl!)
-                : null,
-            child: chat.avatarUrl != null
-                ? null
-                : Text(
-                    _avatarLabel(chat.title),
-                    style: TextStyle(
-                      color: isDark ? Colors.white : AppColors.deepNavy,
-                      fontWeight: FontWeight.bold,
+    return Column(
+      children: [
+        ListTile(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.m,
+            vertical: 8,
+          ),
+          leading: Stack(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.grey850 : AppColors.grey100,
+                  border: Border.all(
+                    color: isDark ? AppColors.borderDark : AppColors.black,
+                  ),
+                  image: chat.avatarUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(chat.avatarUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: chat.avatarUrl != null
+                    ? null
+                    : Text(
+                        _avatarLabel(chat.title),
+                        style: AppTypography.titleMedium.copyWith(
+                          color: isDark ? AppColors.white : AppColors.black,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+              ),
+              if (chat.type == ChatType.group)
+                Positioned(
+                  right: -1,
+                  bottom: -1,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.white : AppColors.black,
+                      border: Border.all(
+                        color: isDark ? AppColors.bgDark : Colors.white,
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.group,
+                      size: 10,
+                      color: isDark ? AppColors.black : AppColors.white,
                     ),
                   ),
-          ),
-          if (chat.type == ChatType.group)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: AppColors.electricBlue,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isDark ? AppColors.bgDark : Colors.white,
-                    width: 2,
-                  ),
                 ),
-                child: const Icon(Icons.group, size: 10, color: Colors.white),
-              ),
-            ),
-        ],
-      ),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              chat.title,
-              style: AppTypography.titleMedium.copyWith(
-                fontWeight: chat.unreadCount > 0
-                    ? FontWeight.bold
-                    : FontWeight.w600,
-                color: isDark ? Colors.white : AppColors.textPrimaryLight,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            ],
           ),
-          Text(
-            chat.hasMessages ? _timeLabel(chat.lastMessage.timestamp) : '',
-            style: AppTypography.labelSmall.copyWith(
-              color: chat.unreadCount > 0
-                  ? AppColors.electricBlue
-                  : AppColors.textMuted(context),
-            ),
-          ),
-        ],
-      ),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                chat.hasMessages ? chat.lastMessage.content : 'No messages yet',
-                style: AppTypography.bodySmall.copyWith(
-                  color: chat.unreadCount > 0
-                      ? (isDark ? Colors.white : Colors.black)
-                      : AppColors.textMuted(context),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (chat.unreadCount > 0)
-              Container(
-                margin: const EdgeInsets.only(left: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.electricBlue,
-                  borderRadius: BorderRadius.circular(10),
-                ),
+          title: Row(
+            children: [
+              Expanded(
                 child: Text(
-                  chat.unreadCount.toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+                  chat.title,
+                  style: AppTypography.titleMedium.copyWith(
+                    fontWeight:
+                        chat.unreadCount > 0 ? FontWeight.w900 : FontWeight.w700,
+                    color: isDark ? Colors.white : AppColors.black,
+                    fontSize: 15,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-          ],
+              const SizedBox(width: 8),
+              Text(
+                chat.hasMessages ? _timeLabel(chat.lastMessage.timestamp) : '',
+                style: AppTypography.labelSmall.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: chat.unreadCount > 0
+                      ? (isDark ? AppColors.white : AppColors.black)
+                      : AppColors.grey500,
+                ),
+              ),
+            ],
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    chat.hasMessages
+                        ? chat.lastMessage.content
+                        : 'No messages yet',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: chat.unreadCount > 0
+                          ? (isDark ? Colors.white : AppColors.black)
+                          : AppColors.grey500,
+                      fontWeight: chat.unreadCount > 0
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (chat.unreadCount > 0)
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.white : AppColors.black,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      chat.unreadCount.toString(),
+                      style: TextStyle(
+                        color: isDark ? AppColors.black : AppColors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
-      ),
+        Divider(
+          height: 1,
+          thickness: 1,
+          indent: 88,
+          endIndent: 0,
+          color: isDark ? AppColors.borderDark : AppColors.grey100,
+        ),
+      ],
     );
   }
 

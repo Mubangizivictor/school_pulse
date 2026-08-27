@@ -31,17 +31,35 @@ class MediaLinksDocsScreen extends StatelessWidget {
             icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text('Media, Links & Docs', style: AppTypography.titleLarge),
+          title: Text(
+            'MEDIA, LINKS & DOCS',
+            style: AppTypography.titleLarge.copyWith(
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+            ),
+          ),
           bottom: TabBar(
-            labelColor: AppColors.electricBlue,
-            unselectedLabelColor: AppColors.textMuted(context),
-            indicatorColor: AppColors.electricBlue,
-            indicatorWeight: 3,
-            labelStyle: AppTypography.titleSmall,
+            labelColor: AppColors.textPrimary(context),
+            unselectedLabelColor: AppColors.textPrimary(context).withOpacity(0.5),
+            indicatorColor: AppColors.textPrimary(context),
+            indicatorWeight: 4,
+            labelStyle: AppTypography.titleSmall.copyWith(
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+            ),
+            indicatorSize: TabBarIndicatorSize.tab,
+            indicator: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: AppColors.textPrimary(context),
+                  width: 4,
+                ),
+              ),
+            ),
             tabs: const [
-              Tab(text: 'Media'),
-              Tab(text: 'Links'),
-              Tab(text: 'Docs'),
+              Tab(text: 'MEDIA'),
+              Tab(text: 'LINKS'),
+              Tab(text: 'DOCS'),
             ],
           ),
         ),
@@ -116,16 +134,18 @@ class MediaLinksDocsScreen extends StatelessWidget {
               final message = entry.value[index];
               return GestureDetector(
                 onTap: () => _openImage(context, message),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border(context), width: 1),
+                  ),
                   child: Image.network(
                     message.mediaUrl!,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stack) => Container(
-                      color: Colors.black,
-                      child: const Icon(
+                      color: AppColors.background(context),
+                      child: Icon(
                         Icons.broken_image_outlined,
-                        color: Colors.white,
+                        color: AppColors.textPrimary(context),
                       ),
                     ),
                   ),
@@ -152,35 +172,42 @@ class MediaLinksDocsScreen extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.m),
       itemCount: links.length,
       itemBuilder: (context, index) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         final link = links[index];
         return Container(
           margin: const EdgeInsets.only(bottom: AppSpacing.s),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.background(context),
+            border: Border.all(color: AppColors.border(context), width: 1),
           ),
           child: ListTile(
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.electricBlue,
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.background(context),
+                border: Border.all(color: AppColors.border(context), width: 1),
               ),
-              child: const Icon(Icons.link, color: AppColors.electricBlue),
+              child: Icon(
+                Icons.link,
+                color: AppColors.textPrimary(context),
+              ),
             ),
             title: Text(
               link.url,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.electricBlue,
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w900,
                 decoration: TextDecoration.underline,
               ),
             ),
             subtitle: Text(
-              '${link.message.senderName} • ${DateFormat('dd/MM/yy HH:mm').format(link.message.timestamp)}',
-              style: AppTypography.labelSmall,
+              '${link.message.senderName} • ${DateFormat('dd/MM/yy HH:mm').format(link.message.timestamp)}'
+                  .toUpperCase(),
+              style: AppTypography.labelSmall.copyWith(
+                fontWeight: FontWeight.w700,
+                fontSize: 9,
+              ),
             ),
             onTap: () => _openUrl(context, link.url),
           ),
@@ -196,34 +223,45 @@ class MediaLinksDocsScreen extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.m),
       itemCount: docs.length,
       itemBuilder: (context, index) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         final doc = docs[index];
         return Container(
           margin: const EdgeInsets.only(bottom: AppSpacing.s),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.background(context),
+            border: Border.all(color: AppColors.border(context), width: 1),
           ),
           child: ListTile(
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.background(context),
+                border: Border.all(color: AppColors.border(context), width: 1),
               ),
-              child: const Icon(Icons.picture_as_pdf, color: Colors.black),
+              child: Icon(
+                Icons.picture_as_pdf,
+                color: AppColors.textPrimary(context),
+              ),
             ),
             title: Text(
-              doc.fileName ?? 'Attachment',
-              style: AppTypography.titleSmall,
-            ),
-            subtitle: Text(
-              '${doc.fileSize ?? ''} • ${DateFormat('dd/MM/yy • HH:mm').format(doc.timestamp)}',
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.textMuted(context),
+              doc.fileName?.toUpperCase() ?? 'ATTACHMENT',
+              style: AppTypography.titleSmall.copyWith(
+                fontWeight: FontWeight.w900,
               ),
             ),
-            trailing: const Icon(Icons.file_download_outlined, size: 20),
+            subtitle: Text(
+              '${doc.fileSize ?? ''} • ${DateFormat('dd/MM/yy • HH:mm').format(doc.timestamp)}'
+                  .toUpperCase(),
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w700,
+                fontSize: 9,
+              ),
+            ),
+            trailing: Icon(
+              Icons.file_download_outlined,
+              size: 20,
+              color: AppColors.textPrimary(context),
+            ),
             onTap: doc.mediaUrl == null
                 ? null
                 : () => _openUrl(context, doc.mediaUrl!),
@@ -237,24 +275,32 @@ class MediaLinksDocsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (dialogContext) => Dialog(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.background(context),
         insetPadding: EdgeInsets.zero,
-        child: Stack(
-          children: [
-            Center(
-              child: InteractiveViewer(
-                child: Image.network(message.mediaUrl!, fit: BoxFit.contain),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.border(context), width: 1),
+          ),
+          child: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer(
+                  child: Image.network(message.mediaUrl!, fit: BoxFit.contain),
+                ),
               ),
-            ),
-            Positioned(
-              top: 40,
-              right: 8,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: () => Navigator.pop(dialogContext),
+              Positioned(
+                top: 40,
+                right: 8,
+                child: IconButton(
+                  icon: Icon(
+                    Icons.close,
+                    color: AppColors.textPrimary(context),
+                  ),
+                  onPressed: () => Navigator.pop(dialogContext),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -294,10 +340,12 @@ class MediaLinksDocsScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.s, left: 4),
       child: Text(
-        title,
+        title.toUpperCase(),
         style: AppTypography.labelSmall.copyWith(
-          color: AppColors.textMuted(context),
-          letterSpacing: 1.2,
+          color: AppColors.textPrimary(context),
+          fontWeight: FontWeight.w900,
+          letterSpacing: 2,
+          fontSize: 10,
         ),
       ),
     );

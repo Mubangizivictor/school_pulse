@@ -364,6 +364,12 @@ class StaffShell extends StatelessWidget {
     // are regular management screens and keep the shared nav.
     final isStructureWizardSection =
         GoRouterState.of(context).uri.path == '/staff/admin/structure';
+    // The Add Staff wizard owns its own 5-stage header (Profile/Work/
+    // Roles/Access/Review) and sticky Back/Continue footer, same reasoning
+    // as the Structure wizard above - the shared bottom nav must not render
+    // on top of it.
+    final isAddStaffWizardRoute =
+        GoRouterState.of(context).uri.path == '/staff/admin/users/add-staff';
 
     final List<NavigationDestination> subjectTeacherDestinations = [
       const NavigationDestination(
@@ -725,6 +731,7 @@ class StaffShell extends StatelessWidget {
               !isBursarSection &&
               !isNurseSection &&
               !isStructureWizardSection &&
+              !isAddStaffWizardRoute &&
               !isDirectEnrolmentRoute)
           ? Container(
               decoration: BoxDecoration(

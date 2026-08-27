@@ -6,10 +6,9 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
-import 'package:school_pulse/features/student/domain/entities/student.dart';
-import 'package:school_pulse/features/student/domain/usecases/get_all_students.dart';
 import 'package:school_pulse/features/student/domain/usecases/manage_parent_access_codes.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
+import 'package:school_pulse/features/admin/presentation/link_parent_wizard/link_parent_wizard_page.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 /// Admin screen for issuing and managing parent access codes for already
@@ -128,9 +127,10 @@ class _AccessCodesScreenState extends State<AccessCodesScreen> {
   }
 
   Future<void> _openCreateDialog() async {
-    final created = await showDialog<bool>(
-      context: context,
-      builder: (_) => _CreateAccessCodeDialog(schoolId: _schoolId),
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => LinkParentWizardPage(schoolId: _schoolId),
+      ),
     );
     if (created == true) _load();
   }
@@ -335,204 +335,6 @@ class _StatusChip extends StatelessWidget {
           color: color,
         ),
       ),
-    );
-  }
-}
-
-class _CreateAccessCodeDialog extends StatefulWidget {
-  final String schoolId;
-  const _CreateAccessCodeDialog({required this.schoolId});
-
-  @override
-  State<_CreateAccessCodeDialog> createState() =>
-      _CreateAccessCodeDialogState();
-}
-
-class _CreateAccessCodeDialogState extends State<_CreateAccessCodeDialog> {
-  final _parentNameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  bool _isLoadingStudents = true;
-  bool _isSaving = false;
-  List<Student> _students = [];
-  final Set<String> _selectedStudentIds = {};
-  String _studentQuery = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadStudents();
-  }
-
-  @override
-  void dispose() {
-    _parentNameController.dispose();
-    _phoneController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadStudents() async {
-    final result = await di.sl<GetAllStudents>()(schoolId: widget.schoolId);
-    if (!mounted) return;
-    result.fold(
-      (failure) => setState(() => _isLoadingStudents = false),
-      (students) => setState(() {
-        _students = students;
-        _isLoadingStudents = false;
-      }),
-    );
-  }
-
-  Future<void> _submit() async {
-    if (_selectedStudentIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select at least one student.')),
-      );
-      return;
-    }
-    if (_phoneController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter the parent\'s phone number.')),
-      );
-      return;
-    }
-
-    setState(() => _isSaving = true);
-    final result = await di.sl<CreateAccessCode>()(
-      studentIds: _selectedStudentIds.toList(),
-      schoolId: widget.schoolId,
-      phoneNumber: _phoneController.text.trim(),
-      parentName: _parentNameController.text.trim().isEmpty
-          ? null
-          : _parentNameController.text.trim(),
-    );
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-    result.fold(
-      (failure) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not issue code: ${failure.message}'),
-          backgroundColor: AppColors.danger(context),
-        ),
-      ),
-      (code) {
-        Navigator.pop(context, true);
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('Access code issued'),
-            content: SelectableText(
-              'Share this code with the parent along with their phone number:\n\n$code',
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Done'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final filteredStudents = _students
-        .where(
-          (s) => s.name.toLowerCase().contains(_studentQuery.toLowerCase()),
-        )
-        .toList();
-
-    return AlertDialog(
-      title: const Text('Issue Access Code'),
-      content: SizedBox(
-        width: 420,
-        height: 440,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _parentNameController,
-              decoration: const InputDecoration(
-                labelText: 'Parent name (optional)',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Parent phone number',
-                hintText: '+256700000000',
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Children (${_selectedStudentIds.length} selected)',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textSecondary(context),
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              onChanged: (v) => setState(() => _studentQuery = v),
-              decoration: InputDecoration(
-                hintText: 'Search students...',
-                isDense: true,
-                prefixIcon: const Icon(Icons.search, size: 18),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: _isLoadingStudents
-                  ? const Center(child: SchoolPulseLoader())
-                  : ListView.builder(
-                      itemCount: filteredStudents.length,
-                      itemBuilder: (context, index) {
-                        final student = filteredStudents[index];
-                        final selected = _selectedStudentIds.contains(
-                          student.id,
-                        );
-                        return CheckboxListTile(
-                          dense: true,
-                          title: Text(student.name),
-                          subtitle: Text(student.studentCode),
-                          value: selected,
-                          onChanged: (val) {
-                            setState(() {
-                              if (val == true) {
-                                _selectedStudentIds.add(student.id);
-                              } else {
-                                _selectedStudentIds.remove(student.id);
-                              }
-                            });
-                          },
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _isSaving ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _isSaving ? null : _submit,
-          child: _isSaving
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Issue Code'),
-        ),
-      ],
     );
   }
 }

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
-import 'package:school_pulse/features/parent/widgets/student_app_bar.dart';
 import 'package:school_pulse/features/parent_access/domain/entities/parent_module_visibility.dart';
 import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_cubit.dart';
 import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_state.dart';
@@ -21,107 +21,102 @@ class MoreMenuScreen extends StatelessWidget {
             : ParentModuleVisibility.none;
 
         return Scaffold(
-          appBar: const StudentAppBar(title: 'More'),
+          backgroundColor: AppColors.white,
+          appBar: AppBar(
+            backgroundColor: AppColors.white,
+            elevation: 0,
+            centerTitle: false,
+            title: const Text(
+              'More',
+              style: TextStyle(
+                color: AppColors.black,
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             children: [
-              _buildMenuSection(context, 'Services', [
-                if (visibility.academics)
-                  _MenuTile(
-                    icon: Icons.calendar_month_outlined,
-                    title: 'School Calendar',
-                    onTap: () => context.push('/parent/calendar'),
-                  ),
-                if (visibility.health)
-                  _MenuTile(
-                    icon: Icons.health_and_safety_outlined,
-                    title: 'Health',
-                    onTap: () => context.push('/parent/health'),
-                  ),
-                if (visibility.library)
-                  _MenuTile(
-                    icon: Icons.library_books_outlined,
-                    title: 'Library',
-                    onTap: () => context.push('/parent/library'),
-                  ),
-                if (visibility.discipline)
-                  _MenuTile(
-                    icon: Icons.gavel_outlined,
-                    title: 'Discipline',
-                    onTap: () => context.push('/parent/discipline'),
-                  ),
-                if (visibility.appointments)
-                  _MenuTile(
-                    icon: Icons.event_available_outlined,
-                    title: 'Appointments',
-                    onTap: () => context.push('/parent/appointments'),
-                  ),
-                if (visibility.transport)
-                  _MenuTile(
-                    icon: Icons.directions_bus_outlined,
-                    title: 'Transport',
-                    onTap: () => context.push('/parent/transport'),
-                  ),
-                if (visibility.boarding)
-                  _MenuTile(
-                    icon: Icons.bed_outlined,
-                    title: 'Boarding',
-                    onTap: () => context.push('/parent/boarding'),
-                  ),
-                if (visibility.security)
-                  _MenuTile(
-                    icon: Icons.security_outlined,
-                    title: 'Security & Safety',
-                    onTap: () => context.push('/parent/security'),
-                  ),
-              ]),
-              const SizedBox(height: 24),
-              _buildMenuSection(context, 'Account', [
-                _MenuTile(
-                  icon: Icons.person_outline,
-                  title: 'Profile',
-                  onTap: () => context.push('/parent/profile'),
+              _buildSectionHeader('CARE & TRANSPORT'),
+              const SizedBox(height: 12),
+              _buildMenuCard([
+                _buildMenuTile(
+                  context,
+                  icon: Icons.health_and_safety_outlined,
+                  title: 'Health & Clinic Visits',
+                  onTap: () => context.push('/parent/health'),
+                  visible: visibility.health,
                 ),
-                _MenuTile(
-                  icon: Icons.notifications_outlined,
-                  title: 'Notifications',
-                  onTap: () => context.push('/parent/notifications'),
+                _buildMenuTile(
+                  context,
+                  icon: Icons.directions_bus_outlined,
+                  title: 'Transport Routes',
+                  onTap: () => context.push('/parent/transport'),
+                  visible: visibility.transport,
                 ),
-                _MenuTile(
-                  icon: Icons.settings_outlined,
-                  title: 'Settings',
-                  onTap: () => context.push('/parent/profile'),
-                ),
-              ]),
-              const SizedBox(height: 24),
-              _buildMenuSection(context, 'Support', [
-                _MenuTile(
-                  icon: Icons.help_outline,
-                  title: 'Help Center',
-                  onTap: () => _showHelpDialog(context),
-                ),
-                _MenuTile(
-                  icon: Icons.info_outline,
-                  title: 'About School Pulse',
-                  onTap: () => context.push('/about-school-pulse'),
+                _buildMenuTile(
+                  context,
+                  icon: Icons.door_front_door_outlined,
+                  title: 'Gate Activity',
+                  onTap: () => context.push('/parent/security'),
+                  visible: visibility.security,
                 ),
               ]),
               const SizedBox(height: 32),
+              _buildSectionHeader('SCHOOL INFO'),
+              const SizedBox(height: 12),
+              _buildMenuCard([
+                _buildMenuTile(
+                  context,
+                  icon: Icons.calendar_month_outlined,
+                  title: 'School Calendar',
+                  onTap: () => context.push('/parent/calendar'),
+                  visible: visibility.academics,
+                ),
+                _buildMenuTile(
+                  context,
+                  icon: Icons.library_books_outlined,
+                  title: 'Library',
+                  onTap: () => context.push('/parent/library'),
+                  visible: visibility.library,
+                ),
+              ]),
+              const SizedBox(height: 32),
+              _buildSectionHeader('ACCOUNT'),
+              const SizedBox(height: 12),
+              _buildMenuCard([
+                _buildMenuTile(
+                  context,
+                  icon: Icons.person_outline,
+                  title: 'Profile Settings',
+                  onTap: () => context.push('/parent/profile'),
+                ),
+                _buildMenuTile(
+                  context,
+                  icon: Icons.notifications_none_rounded,
+                  title: 'Notification Preferences',
+                  onTap: () => context.push('/parent/profile'),
+                ),
+              ]),
+              const SizedBox(height: 40),
               SecondaryButton(
-                label: 'Logout',
+                label: 'Log Out',
+                color: AppColors.dangerLight,
                 onPressed: () {
                   context.read<AuthBloc>().add(LogoutPressed());
                   context.go('/welcome');
                 },
-                icon: Icons.logout,
               ),
-              const SizedBox(height: 16),
-              Center(
+              const SizedBox(height: 20),
+              const Center(
                 child: Text(
-                  'Version 1.0.0',
-                  style: Theme.of(context).textTheme.labelSmall,
+                  'School Pulse v1.2.0',
+                  style: TextStyle(color: AppColors.grey500, fontSize: 12),
                 ),
               ),
+              const SizedBox(height: 40),
             ],
           ),
         );
@@ -129,63 +124,51 @@ class MoreMenuScreen extends StatelessWidget {
     );
   }
 
-  void _showHelpDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Help Center'),
-        content: const Text(
-          'For help with your account or the app, please contact your '
-          'school\'s administration office. They can reset access codes, '
-          'update your contact details, and answer questions about fees, '
-          'academics, and other records shown in this app.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 1.2,
+        color: AppColors.grey500,
       ),
     );
   }
 
-  Widget _buildMenuSection(
-    BuildContext context,
-    String title,
-    List<Widget> children,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-        ),
-        AppCard(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: children.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final child = entry.value;
-              return Column(
-                children: [
-                  child,
-                  if (idx < children.length - 1)
-                    const Divider(height: 1, indent: 56),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
-      ],
+  Widget _buildMenuCard(List<Widget> tiles) {
+    final visibleTiles = tiles.where((tile) {
+      if (tile is _MenuTile) return tile.visible;
+      return true;
+    }).toList();
+
+    if (visibleTiles.isEmpty) return const SizedBox.shrink();
+
+    return AppCard(
+      padding: EdgeInsets.zero,
+      showShadow: false,
+      child: Column(
+        children: visibleTiles.asMap().entries.map((entry) {
+          final isLast = entry.key == visibleTiles.length - 1;
+          return Column(
+            children: [
+              entry.value,
+              if (!isLast) const Divider(height: 1, indent: 52),
+            ],
+          );
+        }).toList(),
+      ),
     );
+  }
+
+  Widget _buildMenuTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool visible = true,
+  }) {
+    return _MenuTile(icon: icon, title: title, onTap: onTap, visible: visible);
   }
 }
 
@@ -193,19 +176,25 @@ class _MenuTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final VoidCallback onTap;
+  final bool visible;
 
   const _MenuTile({
     required this.icon,
     required this.title,
     required this.onTap,
+    this.visible = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (!visible) return const SizedBox.shrink();
     return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      trailing: const Icon(Icons.chevron_right, size: 20),
+      leading: Icon(icon, color: AppColors.black, size: 22),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+      ),
+      trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.grey300),
       onTap: onTap,
     );
   }

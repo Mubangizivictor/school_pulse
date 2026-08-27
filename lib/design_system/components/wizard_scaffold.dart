@@ -319,79 +319,136 @@ class WizardStageScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: onBack,
-                    icon: Icon(
-                      Icons.arrow_back,
-                      color: AppColors.textPrimary(context),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
+    final baseTheme = Theme.of(context);
+    // Scoped to this wizard only: flat, un-filled, thin-bordered fields with
+    // compact label text - matches the reference design's minimal field
+    // style without changing the app-wide InputDecorationTheme used by
+    // every other screen.
+    final wizardTheme = baseTheme.copyWith(
+      inputDecorationTheme: baseTheme.inputDecorationTheme.copyWith(
+        filled: false,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
+        labelStyle: TextStyle(
+          color: AppColors.textMuted(context),
+          fontSize: 13,
+        ),
+        hintStyle: TextStyle(
+          color: AppColors.textMuted(context),
+          fontSize: 13.5,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: AppColors.border(context)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: AppColors.border(context)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: AppColors.textPrimary(context)),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: AppColors.danger(context), width: 1.4),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: AppColors.danger(context), width: 1.6),
+        ),
+        errorStyle: TextStyle(color: AppColors.danger(context), fontSize: 11.5),
+      ),
+      textTheme: baseTheme.textTheme
+          .apply(fontSizeFactor: 1.0)
+          .copyWith(
+            bodyLarge: baseTheme.textTheme.bodyLarge?.copyWith(fontSize: 14),
+            bodyMedium: baseTheme.textTheme.bodyMedium?.copyWith(
+              fontSize: 13.5,
+            ),
+          ),
+    );
+    return Theme(
+      data: wizardTheme,
+      child: Scaffold(
+        backgroundColor: AppColors.background(context),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: onBack,
+                      icon: Icon(
+                        Icons.arrow_back,
+                        size: 20,
                         color: AppColors.textPrimary(context),
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ),
-                  if (onSaveDraft != null)
-                    TextButton(
-                      onPressed: onSaveDraft,
+                    Expanded(
                       child: Text(
-                        'Save draft',
+                        title,
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.textPrimary(context),
-                          fontWeight: FontWeight.w500,
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                    )
-                  else
-                    const SizedBox(width: 64),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: WizardStageStepper(
-                stageLabels: stageLabels,
-                currentIndex: currentStageIndex,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: contentPadding,
-                child: child,
-              ),
-            ),
-            if (footer != null)
-              Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: AppColors.border(context)),
-                  ),
-                ),
-                child: SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-                    child: footer!,
-                  ),
+                    ),
+                    if (onSaveDraft != null)
+                      TextButton(
+                        onPressed: onSaveDraft,
+                        child: Text(
+                          'Save draft',
+                          style: TextStyle(
+                            color: AppColors.textPrimary(context),
+                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 64),
+                  ],
                 ),
               ),
-          ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: WizardStageStepper(
+                  stageLabels: stageLabels,
+                  currentIndex: currentStageIndex,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: contentPadding,
+                  child: child,
+                ),
+              ),
+              if (footer != null)
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: AppColors.border(context)),
+                    ),
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                      child: footer!,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -415,17 +472,17 @@ class WizardStageHeading extends StatelessWidget {
           title,
           style: TextStyle(
             color: AppColors.textPrimary(context),
-            fontSize: 22,
+            fontSize: 18,
             fontWeight: FontWeight.w700,
           ),
         ),
         if (subtitle != null) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Text(
             subtitle!,
             style: TextStyle(
               color: AppColors.textMuted(context),
-              fontSize: 13.5,
+              fontSize: 12.5,
             ),
           ),
         ],
@@ -454,7 +511,7 @@ class WizardSectionLabel extends StatelessWidget {
             label,
             style: TextStyle(
               color: AppColors.textPrimary(context),
-              fontSize: 15,
+              fontSize: 13.5,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -465,7 +522,7 @@ class WizardSectionLabel extends StatelessWidget {
                 helper!,
                 style: TextStyle(
                   color: AppColors.textMuted(context),
-                  fontSize: 12.5,
+                  fontSize: 11.5,
                 ),
               ),
             ),

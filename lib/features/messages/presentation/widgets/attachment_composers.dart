@@ -35,32 +35,31 @@ class _SheetShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Container(
-        margin: const EdgeInsets.all(AppSpacing.m),
-        padding: const EdgeInsets.all(AppSpacing.l),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.8,
-        ),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark : Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          color: AppColors.background(context),
+          border: Border(
+            top: BorderSide(color: AppColors.border(context), width: 1),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              title,
+              title.toUpperCase(),
               style: AppTypography.titleMedium.copyWith(
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+                color: AppColors.textPrimary(context),
               ),
             ),
-            const SizedBox(height: AppSpacing.m),
+            const SizedBox(height: AppSpacing.xl),
             Flexible(child: SingleChildScrollView(child: child)),
           ],
         ),
@@ -110,37 +109,53 @@ class _PollComposerSheetState extends State<PollComposerSheet> {
             controller: _question,
             autofocus: true,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Question',
+            style: AppTypography.bodyLarge.copyWith(
+              color: AppColors.textPrimary(context),
+            ),
+            decoration: InputDecoration(
+              labelText: 'QUESTION',
+              labelStyle: AppTypography.labelSmall.copyWith(
+                fontWeight: FontWeight.w900,
+                color: AppColors.textMuted(context),
+              ),
               hintText: 'Which day suits the class trip?',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.zero,
+              ),
             ),
             onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: AppSpacing.m),
+          const SizedBox(height: AppSpacing.l),
           for (var i = 0; i < _options.length; i++)
             Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.s),
+              padding: const EdgeInsets.only(bottom: AppSpacing.m),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _options[i],
                       textCapitalization: TextCapitalization.sentences,
+                      style: AppTypography.bodyLarge.copyWith(
+                        color: AppColors.textPrimary(context),
+                      ),
                       decoration: InputDecoration(
-                        labelText: 'Option ${i + 1}',
-                        border: const OutlineInputBorder(),
+                        labelText: 'OPTION ${i + 1}',
+                        labelStyle: AppTypography.labelSmall.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textMuted(context),
+                        ),
+                        border: const OutlineInputBorder(
+                          borderRadius: BorderRadius.zero,
+                        ),
                       ),
                       onChanged: (_) => setState(() {}),
                     ),
                   ),
-                  // The first two options are the minimum, so they can't be
-                  // removed.
                   if (_options.length > 2)
                     IconButton(
-                      icon: const Icon(
-                        Icons.remove_circle_outline,
-                        color: Colors.black,
+                      icon: Icon(
+                        Icons.close,
+                        color: AppColors.textPrimary(context),
                       ),
                       onPressed: () =>
                           setState(() => _options.removeAt(i).dispose()),
@@ -149,13 +164,26 @@ class _PollComposerSheetState extends State<PollComposerSheet> {
               ),
             ),
           if (_options.length < _maxOptions)
-            TextButton.icon(
+            OutlinedButton.icon(
               onPressed: () =>
                   setState(() => _options.add(TextEditingController())),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add option'),
+              icon: Icon(Icons.add, size: 18, color: AppColors.textPrimary(context)),
+              label: Text(
+                'ADD OPTION',
+                style: AppTypography.labelLarge.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero,
+                ),
+                side: BorderSide(color: AppColors.border(context)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
             ),
-          const SizedBox(height: AppSpacing.m),
+          const SizedBox(height: AppSpacing.xl),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -172,18 +200,21 @@ class _PollComposerSheetState extends State<PollComposerSheet> {
                     )
                   : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.electricBlue,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.textPrimary(context),
+                foregroundColor: AppColors.background(context),
                 disabledBackgroundColor: AppColors.disabled(context),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero,
                 ),
                 elevation: 0,
               ),
-              child: const Text(
-                'Send poll',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              child: Text(
+                'SEND POLL',
+                style: AppTypography.labelLarge.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.1,
+                ),
               ),
             ),
           ),
@@ -218,12 +249,50 @@ class _EventComposerSheetState extends State<EventComposerSheet> {
       initialDate: _start,
       firstDate: DateTime.now().subtract(const Duration(days: 1)),
       lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.black,
+              primary: Colors.black,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+            dialogTheme: const DialogTheme(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.zero,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (date == null || !mounted) return;
 
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(_start),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.black,
+              primary: Colors.black,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: Colors.black,
+            ),
+            dialogTheme: const DialogTheme(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.zero,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (!mounted) return;
 
@@ -249,37 +318,62 @@ class _EventComposerSheetState extends State<EventComposerSheet> {
             controller: _title,
             autofocus: true,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Event',
+            style: AppTypography.bodyLarge.copyWith(
+              color: AppColors.textPrimary(context),
+            ),
+            decoration: InputDecoration(
+              labelText: 'EVENT TITLE',
+              labelStyle: AppTypography.labelSmall.copyWith(
+                fontWeight: FontWeight.w900,
+                color: AppColors.textMuted(context),
+              ),
               hintText: 'PTA meeting',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.zero,
+              ),
             ),
             onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: AppSpacing.m),
+          const SizedBox(height: AppSpacing.l),
           OutlinedButton.icon(
             onPressed: _pickDateTime,
-            icon: const Icon(Icons.calendar_today_outlined, size: 18),
-            label: Text(DateFormat('EEE, d MMM y • h:mm a').format(_start)),
+            icon: Icon(Icons.calendar_today_outlined, size: 18, color: AppColors.textPrimary(context)),
+            label: Text(
+              DateFormat('EEE, d MMM y • h:mm a').format(_start),
+              style: AppTypography.bodyMedium.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary(context),
+              ),
+            ),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
               alignment: Alignment.centerLeft,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.zero,
               ),
+              side: BorderSide(color: AppColors.border(context)),
             ),
           ),
-          const SizedBox(height: AppSpacing.m),
+          const SizedBox(height: AppSpacing.l),
           TextField(
             controller: _location,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Where (optional)',
+            style: AppTypography.bodyLarge.copyWith(
+              color: AppColors.textPrimary(context),
+            ),
+            decoration: InputDecoration(
+              labelText: 'WHERE (OPTIONAL)',
+              labelStyle: AppTypography.labelSmall.copyWith(
+                fontWeight: FontWeight.w900,
+                color: AppColors.textMuted(context),
+              ),
               hintText: 'Assembly hall',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.zero,
+              ),
             ),
           ),
-          const SizedBox(height: AppSpacing.m),
+          const SizedBox(height: AppSpacing.xl),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -296,18 +390,21 @@ class _EventComposerSheetState extends State<EventComposerSheet> {
                       ),
                     ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.electricBlue,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.textPrimary(context),
+                foregroundColor: AppColors.background(context),
                 disabledBackgroundColor: AppColors.disabled(context),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero,
                 ),
                 elevation: 0,
               ),
-              child: const Text(
-                'Send event',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              child: Text(
+                'SEND EVENT',
+                style: AppTypography.labelLarge.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.1,
+                ),
               ),
             ),
           ),
@@ -345,21 +442,30 @@ class _ContactPickerSheetState extends State<ContactPickerSheet> {
       child: Column(
         children: [
           TextField(
-            decoration: const InputDecoration(
-              hintText: 'Search contacts...',
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
+            style: AppTypography.bodyLarge.copyWith(
+              color: AppColors.textPrimary(context),
+            ),
+            decoration: InputDecoration(
+              hintText: 'SEARCH CONTACTS...',
+              hintStyle: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textMuted(context),
+              ),
+              prefixIcon: Icon(Icons.search, color: AppColors.textPrimary(context)),
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.zero,
+              ),
             ),
             onChanged: (value) => setState(() => _query = value),
           ),
-          const SizedBox(height: AppSpacing.s),
+          const SizedBox(height: AppSpacing.m),
           if (filtered.isEmpty)
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.l),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: Text(
-                'No contacts match "$_query"',
+                'NO CONTACTS MATCH "$_query"',
                 style: AppTypography.bodySmall.copyWith(
                   color: AppColors.textMuted(context),
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             )
@@ -373,24 +479,51 @@ class _ContactPickerSheetState extends State<ContactPickerSheet> {
                 final role = UserRole.values.where(
                   (r) => r.name == contact.role,
                 );
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.electricBlue,
-                    child: Text(
-                      contact.initials,
-                      style: const TextStyle(color: AppColors.electricBlue),
+                return Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: AppColors.border(context), width: 0.5),
                     ),
                   ),
-                  title: Text(contact.name, style: AppTypography.titleSmall),
-                  subtitle: Text(
-                    role.isEmpty
-                        ? contact.role
-                        : UserRoleDisplay.name(role.first),
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textMuted(context),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.m,
+                      vertical: AppSpacing.s,
                     ),
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.textPrimary(context),
+                        border: Border.all(color: AppColors.textPrimary(context), width: 1),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        contact.initials,
+                        style: AppTypography.labelLarge.copyWith(
+                          color: AppColors.background(context),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      contact.name.toUpperCase(),
+                      style: AppTypography.titleSmall.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    subtitle: Text(
+                      (role.isEmpty
+                          ? contact.role
+                          : UserRoleDisplay.name(role.first)).toUpperCase(),
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textMuted(context),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    onTap: () => Navigator.pop(context, contact),
                   ),
-                  onTap: () => Navigator.pop(context, contact),
                 );
               },
             ),

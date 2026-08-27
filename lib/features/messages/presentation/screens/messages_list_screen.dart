@@ -23,7 +23,7 @@ class MessagesListScreen extends StatefulWidget {
   State<MessagesListScreen> createState() => _MessagesListScreenState();
 }
 
-enum _InboxFilter { all, unread, groups, official }
+enum _InboxFilter { all, unread, groups, official, school, teachers }
 
 class _MessagesListScreenState extends State<MessagesListScreen> {
   _InboxFilter _filter = _InboxFilter.all;
@@ -61,24 +61,29 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final inboxSurface = isDark ? Colors.black : colors.surfaceContainerHigh;
-    final inboxBorder = isDark ? Colors.black : colors.outlineVariant;
+    final inboxSurface = isDark ? AppColors.black : AppColors.grey50;
+    final inboxBorder = isDark ? AppColors.grey850 : AppColors.grey200;
     return Scaffold(
-      backgroundColor: colors.surface,
+      backgroundColor: isDark ? AppColors.black : AppColors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
           'Messages',
           style: AppTypography.headlineMedium.copyWith(
-            color: colors.onSurface,
-            fontWeight: FontWeight.bold,
+            color: isDark ? AppColors.white : AppColors.black,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.5,
           ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/messages/new'),
         tooltip: 'New message',
+        backgroundColor: AppColors.primary(context),
+        foregroundColor: isDark ? AppColors.black : AppColors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: const Icon(Icons.edit_square),
       ),
       body: MessagingUserBuilder(
@@ -94,7 +99,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                   inboxSurface,
                   inboxBorder,
                 );
-                final filterRow = _buildFilterRow(context, conversations);
+                final filterRow = _buildFilterRow(context, user, conversations);
                 final content = Builder(
                   builder: (context) {
                     if (state.conversationsError != null) {
@@ -103,7 +108,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                     if (conversations == null) {
                       return const Center(child: SchoolPulseLoader());
                     }
-                    final visible = _applyFilter(conversations);
+                    final visible = _applyFilter(conversations, user);
                     if (visible.isEmpty) {
                       return _buildEmptyState(
                         isWide: layout != ResponsiveLayout.mobile,
@@ -194,7 +199,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
   }
 
   Widget _buildSearchBar(BuildContext context, Color surface, Color border) {
-    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Semantics(
@@ -202,23 +207,27 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
         label: 'Search messages',
         child: InkWell(
           onTap: () => context.push('/messages/search'),
-          borderRadius: BorderRadius.circular(16),
-          focusColor: colors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: surface,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: border),
             ),
             child: Row(
               children: [
-                Icon(Icons.search, color: colors.onSurfaceVariant, size: 22),
+                Icon(
+                  Icons.search,
+                  color: isDark ? AppColors.grey500 : AppColors.grey700,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 Text(
                   'Search messages',
                   style: AppTypography.bodyLarge.copyWith(
-                    color: colors.onSurfaceVariant,
+                    color: isDark ? AppColors.grey500 : AppColors.grey700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -231,33 +240,33 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
 
   Widget _buildFilterRow(
     BuildContext context,
+    UserEntity user,
     List<ChatConversation>? conversations,
   ) {
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isParent = user.roles.contains(UserRole.parent);
+    final filters = isParent
+        ? [_InboxFilter.all, _InboxFilter.school, _InboxFilter.teachers]
+        : [
+            _InboxFilter.all,
+            _InboxFilter.unread,
+            _InboxFilter.groups,
+            _InboxFilter.official,
+          ];
+
     return SizedBox(
       height: 48,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          _FilterChip(
-            label: 'All',
-            isSelected: _filter == _InboxFilter.all,
-            onTap: () => setState(() => _filter = _InboxFilter.all),
-          ),
-          _FilterChip(
-            label: 'Unread',
-            isSelected: _filter == _InboxFilter.unread,
-            onTap: () => setState(() => _filter = _InboxFilter.unread),
-          ),
-          _FilterChip(
-            label: 'Groups',
-            isSelected: _filter == _InboxFilter.groups,
-            onTap: () => setState(() => _filter = _InboxFilter.groups),
-          ),
-          _FilterChip(
-            label: 'Official',
-            isSelected: _filter == _InboxFilter.official,
-            onTap: () => setState(() => _filter = _InboxFilter.official),
+          ...filters.map(
+            (f) => _FilterChip(
+              label: _filterLabel(f),
+              isSelected: _filter == f,
+              onTap: () => setState(() => _filter = f),
+            ),
           ),
           _FilterChip(
             label: 'Archived',
@@ -278,6 +287,23 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
     );
   }
 
+  String _filterLabel(_InboxFilter filter) {
+    switch (filter) {
+      case _InboxFilter.all:
+        return 'All';
+      case _InboxFilter.unread:
+        return 'Unread';
+      case _InboxFilter.groups:
+        return 'Groups';
+      case _InboxFilter.official:
+        return 'Official';
+      case _InboxFilter.school:
+        return 'School';
+      case _InboxFilter.teachers:
+        return 'Teachers';
+    }
+  }
+
   /// A 1:1 chat someone started that this user hasn't accepted yet. Only
   /// happens between two non-staff accounts - see
   /// MessagesRepositoryImpl.startDirectConversation.
@@ -287,7 +313,10 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
   int _pendingRequests(List<ChatConversation>? all) =>
       all == null ? 0 : all.where(_isRequest).length;
 
-  List<ChatConversation> _applyFilter(List<ChatConversation> all) {
+  List<ChatConversation> _applyFilter(
+    List<ChatConversation> all,
+    UserEntity user,
+  ) {
     // Archived chats and unaccepted requests each live behind their own
     // screen; everything else is filtered by the chip row.
     final visible = all.where((c) => !c.isArchived && !_isRequest(c));
@@ -299,13 +328,25 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
       case _InboxFilter.groups:
         return visible.where((c) => c.type == ChatType.group).toList();
       case _InboxFilter.official:
-        // "Official" is the school's one-way traffic: broadcast lists and
-        // announcement channels.
+      case _InboxFilter.school:
+        // "Official" / "School" is the school's one-way traffic: broadcast
+        // lists and announcement channels.
         return visible
             .where(
               (c) => c.type == ChatType.broadcast || c.type == ChatType.channel,
             )
             .toList();
+      case _InboxFilter.teachers:
+        // Filter conversations involving teachers.
+        return visible.where((c) {
+          return c.participants.any(
+            (p) =>
+                p.id != user.id &&
+                (p.role.toLowerCase().contains('teacher') ||
+                    p.role.toLowerCase().contains('head') ||
+                    p.role.toLowerCase().contains('tutor')),
+          );
+        }).toList();
     }
   }
 
@@ -314,9 +355,10 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
     UserEntity user,
     ChatConversation chat,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      backgroundColor: isDark ? AppColors.grey900 : AppColors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -329,20 +371,21 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               child: Text(
                 chat.title,
                 style: AppTypography.titleMedium.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.bold,
+                  color: isDark ? AppColors.white : AppColors.black,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ),
             ListTile(
               leading: Icon(
                 chat.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: isDark ? AppColors.white : AppColors.black,
               ),
               title: Text(
                 chat.isPinned ? 'Unpin' : 'Pin to top',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: isDark ? AppColors.white : AppColors.black,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               onTap: () {
@@ -357,12 +400,13 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                 chat.isMuted
                     ? Icons.notifications_off
                     : Icons.notifications_none,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: isDark ? AppColors.white : AppColors.black,
               ),
               title: Text(
                 chat.isMuted ? 'Unmute' : 'Mute',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: isDark ? AppColors.white : AppColors.black,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               onTap: () {
@@ -375,12 +419,13 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             ListTile(
               leading: Icon(
                 Icons.archive_outlined,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: isDark ? AppColors.white : AppColors.black,
               ),
               title: Text(
                 'Archive',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: isDark ? AppColors.white : AppColors.black,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               onTap: () {
@@ -391,10 +436,16 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.black),
+              leading: Icon(
+                Icons.delete_outline,
+                color: AppColors.danger(context),
+              ),
               title: Text(
                 chat.type == ChatType.direct ? 'Delete chat' : 'Exit group',
-                style: const TextStyle(color: Colors.black),
+                style: TextStyle(
+                  color: AppColors.danger(context),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -464,7 +515,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               child: Icon(
                 Icons.chat_bubble_outline_rounded,
                 size: 80,
-                color: AppColors.electricBlue,
+                color: AppColors.black,
               ),
             ),
             const SizedBox(height: 32),
@@ -472,7 +523,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               'No Conversations Yet',
               style: AppTypography.headlineSmall.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w900,
               ),
             ),
             const SizedBox(height: 12),
@@ -490,17 +541,17 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               child: ElevatedButton(
                 onPressed: () => context.push('/messages/new'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.electricBlue,
+                  backgroundColor: AppColors.black,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   elevation: 0,
                 ),
                 child: const Text(
                   'Start Messaging',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
                 ),
               ),
             ),
@@ -623,20 +674,24 @@ class _FilterChip extends StatelessWidget {
         label: Text(label),
         selected: isSelected,
         onSelected: (_) => onTap?.call(),
-        selectedColor: colors.primary,
-        backgroundColor: isDark ? Colors.black : colors.surfaceContainerHigh,
+        selectedColor: isDark ? AppColors.white : AppColors.black,
+        backgroundColor: Colors.transparent,
         labelStyle: TextStyle(
-          color: isSelected ? colors.onPrimary : colors.onSurfaceVariant,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected
+              ? (isDark ? AppColors.black : AppColors.white)
+              : (isDark ? AppColors.grey500 : AppColors.grey700),
+          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+          fontSize: 13,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           side: BorderSide(
             color: isSelected
-                ? colors.primary
+                ? AppColors.black
                 : isDark
-                ? Colors.black
-                : colors.outlineVariant,
+                    ? AppColors.grey850
+                    : AppColors.grey200,
+            width: isSelected ? 2 : 1,
           ),
         ),
         showCheckmark: false,

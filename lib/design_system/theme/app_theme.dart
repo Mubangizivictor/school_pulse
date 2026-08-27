@@ -32,8 +32,12 @@ class AppTheme {
       onPrimary: background,
       secondary: foreground,
       onSecondary: background,
-      error: foreground,
-      onError: background,
+      // Errors are semantic, not part of the monochrome brand palette.  This
+      // keeps required-field feedback recognisable in both appearances.
+      error: dark
+          ? SemanticColors.dark.errorRed
+          : SemanticColors.light.errorRed,
+      onError: dark ? AppColors.black : AppColors.white,
       surface: surface,
       onSurface: foreground,
       surfaceContainerHighest: surfaceMuted,
@@ -117,7 +121,12 @@ class AppTheme {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadius.medium,
-          borderSide: BorderSide(color: foreground, width: 1.5),
+          borderSide: BorderSide(
+            color: dark
+                ? SemanticColors.dark.errorRed
+                : SemanticColors.light.errorRed,
+            width: 1.5,
+          ),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(

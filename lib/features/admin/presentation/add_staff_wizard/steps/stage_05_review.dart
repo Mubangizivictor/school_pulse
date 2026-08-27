@@ -324,7 +324,7 @@ class _ReviewRow extends StatelessWidget {
                     style: TextStyle(
                       color: AppColors.textPrimary(context),
                       fontWeight: FontWeight.w700,
-                      fontSize: 13.5,
+                      fontSize: 12.5,
                     ),
                   ),
                   const SizedBox(height: 2),

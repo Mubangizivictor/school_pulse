@@ -7,6 +7,7 @@ import 'package:school_pulse/app/school_splash_user_resolver.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/login_flow/welcome_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/parent_login_screens.dart';
+import 'package:school_pulse/features/auth/login_flow/parent_access_setup_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/staff_login_screens.dart';
 import 'package:school_pulse/features/auth/login_flow/platform_owner_access_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/mfa_challenge_screen.dart';
@@ -731,7 +732,7 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/parent/login/child-id',
-      builder: (context, state) => const ChildIdScreen(),
+      builder: (context, state) => const ParentAccessSetupScreen(),
     ),
     GoRoute(
       path: '/parent/login/verify',
@@ -810,7 +811,7 @@ final router = GoRouter(
           builder: (context, state) => const ParentHomeScreen(),
         ),
         GoRoute(
-          path: '/parent/academics',
+          path: '/parent/learn',
           builder: (context, state) => ParentModuleGuard(
             isAllowed: (v) => v.academics,
             child: const AcademicsScreen(),
@@ -833,7 +834,7 @@ final router = GoRouter(
           ],
         ),
         GoRoute(
-          path: '/parent/fees',
+          path: '/parent/payments',
           builder: (context, state) => ParentModuleGuard(
             isAllowed: (v) => v.fees,
             child: const FeesScreen(),
@@ -3249,9 +3250,9 @@ class ParentShell extends StatelessWidget {
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/parent/home')) return 0;
-    if (location.startsWith('/parent/academics')) return 1;
-    if (location.startsWith('/parent/fees')) return 2;
-    if (location.startsWith('/parent/messages')) return 3;
+    if (location.startsWith('/parent/learn')) return 1;
+    if (location.startsWith('/parent/messages')) return 2;
+    if (location.startsWith('/parent/payments')) return 3;
     if (location.startsWith('/parent/more')) return 4;
     return 0;
   }
@@ -3262,13 +3263,13 @@ class ParentShell extends StatelessWidget {
         context.go('/parent/home');
         break;
       case 1:
-        context.go('/parent/academics');
+        context.go('/parent/learn');
         break;
       case 2:
-        context.go('/parent/fees');
+        context.go('/parent/messages');
         break;
       case 3:
-        context.go('/parent/messages');
+        context.go('/parent/payments');
         break;
       case 4:
         context.go('/parent/more');
@@ -3311,33 +3312,33 @@ class ParentShell extends StatelessWidget {
     final destinations = [
       const NavigationDestination(
         icon: Icon(Icons.home_outlined),
-        selectedIcon: Icon(Icons.home, color: AppColors.royalBlue),
+        selectedIcon: Icon(Icons.home, color: AppColors.black),
         label: 'Home',
       ),
       const NavigationDestination(
         icon: Icon(Icons.school_outlined),
-        selectedIcon: Icon(Icons.school, color: AppColors.royalBlue),
-        label: 'Academics',
-      ),
-      const NavigationDestination(
-        icon: Icon(Icons.account_balance_wallet_outlined),
-        selectedIcon: Icon(
-          Icons.account_balance_wallet,
-          color: AppColors.royalBlue,
-        ),
-        label: 'Fees',
+        selectedIcon: Icon(Icons.school, color: AppColors.black),
+        label: 'Learn',
       ),
       const NavigationDestination(
         icon: MessagesNavIcon(icon: Icons.message_outlined),
         selectedIcon: MessagesNavIcon(
           icon: Icons.message,
-          color: AppColors.royalBlue,
+          color: AppColors.black,
         ),
         label: 'Messages',
       ),
       const NavigationDestination(
+        icon: Icon(Icons.account_balance_wallet_outlined),
+        selectedIcon: Icon(
+          Icons.account_balance_wallet,
+          color: AppColors.black,
+        ),
+        label: 'Payments',
+      ),
+      const NavigationDestination(
         icon: Icon(Icons.grid_view_outlined),
-        selectedIcon: Icon(Icons.grid_view_rounded, color: AppColors.royalBlue),
+        selectedIcon: Icon(Icons.grid_view_rounded, color: AppColors.black),
         label: 'More',
       ),
     ];

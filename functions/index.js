@@ -1,7 +1,7 @@
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
-const { randomBytes, randomUUID, createHash } = require("crypto");
+const { randomBytes, randomUUID, createHash, createHmac } = require("crypto");
 const admin = require("firebase-admin");
 const { requirePlatformOwner, OwnerAuthorizationError } = require("./vendor/owner-auth");
 const { hashPin, verifyPin, assertNotLockedOut, failedAttemptUpdate, clearLockoutUpdate } = require("./vendor/pin-auth");
@@ -423,6 +423,10 @@ exports.directEnrolLearner = onCall(async (request) => {
     }
     const guardians = Array.isArray(draft.guardians) ? draft.guardians : [];
     const overrideReason = String(draft.guardianOverride?.reason || "").trim();
+    const canOverrideGuardian = roles.some((r) => ["schoolAdmin", "director", "headTeacher", "deputyHead", "admissions", "registrar"].includes(r));
+    if (overrideReason && !canOverrideGuardian) {
+      throw new HttpsError("permission-denied", "You do not have permission to use a guardian override.");
+    }
     if (!guardians.length && !overrideReason) throw new HttpsError("failed-precondition", "Add a guardian or provide an authorised override reason.");
     if (!draft.consentAcknowledged) throw new HttpsError("failed-precondition", "Privacy and guardian consent must be acknowledged.");
     const studentId = String(draft.studentId || "");
@@ -2089,6 +2093,150 @@ exports.airtelMoneyWebhook = onRequest(async (req, res) => {
 // Parent Authentication
 // ============================================================================
 
+// Secure parent-link invitations deliberately live separately from the
+// legacy `parent_access_codes` collection.  The legacy collection uses the
+// printable code as its document id and cannot safely meet single-use-code
+// requirements.  Nothing in `parent_access_code_invites` contains a raw code.
+const PARENT_INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const PARENT_INVITE_ADMIN_ROLES = new Set([
+  "director", "headTeacher", "deputyHead", "schoolAdmin", "admissions", "registrar",
+]);
+function normalizedParentInviteCode(value) {
+  return String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+function parentInviteHash(value) {
+  // An HMAC prevents a six-digit invitation hash from being brute-forced if
+  // an invitation document were ever exposed. Production must configure the
+  // pepper as a Functions secret/environment variable.
+  const pepper = process.env.PARENT_ACCESS_CODE_PEPPER || process.env.PIN_HASH_PEPPER;
+  if (!pepper) throw new HttpsError("failed-precondition", "Parent access codes are not configured.");
+  return createHmac("sha256", pepper).update(normalizedParentInviteCode(value)).digest("hex");
+}
+function newParentInviteCode() {
+  const digits = String(randomBytes(4).readUInt32BE(0) % 1000000).padStart(6, "0");
+  return `SP-${digits.slice(0, 3)}-${digits.slice(3)}`;
+}
+function parentInviteError() {
+  return new HttpsError("permission-denied", "This code is invalid, expired, or already used.");
+}
+function isSafeParentPin(pin) {
+  if (!/^\d{4}$/.test(String(pin || ""))) return false;
+  const value = String(pin);
+  if (/^(\d)\1{3}$/.test(value)) return false;
+  const digits = [...value].map(Number);
+  const ascending = digits.every((digit, index) => index === 0 || digit === digits[index - 1] + 1);
+  const descending = digits.every((digit, index) => index === 0 || digit === digits[index - 1] - 1);
+  return !ascending && !descending;
+}
+async function parentInviteAdmin(request) {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in to manage parent access codes.");
+  const user = await admin.firestore().collection("users").doc(request.auth.uid).get();
+  const data = user.data() || {};
+  const roles = Array.isArray(data.roles) ? data.roles : [data.role];
+  if (!roles.some((role) => PARENT_INVITE_ADMIN_ROLES.has(role))) {
+    throw new HttpsError("permission-denied", "You do not have permission to manage parent access codes.");
+  }
+  return data;
+}
+
+/** Admin-only: links one parent to up to two-parent learners and returns the
+ * raw, one-time code exactly once. */
+exports.createParentAccessCode = onCall(async (request) => {
+  const actor = await parentInviteAdmin(request);
+  const { parentName, phoneNumber, learners } = request.data || {};
+  const schoolId = String(actor.schoolId || "");
+  const normalizedPhone = String(phoneNumber || "").replace(/\s/g, "");
+  if (!schoolId || !String(parentName || "").trim() || !/^\+\d{8,15}$/.test(normalizedPhone) || !Array.isArray(learners) || !learners.length) {
+    throw new HttpsError("invalid-argument", "Parent details and at least one learner are required.");
+  }
+  const learnerIds = [...new Set(learners.map((learner) => String(learner.studentId || "")).filter(Boolean))];
+  if (learnerIds.length !== learners.length) throw new HttpsError("invalid-argument", "Each learner may be linked once.");
+  const db = admin.firestore();
+  const studentSnapshots = await Promise.all(learnerIds.map((id) => db.collection("students").doc(id).get()));
+  if (studentSnapshots.some((snapshot) => !snapshot.exists || snapshot.data().schoolId !== schoolId)) {
+    throw new HttpsError("permission-denied", "One or more learners are unavailable.");
+  }
+  const code = newParentInviteCode();
+  const now = Date.now();
+  const inviteRef = db.collection("parent_access_code_invites").doc(randomUUID());
+  await db.runTransaction(async (transaction) => {
+    for (const studentId of learnerIds) {
+      const links = await transaction.get(db.collection("parent_learner_links").where("schoolId", "==", schoolId).where("studentId", "==", studentId));
+      const active = links.docs.filter((link) => link.data().status !== "revoked");
+      if (active.length >= 2) throw new HttpsError("failed-precondition", "A learner can have a maximum of two parents.");
+      if (active.some((link) => link.data().phoneNumber === normalizedPhone)) throw new HttpsError("already-exists", "This parent is already linked to the learner.");
+    }
+    transaction.set(inviteRef, {
+      schoolId, codeHash: parentInviteHash(code), parentName: String(parentName).trim(), phoneNumber: normalizedPhone,
+      learnerIds, learnerRelationships: learners.map((learner) => ({ studentId: String(learner.studentId), relationship: String(learner.relationship || "Guardian") })),
+      status: "active", createdBy: request.auth.uid, createdAt: admin.firestore.FieldValue.serverTimestamp(), expiresAt: admin.firestore.Timestamp.fromMillis(now + PARENT_INVITE_TTL_MS),
+    });
+    for (const learner of learners) transaction.set(db.collection("parent_learner_links").doc(), {
+      schoolId, studentId: String(learner.studentId), parentInviteId: inviteRef.id, phoneNumber: normalizedPhone,
+      relationship: String(learner.relationship || "Guardian"), status: "pending", createdBy: request.auth.uid, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+  await db.collection("audit_logs").add({ schoolId, actorId: request.auth.uid, module: "parent_access", action: "code_generated", targetType: "parent_access_invite", targetId: inviteRef.id, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+  return { inviteId: inviteRef.id, code, expiresAt: now + PARENT_INVITE_TTL_MS };
+});
+
+exports.revokeParentAccessCode = onCall(async (request) => {
+  const actor = await parentInviteAdmin(request);
+  const ref = admin.firestore().collection("parent_access_code_invites").doc(String(request.data?.inviteId || ""));
+  const invite = await ref.get();
+  if (!invite.exists || invite.data().schoolId !== actor.schoolId) throw new HttpsError("not-found", "Access code not found.");
+  await ref.update({ status: "revoked", revokedAt: admin.firestore.FieldValue.serverTimestamp(), revokedBy: request.auth.uid });
+  await admin.firestore().collection("audit_logs").add({ schoolId: actor.schoolId, actorId: request.auth.uid, module: "parent_access", action: "code_revoked", targetType: "parent_access_invite", targetId: ref.id, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+  return { success: true };
+});
+
+// This is called only after Firebase Phone Auth has verified possession of
+// the submitted number. It never distinguishes bad code, phone, expiry,
+// revocation, or consumption.
+exports.redeemParentAccessCode = onCall(async (request) => {
+  const phoneNumber = request.auth?.token?.phone_number;
+  const hash = parentInviteHash(request.data?.code);
+  const db = admin.firestore();
+  const matches = await db.collection("parent_access_code_invites").where("codeHash", "==", hash).limit(1).get();
+  const invite = matches.docs.first;
+  const genericFailure = async () => {
+    await db.collection("parent_access_code_attempts").add({ codeHash: hash, phoneHash: createHash("sha256").update(String(phoneNumber || request.data?.phoneNumber || "")).digest("hex"), outcome: "failed", createdAt: admin.firestore.FieldValue.serverTimestamp() });
+    throw parentInviteError();
+  };
+  if (!phoneNumber || !invite || invite.data().status !== "active" || invite.data().phoneNumber !== phoneNumber || invite.data().expiresAt.toMillis() < Date.now()) return genericFailure();
+  const data = invite.data();
+  const students = await Promise.all(data.learnerIds.map((id) => db.collection("students").doc(id).get()));
+  if (students.some((student) => !student.exists || student.data().schoolId !== data.schoolId)) return genericFailure();
+  await db.collection("parent_access_code_attempts").add({ inviteId: invite.id, outcome: "verified", createdAt: admin.firestore.FieldValue.serverTimestamp() });
+  const school = await db.collection("schools").doc(data.schoolId).get();
+  return { inviteId: invite.id, schoolName: school.data()?.name || "School", parentName: data.parentName, learners: students.map((student) => ({ name: student.data().name, className: student.data().className || student.data().classId || "" })) };
+});
+
+exports.completeParentAccessCodeSetup = onCall(async (request) => {
+  const phoneNumber = request.auth?.token?.phone_number;
+  const hash = parentInviteHash(request.data?.code);
+  const pin = String(request.data?.pin || "");
+  if (!phoneNumber || !isSafeParentPin(pin)) throw new HttpsError("invalid-argument", "Choose a secure four-digit PIN.");
+  const db = admin.firestore();
+  const matches = await db.collection("parent_access_code_invites").where("codeHash", "==", hash).limit(1).get();
+  const invite = matches.docs.first;
+  if (!invite) throw parentInviteError();
+  const data = invite.data();
+  if (data.status !== "active" || data.phoneNumber !== phoneNumber || data.expiresAt.toMillis() < Date.now()) throw parentInviteError();
+  await db.runTransaction(async (transaction) => {
+    const current = await transaction.get(invite.ref);
+    if (!current.exists || current.data().status !== "active") throw parentInviteError();
+    transaction.update(invite.ref, { status: "used", usedBy: request.auth.uid, usedAt: admin.firestore.FieldValue.serverTimestamp(), pin: hashPin(pin) });
+    transaction.set(db.collection("users").doc(request.auth.uid), { role: "parent", roles: ["parent"], schoolId: data.schoolId, name: data.parentName, phoneNumber, studentIds: data.learnerIds, isActive: true, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    for (const studentId of data.learnerIds) {
+      const links = await transaction.get(db.collection("parent_learner_links").where("parentInviteId", "==", invite.id).where("studentId", "==", studentId));
+      links.docs.forEach((link) => transaction.update(link.ref, { status: "active", parentUserId: request.auth.uid, activatedAt: admin.firestore.FieldValue.serverTimestamp() }));
+    }
+  });
+  await db.collection("audit_logs").add({ schoolId: data.schoolId, actorId: request.auth.uid, module: "parent_access", action: "code_redeemed", targetType: "parent_access_invite", targetId: invite.id, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+  return { success: true };
+});
+
 /**
  * Verifies a parent's access code + phone + PIN server-side (parent_access_
  * codes/{code} is publicly readable by design so the pre-login screens can
@@ -2291,8 +2439,6 @@ exports.completeStudentPinSetup = onCall(async (request) => {
  * with a server-only secret so it can't be forged client-side. Envelope
  * format: "<base64(uniqueSystemId|schoolId|issuedAtMillis)>.<hmacHex>".
  */
-const { createHmac } = require("crypto");
-
 function studentCredentialSecret() {
   const secret = process.env.STUDENT_CREDENTIAL_HMAC_SECRET;
   if (!secret) {

@@ -81,8 +81,6 @@ class _MobileHome extends StatelessWidget {
             const _PinnedSection(),
             const SizedBox(height: 24),
             _GlanceSection(user: user),
-            const SizedBox(height: 32),
-            _ContinueWorking(user: user),
           ],
         ),
       ),
@@ -123,8 +121,6 @@ class _WideHome extends StatelessWidget {
               const _PinnedSection(),
               const SizedBox(height: 24),
               _GlanceSection(user: user),
-              const SizedBox(height: 28),
-              _ContinueWorking(user: user),
             ],
           ),
         ),
@@ -466,73 +462,6 @@ class _Metric extends StatelessWidget {
   );
 }
 
-class _ContinueWorking extends StatelessWidget {
-  const _ContinueWorking({required this.user});
-  final UserEntity user;
-  @override
-  Widget build(BuildContext context) {
-    final actions = <_Shortcut>[
-      if (_canTakeAttendance(user)) _catalog['attendance']!,
-      _catalog['school']!,
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Continue working',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 14),
-        ...actions.map((action) => _ActionCard(action: action)),
-      ],
-    );
-  }
-}
-
-class _ActionCard extends StatelessWidget {
-  const _ActionCard({required this.action});
-  final _Shortcut action;
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: OutlinedButton(
-      onPressed: () => context.push(action.route),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _ink(context),
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.all(12),
-        side: BorderSide(color: _ink(context)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      child: Row(
-        children: [
-          Icon(action.icon, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  action.label,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  action.description,
-                  style: TextStyle(fontSize: 12, color: _ink(context)),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right, size: 18),
-        ],
-      ),
-    ),
-  );
-}
-
 class _PinnedSection extends StatelessWidget {
   const _PinnedSection();
 
@@ -558,33 +487,62 @@ class _Pin extends StatelessWidget {
   const _Pin({required this.shortcut});
   final _Shortcut shortcut;
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 92,
-    child: OutlinedButton(
-      onPressed: () => context.push(shortcut.route),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _ink(context),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.all(8),
-        side: BorderSide(color: _ink(context)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(shortcut.icon, size: 18),
-          const SizedBox(height: 6),
-          Text(
-            shortcut.label,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 112,
+      child: Material(
+        color: colors.surfaceContainerHighest,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: colors.outlineVariant),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => context.push(shortcut.route),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: colors.primary,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(shortcut.icon, size: 20, color: colors.onPrimary),
+                ),
+                const Spacer(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        shortcut.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: colors.onSurface,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 18,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 void _showTermPicker(BuildContext context, UserEntity user) {
@@ -755,14 +713,6 @@ bool _canSeeFinance(UserEntity user) => user.roles.any(
       role == UserRole.director ||
       role == UserRole.headTeacher ||
       role == UserRole.bursar,
-);
-bool _canTakeAttendance(UserEntity user) => user.roles.any(
-  (role) =>
-      role == UserRole.schoolAdmin ||
-      role == UserRole.director ||
-      role == UserRole.headTeacher ||
-      role == UserRole.classTeacher ||
-      role == UserRole.subjectTeacher,
 );
 bool _canApproveReports(UserEntity user) => user.roles.any(
   (role) =>

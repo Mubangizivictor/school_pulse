@@ -252,7 +252,7 @@ class Stage04Access extends StatelessWidget {
             style: TextStyle(
               color: AppColors.textPrimary(context),
               fontWeight: FontWeight.w600,
-              fontSize: 13.5,
+              fontSize: 12.5,
             ),
           ),
         ),
@@ -289,7 +289,7 @@ class _ToggleRow extends StatelessWidget {
                 style: TextStyle(
                   color: AppColors.textPrimary(context),
                   fontWeight: FontWeight.w700,
-                  fontSize: 14,
+                  fontSize: 13,
                 ),
               ),
               const SizedBox(height: 3),
