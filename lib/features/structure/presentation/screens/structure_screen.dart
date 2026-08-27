@@ -443,11 +443,10 @@ class _ReviewRow {
   final int stepIndex;
   final bool requiresSetup;
 
-  /// Overrides the default `onJump(stepIndex)` behaviour with a direct
-  /// navigation (e.g. a GoRouter push) instead of a wizard-step jump. Used
-  /// by rows - like Fee Plans - that live outside this linear setup wizard
-  /// entirely, so they need a real route rather than a step index.
-  final VoidCallback? onTap;
+  /// When set, tapping this row navigates directly to this route instead of
+  /// jumping to [stepIndex] within the wizard - used for destinations (e.g.
+  /// Fee plans) that live outside the linear wizard step sequence.
+  final String? routePath;
 
   const _ReviewRow({
     required this.label,
@@ -455,7 +454,7 @@ class _ReviewRow {
     this.count,
     this.stepIndex = -1,
     this.requiresSetup = false,
-    this.onTap,
+    this.routePath,
   });
 }
 
@@ -511,11 +510,11 @@ class _Review extends StatelessWidget {
       // a real route rather than a wizard-step index. This is the Structure
       // hub's entry point into the Fee Plan Builder - school admin never
       // has to go through a Bursar-prefixed screen to configure billing.
-      _ReviewRow(
+      const _ReviewRow(
         label: 'Fee plans',
         icon: Icons.receipt_long_outlined,
-        onTap: () =>
-            context.push('/staff/admin/structure/academics/fee-structures'),
+        stepIndex: 6,
+        routePath: '/staff/admin/structure/academics/fee-structures',
       ),
     ];
 
@@ -764,7 +763,9 @@ class _ReviewCategory extends StatelessWidget {
                   const Icon(Icons.chevron_right_rounded),
                 ],
               ),
-              onTap: rows[i].onTap ?? () => onJump(rows[i].stepIndex),
+              onTap: () => rows[i].routePath != null
+                  ? context.push(rows[i].routePath!)
+                  : onJump(rows[i].stepIndex),
             ),
           ],
         ],

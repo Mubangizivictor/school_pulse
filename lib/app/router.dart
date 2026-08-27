@@ -1139,6 +1139,20 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/bursar',
+          redirect: (context, state) {
+            final auth = context.read<AuthBloc>().state;
+            if (auth is! AuthAuthenticated) return '/welcome';
+            const permitted = {
+              UserRole.bursar,
+              UserRole.schoolAdmin,
+              UserRole.headTeacher,
+              UserRole.director,
+            };
+            if (!auth.user.roles.any(permitted.contains)) {
+              return UserRoleRouting.dashboardPath(auth.user.role);
+            }
+            return null;
+          },
           builder: (context, state) => const BursarShell(),
           routes: [
             GoRoute(

@@ -2660,6 +2660,16 @@ exports.requestInstitutionHealthRecheck = institutionHealthFunctions.requestInst
 exports.resolveInstitutionHealthIssue = institutionHealthFunctions.resolveInstitutionHealthIssue;
 
 /**
+ * Subscription change requests and usage-metric refreshes. Confirmed by the
+ * schoolAdmin audit as callables the Flutter client already calls
+ * (SubscriptionRepository) but that never existed - see
+ * subscription_management.js for the full scope/approximation notes.
+ */
+const subscriptionManagementFunctions = require("./subscription_management");
+exports.requestSubscriptionChange = subscriptionManagementFunctions.requestSubscriptionChange;
+exports.requestSubscriptionUsageRefresh = subscriptionManagementFunctions.requestSubscriptionUsageRefresh;
+
+/**
  * Student creation with transactional maxStudents cap enforcement. Kept in
  * its own file for the same reason as notifications.js/attendance_sheets.js
  * above - index.js is already large, and this is a self-contained concern.
