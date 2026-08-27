@@ -464,11 +464,16 @@ class MessageBubble extends StatelessWidget {
           decoration: _cardDecoration(context),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: message.isMe
-                    ? Colors.white
-                    : AppColors.electricBlue,
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: message.isMe ? Colors.white : Colors.black,
+                  border: Border.all(
+                    color: _accent(context),
+                    width: 1,
+                  ),
+                ),
                 child: Icon(Icons.person, size: 20, color: _accent(context)),
               ),
               const SizedBox(width: 8),
