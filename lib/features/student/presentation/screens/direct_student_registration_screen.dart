@@ -639,7 +639,6 @@ class _DirectStudentRegistrationScreenState
               Text(
                 'Choose an enrolment path',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontSize: 26,
                   height: 1.12,
                   fontWeight: FontWeight.w800,
                 ),
@@ -648,7 +647,6 @@ class _DirectStudentRegistrationScreenState
               Text(
                 'Select the option that best matches this learner’s status.\nYou can save your progress and return anytime.',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontSize: 17,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   height: 1.28,
                 ),
@@ -755,17 +753,13 @@ class _DirectStudentRegistrationScreenState
               children: [
                 Row(
                   children: [
-                    Icon(icon, size: 27, color: ink),
-                    const SizedBox(width: 14),
+                    Icon(icon, size: 24, color: ink),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         title,
                         style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              fontSize: 21,
-                              color: ink,
-                              fontWeight: FontWeight.w800,
-                            ),
+                            ?.copyWith(color: ink, fontWeight: FontWeight.w800),
                       ),
                     ),
                     Icon(
@@ -773,41 +767,39 @@ class _DirectStudentRegistrationScreenState
                           ? Icons.check_circle_outline_rounded
                           : Icons.circle_outlined,
                       color: ink,
-                      size: 27,
+                      size: 24,
                     ),
                   ],
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(left: 41, top: 5),
+                  padding: const EdgeInsets.only(left: 36, top: 4),
                   child: Text(
                     sub,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 16,
-                      color: muted,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(color: muted),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(left: 41, top: 12),
+                  padding: const EdgeInsets.only(left: 36, top: 10),
                   child: Text(
                     '•  $forWhom',
                     style: Theme.of(
                       context,
-                    ).textTheme.bodySmall?.copyWith(fontSize: 15, color: ink),
+                    ).textTheme.bodyLarge?.copyWith(color: ink),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(left: 41, top: 12),
+                  padding: const EdgeInsets.only(left: 36, top: 10),
                   child: Row(
                     children: [
-                      Icon(Icons.access_time_rounded, size: 21, color: ink),
-                      const SizedBox(width: 10),
+                      Icon(Icons.access_time_rounded, size: 18, color: ink),
+                      const SizedBox(width: 8),
                       Text(
                         estimate,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 16,
-                          color: ink,
-                        ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyLarge?.copyWith(color: ink),
                       ),
                     ],
                   ),
@@ -1178,13 +1170,20 @@ class _DirectStudentRegistrationScreenState
         'First name',
         required: true,
         caps: TextCapitalization.words,
+        personName: true,
       ),
-      _field(_middle, 'Middle name (optional)', caps: TextCapitalization.words),
+      _field(
+        _middle,
+        'Middle name (optional)',
+        caps: TextCapitalization.words,
+        personName: true,
+      ),
       _field(
         _last,
         'Last name',
         required: true,
         caps: TextCapitalization.words,
+        personName: true,
       ),
       _field(
         _dob,
@@ -1838,6 +1837,7 @@ class _DirectStudentRegistrationScreenState
     int lines = 1,
     TextCapitalization caps = TextCapitalization.none,
     bool dateOfBirth = false,
+    bool personName = false,
   }) => Container(
     key: identical(c, _first) ? _firstInvalidKey : null,
     child: TextFormField(
@@ -1845,6 +1845,9 @@ class _DirectStudentRegistrationScreenState
       keyboardType: type,
       maxLines: lines,
       textCapitalization: caps,
+      inputFormatters: personName
+          ? [FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z\s\-']"))]
+          : null,
       decoration: InputDecoration(
         labelText: required ? '$label *' : label,
         hintText: hint,
@@ -1868,6 +1871,16 @@ class _DirectStudentRegistrationScreenState
           : null,
       validator: dateOfBirth
           ? _dateOfBirthError
+          : personName
+          ? (v) {
+              final value = v?.trim() ?? '';
+              if (required && value.isEmpty) return '$label is required';
+              if (value.isNotEmpty &&
+                  !RegExp(r"^[a-zA-Z][a-zA-Z\s\-']*$").hasMatch(value)) {
+                return 'Use letters, spaces, hyphens, or apostrophes only';
+              }
+              return null;
+            }
           : required
           ? (v) => v == null || v.trim().isEmpty ? '$label is required' : null
           : null,
@@ -2034,6 +2047,9 @@ class _DirectStudentRegistrationScreenState
                 TextFormField(
                   controller: e,
                   keyboardType: TextInputType.emailAddress,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                  ],
                   decoration: const InputDecoration(
                     labelText: 'Email (optional)',
                   ),

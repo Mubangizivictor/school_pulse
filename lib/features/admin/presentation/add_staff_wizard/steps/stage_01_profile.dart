@@ -14,7 +14,9 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import '../add_staff_wizard_controller.dart';
 import '../models/add_staff_draft.dart';
 
-final RegExp _phoneCharPattern = RegExp(r'[0-9+\-\s()]');
+// Phone fields deliberately accept only digits and an optional leading `+`.
+// This prevents letters and spaces from ever being entered.
+final RegExp _phoneCharPattern = RegExp(r'[0-9+]');
 final RegExp _phoneDigitsPattern = RegExp(r'^\+?[0-9]{7,15}$');
 final RegExp _nameCharPattern = RegExp(r"[a-zA-Z\s\-']");
 final RegExp _nameWordPattern = RegExp(r"^[a-zA-Z][a-zA-Z\s\-']*$");
@@ -32,13 +34,26 @@ String? _validatePhone(String? v, {required bool required}) {
   return null;
 }
 
+String? _validateRequiredName(String? v) {
+  final value = v?.trim() ?? '';
+  if (value.isEmpty) return 'Required';
+  return _nameWordPattern.hasMatch(value)
+      ? null
+      : 'Use letters, spaces, hyphens, or apostrophes only';
+}
+
 /// Stage 1 - Profile: "Tell us about the person". Combines what used to be
 /// Personal Information, Contact Information, and Documents into one stage
 /// with clear sections, matching the reference design.
 class Stage01Profile extends StatefulWidget {
   final VoidCallback onSaveDraft;
+  final VoidCallback onExit;
 
-  const Stage01Profile({super.key, required this.onSaveDraft});
+  const Stage01Profile({
+    super.key,
+    required this.onSaveDraft,
+    required this.onExit,
+  });
 
   @override
   State<Stage01Profile> createState() => _Stage01ProfileState();
@@ -166,12 +181,12 @@ class _Stage01ProfileState extends State<Stage01Profile> {
       title: 'Add staff',
       stageLabels: kWizardStageLabels,
       currentStageIndex: stageIndexFor(WizardStage.profile),
-      onBack: () => Navigator.of(context).maybePop(),
+      onBack: widget.onExit,
       onSaveDraft: widget.onSaveDraft,
       footer: WizardFooterButtons(
         backLabel: 'Back',
         nextLabel: 'Continue',
-        onBack: () => Navigator.of(context).maybePop(),
+        onBack: widget.onExit,
         onNext: () {
           if (!_formKey.currentState!.validate()) return;
           _saveFieldsToDraft(draft);
@@ -180,6 +195,7 @@ class _Stage01ProfileState extends State<Stage01Profile> {
       ),
       child: Form(
         key: _formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -203,12 +219,16 @@ class _Stage01ProfileState extends State<Stage01Profile> {
                           'First name',
                           TextFormField(
                             controller: _first,
+                            textCapitalization: TextCapitalization.words,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                _nameCharPattern,
+                              ),
+                            ],
                             decoration: const InputDecoration(
                               hintText: 'First name',
                             ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Required'
-                                : null,
+                            validator: _validateRequiredName,
                           ),
                           required: true,
                         ),
@@ -219,12 +239,16 @@ class _Stage01ProfileState extends State<Stage01Profile> {
                           'Last name',
                           TextFormField(
                             controller: _last,
+                            textCapitalization: TextCapitalization.words,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                _nameCharPattern,
+                              ),
+                            ],
                             decoration: const InputDecoration(
                               hintText: 'Last name',
                             ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Required'
-                                : null,
+                            validator: _validateRequiredName,
                           ),
                           required: true,
                         ),
@@ -238,12 +262,14 @@ class _Stage01ProfileState extends State<Stage01Profile> {
                         'First name',
                         TextFormField(
                           controller: _first,
+                          textCapitalization: TextCapitalization.words,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(_nameCharPattern),
+                          ],
                           decoration: const InputDecoration(
                             hintText: 'First name',
                           ),
-                          validator: (v) => (v == null || v.trim().isEmpty)
-                              ? 'Required'
-                              : null,
+                          validator: _validateRequiredName,
                         ),
                         required: true,
                       ),
@@ -252,12 +278,14 @@ class _Stage01ProfileState extends State<Stage01Profile> {
                         'Last name',
                         TextFormField(
                           controller: _last,
+                          textCapitalization: TextCapitalization.words,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(_nameCharPattern),
+                          ],
                           decoration: const InputDecoration(
                             hintText: 'Last name',
                           ),
-                          validator: (v) => (v == null || v.trim().isEmpty)
-                              ? 'Required'
-                              : null,
+                          validator: _validateRequiredName,
                         ),
                         required: true,
                       ),
@@ -343,6 +371,9 @@ class _Stage01ProfileState extends State<Stage01Profile> {
               TextFormField(
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
+                inputFormatters: [
+                  FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                ],
                 decoration: const InputDecoration(hintText: 'Email address'),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Required';

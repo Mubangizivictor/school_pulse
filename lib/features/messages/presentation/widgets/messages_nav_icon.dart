@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
@@ -29,6 +30,8 @@ class MessagesNavIcon extends StatelessWidget {
       builder: (context, state) {
         final count = state.totalUnreadCount;
         return Badge(
+          backgroundColor: AppColors.danger(context),
+          textColor: AppColors.white,
           isLabelVisible: count > 0,
           label: Text(count > 99 ? '99+' : '$count'),
           child: Icon(icon, size: size, color: color),

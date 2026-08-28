@@ -52,8 +52,7 @@ class _MorePage extends StatelessWidget {
       icon: Icons.notifications_none_outlined,
       title: 'Notifications',
       value: 'Manage',
-      onTap: (context) =>
-          context.push('/staff/more/notification-preferences'),
+      onTap: (context) => context.push('/staff/more/notification-preferences'),
     ),
     _AppearanceRow(user: user),
     _Row(
@@ -124,7 +123,7 @@ class _MobileMore extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.fromLTRB(20, 24, 20, 96),
+    padding: const EdgeInsets.fromLTRB(20, 12, 20, 88),
     children: [
       Row(
         children: [
@@ -139,15 +138,15 @@ class _MobileMore extends StatelessWidget {
           ),
         ],
       ),
-      const SizedBox(height: 22),
+      const SizedBox(height: 12),
       _IdentityRow(user: user),
-      const SizedBox(height: 30),
+      const SizedBox(height: 18),
       _Section(title: 'ACCOUNT', children: accountRows),
-      const SizedBox(height: 26),
+      const SizedBox(height: 18),
       _Section(title: 'PREFERENCES', children: preferenceRows),
-      const SizedBox(height: 26),
+      const SizedBox(height: 18),
       _Section(title: 'SUPPORT', children: supportRows),
-      const SizedBox(height: 24),
+      const SizedBox(height: 18),
       OutlinedButton.icon(
         onPressed: () => _signOut(context, user),
         icon: const Icon(Icons.logout_outlined, size: 20),
@@ -155,10 +154,10 @@ class _MobileMore extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           foregroundColor: _ink(context),
           side: BorderSide(color: _ink(context)),
-          padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 18),
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
           alignment: Alignment.centerLeft,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
           ),
         ),
       ),
@@ -263,17 +262,17 @@ class _IdentityRowState extends State<_IdentityRow> {
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: () => context.push('/staff/more/edit-profile'),
-    borderRadius: BorderRadius.circular(20),
+    borderRadius: BorderRadius.circular(16),
     child: Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         border: Border.all(color: _ink(context)),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            radius: 22,
+            radius: 20,
             backgroundColor: _paper(context),
             foregroundColor: _ink(context),
             backgroundImage: user.photoUrl == null || _photoLoadFailed
@@ -291,7 +290,7 @@ class _IdentityRowState extends State<_IdentityRow> {
                   )
                 : null,
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,12 +302,12 @@ class _IdentityRowState extends State<_IdentityRow> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   '${UserRoleDisplay.name(user.role)} · ${user.schoolName ?? 'Active school'}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14, color: _ink(context)),
+                  style: TextStyle(fontSize: 13, color: _ink(context)),
                 ),
               ],
             ),
@@ -380,16 +379,16 @@ class _Section extends StatelessWidget {
       Text(
         title,
         style: const TextStyle(
-          fontSize: 14,
+          fontSize: 13,
           letterSpacing: .7,
           fontWeight: FontWeight.w500,
         ),
       ),
-      const SizedBox(height: 10),
+      const SizedBox(height: 6),
       Container(
         decoration: BoxDecoration(
           border: Border.all(color: _ink(context)),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(children: children),
       ),
@@ -413,20 +412,20 @@ class _Row extends StatelessWidget {
   Widget build(BuildContext context) => InkWell(
     onTap: onTap == null ? null : () => onTap!(context),
     child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               color: _paper(context),
               border: Border.all(color: _ink(context)),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: _ink(context)),
+            child: Icon(icon, size: 20, color: _ink(context)),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,19 +438,19 @@ class _Row extends StatelessWidget {
                   ),
                 ),
                 if (subtitle != null) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 1),
                   Text(
                     subtitle!,
-                    style: TextStyle(fontSize: 14, color: _ink(context)),
+                    style: TextStyle(fontSize: 13, color: _ink(context)),
                   ),
                 ],
               ],
             ),
           ),
           if (value != null)
-            Text(value!, style: TextStyle(fontSize: 13, color: _ink(context))),
+            Text(value!, style: TextStyle(fontSize: 12, color: _ink(context))),
           const SizedBox(width: 5),
-          const Icon(Icons.chevron_right, size: 18),
+          const Icon(Icons.chevron_right, size: 16),
         ],
       ),
     ),

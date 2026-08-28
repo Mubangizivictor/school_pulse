@@ -23,16 +23,10 @@ class ActionButton extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: AppColors.background(context),
-              border: Border.all(
-                color: AppColors.border(context),
-                width: 1,
-              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border(context), width: 1),
             ),
-            child: Icon(
-              icon,
-              color: AppColors.textPrimary(context),
-              size: 24,
-            ),
+            child: Icon(icon, color: AppColors.textPrimary(context), size: 24),
           ),
           const SizedBox(height: 8),
           Text(

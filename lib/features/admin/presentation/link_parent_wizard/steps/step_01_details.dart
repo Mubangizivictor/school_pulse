@@ -77,7 +77,7 @@ class _LinkParentStepDetailsState extends State<LinkParentStepDetails> {
             subtitle: 'Enter the parent or guardian being linked.',
           ),
           const SizedBox(height: 20),
-          WizardSectionLabel(label: 'Parent/guardian name', helper: null),
+          WizardSectionLabel(label: 'Parent/guardian name *', helper: null),
           _RequiredField(
             controller: controller.parentNameController,
             hintText: 'e.g. Sarah Jansen',
@@ -86,7 +86,7 @@ class _LinkParentStepDetailsState extends State<LinkParentStepDetails> {
                 : null,
           ),
           const SizedBox(height: 16),
-          const WizardSectionLabel(label: 'Phone number'),
+          const WizardSectionLabel(label: 'Phone number *'),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -323,6 +323,10 @@ class _RequiredField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      textCapitalization: TextCapitalization.words,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z\s\-']")),
+      ],
       decoration: InputDecoration(hintText: hintText, errorText: errorText),
     );
   }

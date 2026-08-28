@@ -40,6 +40,7 @@ class ChatListTile extends StatelessWidget {
                 height: 56,
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.grey850 : AppColors.grey100,
+                  shape: BoxShape.circle,
                   border: Border.all(
                     color: isDark ? AppColors.borderDark : AppColors.black,
                   ),
@@ -89,8 +90,9 @@ class ChatListTile extends StatelessWidget {
                 child: Text(
                   chat.title,
                   style: AppTypography.titleMedium.copyWith(
-                    fontWeight:
-                        chat.unreadCount > 0 ? FontWeight.w900 : FontWeight.w700,
+                    fontWeight: chat.unreadCount > 0
+                        ? FontWeight.w900
+                        : FontWeight.w700,
                     color: isDark ? Colors.white : AppColors.black,
                     fontSize: 15,
                   ),
@@ -134,8 +136,10 @@ class ChatListTile extends StatelessWidget {
                 if (chat.unreadCount > 0)
                   Container(
                     margin: const EdgeInsets.only(left: 8),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.white : AppColors.black,
                       border: Border.all(

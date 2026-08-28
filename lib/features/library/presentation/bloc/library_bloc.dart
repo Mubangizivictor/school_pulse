@@ -24,6 +24,8 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     on<IssueResourceRequested>(_onIssueResourceRequested);
     on<ReturnResourceRequested>(_onReturnResourceRequested);
     on<ReserveResourceRequested>(_onReserveResourceRequested);
+    on<CancelReservationRequested>(_onCancelReservationRequested);
+    on<FulfilReservationRequested>(_onFulfilReservationRequested);
     on<FetchLibraryStats>(_onFetchLibraryStats);
     on<SearchResourcesRequested>(_onSearchResourcesRequested);
     on<WatchPoliciesRequested>(_onWatchPoliciesRequested);
@@ -132,6 +134,30 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     try {
       await repository.reserveResource(event.reservation);
       emit(const LibraryActionSuccess('Resource reserved successfully'));
+    } catch (e) {
+      emit(LibraryError(e.toString()));
+    }
+  }
+
+  Future<void> _onCancelReservationRequested(
+    CancelReservationRequested event,
+    Emitter<LibraryState> emit,
+  ) async {
+    try {
+      await repository.cancelReservation(event.schoolId, event.reservationId);
+      emit(const LibraryActionSuccess('Reservation cancelled'));
+    } catch (e) {
+      emit(LibraryError(e.toString()));
+    }
+  }
+
+  Future<void> _onFulfilReservationRequested(
+    FulfilReservationRequested event,
+    Emitter<LibraryState> emit,
+  ) async {
+    try {
+      await repository.fulfilReservation(event.schoolId, event.reservationId);
+      emit(const LibraryActionSuccess('Reservation fulfilled'));
     } catch (e) {
       emit(LibraryError(e.toString()));
     }

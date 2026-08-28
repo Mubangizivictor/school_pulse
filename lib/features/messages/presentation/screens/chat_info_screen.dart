@@ -98,6 +98,7 @@ class _ChatInfoView extends StatelessWidget {
                     height: 100,
                     decoration: BoxDecoration(
                       color: AppColors.background(context),
+                      shape: BoxShape.circle,
                       border: Border.all(
                         color: AppColors.border(context),
                         width: 1,
@@ -132,6 +133,7 @@ class _ChatInfoView extends StatelessWidget {
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: AppColors.background(context),
+                            shape: BoxShape.circle,
                             border: Border.all(
                               color: AppColors.border(context),
                               width: 1,
@@ -387,9 +389,7 @@ class _ChatInfoView extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.background(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.zero,
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       builder: (sheetContext) => Container(
         decoration: BoxDecoration(
           border: Border(
@@ -438,14 +438,14 @@ class _ChatInfoView extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(sheetContext);
                   context.read<ConversationBloc>().add(
-                        ConversationInfoUpdated(
-                          conversation.adminIds,
-                          messagePolicy:
-                              conversation.messagePolicy == MessagePolicy.everyone
-                                  ? MessagePolicy.adminsOnly
-                                  : MessagePolicy.everyone,
-                        ),
-                      );
+                    ConversationInfoUpdated(
+                      conversation.adminIds,
+                      messagePolicy:
+                          conversation.messagePolicy == MessagePolicy.everyone
+                          ? MessagePolicy.adminsOnly
+                          : MessagePolicy.everyone,
+                    ),
+                  );
                 },
               ),
             ],
@@ -748,6 +748,7 @@ class _ChatInfoView extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: AppColors.background(context),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.border(context), width: 1),
       ),
       child: Column(children: children),
@@ -786,16 +787,27 @@ class _ChatInfoView extends StatelessWidget {
         height: 40,
         decoration: BoxDecoration(
           color: AppColors.background(context),
+          shape: BoxShape.circle,
           border: Border.all(color: AppColors.border(context), width: 1),
+          image: participant.avatarUrl?.isNotEmpty == true
+              ? DecorationImage(
+                  image: NetworkImage(participant.avatarUrl!),
+                  fit: BoxFit.cover,
+                )
+              : null,
         ),
         child: Center(
-          child: Text(
-            participant.name.isEmpty ? '?' : participant.name[0].toUpperCase(),
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          child: participant.avatarUrl?.isNotEmpty == true
+              ? null
+              : Text(
+                  participant.name.isEmpty
+                      ? '?'
+                      : participant.name[0].toUpperCase(),
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
         ),
       ),
       title: Text(
@@ -817,6 +829,7 @@ class _ChatInfoView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppColors.textPrimary(context)),
               ),
               child: Text(
@@ -871,11 +884,7 @@ class _ChatInfoView extends StatelessWidget {
     bool showChevron = true,
   }) {
     return ListTile(
-      leading: Icon(
-        icon,
-        color: AppColors.textPrimary(context),
-        size: 20,
-      ),
+      leading: Icon(icon, color: AppColors.textPrimary(context), size: 20),
       title: Text(
         title.toUpperCase(),
         style: AppTypography.titleSmall.copyWith(
@@ -982,8 +991,10 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                     height: 40,
                     decoration: BoxDecoration(
                       color: AppColors.background(context),
-                      border:
-                          Border.all(color: AppColors.border(context), width: 1),
+                      border: Border.all(
+                        color: AppColors.border(context),
+                        width: 1,
+                      ),
                     ),
                     child: Center(
                       child: Text(
@@ -1021,11 +1032,11 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
               onPressed: _selected.isEmpty
                   ? null
                   : () => Navigator.pop(
-                        context,
-                        widget.candidates
-                            .where((c) => _selected.contains(c.id))
-                            .toList(),
-                      ),
+                      context,
+                      widget.candidates
+                          .where((c) => _selected.contains(c.id))
+                          .toList(),
+                    ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.textPrimary(context),
                 foregroundColor: AppColors.background(context),

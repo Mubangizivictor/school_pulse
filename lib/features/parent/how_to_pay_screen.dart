@@ -69,10 +69,10 @@ class _Body extends StatelessWidget {
             schoolId,
           ),
           builder: (context, configSnapshot) {
-            if (!codeSnapshot.hasData && !codeSnapshot.hasError) {
+            if (codeSnapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: SchoolPulseLoader());
             }
-            if (!configSnapshot.hasData && !configSnapshot.hasError) {
+            if (configSnapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: SchoolPulseLoader());
             }
 
@@ -147,6 +147,10 @@ class _Body extends StatelessWidget {
                   icon: Icons.info_outline,
                   text: 'Payment channels are set by your school.',
                 ),
+                const SizedBox(height: 28),
+                const SectionHeader(title: 'Paying with mobile money or bank'),
+                const SizedBox(height: 8),
+                const _PaymentFaq(),
               ],
             );
           },
@@ -277,6 +281,117 @@ class _ChannelCard extends StatelessWidget {
           ),
           const Icon(Icons.chevron_right, color: AppColors.grey500),
         ],
+      ),
+    );
+  }
+}
+
+/// General education on how mobile-money and bank payments work in Uganda -
+/// deliberately provider-agnostic and never a substitute for a school's own
+/// configured channel instructions above. Covers the three payment types
+/// School Pulse routes to (MTN MoMo, Airtel Money, bank/bank-agent); the app
+/// itself never processes any of these payments.
+class _PaymentFaq extends StatelessWidget {
+  const _PaymentFaq();
+
+  static const _items = [
+    (
+      question: 'What is a payment code, and why do I need one?',
+      answer:
+          'Every learner has a unique payment code from their school. It '
+          'tells the school which learner and account your money is for, '
+          'so include it every time you pay - by mobile money, at a bank, '
+          'or with a bank agent.',
+    ),
+    (
+      question: 'How does MTN Mobile Money work?',
+      answer:
+          'MTN MoMo lets you send money or pay a bill straight from your '
+          'MTN line. You can either dial the MTN MoMo menu (*165#) and '
+          'choose Pay Bill, or use the MoMo app - either way you\'ll enter '
+          'the school\'s payment details and your payment code, then '
+          'confirm with your MoMo PIN. Your school will tell you the exact '
+          'steps to use for them.',
+    ),
+    (
+      question: 'How does Airtel Money work?',
+      answer:
+          'Airtel Money works the same way on an Airtel line: dial the '
+          'Airtel Money menu (*185#) or use the Airtel Money app, choose '
+          'Pay Bill, enter the school\'s details and your payment code, '
+          'then confirm with your Airtel Money PIN. Your school will '
+          'confirm the exact steps to use for them.',
+    ),
+    (
+      question: 'What if I want to pay through a bank instead?',
+      answer:
+          'You can deposit or transfer to your school\'s bank account, or '
+          'pay in person at an agent banking outlet. Always write your '
+          'payment code as the reference/narration so the school can match '
+          'the payment to the right learner - a deposit slip alone, '
+          'without the code, can be hard to trace.',
+    ),
+    (
+      question: 'Can I pay for fees directly inside School Pulse?',
+      answer:
+          'No. School Pulse never collects or processes payments in the '
+          'app. It only shows your payment code and your school\'s '
+          'approved payment channels - the payment itself always happens '
+          'through MTN MoMo, Airtel Money, your bank, or another channel '
+          'your school has set up.',
+    ),
+    (
+      question: 'How do I know my payment was received?',
+      answer:
+          'Once your school confirms a payment against your payment code, '
+          'it will appear as a confirmed receipt on the Receipts screen. '
+          'If a payment doesn\'t show up after a few days, contact the '
+          'school office with your mobile-money or bank transaction '
+          'reference.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: EdgeInsets.zero,
+      showShadow: false,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: Column(
+          children: [
+            for (var i = 0; i < _items.length; i++) ...[
+              if (i > 0)
+                Divider(
+                  height: 1,
+                  color: AppColors.surfaceContainerHigh(context),
+                ),
+              ExpansionTile(
+                tilePadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                expandedAlignment: Alignment.centerLeft,
+                iconColor: AppColors.textPrimary(context),
+                collapsedIconColor: AppColors.grey500,
+                title: Text(
+                  _items[i].question,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+                children: [
+                  Text(
+                    _items[i].answer,
+                    style: TextStyle(fontSize: 13, color: AppColors.grey500),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -36,7 +36,10 @@ class AnnouncementBloc extends Bloc<AnnouncementEvent, AnnouncementState> {
 
     final canManage = await _canManage(event.operatorUser);
 
-    final result = await repository.getAnnouncements(event.schoolId);
+    final result = await repository.getAnnouncements(
+      event.schoolId,
+      publishedOnly: !canManage,
+    );
     result.fold(
       (failure) => emit(AnnouncementError(failure.message)),
       (announcements) => emit(

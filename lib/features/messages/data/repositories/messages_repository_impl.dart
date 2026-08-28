@@ -77,15 +77,19 @@ class MessagesRepositoryImpl implements MessagesRepository {
   }) async {
     final id = ConversationModel.directId(me.id, contact.id);
     final ref = _conversations.doc(id);
-    final existing = await ref.get();
 
-    if (existing.exists) {
-      // Re-opening a thread the user had hidden brings it back rather than
-      // starting an empty duplicate.
+    // A new conversation cannot be read before it exists: Firestore only
+    // grants reads to participants. Try the participant-only re-open update
+    // first; a missing document then falls through to the allowed create.
+    try {
       await ref.update({
         'deletedBy': FieldValue.arrayRemove([me.id]),
       });
       return id;
+    } on FirebaseException catch (error) {
+      if (error.code != 'not-found' && error.code != 'permission-denied') {
+        rethrow;
+      }
     }
 
     // A chat only lands in Message Requests when two non-staff accounts
@@ -358,6 +362,7 @@ class MessagesRepositoryImpl implements MessagesRepository {
       ChatMessageModel.toCreateJson(
         senderId: sender.id,
         senderName: sender.name,
+        senderAvatar: sender.photoUrl,
         content: content,
         type: type,
         participantIds: participantIds,
@@ -746,6 +751,7 @@ class MessagesRepositoryImpl implements MessagesRepository {
                 id: doc.id,
                 name: doc.data()['name'] as String? ?? 'Unknown',
                 role: doc.data()['role'] as String? ?? '',
+                avatarUrl: doc.data()['photoUrl'] as String?,
               ),
             )
             .toList()
@@ -763,6 +769,7 @@ class MessagesRepositoryImpl implements MessagesRepository {
       id: doc.id,
       name: doc.data()!['name'] as String? ?? 'Unknown',
       role: doc.data()!['role'] as String? ?? '',
+      avatarUrl: doc.data()!['photoUrl'] as String?,
     );
   }
 
@@ -790,6 +797,7 @@ class MessagesRepositoryImpl implements MessagesRepository {
             id: id,
             name: participant['name'] as String? ?? 'Unknown',
             role: participant['role'] as String? ?? '',
+            avatarUrl: participant['avatarUrl'] as String?,
           ),
         );
       }

@@ -86,6 +86,24 @@ class ReserveResourceRequested extends LibraryEvent {
   List<Object?> get props => [reservation];
 }
 
+class CancelReservationRequested extends LibraryEvent {
+  final String schoolId;
+  final String reservationId;
+  const CancelReservationRequested(this.schoolId, this.reservationId);
+
+  @override
+  List<Object?> get props => [schoolId, reservationId];
+}
+
+class FulfilReservationRequested extends LibraryEvent {
+  final String schoolId;
+  final String reservationId;
+  const FulfilReservationRequested(this.schoolId, this.reservationId);
+
+  @override
+  List<Object?> get props => [schoolId, reservationId];
+}
+
 class FetchLibraryStats extends LibraryEvent {
   final String schoolId;
   const FetchLibraryStats(this.schoolId);

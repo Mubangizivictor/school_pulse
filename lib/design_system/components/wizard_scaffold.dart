@@ -262,7 +262,15 @@ class WizardStageStepper extends StatelessWidget {
                 ),
               ),
               child: isDone
-                  ? const Icon(Icons.check, size: 14, color: Colors.white)
+                  // The completed marker uses the theme's primary text colour
+                  // as its fill (black in light mode, white in dark mode).
+                  // Use the background colour for the check so it contrasts
+                  // with that fill in both themes.
+                  ? Icon(
+                      Icons.check,
+                      size: 14,
+                      color: AppColors.background(context),
+                    )
                   : Text(
                       '${index + 1}',
                       style: TextStyle(

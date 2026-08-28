@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/branding/domain/entities/school_branding.dart';
@@ -1024,6 +1025,9 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                         controller: _email,
                         label: 'Email',
                         keyboardType: TextInputType.emailAddress,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                        ],
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return null;
@@ -1039,6 +1043,9 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                         controller: _website,
                         label: 'Website',
                         keyboardType: TextInputType.url,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                        ],
                         validator: (value) {
                           final v = value?.trim() ?? '';
                           if (v.isEmpty) return null;
@@ -1100,7 +1107,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
         surface: Colors.white,
         onSurface: Colors.black,
         outline: Colors.black,
-        error: Colors.black,
+        error: AppColors.dangerLight,
         onError: Colors.white,
       ),
       inputDecorationTheme: const InputDecorationTheme(
@@ -1194,6 +1201,9 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                   label: 'Main email *',
                   hint: 'Enter main email address',
                   keyboardType: TextInputType.emailAddress,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                  ],
                   validator: _emailValidator,
                 ),
                 const SizedBox(height: 8),
@@ -1265,6 +1275,9 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                   label: 'Website (optional)',
                   hint: 'Enter website',
                   keyboardType: TextInputType.url,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                  ],
                   validator: _websiteValidator,
                 ),
                 const SizedBox(height: 12),
@@ -1370,11 +1383,11 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     ),
     errorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Colors.black, width: 1.2),
+      borderSide: const BorderSide(color: AppColors.dangerLight, width: 1.2),
     ),
     focusedErrorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: Colors.black, width: 1.6),
+      borderSide: const BorderSide(color: AppColors.dangerLight, width: 1.6),
     ),
   );
 
@@ -1434,7 +1447,10 @@ class _InstitutionFormState extends State<_InstitutionForm> {
               padding: const EdgeInsets.only(top: 6, left: 12),
               child: Text(
                 state.errorText!,
-                style: const TextStyle(fontSize: 12),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.dangerLight,
+                ),
               ),
             ),
         ],

@@ -32,6 +32,13 @@ import 'package:school_pulse/features/appointments/presentation/bloc/appointment
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:isar/isar.dart';
 import 'package:school_pulse/core/platform/isar_bootstrap.dart';
+import 'package:school_pulse/features/parent_offline/data/datasources/parent_cache_data_source.dart';
+import 'package:school_pulse/features/parent_offline/data/datasources/parent_cache_data_source_factory.dart';
+import 'package:school_pulse/features/parent_offline/data/datasources/parent_queue_data_source.dart';
+import 'package:school_pulse/features/parent_offline/data/datasources/parent_queue_data_source_factory.dart';
+import 'package:school_pulse/features/parent_offline/data/datasources/parent_local_pin_store.dart';
+import 'package:school_pulse/features/parent_offline/domain/parent_offline_cache_service.dart';
+import 'package:school_pulse/features/parent_offline/domain/parent_offline_queue_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_pulse/core/access/effective_access_resolver.dart';
 import 'package:school_pulse/core/utils/device_id_service.dart';
@@ -1495,7 +1502,11 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(
-    () => NotificationBadgeService(repository: sl(), plugin: sl()),
+    () => NotificationBadgeService(
+      repository: sl(),
+      plugin: sl(),
+      messagingBloc: sl(),
+    ),
   );
 
   // Delivery testing tool (real push to the caller's own devices only).
@@ -2350,4 +2361,22 @@ Future<void> init() async {
   sl.registerFactory(
     () => InstitutionContextCubit(repository: sl(), preferences: sl()),
   );
+
+  //! Parent Portal offline (mobile-only cache/queue; no-op on web - see
+  //! ParentCacheDataSourceWeb / ParentQueueDataSourceWeb docs)
+  sl.registerLazySingleton<ParentCacheDataSource>(
+    () => createParentCacheDataSource(isar: kIsWeb ? null : sl<Isar>()),
+  );
+  sl.registerLazySingleton<ParentQueueDataSource>(
+    () => createParentQueueDataSource(isar: kIsWeb ? null : sl<Isar>()),
+  );
+  sl.registerLazySingleton(() => ParentLocalPinStore());
+  sl.registerLazySingleton(
+    () => ParentOfflineCacheService(
+      cache: sl(),
+      pinStore: sl(),
+      networkInfo: sl(),
+    ),
+  );
+  sl.registerLazySingleton(() => ParentOfflineQueueService(dataSource: sl()));
 }

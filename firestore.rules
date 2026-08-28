@@ -246,21 +246,27 @@ service cloud.firestore {
           'schoolAdmin', 'headTeacher', 'director'
         ]) && isSameSchool(request.resource.data.schoolId) &&
         request.resource.data.keys().hasOnly([
-          'name', 'role', 'roles', 'schoolId', 'isActive', 'phone'
+          'name', 'role', 'roles', 'schoolId', 'isActive', 'phone', 'photoUrl'
         ]) ||
         (isSignedIn() && request.auth.uid == uid &&
           isSameSchool(resource.data.schoolId) &&
           request.resource.data.schoolId == resource.data.schoolId &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'name', 'phone'
+            'name', 'phone', 'photoUrl'
           ]));
       allow update: if hasAnyRole([
           'schoolAdmin', 'headTeacher', 'director'
         ]) && isSameSchool(resource.data.schoolId) &&
         request.resource.data.schoolId == resource.data.schoolId &&
         request.resource.data.keys().hasOnly([
-          'name', 'role', 'roles', 'schoolId', 'isActive', 'phone'
-        ]);
+          'name', 'role', 'roles', 'schoolId', 'isActive', 'phone', 'photoUrl'
+        ]) ||
+        (isSignedIn() && request.auth.uid == uid &&
+          isSameSchool(resource.data.schoolId) &&
+          request.resource.data.schoolId == resource.data.schoolId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'phone', 'photoUrl'
+          ]));
       allow delete: if hasAnyRole([
           'schoolAdmin', 'headTeacher', 'director'
         ]) && isSameSchool(resource.data.schoolId);
@@ -1103,6 +1109,44 @@ service cloud.firestore {
     match /schools/{schoolId}/configs/reportReleasePolicy {
       allow read: if isSameSchool(schoolId);
       allow write: if isStaff() && isSameSchool(schoolId);
+    }
+
+    // Library module. Catalog data (resources/policies) is school-wide
+    // reference data with no per-student ownership, so any same-school
+    // signed-in user may read it (a parent needs to browse the catalog to
+    // reserve something); only staff (librarian and above) may write it.
+    match /schools/{schoolId}/library_resources/{id} {
+      allow read: if isSameSchool(schoolId);
+      allow write: if isStaff() && isSameSchool(schoolId);
+    }
+    match /schools/{schoolId}/library_policies/{borrowerType} {
+      allow read: if isSameSchool(schoolId);
+      allow write: if isStaff() && isSameSchool(schoolId);
+    }
+    // borrowerId is the student's id even when a parent is the one viewing
+    // it (see LibraryBorrowing's doc comment) - never the parent's own uid -
+    // so ownership is checked via isParentOf()/isMe(), the same helpers the
+    // reportCards rule above uses, not a direct uid comparison.
+    match /schools/{schoolId}/library_borrowings/{id} {
+      allow read: if isSameSchool(schoolId) && (
+        isStaff() || isParentOf(resource.data.borrowerId) || isMe(resource.data.borrowerId)
+      );
+      allow write: if isStaff() && isSameSchool(schoolId);
+    }
+    match /schools/{schoolId}/library_reservations/{id} {
+      allow read: if isSameSchool(schoolId) && (
+        isStaff() || isParentOf(resource.data.borrowerId) || isMe(resource.data.borrowerId)
+      );
+      // A parent/student may create their own reservation request directly
+      // (this module has no Cloud Function write path, unlike appointments)
+      // but only staff can fulfil/cancel one, and never for someone else's
+      // borrowerId.
+      allow create: if isSameSchool(request.resource.data.schoolId) && (
+        isStaff() ||
+        isParentOf(request.resource.data.borrowerId) ||
+        isMe(request.resource.data.borrowerId)
+      );
+      allow update, delete: if isStaff() && isSameSchool(schoolId);
     }
     // QR verification lookup - public, read-only, and must never contain
     // PII: only a report/verification reference, checked against

@@ -155,13 +155,6 @@ class _DirectoryState extends State<_Directory> {
         ),
       ],
     ),
-    floatingActionButton: FloatingActionButton.extended(
-      onPressed: _enrol,
-      icon: const Icon(Icons.person_add_alt_1),
-      label: const Text('Enrol learner'),
-      shape: const StadiumBorder(),
-      extendedPadding: const EdgeInsets.symmetric(horizontal: 22),
-    ),
     body: BlocBuilder<StudentsBloc, StudentsState>(
       builder: (context, state) {
         if (state is StudentsLoading) {
@@ -194,7 +187,7 @@ class _DirectoryState extends State<_Directory> {
                     ),
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 132),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                       children: [
                         _searchBox(),
                         const SizedBox(height: 12),

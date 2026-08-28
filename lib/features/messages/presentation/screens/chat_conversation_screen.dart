@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -21,6 +22,9 @@ import 'package:school_pulse/features/messages/presentation/bloc/conversation_bl
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/attachment_composers.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/message_bubble.dart';
+import 'package:school_pulse/features/parent/widgets/child_selector_sheet.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 class ChatConversationScreen extends StatelessWidget {
@@ -317,7 +321,12 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      conversation.subtitle ?? '',
+                      [
+                        if ((conversation.subtitle ?? '').isNotEmpty)
+                          conversation.subtitle!,
+                        if ((user.schoolName ?? '').isNotEmpty)
+                          user.schoolName!,
+                      ].join(' · '),
                       style: AppTypography.labelSmall.copyWith(
                         color: AppColors.textMuted(context),
                         fontSize: 11,
@@ -333,17 +342,18 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.videocam_outlined),
-            onPressed: () =>
-                context.showMessagingSnack('Video calls are not available yet'),
+          PopupMenuButton<String>(
+            tooltip: 'Conversation options',
+            icon: const Icon(Icons.more_horiz_rounded),
+            onSelected: (value) {
+              if (value == 'info') {
+                context.push('/messages/chat/${widget.chatId}/info');
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'info', child: Text('Conversation info')),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.phone_outlined),
-            onPressed: () =>
-                context.showMessagingSnack('Voice calls are not available yet'),
-          ),
-          const SizedBox(width: 4),
         ],
       ),
       body: _buildChatBody(context, isDark, user, conversation, convoState),
@@ -359,6 +369,8 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
   ) {
     return Column(
       children: [
+        if (user.roles.contains(UserRole.parent))
+          _buildChildContextSelector(context),
         if (conversation.pinnedMessageContent != null)
           _buildPinnedBanner(context, isDark, conversation),
         Expanded(
@@ -397,60 +409,87 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                   return false;
                 },
                 child: ListView.builder(
-                  padding: const EdgeInsets.all(AppSpacing.m),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                    vertical: AppSpacing.m,
+                  ),
                   reverse: true,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final message = messages[messages.length - 1 - index];
-                    return MessageBubble(
-                      message: message,
-                      isGroup: conversation.type != ChatType.direct,
-                      textScale: _preferences.textScale,
-                      isSelected: _selectedIds.contains(message.id),
-                      selectionMode: _selectedIds.isNotEmpty,
-                      onToggleSelected: () => _toggleSelected(message.id),
-                      onSelect: () => _toggleSelected(message.id),
-                      onReply: () => setState(() {
-                        _replyTo = message;
-                        _editing = null;
-                      }),
-                      onForward: () => _forward(user, message),
-                      onStar: () => context.read<ConversationBloc>().add(
-                        ConversationMessageStarredSet(
-                          message.id,
-                          !message.isStarred,
+                    final sourceIndex = messages.length - 1 - index;
+                    final message = messages[sourceIndex];
+                    final older = sourceIndex + 1 < messages.length
+                        ? messages[sourceIndex + 1]
+                        : null;
+                    final showDate =
+                        older == null ||
+                        !DateUtils.isSameDay(
+                          message.timestamp,
+                          older.timestamp,
+                        );
+                    return Column(
+                      children: [
+                        if (showDate)
+                          _buildDateSeparator(context, message.timestamp),
+                        MessageBubble(
+                          message: message,
+                          senderAvatarUrl: _participantAvatar(
+                            conversation,
+                            message.senderId,
+                          ),
+                          isGroup: conversation.type != ChatType.direct,
+                          textScale: _preferences.textScale,
+                          isSelected: _selectedIds.contains(message.id),
+                          selectionMode: _selectedIds.isNotEmpty,
+                          onToggleSelected: () => _toggleSelected(message.id),
+                          onSelect: () => _toggleSelected(message.id),
+                          onReply: () => setState(() {
+                            _replyTo = message;
+                            _editing = null;
+                          }),
+                          onForward: () => _forward(user, message),
+                          onStar: () => context.read<ConversationBloc>().add(
+                            ConversationMessageStarredSet(
+                              message.id,
+                              !message.isStarred,
+                            ),
+                          ),
+                          onCopy: () {
+                            Clipboard.setData(
+                              ClipboardData(text: message.content),
+                            );
+                            context.showMessagingSnack('Copied to clipboard');
+                          },
+                          onEdit:
+                              message.isMe && message.type == MessageType.text
+                              ? () {
+                                  setState(() {
+                                    _editing = message;
+                                    _replyTo = null;
+                                    _messageController.text = message.content;
+                                  });
+                                }
+                              : null,
+                          onDelete: message.isMe
+                              ? () => _confirmDelete(message)
+                              : null,
+                          onPin: () => context.read<ConversationBloc>().add(
+                            ConversationMessagePinnedSet(
+                              message,
+                              !message.isPinned,
+                            ),
+                          ),
+                          onReact: (emoji) =>
+                              context.read<ConversationBloc>().add(
+                                ConversationMessageReacted(message.id, emoji),
+                              ),
+                          onVote: (option) => context
+                              .read<ConversationBloc>()
+                              .add(ConversationPollVoted(message.id, option)),
+                          onOpenContact: (contactId) =>
+                              _openSharedContact(user, contactId),
                         ),
-                      ),
-                      onCopy: () {
-                        Clipboard.setData(ClipboardData(text: message.content));
-                        context.showMessagingSnack('Copied to clipboard');
-                      },
-                      onEdit: message.isMe && message.type == MessageType.text
-                          ? () {
-                              setState(() {
-                                _editing = message;
-                                _replyTo = null;
-                                _messageController.text = message.content;
-                              });
-                            }
-                          : null,
-                      onDelete: message.isMe
-                          ? () => _confirmDelete(message)
-                          : null,
-                      onPin: () => context.read<ConversationBloc>().add(
-                        ConversationMessagePinnedSet(
-                          message,
-                          !message.isPinned,
-                        ),
-                      ),
-                      onReact: (emoji) => context.read<ConversationBloc>().add(
-                        ConversationMessageReacted(message.id, emoji),
-                      ),
-                      onVote: (option) => context.read<ConversationBloc>().add(
-                        ConversationPollVoted(message.id, option),
-                      ),
-                      onOpenContact: (contactId) =>
-                          _openSharedContact(user, contactId),
+                      ],
                     );
                   },
                 ),
@@ -460,6 +499,47 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
         ),
         if (convoState.uploading || _sendingLocation)
           const LinearProgressIndicator(minHeight: 2),
+        if (convoState.messages?.any((message) => message.isSending) ?? false)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.cloud_off_outlined,
+                  size: 14,
+                  color: AppColors.textMuted(context),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Will send when online',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (_selectedIds.isEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.verified_user_outlined,
+                  size: 14,
+                  color: AppColors.textMuted(context),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Messages are recorded for school safeguarding.',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
         // The composer is out of the way while a selection is active.
         if (_selectedIds.isNotEmpty)
           const SizedBox.shrink()
@@ -470,6 +550,68 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
       ],
     );
   }
+
+  Widget _buildChildContextSelector(BuildContext context) {
+    return BlocBuilder<SelectedStudentBloc, SelectedStudentState>(
+      builder: (context, state) {
+        if (state is! SelectedStudentLoaded) return const SizedBox.shrink();
+        final student = state.student;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 2),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: () => ChildSelectorSheet.show(context),
+              icon: const Icon(Icons.person_outline_rounded, size: 16),
+              label: Text(
+                student.name,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.labelMedium.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 34),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String? _participantAvatar(ChatConversation conversation, String userId) {
+    for (final participant in conversation.participants) {
+      if (participant.id == userId) return participant.avatarUrl;
+    }
+    return null;
+  }
+
+  Widget _buildDateSeparator(BuildContext context, DateTime date) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 14),
+    child: Row(
+      children: [
+        const Expanded(child: Divider()),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            DateUtils.isSameDay(date, DateTime.now())
+                ? 'Today'
+                : DateFormat('d MMM yyyy').format(date),
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textMuted(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const Expanded(child: Divider()),
+      ],
+    ),
+  );
 
   Widget _buildPinnedBanner(
     BuildContext context,
@@ -622,9 +764,8 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                         horizontal: AppSpacing.m,
                       ),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColors.grey850
-                            : AppColors.grey50,
+                        color: isDark ? AppColors.grey850 : AppColors.grey50,
+                        borderRadius: BorderRadius.circular(22),
                         border: Border.all(
                           color: isDark
                               ? AppColors.borderDark
@@ -635,14 +776,9 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                         controller: _messageController,
                         // "Enter is send" turns the return key into a send
                         // button; otherwise it stays a newline.
-                        maxLines: _preferences.enterIsSend ? 1 : 4,
+                        maxLines: 4,
                         minLines: 1,
-                        textInputAction: _preferences.enterIsSend
-                            ? TextInputAction.send
-                            : TextInputAction.newline,
-                        onSubmitted: _preferences.enterIsSend
-                            ? (_) => _send(user, conversation)
-                            : null,
+                        textInputAction: TextInputAction.newline,
                         textCapitalization: TextCapitalization.sentences,
                         style: AppTypography.bodyMedium.copyWith(
                           color: isDark ? Colors.white : Colors.black,
@@ -655,7 +791,9 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                          ),
                           suffixIcon: Icon(
                             Icons.emoji_emotions_outlined,
                             color: isDark ? AppColors.white : AppColors.black,
@@ -672,20 +810,22 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: isDark ? AppColors.white : AppColors.black,
-                        border: Border.all(
-                          color: isDark ? AppColors.white : AppColors.black,
-                        ),
+                        color: _composerHadText
+                            ? (isDark ? AppColors.white : AppColors.black)
+                            : (isDark ? AppColors.grey850 : AppColors.grey100),
+                        shape: BoxShape.circle,
                       ),
                       child: IconButton(
                         icon: Icon(
-                          _composerHadText ? Icons.send : Icons.mic,
-                          color: isDark ? AppColors.black : AppColors.white,
+                          Icons.send_rounded,
+                          color: _composerHadText
+                              ? (isDark ? AppColors.black : AppColors.white)
+                              : AppColors.textMuted(context),
                           size: 18,
                         ),
                         onPressed: _composerHadText
                             ? () => _send(user, conversation)
-                            : _startRecording,
+                            : null,
                       ),
                     ),
                   ),
@@ -1523,9 +1663,7 @@ class _ForwardSheetState extends State<_ForwardSheet> {
                     ),
                   ),
                   trailing: Icon(
-                    selected
-                        ? Icons.check_box
-                        : Icons.check_box_outline_blank,
+                    selected ? Icons.check_box : Icons.check_box_outline_blank,
                     color: isDark ? Colors.white : Colors.black,
                   ),
                   onTap: () => setState(() {

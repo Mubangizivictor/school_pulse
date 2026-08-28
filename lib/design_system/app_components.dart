@@ -36,6 +36,7 @@ class AppCard extends StatefulWidget {
   final VoidCallback? onTap;
   final Color? color;
   final Color? borderColor;
+  final double borderWidth;
   final bool showBorder;
   final bool showShadow;
 
@@ -47,6 +48,7 @@ class AppCard extends StatefulWidget {
     this.onTap,
     this.color,
     this.borderColor,
+    this.borderWidth = 1,
     this.showBorder = true,
     this.showShadow = true,
   });
@@ -97,7 +99,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
             border: widget.showBorder
                 ? Border.all(
                     color: widget.borderColor ?? scheme.outlineVariant,
-                    width: 1,
+                    width: widget.borderWidth,
                   )
                 : null,
           ),
@@ -789,7 +791,6 @@ class _AnalyticalStatCardState extends State<AnalyticalStatCard>
   @override
   Widget build(BuildContext context) {
     final semantic = Theme.of(context).extension<SemanticColors>()!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AppCard(
       padding: EdgeInsets.zero,

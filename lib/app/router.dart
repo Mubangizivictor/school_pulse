@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +8,6 @@ import 'package:school_pulse/app/school_splash_user_resolver.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/login_flow/welcome_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/parent_login_screens.dart';
-import 'package:school_pulse/features/auth/login_flow/parent_access_setup_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/staff_login_screens.dart';
 import 'package:school_pulse/features/auth/login_flow/platform_owner_access_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/mfa_challenge_screen.dart';
@@ -127,8 +127,9 @@ import 'package:school_pulse/features/messages/presentation/screens/broadcast_de
 import 'package:school_pulse/features/messages/presentation/screens/chat_settings_screen.dart';
 import 'package:school_pulse/features/messages/presentation/screens/archived_chats_screen.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
+import 'package:school_pulse/features/parent_offline/presentation/widgets/parent_offline_gate.dart';
+import 'package:school_pulse/features/parent_offline/presentation/widgets/parent_web_online_gate.dart';
 import 'package:school_pulse/features/parent/profile_screen.dart';
-import 'package:school_pulse/features/parent/more_menu_screen.dart';
 import 'package:school_pulse/features/parent/boarding_screen.dart';
 import 'package:school_pulse/features/parent/security_activity_screen.dart';
 import 'package:school_pulse/features/shared/shell_screen.dart';
@@ -185,7 +186,7 @@ import 'package:school_pulse/features/nurse/presentation/shell/nurse_shell.dart'
 import 'package:school_pulse/features/health/presentation/screens/nurse_student_lookup_screen.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
 import 'package:school_pulse/injection_container.dart' as di;
-import 'package:school_pulse/features/librarian/librarian_dashboard.dart';
+import 'package:school_pulse/features/library/presentation/screens/library_dashboard_screen.dart';
 import 'package:school_pulse/features/library/presentation/screens/library_student_lookup_screen.dart';
 import 'package:school_pulse/features/matron/presentation/screens/matron_dashboard_screen.dart';
 import 'package:school_pulse/features/matron/presentation/screens/leave_management_screen.dart'
@@ -553,6 +554,9 @@ final router = GoRouter(
         !isLoggingIn &&
         !isInstitutionSuspendedRoute &&
         !state.uri.path.startsWith('/super-admin')) {
+      // The router owns this redirect callback; its context remains valid for
+      // the life of the redirect evaluation after the security await above.
+      // ignore: use_build_context_synchronously
       final contextState = context.read<InstitutionContextCubit>().state;
       if (contextState is InstitutionContextSuspended) {
         return '/institution-suspended';
@@ -561,6 +565,7 @@ final router = GoRouter(
     // A user who was suspended and got reactivated shouldn't stay stuck on
     // the suspended screen once the context reloads as active.
     if (isInstitutionSuspendedRoute && authState is AuthAuthenticated) {
+      // ignore: use_build_context_synchronously
       final contextState = context.read<InstitutionContextCubit>().state;
       if (contextState is InstitutionContextLoaded) {
         return UserRoleRouting.dashboardPath(authState.user.role);
@@ -733,7 +738,7 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/parent/login/child-id',
-      builder: (context, state) => const ParentAccessSetupScreen(),
+      builder: (context, state) => const ChildIdScreen(),
     ),
     GoRoute(
       path: '/parent/login/verify',
@@ -742,8 +747,40 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/parent/login/pin',
+      // GoRouter's refreshListenable re-evaluates this route's builder on
+      // every AuthBloc emission (e.g. the auto-login this screen itself
+      // triggers after PIN setup: AuthLoading immediately, then
+      // AuthAuthenticated once it resolves), but `extra` is only ever
+      // populated on the original push - every one of those re-evaluations
+      // sees it as null. Redirect instead of crashing, but only once the
+      // outcome is actually known: AuthLoading is a mid-flight state, not a
+      // failure, so bouncing on it would send an about-to-succeed login back
+      // to square one before AuthAuthenticated ever gets to fire.
+      redirect: (context, state) {
+        final extra = state.extra;
+        if (extra is! Map<String, dynamic> ||
+            extra['accessCode'] is! ParentAccessCode ||
+            extra['phoneNumber'] is! String) {
+          final authState = context.read<AuthBloc>().state;
+          if (authState is AuthAuthenticated) return '/school-splash';
+          if (authState is AuthLoading) return null;
+          return '/parent/login/child-id';
+        }
+        return null;
+      },
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>;
+        final extra = state.extra;
+        // Mirrors the redirect above: during the AuthLoading window the
+        // redirect deliberately stays put rather than navigating away, so
+        // the builder must tolerate the same missing `extra` without
+        // crashing - a brief loading frame beats a red error screen.
+        if (extra is! Map<String, dynamic> ||
+            extra['accessCode'] is! ParentAccessCode ||
+            extra['phoneNumber'] is! String) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
         return ParentPinScreen(
           accessCode: extra['accessCode'] as ParentAccessCode,
           phoneNumber: extra['phoneNumber'] as String,
@@ -815,7 +852,11 @@ final router = GoRouter(
           path: '/parent/learn',
           builder: (context, state) => ParentModuleGuard(
             isAllowed: (v) => v.academics,
-            child: const AcademicsScreen(),
+            child: AcademicsScreen(
+              initialTab: state.extra is int
+                  ? state.extra as int
+                  : AcademicsTab.homework,
+            ),
           ),
           routes: [
             GoRoute(
@@ -866,7 +907,7 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/parent/more',
-          builder: (context, state) => const MoreMenuScreen(),
+          redirect: (context, state) => '/parent/profile',
         ),
         GoRoute(
           path: '/parent/health',
@@ -906,6 +947,12 @@ final router = GoRouter(
         GoRoute(
           path: '/parent/profile',
           builder: (context, state) => const ProfileScreen(),
+          routes: [
+            GoRoute(
+              path: 'edit',
+              builder: (context, state) => const EditProfileScreen(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/parent/notifications',
@@ -1280,7 +1327,13 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/librarian',
-          builder: (context, state) => const LibrarianDashboardScreen(),
+          builder: (context, state) {
+            final authState = context.read<AuthBloc>().state;
+            final schoolId = authState is AuthAuthenticated
+                ? authState.user.schoolId
+                : '';
+            return LibraryDashboardScreen(schoolId: schoolId);
+          },
           routes: [
             GoRoute(
               path: 'lookup',
@@ -3012,98 +3065,109 @@ final router = GoRouter(
         ),
       ],
     ),
-    GoRoute(
-      path: '/messages',
-      builder: (context, state) => const MessagesListScreen(),
+    ShellRoute(
+      // Messaging uses shared routes for every role. Keep the parent shell
+      // around those shared subflows so selecting a contact, opening a chat,
+      // or changing message settings never makes the parent navigation vanish.
+      builder: (context, state, child) => _messagingShell(context, child),
       routes: [
         GoRoute(
-          path: 'search',
-          builder: (context, state) => const SearchMessagesScreen(),
-        ),
-        GoRoute(
-          path: 'requests',
-          builder: (context, state) => const MessageRequestsScreen(),
-        ),
-        GoRoute(
-          path: 'archived',
-          builder: (context, state) => const ArchivedChatsScreen(),
-        ),
-        GoRoute(
-          path: 'starred',
-          builder: (context, state) => const StarredMessagesScreen(),
-        ),
-        GoRoute(
-          path: 'pinned',
-          builder: (context, state) => const PinnedMessagesScreen(),
-        ),
-        GoRoute(
-          path: 'settings',
-          builder: (context, state) => const ChatSettingsScreen(),
-        ),
-        GoRoute(
-          path: 'broadcast/:id',
-          builder: (context, state) =>
-              BroadcastDetailsScreen(broadcastId: state.pathParameters['id']!),
-        ),
-        GoRoute(
-          path: 'new',
-          builder: (context, state) => const NewMessageTypeScreen(),
+          path: '/messages',
+          builder: (context, state) => const MessagesListScreen(),
           routes: [
             GoRoute(
-              path: 'contacts',
-              builder: (context, state) => const SelectContactsScreen(),
+              path: 'search',
+              builder: (context, state) => const SearchMessagesScreen(),
             ),
             GoRoute(
-              path: 'group',
-              builder: (context, state) =>
-                  const SelectContactsScreen(isGroupSelection: true),
+              path: 'requests',
+              builder: (context, state) => const MessageRequestsScreen(),
+            ),
+            GoRoute(
+              path: 'archived',
+              builder: (context, state) => const ArchivedChatsScreen(),
+            ),
+            GoRoute(
+              path: 'starred',
+              builder: (context, state) => const StarredMessagesScreen(),
+            ),
+            GoRoute(
+              path: 'pinned',
+              builder: (context, state) => const PinnedMessagesScreen(),
+            ),
+            GoRoute(
+              path: 'settings',
+              builder: (context, state) => const ChatSettingsScreen(),
+            ),
+            GoRoute(
+              path: 'broadcast/:id',
+              builder: (context, state) => BroadcastDetailsScreen(
+                broadcastId: state.pathParameters['id']!,
+              ),
+            ),
+            GoRoute(
+              path: 'new',
+              builder: (context, state) => const NewMessageTypeScreen(),
               routes: [
-                // Shared by the group, broadcast and channel flows - which
-                // one is being created travels in the NewConversationDraft.
                 GoRoute(
-                  path: 'details',
-                  builder: (context, state) => NewGroupDetailsScreen(
-                    draft: state.extra as NewConversationDraft?,
+                  path: 'contacts',
+                  builder: (context, state) => const SelectContactsScreen(),
+                ),
+                GoRoute(
+                  path: 'group',
+                  builder: (context, state) =>
+                      const SelectContactsScreen(isGroupSelection: true),
+                  routes: [
+                    // Shared by the group, broadcast and channel flows - which
+                    // one is being created travels in the NewConversationDraft.
+                    GoRoute(
+                      path: 'details',
+                      builder: (context, state) => NewGroupDetailsScreen(
+                        draft: state.extra as NewConversationDraft?,
+                      ),
+                    ),
+                  ],
+                ),
+                GoRoute(
+                  path: 'broadcast',
+                  builder: (context, state) => const SelectContactsScreen(
+                    isGroupSelection: true,
+                    conversationType: ChatType.broadcast,
+                  ),
+                ),
+                GoRoute(
+                  path: 'channel',
+                  builder: (context, state) => const SelectContactsScreen(
+                    isGroupSelection: true,
+                    conversationType: ChatType.channel,
                   ),
                 ),
               ],
             ),
             GoRoute(
-              path: 'broadcast',
-              builder: (context, state) => const SelectContactsScreen(
-                isGroupSelection: true,
-                conversationType: ChatType.broadcast,
+              path: 'chat/:chatId',
+              builder: (context, state) => ChatConversationScreen(
+                chatId: state.pathParameters['chatId']!,
               ),
-            ),
-            GoRoute(
-              path: 'channel',
-              builder: (context, state) => const SelectContactsScreen(
-                isGroupSelection: true,
-                conversationType: ChatType.channel,
-              ),
-            ),
-          ],
-        ),
-        GoRoute(
-          path: 'chat/:chatId',
-          builder: (context, state) =>
-              ChatConversationScreen(chatId: state.pathParameters['chatId']!),
-          routes: [
-            GoRoute(
-              path: 'info',
-              builder: (context, state) =>
-                  ChatInfoScreen(chatId: state.pathParameters['chatId']!),
-            ),
-            GoRoute(
-              path: 'media',
-              builder: (context, state) =>
-                  MediaLinksDocsScreen(chatId: state.pathParameters['chatId']!),
-            ),
-            GoRoute(
-              path: 'profile',
-              builder: (context, state) => ContactProfileScreen(
-                contactId: state.pathParameters['chatId']!,
-              ),
+              routes: [
+                GoRoute(
+                  path: 'info',
+                  builder: (context, state) =>
+                      ChatInfoScreen(chatId: state.pathParameters['chatId']!),
+                ),
+                GoRoute(
+                  path: 'media',
+                  builder: (context, state) => MediaLinksDocsScreen(
+                    chatId: state.pathParameters['chatId']!,
+                  ),
+                ),
+                GoRoute(
+                  path: 'profile',
+                  builder: (context, state) => ContactProfileScreen(
+                    contactId: state.pathParameters['chatId']!,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -3250,6 +3314,21 @@ final router = GoRouter(
   ],
 );
 
+Widget _messagingShell(BuildContext context, Widget child) {
+  final authState = context.read<AuthBloc>().state;
+  if (authState is AuthAuthenticated &&
+      authState.user.roles.contains(UserRole.parent)) {
+    // Web Parent Portal is online-only; mobile instead gets the local
+    // PIN/biometric re-entry gate so setup-completed parents can reopen the
+    // portal offline. See ParentWebOnlineGate / ParentOfflineGate docs.
+    final shell = ParentShell(child: child);
+    return kIsWeb
+        ? ParentWebOnlineGate(child: shell)
+        : ParentOfflineGate(child: shell);
+  }
+  return child;
+}
+
 class ParentShell extends StatelessWidget {
   final Widget child;
   const ParentShell({super.key, required this.child});
@@ -3259,8 +3338,9 @@ class ParentShell extends StatelessWidget {
     if (location.startsWith('/parent/home')) return 0;
     if (location.startsWith('/parent/learn')) return 1;
     if (location.startsWith('/parent/messages')) return 2;
+    if (location.startsWith('/messages')) return 2;
     if (location.startsWith('/parent/payments')) return 3;
-    if (location.startsWith('/parent/more')) return 4;
+    if (location.startsWith('/parent/profile')) return 4;
     return 0;
   }
 
@@ -3279,7 +3359,7 @@ class ParentShell extends StatelessWidget {
         context.go('/parent/payments');
         break;
       case 4:
-        context.go('/parent/more');
+        context.go('/parent/profile');
         break;
     }
   }
@@ -3301,9 +3381,9 @@ class ParentShell extends StatelessWidget {
               Navigator.pop(context);
               context.go('/welcome');
             },
-            child: const Text(
+            child: Text(
               'Logout',
-              style: TextStyle(color: AppColors.black),
+              style: TextStyle(color: AppColors.danger(context)),
             ),
           ),
         ],
@@ -3316,37 +3396,38 @@ class ParentShell extends StatelessWidget {
     final isMobile = MediaQuery.of(context).size.width < 600;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final selectedIconColor = AppColors.textPrimary(context);
     final destinations = [
-      const NavigationDestination(
-        icon: Icon(Icons.home_outlined),
-        selectedIcon: Icon(Icons.home, color: AppColors.black),
+      NavigationDestination(
+        icon: const Icon(Icons.home_rounded),
+        selectedIcon: Icon(Icons.home_rounded, color: selectedIconColor),
         label: 'Home',
       ),
-      const NavigationDestination(
-        icon: Icon(Icons.school_outlined),
-        selectedIcon: Icon(Icons.school, color: AppColors.black),
-        label: 'Learn',
+      NavigationDestination(
+        icon: const Icon(Icons.auto_stories_outlined),
+        selectedIcon: Icon(Icons.auto_stories, color: selectedIconColor),
+        label: 'Academics',
       ),
-      const NavigationDestination(
-        icon: MessagesNavIcon(icon: Icons.message_outlined),
+      NavigationDestination(
+        icon: const MessagesNavIcon(icon: Icons.chat_bubble_outline_rounded),
         selectedIcon: MessagesNavIcon(
-          icon: Icons.message,
-          color: AppColors.black,
+          icon: Icons.chat_bubble_rounded,
+          color: selectedIconColor,
         ),
         label: 'Messages',
       ),
-      const NavigationDestination(
-        icon: Icon(Icons.account_balance_wallet_outlined),
+      NavigationDestination(
+        icon: const Icon(Icons.account_balance_wallet_rounded),
         selectedIcon: Icon(
-          Icons.account_balance_wallet,
-          color: AppColors.black,
+          Icons.account_balance_wallet_rounded,
+          color: selectedIconColor,
         ),
-        label: 'Payments',
+        label: 'Fees',
       ),
-      const NavigationDestination(
-        icon: Icon(Icons.grid_view_outlined),
-        selectedIcon: Icon(Icons.grid_view_rounded, color: AppColors.black),
-        label: 'More',
+      NavigationDestination(
+        icon: const Icon(Icons.person_outline_rounded),
+        selectedIcon: Icon(Icons.person_rounded, color: selectedIconColor),
+        label: 'Profile',
       ),
     ];
 
@@ -3473,16 +3554,29 @@ class ParentShell extends StatelessWidget {
                   ),
                 ],
               ),
-              child: NavigationBar(
-                height: 64,
-                backgroundColor: isDark
-                    ? AppColors.surfaceDark
-                    : AppColors.surfaceLight,
-                indicatorColor: AppColors.electricBlue,
-                selectedIndex: _calculateSelectedIndex(context),
-                onDestinationSelected: (idx) => _onItemTapped(idx, context),
-                destinations: destinations,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              child: NavigationBarTheme(
+                data: NavigationBarThemeData(
+                  labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                    final selected = states.contains(WidgetState.selected);
+                    return AppTypography.labelSmall.copyWith(
+                      color: selected
+                          ? AppColors.textPrimary(context)
+                          : AppColors.textMuted(context),
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    );
+                  }),
+                ),
+                child: NavigationBar(
+                  height: 64,
+                  backgroundColor: isDark
+                      ? AppColors.surfaceDark
+                      : AppColors.surfaceLight,
+                  indicatorColor: AppColors.surfaceContainerHigh(context),
+                  selectedIndex: _calculateSelectedIndex(context),
+                  onDestinationSelected: (idx) => _onItemTapped(idx, context),
+                  destinations: destinations,
+                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                ),
               ),
             )
           : null,

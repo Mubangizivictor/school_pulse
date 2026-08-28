@@ -33,8 +33,12 @@ String _schoolPrefixFromName(String? schoolName) {
       .toUpperCase();
 }
 
-String _generateAccessCode({required String prefix, int length = 8}) {
-  final suffix = String.fromCharCodes(
+String _generateAccessCode({
+  required String prefix,
+  int length = 8,
+  String suffix = '',
+}) {
+  final random = String.fromCharCodes(
     List.generate(
       length,
       (_) => _accessCodeAlphabet.codeUnitAt(
@@ -42,7 +46,7 @@ String _generateAccessCode({required String prefix, int length = 8}) {
       ),
     ),
   );
-  return '$prefix$suffix';
+  return '$prefix$random$suffix';
 }
 
 /// Thrown when createStudentWithCapacityCheck rejects a create because the
@@ -430,7 +434,12 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
 
   @override
   Future<ParentAccessCodeModel?> resolveAccessCode(String code) async {
-    final normalizedCode = code.trim().toUpperCase();
+    // Parents type this on a phone keypad, often unaware of case or that
+    // dashes matter - strip everything but letters/digits so "vhs-abc123p",
+    // "VHSABC123P", and "VHS ABC 123 P" all resolve to the same code.
+    final normalizedCode = code
+        .toUpperCase()
+        .replaceAll(RegExp(r'[^A-Z0-9]'), '');
     final doc = await firestore
         .collection('parent_access_codes')
         .doc(normalizedCode)
@@ -466,9 +475,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     final schoolPrefix = _schoolPrefixFromName(
       schoolDoc.data()?['name'] as String?,
     );
-    final parentCode = _generateAccessCode(
-      prefix: schoolPrefix.isNotEmpty ? '$schoolPrefix-P-' : 'P',
-    );
+    final parentCode = _generateAccessCode(prefix: schoolPrefix, suffix: 'P');
     // The code is also the document ID so pre-login users can perform the
     // rule-safe direct get without permission to enumerate access codes.
     final docRef = firestore.collection('parent_access_codes').doc(parentCode);
@@ -499,20 +506,15 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     final oldData = oldSnapshot.data()!;
 
     final schoolId = oldData['schoolId'] as String?;
-    String prefix = 'P';
+    String prefix = '';
     if (schoolId != null) {
       final schoolDoc = await firestore
           .collection('schools')
           .doc(schoolId)
           .get();
-      final schoolPrefix = _schoolPrefixFromName(
-        schoolDoc.data()?['name'] as String?,
-      );
-      if (schoolPrefix.isNotEmpty) {
-        prefix = '$schoolPrefix-P-';
-      }
+      prefix = _schoolPrefixFromName(schoolDoc.data()?['name'] as String?);
     }
-    final newCode = _generateAccessCode(prefix: prefix);
+    final newCode = _generateAccessCode(prefix: prefix, suffix: 'P');
     final newRef = firestore.collection('parent_access_codes').doc(newCode);
 
     final batch = firestore.batch();

@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 import '../../../../core/error/failures.dart';
 import '../../domain/entities/budget.dart';
 import '../../domain/entities/expenditure.dart';
@@ -242,7 +243,8 @@ class FinanceRepositoryImpl implements FinanceRepository {
     try {
       final history = await remoteDataSource.getAllPaymentHistory();
       return Right(history);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('FinanceRepositoryImpl.getAllPaymentHistory error: $e\n$st');
       return Left(ServerFailure());
     }
   }
@@ -252,7 +254,8 @@ class FinanceRepositoryImpl implements FinanceRepository {
     try {
       final fees = await remoteDataSource.getFees(studentId);
       return Right(fees);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('FinanceRepositoryImpl.getFees error: $e\n$st');
       return Left(ServerFailure());
     }
   }

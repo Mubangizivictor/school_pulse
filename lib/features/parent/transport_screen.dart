@@ -217,6 +217,15 @@ class _TransportScreenState extends State<TransportScreen> {
                   const SizedBox(height: 16),
                   FadeInSlide(
                     delay: const Duration(milliseconds: 300),
+                    child: PrimaryButton(
+                      label: 'Report pickup change',
+                      icon: Icons.edit_calendar_outlined,
+                      onPressed: () => context.push('/parent/messages'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FadeInSlide(
+                    delay: const Duration(milliseconds: 350),
                     child: SecondaryButton(
                       label: 'Contact Transport Coordinator',
                       icon: Icons.chat_bubble_outline,

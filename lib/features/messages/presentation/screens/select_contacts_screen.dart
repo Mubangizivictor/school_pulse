@@ -114,7 +114,7 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
+          icon: Icon(Icons.arrow_back_rounded, color: colors.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
         title: _searching
@@ -125,10 +125,10 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
                   color: colors.onSurface,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'SEARCH CONTACTS...',
+                  hintText: 'Search contacts',
                   hintStyle: AppTypography.bodyLarge.copyWith(
                     color: colors.onSurfaceVariant,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w500,
                   ),
                   border: InputBorder.none,
                 ),
@@ -138,17 +138,16 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _titleForType().toUpperCase(),
+                    _titleForType(),
                     style: AppTypography.titleLarge.copyWith(
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                   Text(
-                    '${_selectedIds.length} OF ${_contacts.length} SELECTED'
-                        .toUpperCase(),
+                    '${_selectedIds.length} selected',
                     style: AppTypography.labelSmall.copyWith(
                       color: colors.onSurfaceVariant,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -157,7 +156,7 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
           IconButton(
             icon: Icon(
               _searching ? Icons.close : Icons.search,
-              color: AppColors.textPrimary(context),
+              color: colors.onSurface,
             ),
             onPressed: () => setState(() {
               _searching = !_searching;
@@ -233,7 +232,9 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
                                     decoration: BoxDecoration(
                                       color: colors.onSurface,
                                       border: Border.all(
-                                          color: colors.surface, width: 1),
+                                        color: colors.surface,
+                                        width: 1,
+                                      ),
                                     ),
                                     child: Icon(
                                       Icons.close,
@@ -287,10 +288,7 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
       ),
       child: Container(
         padding: const EdgeInsets.only(top: AppSpacing.m),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          border: Border(top: BorderSide(color: colors.onSurface, width: 1)),
-        ),
+        decoration: BoxDecoration(color: colors.surface),
         child: SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -301,8 +299,8 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
               disabledBackgroundColor: colors.surfaceContainerHigh,
               disabledForegroundColor: colors.onSurfaceVariant,
               minimumSize: const Size.fromHeight(56),
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.zero,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
               ),
               elevation: 0,
             ),
@@ -326,11 +324,9 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
                       ),
                       const SizedBox(width: AppSpacing.s),
                       Text(
-                        (widget.isGroupSelection ? 'Continue' : 'Start chat')
-                            .toUpperCase(),
+                        widget.isGroupSelection ? 'Continue' : 'Start chat',
                         style: AppTypography.titleMedium.copyWith(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],
@@ -485,10 +481,16 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
     } else {
       setState(() => _creating = false);
       context.showMessagingSnack(
-        result.lastDecision?.message ??
-            'Could not start the chat: ${result.lastActionError}',
+        result.lastDecision?.message ?? _startChatError(result.lastActionError),
       );
     }
+  }
+
+  String _startChatError(String? error) {
+    if ((error ?? '').toLowerCase().contains('permission-denied')) {
+      return 'You do not have permission to start a chat with this contact.';
+    }
+    return 'Could not start the chat. Please try again.';
   }
 
   String _titleForType() {
@@ -513,11 +515,11 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
         AppSpacing.s,
       ),
       child: Text(
-        title.toUpperCase(),
+        title,
         style: AppTypography.labelSmall.copyWith(
-          color: colors.onSurface,
-          letterSpacing: 1.2,
-          fontWeight: FontWeight.w900,
+          color: colors.onSurfaceVariant,
+          letterSpacing: 0.8,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -530,17 +532,21 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.m, vertical: 4),
       decoration: BoxDecoration(
-        color: colors.surface,
+        color: isSelected ? colors.surfaceContainerHighest : colors.surface,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: colors.onSurface,
-          width: isSelected ? 2 : 1,
+          color: isSelected ? colors.onSurface : colors.outline,
+          width: 1.5,
         ),
       ),
       child: ListTile(
         leading: Container(
           height: 44,
           width: 44,
-          color: colors.onSurface,
+          decoration: BoxDecoration(
+            color: colors.onSurface,
+            shape: BoxShape.circle,
+          ),
           alignment: Alignment.center,
           child: Text(
             contact.initials.toUpperCase(),
@@ -551,30 +557,26 @@ class _SelectContactsScreenState extends State<SelectContactsScreen> {
           ),
         ),
         title: Text(
-          contact.name.toUpperCase(),
-          style: AppTypography.titleSmall.copyWith(
-            fontWeight: FontWeight.w900,
-          ),
+          contact.name,
+          style: AppTypography.titleSmall.copyWith(fontWeight: FontWeight.w800),
         ),
         subtitle: Text(
-          _roleLabel(contact.role).toUpperCase(),
+          _roleLabel(contact.role),
           style: AppTypography.bodySmall.copyWith(
             color: colors.onSurfaceVariant,
             fontWeight: FontWeight.w700,
           ),
         ),
         trailing: Container(
-          width: 24,
-          height: 24,
+          width: 26,
+          height: 26,
           decoration: BoxDecoration(
-            border: Border.all(
-              color: colors.onSurface,
-              width: 2,
-            ),
+            shape: BoxShape.circle,
+            border: Border.all(color: colors.outline, width: 1.5),
             color: isSelected ? colors.onSurface : Colors.transparent,
           ),
           child: isSelected
-              ? Icon(Icons.check, size: 16, color: colors.surface)
+              ? Icon(Icons.check_rounded, size: 16, color: colors.surface)
               : null,
         ),
         onTap: () {

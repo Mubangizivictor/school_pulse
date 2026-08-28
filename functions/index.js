@@ -1,5 +1,5 @@
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { randomBytes, randomUUID, createHash, createHmac } = require("crypto");
 const admin = require("firebase-admin");
@@ -11,7 +11,8 @@ const { renderReportCardPdf } = require("./report_card_pdf");
 admin.initializeApp();
 const supportAuditFunctions = require("./support_audit")({ admin, onCall, HttpsError });
 const enrollmentAuditFunctions = require("./enrollment_audit")({ admin, onCall, HttpsError });
-Object.assign(exports, require("./student_fee_billing")({ admin, onCall, HttpsError }));
+const { maybeAutoUpdateReportCardFinancialAccess } = require("./report_card_financial_gate")({ admin });
+Object.assign(exports, require("./student_fee_billing")({ admin, onCall, HttpsError, maybeAutoUpdateReportCardFinancialAccess }));
 Object.assign(exports, require("./staff_payroll_structure")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./payment_codes")({ admin, onCall, HttpsError }));
 
@@ -2104,6 +2105,85 @@ exports.airtelMoneyWebhook = onRequest(async (req, res) => {
 });
 
 // ============================================================================
+// Public school branding mirror
+// ============================================================================
+
+// schools/{id} and schools/{id}/config/institution_profile mix public
+// branding (name, initials, logo) with billing/subscription and contact PII,
+// so both stay locked to signed-in staff of that school (see firestore.rules
+// for schools/{schoolId}). Pre-login screens - the parent "Connect to
+// school" code-entry flow - still need to show a school's name/badge before
+// any session exists, so this mirrors ONLY the public fields into
+// schools/{id}/public/branding, which firestore.rules allows anyone to read.
+function schoolPublicBrandingFrom(schoolData, profileData) {
+  const nonEmpty = (value) => {
+    const text = value == null ? "" : String(value).trim();
+    return text.length ? text : null;
+  };
+  const branding = (schoolData && schoolData.branding) || {};
+  return {
+    schoolName:
+      nonEmpty(profileData && profileData.displayName) ||
+      nonEmpty(profileData && profileData.name) ||
+      nonEmpty(schoolData && schoolData.name) ||
+      nonEmpty(schoolData && schoolData.schoolName) ||
+      "School",
+    schoolInitials:
+      nonEmpty(profileData && profileData.initials) ||
+      nonEmpty(profileData && profileData.shortName) ||
+      nonEmpty(schoolData && schoolData.initials) ||
+      nonEmpty(schoolData && schoolData.schoolInitials) ||
+      "",
+    badgeUrl:
+      nonEmpty(profileData && profileData.badgeUrl) ||
+      nonEmpty(branding.badgeUrl) ||
+      nonEmpty(profileData && profileData.logoUrl) ||
+      nonEmpty(branding.logoUrl) ||
+      null,
+    city: nonEmpty(schoolData && schoolData.city),
+    country: nonEmpty(schoolData && schoolData.country),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+}
+
+async function syncSchoolPublicBranding(schoolId) {
+  const db = admin.firestore();
+  const [schoolSnap, profileSnap] = await Promise.all([
+    db.collection("schools").doc(schoolId).get(),
+    db.collection("schools").doc(schoolId).collection("config").doc("institution_profile").get(),
+  ]);
+  if (!schoolSnap.exists) return;
+  const publicData = schoolPublicBrandingFrom(schoolSnap.data(), profileSnap.exists ? profileSnap.data() : null);
+  await db.collection("schools").doc(schoolId).collection("public").doc("branding").set(publicData, { merge: true });
+}
+
+exports.syncSchoolPublicBrandingOnSchoolWrite = onDocumentWritten("schools/{schoolId}", async (event) => {
+  await syncSchoolPublicBranding(event.params.schoolId);
+});
+
+exports.syncSchoolPublicBrandingOnProfileWrite = onDocumentWritten(
+  "schools/{schoolId}/config/institution_profile",
+  async (event) => {
+    await syncSchoolPublicBranding(event.params.schoolId);
+  },
+);
+
+// One-time backfill for schools that existed before the triggers above -
+// they only fire on a future write, so any school untouched since deploy
+// has no public/branding doc yet. Any signed-in staff member may trigger
+// it (it only syncs their own school's already-public branding fields, so
+// there's nothing to gate more tightly); safe to delete once every
+// existing tenant has a public/branding doc.
+exports.backfillSchoolPublicBranding = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in to continue.");
+  const user = await admin.firestore().collection("users").doc(request.auth.uid).get();
+  const schoolId = user.data() && user.data().schoolId;
+  if (!schoolId) throw new HttpsError("failed-precondition", "No school associated with this account.");
+  await syncSchoolPublicBranding(schoolId);
+  return { synced: schoolId };
+});
+
+// ============================================================================
 // Parent Authentication
 // ============================================================================
 
@@ -2126,9 +2206,9 @@ function parentInviteHash(value) {
   if (!pepper) throw new HttpsError("failed-precondition", "Parent access codes are not configured.");
   return createHmac("sha256", pepper).update(normalizedParentInviteCode(value)).digest("hex");
 }
-function newParentInviteCode() {
+function newParentInviteCode(schoolPrefix) {
   const digits = String(randomBytes(4).readUInt32BE(0) % 1000000).padStart(6, "0");
-  return `SP-${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${schoolPrefix}-${digits}P`;
 }
 function parentInviteError() {
   return new HttpsError("permission-denied", "This code is invalid, expired, or already used.");
@@ -2155,7 +2235,7 @@ async function parentInviteAdmin(request) {
 
 /** Admin-only: links one parent to up to two-parent learners and returns the
  * raw, one-time code exactly once. */
-exports.createParentAccessCode = onCall(async (request) => {
+exports.createParentAccessCode = onCall({ secrets: ["PARENT_ACCESS_CODE_PEPPER"] }, async (request) => {
   const actor = await parentInviteAdmin(request);
   const { parentName, phoneNumber, learners } = request.data || {};
   const schoolId = String(actor.schoolId || "");
@@ -2170,7 +2250,23 @@ exports.createParentAccessCode = onCall(async (request) => {
   if (studentSnapshots.some((snapshot) => !snapshot.exists || snapshot.data().schoolId !== schoolId)) {
     throw new HttpsError("permission-denied", "One or more learners are unavailable.");
   }
-  const code = newParentInviteCode();
+  const schoolSnap = await db.collection("schools").doc(schoolId).get();
+  const schoolPrefix = schoolPrefixFrom(schoolSnap.exists ? schoolSnap.data().name : actor.schoolName);
+  // Codes are random; collisions are rare but checked for, since the raw
+  // code is never stored (only its hash) and must be unique per school.
+  let code;
+  let codeHash;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const candidate = newParentInviteCode(schoolPrefix);
+    const candidateHash = parentInviteHash(candidate);
+    const collision = await db.collection("parent_access_code_invites").where("schoolId", "==", schoolId).where("codeHash", "==", candidateHash).limit(1).get();
+    if (collision.empty) {
+      code = candidate;
+      codeHash = candidateHash;
+      break;
+    }
+  }
+  if (!code) throw new HttpsError("internal", "Could not generate a unique access code. Try again.");
   const now = Date.now();
   const inviteRef = db.collection("parent_access_code_invites").doc(randomUUID());
   await db.runTransaction(async (transaction) => {
@@ -2181,7 +2277,7 @@ exports.createParentAccessCode = onCall(async (request) => {
       if (active.some((link) => link.data().phoneNumber === normalizedPhone)) throw new HttpsError("already-exists", "This parent is already linked to the learner.");
     }
     transaction.set(inviteRef, {
-      schoolId, codeHash: parentInviteHash(code), parentName: String(parentName).trim(), phoneNumber: normalizedPhone,
+      schoolId, codeHash, parentName: String(parentName).trim(), phoneNumber: normalizedPhone,
       learnerIds, learnerRelationships: learners.map((learner) => ({ studentId: String(learner.studentId), relationship: String(learner.relationship || "Guardian") })),
       status: "active", createdBy: request.auth.uid, createdAt: admin.firestore.FieldValue.serverTimestamp(), expiresAt: admin.firestore.Timestamp.fromMillis(now + PARENT_INVITE_TTL_MS),
     });
@@ -2207,12 +2303,12 @@ exports.revokeParentAccessCode = onCall(async (request) => {
 // This is called only after Firebase Phone Auth has verified possession of
 // the submitted number. It never distinguishes bad code, phone, expiry,
 // revocation, or consumption.
-exports.redeemParentAccessCode = onCall(async (request) => {
+exports.redeemParentAccessCode = onCall({ secrets: ["PARENT_ACCESS_CODE_PEPPER"] }, async (request) => {
   const phoneNumber = request.auth?.token?.phone_number;
   const hash = parentInviteHash(request.data?.code);
   const db = admin.firestore();
   const matches = await db.collection("parent_access_code_invites").where("codeHash", "==", hash).limit(1).get();
-  const invite = matches.docs.first;
+  const invite = matches.docs[0];
   const genericFailure = async () => {
     await db.collection("parent_access_code_attempts").add({ codeHash: hash, phoneHash: createHash("sha256").update(String(phoneNumber || request.data?.phoneNumber || "")).digest("hex"), outcome: "failed", createdAt: admin.firestore.FieldValue.serverTimestamp() });
     throw parentInviteError();
@@ -2226,14 +2322,14 @@ exports.redeemParentAccessCode = onCall(async (request) => {
   return { inviteId: invite.id, schoolName: school.data()?.name || "School", parentName: data.parentName, learners: students.map((student) => ({ name: student.data().name, className: student.data().className || student.data().classId || "" })) };
 });
 
-exports.completeParentAccessCodeSetup = onCall(async (request) => {
+exports.completeParentAccessCodeSetup = onCall({ secrets: ["PARENT_ACCESS_CODE_PEPPER"] }, async (request) => {
   const phoneNumber = request.auth?.token?.phone_number;
   const hash = parentInviteHash(request.data?.code);
   const pin = String(request.data?.pin || "");
   if (!phoneNumber || !isSafeParentPin(pin)) throw new HttpsError("invalid-argument", "Choose a secure four-digit PIN.");
   const db = admin.firestore();
   const matches = await db.collection("parent_access_code_invites").where("codeHash", "==", hash).limit(1).get();
-  const invite = matches.docs.first;
+  const invite = matches.docs[0];
   if (!invite) throw parentInviteError();
   const data = invite.data();
   if (data.status !== "active" || data.phoneNumber !== phoneNumber || data.expiresAt.toMillis() < Date.now()) throw parentInviteError();
@@ -4458,10 +4554,17 @@ exports.signReportCardAsHeadteacher = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "reportCardId is required.");
   }
 
+  let finalizedReportContext = null;
+
   await runWorkflowTransition({
     schoolId: caller.schoolId,
     reportCardId,
     decide: (data) => {
+      finalizedReportContext = {
+        studentId: data.studentId,
+        academicYearId: data.academicYearId,
+        termId: data.termId,
+      };
       if (!reportCardEngine.isValidTransition(data.academicStatus, reportCardEngine.ACADEMIC_STATUS.ACADEMICALLY_FINALIZED)) {
         return { ok: false, httpsError: new HttpsError("failed-precondition", `Cannot finalize a report in status "${data.academicStatus}".`) };
       }
@@ -4496,6 +4599,12 @@ exports.signReportCardAsHeadteacher = onCall(async (request) => {
           academicStatus: reportCardEngine.ACADEMIC_STATUS.ACADEMICALLY_FINALIZED,
           currentApprovalStage: "finalized",
           isFinalized: true,
+          // A brand-new finalized report always starts under the automatic
+          // fee-payment gate (never a Bursar decision yet) - whether it opens
+          // released or held is decided right after this transaction commits,
+          // in the recheckFn passed to runWorkflowTransition below.
+          financialAccessStatus: "held",
+          financialAccessSource: "auto",
           headteacherDecision: {
             decision: "signed", actorUid: caller.uid, actorDisplayName: caller.displayName,
             reportVersion: data.version, sourceHashReviewed: data.sourceHash,
@@ -4521,6 +4630,20 @@ exports.signReportCardAsHeadteacher = onCall(async (request) => {
       };
     },
   });
+
+  if (finalizedReportContext) {
+    // Decides whether this just-finalized report opens released or held,
+    // based on the term's current fee balance - see
+    // maybeAutoUpdateReportCardFinancialAccess's doc comment. Best-effort:
+    // a failure here must not undo the finalization itself, since a Bursar
+    // can always release the report manually if the automatic check fails.
+    await maybeAutoUpdateReportCardFinancialAccess({
+      schoolId: caller.schoolId,
+      ...finalizedReportContext,
+    }).catch((err) => {
+      console.error("maybeAutoUpdateReportCardFinancialAccess failed after finalization", err);
+    });
+  }
 
   await writeAudit(caller.schoolId, {
     userId: caller.uid, action: "report_card.academically_finalized", entityType: "reportCards", entityId: reportCardId, newValue: {},
@@ -4806,6 +4929,12 @@ exports.setReportCardFinancialAccess = onCall(async (request) => {
         }
         tx.update(ref, {
           financialAccessStatus: statusFor,
+          // Marks this decision as a human Bursar override so the automatic
+          // fee-payment gate (see maybeAutoUpdateReportCardFinancialAccess)
+          // never silently overwrites it - a Bursar's manual release/hold/
+          // revoke is authoritative until a Bursar changes it again,
+          // regardless of what the fee balance does afterwards.
+          financialAccessSource: "bursar",
           financialAccessUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
           financialAccessUpdatedBy: caller.uid,
           financialAccessReason: reason.trim(),

@@ -261,9 +261,9 @@ class _ProfileTab extends StatelessWidget {
               _IdentityHeader(user: user, roleLabel: roleLabel),
               const SizedBox(height: 20),
               AppCard(
-                color: Colors.white,
+                color: AppColors.surfaceElevated(context),
                 showShadow: false,
-                borderColor: const Color(0xFFD8D8D8),
+                borderColor: AppColors.border(context),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final wide = constraints.maxWidth >= 700;
@@ -301,9 +301,9 @@ class _ProfileTab extends StatelessWidget {
               if (emergencyRows.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 AppCard(
-                  color: Colors.white,
+                  color: AppColors.surfaceElevated(context),
                   showShadow: false,
-                  borderColor: const Color(0xFFD8D8D8),
+                  borderColor: AppColors.border(context),
                   child: _InformationSection(
                     title: 'Emergency contact',
                     icon: Icons.contact_emergency_outlined,
@@ -344,14 +344,14 @@ class _IdentityHeader extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: Colors.black,
+                  color: AppColors.textPrimary(context),
                 ),
               ),
               if (user.staffCode?.isNotEmpty == true)
                 Text(
                   user.staffCode!,
-                  style: const TextStyle(
-                    color: Color(0xFF666666),
+                  style: TextStyle(
+                    color: AppColors.textMuted(context),
                     fontSize: 15,
                   ),
                 ),
@@ -384,7 +384,7 @@ class _StaffAvatar extends StatelessWidget {
     final fallback = AvatarInitials(
       name: user.name,
       size: 72,
-      ringColor: Colors.black,
+      ringColor: AppColors.textPrimary(context),
     );
     if (user.photoUrl == null || user.photoUrl!.trim().isEmpty) return fallback;
     return Container(
@@ -392,7 +392,7 @@ class _StaffAvatar extends StatelessWidget {
       height: 72,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.black, width: 1.5),
+        border: Border.all(color: AppColors.textPrimary(context), width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,
       child: Image.network(
@@ -410,14 +410,14 @@ class _BlackPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-    decoration: const BoxDecoration(
-      color: Colors.black,
-      borderRadius: BorderRadius.all(Radius.circular(18)),
+    decoration: BoxDecoration(
+      color: AppColors.textPrimary(context),
+      borderRadius: const BorderRadius.all(Radius.circular(18)),
     ),
     child: Text(
       label.toUpperCase(),
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: AppColors.background(context),
         fontSize: 11,
         fontWeight: FontWeight.w700,
       ),
@@ -442,13 +442,19 @@ class _StatusLabel extends StatelessWidget {
         Container(
           width: 8,
           height: 8,
-          decoration: const BoxDecoration(
-            color: Colors.black,
+          decoration: BoxDecoration(
+            color: AppColors.textPrimary(context),
             shape: BoxShape.circle,
           ),
         ),
         const SizedBox(width: 7),
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary(context),
+          ),
+        ),
       ],
     );
   }
@@ -476,13 +482,13 @@ class _InformationSection extends StatelessWidget {
     children: [
       Row(
         children: [
-          Icon(icon, size: 21, color: Colors.black),
+          Icon(icon, size: 21, color: AppColors.textPrimary(context)),
           const SizedBox(width: 10),
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
-              color: Colors.black,
+              color: AppColors.textPrimary(context),
             ),
           ),
         ],
@@ -588,21 +594,24 @@ class _AccountOnboardingCardState extends State<_AccountOnboardingCard> {
   Widget build(BuildContext context) {
     final canManage = _canManage(context);
     return AppCard(
-      color: Colors.white,
+      color: AppColors.surfaceElevated(context),
       showShadow: false,
-      borderColor: const Color(0xFFD8D8D8),
+      borderColor: AppColors.border(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.shield_outlined, color: Colors.black),
+              Icon(
+                Icons.shield_outlined,
+                color: AppColors.textPrimary(context),
+              ),
               const SizedBox(width: 10),
               Text(
                 'Account access',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: Colors.black,
+                  color: AppColors.textPrimary(context),
                 ),
               ),
             ],
@@ -615,7 +624,7 @@ class _AccountOnboardingCardState extends State<_AccountOnboardingCard> {
                 widget.user.isActive
                     ? Icons.check_circle_outline
                     : Icons.cancel_outlined,
-                color: Colors.black,
+                color: AppColors.textPrimary(context),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -628,9 +637,10 @@ class _AccountOnboardingCardState extends State<_AccountOnboardingCard> {
                           : widget.user.mustChangePassword
                           ? 'Setup pending'
                           : 'Account active',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary(context),
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -662,8 +672,8 @@ class _AccountOnboardingCardState extends State<_AccountOnboardingCard> {
                         : 'Send password reset link',
                   ),
                   style: FilledButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.textPrimary(context),
+                    foregroundColor: AppColors.background(context),
                   ),
                 ),
               ),
@@ -685,7 +695,7 @@ class _AccountOnboardingCardState extends State<_AccountOnboardingCard> {
                       : 'Reactivate staff account',
                 ),
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.black,
+                  foregroundColor: AppColors.textPrimary(context),
                   minimumSize: const Size.fromHeight(44),
                   alignment: Alignment.centerLeft,
                 ),
@@ -903,7 +913,7 @@ class _RolesTabState extends State<_RolesTab> {
               ),
               Text(
                 'Access limited to assigned classes and subjects.',
-                style: const TextStyle(color: Color(0xFF555555)),
+                style: TextStyle(color: AppColors.textMuted(context)),
               ),
               const SizedBox(height: 16),
               if (assignments.isEmpty)
@@ -930,8 +940,8 @@ class _RolesTabState extends State<_RolesTab> {
         onPressed: _openAssign,
         icon: const Icon(Icons.add),
         label: const Text('Assign role'),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.textPrimary(context),
+        foregroundColor: AppColors.background(context),
       ),
     );
   }
@@ -1134,9 +1144,9 @@ class _RoleCard extends StatelessWidget {
     ];
 
     return AppCard(
-      color: Colors.white,
+      color: AppColors.surfaceElevated(context),
       showShadow: false,
-      borderColor: const Color(0xFFD8D8D8),
+      borderColor: AppColors.border(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1146,10 +1156,14 @@ class _RoleCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F2F2),
+                  color: AppColors.surfaceContainer(context),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: Colors.black, size: 20),
+                child: Icon(
+                  icon,
+                  color: AppColors.textPrimary(context),
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1167,11 +1181,14 @@ class _RoleCard extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           if (scopes.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 5),
+            Padding(
+              padding: const EdgeInsets.only(top: 5),
               child: Text(
                 'Whole-school scope',
-                style: TextStyle(fontSize: 12, color: Color(0xFF666666)),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMuted(context),
+                ),
               ),
             )
           else

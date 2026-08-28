@@ -2,7 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/announcement_model.dart';
 
 abstract class AnnouncementRemoteDataSource {
-  Future<List<AnnouncementModel>> getAnnouncements(String schoolId);
+  Future<List<AnnouncementModel>> getAnnouncements(
+    String schoolId, {
+    bool publishedOnly = false,
+  });
   Future<void> upsertAnnouncement(AnnouncementModel announcement);
   Future<void> deleteAnnouncement(String schoolId, String announcementId);
   Future<void> publishAnnouncement(String schoolId, String announcementId);
@@ -17,10 +20,17 @@ class AnnouncementRemoteDataSourceImpl implements AnnouncementRemoteDataSource {
       firestore.collection('schools').doc(schoolId).collection('announcements');
 
   @override
-  Future<List<AnnouncementModel>> getAnnouncements(String schoolId) async {
-    final snapshot = await _announcements(
-      schoolId,
-    ).orderBy('createdAt', descending: true).get();
+  Future<List<AnnouncementModel>> getAnnouncements(
+    String schoolId, {
+    bool publishedOnly = false,
+  }) async {
+    Query<Map<String, dynamic>> query = _announcements(schoolId);
+    if (publishedOnly) {
+      query = query.where('status', isEqualTo: 'published');
+    }
+    final snapshot = await query
+        .orderBy('createdAt', descending: true)
+        .get();
     return snapshot.docs
         .map((doc) => AnnouncementModel.fromFirestore(doc))
         .toList();

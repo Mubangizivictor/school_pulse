@@ -98,11 +98,6 @@ class _StaffListPageState extends State<StaffListPage> {
           title: 'Staff',
           actions: [
             IconButton(
-              icon: const Icon(Icons.vpn_key_outlined),
-              tooltip: 'Parent access codes',
-              onPressed: () => context.push('/staff/admin/users/access-codes'),
-            ),
-            IconButton(
               icon: const Icon(Icons.filter_list),
               onPressed: () => _openFilters(context),
             ),
@@ -216,7 +211,10 @@ class _StaffListPageState extends State<StaffListPage> {
           icon: const Icon(Icons.add),
           label: const Text('Add Staff'),
           backgroundColor: AppColors.primary(context),
-          foregroundColor: Colors.white,
+          // Primary reverses between black and white by theme. Its matching
+          // background is therefore the only colour that stays legible in
+          // both appearances.
+          foregroundColor: AppColors.background(context),
         ),
       ),
     );
@@ -323,7 +321,9 @@ class _StatusChip extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? Colors.white : AppColors.textSecondary(context),
+            color: selected
+                ? AppColors.background(context)
+                : AppColors.textSecondary(context),
             fontWeight: FontWeight.w600,
             fontSize: 13,
           ),

@@ -391,6 +391,8 @@ class _ParentAccessSetupScreenState extends State<ParentAccessSetupScreen> {
       _RequiredLabel(text: 'Create 4-digit PIN'),
       const SizedBox(height: 8),
       _PinDotField(controller: _pin, hasError: _submitted && !_validPin),
+      if (_submitted && !_validPin)
+        _FieldError(message: 'Choose a secure 4-digit PIN.'),
       const SizedBox(height: 16),
       _RequiredLabel(text: 'Confirm PIN'),
       const SizedBox(height: 8),
@@ -398,6 +400,8 @@ class _ParentAccessSetupScreenState extends State<ParentAccessSetupScreen> {
         controller: _confirmPin,
         hasError: _submitted && _pin.text != _confirmPin.text,
       ),
+      if (_submitted && _validPin && _pin.text != _confirmPin.text)
+        _FieldError(message: 'PINs do not match.'),
       if (_error != null) ...[
         const SizedBox(height: 16),
         _ErrorBanner(message: _error!),
@@ -518,6 +522,20 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
+class _FieldError extends StatelessWidget {
+  final String message;
+  const _FieldError({required this.message});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 6),
+    child: Text(
+      message,
+      style: TextStyle(color: AppColors.danger(context), fontSize: 12),
+    ),
+  );
+}
+
 /// Grouped SP-nnn-nnn code entry: a single underlying text field masked
 /// visually as three boxed groups, matching the reference design's layout,
 /// plus a Paste action for the school-provided code.
@@ -534,45 +552,27 @@ class _GroupedCodeField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = hasError
-        ? AppColors.danger(context)
-        : AppColors.border(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: borderColor),
-            borderRadius: BorderRadius.circular(8),
+        TextField(
+          controller: controller,
+          textCapitalization: TextCapitalization.characters,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9-]')),
+            LengthLimitingTextInputFormatter(10),
+          ],
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.w800,
+            fontSize: 18,
+            letterSpacing: 2,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: TextField(
-            controller: controller,
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9-]')),
-              LengthLimitingTextInputFormatter(10),
-            ],
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
-              letterSpacing: 2,
-            ),
-            decoration: const InputDecoration(
-              hintText: 'SP-482-791',
-              border: InputBorder.none,
-            ),
+          decoration: InputDecoration(
+            hintText: 'SP-482-791',
+            errorText: hasError ? 'Enter a valid access code' : null,
           ),
         ),
-        if (hasError)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              'Enter a valid access code',
-              style: TextStyle(color: AppColors.danger(context), fontSize: 12),
-            ),
-          ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
           onPressed: onPaste,

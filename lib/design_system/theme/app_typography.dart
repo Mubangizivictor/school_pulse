@@ -8,106 +8,106 @@ class AppTypography {
 
   static TextStyle get displayLarge => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 49,
+    fontSize: 44,
     fontWeight: FontWeight.w400,
     letterSpacing: -0.25,
   );
 
   static TextStyle get displayMedium => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 39,
+    fontSize: 35,
     fontWeight: FontWeight.w400,
   );
 
   static TextStyle get displaySmall => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 31,
+    fontSize: 28,
     fontWeight: FontWeight.w400,
   );
 
   static TextStyle get headlineLarge => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 27,
+    fontSize: 24,
     fontWeight: FontWeight.w700,
   );
 
   static TextStyle get headlineMedium => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 24,
+    fontSize: 21,
     fontWeight: FontWeight.w700,
   );
 
   static TextStyle get headlineSmall => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: FontWeight.w700,
   );
 
   static TextStyle get titleLarge => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 19,
+    fontSize: 17,
     fontWeight: FontWeight.w600,
   );
 
   static TextStyle get titleMedium => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.15,
   );
 
   static TextStyle get titleSmall => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.1,
   );
 
   static TextStyle get bodyLarge => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: FontWeight.w400,
     letterSpacing: 0.5,
   );
 
   static TextStyle get bodyMedium => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: FontWeight.w400,
     letterSpacing: 0.25,
   );
 
   static TextStyle get bodySmall => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: FontWeight.w400,
     letterSpacing: 0.4,
   );
 
   static TextStyle get labelLarge => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.1,
   );
 
   static TextStyle get labelMedium => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.5,
   );
 
   static TextStyle get labelSmall => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.5,
   );
 
   static TextStyle get kpiStyle => GoogleFonts.getFont(
     _fontFamily,
-    fontSize: 27,
+    fontSize: 24,
     fontWeight: FontWeight.w800,
     letterSpacing: -1.0,
   );

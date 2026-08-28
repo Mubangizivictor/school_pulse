@@ -39,6 +39,7 @@ abstract class LibraryRepository {
   });
   Future<void> reserveResource(LibraryReservation reservation);
   Future<void> cancelReservation(String schoolId, String reservationId);
+  Future<void> fulfilReservation(String schoolId, String reservationId);
 
   // Policies
   Stream<List<LibraryPolicy>> watchPolicies(String schoolId);

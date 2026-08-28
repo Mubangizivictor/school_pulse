@@ -1,125 +1,261 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:school_pulse/core/utils.dart';
-import 'package:school_pulse/design_system/components/pulse_button.dart';
-import 'package:school_pulse/design_system/components/pulse_text_field.dart';
-import 'package:school_pulse/design_system/components/pulse_logo.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/design_system/theme/app_gradients.dart';
-import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/features/auth/data/datasources/remembered_login_store.dart';
-import 'package:school_pulse/features/auth/login_flow/auth_chrome.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/branding/presentation/widgets/school_badge.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
-class ParentAuthLayout extends StatelessWidget {
-  final Widget child;
-  final String title;
-  final String? subtitle;
+/// Detected school identity for the in-progress "Connect to school" flow.
+/// Only ever populated from a server-verified access code - never trust a
+/// client-derived guess at which school a code belongs to.
+class _DetectedSchool {
+  final String schoolId;
+  final String schoolName;
+  final String location;
+  final String? badgeUrl;
 
-  const ParentAuthLayout({
-    super.key,
-    required this.child,
-    required this.title,
-    this.subtitle,
+  const _DetectedSchool({
+    required this.schoolId,
+    required this.schoolName,
+    required this.location,
+    this.badgeUrl,
+  });
+}
+
+/// Shared native-iOS chrome for the three "Connect to school" steps: centered
+/// nav title, back chevron, soft off-white background, generous safe-area
+/// spacing.
+class _ConnectToSchoolScaffold extends StatelessWidget {
+  final Widget child;
+  final Widget footer;
+
+  const _ConnectToSchoolScaffold({required this.child, required this.footer});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background(context),
+      appBar: AppBar(
+        backgroundColor: AppColors.background(context),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        titleSpacing: 0,
+        leading: IconButton(
+          icon: Icon(
+            CupertinoIcons.chevron_left,
+            color: AppColors.textPrimary(context),
+          ),
+          onPressed: () => context.pop(),
+        ),
+        title: Text(
+          'Connect to school',
+          style: AppTypography.titleMedium.copyWith(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.x2l,
+                  AppSpacing.xl,
+                  AppSpacing.xl,
+                ),
+                child: child,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                0,
+                AppSpacing.xl,
+                AppSpacing.l,
+              ),
+              child: footer,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScreenHeading extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _ScreenHeading({required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: AppTypography.headlineMedium.copyWith(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.w800,
+            fontSize: 28,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s),
+        Text(
+          subtitle,
+          textAlign: TextAlign.center,
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary(context),
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// One row inside an inset grouped section - subtle separators, no card
+/// shadow, matching native iOS Settings-style forms.
+class _InsetGroup extends StatelessWidget {
+  final List<Widget> children;
+
+  const _InsetGroup({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        children: [
+          for (int i = 0; i < children.length; i++) ...[
+            children[i],
+            if (i != children.length - 1)
+              Divider(
+                height: 1,
+                thickness: 1,
+                indent: AppSpacing.xl,
+                color: AppColors.border(context),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _InsetLabel extends StatelessWidget {
+  final String label;
+  final bool isRequired;
+
+  const _InsetLabel({required this.label, this.isRequired = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.l,
+        AppSpacing.xl,
+        AppSpacing.xs,
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: AppTypography.labelLarge.copyWith(
+            color: AppColors.textSecondary(context),
+            fontWeight: FontWeight.w600,
+          ),
+          children: [
+            TextSpan(text: label),
+            if (isRequired)
+              TextSpan(
+                text: ' *',
+                style: TextStyle(color: AppColors.danger(context)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RoundedBlackButton extends StatelessWidget {
+  final String label;
+  final bool isLoading;
+  final VoidCallback? onPressed;
+
+  const _RoundedBlackButton({
+    required this.label,
+    required this.isLoading,
+    this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
+    final enabled = onPressed != null && !isLoading;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fill = isDark ? AppColors.white : AppColors.black;
+    final foreground = isDark ? AppColors.black : AppColors.white;
+    final disabledFill = AppColors.border(context);
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: isDark ? AppGradients.premiumDark : null,
-          color: isDark ? null : AppColors.bgLight,
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.x3l),
-            child: ResponsiveBuilder(
-              builder: (context, layout) {
-                final isDesktop = layout == ResponsiveLayout.desktop;
-
-                return Container(
-                  constraints: BoxConstraints(maxWidth: isDesktop ? 450 : 400),
-                  padding: isDesktop
-                      ? const EdgeInsets.all(AppSpacing.x4l)
-                      : null,
-                  decoration: isDesktop
-                      ? BoxDecoration(
-                          color: isDark ? AppColors.surfaceDark : Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: isDark
-                                ? AppColors.white
-                                : AppColors.borderLight,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black,
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        )
-                      : null,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Center(
-                        child: PulseLogo(
-                          width: 320,
-                          variant: PulseLogoVariant.auth,
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: label,
+      child: SizedBox(
+        height: 52,
+        child: Material(
+          color: enabled ? fill : disabledFill,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            onTap: enabled ? onPressed : null,
+            borderRadius: BorderRadius.circular(14),
+            child: Center(
+              child: isLoading
+                  ? SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation(
+                          enabled
+                              ? foreground
+                              : AppColors.textSecondary(context),
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xl),
-                      Text(
-                        title,
-                        style: AppTypography.headlineMedium.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: isDark
-                              ? Colors.white
-                              : AppColors.textPrimaryLight,
-                        ),
-                        textAlign: TextAlign.center,
+                    )
+                  : Text(
+                      label,
+                      style: AppTypography.titleMedium.copyWith(
+                        color: enabled
+                            ? foreground
+                            : AppColors.textSecondary(context),
+                        fontWeight: FontWeight.w700,
                       ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          subtitle!,
-                          style: AppTypography.bodyMedium.copyWith(
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.xl),
-                      child,
-                    ],
-                  ),
-                );
-              },
+                    ),
             ),
           ),
         ),
@@ -127,6 +263,87 @@ class ParentAuthLayout extends StatelessWidget {
     );
   }
 }
+
+/// Looks up a school's display name, location, and badge for a detected
+/// schoolId. Never exposes anything unless the caller already holds a
+/// server-verified [ParentAccessCode].
+/// Reads schools/{id}/public/branding - a server-maintained mirror of only
+/// the non-sensitive fields off schools/{id} and its institution_profile,
+/// kept in sync by syncSchoolPublicBrandingOn{School,Profile}Write in
+/// functions/index.js. The full schools/{id} doc also carries billing/
+/// contact PII and is locked to signed-in staff of that school, so this
+/// pre-login screen can't (and shouldn't) read it directly.
+Future<_DetectedSchool?> _lookupSchool(String schoolId) async {
+  if (schoolId.isEmpty) return null;
+  try {
+    final doc = await FirebaseFirestore.instance
+        .collection('schools')
+        .doc(schoolId)
+        .collection('public')
+        .doc('branding')
+        .get();
+    if (!doc.exists) return null;
+    final data = doc.data() ?? const <String, dynamic>{};
+    String? nonEmpty(Object? value) {
+      final text = value?.toString().trim();
+      return text == null || text.isEmpty ? null : text;
+    }
+
+    final name = nonEmpty(data['schoolName']) ?? 'School';
+    final location = [
+      nonEmpty(data['city']),
+      nonEmpty(data['country']),
+    ].whereType<String>().join(', ');
+    return _DetectedSchool(
+      schoolId: schoolId,
+      schoolName: name,
+      location: location,
+      badgeUrl: nonEmpty(data['badgeUrl']),
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
+class _DetectedSchoolHeader extends StatelessWidget {
+  final _DetectedSchool school;
+
+  const _DetectedSchoolHeader({required this.school});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SchoolBadge(badgeUrl: school.badgeUrl, size: 88),
+        const SizedBox(height: AppSpacing.l),
+        Text(
+          school.schoolName,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: AppTypography.titleLarge.copyWith(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        if (school.location.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            school.location,
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary(context),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// A single generic message for every invalid/expired/revoked/used code, so
+/// the flow never reveals which of those applies, nor any school identity.
+const _kGenericCodeError =
+    "That code doesn't look right. Please check it and try again.";
 
 class ChildIdScreen extends StatefulWidget {
   const ChildIdScreen({super.key});
@@ -138,49 +355,364 @@ class ChildIdScreen extends StatefulWidget {
 class _ChildIdScreenState extends State<ChildIdScreen> {
   final _controller = TextEditingController();
   final _rememberedLoginStore = RememberedLoginStore();
-  bool _isValid = false;
-  bool _isLooking = false;
+  Timer? _debounce;
+  bool _isChecking = false;
   String? _error;
+  ParentAccessCode? _resolvedCode;
+  _DetectedSchool? _detectedSchool;
 
   @override
   void initState() {
     super.initState();
-    _controller.addListener(_validate);
+    _controller.addListener(_onChanged);
     _rememberedLoginStore.getParentIdentity().then((identity) {
       if (!mounted || identity == null) return;
-      setState(() => _controller.text = identity.code);
+      _controller.text = identity.code;
     });
   }
 
-  void _validate() {
-    final text = _controller.text;
-    final regex = RegExp(r'^[A-Z]{3}\d{4}$');
-    setState(() {
-      _isValid = regex.hasMatch(text);
-      _error = null;
-    });
+  String get _normalizedCode =>
+      _controller.text.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+
+  void _onChanged() {
+    _debounce?.cancel();
+    // Any edit invalidates a previously detected school - never keep stale
+    // branding on screen while the user is typing a different code.
+    if (_resolvedCode != null || _detectedSchool != null || _error != null) {
+      setState(() {
+        _resolvedCode = null;
+        _detectedSchool = null;
+        _error = null;
+      });
+    }
+    final code = _normalizedCode;
+    if (code.length < 4) return;
+    _debounce = Timer(
+      const Duration(milliseconds: 500),
+      () => _verifyCode(code),
+    );
   }
 
-  Future<void> _continue() async {
+  Future<void> _verifyCode(String code) async {
+    if (!mounted || code != _normalizedCode) return;
     setState(() {
-      _isLooking = true;
+      _isChecking = true;
       _error = null;
     });
 
-    final result = await di.sl<ResolveParentAccessCode>()(_controller.text);
-    if (!mounted) return;
+    final result = await di.sl<ResolveParentAccessCode>()(code);
+    if (!mounted || code != _normalizedCode) return;
 
-    result.fold(
-      (failure) => setState(() {
-        _isLooking = false;
-        _error = failure.message;
-      }),
-      (accessCode) {
-        setState(() => _isLooking = false);
-        context.push('/parent/login/verify', extra: accessCode);
+    await result.fold(
+      (failure) async {
+        setState(() {
+          _isChecking = false;
+          _error = _kGenericCodeError;
+        });
+      },
+      (accessCode) async {
+        if (accessCode.isActive == false) {
+          setState(() {
+            _isChecking = false;
+            _error = _kGenericCodeError;
+          });
+          return;
+        }
+        final school = await _lookupSchool(accessCode.schoolId);
+        if (!mounted || code != _normalizedCode) return;
+        if (school == null) {
+          setState(() {
+            _isChecking = false;
+            _error = _kGenericCodeError;
+          });
+          return;
+        }
+        setState(() {
+          _isChecking = false;
+          _resolvedCode = accessCode;
+          _detectedSchool = school;
+        });
       },
     );
   }
+
+  void _changeSchool() {
+    _debounce?.cancel();
+    setState(() {
+      _controller.clear();
+      _resolvedCode = null;
+      _detectedSchool = null;
+      _error = null;
+    });
+  }
+
+  void _continue() {
+    if (_resolvedCode == null) return;
+    context.push('/parent/login/verify', extra: _resolvedCode);
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final detected = _detectedSchool;
+    return _ConnectToSchoolScaffold(
+      footer: _RoundedBlackButton(
+        label: 'Continue',
+        isLoading: false,
+        onPressed: _resolvedCode != null ? _continue : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: detected == null
+                ? Container(
+                    width: 88,
+                    height: 88,
+                    decoration: BoxDecoration(
+                      color: AppColors.background(context),
+                      borderRadius: BorderRadius.circular(21),
+                      border: Border.all(color: AppColors.border(context)),
+                    ),
+                    child: Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(
+                            CupertinoIcons.shield,
+                            size: 40,
+                            color: AppColors.textPrimary(context),
+                            semanticLabel: 'School Pulse',
+                          ),
+                          Icon(
+                            Icons.monitor_heart_outlined,
+                            size: 18,
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : _DetectedSchoolHeader(school: detected),
+          ),
+          const SizedBox(height: AppSpacing.x3l),
+          const _ScreenHeading(
+            title: 'Enter your school code',
+            subtitle:
+                'Use the access code provided by your school to get started.',
+          ),
+          const SizedBox(height: AppSpacing.x2l),
+          _InsetGroup(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.l,
+                  AppSpacing.l,
+                  AppSpacing.l,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          RichText(
+                            text: TextSpan(
+                              style: AppTypography.labelLarge.copyWith(
+                                color: AppColors.textSecondary(context),
+                                fontWeight: FontWeight.w600,
+                              ),
+                              children: [
+                                const TextSpan(text: 'Access code'),
+                                TextSpan(
+                                  text: ' *',
+                                  style: TextStyle(
+                                    color: AppColors.danger(context),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          TextField(
+                            controller: _controller,
+                            textCapitalization: TextCapitalization.characters,
+                            autocorrect: false,
+                            enableSuggestions: false,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'[a-zA-Z0-9\- ]'),
+                              ),
+                            ],
+                            style: AppTypography.titleMedium.copyWith(
+                              color: AppColors.textPrimary(context),
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.0,
+                            ),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              isCollapsed: true,
+                              filled: false,
+                              hintText: 'e.g. VHS2025',
+                              hintStyle: TextStyle(
+                                color: AppColors.textSecondary(context),
+                              ),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_isChecking)
+                      const Padding(
+                        padding: EdgeInsets.all(10),
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    else ...[
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: Icon(
+                          CupertinoIcons.viewfinder,
+                          color: AppColors.textSecondary(context),
+                        ),
+                        tooltip: 'Scan code',
+                        onPressed: _scanCode,
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: Icon(
+                          CupertinoIcons.doc_on_clipboard,
+                          color: AppColors.textSecondary(context),
+                        ),
+                        tooltip: 'Paste code',
+                        onPressed: _pasteCode,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: AppSpacing.m),
+            Text(
+              _error!,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.danger(context),
+              ),
+            ),
+          ],
+          if (detected != null) ...[
+            const SizedBox(height: AppSpacing.xl),
+            _InsetGroup(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.l),
+                  child: Row(
+                    children: [
+                      SchoolBadge(badgeUrl: detected.badgeUrl, size: 40),
+                      const SizedBox(width: AppSpacing.l),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    detected.schoolName,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTypography.bodyLarge.copyWith(
+                                      color: AppColors.textPrimary(context),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.xs),
+                                Icon(
+                                  CupertinoIcons.checkmark_seal_fill,
+                                  size: 16,
+                                  color: AppColors.success(context),
+                                ),
+                              ],
+                            ),
+                            if (detected.location.isNotEmpty)
+                              Text(
+                                detected.location,
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: AppColors.textSecondary(context),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _changeSchool,
+                        child: const Text('Change'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pasteCode() async {
+    final data = await Clipboard.getData('text/plain');
+    final text = data?.text?.trim();
+    if (text == null || text.isEmpty) return;
+    _controller.text = text;
+    _controller.selection = TextSelection.collapsed(
+      offset: _controller.text.length,
+    );
+  }
+
+  Future<void> _scanCode() async {
+    final scanned = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const _AccessCodeScannerScreen()),
+    );
+    if (scanned == null || scanned.isEmpty) return;
+    _controller.text = scanned;
+    _controller.selection = TextSelection.collapsed(
+      offset: _controller.text.length,
+    );
+  }
+}
+
+/// Barcode/QR scanner for a printed access code. Returns the first raw
+/// scanned value back to the code field on Screen 1.
+class _AccessCodeScannerScreen extends StatefulWidget {
+  const _AccessCodeScannerScreen();
+
+  @override
+  State<_AccessCodeScannerScreen> createState() =>
+      _AccessCodeScannerScreenState();
+}
+
+class _AccessCodeScannerScreenState extends State<_AccessCodeScannerScreen> {
+  final _controller = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+  );
+  bool _handled = false;
 
   @override
   void dispose() {
@@ -190,325 +722,22 @@ class _ChildIdScreenState extends State<ChildIdScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return AuthPortalScaffold(
-      accent: AppColors.emeraldGreen,
-      alignToTop: true,
-      title: 'Parent Portal',
-      backgroundColor: isDark ? AppColors.bgDark : Colors.white,
-      children: [
-        const _ParentPortalIntroduction(),
-        const SizedBox(height: AppSpacing.x5l),
-        _ParentAccessCodeField(
-          label: 'Access Code',
-          hint: 'e.g. KHA1234',
-          controller: _controller,
-          textCapitalization: TextCapitalization.characters,
-          errorText: _error,
-        ),
-        const SizedBox(height: AppSpacing.x2l),
-        const _ParentPortalHelpCard(),
-        const SizedBox(height: AppSpacing.x2l),
-        _ParentContinueButton(
-          isLoading: _isLooking,
-          onPressed: _isValid && !_isLooking ? _continue : null,
-        ),
-        const SizedBox(height: AppSpacing.x3l),
-        const _ParentPortalPrivacyNote(),
-      ],
-    );
-  }
-}
-
-class _ParentPortalIntroduction extends StatelessWidget {
-  const _ParentPortalIntroduction();
-
-  @override
-  Widget build(BuildContext context) {
-    final textColor = Theme.of(context).colorScheme.onSurfaceVariant;
-    return Text(
-      "Enter the code provided by the school office to access your child's records.",
-      textAlign: TextAlign.center,
-      style: AppTypography.bodyMedium.copyWith(
-        color: textColor,
-        fontSize: 14,
-        height: 1.45,
-        letterSpacing: 0.1,
+    return Scaffold(
+      appBar: AppBar(title: const Text('Scan school code')),
+      body: MobileScanner(
+        controller: _controller,
+        onDetect: (capture) {
+          if (_handled) return;
+          for (final barcode in capture.barcodes) {
+            final value = barcode.rawValue;
+            if (value != null && value.isNotEmpty) {
+              _handled = true;
+              Navigator.of(context).pop(value);
+              break;
+            }
+          }
+        },
       ),
-    );
-  }
-}
-
-class _ParentAccessCodeField extends StatelessWidget {
-  final String label;
-  final String hint;
-  final TextEditingController controller;
-  final TextCapitalization textCapitalization;
-  final String? errorText;
-
-  const _ParentAccessCodeField({
-    required this.label,
-    required this.hint,
-    required this.controller,
-    required this.textCapitalization,
-    this.errorText,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final accent = AppColors.textPrimary(context);
-    final radius = BorderRadius.circular(16);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTypography.titleLarge.copyWith(
-            color: theme.colorScheme.onSurface,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.l),
-        TextField(
-          controller: controller,
-          keyboardType: TextInputType.text,
-          textCapitalization: textCapitalization,
-          style: AppTypography.bodyLarge.copyWith(
-            color: theme.colorScheme.onSurface,
-            fontWeight: FontWeight.w500,
-          ),
-          decoration: InputDecoration(
-            hintText: hint,
-            errorText: errorText,
-            errorMaxLines: 2,
-            hintStyle: AppTypography.bodyLarge.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w400,
-            ),
-            prefixIcon: Icon(Icons.vpn_key_outlined, color: accent, size: 29),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xl,
-              vertical: AppSpacing.xl,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: radius,
-              borderSide: BorderSide(color: accent),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: radius,
-              borderSide: BorderSide(color: accent, width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: radius,
-              borderSide: BorderSide(color: theme.colorScheme.error),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: radius,
-              borderSide: BorderSide(color: theme.colorScheme.error, width: 2),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ParentPortalHelpCard extends StatelessWidget {
-  const _ParentPortalHelpCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final accent = AppColors.textPrimary(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.x3l,
-        vertical: AppSpacing.x2l,
-      ),
-      decoration: BoxDecoration(
-        color: accent,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.info_outline_rounded,
-            color: theme.colorScheme.surface,
-            size: 34,
-          ),
-          const SizedBox(width: AppSpacing.x2l),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Don't have a code?",
-                  style: AppTypography.bodyLarge.copyWith(
-                    color: theme.colorScheme.surface,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.s),
-                Text(
-                  "Please contact your school's\nadministration office.",
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: theme.colorScheme.surface,
-                    height: 1.45,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.l),
-          Icon(
-            Icons.support_agent_rounded,
-            color: theme.colorScheme.surface,
-            size: 36,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ParentContinueButton extends StatelessWidget {
-  final bool isLoading;
-  final VoidCallback? onPressed;
-
-  const _ParentContinueButton({required this.isLoading, this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onPressed != null && !isLoading;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final disabled = Theme.of(context).colorScheme.onSurface;
-    final fill = isDark ? Colors.white : Colors.black;
-    final foreground = isDark ? Colors.black : Colors.white;
-
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: 'Continue',
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          onTap: enabled ? onPressed : null,
-          borderRadius: BorderRadius.circular(18),
-          child: Ink(
-            height: 64,
-            decoration: BoxDecoration(
-              color: enabled ? fill : disabled,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: enabled
-                  ? [
-                      BoxShadow(
-                        color: fill,
-                        blurRadius: 18,
-                        offset: const Offset(0, 8),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (isLoading)
-                  SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation(
-                        enabled ? foreground : fill,
-                      ),
-                    ),
-                  )
-                else ...[
-                  Text(
-                    'Continue',
-                    style: AppTypography.titleLarge.copyWith(
-                      color: enabled ? foreground : fill,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Positioned(
-                    right: AppSpacing.x3l,
-                    child: Icon(
-                      Icons.arrow_forward_rounded,
-                      color: enabled ? foreground : fill,
-                      size: 31,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ParentPortalPrivacyNote extends StatelessWidget {
-  const _ParentPortalPrivacyNote();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final accent = AppColors.textPrimary(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 58,
-          height: 58,
-          decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Icon(
-                Icons.shield_outlined,
-                color: theme.colorScheme.surface,
-                size: 34,
-              ),
-              Positioned(
-                top: 23,
-                child: Icon(
-                  Icons.lock_rounded,
-                  color: theme.colorScheme.surface,
-                  size: 13,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: AppSpacing.xl),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Your data is secure with us',
-                style: AppTypography.bodyLarge.copyWith(
-                  color: theme.colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.s),
-              Text(
-                'We value your privacy and protect your information.',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  height: 1.35,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
@@ -523,35 +752,67 @@ class ParentPhoneScreen extends StatefulWidget {
 
 class _ParentPhoneScreenState extends State<ParentPhoneScreen> {
   final _phoneController = TextEditingController();
+  String _countryCode = '+256';
   bool _isLoading = false;
   String? _error;
+  _DetectedSchool? _school;
+
+  static const _countries = [
+    {'flag': '🇺🇬', 'code': '+256'},
+    {'flag': '🇰🇪', 'code': '+254'},
+    {'flag': '🇹🇿', 'code': '+255'},
+    {'flag': '🇷🇼', 'code': '+250'},
+    {'flag': '🇳🇬', 'code': '+234'},
+    {'flag': '🇬🇭', 'code': '+233'},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSchool();
+  }
+
+  Future<void> _loadSchool() async {
+    final accessCode = widget.accessCode;
+    if (accessCode == null) return;
+    final school = await _lookupSchool(accessCode.schoolId);
+    if (!mounted) return;
+    setState(() => _school = school);
+  }
 
   void _verifyPhone() {
-    if (widget.accessCode == null) return;
+    final accessCode = widget.accessCode;
+    if (accessCode == null) return;
 
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
-    final inputPhone = PhoneFormatter.toE164(_phoneController.text);
+    final inputPhone = PhoneFormatter.toE164(
+      '$_countryCode${_phoneController.text.replaceAll(RegExp(r'\D'), '')}',
+    );
 
-    Future.delayed(const Duration(milliseconds: 500), () {
+    Future.delayed(const Duration(milliseconds: 400), () {
       if (!mounted) return;
 
-      if (widget.accessCode!.phoneNumber == inputPhone) {
+      if (accessCode.phoneNumber == inputPhone) {
         setState(() => _isLoading = false);
         context.push(
           '/parent/login/pin',
-          extra: {'accessCode': widget.accessCode, 'phoneNumber': inputPhone},
+          extra: {'accessCode': accessCode, 'phoneNumber': inputPhone},
         );
       } else {
         setState(() {
           _isLoading = false;
-          _error = 'Phone number does not match this access code.';
+          _error = 'That phone number does not match this access code.';
         });
       }
     });
+  }
+
+  void _changeCode() {
+    context.pop();
   }
 
   @override
@@ -562,32 +823,146 @@ class _ParentPhoneScreenState extends State<ParentPhoneScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ParentAuthLayout(
-      title: "Identity Verification",
-      subtitle:
-          "Enter the phone number registered with this access code to continue.",
+    final schoolName = _school?.schoolName ?? 'your school';
+    return _ConnectToSchoolScaffold(
+      footer: _RoundedBlackButton(
+        label: 'Continue',
+        isLoading: _isLoading,
+        onPressed: _phoneController.text.trim().isNotEmpty
+            ? _verifyPhone
+            : null,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          PulseTextField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            label: 'Phone Number',
-            hint: '07xx xxx xxx',
-            prefixIcon: Icons.phone_android_rounded,
-            validator: (_) => _error,
+          if (_school != null) _DetectedSchoolHeader(school: _school!),
+          const SizedBox(height: AppSpacing.x3l),
+          _ScreenHeading(
+            title: 'Confirm your phone',
+            subtitle:
+                "We'll use this number for important updates from $schoolName.",
           ),
-          const SizedBox(height: AppSpacing.l),
-          PulseButton(
-            label: 'Verify & Continue',
-            isLoading: _isLoading,
-            onPressed: _isLoading ? null : _verifyPhone,
-            isFullWidth: true,
+          const SizedBox(height: AppSpacing.x2l),
+          _InsetLabel(label: 'Phone number', isRequired: true),
+          _InsetGroup(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                child: Row(
+                  children: [
+                    DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _countryCode,
+                        items: _countries
+                            .map(
+                              (c) => DropdownMenuItem(
+                                value: c['code'],
+                                child: Text('${c['flag']} ${c['code']}'),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => _countryCode = value);
+                          }
+                        },
+                      ),
+                    ),
+                    Container(
+                      height: 24,
+                      width: 1,
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.l,
+                      ),
+                      color: AppColors.border(context),
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        onChanged: (_) => setState(() {}),
+                        style: AppTypography.bodyLarge.copyWith(
+                          color: AppColors.textPrimary(context),
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          filled: false,
+                          hintText: '7XX XXX XXX',
+                          hintStyle: TextStyle(
+                            color: AppColors.textSecondary(context),
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.xl,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: AppSpacing.m),
+            Text(
+              _error!,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.danger(context),
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.x2l),
+          Center(
+            child: TextButton(
+              onPressed: _changeCode,
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'Wrong school? ',
+                      style: TextStyle(color: AppColors.textSecondary(context)),
+                    ),
+                    TextSpan(
+                      text: 'Change code',
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        decoration: TextDecoration.underline,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+/// Rejects PINs that are trivially guessable - all-repeated digits, or a
+/// run that's strictly ascending/descending (e.g. 1234, 4321). Mirrors the
+/// server-side `isSafeParentPin` check in functions/index.js so the user
+/// sees the same rule before submitting.
+bool _isWeakPin(String pin) {
+  if (!RegExp(r'^\d{4}$').hasMatch(pin)) return true;
+  final digits = pin.split('').map(int.parse).toList();
+  if (digits.toSet().length == 1) return true;
+  var ascending = true;
+  var descending = true;
+  for (var i = 1; i < digits.length; i++) {
+    if (digits[i] != digits[i - 1] + 1) ascending = false;
+    if (digits[i] != digits[i - 1] - 1) descending = false;
+  }
+  return ascending || descending;
 }
 
 class ParentPinScreen extends StatefulWidget {
@@ -608,19 +983,51 @@ class _ParentPinScreenState extends State<ParentPinScreen> {
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
   final _rememberedLoginStore = RememberedLoginStore();
+  bool _pinVisible = false;
+  bool _confirmVisible = false;
+  bool _submitted = false;
   String? _error;
+  String? _pinError;
+  String? _confirmPinError;
+  _DetectedSchool? _school;
+
+  bool get _isFirstTime =>
+      widget.accessCode.pin == null || widget.accessCode.pin!.isEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSchool();
+  }
+
+  Future<void> _loadSchool() async {
+    final school = await _lookupSchool(widget.accessCode.schoolId);
+    if (!mounted) return;
+    setState(() => _school = school);
+  }
 
   void _login() {
-    final isFirstTime =
-        widget.accessCode.pin == null || widget.accessCode.pin!.isEmpty;
+    setState(() {
+      _submitted = true;
+      _error = null;
+      _pinError = null;
+      _confirmPinError = null;
+    });
 
-    if (isFirstTime) {
-      if (_pinController.text.length < 4) {
-        setState(() => _error = 'PIN must be 4 digits.');
+    final pin = _pinController.text;
+    final confirm = _confirmPinController.text;
+
+    if (_isFirstTime) {
+      if (!RegExp(r'^\d{4}$').hasMatch(pin)) {
+        setState(() => _pinError = 'Enter a 4-digit PIN.');
         return;
       }
-      if (_pinController.text != _confirmPinController.text) {
-        setState(() => _error = 'PINs do not match.');
+      if (_isWeakPin(pin)) {
+        setState(() => _pinError = 'Choose a less predictable PIN.');
+        return;
+      }
+      if (pin != confirm) {
+        setState(() => _confirmPinError = 'PINs do not match.');
         return;
       }
 
@@ -628,7 +1035,7 @@ class _ParentPinScreenState extends State<ParentPinScreen> {
         CompleteParentPinSetupRequested(
           code: widget.accessCode.parentCode,
           phoneNumber: widget.phoneNumber,
-          newPin: _pinController.text,
+          newPin: pin,
         ),
       );
     } else {
@@ -636,7 +1043,7 @@ class _ParentPinScreenState extends State<ParentPinScreen> {
         LoginParentPressed(
           code: widget.accessCode.parentCode,
           phoneNumber: widget.phoneNumber,
-          pin: _pinController.text,
+          pin: pin,
         ),
       );
     }
@@ -658,55 +1065,198 @@ class _ParentPinScreenState extends State<ParentPinScreen> {
             code: widget.accessCode.parentCode,
             phone: widget.phoneNumber,
           );
-          context.go('/school-splash');
+          context.go('/parent/home');
         } else if (state is AuthFailureState) {
           setState(() => _error = state.message);
         }
       },
       builder: (context, state) {
         final isLoading = state is AuthLoading;
-        final isFirstTime =
-            widget.accessCode.pin == null || widget.accessCode.pin!.isEmpty;
-
-        return ParentAuthLayout(
-          title: isFirstTime ? "Secure Your Portal" : "Enter Secure PIN",
-          subtitle: isFirstTime
-              ? "Choose a 4-digit PIN to secure your portal access."
-              : "Enter your 4-digit PIN to access your account.",
+        return _ConnectToSchoolScaffold(
+          footer: _RoundedBlackButton(
+            label: _isFirstTime ? 'Finish setup' : 'Sign in',
+            isLoading: isLoading,
+            onPressed: isLoading ? null : _login,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              PulseTextField(
-                controller: _pinController,
-                keyboardType: TextInputType.number,
-                isPassword: true,
-                label: isFirstTime ? 'New PIN' : 'Enter PIN',
-                hint: '••••',
-                prefixIcon: Icons.lock_outline_rounded,
-                validator: (_) => _error,
+              if (_school != null) _DetectedSchoolHeader(school: _school!),
+              const SizedBox(height: AppSpacing.x3l),
+              _ScreenHeading(
+                title: _isFirstTime ? 'Create a PIN' : 'Enter your PIN',
+                subtitle: _isFirstTime
+                    ? 'Choose a 4-digit PIN for quick, secure access.'
+                    : 'Enter your 4-digit PIN to continue.',
               ),
-              if (isFirstTime) ...[
-                const SizedBox(height: AppSpacing.xl),
-                PulseTextField(
-                  controller: _confirmPinController,
-                  keyboardType: TextInputType.number,
-                  isPassword: true,
-                  label: 'Confirm PIN',
-                  hint: '••••',
-                  prefixIcon: Icons.lock_reset_rounded,
+              const SizedBox(height: AppSpacing.x2l),
+              _InsetLabel(
+                label: _isFirstTime ? 'New PIN' : 'PIN',
+                isRequired: true,
+              ),
+              _InsetGroup(
+                children: [
+                  _PinRow(
+                    controller: _pinController,
+                    obscured: !_pinVisible,
+                    onToggleVisibility: () =>
+                        setState(() => _pinVisible = !_pinVisible),
+                    onChanged: (_) {
+                      if (_pinError != null || _error != null) {
+                        setState(() {
+                          _pinError = null;
+                          _error = null;
+                        });
+                      }
+                    },
+                  ),
+                  if (_isFirstTime) ...[
+                    Divider(height: 1, color: AppColors.border(context)),
+                    _PinRow(
+                      controller: _confirmPinController,
+                      obscured: !_confirmVisible,
+                      onToggleVisibility: () =>
+                          setState(() => _confirmVisible = !_confirmVisible),
+                      onChanged: (_) {
+                        if (_confirmPinError != null) {
+                          setState(() => _confirmPinError = null);
+                        }
+                      },
+                      label: 'Confirm PIN',
+                    ),
+                  ],
+                ],
+              ),
+              if ((_submitted && _pinError != null) ||
+                  (_submitted && _confirmPinError != null) ||
+                  _error != null) ...[
+                const SizedBox(height: AppSpacing.m),
+                Text(
+                  _pinError ?? _confirmPinError ?? _error ?? '',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.danger(context),
+                  ),
+                ),
+              ],
+              if (_isFirstTime) ...[
+                const SizedBox(height: AppSpacing.l),
+                Row(
+                  children: [
+                    Icon(
+                      CupertinoIcons.shield,
+                      size: 16,
+                      color: AppColors.textSecondary(context),
+                    ),
+                    const SizedBox(width: AppSpacing.s),
+                    Expanded(
+                      child: Text(
+                        'Avoid easy-to-guess numbers.',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textSecondary(context),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
               const SizedBox(height: AppSpacing.l),
-              PulseButton(
-                label: isFirstTime ? 'Save PIN & Login' : 'Sign In',
-                isLoading: isLoading,
-                onPressed: isLoading ? null : _login,
-                isFullWidth: true,
+              Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      CupertinoIcons.lock,
+                      size: 14,
+                      color: AppColors.textSecondary(context),
+                    ),
+                    const SizedBox(width: AppSpacing.s),
+                    Text(
+                      'Your PIN is private.',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _PinRow extends StatelessWidget {
+  final TextEditingController controller;
+  final bool obscured;
+  final VoidCallback onToggleVisibility;
+  final ValueChanged<String> onChanged;
+  final String label;
+
+  const _PinRow({
+    required this.controller,
+    required this.obscured,
+    required this.onToggleVisibility,
+    required this.onChanged,
+    this.label = 'New PIN',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl,
+        vertical: AppSpacing.s,
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 96,
+            child: Text(
+              label,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              obscureText: obscured,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.right,
+              maxLength: 4,
+              onChanged: onChanged,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: AppTypography.titleMedium.copyWith(
+                color: AppColors.textPrimary(context),
+                letterSpacing: 6,
+                fontWeight: FontWeight.w700,
+              ),
+              decoration: const InputDecoration(
+                isDense: true,
+                filled: false,
+                counterText: '',
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+              ),
+            ),
+          ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              obscured ? CupertinoIcons.eye : CupertinoIcons.eye_slash,
+              size: 20,
+              color: AppColors.textSecondary(context),
+            ),
+            onPressed: onToggleVisibility,
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'app_colors.dart';
 import 'app_radius.dart';
 import 'app_typography.dart';
@@ -83,6 +84,15 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         titleTextStyle: text.titleLarge,
         iconTheme: IconThemeData(color: foreground),
+        systemOverlayStyle: dark
+            ? SystemUiOverlayStyle.light.copyWith(
+                statusBarColor: Colors.transparent,
+                systemNavigationBarColor: background,
+              )
+            : SystemUiOverlayStyle.dark.copyWith(
+                statusBarColor: Colors.transparent,
+                systemNavigationBarColor: background,
+              ),
       ),
       cardTheme: CardThemeData(
         color: surface,
@@ -182,7 +192,13 @@ class AppTheme {
         trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
       ),
       checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStatePropertyAll(foreground),
+        // Keep unchecked boxes transparent so the outline remains visible.
+        // The fill and check use opposing theme colours when selected.
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? foreground
+              : Colors.transparent,
+        ),
         checkColor: WidgetStatePropertyAll(background),
         side: outline,
       ),

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,13 +12,18 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/finance/domain/entities/student_bill.dart';
 import 'package:school_pulse/features/finance/domain/repositories/student_billing_repository.dart';
+import 'package:school_pulse/features/finance/presentation/screens/student_billing/student_bills_screen.dart';
 import 'package:school_pulse/features/parent/how_to_pay_screen.dart';
 import 'package:school_pulse/features/parent/receipts_screen.dart';
 import 'package:school_pulse/features/parent/widgets/child_selector_sheet.dart';
+import 'package:school_pulse/features/parent_offline/domain/parent_offline_cache_service.dart';
+import 'package:school_pulse/features/parent_offline/presentation/widgets/parent_offline_banner.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
+
+const _feesCacheKey = 'fees_payment_code';
 
 /// Fees & payments - the redesigned Parent Payments landing screen. School
 /// Pulse never accepts money in-app: this screen shows the current balance,
@@ -55,10 +62,69 @@ class FeesScreen extends StatelessWidget {
   }
 }
 
-class _Body extends StatelessWidget {
+class _Body extends StatefulWidget {
   final Student student;
 
   const _Body({required this.student});
+
+  @override
+  State<_Body> createState() => _BodyState();
+}
+
+class _BodyState extends State<_Body> {
+  bool _offline = false;
+  DateTime? _cachedAt;
+  int? _cachedBalanceUgx;
+  String? _cachedCode;
+  bool _checkedCache = false;
+
+  String get _tenantId => widget.student.schoolId;
+  String get _learnerId => widget.student.id;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFromCacheIfOffline();
+  }
+
+  Future<void> _loadFromCacheIfOffline() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return;
+    final cacheService = di.sl<ParentOfflineCacheService>();
+    final online = await cacheService.isOnline;
+    final cached = await cacheService.read(
+      tenantId: _tenantId,
+      parentId: authState.user.id,
+      learnerId: _learnerId,
+      cacheKey: _feesCacheKey,
+    );
+    if (!mounted) return;
+    setState(() {
+      _checkedCache = true;
+      _offline = !online;
+      if (cached != null) {
+        final data = jsonDecode(cached.payloadJson) as Map<String, dynamic>;
+        _cachedBalanceUgx = data['balanceUgx'] as int?;
+        _cachedCode = data['code'] as String?;
+        _cachedAt = cached.updatedAt;
+      }
+    });
+  }
+
+  Future<void> _saveToCache({
+    required int balanceUgx,
+    required String? code,
+  }) async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return;
+    await di.sl<ParentOfflineCacheService>().save(
+      tenantId: _tenantId,
+      parentId: authState.user.id,
+      learnerId: _learnerId,
+      cacheKey: _feesCacheKey,
+      payloadJson: jsonEncode({'balanceUgx': balanceUgx, 'code': code}),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,11 +137,14 @@ class _Body extends StatelessWidget {
 
     return StreamBuilder<List<StudentBill>>(
       stream: di.sl<StudentBillingRepository>().watchBills(
-        student.schoolId,
-        student.id,
+        widget.student.schoolId,
+        widget.student.id,
       ),
       builder: (context, billsSnapshot) {
         if (!billsSnapshot.hasData) {
+          if (_checkedCache && _cachedAt != null) {
+            return _offlineFallback(schoolName);
+          }
           return _loadingSkeleton();
         }
         final bills = billsSnapshot.data!;
@@ -85,18 +154,33 @@ class _Body extends StatelessWidget {
 
         return StreamBuilder<String?>(
           stream: di.sl<StudentBillingRepository>().watchStudentPaymentCode(
-            student.schoolId,
-            student.id,
+            widget.student.schoolId,
+            widget.student.id,
           ),
           builder: (context, codeSnapshot) {
             final code = codeSnapshot.data;
+            // Write-through: every successful live read refreshes the
+            // offline cache so the next airplane-mode open shows this data
+            // instead of an empty state.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _saveToCache(balanceUgx: balanceUgx, code: code);
+            });
 
             return ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                _ChildSwitcherRow(student: student),
+                if (_offline) ...[
+                  const ParentOfflineBanner(),
+                  const SizedBox(height: 12),
+                ],
+                _ChildSwitcherRow(student: widget.student),
                 const SizedBox(height: 16),
-                _BalanceCard(balanceUgx: balanceUgx, currentBill: currentBill),
+                _BalanceCard(
+                  balanceUgx: balanceUgx,
+                  currentBill: currentBill,
+                  schoolId: widget.student.schoolId,
+                  studentId: widget.student.id,
+                ),
                 const SizedBox(height: 20),
                 _PaymentCodeCard(code: code, schoolName: schoolName),
                 const SizedBox(height: 16),
@@ -111,8 +195,8 @@ class _Body extends StatelessWidget {
                 const SectionHeader(title: 'Recent payment'),
                 const SizedBox(height: 8),
                 _RecentPaymentCard(
-                  schoolId: student.schoolId,
-                  studentId: student.id,
+                  schoolId: widget.student.schoolId,
+                  studentId: widget.student.id,
                   bills: bills,
                 ),
               ],
@@ -120,6 +204,28 @@ class _Body extends StatelessWidget {
           },
         );
       },
+    );
+  }
+
+  Widget _offlineFallback(String schoolName) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const ParentOfflineBanner(),
+        const SizedBox(height: 12),
+        _ChildSwitcherRow(student: widget.student),
+        const SizedBox(height: 16),
+        _BalanceCard(
+          balanceUgx: _cachedBalanceUgx ?? 0,
+          currentBill: null,
+          schoolId: widget.student.schoolId,
+          studentId: widget.student.id,
+        ),
+        const SizedBox(height: 20),
+        _PaymentCodeCard(code: _cachedCode, schoolName: schoolName),
+        const SizedBox(height: 8),
+        ParentLastUpdatedLabel(updatedAt: _cachedAt),
+      ],
     );
   }
 
@@ -179,8 +285,15 @@ class _ChildSwitcherRow extends StatelessWidget {
 class _BalanceCard extends StatelessWidget {
   final int balanceUgx;
   final StudentBill? currentBill;
+  final String schoolId;
+  final String studentId;
 
-  const _BalanceCard({required this.balanceUgx, this.currentBill});
+  const _BalanceCard({
+    required this.balanceUgx,
+    this.currentBill,
+    required this.schoolId,
+    required this.studentId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -194,51 +307,86 @@ class _BalanceCard extends StatelessWidget {
             style: TextStyle(fontSize: 13, color: AppColors.grey500),
           ),
           const SizedBox(height: 6),
-          Text(
-            '${CurrencyFormatter.ugx(balanceUgx.toDouble())} due',
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+          Text.rich(
+            TextSpan(
+              text: CurrencyFormatter.ugx(balanceUgx.toDouble()),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textPrimary(context),
+              ),
+              children: balanceUgx > 0
+                  ? [
+                      TextSpan(
+                        text: ' due',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.danger(context),
+                        ),
+                      ),
+                    ]
+                  : null,
+            ),
           ),
           if (currentBill != null) ...[
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceContainerHigh(context),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.description_outlined,
-                    size: 18,
-                    color: AppColors.textPrimary(context),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Current bill',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          currentBill!.termId.isNotEmpty
-                              ? currentBill!.termId
-                              : 'Current term',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.grey500,
-                          ),
-                        ),
-                      ],
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => Scaffold(
+                    appBar: AppBar(title: const Text('Current bill')),
+                    body: StudentBillsScreen(
+                      schoolId: schoolId,
+                      studentId: studentId,
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: AppColors.grey500),
-                ],
+                ),
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerHigh(context),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.description_outlined,
+                      size: 18,
+                      color: AppColors.textPrimary(context),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Current bill',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            currentBill!.termId.isNotEmpty
+                                ? currentBill!.termId
+                                : 'Current term',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.grey500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: AppColors.grey500),
+                  ],
+                ),
               ),
             ),
           ],

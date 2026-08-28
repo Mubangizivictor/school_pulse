@@ -8,7 +8,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/student/domain/entities/parent_access_code.dart';
 import 'package:school_pulse/features/student/domain/usecases/manage_parent_access_codes.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
-import 'package:school_pulse/features/admin/presentation/link_parent_wizard/link_parent_wizard_page.dart';
+import 'package:school_pulse/features/admin/presentation/screens/create_parent_access_code_screen.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 /// Admin screen for issuing and managing parent access codes for already
@@ -129,7 +129,7 @@ class _AccessCodesScreenState extends State<AccessCodesScreen> {
   Future<void> _openCreateDialog() async {
     final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => LinkParentWizardPage(schoolId: _schoolId),
+        builder: (_) => const CreateParentAccessCodeScreen(),
       ),
     );
     if (created == true) _load();
@@ -147,16 +147,7 @@ class _AccessCodesScreenState extends State<AccessCodesScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
-      appBar: AdminAppBar(
-        title: 'Access Codes',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Issue new access code',
-            onPressed: _openCreateDialog,
-          ),
-        ],
-      ),
+      appBar: AdminAppBar(title: 'Access Codes'),
       body: _isLoading
           ? const Center(child: SchoolPulseLoader())
           : Column(
@@ -332,7 +323,9 @@ class _StatusChip extends StatelessWidget {
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w800,
-          color: color,
+          // The status colour fills this chip.  Its label must use the
+          // opposing theme background colour or it becomes invisible.
+          color: AppColors.background(context),
         ),
       ),
     );

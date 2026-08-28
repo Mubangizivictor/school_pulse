@@ -4,7 +4,7 @@
  * All money is stored as integer UGX. Published plan versions and issued
  * bills are immutable snapshots; corrections use adjustments, never rewrites.
  */
-module.exports = ({ admin, onCall, HttpsError }) => {
+module.exports = ({ admin, onCall, HttpsError, maybeAutoUpdateReportCardFinancialAccess }) => {
   // Bug fixed here: this factory used to assign onto the bare `exports`
   // identifier, which inside this arrow function resolves to THIS FILE's
   // own module-level exports object (a closure reference), not something
@@ -346,9 +346,17 @@ module.exports = ({ admin, onCall, HttpsError }) => {
         action: "bill_adjustment_applied", actorId: actorUid, studentId, billId,
         adjustmentId: ref.id, type, amountUgx, occurredAt: serverTime(),
       });
-      return { adjustmentId: ref.id, amountUgx, balanceUgx: newBalance };
+      return {
+        adjustmentId: ref.id, amountUgx, balanceUgx: newBalance,
+        academicYearId: bill.academicYearId, termId: bill.termId,
+      };
     });
-    return result;
+    if (maybeAutoUpdateReportCardFinancialAccess) {
+      await maybeAutoUpdateReportCardFinancialAccess({
+        schoolId, studentId, academicYearId: result.academicYearId, termId: result.termId,
+      }).catch((err) => console.error("maybeAutoUpdateReportCardFinancialAccess failed after adjustment", err));
+    }
+    return { adjustmentId: result.adjustmentId, amountUgx: result.amountUgx, balanceUgx: result.balanceUgx };
   }
   api.applyBillAdjustmentCore = applyBillAdjustmentCore;
 
@@ -429,9 +437,22 @@ module.exports = ({ admin, onCall, HttpsError }) => {
         action: "student_payment_recorded", actorId: caller.uid, studentId, billId,
         paymentId: paymentRef.id, amountUgx, receiptNumber, occurredAt: serverTime(),
       });
-      return { paymentId: paymentRef.id, receiptNumber, balanceUgx: newBalance };
+      return {
+        paymentId: paymentRef.id, receiptNumber, balanceUgx: newBalance,
+        academicYearId: bill.academicYearId, termId: bill.termId,
+      };
     });
-    return result;
+    // Best-effort, outside the money transaction: a fully-settled balance
+    // may auto-release this student's report card for the same term (unless
+    // a Bursar has already made a manual call - see
+    // maybeAutoUpdateReportCardFinancialAccess). Never let this fail the
+    // payment itself, which has already been recorded and receipted.
+    if (maybeAutoUpdateReportCardFinancialAccess) {
+      await maybeAutoUpdateReportCardFinancialAccess({
+        schoolId, studentId, academicYearId: result.academicYearId, termId: result.termId,
+      }).catch((err) => console.error("maybeAutoUpdateReportCardFinancialAccess failed after payment", err));
+    }
+    return { paymentId: result.paymentId, receiptNumber: result.receiptNumber, balanceUgx: result.balanceUgx };
   });
 
   // Compensating-record reversal: never mutates the original payment doc.
@@ -495,9 +516,24 @@ module.exports = ({ admin, onCall, HttpsError }) => {
         action: "student_payment_reversed", actorId: caller.uid, studentId, billId,
         paymentId, reversalPaymentId: reversalRef.id, reason, occurredAt: serverTime(),
       });
-      return { reversalPaymentId: reversalRef.id, receiptNumber, balanceUgx: newBalance };
+      return {
+        reversalPaymentId: reversalRef.id, receiptNumber, balanceUgx: newBalance,
+        academicYearId: bill.academicYearId, termId: bill.termId,
+      };
     });
-    return result;
+    // Best-effort: a reversal can drop a term back below fully-paid, which
+    // should re-hold an auto-released report (but never touch one a Bursar
+    // has manually released/revoked - see
+    // maybeAutoUpdateReportCardFinancialAccess).
+    if (maybeAutoUpdateReportCardFinancialAccess) {
+      await maybeAutoUpdateReportCardFinancialAccess({
+        schoolId, studentId, academicYearId: result.academicYearId, termId: result.termId,
+      }).catch((err) => console.error("maybeAutoUpdateReportCardFinancialAccess failed after reversal", err));
+    }
+    return {
+      reversalPaymentId: result.reversalPaymentId, receiptNumber: result.receiptNumber,
+      balanceUgx: result.balanceUgx,
+    };
   });
 
   return api;

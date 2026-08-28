@@ -170,27 +170,100 @@ class _IdentityErrorState extends StatelessWidget {
   }
 }
 
-/// Front + back of the card, matching the two-sided student ID card layout:
-/// front carries the photo/name/role identity, back carries the QR and
-/// authenticity/return-if-found footer. Shown side by side in a scrollable
-/// row instead of stacked, since a physical card has both sides at once.
-class _IdCardPreview extends StatelessWidget {
+/// Front/back preview following the Student ID card interaction: show one
+/// print-stable side at a time instead of squeezing two physical cards into
+/// the mobile viewport.
+class _IdCardPreview extends StatefulWidget {
   const _IdCardPreview({required this.staff, required this.identity});
 
   final UserEntity staff;
   final StaffIdentity identity;
 
   @override
+  State<_IdCardPreview> createState() => _IdCardPreviewState();
+}
+
+class _IdCardPreviewState extends State<_IdCardPreview> {
+  bool _showFront = true;
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 320),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _StaffCardSideSelector(
+              showFront: _showFront,
+              onChanged: (value) => setState(() => _showFront = value),
+            ),
+            const SizedBox(height: 18),
+            AspectRatio(
+              aspectRatio: 0.62,
+              child: _showFront
+                  ? _CardFront(staff: widget.staff)
+                  : _CardBack(staff: widget.staff, identity: widget.identity),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StaffCardSideSelector extends StatelessWidget {
+  const _StaffCardSideSelector({
+    required this.showFront,
+    required this.onChanged,
+  });
+
+  final bool showFront;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(22),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CardFront(staff: staff),
-          const SizedBox(width: 16),
-          _CardBack(staff: staff, identity: identity),
+          Expanded(child: _segment(context, 'Front', showFront, true)),
+          Expanded(child: _segment(context, 'Back', !showFront, false)),
         ],
+      ),
+    );
+  }
+
+  Widget _segment(
+    BuildContext context,
+    String label,
+    bool selected,
+    bool showFront,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: () => onChanged(showFront),
+      borderRadius: BorderRadius.circular(19),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? scheme.onSurface : Colors.transparent,
+          borderRadius: BorderRadius.circular(19),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: selected ? scheme.surface : scheme.onSurfaceVariant,
+          ),
+        ),
       ),
     );
   }
@@ -198,6 +271,10 @@ class _IdCardPreview extends StatelessWidget {
 
 const _cardWidth = 240.0;
 const _cardHeight = 380.0;
+// Physical ID cards deliberately keep a fixed print-friendly appearance.
+// They are white regardless of the app's current light/dark theme.
+const _staffCardAccent = Color(0xFF1B2A6B);
+const _staffCardAccentSoft = Color(0xFFE9EBF7);
 
 class _CardFront extends StatelessWidget {
   const _CardFront({required this.staff});
@@ -208,13 +285,13 @@ class _CardFront extends StatelessWidget {
     final schoolName =
         context.watch<ThemeProvider>().config?.schoolName ??
         'SCHOOL PULSE ACADEMY';
-    final scheme = Theme.of(context).colorScheme;
     final roleLabel = staff.roles.isEmpty
         ? '—'
         : UserRoleDisplay.name(staff.roles.first);
 
     return Card(
       elevation: 4,
+      color: Colors.white,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SizedBox(
@@ -226,7 +303,7 @@ class _CardFront extends StatelessWidget {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              color: scheme.primary,
+              color: _staffCardAccent,
               child: Column(
                 children: [
                   Text(
@@ -236,7 +313,7 @@ class _CardFront extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: scheme.onPrimary,
+                      color: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -245,7 +322,7 @@ class _CardFront extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1.4,
-                      color: Colors.black,
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -254,12 +331,13 @@ class _CardFront extends StatelessWidget {
             const SizedBox(height: 18),
             CircleAvatar(
               radius: 44,
+              backgroundColor: _staffCardAccentSoft,
               backgroundImage: staff.photoUrl?.isNotEmpty == true
                   ? NetworkImage(staff.photoUrl!)
                   : null,
               child: staff.photoUrl?.isNotEmpty == true
                   ? null
-                  : const Icon(Icons.person, size: 42),
+                  : const Icon(Icons.person, size: 42, color: _staffCardAccent),
             ),
             const SizedBox(height: 14),
             Padding(
@@ -269,13 +347,19 @@ class _CardFront extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black,
+                ),
               ),
             ),
             const SizedBox(height: 4),
-            Text(roleLabel, style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              roleLabel,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF404040)),
+            ),
             const Spacer(),
             if (staff.staffCode != null)
               Container(
@@ -285,14 +369,14 @@ class _CardFront extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: scheme.primary,
+                  color: _staffCardAccentSoft,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   staff.staffCode!,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: scheme.primary,
+                    color: _staffCardAccent,
                   ),
                 ),
               ),
@@ -313,10 +397,9 @@ class _CardBack extends StatelessWidget {
     final schoolName =
         context.watch<ThemeProvider>().config?.schoolName ??
         'SCHOOL PULSE ACADEMY';
-    final scheme = Theme.of(context).colorScheme;
-
     return Card(
       elevation: 4,
+      color: Colors.white,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SizedBox(
@@ -328,13 +411,13 @@ class _CardBack extends StatelessWidget {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              color: scheme.primary,
+              color: _staffCardAccent,
               child: Text(
                 'STAFF ID CARD',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: scheme.onPrimary,
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -356,7 +439,7 @@ class _CardBack extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: const Color(0xFF404040),
                 ),
               ),
             ),
@@ -381,7 +464,7 @@ class _CardBack extends StatelessWidget {
                 'If found, please return to the school office.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: const Color(0xFF404040),
                 ),
               ),
             ),
@@ -400,22 +483,23 @@ class _BackBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: scheme.primary,
+            color: _staffCardAccentSoft,
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 18, color: scheme.primary),
+          child: Icon(icon, size: 18, color: _staffCardAccent),
         ),
         const SizedBox(height: 6),
         Text(
           label,
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.labelSmall,
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: const Color(0xFF404040)),
         ),
       ],
     );

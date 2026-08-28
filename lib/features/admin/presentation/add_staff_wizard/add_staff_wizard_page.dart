@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -67,7 +68,7 @@ class _AddStaffWizardPageState extends State<AddStaffWizardPage> {
         canPop: false,
         onPopInvokedWithResult: (didPop, result) {
           if (didPop) return;
-          _handleBack(context);
+          _handleBack();
         },
         child: Consumer<AddStaffWizardController>(
           builder: (context, controller, _) {
@@ -78,13 +79,21 @@ class _AddStaffWizardPageState extends State<AddStaffWizardPage> {
     );
   }
 
-  void _handleBack(BuildContext context) {
-    final controller = context.read<AddStaffWizardController>();
-    if (controller.stage == WizardStage.profile) {
-      Navigator.of(context).maybePop();
+  void _handleBack() {
+    if (_controller.stage == WizardStage.profile) {
+      _exitWizard();
     } else {
-      controller.back();
+      _controller.back();
     }
+  }
+
+  void _exitWizard() {
+    if (!mounted) return;
+    // The wizard deliberately blocks route pops so a system back gesture can
+    // move between stages. At the first stage, use an explicit route change
+    // instead of `maybePop()`; otherwise PopScope intercepts that pop again
+    // and the user appears unable to leave Add staff.
+    context.go('/staff/admin/users');
   }
 
   void _saveDraft(BuildContext context) {
@@ -98,7 +107,10 @@ class _AddStaffWizardPageState extends State<AddStaffWizardPage> {
   Widget _buildStage(WizardStage stage) {
     switch (stage) {
       case WizardStage.profile:
-        return Stage01Profile(onSaveDraft: () => _saveDraft(context));
+        return Stage01Profile(
+          onSaveDraft: () => _saveDraft(context),
+          onExit: _exitWizard,
+        );
       case WizardStage.work:
         return Stage02Work(onSaveDraft: () => _saveDraft(context));
       case WizardStage.roles:

@@ -32,6 +32,8 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
   final _confirmController = TextEditingController();
   bool _isLoading = false;
   String? _error;
+  String? _passwordError;
+  String? _confirmError;
 
   @override
   void dispose() {
@@ -47,24 +49,28 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
 
     if (_isParent) {
       if (password.length != 4 || int.tryParse(password) == null) {
-        setState(() => _error = 'PIN must be 4 digits.');
+        setState(() => _passwordError = 'PIN must be 4 digits.');
         return;
       }
     } else {
       if (password.length < 6) {
-        setState(() => _error = 'Password must be at least 6 characters.');
+        setState(
+          () => _passwordError = 'Password must be at least 6 characters.',
+        );
         return;
       }
     }
 
     if (password != _confirmController.text) {
-      setState(() => _error = 'Entries do not match.');
+      setState(() => _confirmError = 'Entries do not match.');
       return;
     }
 
     setState(() {
       _isLoading = true;
       _error = null;
+      _passwordError = null;
+      _confirmError = null;
     });
 
     if (_isParent) {
@@ -215,6 +221,13 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
                         prefixIcon: _isParent
                             ? Icons.dialpad
                             : Icons.lock_outline,
+                        errorText: _passwordError,
+                        isRequired: true,
+                        onChanged: (_) {
+                          if (_passwordError != null) {
+                            setState(() => _passwordError = null);
+                          }
+                        },
                       ),
                       const SizedBox(height: AppSpacing.xl),
                       PulseTextField(
@@ -228,7 +241,16 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
                         prefixIcon: _isParent
                             ? Icons.dialpad
                             : Icons.lock_reset_rounded,
-                        validator: (_) => _error,
+                        errorText: _confirmError ?? _error,
+                        isRequired: true,
+                        onChanged: (_) {
+                          if (_confirmError != null || _error != null) {
+                            setState(() {
+                              _confirmError = null;
+                              _error = null;
+                            });
+                          }
+                        },
                       ),
                       const SizedBox(height: AppSpacing.x4l),
                       PulseButton(

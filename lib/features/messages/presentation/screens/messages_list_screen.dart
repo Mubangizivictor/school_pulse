@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
@@ -60,20 +59,16 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final inboxSurface = isDark ? AppColors.black : AppColors.grey50;
-    final inboxBorder = isDark ? AppColors.grey850 : AppColors.grey200;
     return Scaffold(
-      backgroundColor: isDark ? AppColors.black : AppColors.white,
+      backgroundColor: colors.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'MESSAGES',
-          style: AppTypography.headlineMedium.copyWith(
+          'Messages',
+          style: AppTypography.titleLarge.copyWith(
             color: colors.onSurface,
             fontWeight: FontWeight.w900,
-            letterSpacing: 1.2,
           ),
         ),
       ),
@@ -83,8 +78,8 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
         backgroundColor: colors.onSurface,
         foregroundColor: colors.surface,
         elevation: 0,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        child: const Icon(Icons.edit_square),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Icon(Icons.edit_rounded),
       ),
       body: MessagingUserBuilder(
         builder: (context, user) => BlocBuilder<MessagingBloc, MessagingState>(
@@ -92,14 +87,14 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
           builder: (context, state) {
             final conversations = state.conversations;
             _reconcileArchivedIfNeeded(conversations);
+            final isParent = user.roles.contains(UserRole.parent);
             return ResponsiveBuilder(
               builder: (context, layout) {
-                final searchBar = _buildSearchBar(
-                  context,
-                  inboxSurface,
-                  inboxBorder,
-                );
+                final searchBar = _buildSearchBar(context);
                 final filterRow = _buildFilterRow(context, user, conversations);
+                final lockNotice = isParent
+                    ? _buildParentLockNotice(context)
+                    : const SizedBox.shrink();
                 final content = Builder(
                   builder: (context) {
                     if (state.conversationsError != null) {
@@ -140,6 +135,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                 if (layout == ResponsiveLayout.mobile) {
                   return Column(
                     children: [
+                      lockNotice,
                       searchBar,
                       filterRow,
                       Expanded(child: content),
@@ -164,6 +160,7 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
                           Expanded(
                             child: Column(
                               children: [
+                                lockNotice,
                                 searchBar,
                                 filterRow,
                                 const SizedBox(height: 8),
@@ -204,31 +201,59 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
     if (conversations != null) _reconcileArchived(conversations);
   }
 
-  Widget _buildSearchBar(BuildContext context, Color surface, Color border) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildParentLockNotice(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.lock_outline_rounded,
+            size: 14,
+            color: colors.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'You can message school contacts only',
+            style: AppTypography.bodySmall.copyWith(
+              color: colors.onSurfaceVariant,
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
       child: Semantics(
         button: true,
         label: 'Search messages',
         child: InkWell(
           onTap: () => context.push('/messages/search'),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
             decoration: BoxDecoration(
-              color: colors.surface,
-              border: Border.all(color: colors.onSurface, width: 1),
+              color: colors.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
               children: [
-                Icon(Icons.search, color: colors.onSurface, size: 20),
+                Icon(
+                  Icons.search_rounded,
+                  color: colors.onSurfaceVariant,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 Text(
-                  'SEARCH MESSAGES',
-                  style: AppTypography.bodyLarge.copyWith(
-                    color: colors.onSurface,
-                    fontWeight: FontWeight.w900,
+                  'Search conversations',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: colors.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -244,8 +269,6 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
     UserEntity user,
     List<ChatConversation>? conversations,
   ) {
-    final colors = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isParent = user.roles.contains(UserRole.parent);
     final filters = isParent
         ? [_InboxFilter.all, _InboxFilter.school, _InboxFilter.teachers]
@@ -257,10 +280,10 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
           ];
 
     return SizedBox(
-      height: 48,
+      height: 44,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
         children: [
           ...filters.map(
             (f) => _FilterChip(
@@ -494,31 +517,31 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
   }
 
   Widget _buildEmptyState({bool isWide = false}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
-    return Center(
+    return Align(
+      alignment: Alignment.topCenter,
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.x3l),
+        padding: const EdgeInsets.fromLTRB(24, 72, 24, 24),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: isWide ? 420 : double.infinity),
+          constraints: BoxConstraints(maxWidth: isWide ? 380 : 360),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(40),
+                width: 88,
+                height: 88,
                 decoration: BoxDecoration(
-                  color: colors.surface,
-                  border: Border.all(color: colors.onSurface, width: 1),
+                  color: colors.surfaceContainerHighest,
+                  shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.chat_bubble_outline_rounded,
-                  size: 80,
+                  size: 38,
                   color: colors.onSurface,
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
               Text(
-                'NO CONVERSATIONS YET',
+                'No conversations yet',
                 style: AppTypography.headlineSmall.copyWith(
                   color: colors.onSurface,
                   fontWeight: FontWeight.w900,
@@ -526,31 +549,30 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'STAY CONNECTED WITH TEACHERS, PARENTS, AND SCHOOL STAFF. START A NEW CONVERSATION BELOW.',
+                'Start a conversation with teachers, parents, or school staff.',
                 textAlign: TextAlign.center,
                 style: AppTypography.bodyMedium.copyWith(
                   color: colors.onSurface,
-                  height: 1.5,
-                  fontWeight: FontWeight.w700,
+                  height: 1.45,
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 28),
               SizedBox(
-                width: double.infinity,
+                width: 240,
                 child: ElevatedButton(
                   onPressed: () => context.push('/messages/new'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colors.onSurface,
                     foregroundColor: colors.surface,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.zero,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     elevation: 0,
                   ),
                   child: const Text(
-                    'START MESSAGING',
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                    'Start a conversation',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
                   ),
                 ),
               ),
@@ -588,7 +610,6 @@ class _MessagingTipsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       width: 260,
       child: Column(
@@ -667,20 +688,22 @@ class _FilterChip extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
-        label: Text(label.toUpperCase()),
+        label: Text(label),
         selected: isSelected,
         onSelected: (_) => onTap?.call(),
         selectedColor: colors.onSurface,
-        backgroundColor: colors.surface,
+        backgroundColor: colors.surfaceContainerHighest,
         labelStyle: TextStyle(
           color: isSelected ? colors.surface : colors.onSurface,
-          fontWeight: FontWeight.w900,
-          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          fontSize: 10,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.zero,
-          side: BorderSide(color: colors.onSurface, width: isSelected ? 2 : 1),
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.transparent),
         ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        visualDensity: VisualDensity.compact,
         showCheckmark: false,
       ),
     );

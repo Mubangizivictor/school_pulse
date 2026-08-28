@@ -1,8 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
 
+import '../domain/entities/notification_model.dart';
 import '../domain/repositories/notification_repository.dart';
 
 /// Keeps the app-icon badge in step with the unread count.
@@ -18,27 +21,52 @@ import '../domain/repositories/notification_repository.dart';
 class NotificationBadgeService {
   final NotificationRepository repository;
   final FlutterLocalNotificationsPlugin plugin;
+  final MessagingBloc messagingBloc;
 
-  StreamSubscription<NotificationCounts>? _sub;
+  StreamSubscription<NotificationCounts>? _notificationsSub;
+  StreamSubscription<MessagingState>? _messagesSub;
   Timer? _debounce;
   int _lastPublished = -1;
+  int _notificationUnread = 0;
+  int _messageUnread = 0;
 
-  NotificationBadgeService({required this.repository, required this.plugin});
+  static const _appBadgeChannel = MethodChannel('school_pulse/app_badge');
+
+  NotificationBadgeService({
+    required this.repository,
+    required this.plugin,
+    required this.messagingBloc,
+  });
 
   void start({required String schoolId, required String userId}) {
-    _sub?.cancel();
-    _sub = repository
+    _notificationsSub?.cancel();
+    _messagesSub?.cancel();
+    _notificationUnread = 0;
+    _messageUnread = messagingBloc.state.totalUnreadCount;
+    _notificationsSub = repository
         .watchCounts(schoolId: schoolId, recipientUserId: userId)
-        .listen(
-          (counts) => _scheduleUpdate(counts.unread),
-          onError: (Object e) => _log('counts stream error', e),
-        );
+        .listen((counts) {
+          // Message notifications are represented by the messaging inbox as
+          // well. Count that source once, rather than double-badging it.
+          _notificationUnread =
+              (counts.unread -
+                      (counts.unreadByCategory[NotificationCategory.messages] ??
+                          0))
+                  .clamp(0, counts.unread)
+                  .toInt();
+          _scheduleUpdate();
+        }, onError: (Object e) => _log('counts stream error', e));
+    _messagesSub = messagingBloc.stream.listen((state) {
+      _messageUnread = state.totalUnreadCount;
+      _scheduleUpdate();
+    });
+    _scheduleUpdate();
   }
 
-  void _scheduleUpdate(int unread) {
+  void _scheduleUpdate() {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
-      unawaited(_publish(unread));
+      unawaited(_publish(_notificationUnread + _messageUnread));
     });
   }
 
@@ -47,19 +75,21 @@ class NotificationBadgeService {
     _lastPublished = unread;
 
     try {
-      final ios = plugin
-          .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin
-          >();
-      if (ios != null) {
-        // iOS has no direct "set badge" call in this plugin; the badge is
-        // carried by delivered notifications. Clearing every delivered
-        // notification when the count reaches zero is what actually removes
-        // the badge from the home screen.
-        if (unread == 0) await plugin.cancelAll();
-      }
+      // iOS exposes a real launcher-badge API. The native handler is a no-op
+      // on platforms whose launchers do not support numeric app badges.
+      await _appBadgeChannel.invokeMethod<void>('setBadgeCount', unread);
     } catch (e) {
       _log('badge update failed', e);
+    }
+
+    // Existing notifications may still carry an old iOS badge. Once no item
+    // needs attention, remove them so the launcher never retains a stale dot.
+    if (unread == 0) {
+      try {
+        await plugin.cancelAll();
+      } catch (e) {
+        _log('badge clear failed', e);
+      }
     }
   }
 
@@ -69,6 +99,7 @@ class NotificationBadgeService {
     _debounce?.cancel();
     _lastPublished = 0;
     try {
+      await _appBadgeChannel.invokeMethod<void>('setBadgeCount', 0);
       await plugin.cancelAll();
     } catch (e) {
       _log('badge clear failed', e);
@@ -77,8 +108,10 @@ class NotificationBadgeService {
 
   Future<void> dispose() async {
     _debounce?.cancel();
-    await _sub?.cancel();
-    _sub = null;
+    await _notificationsSub?.cancel();
+    await _messagesSub?.cancel();
+    _notificationsSub = null;
+    _messagesSub = null;
   }
 
   static void _log(String message, Object error) {

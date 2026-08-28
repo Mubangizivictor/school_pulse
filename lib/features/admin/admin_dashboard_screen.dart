@@ -13,6 +13,7 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
+import 'package:school_pulse/features/notifications/domain/repositories/notification_repository.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -161,20 +162,7 @@ class _Header extends StatelessWidget {
           ],
         ),
       ),
-      Stack(
-        clipBehavior: Clip.none,
-        children: [
-          IconButton(
-            onPressed: () => context.push('/staff/notifications'),
-            icon: const Icon(Icons.notifications_none_rounded, size: 22),
-          ),
-          Positioned(
-            right: 8,
-            top: 7,
-            child: CircleAvatar(radius: 3.5, backgroundColor: _ink(context)),
-          ),
-        ],
-      ),
+      _NotificationButton(user: user),
       IconButton(
         onPressed: () => context.push('/staff/messages'),
         icon: const MessagesNavIcon(
@@ -186,34 +174,79 @@ class _Header extends StatelessWidget {
   );
 }
 
+/// Shows a badge only when the signed-in user has an unread notification.
+/// The former dot was decorative, so it incorrectly appeared even when there
+/// was nothing to open.
+class _NotificationButton extends StatelessWidget {
+  const _NotificationButton({required this.user});
+
+  final UserEntity user;
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<NotificationCounts>(
+    stream: di.sl<NotificationRepository>().watchCounts(
+      schoolId: user.schoolId,
+      recipientUserId: user.id,
+    ),
+    builder: (context, snapshot) {
+      final unread = snapshot.data?.unread ?? 0;
+      return IconButton(
+        onPressed: () => context.push('/staff/notifications'),
+        icon: Badge(
+          isLabelVisible: unread > 0,
+          backgroundColor: Theme.of(context).colorScheme.error,
+          textColor: Colors.white,
+          label: Text(unread > 99 ? '99+' : '$unread'),
+          child: const Icon(Icons.notifications_none_rounded, size: 22),
+        ),
+      );
+    },
+  );
+}
+
 class _ContextRow extends StatelessWidget {
   const _ContextRow({required this.user});
   final UserEntity user;
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      OutlinedButton.icon(
-        onPressed: () => _showTermPicker(context, user),
-        icon: const Icon(Icons.calendar_today_outlined),
-        label: BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
-          builder: (_, state) => Text(
-            state is AdminDashboardLoaded
-                ? state.stats.currentPeriodLabel ?? 'Select term'
-                : 'Select term',
+      Expanded(
+        child: OutlinedButton.icon(
+          onPressed: () => _showTermPicker(context, user),
+          icon: const Icon(Icons.calendar_today_outlined),
+          label: BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
+            builder: (_, state) => Text(
+              state is AdminDashboardLoaded
+                  ? state.stats.currentPeriodLabel ?? 'Select term'
+                  : 'Select term',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: _ink(context),
+            side: BorderSide(color: _ink(context)),
+            minimumSize: const Size.fromHeight(52),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
           ),
         ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: _ink(context),
-          side: BorderSide(color: _ink(context)),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        ),
       ),
-      const Spacer(),
-      Flexible(
-        child: Text(
-          DateFormat('EEEE, d MMMM').format(DateTime.now()),
-          textAlign: TextAlign.end,
-          style: const TextStyle(fontSize: 13),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Container(
+          height: 52,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: _ink(context)),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            DateFormat('EEEE, d MMMM').format(DateTime.now()),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13),
+          ),
         ),
       ),
     ],
@@ -490,7 +523,7 @@ class _Pin extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return SizedBox(
-      height: 112,
+      height: 56,
       child: Material(
         color: colors.surfaceContainerHighest,
         shape: RoundedRectangleBorder(
@@ -501,40 +534,35 @@ class _Pin extends StatelessWidget {
         child: InkWell(
           onTap: () => context.push(shortcut.route),
           child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
               children: [
                 Container(
-                  width: 36,
-                  height: 36,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: colors.primary,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(9),
                   ),
-                  child: Icon(shortcut.icon, size: 20, color: colors.onPrimary),
+                  child: Icon(shortcut.icon, size: 18, color: colors.onPrimary),
                 ),
-                const Spacer(),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        shortcut.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: colors.onSurface,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    shortcut.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: colors.onSurface,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
                     ),
-                    Icon(
-                      Icons.arrow_forward_rounded,
-                      size: 18,
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 18,
+                  color: colors.onSurfaceVariant,
                 ),
               ],
             ),

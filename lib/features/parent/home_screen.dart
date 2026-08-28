@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/features/parent/academics_screen.dart'
+    show AcademicsTab;
 
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/features/academic/domain/entities/attendance_record.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
 import 'package:school_pulse/features/announcements/domain/entities/announcement_entity.dart';
@@ -14,13 +17,13 @@ import 'package:school_pulse/features/announcements/presentation/bloc/announceme
 import 'package:school_pulse/features/announcements/presentation/screens/announcement_detail_screen.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/finance/domain/entities/fee_item.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_event.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_state.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/finance/domain/entities/student_bill.dart';
+import 'package:school_pulse/features/finance/domain/repositories/student_billing_repository.dart';
 import 'package:school_pulse/features/parent/presentation/bloc/parent_timetable_bloc.dart';
 import 'package:school_pulse/features/parent/widgets/child_selector_sheet.dart';
+import 'package:school_pulse/features/parent_access/domain/entities/parent_module_visibility.dart';
+import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_cubit.dart';
+import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_state.dart';
 import 'package:school_pulse/features/school_calendar/domain/entities/calendar_event.dart';
 import 'package:school_pulse/features/school_calendar/presentation/bloc/school_calendar_bloc.dart';
 import 'package:school_pulse/features/school_calendar/presentation/bloc/school_calendar_event.dart';
@@ -86,7 +89,6 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     context.read<AcademicBloc>().add(
       GetAttendanceRecordsRequested(studentId: student.id),
     );
-    context.read<FinanceBloc>().add(FetchFees(student.id));
     if (student.className.isNotEmpty) {
       _homeworkBloc.add(
         LoadStudentHomework(student.schoolId, student.className),
@@ -214,43 +216,58 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
 
                     final selectedStudent = studentState.student;
 
-                    return Scaffold(
-                      backgroundColor: AppColors.white,
-                      body: SafeArea(
-                        child: RefreshIndicator(
-                          onRefresh: _refresh,
-                          child: CustomScrollView(
-                            slivers: [
-                              _buildSliverAppBar(
-                                context,
-                                authState.user.name,
-                                myStudents,
-                                selectedStudent,
-                              ),
-                              SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(20.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      _buildPulseSection(
-                                        context,
-                                        selectedStudent,
-                                      ),
-                                      const SizedBox(height: 32),
-                                      _buildActionsSection(context),
-                                      const SizedBox(height: 32),
-                                      _buildWeekSection(context),
-                                      const SizedBox(height: 32),
-                                    ],
+                    return BlocBuilder<ParentAccessCubit, ParentAccessState>(
+                      builder: (context, accessState) {
+                        final visibility = accessState is ParentAccessResolved
+                            ? accessState.visibility
+                            : ParentModuleVisibility.none;
+
+                        return Scaffold(
+                          backgroundColor: AppColors.background(context),
+                          body: SafeArea(
+                            child: RefreshIndicator(
+                              onRefresh: _refresh,
+                              child: CustomScrollView(
+                                slivers: [
+                                  _buildSliverAppBar(
+                                    context,
+                                    authState.user.name,
                                   ),
-                                ),
+                                  SliverToBoxAdapter(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(20.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          _buildChildSwitcher(
+                                            context,
+                                            selectedStudent,
+                                          ),
+                                          const SizedBox(height: 28),
+                                          _buildPulseSection(
+                                            context,
+                                            selectedStudent,
+                                            visibility,
+                                          ),
+                                          const SizedBox(height: 32),
+                                          _buildActionsSection(
+                                            context,
+                                            visibility,
+                                          ),
+                                          const SizedBox(height: 32),
+                                          _buildWeekSection(context),
+                                          const SizedBox(height: 32),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -266,55 +283,40 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
   // App bar
   // ---------------------------------------------------------------------
 
-  Widget _buildSliverAppBar(
-    BuildContext context,
-    String parentName,
-    List<Student> students,
-    Student selected,
-  ) {
+  Widget _buildSliverAppBar(BuildContext context, String parentName) {
+    final themeProvider = context.watch<ThemeProvider>();
     final firstName = parentName.trim().isEmpty
         ? 'there'
         : parentName.trim().split(RegExp(r'\s+')).first;
 
     return SliverAppBar(
       floating: true,
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.background(context),
       elevation: 0,
       centerTitle: false,
       title: Text(
         'Good morning, $firstName',
-        style: const TextStyle(
-          color: AppColors.black,
+        style: TextStyle(
+          color: AppColors.textPrimary(context),
           fontSize: 20,
           fontWeight: FontWeight.w900,
           letterSpacing: -0.5,
         ),
       ),
       actions: [
-        const NotificationBellButton(),
-        Padding(
-          padding: const EdgeInsets.only(right: 16.0, left: 8.0),
-          child: GestureDetector(
-            onTap: () => ChildSelectorSheet.show(context),
-            child: SizedBox(
-              height: 32,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  for (var i = 0; i < students.length && i < 3; i++)
-                    Positioned(
-                      left: i * 18.0,
-                      child: AvatarInitials(
-                        name: students[i].name,
-                        size: 32,
-                        ringColor: students[i].id == selected.id
-                            ? AppColors.black
-                            : null,
-                      ),
-                    ),
-                ],
-              ),
-            ),
+        IconButton(
+          tooltip: themeProvider.themeMode == ThemeMode.dark
+              ? 'Use light theme'
+              : 'Use dark theme',
+          icon: Icon(
+            themeProvider.themeMode == ThemeMode.dark
+                ? Icons.light_mode_outlined
+                : Icons.dark_mode_outlined,
+          ),
+          onPressed: () => themeProvider.setThemeMode(
+            themeProvider.themeMode == ThemeMode.dark
+                ? ThemeMode.light
+                : ThemeMode.dark,
           ),
         ),
       ],
@@ -325,33 +327,107 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
   // Today's pulse
   // ---------------------------------------------------------------------
 
-  Widget _buildPulseSection(BuildContext context, Student student) {
+  Widget _buildChildSwitcher(BuildContext context, Student student) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => ChildSelectorSheet.show(context),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainer(context),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border(context), width: 1.2),
+        ),
+        child: Row(
+          children: [
+            AvatarInitials(name: student.name, size: 48),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    student.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    student.className.isEmpty
+                        ? 'Linked student'
+                        : student.className,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textMuted(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textMuted(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPulseSection(
+    BuildContext context,
+    Student student,
+    ParentModuleVisibility visibility,
+  ) {
+    final rows = <Widget>[
+      if (visibility.attendance) _buildAttendanceRow(context, student),
+      if (visibility.academics) _buildNextLessonRow(context),
+      if (visibility.academics) _buildHomeworkRow(context),
+      if (visibility.fees) _buildFeesRow(context, student),
+    ];
+
+    if (rows.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "TODAY'S PULSE · ${_firstName(student.name)}",
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.2,
-            color: AppColors.grey500,
-          ),
+        const Text(
+          "Today's pulse",
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
         AppCard(
-          padding: const EdgeInsets.all(20),
-          color: AppColors.white,
+          padding: const EdgeInsets.all(12),
+          color: AppColors.surfaceContainer(context),
           showShadow: false,
           child: Column(
             children: [
-              _buildAttendanceRow(context, student),
-              const Divider(height: 32),
-              _buildNextLessonRow(context),
-              const Divider(height: 32),
-              _buildHomeworkRow(context),
-              const Divider(height: 32),
-              _buildFeesRow(context),
+              LayoutBuilder(
+                builder: (context, constraints) => Wrap(
+                  children: [
+                    for (final row in rows)
+                      SizedBox(
+                        width: constraints.maxWidth / 2,
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: row,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const Divider(height: 12),
+              TextButton.icon(
+                onPressed: () => context.go(
+                  '/parent/learn',
+                  extra: AcademicsTab.timetable,
+                ),
+                iconAlignment: IconAlignment.end,
+                icon: const Icon(Icons.chevron_right_rounded),
+                label: const Text('View full day'),
+              ),
             ],
           ),
         ),
@@ -390,13 +466,22 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
           );
         }
 
-        final (label, icon) = switch (today.status) {
+        final (label, icon, statusColor) = switch (today.status) {
           StudentStatus.present => (
             'At school',
             Icons.check_circle_outline_rounded,
+            AppColors.success(context),
           ),
-          StudentStatus.absent => ('Absent', Icons.cancel_outlined),
-          StudentStatus.late => ('Late', Icons.watch_later_outlined),
+          StudentStatus.absent => (
+            'Absent',
+            Icons.cancel_outlined,
+            AppColors.danger(context),
+          ),
+          StudentStatus.late => (
+            'Late',
+            Icons.watch_later_outlined,
+            AppColors.warning(context),
+          ),
         };
 
         // AttendanceRecord has no dedicated check-in timestamp field - `date`
@@ -414,6 +499,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
           icon: icon,
           title: 'Attendance',
           value: label,
+          valueColor: statusColor,
           subtitle: subtitle,
         );
       },
@@ -434,7 +520,10 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             title: 'Next lesson',
             value: '—',
             subtitle: 'Timetable not published yet',
-            onTap: () => context.go('/parent/learn'),
+            onTap: () => context.go(
+              '/parent/learn',
+              extra: AcademicsTab.timetable,
+            ),
           );
         }
 
@@ -446,7 +535,10 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             title: 'Next lesson',
             value: '—',
             subtitle: 'No more lessons today',
-            onTap: () => context.go('/parent/learn'),
+            onTap: () => context.go(
+              '/parent/learn',
+              extra: AcademicsTab.timetable,
+            ),
           );
         }
 
@@ -462,7 +554,10 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
           subtitle: next.lesson.roomName?.isNotEmpty == true
               ? next.lesson.roomName!
               : next.slot.name,
-          onTap: () => context.go('/parent/learn'),
+          onTap: () => context.go(
+            '/parent/learn',
+            extra: AcademicsTab.timetable,
+          ),
           hideValue: true,
         );
       },
@@ -484,7 +579,10 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             title: 'Homework',
             value: '—',
             subtitle: 'Could not load homework',
-            onTap: () => context.go('/parent/learn'),
+            onTap: () => context.go(
+              '/parent/learn',
+              extra: AcademicsTab.homework,
+            ),
           );
         }
 
@@ -502,40 +600,60 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
         return _buildPulseItem(
           context,
           icon: Icons.assignment_outlined,
-          title: 'Homework: $dueThisWeek due this week',
+          title: 'Homework: $dueThisWeek',
+          titleSuffix: TextSpan(
+            text: ' due this week',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: dueThisWeek > 0
+                  ? AppColors.warning(context)
+                  : AppColors.grey500,
+            ),
+          ),
           value: '',
           subtitle: 'View and manage',
-          onTap: () => context.go('/parent/learn'),
+          onTap: () => context.go(
+            '/parent/learn',
+            extra: AcademicsTab.homework,
+          ),
           hideValue: true,
         );
       },
     );
   }
 
-  Widget _buildFeesRow(BuildContext context) {
-    return BlocBuilder<FinanceBloc, FinanceState>(
-      builder: (context, state) {
-        if (state is FinanceLoading) {
+  Widget _buildFeesRow(BuildContext context, Student student) {
+    return StreamBuilder<List<StudentBill>>(
+      stream: di.sl<StudentBillingRepository>().watchBills(
+        student.schoolId,
+        student.id,
+      ),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
           return _pulseSkeletonRow(Icons.account_balance_wallet_outlined);
         }
 
-        final fees = state is FinanceLoaded ? state.fees : <FeeItem>[];
-        final unpaid = fees.where((f) => f.status != FeeStatus.paid).toList();
+        final bills = snapshot.data!;
+        final outstanding = bills.where((b) => b.balanceUgx > 0).toList();
 
-        if (unpaid.isEmpty) {
+        if (outstanding.isEmpty) {
+          final isAllPaid = bills.isNotEmpty;
           return _buildPulseItem(
             context,
             icon: Icons.account_balance_wallet_outlined,
             title: 'Fees',
-            value: 'All paid',
+            value: bills.isEmpty ? 'No bills yet' : 'All paid',
+            valueColor: isAllPaid ? AppColors.success(context) : null,
             subtitle: 'Term fees',
             onTap: () => context.go('/parent/payments'),
           );
         }
 
-        final balance = unpaid.fold<double>(0, (sum, f) => sum + f.amount);
-        unpaid.sort((a, b) => a.dueDate.compareTo(b.dueDate));
-        final earliestDue = unpaid.first.dueDate;
+        final balance = outstanding.fold<int>(
+          0,
+          (sum, b) => sum + b.balanceUgx,
+        );
         final formattedBalance = NumberFormat.currency(
           symbol: '',
           decimalDigits: 0,
@@ -544,8 +662,15 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
         return _buildPulseItem(
           context,
           icon: Icons.account_balance_wallet_outlined,
-          title:
-              'Fees: $formattedBalance due ${DateFormat('d MMM').format(earliestDue)}',
+          title: 'Fees: UGX $formattedBalance',
+          titleSuffix: TextSpan(
+            text: ' due',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.danger(context),
+            ),
+          ),
           value: '',
           subtitle: 'Term fees',
           onTap: () => context.go('/parent/payments'),
@@ -589,41 +714,62 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     required String subtitle,
     VoidCallback? onTap,
     bool hideValue = false,
+    InlineSpan? titleSuffix,
+    Color? valueColor,
   }) {
     final content = Row(
       children: [
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: AppColors.grey100,
+            color: AppColors.surfaceContainerHigh(context),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, size: 20, color: AppColors.black),
+          child: Icon(icon, size: 20, color: AppColors.textPrimary(context)),
         ),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
+              Text.rich(
+                TextSpan(
+                  text: title,
+                  children: titleSuffix != null ? [titleSuffix] : null,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary(context),
                 ),
               ),
               Text(
                 subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12, color: AppColors.grey500),
               ),
             ],
           ),
         ),
-        if (!hideValue && value.isNotEmpty)
-          Text(
-            value,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        if (!hideValue && value.isNotEmpty) ...[
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: valueColor ?? AppColors.textPrimary(context),
+              ),
+            ),
           ),
+        ],
         if (onTap != null)
           const Icon(Icons.chevron_right_rounded, color: AppColors.grey300),
       ],
@@ -641,65 +787,119 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
   // Quick actions
   // ---------------------------------------------------------------------
 
-  Widget _buildActionsSection(BuildContext context) {
+  Widget _buildActionsSection(
+    BuildContext context,
+    ParentModuleVisibility visibility,
+  ) {
+    final actions = <Widget>[
+      if (visibility.messages)
+        _buildActionCard(
+          context,
+          icon: Icons.chat_bubble_outline_rounded,
+          label: 'Message teacher',
+          onTap: () => context.go('/parent/messages'),
+        ),
+      if (visibility.messages)
+        _buildActionCard(
+          context,
+          icon: Icons.report_gmailerrorred_outlined,
+          label: 'Report absence',
+          // No dedicated "report absence" flow exists yet - messaging
+          // the school is the closest real action.
+          onTap: () => context.go('/parent/messages'),
+        ),
+      if (visibility.fees)
+        _buildActionCard(
+          context,
+          icon: Icons.receipt_long_outlined,
+          label: 'Payment guide',
+          onTap: () => context.push('/parent/payments/how-to-pay'),
+        ),
+      if (visibility.academics)
+        _buildActionCard(
+          context,
+          icon: Icons.calendar_view_week_outlined,
+          label: 'View timetable',
+          onTap: () => context.go(
+            '/parent/learn',
+            extra: AcademicsTab.timetable,
+          ),
+        ),
+      if (visibility.health)
+        _buildActionCard(
+          context,
+          icon: Icons.health_and_safety_outlined,
+          label: 'Health visits',
+          onTap: () => context.push('/parent/health'),
+        ),
+      if (visibility.transport)
+        _buildActionCard(
+          context,
+          icon: Icons.directions_bus_outlined,
+          label: 'Transport routes',
+          onTap: () => context.push('/parent/transport'),
+        ),
+      if (visibility.security)
+        _buildActionCard(
+          context,
+          icon: Icons.door_front_door_outlined,
+          label: 'Gate activity',
+          onTap: () => context.push('/parent/security'),
+        ),
+      if (visibility.academics)
+        _buildActionCard(
+          context,
+          icon: Icons.calendar_month_outlined,
+          label: 'School calendar',
+          onTap: () => context.push('/parent/calendar'),
+        ),
+      if (visibility.library)
+        _buildActionCard(
+          context,
+          icon: Icons.library_books_outlined,
+          label: 'Library',
+          onTap: () => context.push('/parent/library'),
+        ),
+      if (visibility.appointments)
+        _buildActionCard(
+          context,
+          icon: Icons.event_available_outlined,
+          label: 'Appointments',
+          onTap: () => context.push('/parent/appointments'),
+        ),
+    ];
+
+    if (actions.isEmpty) return const SizedBox.shrink();
+
+    final rows = <Widget>[];
+    for (var i = 0; i < actions.length; i += 2) {
+      final hasSecond = i + 1 < actions.length;
+      rows.add(
+        Row(
+          children: [
+            Expanded(child: actions[i]),
+            if (hasSecond) ...[
+              const SizedBox(width: 12),
+              Expanded(child: actions[i + 1]),
+            ] else
+              const Spacer(),
+          ],
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'QUICK ACTIONS',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.2,
-            color: AppColors.grey500,
-          ),
+          'School services',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                context,
-                icon: Icons.chat_bubble_outline_rounded,
-                label: 'Message teacher',
-                onTap: () => context.go('/parent/messages'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionCard(
-                context,
-                icon: Icons.report_gmailerrorred_outlined,
-                label: 'Report absence',
-                // No dedicated "report absence" flow exists yet - messaging
-                // the school is the closest real action.
-                onTap: () => context.go('/parent/messages'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                context,
-                icon: Icons.account_balance_wallet_outlined,
-                label: 'Pay fees',
-                onTap: () => context.go('/parent/payments'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionCard(
-                context,
-                icon: Icons.calendar_view_week_outlined,
-                label: 'View timetable',
-                onTap: () => context.go('/parent/learn'),
-              ),
-            ),
-          ],
-        ),
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) const SizedBox(height: 12),
+          rows[i],
+        ],
       ],
     );
   }
@@ -710,20 +910,35 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     required String label,
     required VoidCallback onTap,
   }) {
-    return AppCard(
-      onTap: onTap,
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
-      showShadow: false,
-      child: Column(
-        children: [
-          Icon(icon, size: 28, color: AppColors.black),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-          ),
-        ],
+    return SizedBox(
+      height: 62,
+      child: AppCard(
+        onTap: onTap,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        showShadow: false,
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: AppColors.textPrimary(context)),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: AppColors.textMuted(context),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -750,12 +965,12 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             ),
             TextButton(
               onPressed: () => context.push('/parent/calendar'),
-              child: const Text(
+              child: Text(
                 'Full Calendar',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.black,
+                  color: AppColors.textPrimary(context),
                 ),
               ),
             ),
@@ -857,13 +1072,13 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             width: 50,
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.grey100,
+              color: AppColors.surfaceContainerHigh(context),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.campaign_outlined,
               size: 20,
-              color: AppColors.black,
+              color: AppColors.textPrimary(context),
             ),
           ),
           const SizedBox(width: 16),
@@ -915,16 +1130,17 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             width: 50,
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.grey100,
+              color: AppColors.surfaceContainerHigh(context),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               dateLabel.replaceFirst(' ', '\n'),
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w900,
                 height: 1.2,
+                color: AppColors.textPrimary(context),
               ),
             ),
           ),
@@ -956,11 +1172,5 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
         ],
       ),
     );
-  }
-
-  String _firstName(String name) {
-    final trimmed = name.trim();
-    if (trimmed.isEmpty) return '';
-    return trimmed.split(RegExp(r'\s+')).first;
   }
 }

@@ -3,11 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/parent_access/domain/entities/parent_module_visibility.dart';
 import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_cubit.dart';
 import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_state.dart';
+import 'package:school_pulse/features/student/presentation/bloc/students_bloc.dart';
+import 'package:school_pulse/features/student/presentation/bloc/students_state.dart';
 
 class MoreMenuScreen extends StatelessWidget {
   const MoreMenuScreen({super.key});
@@ -19,18 +19,17 @@ class MoreMenuScreen extends StatelessWidget {
         final visibility = accessState is ParentAccessResolved
             ? accessState.visibility
             : ParentModuleVisibility.none;
-
         return Scaffold(
-          backgroundColor: AppColors.white,
+          backgroundColor: AppColors.background(context),
           appBar: AppBar(
-            backgroundColor: AppColors.white,
+            backgroundColor: AppColors.background(context),
             elevation: 0,
             centerTitle: false,
-            title: const Text(
+            title: Text(
               'More',
               style: TextStyle(
-                color: AppColors.black,
-                fontSize: 24,
+                color: AppColors.textPrimary(context),
+                fontSize: 20,
                 fontWeight: FontWeight.w900,
                 letterSpacing: -0.5,
               ),
@@ -39,9 +38,35 @@ class MoreMenuScreen extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              BlocBuilder<StudentsBloc, StudentsState>(
+                builder: (context, studentsState) {
+                  final students = studentsState is StudentsLoaded
+                      ? studentsState.students
+                      : const [];
+                  if (students.isEmpty) return const SizedBox.shrink();
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionHeader('MY CHILDREN'),
+                      const SizedBox(height: 12),
+                      _buildMenuCard(context, [
+                        for (final student in students)
+                          _buildMenuTile(
+                            context,
+                            icon: Icons.person_outline,
+                            title: '${student.name} · ${student.className}',
+                            onTap: () => context.push('/parent/profile'),
+                          ),
+                      ]),
+                      const SizedBox(height: 32),
+                    ],
+                  );
+                },
+              ),
               _buildSectionHeader('CARE & TRANSPORT'),
               const SizedBox(height: 12),
-              _buildMenuCard([
+              _buildMenuCard(context, [
                 _buildMenuTile(
                   context,
                   icon: Icons.health_and_safety_outlined,
@@ -64,57 +89,6 @@ class MoreMenuScreen extends StatelessWidget {
                   visible: visibility.security,
                 ),
               ]),
-              const SizedBox(height: 32),
-              _buildSectionHeader('SCHOOL INFO'),
-              const SizedBox(height: 12),
-              _buildMenuCard([
-                _buildMenuTile(
-                  context,
-                  icon: Icons.calendar_month_outlined,
-                  title: 'School Calendar',
-                  onTap: () => context.push('/parent/calendar'),
-                  visible: visibility.academics,
-                ),
-                _buildMenuTile(
-                  context,
-                  icon: Icons.library_books_outlined,
-                  title: 'Library',
-                  onTap: () => context.push('/parent/library'),
-                  visible: visibility.library,
-                ),
-              ]),
-              const SizedBox(height: 32),
-              _buildSectionHeader('ACCOUNT'),
-              const SizedBox(height: 12),
-              _buildMenuCard([
-                _buildMenuTile(
-                  context,
-                  icon: Icons.person_outline,
-                  title: 'Profile Settings',
-                  onTap: () => context.push('/parent/profile'),
-                ),
-                _buildMenuTile(
-                  context,
-                  icon: Icons.notifications_none_rounded,
-                  title: 'Notification Preferences',
-                  onTap: () => context.push('/parent/profile'),
-                ),
-              ]),
-              const SizedBox(height: 40),
-              SecondaryButton(
-                label: 'Log Out',
-                onPressed: () {
-                  context.read<AuthBloc>().add(LogoutPressed());
-                  context.go('/welcome');
-                },
-              ),
-              const SizedBox(height: 20),
-              const Center(
-                child: Text(
-                  'School Pulse v1.2.0',
-                  style: TextStyle(color: AppColors.grey500, fontSize: 12),
-                ),
-              ),
               const SizedBox(height: 40),
             ],
           ),
@@ -127,7 +101,7 @@ class MoreMenuScreen extends StatelessWidget {
     return Text(
       title,
       style: const TextStyle(
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: FontWeight.w800,
         letterSpacing: 1.2,
         color: AppColors.grey500,
@@ -135,7 +109,7 @@ class MoreMenuScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuCard(List<Widget> tiles) {
+  Widget _buildMenuCard(BuildContext context, List<Widget> tiles) {
     final visibleTiles = tiles.where((tile) {
       if (tile is _MenuTile) return tile.visible;
       return true;
@@ -146,13 +120,21 @@ class MoreMenuScreen extends StatelessWidget {
     return AppCard(
       padding: EdgeInsets.zero,
       showShadow: false,
+      borderColor: Theme.of(context).colorScheme.outline,
+      borderWidth: 1.5,
       child: Column(
         children: visibleTiles.asMap().entries.map((entry) {
           final isLast = entry.key == visibleTiles.length - 1;
           return Column(
             children: [
               entry.value,
-              if (!isLast) const Divider(height: 1, indent: 52),
+              if (!isLast)
+                Divider(
+                  height: 1.5,
+                  thickness: 1.5,
+                  indent: 52,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
             ],
           );
         }).toList(),
@@ -188,10 +170,10 @@ class _MenuTile extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!visible) return const SizedBox.shrink();
     return ListTile(
-      leading: Icon(icon, color: AppColors.black, size: 22),
+      leading: Icon(icon, color: AppColors.textPrimary(context), size: 22),
       title: Text(
         title,
-        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
       ),
       trailing: const Icon(
         Icons.chevron_right_rounded,

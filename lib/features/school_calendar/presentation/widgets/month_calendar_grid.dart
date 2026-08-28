@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
 import '../../domain/entities/calendar_event.dart';
 import 'event_type_colors.dart';
 
@@ -36,6 +35,7 @@ class MonthCalendarGrid extends StatelessWidget {
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
     final leadingBlanks = (firstOfMonth.weekday - DateTime.monday) % 7;
     final today = DateTime.now();
+    final colors = Theme.of(context).colorScheme;
 
     final cells = <Widget>[];
     for (var i = 0; i < leadingBlanks; i++) {
@@ -54,23 +54,27 @@ class MonthCalendarGrid extends StatelessWidget {
           onTap: onDayTap == null ? null : () => onDayTap!(day),
           borderRadius: BorderRadius.circular(8),
           child: Container(
-            decoration: isToday
-                ? BoxDecoration(
-                    color: AppColors.primary(context),
-                    borderRadius: BorderRadius.circular(8),
-                  )
-                : null,
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(vertical: 4),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  '$d',
-                  style: TextStyle(
-                    color: isToday
-                        ? AppColors.primary(context)
-                        : AppColors.textPrimary(context),
-                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: isToday
+                      ? BoxDecoration(
+                          color: colors.onSurface,
+                          shape: BoxShape.circle,
+                        )
+                      : null,
+                  child: Text(
+                    '$d',
+                    style: TextStyle(
+                      color: isToday ? colors.surface : colors.onSurface,
+                      fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -120,6 +124,7 @@ class MonthCalendarGrid extends StatelessWidget {
         const SizedBox(height: 4),
         GridView.count(
           crossAxisCount: 7,
+          childAspectRatio: 1.05,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           children: cells,

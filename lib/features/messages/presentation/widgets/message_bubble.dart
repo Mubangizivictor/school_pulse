@@ -13,8 +13,21 @@ import 'package:url_launcher/url_launcher.dart';
 /// chat doesn't need a full emoji keyboard.
 const List<String> kQuickReactions = ['❤️', '👍', '🔥', '😂', '😮', '🙏'];
 
+String _initials(String name) {
+  final words = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((word) => word.isNotEmpty);
+  final initials = words.take(2).map((word) => word[0]).join();
+  return initials.isEmpty ? '?' : initials.toUpperCase();
+}
+
 class MessageBubble extends StatelessWidget {
   final ChatMessage message;
+
+  /// The current profile photo resolved from the conversation participant.
+  /// This fills in older messages written before sender avatars were stored.
+  final String? senderAvatarUrl;
 
   /// Group and channel threads label each bubble with its sender; a 1:1 chat
   /// doesn't need to.
@@ -53,6 +66,7 @@ class MessageBubble extends StatelessWidget {
   const MessageBubble({
     super.key,
     required this.message,
+    this.senderAvatarUrl,
     this.isGroup = true,
     this.onSelect,
     this.onToggleSelected,
@@ -86,16 +100,39 @@ class MessageBubble extends StatelessWidget {
             ? CrossAxisAlignment.end
             : CrossAxisAlignment.start,
         children: [
-          if (!message.isMe && isGroup)
+          if (!message.isMe)
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 4),
-              child: Text(
-                message.senderName.toUpperCase(),
-                style: AppTypography.labelSmall.copyWith(
-                  color: isDark ? AppColors.white : AppColors.black,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 10,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: isDark
+                        ? AppColors.grey850
+                        : AppColors.grey100,
+                    backgroundImage: senderAvatarUrl?.isNotEmpty == true
+                        ? NetworkImage(senderAvatarUrl!)
+                        : null,
+                    child: senderAvatarUrl?.isNotEmpty == true
+                        ? null
+                        : Text(
+                            _initials(message.senderName),
+                            style: AppTypography.labelSmall.copyWith(
+                              color: isDark ? Colors.white : Colors.black,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                  ),
+                  const SizedBox(width: 7),
+                  Text(
+                    message.senderName,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textMuted(context),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ),
           GestureDetector(
@@ -112,9 +149,12 @@ class MessageBubble extends StatelessWidget {
                 color: message.isMe
                     ? (isDark ? Colors.white : Colors.black)
                     : (isDark ? AppColors.grey850 : AppColors.grey50),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: isDark ? AppColors.borderDark : AppColors.black,
-                  width: 1,
+                  color: message.isMe
+                      ? (isDark ? Colors.white : Colors.black)
+                      : (isDark ? AppColors.borderDark : AppColors.grey200),
+                  width: 1.25,
                 ),
               ),
               child: Column(
@@ -182,7 +222,8 @@ class MessageBubble extends StatelessWidget {
                         const SizedBox(width: 4),
                       ],
                       Text(
-                        DateFormat('HH:mm').format(message.timestamp),
+                        '${DateFormat('HH:mm').format(message.timestamp)} · '
+                        '${message.isSending ? 'Sending' : (message.isRead ? 'Read' : 'Delivered')}',
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
@@ -242,7 +283,7 @@ class MessageBubble extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTypography.bodySmall.copyWith(
-              color: onBubble.withOpacity(0.7),
+              color: onBubble.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -302,7 +343,7 @@ class MessageBubble extends StatelessWidget {
       color: message.isMe
           ? (isDark ? AppColors.grey100 : AppColors.grey900)
           : (isDark ? AppColors.grey900 : AppColors.grey100),
-      border: Border.all(color: _accent(context).withOpacity(0.2)),
+      border: Border.all(color: _accent(context).withValues(alpha: 0.2)),
     );
   }
 
@@ -469,10 +510,7 @@ class MessageBubble extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   color: message.isMe ? Colors.white : Colors.black,
-                  border: Border.all(
-                    color: _accent(context),
-                    width: 1,
-                  ),
+                  border: Border.all(color: _accent(context), width: 1),
                 ),
                 child: Icon(Icons.person, size: 20, color: _accent(context)),
               ),
@@ -653,7 +691,9 @@ class MessageBubble extends StatelessWidget {
               child: Container(
                 height: 34,
                 decoration: BoxDecoration(
-                  color: message.isMe ? Colors.white : (isDark ? Colors.white : Colors.black),
+                  color: message.isMe
+                      ? Colors.white
+                      : (isDark ? Colors.white : Colors.black),
                   borderRadius: BorderRadius.zero,
                 ),
               ),
@@ -735,7 +775,7 @@ class MessageBubble extends StatelessWidget {
             message.mediaUrl!,
             width: 220,
             fit: BoxFit.cover,
-          loadingBuilder: (context, child, progress) => progress == null
+            loadingBuilder: (context, child, progress) => progress == null
                 ? child
                 : const SizedBox(
                     width: 220,
@@ -895,14 +935,20 @@ class _VoiceNoteBubbleState extends State<VoiceNoteBubble> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final foreground = widget.onDark ? Colors.black : (isDark ? Colors.white : Colors.black);
-    final muted = widget.onDark ? AppColors.grey700 : AppColors.textMuted(context);
+    final foreground = widget.onDark
+        ? Colors.black
+        : (isDark ? Colors.white : Colors.black);
+    final muted = widget.onDark
+        ? AppColors.grey700
+        : AppColors.textMuted(context);
 
     return Container(
       width: 220,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: widget.onDark ? Colors.white : (isDark ? AppColors.grey900 : AppColors.grey50),
+        color: widget.onDark
+            ? Colors.white
+            : (isDark ? AppColors.grey900 : AppColors.grey50),
         border: Border.all(
           color: isDark ? AppColors.borderDark : AppColors.black,
           width: 1,
@@ -1003,6 +1049,7 @@ class MessageActionsMenu extends StatelessWidget {
     this.onSelect,
   });
 
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(

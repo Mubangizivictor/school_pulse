@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/academic/domain/entities/academic_record.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/features/parent/presentation/bloc/parent_timetable_bloc.dart';
+import 'package:school_pulse/features/parent/report_card_screen.dart';
+import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_cubit.dart';
+import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_state.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
@@ -17,8 +20,20 @@ import 'package:school_pulse/features/student/presentation/bloc/student_homework
 import 'package:school_pulse/features/teacher/domain/entities/homework.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
+/// Tab indices for [AcademicsScreen], so callers deep-linking in (e.g. the
+/// Home screen's "View timetable" / "Next lesson" / "Homework" rows) can
+/// land on the right tab instead of always opening on Homework.
+abstract class AcademicsTab {
+  static const homework = 0;
+  static const progress = 1;
+  static const reportCards = 2;
+  static const timetable = 3;
+}
+
 class AcademicsScreen extends StatefulWidget {
-  const AcademicsScreen({super.key});
+  final int initialTab;
+
+  const AcademicsScreen({super.key, this.initialTab = AcademicsTab.homework});
 
   @override
   State<AcademicsScreen> createState() => _AcademicsScreenState();
@@ -33,7 +48,11 @@ class _AcademicsScreenState extends State<AcademicsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 4,
+      vsync: this,
+      initialIndex: widget.initialTab.clamp(0, 3),
+    );
     _timetableBloc = di.sl<ParentTimetableBloc>();
     _homeworkBloc = di.sl<StudentHomeworkBloc>();
     _loadData();
@@ -91,45 +110,72 @@ class _AcademicsScreenState extends State<AcademicsScreen>
         BlocProvider.value(value: _homeworkBloc),
       ],
       child: Scaffold(
-        backgroundColor: AppColors.white,
+        backgroundColor: AppColors.background(context),
         appBar: AppBar(
-          backgroundColor: AppColors.white,
+          backgroundColor: AppColors.background(context),
           elevation: 0,
           centerTitle: false,
-          title: const Text(
-            'Learn',
+          title: Text(
+            'Academics',
             style: TextStyle(
-              color: AppColors.black,
+              color: AppColors.textPrimary(context),
               fontSize: 24,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
             ),
           ),
-          bottom: TabBar(
-            controller: _tabController,
-            indicatorColor: AppColors.black,
-            labelColor: AppColors.black,
-            unselectedLabelColor: AppColors.grey500,
-            labelStyle: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
-            ),
-            indicatorWeight: 3,
-            tabs: const [
-              Tab(text: 'Homework'),
-              Tab(text: 'Progress'),
-              Tab(text: 'Timetable'),
-            ],
-          ),
         ),
-        body: TabBarView(
-          controller: _tabController,
+        body: Column(
           children: [
-            _buildHomeworkTab(),
-            _buildProgressTab(),
-            _buildTimetableTab(),
+            _buildSegmentedTabBar(context),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildHomeworkTab(),
+                  _buildProgressTab(),
+                  _buildReportCardsTab(),
+                  _buildTimetableTab(),
+                ],
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  static const _tabLabels = ['Homework', 'Progress', 'Report Cards', 'Timetable'];
+
+  Widget _buildSegmentedTabBar(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.background(context),
+        border: Border(
+          bottom: BorderSide(color: AppColors.border(context), width: 1),
+        ),
+      ),
+      child: AnimatedBuilder(
+        animation: _tabController,
+        builder: (context, _) {
+          final activeIndex = _tabController.index;
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (var i = 0; i < _tabLabels.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  _SegmentButton(
+                    label: _tabLabels[i],
+                    isActive: activeIndex == i,
+                    onTap: () => _tabController.animateTo(i),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -230,7 +276,9 @@ class _AcademicsScreenState extends State<AcademicsScreen>
                   isOverdue ? 'Overdue · was due $dueDate' : 'Due $dueDate',
                   style: TextStyle(
                     fontSize: 13,
-                    color: isOverdue ? AppColors.black : AppColors.grey500,
+                    color: isOverdue
+                        ? AppColors.textPrimary(context)
+                        : AppColors.grey500,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -241,7 +289,9 @@ class _AcademicsScreenState extends State<AcademicsScreen>
             isOverdue
                 ? Icons.error_outline_rounded
                 : Icons.radio_button_unchecked_rounded,
-            color: isOverdue ? AppColors.black : AppColors.grey300,
+            color: isOverdue
+                ? AppColors.textPrimary(context)
+                : AppColors.grey300,
           ),
         ],
       ),
@@ -249,40 +299,95 @@ class _AcademicsScreenState extends State<AcademicsScreen>
   }
 
   Widget _buildProgressTab() {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        const Text(
-          'TERM 3 PERFORMANCE',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.2,
-            color: AppColors.grey500,
-          ),
-        ),
-        const SizedBox(height: 16),
-        AppCard(
-          padding: const EdgeInsets.all(20),
-          showShadow: false,
-          child: Column(
-            children: [
-              _buildProgressRow('Mathematics', 0.85, 'A'),
-              const Divider(height: 32),
-              _buildProgressRow('English', 0.78, 'B+'),
-              const Divider(height: 32),
-              _buildProgressRow('Science', 0.92, 'A+'),
-              const Divider(height: 32),
-              _buildProgressRow('History', 0.65, 'C'),
+    return BlocBuilder<AcademicBloc, AcademicState>(
+      builder: (context, state) {
+        if (state is AcademicLoading || state is AcademicInitial) {
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            children: const [
+              Skeleton(height: 60, borderRadius: 16),
+              SizedBox(height: 12),
+              Skeleton(height: 60, borderRadius: 16),
+              SizedBox(height: 12),
+              Skeleton(height: 60, borderRadius: 16),
             ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        PrimaryButton(
-          label: 'View Full Report Card',
-          onPressed: () => context.push('/parent/learn/report-card'),
-        ),
-      ],
+          );
+        }
+
+        final records = state is AcademicLoaded
+            ? state.academicRecords
+            : <AcademicRecord>[];
+
+        if (records.isEmpty) {
+          return const EmptyState(
+            icon: Icons.school_outlined,
+            title: 'No results yet',
+            message: 'Results will appear here once the school publishes them.',
+          );
+        }
+
+        final latestTerm = records
+            .map((r) => r.term)
+            .fold<String>('', (a, b) => b.compareTo(a) > 0 ? b : a);
+        final termRecords = records.where((r) => r.term == latestTerm).toList();
+
+        return ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Text(
+              latestTerm.isNotEmpty
+                  ? '${latestTerm.toUpperCase()} PERFORMANCE'
+                  : 'PERFORMANCE',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+                color: AppColors.grey500,
+              ),
+            ),
+            const SizedBox(height: 16),
+            AppCard(
+              padding: const EdgeInsets.all(20),
+              showShadow: false,
+              child: Column(
+                children: [
+                  for (var i = 0; i < termRecords.length; i++) ...[
+                    if (i > 0) const Divider(height: 32),
+                    _buildProgressRow(
+                      termRecords[i].subject,
+                      (termRecords[i].score / 100).clamp(0.0, 1.0),
+                      termRecords[i].grade ?? '—',
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            PrimaryButton(
+              label: 'View Full Report Card',
+              onPressed: () => _tabController.animateTo(2),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildReportCardsTab() {
+    return BlocBuilder<ParentAccessCubit, ParentAccessState>(
+      builder: (context, state) {
+        final visibility = state is ParentAccessResolved
+            ? state.visibility
+            : null;
+        if (visibility != null && !visibility.reportCard) {
+          return const EmptyState(
+            icon: Icons.lock_outline,
+            title: 'Not available',
+            message: 'You do not have access to report cards for this child.',
+          );
+        }
+        return const ParentReportCardBody();
+      },
     );
   }
 
@@ -302,8 +407,8 @@ class _AcademicsScreenState extends State<AcademicsScreen>
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: value,
-              backgroundColor: AppColors.grey100,
-              color: AppColors.black,
+              backgroundColor: AppColors.surfaceContainerHigh(context),
+              color: AppColors.textPrimary(context),
               minHeight: 8,
             ),
           ),
@@ -413,7 +518,9 @@ class _AcademicsScreenState extends State<AcademicsScreen>
               margin: const EdgeInsets.only(right: 12),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.black : AppColors.grey100,
+                color: isSelected
+                    ? AppColors.textPrimary(context)
+                    : AppColors.surfaceContainerHigh(context),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Center(
@@ -422,7 +529,9 @@ class _AcademicsScreenState extends State<AcademicsScreen>
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: isSelected ? AppColors.white : AppColors.grey500,
+                    color: isSelected
+                        ? AppColors.background(context)
+                        : AppColors.grey500,
                   ),
                 ),
               ),
@@ -482,6 +591,46 @@ class _AcademicsScreenState extends State<AcademicsScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SegmentButton extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _SegmentButton({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive
+              ? AppColors.textPrimary(context)
+              : AppColors.surfaceContainerHigh(context),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: isActive
+                ? AppColors.background(context)
+                : AppColors.textMuted(context),
+          ),
+        ),
       ),
     );
   }

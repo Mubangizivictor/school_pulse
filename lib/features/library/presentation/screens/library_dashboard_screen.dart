@@ -7,6 +7,7 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/admin/presentation/screens/library_settings_screen.dart';
 import 'package:school_pulse/features/library/presentation/screens/issue_resource_screen.dart';
+import 'package:school_pulse/features/library/presentation/screens/reservations_screen.dart';
 import 'package:school_pulse/features/library/presentation/widgets/reading_trends_chart.dart';
 import 'package:school_pulse/core/services/printer/printer_service.dart';
 import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
@@ -159,10 +160,20 @@ class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const SectionHeader(title: 'Active Borrowings'),
-                    TextButton.icon(
-                      onPressed: () => _showResourceInventory(context),
-                      icon: const Icon(Icons.inventory_2_outlined),
-                      label: const Text('Inventory & Labels'),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton.icon(
+                          onPressed: () => _showReservations(context),
+                          icon: const Icon(Icons.bookmark_added_outlined),
+                          label: const Text('Reservations'),
+                        ),
+                        TextButton.icon(
+                          onPressed: () => _showResourceInventory(context),
+                          icon: const Icon(Icons.inventory_2_outlined),
+                          label: const Text('Inventory & Labels'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -209,6 +220,19 @@ class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
           );
           Navigator.pop(context);
         },
+      ),
+    );
+  }
+
+  void _showReservations(BuildContext context) {
+    final bloc = context.read<LibraryBloc>();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: bloc,
+          child: ReservationsScreen(schoolId: widget.schoolId),
+        ),
       ),
     );
   }

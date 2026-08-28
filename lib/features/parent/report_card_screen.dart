@@ -33,6 +33,28 @@ class ReportCardScreen extends StatefulWidget {
 }
 
 class _ReportCardScreenState extends State<ReportCardScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      appBar: StudentAppBar(title: 'Report Card'),
+      body: ParentReportCardBody(),
+    );
+  }
+}
+
+/// The report-card list/detail body, standalone-scaffold-free so it can be
+/// embedded either as its own routed screen ([ReportCardScreen], the
+/// Student-role path) or as one tab of the parent's Academics screen -
+/// owns its own [ParentReportCardBloc] instance either way, since each host
+/// needs an independent load lifecycle.
+class ParentReportCardBody extends StatefulWidget {
+  const ParentReportCardBody({super.key});
+
+  @override
+  State<ParentReportCardBody> createState() => _ParentReportCardBodyState();
+}
+
+class _ParentReportCardBodyState extends State<ParentReportCardBody> {
   late final ParentReportCardBloc _bloc;
 
   @override
@@ -73,45 +95,42 @@ class _ReportCardScreenState extends State<ReportCardScreen> {
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: _bloc,
-      child: Scaffold(
-        appBar: const StudentAppBar(title: 'Report Card'),
-        body: BlocConsumer<ParentReportCardBloc, ParentReportCardState>(
-          listener: (context, state) {
-            if (state.downloadUrl != null) {
-              launchUrl(
-                Uri.parse(state.downloadUrl!),
-                mode: LaunchMode.externalApplication,
-              );
-              _bloc.add(const ParentReportCardFeedbackCleared());
-            }
-            if (state.errorMessage != null) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
-              _bloc.add(const ParentReportCardFeedbackCleared());
-            }
-          },
-          builder: (context, state) {
-            if (state.isLoading) {
-              return const Center(child: SchoolPulseLoader());
-            }
-            if (state.reportCards.isEmpty) {
-              return EmptyState(
-                icon: Icons.lock_outline,
-                title: 'Report not yet released',
-                message:
-                    "Please contact the school bursar's office for "
-                    'assistance.',
-                ctaLabel: 'Refresh',
-                onCtaPressed: _load,
-              );
-            }
-            return _ReportCardList(
-              reportCards: state.reportCards,
-              isDownloading: state.isDownloading,
+      child: BlocConsumer<ParentReportCardBloc, ParentReportCardState>(
+        listener: (context, state) {
+          if (state.downloadUrl != null) {
+            launchUrl(
+              Uri.parse(state.downloadUrl!),
+              mode: LaunchMode.externalApplication,
             );
-          },
-        ),
+            _bloc.add(const ParentReportCardFeedbackCleared());
+          }
+          if (state.errorMessage != null) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+            _bloc.add(const ParentReportCardFeedbackCleared());
+          }
+        },
+        builder: (context, state) {
+          if (state.isLoading) {
+            return const Center(child: SchoolPulseLoader());
+          }
+          if (state.reportCards.isEmpty) {
+            return EmptyState(
+              icon: Icons.lock_outline,
+              title: 'Report not yet released',
+              message:
+                  "Please contact the school bursar's office for "
+                  'assistance.',
+              ctaLabel: 'Refresh',
+              onCtaPressed: _load,
+            );
+          }
+          return _ReportCardList(
+            reportCards: state.reportCards,
+            isDownloading: state.isDownloading,
+          );
+        },
       ),
     );
   }

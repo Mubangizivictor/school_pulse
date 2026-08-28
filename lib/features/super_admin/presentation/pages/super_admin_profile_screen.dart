@@ -70,6 +70,7 @@ class _SuperAdminProfileScreenState extends State<SuperAdminProfileScreen> {
       return const Scaffold(body: Center(child: Text('Not signed in')));
     }
     final user = authState.user;
+    final colors = Theme.of(context).colorScheme;
 
     if (!_initialized) {
       _nameController.text = user.name;
@@ -96,7 +97,7 @@ class _SuperAdminProfileScreenState extends State<SuperAdminProfileScreen> {
                 children: [
                   CircleAvatar(
                     radius: 64,
-                    backgroundColor: AppColors.primary(context),
+                    backgroundColor: colors.onSurface,
                     backgroundImage: _photoUrl?.isNotEmpty == true
                         ? NetworkImage(_photoUrl!)
                         : null,
@@ -106,7 +107,7 @@ class _SuperAdminProfileScreenState extends State<SuperAdminProfileScreen> {
                             _initials(user.name),
                             style: TextStyle(
                               fontSize: 34,
-                              color: AppColors.primary(context),
+                              color: colors.surface,
                             ),
                           ),
                   ),

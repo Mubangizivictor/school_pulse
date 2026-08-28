@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,6 +23,8 @@ import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_l
 import 'package:school_pulse/features/teacher/domain/services/active_responsibility_service.dart';
 import 'package:school_pulse/core/utils/device_id_service.dart';
 import 'package:school_pulse/core/utils/device_info_service.dart';
+import 'package:school_pulse/features/parent_offline/domain/parent_offline_cache_service.dart';
+import 'package:school_pulse/features/parent_offline/domain/parent_offline_queue_service.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -199,6 +203,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
     result.fold((failure) => emit(AuthFailureState(failure.message)), (user) {
       _syncNotifications(user);
+      // Every successful online parent login is a real network-verified
+      // identity check - piggyback it to (re)set the mobile local
+      // PIN/biometric re-entry gate so this parent can reopen the Parent
+      // Portal offline afterward. Mirrors their just-typed server PIN
+      // rather than asking them to choose a second one; a device-local
+      // salted hash only, never the server PIN itself (see
+      // ParentLocalPinStore doc). No-ops on web.
+      unawaited(
+        di.sl<ParentOfflineCacheService>().setOfflineGatePin(
+          parentId: user.id,
+          pin: event.pin,
+        ),
+      );
       emit(AuthAuthenticated(user));
     });
   }
@@ -265,6 +282,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       await NotificationService().unsubscribeAllTopics();
     } catch (_) {}
+    // Parent Portal offline cache + queue + local PIN gate are all keyed
+    // to (tenantId, parentId) but stored on-device - clear them on logout
+    // so a subsequent parent/user on this device can never read the
+    // previous parent's cached data or unlock with their offline PIN.
+    if (previousUser != null && previousUser.roles.contains(UserRole.parent)) {
+      try {
+        await di.sl<ParentOfflineCacheService>().clearAllForParent(
+          tenantId: previousUser.schoolId,
+          parentId: previousUser.id,
+        );
+      } catch (_) {}
+      try {
+        await di.sl<ParentOfflineQueueService>().clearAllForParent(
+          tenantId: previousUser.schoolId,
+          parentId: previousUser.id,
+        );
+      } catch (_) {}
+    }
 
     emit(AuthUnauthenticated());
   }

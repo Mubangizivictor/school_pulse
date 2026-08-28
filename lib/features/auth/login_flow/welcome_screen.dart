@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/branding/presentation/widgets/school_badge.dart';
 
 /// A deliberately quiet entry point for the three School Pulse portals.
 class WelcomeScreen extends StatelessWidget {
@@ -45,27 +48,7 @@ class WelcomeScreen extends StatelessWidget {
                         children: [
                           const _WelcomeBrand(),
                           const SizedBox(height: AppSpacing.x5l),
-                          Text(
-                            'Choose your portal',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.manrope(
-                              color: AppColors.textPrimary(context),
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.s),
-                          Text(
-                            'Sign in to continue to School Pulse',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.manrope(
-                              color: AppColors.textSecondary(context),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.x4l),
+                          const SizedBox(height: AppSpacing.xl),
                           _RoleCard(
                             title: 'Parent Portal',
                             subtitle: "Manage your child's education",
@@ -147,8 +130,15 @@ class _WelcomeBrandState extends State<_WelcomeBrand> {
 
   @override
   Widget build(BuildContext context) {
+    final branding = context.watch<ThemeProvider>().branding;
     final foreground = AppColors.textPrimary(context);
-    final surface = AppColors.surfaceElevated(context);
+    final schoolName = branding?.schoolName.trim().isNotEmpty == true
+        ? branding!.schoolName
+        : 'SCHOOL PULSE';
+    final motto = branding?.schoolMotto.trim().isNotEmpty == true
+        ? branding!.schoolMotto
+        : 'Your school, in sync';
+    final badgeUrl = branding?.badgeUrl ?? branding?.logoUrl;
     return GestureDetector(
       onLongPressStart: (_) => _armHold(),
       onLongPressEnd: (_) => _cancelHold(),
@@ -157,19 +147,10 @@ class _WelcomeBrandState extends State<_WelcomeBrand> {
         label: 'School Pulse',
         child: Column(
           children: [
-            Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                color: foreground,
-                borderRadius: BorderRadius.circular(26),
-                border: Border.all(color: AppColors.border(context)),
-              ),
-              child: Icon(Icons.school_rounded, color: surface, size: 46),
-            ),
+            SchoolBadge(badgeUrl: badgeUrl, size: 84),
             const SizedBox(height: AppSpacing.l),
             Text(
-              'SCHOOL PULSE',
+              schoolName.toUpperCase(),
               textAlign: TextAlign.center,
               style: GoogleFonts.manrope(
                 color: foreground,
@@ -180,7 +161,7 @@ class _WelcomeBrandState extends State<_WelcomeBrand> {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Your school, in sync',
+              motto,
               textAlign: TextAlign.center,
               style: GoogleFonts.manrope(
                 color: AppColors.textSecondary(context),
@@ -290,25 +271,36 @@ class _TrustRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = AppColors.textSecondary(context);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _TrustItem(
-          icon: Icons.verified_user_outlined,
-          label: 'Secure',
-          color: color,
-        ),
-        _TrustItem(
-          icon: Icons.cloud_done_outlined,
-          label: 'Reliable',
-          color: color,
-        ),
-        _TrustItem(
-          icon: Icons.headset_mic_outlined,
-          label: 'Support',
-          color: color,
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.l,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _TrustItem(
+            icon: Icons.verified_user_outlined,
+            label: 'Secure',
+            color: color,
+          ),
+          _TrustItem(
+            icon: Icons.cloud_done_outlined,
+            label: 'Reliable',
+            color: color,
+          ),
+          _TrustItem(
+            icon: Icons.headset_mic_outlined,
+            label: 'Support',
+            color: color,
+          ),
+        ],
+      ),
     );
   }
 }

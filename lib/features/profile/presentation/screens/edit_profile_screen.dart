@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/components/pulse_text_field.dart';
@@ -61,6 +62,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       return const Scaffold(body: Center(child: Text('Not signed in')));
     }
     final user = authState.user;
+    final colors = Theme.of(context).colorScheme;
 
     if (!_initialized) {
       _nameController.text = user.name;
@@ -87,7 +89,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 children: [
                   CircleAvatar(
                     radius: 64,
-                    backgroundColor: AppColors.primary(context),
+                    backgroundColor: colors.onSurface,
                     backgroundImage:
                         _photoUrl?.isNotEmpty == true && !_photoLoadFailed
                         ? NetworkImage(_photoUrl!)
@@ -106,23 +108,40 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             _initials(user.name),
                             style: TextStyle(
                               fontSize: 34,
-                              color: AppColors.primary(context),
+                              fontWeight: FontWeight.w800,
+                              color: colors.surface,
                             ),
                           ),
                   ),
                   Positioned(
                     right: -4,
                     bottom: -4,
-                    child: IconButton.filled(
-                      tooltip: 'Change profile picture',
-                      onPressed: _uploadingPhoto ? null : _choosePhoto,
-                      icon: _uploadingPhoto
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.camera_alt_outlined),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.textPrimary(context),
+                        border: Border.all(
+                          color: AppColors.background(context),
+                          width: 2,
+                        ),
+                      ),
+                      child: IconButton(
+                        tooltip: 'Change profile picture',
+                        onPressed: _uploadingPhoto ? null : _choosePhoto,
+                        icon: _uploadingPhoto
+                            ? SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.background(context),
+                                ),
+                              )
+                            : Icon(
+                                Icons.camera_alt_outlined,
+                                color: AppColors.background(context),
+                              ),
+                      ),
                     ),
                   ),
                 ],
@@ -238,11 +257,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
     if (image == null || !mounted) return;
 
+    final cropped = await ImageCropper().cropImage(
+      sourcePath: image.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Photo',
+          lockAspectRatio: true,
+          hideBottomControls: false,
+        ),
+        IOSUiSettings(title: 'Crop Photo', aspectRatioLockEnabled: true),
+      ],
+    );
+    if (cropped == null || !mounted) return;
+
     setState(() => _uploadingPhoto = true);
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) throw StateError('You are not signed in.');
-      final bytes = await image.readAsBytes();
+      final bytes = await cropped.readAsBytes();
       final reference = FirebaseStorage.instance.ref(
         'profile_photos/$uid/profile.jpg',
       );

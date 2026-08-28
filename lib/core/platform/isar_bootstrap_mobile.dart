@@ -29,6 +29,8 @@ import 'package:school_pulse/features/teacher/data/models/subject_resource_isar_
 import 'package:school_pulse/features/teacher/data/models/subject_teacher_isar_models.dart';
 import 'package:school_pulse/features/shared/boarding/data/models/boarding_attendance_isar.dart';
 import 'package:school_pulse/features/student/data/enrollment_setup/models/enrollment_setup_draft_isar.dart';
+import 'package:school_pulse/features/parent_offline/data/models/parent_cache_entry_isar.dart';
+import 'package:school_pulse/features/parent_offline/data/models/parent_queue_item_isar.dart';
 
 /// Isar's web engine persists to IndexedDB and ignores the directory path;
 /// `getApplicationDocumentsDirectory()` has no web implementation and
@@ -114,5 +116,7 @@ Future<Isar> open() async {
     ClinicVisitIsarSchema,
     BoardingAttendanceIsarSchema,
     EnrollmentSetupDraftIsarSchema,
+    ParentCacheEntryIsarSchema,
+    ParentQueueItemIsarSchema,
   ], directory: dir.path);
 }

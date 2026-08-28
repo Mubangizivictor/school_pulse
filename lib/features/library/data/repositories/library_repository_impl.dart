@@ -306,6 +306,15 @@ class LibraryRepositoryImpl implements LibraryRepository {
   }
 
   @override
+  Future<void> fulfilReservation(String schoolId, String reservationId) {
+    return remoteDataSource.updateReservationStatus(
+      schoolId,
+      reservationId,
+      ReservationStatus.fulfilled.name,
+    );
+  }
+
+  @override
   Stream<List<LibraryPolicy>> watchPolicies(String schoolId) {
     return remoteDataSource
         .watchPolicies(schoolId)

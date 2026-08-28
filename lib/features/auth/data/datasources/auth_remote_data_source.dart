@@ -700,6 +700,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
     }
     await batch.commit();
+    await _syncProfileIntoConversations(user);
   }
 
   @override
@@ -778,5 +779,33 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     'schoolId': user.schoolId,
     'isActive': user.isActive,
     'phone': user.phoneNumber,
+    'photoUrl': user.photoUrl,
   };
+
+  /// Conversation participants are denormalized for a one-query inbox.
+  /// Refresh the safe display fields when a person changes their profile.
+  Future<void> _syncProfileIntoConversations(UserModel user) async {
+    final snapshot = await firestore
+        .collection('conversations')
+        .where('participantIds', arrayContains: user.id)
+        .get();
+
+    for (final doc in snapshot.docs) {
+      final participants = (doc.data()['participants'] as List? ?? const [])
+          .map<Map<String, dynamic>>(
+            (value) => Map<String, dynamic>.from(value as Map),
+          )
+          .map((participant) {
+            if (participant['id'] != user.id) return participant;
+            return {
+              ...participant,
+              'name': user.name,
+              'role': user.role.name,
+              'avatarUrl': user.photoUrl,
+            };
+          })
+          .toList();
+      await doc.reference.update({'participants': participants});
+    }
+  }
 }
