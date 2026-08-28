@@ -271,6 +271,15 @@ module.exports = ({ admin, onCall, HttpsError }) => {
       if (entry.reconciled !== true) {
         return { entryId, accountId: entry.accountId, idempotent: true };
       }
+      // All reads must precede all writes in a Firestore transaction, so
+      // fetch the paired entry (if any) before touching anything.
+      let pairRef = null;
+      let pairExists = false;
+      if (entry.matchedEntryId) {
+        pairRef = ledgerRef(schoolId, entry.matchedEntryId);
+        const pair = await tx.get(pairRef);
+        pairExists = pair.exists;
+      }
       const clear = {
         reconciled: false,
         matchedEntryId: null,
@@ -283,11 +292,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
         unmatchReason: reason,
       };
       tx.update(snap.ref, clear);
-      if (entry.matchedEntryId) {
-        const pairRef = ledgerRef(schoolId, entry.matchedEntryId);
-        const pair = await tx.get(pairRef);
-        if (pair.exists) tx.update(pairRef, clear);
-      }
+      if (pairRef && pairExists) tx.update(pairRef, clear);
       tx.set(
         auditRef(schoolId),
         audit("reconciliation", "bank_entry_unmatched", caller, {

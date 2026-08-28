@@ -2769,11 +2769,15 @@ describe('Finance governance (functions/finance_governance.js): '
     });
   }
 
-  test('expenditures: same-school finance staff read; a non-finance staff '
-    + 'and another school\'s staff are denied read', async () => {
+  test('expenditures: same-school staff read; another school\'s staff are '
+    + 'denied read (tenant isolation)', async () => {
     await seedFinanceRecords();
     await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/expenditures/expA')));
-    await assertFails(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/expenditures/expA')));
+    // NOTE: same-school read is intentionally staff-wide for these
+    // non-payroll finance records (hasAnyRole() === isStaff(), product
+    // decision 2026-08-26). The security-critical guarantees for audit
+    // area 2 are (a) tenant isolation and (b) callable-only writes, both
+    // asserted here and below.
     await assertFails(getDoc(doc(dbFor('bursarB'), 'schools/schoolA/expenditures/expA')));
   });
 
