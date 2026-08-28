@@ -1,33 +1,157 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/core/utils.dart'
     show CurrencyFormatter, DateFormatter;
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/approvals/data/repositories/approval_repository.dart';
+import 'package:school_pulse/features/approvals/domain/entities/approval_models.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/finance/domain/entities/expenditure.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_event.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_state.dart';
 import 'package:school_pulse/features/finance/presentation/widgets/finance_kit.dart';
 
-/// Roles allowed to approve/reject/return an expenditure request. Mirrors
-/// the existing [ExpenditureScreen] approver set and firestore.rules'
-/// intent: bursars *prepare* spend; these roles *decide* on it.
-const _approverRoles = {
-  UserRole.schoolAdmin,
-  UserRole.headTeacher,
-  UserRole.director,
-  UserRole.bursar,
+/// Finance's projection of the one institution-wide approval workflow
+/// (`schools/{id}/approval_requests`). The server assigns every current-stage
+/// approver; this screen never infers approval authority from a client role
+/// alone. Both the mobile tab and the desktop console
+/// (`BursarWebApprovalsScreen`) use the shared helpers below so the decision
+/// surface, actionability rule and "reason required" behaviour are identical
+/// everywhere.
+
+/// Finance-relevant `moduleKey` / `requestType` values for the inbox filter.
+bool isFinanceApproval(ApprovalRequest r) {
+  final m = r.moduleKey.toLowerCase();
+  final t = r.requestType.toLowerCase();
+  return m == 'finance' ||
+      m == 'expenditure' ||
+      t.contains('payment') ||
+      t.contains('expenditure') ||
+      t.contains('requisition') ||
+      t.contains('refund') ||
+      t.contains('journal');
+}
+
+const _openStatuses = {
+  ApprovalStatus.pending,
+  ApprovalStatus.partiallyApproved,
+  ApprovalStatus.inReview,
+  ApprovalStatus.awaitingInformation,
 };
 
-/// Approvals tab (bottom-nav slot 2). Pending / History over
-/// `schools/{schoolId}/expenditures`, driven by [FinanceBloc]. Matches the
-/// reference "Approvals" screenshot: a Pending(N) / History segmented
-/// header, request cards with amount + requester + high-risk badge, and
-/// Reject / Approve inline actions.
+bool approvalIsOpen(ApprovalRequest r) =>
+    _openStatuses.contains(r.currentStatus);
+
+/// A request the signed-in user can act on right now: open, they are a
+/// current-stage approver, and it has not passed its due date.
+bool approvalIsActionable(ApprovalRequest r, String uid) =>
+    approvalIsOpen(r) &&
+    r.requiredApprovers.contains(uid) &&
+    r.dueAt?.isBefore(DateTime.now()) != true;
+
+/// Whether [r] is over the "high risk" threshold for extra scrutiny (a large
+/// spend, an urgent priority, or a passed due date).
+bool approvalIsHighRisk(ApprovalRequest r) =>
+    (r.amount ?? 0) >= 3000000 ||
+    r.priority.index >= ApprovalPriority.high.index ||
+    r.dueAt?.isBefore(DateTime.now()) == true;
+
+String approvalTypeLabel(String requestType) => requestType
+    .replaceAll('_', ' ')
+    .split(' ')
+    .where((w) => w.isNotEmpty)
+    .map((w) => w[0].toUpperCase() + w.substring(1))
+    .join(' ');
+
+/// Confirm-then-decide on [request]. Shared by mobile + desktop. Rejecting
+/// and returning both require a reason; the callable enforces version
+/// concurrency (`expectedVersion`).
+Future<void> decideApproval(
+  BuildContext context,
+  ApprovalRepository repository,
+  String schoolId,
+  ApprovalRequest request,
+  ApprovalDecision decision,
+) async {
+  final requireReason =
+      decision == ApprovalDecision.rejected ||
+      decision == ApprovalDecision.returned;
+  final controller = TextEditingController();
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(switch (decision) {
+        ApprovalDecision.approved => 'Approve request',
+        ApprovalDecision.rejected => 'Reject request',
+        ApprovalDecision.returned => 'Return for changes',
+        _ => 'Update request',
+      }),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(request.title),
+          if (request.amount != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              CurrencyFormatter.ugx(request.amount!),
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ],
+          const SizedBox(height: 12),
+          TextField(
+            controller: controller,
+            maxLines: 2,
+            decoration: InputDecoration(
+              labelText: requireReason ? 'Reason' : 'Comment (optional)',
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Confirm'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+  final reason = controller.text.trim();
+  if (requireReason && reason.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('A reason is required to reject or return a request.'),
+      ),
+    );
+    return;
+  }
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    await repository.decide(
+      schoolId: schoolId,
+      requestId: request.approvalRequestId,
+      decision: decision,
+      comment: reason,
+      expectedVersion: request.version,
+    );
+    messenger.showSnackBar(const SnackBar(content: Text('Decision recorded.')));
+  } catch (_) {
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'This approval changed or could not be saved. Refresh and try again.',
+        ),
+      ),
+    );
+  }
+}
+
+/// Approvals tab (mobile bottom-nav slot 2). Pending / History over the
+/// finance slice of `approval_requests`.
 class BursarApprovalsScreen extends StatefulWidget {
   const BursarApprovalsScreen({super.key});
 
@@ -37,13 +161,8 @@ class BursarApprovalsScreen extends StatefulWidget {
 
 class _BursarApprovalsScreenState extends State<BursarApprovalsScreen>
     with SingleTickerProviderStateMixin {
+  final _repository = ApprovalRepository();
   late final TabController _tabs = TabController(length: 2, vsync: this);
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
 
   @override
   void dispose() {
@@ -51,23 +170,12 @@ class _BursarApprovalsScreenState extends State<BursarApprovalsScreen>
     super.dispose();
   }
 
-  void _load() {
-    final auth = context.read<AuthBloc>().state;
-    if (auth is AuthAuthenticated) {
-      context.read<FinanceBloc>().add(
-        LoadExpenditureRequests(auth.user.schoolId),
-      );
-    }
-  }
-
-  bool get _canApprove {
-    final auth = context.read<AuthBloc>().state;
-    return auth is AuthAuthenticated &&
-        auth.user.roles.any(_approverRoles.contains);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return const SizedBox.shrink();
+    final uid = auth.user.id;
+
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
@@ -95,161 +203,93 @@ class _BursarApprovalsScreenState extends State<BursarApprovalsScreen>
           ],
         ),
       ),
-      body: SafeArea(
-        top: false,
-        child: BlocConsumer<FinanceBloc, FinanceState>(
-          listener: (context, state) {
-            if (state is FinanceActionSuccess) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(state.message)));
-              _load();
-            }
-          },
-          builder: (context, state) {
-            if (state is FinanceLoading || state is FinanceInitial) {
-              return FinanceStates.loading();
-            }
-            if (state is FinanceError) {
-              return FinanceStates.error(
-                context,
-                state.message,
-                onRetry: _load,
-              );
-            }
-            if (state is! ExpendituresLoaded) return const SizedBox.shrink();
-
-            final pending = state.requests
-                .where((r) => r.status == ExpenditureStatus.pending)
-                .toList();
-            final history = state.requests
-                .where((r) => r.status != ExpenditureStatus.pending)
-                .toList();
-
-            return TabBarView(
-              controller: _tabs,
-              children: [
-                _RequestList(
-                  requests: pending,
-                  emptyTitle: 'Nothing awaiting approval',
-                  emptyMessage:
-                      'New payment and requisition requests land here.',
-                  onRefresh: _load,
-                  canApprove: _canApprove,
-                  onDecision: _decide,
-                ),
-                _RequestList(
-                  requests: history,
-                  emptyTitle: 'No decisions yet',
-                  emptyMessage:
-                      'Approved, rejected and released requests appear here.',
-                  onRefresh: _load,
-                  canApprove: false,
-                  onDecision: _decide,
-                ),
-              ],
+      body: StreamBuilder<List<ApprovalRequest>>(
+        stream: _repository.watchInbox(auth.user.schoolId),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return FinanceStates.error(
+              context,
+              'Could not sync approvals. Cached items remain available when '
+              'offline.',
+              onRetry: () => setState(() {}),
             );
-          },
-        ),
-      ),
-    );
-  }
+          }
+          if (!snapshot.hasData) return FinanceStates.loading();
+          final all = snapshot.data!.where(isFinanceApproval).toList();
+          final pending = all
+              .where((r) => approvalIsActionable(r, uid))
+              .toList();
+          final history = all
+              .where(
+                (r) =>
+                    !approvalIsOpen(r) &&
+                    (r.requestedBy == uid || r.requiredApprovers.contains(uid)),
+              )
+              .toList();
 
-  Future<void> _decide(
-    ExpenditureRequest request,
-    ExpenditureStatus decision,
-  ) async {
-    final auth = context.read<AuthBloc>().state;
-    if (auth is! AuthAuthenticated || !_canApprove) return;
-
-    final commentController = TextEditingController();
-    final requireComment = decision != ExpenditureStatus.approved;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          decision == ExpenditureStatus.approved
-              ? 'Approve request'
-              : decision == ExpenditureStatus.rejected
-              ? 'Reject request'
-              : 'Request changes',
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(request.description),
-            const SizedBox(height: 4),
-            Text(
-              CurrencyFormatter.ugx(request.amount),
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: commentController,
-              maxLines: 2,
-              decoration: InputDecoration(
-                labelText: requireComment ? 'Reason' : 'Comment (optional)',
+          return TabBarView(
+            controller: _tabs,
+            children: [
+              _ApprovalList(
+                items: pending,
+                emptyTitle: 'No approvals waiting for you',
+                emptyMessage:
+                    'New finance requests assigned to your current approval '
+                    'step will appear here.',
+                onRefresh: () => setState(() {}),
+                onTap: (r) => _openSheet(r, auth.user.schoolId, true),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    final comment = commentController.text.trim();
-    if (requireComment && comment.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('A reason is required to reject or return a request.'),
-        ),
-      );
-      return;
-    }
-    context.read<FinanceBloc>().add(
-      UpdateExpenditureApproval(
-        schoolId: auth.user.schoolId,
-        requestId: request.id,
-        status: decision,
-        approverId: auth.user.id,
-        approverName: auth.user.name,
-        approverRole: auth.user.role.name,
-        comment: comment.isEmpty ? null : comment,
+              _ApprovalList(
+                items: history,
+                emptyTitle: 'No approval history yet',
+                emptyMessage:
+                    'Completed, rejected, returned, cancelled and expired '
+                    'actions will appear here.',
+                onRefresh: () => setState(() {}),
+                onTap: (r) => _openSheet(r, auth.user.schoolId, false),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
+
+  Future<void> _openSheet(
+    ApprovalRequest request,
+    String schoolId,
+    bool actionable,
+  ) => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppColors.surfaceElevated(context),
+    builder: (context) => _ApprovalDetailSheet(
+      repository: _repository,
+      schoolId: schoolId,
+      request: request,
+      actionable: actionable,
+    ),
+  );
 }
 
-class _RequestList extends StatelessWidget {
-  final List<ExpenditureRequest> requests;
+class _ApprovalList extends StatelessWidget {
+  final List<ApprovalRequest> items;
   final String emptyTitle;
   final String emptyMessage;
   final VoidCallback onRefresh;
-  final bool canApprove;
-  final void Function(ExpenditureRequest, ExpenditureStatus) onDecision;
+  final ValueChanged<ApprovalRequest> onTap;
 
-  const _RequestList({
-    required this.requests,
+  const _ApprovalList({
+    required this.items,
     required this.emptyTitle,
     required this.emptyMessage,
     required this.onRefresh,
-    required this.canApprove,
-    required this.onDecision,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (requests.isEmpty) {
+    if (items.isEmpty) {
       return FinanceStates.empty(
         context,
         icon: Icons.verified_outlined,
@@ -259,43 +299,28 @@ class _RequestList extends StatelessWidget {
     }
     return RefreshIndicator(
       onRefresh: () async => onRefresh(),
-      child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.l,
-          AppSpacing.l,
-          AppSpacing.l,
-          AppSpacing.x3l,
-        ),
-        itemCount: requests.length,
-        itemBuilder: (context, i) => _RequestCard(
-          request: requests[i],
-          canApprove: canApprove,
-          onDecision: onDecision,
-        ),
+      child: ListView.separated(
+        padding: const EdgeInsets.all(AppSpacing.l),
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.m),
+        itemBuilder: (_, i) =>
+            _ApprovalCard(request: items[i], onTap: () => onTap(items[i])),
       ),
     );
   }
 }
 
-class _RequestCard extends StatelessWidget {
-  final ExpenditureRequest request;
-  final bool canApprove;
-  final void Function(ExpenditureRequest, ExpenditureStatus) onDecision;
+class _ApprovalCard extends StatelessWidget {
+  final ApprovalRequest request;
+  final VoidCallback onTap;
 
-  const _RequestCard({
-    required this.request,
-    required this.canApprove,
-    required this.onDecision,
-  });
-
-  /// A large spend flagged for extra scrutiny - the reference screenshot's
-  /// red "High risk" chip. Threshold-based only; no server signal exists yet.
-  bool get _highRisk => request.amount >= 3000000;
+  const _ApprovalCard({required this.request, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final highRisk = approvalIsHighRisk(request);
     return FinanceCard(
-      margin: const EdgeInsets.only(bottom: AppSpacing.m),
+      onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -303,35 +328,38 @@ class _RequestCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${_typeLabel(request)} • ${DateFormatter.format(request.createdAt)}',
+                  '${approvalTypeLabel(request.requestType)} • '
+                  '${DateFormatter.format(request.submittedAt)}',
                   style: TextStyle(
                     fontSize: 11,
                     color: AppColors.textMuted(context),
                   ),
                 ),
               ),
-              if (_highRisk)
+              if (highRisk)
                 const FinanceStatusChip(
                   label: 'High risk',
                   tone: FinanceStatusTone.negative,
                 )
               else
-                FinanceStatusChip.forStatus(request.status.name),
+                FinanceStatusChip.forStatus(request.currentStatus.name),
             ],
           ),
           const SizedBox(height: AppSpacing.m),
           Text(
-            request.description,
+            request.title,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary(context),
             ),
           ),
-          if (request.supplierName != null) ...[
+          if (request.summary.isNotEmpty) ...[
             const SizedBox(height: 2),
             Text(
-              request.supplierName!,
+              request.summary,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textMuted(context),
@@ -339,55 +367,140 @@ class _RequestCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.m),
-          KeyValueRow(
-            'Amount',
-            CurrencyFormatter.ugx(request.amount),
-            bold: true,
-          ),
-          KeyValueRow('Requested by', request.requesterName, dense: true),
-          if (request.budgetCategoryId.isNotEmpty)
-            KeyValueRow('Budget vote', request.budgetCategoryId, dense: true),
-          if (request.attachmentUrls.isNotEmpty)
-            KeyValueRow(
-              'Attachments',
-              '${request.attachmentUrls.length} file(s)',
-              dense: true,
-            ),
-          if (request.approvalHistory.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.s),
-            Text(
-              'Route: ${request.approvalHistory.map((s) => s.approverRole).join(' → ')}',
-              style: TextStyle(
-                fontSize: 11,
-                color: AppColors.textMuted(context),
+          Row(
+            children: [
+              Text(
+                request.amount == null
+                    ? 'Amount not applicable'
+                    : CurrencyFormatter.ugx(request.amount!),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary(context),
+                ),
               ),
+              const Spacer(),
+              Text(
+                'Step: ${request.currentStage}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textMuted(context),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ApprovalDetailSheet extends StatefulWidget {
+  final ApprovalRepository repository;
+  final String schoolId;
+  final ApprovalRequest request;
+  final bool actionable;
+
+  const _ApprovalDetailSheet({
+    required this.repository,
+    required this.schoolId,
+    required this.request,
+    required this.actionable,
+  });
+
+  @override
+  State<_ApprovalDetailSheet> createState() => _ApprovalDetailSheetState();
+}
+
+class _ApprovalDetailSheetState extends State<_ApprovalDetailSheet> {
+  bool _working = false;
+
+  Future<void> _decide(ApprovalDecision decision) async {
+    setState(() => _working = true);
+    await decideApproval(
+      context,
+      widget.repository,
+      widget.schoolId,
+      widget.request,
+      decision,
+    );
+    if (mounted) {
+      setState(() => _working = false);
+      Navigator.of(context).maybePop();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.request;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.l,
+        AppSpacing.l,
+        AppSpacing.l,
+        MediaQuery.of(context).viewInsets.bottom + AppSpacing.l,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            r.title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary(context),
             ),
-          ],
-          if (canApprove && request.status == ExpenditureStatus.pending) ...[
+          ),
+          const SizedBox(height: AppSpacing.m),
+          KeyValueRow('Reference', r.approvalRequestId),
+          KeyValueRow('Type', approvalTypeLabel(r.requestType)),
+          KeyValueRow('Requested by', r.requesterRole),
+          KeyValueRow('Submitted', DateFormatter.format(r.submittedAt)),
+          if (r.amount != null)
+            KeyValueRow('Amount', CurrencyFormatter.ugx(r.amount!), bold: true),
+          KeyValueRow('Current step', r.currentStage),
+          if (r.reason != null && r.reason!.isNotEmpty)
+            KeyValueRow('Reason', r.reason!),
+          if (r.attachments.isNotEmpty)
+            KeyValueRow('Attachments', '${r.attachments.length} file(s)'),
+          if (widget.actionable) ...[
             const SizedBox(height: AppSpacing.l),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary(context),
-                    side: BorderSide(color: AppColors.border(context)),
-                    shape: const StadiumBorder(),
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.danger(context),
+                      side: BorderSide(color: AppColors.danger(context)),
+                    ),
+                    onPressed: _working
+                        ? null
+                        : () => _decide(ApprovalDecision.rejected),
+                    child: const Text('Reject'),
                   ),
-                  onPressed: () =>
-                      onDecision(request, ExpenditureStatus.rejected),
-                  child: const Text('Reject'),
                 ),
                 const SizedBox(width: AppSpacing.m),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary(context),
-                    foregroundColor: AppColors.background(context),
-                    shape: const StadiumBorder(),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _working
+                        ? null
+                        : () => _decide(ApprovalDecision.returned),
+                    child: const Text('Return'),
                   ),
-                  onPressed: () =>
-                      onDecision(request, ExpenditureStatus.approved),
-                  child: const Text('Approve'),
+                ),
+                const SizedBox(width: AppSpacing.m),
+                Expanded(
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary(context),
+                      foregroundColor: AppColors.background(context),
+                    ),
+                    onPressed: _working
+                        ? null
+                        : () => _decide(ApprovalDecision.approved),
+                    child: const Text('Approve'),
+                  ),
                 ),
               ],
             ),
@@ -396,7 +509,4 @@ class _RequestCard extends StatelessWidget {
       ),
     );
   }
-
-  String _typeLabel(ExpenditureRequest r) =>
-      r.supplierName != null ? 'Supplier payment' : 'Requisition';
 }
