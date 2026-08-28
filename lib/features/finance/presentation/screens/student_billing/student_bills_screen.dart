@@ -1,28 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
-import 'package:school_pulse/injection_container.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:school_pulse/core/user_roles.dart';
-import 'package:school_pulse/core/utils.dart' show CurrencyFormatter, DateFormatter;
+import 'package:school_pulse/core/utils.dart'
+    show CurrencyFormatter, DateFormatter;
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/injection_container.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/finance/domain/entities/student_bill.dart';
 import 'package:school_pulse/features/finance/domain/repositories/student_billing_repository.dart';
-import 'record_payment_dialog.dart';
+import 'package:school_pulse/features/finance/presentation/screens/receive_payment_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/receipt_detail_screen.dart';
+import 'package:school_pulse/features/finance/presentation/widgets/finance_kit.dart';
 import 'apply_adjustment_dialog.dart';
 
-/// Renders a student's real, issued bills - the immutable snapshot backend
-/// (functions/student_fee_billing.js), not the legacy FeeItem/FinanceBloc
-/// mock stream. Used both embedded in the parent Fees screen (read-only)
-/// and as a standalone staff screen (with adjustment/payment/reversal
-/// actions gated to finance roles).
+/// Student Statement (a.k.a. issued bills).
 ///
-/// Every amount shown for a bill is exactly what was stored at issuance -
-/// this screen never recomputes a total against the current fee-plan
-/// version, only ever displays adjustmentTotalUgx/paidTotalUgx/balanceUgx
-/// as they stand after adjustments/payments have been layered on top.
+/// Matches the reference "Student Statement" screenshot: a learner header,
+/// a term selector, an overall status badge, a fee breakdown table with
+/// scholarship/discount lines, an amount-due total, and payment history.
+/// Renders the immutable snapshot backend (`student_accounts/*/bills/**`) -
+/// every figure is displayed exactly as stored at issuance, never recomputed.
+/// Staff see Record payment / Adjust; parents see a read-only view.
 class StudentBillsScreen extends StatelessWidget {
   final String schoolId;
   final String studentId;
@@ -44,389 +45,413 @@ class StudentBillsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthBloc>().state;
-    final canManage = authState is AuthAuthenticated &&
-        authState.user.roles.any(_financeRoles.contains);
+    final auth = context.watch<AuthBloc>().state;
+    final canManage =
+        auth is AuthAuthenticated &&
+        auth.user.roles.any(_financeRoles.contains);
+    final studentName = auth is AuthAuthenticated ? auth.user.name : '';
 
     final body = StreamBuilder<List<StudentBill>>(
       stream: sl<StudentBillingRepository>().watchBills(schoolId, studentId),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: SchoolPulseLoader());
+        if (snapshot.hasError) {
+          return FinanceStates.error(context, 'Could not load statement.');
         }
+        if (!snapshot.hasData) return FinanceStates.loading();
         final bills = snapshot.data!;
         if (bills.isEmpty) {
-          return const EmptyState(
+          return FinanceStates.empty(
+            context,
             icon: Icons.receipt_long_outlined,
             title: 'No bills yet',
             message:
-                'No bill has been issued for this student yet. Billing '
-                'starts once a fee plan is published and the student is '
-                'activated.',
+                'Billing starts once a fee plan is published and the '
+                'learner is activated.',
           );
         }
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: bills.length,
-          itemBuilder: (context, index) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _BillCard(
-              schoolId: schoolId,
-              studentId: studentId,
-              bill: bills[index],
-              canManage: canManage,
-            ),
-          ),
+        return _StatementBody(
+          schoolId: schoolId,
+          studentId: studentId,
+          studentName: studentName,
+          bills: bills,
+          canManage: canManage,
+          embedded: embedded,
         );
       },
     );
 
     if (embedded) return body;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Bills')),
-      body: body,
-    );
+    return FinanceScaffold(title: 'Student Statement', body: body);
   }
 }
 
-class _BillCard extends StatefulWidget {
+class _StatementBody extends StatefulWidget {
   final String schoolId;
   final String studentId;
-  final StudentBill bill;
+  final String studentName;
+  final List<StudentBill> bills;
   final bool canManage;
+  final bool embedded;
 
-  const _BillCard({
+  const _StatementBody({
     required this.schoolId,
     required this.studentId,
-    required this.bill,
+    required this.studentName,
+    required this.bills,
     required this.canManage,
+    required this.embedded,
   });
 
   @override
-  State<_BillCard> createState() => _BillCardState();
+  State<_StatementBody> createState() => _StatementBodyState();
 }
 
-class _BillCardState extends State<_BillCard> {
-  bool _expanded = false;
+class _StatementBodyState extends State<_StatementBody> {
+  late StudentBill _selected = widget.bills.first;
+
+  int get _scholarshipDiscount => widget.bills
+      .where((b) => b.id == _selected.id)
+      .fold(0, (s, b) => s + b.adjustmentTotalUgx);
 
   @override
   Widget build(BuildContext context) {
-    final bill = widget.bill;
-    return AppCard(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final bill = _selected;
+    final overallOverdue = bill.status != 'paid' && bill.balanceUgx > 0;
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.l,
+        AppSpacing.m,
+        AppSpacing.l,
+        widget.embedded ? AppSpacing.l : AppSpacing.x3l,
+      ),
+      children: [
+        // Learner header
+        Row(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  bill.issuedAt != null
-                      ? 'Bill issued ${DateFormatter.format(bill.issuedAt!)}'
-                      : 'Bill',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                _StatusChip(status: bill.status),
-              ],
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.surfaceContainer(context),
+              child: Icon(
+                Icons.person_outline_rounded,
+                color: AppColors.textSecondary(context),
+              ),
             ),
-            const SizedBox(height: 12),
-            for (final line in bill.lines)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(child: Text(line.name)),
-                    Text(CurrencyFormatter.ugx(line.amountUgx.toDouble())),
-                  ],
-                ),
-              ),
-            const Divider(height: 20),
-            _totalRow(context, 'Issued total', bill.issuedTotalUgx),
-            if (bill.adjustmentTotalUgx > 0)
-              _totalRow(
-                context,
-                'Adjustments',
-                -bill.adjustmentTotalUgx,
-                color: AppColors.success(context),
-              ),
-            if (bill.paidTotalUgx > 0)
-              _totalRow(
-                context,
-                'Paid',
-                -bill.paidTotalUgx,
-                color: AppColors.success(context),
-              ),
-            const Divider(height: 20),
-            _totalRow(
-              context,
-              'Balance',
-              bill.balanceUgx,
-              bold: true,
-              color: bill.balanceUgx > 0
-                  ? AppColors.warning(context)
-                  : AppColors.success(context),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: () => setState(() => _expanded = !_expanded),
-                  child: Text(_expanded ? 'Hide history' : 'Show history'),
-                ),
-                const Spacer(),
-                if (widget.canManage) ...[
-                  TextButton(
-                    onPressed: bill.balanceUgx <= 0
-                        ? null
-                        : () => showDialog(
-                              context: context,
-                              builder: (_) => ApplyAdjustmentDialog(
-                                schoolId: widget.schoolId,
-                                studentId: widget.studentId,
-                                bill: bill,
-                              ),
-                            ),
-                    child: const Text('Adjust'),
+            const SizedBox(width: AppSpacing.l),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.studentName.isEmpty ? 'Learner' : widget.studentName,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary(context),
+                    ),
                   ),
-                  PrimaryButton(
-                    label: 'Record payment',
-                    onPressed: bill.balanceUgx <= 0
-                        ? null
-                        : () => showDialog(
-                              context: context,
-                              builder: (_) => RecordPaymentDialog(
-                                schoolId: widget.schoolId,
-                                studentId: widget.studentId,
-                                bill: bill,
-                              ),
-                            ),
+                  Text(
+                    'Class ${bill.classId}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted(context),
+                    ),
                   ),
                 ],
-              ],
-            ),
-            if (_expanded)
-              _BillHistory(
-                schoolId: widget.schoolId,
-                studentId: widget.studentId,
-                bill: bill,
-                canManage: widget.canManage,
               ),
+            ),
           ],
         ),
-      ),
-    );
-  }
+        const SizedBox(height: AppSpacing.l),
 
-  Widget _totalRow(
-    BuildContext context,
-    String label,
-    int amountUgx, {
-    bool bold = false,
-    Color? color,
-  }) {
-    final style = TextStyle(
-      fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
-      color: color,
-    );
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: style),
-          Text(
-            '${amountUgx < 0 ? '- ' : ''}${CurrencyFormatter.ugx(amountUgx.abs().toDouble())}',
-            style: style,
+        // Term selector + status
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                initialValue: bill.id,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.l,
+                    vertical: AppSpacing.m,
+                  ),
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.border(context)),
+                  ),
+                ),
+                items: [
+                  for (final b in widget.bills)
+                    DropdownMenuItem(
+                      value: b.id,
+                      child: Text(
+                        b.issuedAt != null
+                            ? 'Bill • ${DateFormatter.format(b.issuedAt!)}'
+                            : 'Bill ${b.id}',
+                      ),
+                    ),
+                ],
+                onChanged: (id) => setState(
+                  () => _selected = widget.bills.firstWhere((b) => b.id == id),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.m),
+            FinanceStatusChip(
+              label: overallOverdue ? 'Overdue' : 'Settled',
+              tone: overallOverdue
+                  ? FinanceStatusTone.negative
+                  : FinanceStatusTone.positive,
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.l),
+
+        // Fee breakdown
+        SectionCard(
+          title: 'FEE BREAKDOWN',
+          child: Column(
+            children: [
+              for (final line in bill.lines)
+                KeyValueRow(
+                  line.name,
+                  CurrencyFormatter.ugx(line.amountUgx.toDouble()),
+                ),
+              const Divider(height: AppSpacing.x2l),
+              KeyValueRow(
+                'Issued total',
+                CurrencyFormatter.ugx(bill.issuedTotalUgx.toDouble()),
+              ),
+              if (_scholarshipDiscount > 0)
+                KeyValueRow(
+                  'Scholarship / discount',
+                  '- ${CurrencyFormatter.ugx(_scholarshipDiscount.toDouble())}',
+                  valueColor: AppColors.success(context),
+                ),
+              if (bill.paidTotalUgx > 0)
+                KeyValueRow(
+                  'Paid to date',
+                  '- ${CurrencyFormatter.ugx(bill.paidTotalUgx.toDouble())}',
+                  valueColor: AppColors.success(context),
+                ),
+              const Divider(height: AppSpacing.x2l),
+              KeyValueRow(
+                'Amount due',
+                CurrencyFormatter.ugx(bill.balanceUgx.toDouble()),
+                bold: true,
+                valueColor: bill.balanceUgx > 0
+                    ? AppColors.danger(context)
+                    : AppColors.success(context),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.l),
+
+        // Payment history
+        _PaymentHistory(
+          schoolId: widget.schoolId,
+          studentId: widget.studentId,
+          studentName: widget.studentName,
+          bill: bill,
+          canManage: widget.canManage,
+        ),
+        const SizedBox(height: AppSpacing.l),
+
+        // Actions
+        if (!widget.embedded)
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _shareStatement(context, bill),
+                  icon: const Icon(Icons.ios_share_rounded, size: 16),
+                  label: const Text('Share statement'),
+                ),
+              ),
+              if (widget.canManage) ...[
+                const SizedBox(width: AppSpacing.m),
+                Expanded(
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary(context),
+                      foregroundColor: AppColors.background(context),
+                    ),
+                    onPressed: bill.balanceUgx <= 0
+                        ? null
+                        : () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ReceivePaymentScreen(
+                                schoolId: widget.schoolId,
+                                studentId: widget.studentId,
+                                studentName: widget.studentName,
+                                bill: bill,
+                              ),
+                            ),
+                          ),
+                    child: const Text('Record payment'),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        if (widget.canManage && !widget.embedded) ...[
+          const SizedBox(height: AppSpacing.m),
+          TextButton.icon(
+            onPressed: bill.balanceUgx <= 0
+                ? null
+                : () => showDialog(
+                    context: context,
+                    builder: (_) => ApplyAdjustmentDialog(
+                      schoolId: widget.schoolId,
+                      studentId: widget.studentId,
+                      bill: bill,
+                    ),
+                  ),
+            icon: const Icon(Icons.percent_rounded, size: 16),
+            label: const Text('Apply scholarship / discount'),
           ),
         ],
-      ),
+      ],
     );
+  }
+
+  void _shareStatement(BuildContext context, StudentBill bill) {
+    final buffer = StringBuffer()
+      ..writeln('Statement for ${widget.studentName}')
+      ..writeln('Class ${bill.classId}')
+      ..writeln('');
+    for (final line in bill.lines) {
+      buffer.writeln(
+        '${line.name}: ${CurrencyFormatter.ugx(line.amountUgx.toDouble())}',
+      );
+    }
+    buffer
+      ..writeln('')
+      ..writeln(
+        'Issued total: ${CurrencyFormatter.ugx(bill.issuedTotalUgx.toDouble())}',
+      )
+      ..writeln('Paid: ${CurrencyFormatter.ugx(bill.paidTotalUgx.toDouble())}')
+      ..writeln(
+        'Amount due: ${CurrencyFormatter.ugx(bill.balanceUgx.toDouble())}',
+      );
+    Share.share(buffer.toString(), subject: 'Fee statement');
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  final String status;
-  const _StatusChip({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = status == 'paid'
-        ? AppColors.success(context)
-        : AppColors.warning(context);
-    return Chip(
-      label: Text(status, style: const TextStyle(fontSize: 11)),
-      backgroundColor: color.withValues(alpha: 0.15),
-      labelStyle: TextStyle(color: color),
-      visualDensity: VisualDensity.compact,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    );
-  }
-}
-
-class _BillHistory extends StatelessWidget {
+class _PaymentHistory extends StatelessWidget {
   final String schoolId;
   final String studentId;
+  final String studentName;
   final StudentBill bill;
   final bool canManage;
 
-  const _BillHistory({
+  const _PaymentHistory({
     required this.schoolId,
     required this.studentId,
+    required this.studentName,
     required this.bill,
     required this.canManage,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Divider(height: 1),
-          const SizedBox(height: 8),
-          const Text('Payments', style: TextStyle(fontWeight: FontWeight.w600)),
-          StreamBuilder<List<StudentPayment>>(
-            stream: sl<StudentBillingRepository>().watchPayments(
-              schoolId,
-              studentId,
-              bill.id,
-            ),
-            builder: (context, snapshot) {
-              final payments = snapshot.data ?? const <StudentPayment>[];
-              if (payments.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6),
-                  child: Text('No payments recorded yet.'),
-                );
-              }
-              return Column(
-                children: payments
-                    .map(
-                      (p) => ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(
-                          p.isReversal
-                              ? Icons.undo_outlined
-                              : Icons.payments_outlined,
-                          color: p.isReversal
-                              ? AppColors.danger(context)
-                              : AppColors.success(context),
-                        ),
-                        title: Text(
-                          '${CurrencyFormatter.ugx(p.amountUgx.abs().toDouble())} '
-                          '${p.isReversal ? '(reversal)' : ''}',
-                        ),
-                        subtitle: Text(
-                          'Receipt ${p.receiptNumber} • ${p.method}'
-                          '${p.isReversed ? ' • reversed' : ''}',
-                        ),
-                        trailing: canManage && !p.isReversal && !p.isReversed
-                            ? TextButton(
-                                onPressed: () => _confirmReverse(context, p),
-                                child: const Text('Reverse'),
-                              )
-                            : null,
-                      ),
-                    )
-                    .toList(),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Adjustments',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-          StreamBuilder<List<BillAdjustment>>(
-            stream: sl<StudentBillingRepository>().watchAdjustments(
-              schoolId,
-              studentId,
-              bill.id,
-            ),
-            builder: (context, snapshot) {
-              final adjustments = snapshot.data ?? const <BillAdjustment>[];
-              if (adjustments.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6),
-                  child: Text('No adjustments applied yet.'),
-                );
-              }
-              return Column(
-                children: adjustments
-                    .map(
-                      (a) => ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.discount_outlined),
-                        title: Text(
-                          '${a.type} - ${CurrencyFormatter.ugx(a.amountUgx.toDouble())}',
-                        ),
-                        subtitle: Text(a.reason),
-                      ),
-                    )
-                    .toList(),
-              );
-            },
-          ),
-        ],
+    return StreamBuilder<List<StudentPayment>>(
+      stream: sl<StudentBillingRepository>().watchPayments(
+        schoolId,
+        studentId,
+        bill.id,
       ),
-    );
-  }
-
-  Future<void> _confirmReverse(BuildContext context, StudentPayment payment) async {
-    final reasonController = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Reverse payment?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'This records a compensating reversal for receipt '
-              '${payment.receiptNumber}. The original payment record is '
-              'never deleted or changed.',
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reasonController,
-              decoration: const InputDecoration(labelText: 'Reason'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Reverse'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || reasonController.text.trim().isEmpty) return;
-    final result = await sl<StudentBillingRepository>().reverseStudentPayment(
-      schoolId: schoolId,
-      studentId: studentId,
-      billId: bill.id,
-      paymentId: payment.id,
-      reason: reasonController.text.trim(),
-    );
-    if (!context.mounted) return;
-    result.fold(
-      (failure) => ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(failure.message))),
-      (_) => ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Payment reversed.'))),
+      builder: (context, snapshot) {
+        final payments = snapshot.data ?? const <StudentPayment>[];
+        return SectionCard(
+          title: 'PAYMENT HISTORY',
+          child: payments.isEmpty
+              ? Text(
+                  'No payments recorded yet.',
+                  style: TextStyle(color: AppColors.textMuted(context)),
+                )
+              : Column(
+                  children: [
+                    for (final p in payments)
+                      InkWell(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ReceiptDetailScreen(
+                              schoolId: schoolId,
+                              studentId: studentId,
+                              studentName: studentName,
+                              billId: bill.id,
+                              payment: p,
+                            ),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.s,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                p.isReversal
+                                    ? Icons.undo_rounded
+                                    : Icons.check_circle_outline_rounded,
+                                size: 16,
+                                color: p.isReversal
+                                    ? AppColors.danger(context)
+                                    : AppColors.success(context),
+                              ),
+                              const SizedBox(width: AppSpacing.m),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      p.isReversal
+                                          ? 'Reversal • ${p.receiptNumber}'
+                                          : 'Receipt ${p.receiptNumber}',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${p.method}'
+                                      '${p.recordedAt != null ? ' • ${DateFormatter.format(p.recordedAt!)}' : ''}'
+                                      '${p.isReversed ? ' • reversed' : ''}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textMuted(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '${p.amountUgx < 0 ? '- ' : ''}'
+                                '${CurrencyFormatter.ugx(p.amountUgx.abs().toDouble())}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: p.isReversal
+                                      ? AppColors.danger(context)
+                                      : AppColors.success(context),
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                size: 18,
+                                color: AppColors.textMuted(context),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+        );
+      },
     );
   }
 }

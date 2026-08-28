@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_home_screen.dart';
-import 'package:school_pulse/features/finance/presentation/screens/fee_collection_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_student_lookup_screen.dart';
-import 'package:school_pulse/features/finance/presentation/screens/financial_reports_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/bursar_approvals_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/bursar_cash_bank_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_more_screen.dart';
 
 /// Bottom-navigation shell for the Bursar / Finance module.
 ///
-/// 5 tabs: Home / Collections / Students / Reports / More.
-/// Each tab owns a nested [Navigator] so that screens pushed on top of a
-/// tab's root keep the [BursarShell]'s bottom nav visible (push-on-top-of-tab
-/// pattern).
+/// 5 tabs, matching the locked reference screenshots exactly:
+/// **Home | Students | Approvals | Cash & Bank | More**.
+/// The active tab is black, inactive tabs grey. Each tab owns a nested
+/// [Navigator] so screens pushed on top of a tab keep this bottom nav
+/// visible (push-on-top-of-tab pattern). Receive Payment is reached from a
+/// Home quick action or the student statement screen, not a tab.
 class BursarShell extends StatefulWidget {
   const BursarShell({super.key});
 
@@ -27,80 +29,45 @@ class _BursarShellState extends State<BursarShell> {
     (_) => GlobalKey<NavigatorState>(),
   );
 
-  static const List<NavigationDestination> _destinations = [
-    NavigationDestination(
-      icon: Icon(Icons.home_outlined, size: 24),
-      selectedIcon: Icon(
-        Icons.home_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
-      ),
-      label: 'Home',
+  static const List<_TabSpec> _tabs = [
+    _TabSpec(Icons.home_outlined, Icons.home_rounded, 'Home'),
+    _TabSpec(
+      Icons.people_outline_rounded,
+      Icons.people_alt_rounded,
+      'Students',
     ),
-    NavigationDestination(
-      icon: Icon(Icons.account_balance_wallet_outlined, size: 24),
-      selectedIcon: Icon(
-        Icons.account_balance_wallet_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
-      ),
-      label: 'Collections',
+    _TabSpec(Icons.verified_outlined, Icons.verified_rounded, 'Approvals'),
+    _TabSpec(
+      Icons.account_balance_outlined,
+      Icons.account_balance_rounded,
+      'Cash & Bank',
     ),
-    NavigationDestination(
-      icon: Icon(Icons.people_outline_rounded, size: 24),
-      selectedIcon: Icon(
-        Icons.people_alt_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
-      ),
-      label: 'Students',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.bar_chart_outlined, size: 24),
-      selectedIcon: Icon(
-        Icons.bar_chart_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
-      ),
-      label: 'Reports',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.grid_view_outlined, size: 24),
-      selectedIcon: Icon(
-        Icons.grid_view_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
-      ),
-      label: 'More',
-    ),
+    _TabSpec(Icons.more_horiz_rounded, Icons.more_horiz_rounded, 'More'),
   ];
 
-  Widget Function(BuildContext) _routeBuilder(int tabIndex) {
+  Widget _rootFor(int tabIndex) {
     switch (tabIndex) {
       case 0:
-        return (_) => const BursarHomeScreen();
+        return const BursarHomeScreen();
       case 1:
-        return (_) => const FeeCollectionScreen();
+        return const BursarStudentLookupScreen();
       case 2:
-        return (_) => const BursarStudentLookupScreen();
+        return const BursarApprovalsScreen();
       case 3:
-        return (_) => const FinancialReportsScreen();
+        return const BursarCashBankScreen();
       case 4:
       default:
-        return (_) => const BursarMoreScreen();
+        return const BursarMoreScreen();
     }
   }
 
   Widget _buildTabNavigator(int index) {
     return Navigator(
       key: _navigatorKeys[index],
-      initialRoute: '/',
-      onGenerateRoute: (routeSettings) {
-        return MaterialPageRoute(
-          builder: _routeBuilder(index),
-          settings: routeSettings,
-        );
-      },
+      onGenerateRoute: (routeSettings) => MaterialPageRoute(
+        builder: (_) => _rootFor(index),
+        settings: routeSettings,
+      ),
     );
   }
 
@@ -113,18 +80,23 @@ class _BursarShellState extends State<BursarShell> {
   }
 
   Future<bool> _onWillPop() async {
-    final isFirstRouteInCurrentTab =
-        !(_navigatorKeys[_selectedIndex].currentState?.canPop() ?? false);
-    if (isFirstRouteInCurrentTab) {
-      return true;
+    final canPopInTab =
+        _navigatorKeys[_selectedIndex].currentState?.canPop() ?? false;
+    if (canPopInTab) {
+      _navigatorKeys[_selectedIndex].currentState?.pop();
+      return false;
     }
-    _navigatorKeys[_selectedIndex].currentState?.pop();
-    return false;
+    if (_selectedIndex != 0) {
+      setState(() => _selectedIndex = 0);
+      return false;
+    }
+    return true;
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = AppColors.primary(context);
+    final muted = AppColors.textMuted(context);
 
     return PopScope(
       canPop: false,
@@ -140,29 +112,52 @@ class _BursarShellState extends State<BursarShell> {
           index: _selectedIndex,
           children: List.generate(5, _buildTabNavigator),
         ),
-        bottomNavigationBar: Container(
+        bottomNavigationBar: DecoratedBox(
           decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow(context),
-                blurRadius: 20,
-                offset: const Offset(0, -5),
-              ),
-            ],
+            border: Border(top: BorderSide(color: AppColors.border(context))),
           ),
-          child: NavigationBar(
-            height: 64,
-            backgroundColor: isDark
-                ? AppColors.surfaceDark
-                : AppColors.surfaceLight,
-            indicatorColor: AppColors.electricBlue,
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: _onDestinationSelected,
-            destinations: _destinations,
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          child: NavigationBarTheme(
+            data: NavigationBarThemeData(
+              backgroundColor: AppColors.surfaceElevated(context),
+              indicatorColor: AppColors.surfaceContainer(context),
+              labelTextStyle: WidgetStateProperty.resolveWith(
+                (states) => TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: states.contains(WidgetState.selected)
+                      ? primary
+                      : muted,
+                ),
+              ),
+            ),
+            child: NavigationBar(
+              height: 64,
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: _onDestinationSelected,
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              destinations: [
+                for (final tab in _tabs)
+                  NavigationDestination(
+                    icon: Icon(tab.icon, size: 24, color: muted),
+                    selectedIcon: Icon(
+                      tab.selectedIcon,
+                      size: 24,
+                      color: primary,
+                    ),
+                    label: tab.label,
+                  ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+class _TabSpec {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  const _TabSpec(this.icon, this.selectedIcon, this.label);
 }
