@@ -420,10 +420,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               ),
               const Divider(height: 12),
               TextButton.icon(
-                onPressed: () => context.go(
-                  '/parent/learn',
-                  extra: AcademicsTab.timetable,
-                ),
+                onPressed: () =>
+                    context.go('/parent/learn', extra: AcademicsTab.timetable),
                 iconAlignment: IconAlignment.end,
                 icon: const Icon(Icons.chevron_right_rounded),
                 label: const Text('View full day'),
@@ -520,10 +518,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             title: 'Next lesson',
             value: '—',
             subtitle: 'Timetable not published yet',
-            onTap: () => context.go(
-              '/parent/learn',
-              extra: AcademicsTab.timetable,
-            ),
+            onTap: () =>
+                context.go('/parent/learn', extra: AcademicsTab.timetable),
           );
         }
 
@@ -535,10 +531,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             title: 'Next lesson',
             value: '—',
             subtitle: 'No more lessons today',
-            onTap: () => context.go(
-              '/parent/learn',
-              extra: AcademicsTab.timetable,
-            ),
+            onTap: () =>
+                context.go('/parent/learn', extra: AcademicsTab.timetable),
           );
         }
 
@@ -554,10 +548,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
           subtitle: next.lesson.roomName?.isNotEmpty == true
               ? next.lesson.roomName!
               : next.slot.name,
-          onTap: () => context.go(
-            '/parent/learn',
-            extra: AcademicsTab.timetable,
-          ),
+          onTap: () =>
+              context.go('/parent/learn', extra: AcademicsTab.timetable),
           hideValue: true,
         );
       },
@@ -579,10 +571,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             title: 'Homework',
             value: '—',
             subtitle: 'Could not load homework',
-            onTap: () => context.go(
-              '/parent/learn',
-              extra: AcademicsTab.homework,
-            ),
+            onTap: () =>
+                context.go('/parent/learn', extra: AcademicsTab.homework),
           );
         }
 
@@ -613,10 +603,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
           ),
           value: '',
           subtitle: 'View and manage',
-          onTap: () => context.go(
-            '/parent/learn',
-            extra: AcademicsTab.homework,
-          ),
+          onTap: () =>
+              context.go('/parent/learn', extra: AcademicsTab.homework),
           hideValue: true,
         );
       },
@@ -820,10 +808,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
           context,
           icon: Icons.calendar_view_week_outlined,
           label: 'View timetable',
-          onTap: () => context.go(
-            '/parent/learn',
-            extra: AcademicsTab.timetable,
-          ),
+          onTap: () =>
+              context.go('/parent/learn', extra: AcademicsTab.timetable),
         ),
       if (visibility.health)
         _buildActionCard(
@@ -866,6 +852,20 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
           icon: Icons.event_available_outlined,
           label: 'Appointments',
           onTap: () => context.push('/parent/appointments'),
+        ),
+      if (visibility.discipline)
+        _buildActionCard(
+          context,
+          icon: Icons.gavel_outlined,
+          label: 'Discipline',
+          onTap: () => context.push('/parent/discipline'),
+        ),
+      if (visibility.boarding)
+        _buildActionCard(
+          context,
+          icon: Icons.night_shelter_outlined,
+          label: 'Boarding',
+          onTap: () => context.push('/parent/boarding'),
         ),
     ];
 
