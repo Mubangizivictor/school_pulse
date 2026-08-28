@@ -46,7 +46,8 @@ export FIREBASE_AUTH_EMULATOR_HOST="localhost:9099"
 export FIREBASE_STORAGE_EMULATOR_HOST="localhost:9199"
 
 echo "==> Starting Firebase emulators (Firestore/Auth/Storage)…"
-firebase emulators:start --only firestore,auth,storage --project "$GCLOUD_PROJECT" &
+# functions is required: the staff-login gate calls assertNotPlatformOwner.
+firebase emulators:start --only firestore,auth,storage,functions --project "$GCLOUD_PROJECT" &
 EMU_PID=$!
 trap 'echo "==> Stopping emulators"; kill $EMU_PID 2>/dev/null || true' EXIT
 
