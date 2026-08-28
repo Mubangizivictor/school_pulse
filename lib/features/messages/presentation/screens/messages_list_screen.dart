@@ -72,14 +72,27 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/messages/new'),
-        tooltip: 'New message',
-        backgroundColor: colors.onSurface,
-        foregroundColor: colors.surface,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: const Icon(Icons.edit_rounded),
+      // The empty state owns the first-conversation affordance.  Showing the
+      // pen alongside it duplicates the same action and makes the empty
+      // screen visually noisy.  Once there is any conversation, the FAB
+      // becomes the compact compose affordance.
+      floatingActionButton: BlocBuilder<MessagingBloc, MessagingState>(
+        bloc: context.messagingBloc,
+        builder: (context, state) {
+          final hasConversations = state.conversations?.isNotEmpty ?? false;
+          if (!hasConversations) return const SizedBox.shrink();
+          return FloatingActionButton(
+            onPressed: () => context.push('/messages/new'),
+            tooltip: 'New message',
+            backgroundColor: colors.onSurface,
+            foregroundColor: colors.surface,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.edit_rounded),
+          );
+        },
       ),
       body: MessagingUserBuilder(
         builder: (context, user) => BlocBuilder<MessagingBloc, MessagingState>(
