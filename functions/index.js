@@ -13,6 +13,7 @@ const supportAuditFunctions = require("./support_audit")({ admin, onCall, HttpsE
 const enrollmentAuditFunctions = require("./enrollment_audit")({ admin, onCall, HttpsError });
 Object.assign(exports, require("./student_fee_billing")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./staff_payroll_structure")({ admin, onCall, HttpsError }));
+Object.assign(exports, require("./payment_codes")({ admin, onCall, HttpsError }));
 
 /**
  * Enqueue a templated transactional email for the `public_functions`
