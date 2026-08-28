@@ -1,4 +1,3 @@
-import 'package:school_pulse/features/parent_offline/data/models/parent_queue_item_isar.dart';
 import 'parent_queue_data_source.dart';
 
 /// Parent Portal is online-only on web - actions submit directly and are
@@ -23,7 +22,7 @@ class ParentQueueDataSourceWeb implements ParentQueueDataSource {
   }) async {}
 
   @override
-  Future<List<ParentQueueItemIsar>> pending({
+  Future<List<ParentQueueItem>> pending({
     required String tenantId,
     required String parentId,
   }) async => const [];

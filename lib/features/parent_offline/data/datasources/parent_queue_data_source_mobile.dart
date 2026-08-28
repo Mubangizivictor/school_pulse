@@ -36,11 +36,11 @@ class ParentQueueDataSourceMobile implements ParentQueueDataSource {
   }
 
   @override
-  Future<List<ParentQueueItemIsar>> pending({
+  Future<List<ParentQueueItem>> pending({
     required String tenantId,
     required String parentId,
-  }) {
-    return isar.parentQueueItemIsars
+  }) async {
+    final items = await isar.parentQueueItemIsars
         .filter()
         .tenantIdEqualTo(tenantId)
         .parentIdEqualTo(parentId)
@@ -48,7 +48,22 @@ class ParentQueueDataSourceMobile implements ParentQueueDataSource {
         .statusEqualTo(ParentQueueStatus.done)
         .sortByCreatedAt()
         .findAll();
+    return items.map(_toItem).toList();
   }
+
+  ParentQueueItem _toItem(ParentQueueItemIsar item) => ParentQueueItem(
+    idempotencyKey: item.idempotencyKey,
+    tenantId: item.tenantId,
+    parentId: item.parentId,
+    learnerId: item.learnerId,
+    createdAt: item.createdAt,
+    actionType: item.actionType,
+    payloadVersion: item.payloadVersion,
+    payloadJson: item.payloadJson,
+    retryCount: item.retryCount,
+    status: item.status,
+    lastError: item.lastError,
+  );
 
   Future<ParentQueueItemIsar?> _find(String idempotencyKey) {
     return isar.parentQueueItemIsars

@@ -1,21 +1,9 @@
 import 'package:isar/isar.dart';
 
+import 'package:school_pulse/features/parent_offline/data/datasources/parent_queue_data_source.dart'
+    show ParentQueueActionType, ParentQueueStatus;
+
 part 'parent_queue_item_isar.g.dart';
-
-enum ParentQueueActionType {
-  markMessageRead,
-  markAnnouncementRead,
-  acknowledgement,
-  saveMessageDraft,
-  absenceRequest,
-  appointmentRequest,
-  appointmentCancellation,
-  contactPreferenceUpdate,
-  notificationPreferenceUpdate,
-  externalPaymentReference,
-}
-
-enum ParentQueueStatus { pending, syncing, failed, done }
 
 /// One durable, offline-queued parent action. Only the actions explicitly
 /// permitted to be queued (see [ParentQueueActionType]) may ever be written

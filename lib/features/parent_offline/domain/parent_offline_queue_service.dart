@@ -1,14 +1,12 @@
 import 'package:uuid/uuid.dart';
 
 import 'package:school_pulse/features/parent_offline/data/datasources/parent_queue_data_source.dart';
-import 'package:school_pulse/features/parent_offline/data/models/parent_queue_item_isar.dart';
 
 /// A single queued action ready to be sent to the server. The caller
 /// supplies [send] - this service only owns durability, ordering, and
 /// idempotency-key bookkeeping, never the wire format of any one action
 /// type.
-typedef ParentQueueActionSender =
-    Future<void> Function(ParentQueueItemIsar item);
+typedef ParentQueueActionSender = Future<void> Function(ParentQueueItem item);
 
 /// Drives the safe-actions-only offline queue: enqueue while offline,
 /// replay in creation order on reconnect, and never double-submit thanks to
@@ -41,7 +39,7 @@ class ParentOfflineQueueService {
     return idempotencyKey;
   }
 
-  Future<List<ParentQueueItemIsar>> pendingFor({
+  Future<List<ParentQueueItem>> pendingFor({
     required String tenantId,
     required String parentId,
   }) => _dataSource.pending(tenantId: tenantId, parentId: parentId);
