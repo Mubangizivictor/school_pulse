@@ -392,10 +392,95 @@ class _BursarPayrollScreenState extends State<BursarPayrollScreen> {
         'runId': run.id,
         'decision': 'approve',
       });
-    if (run.status == 'approved')
-      _toast(
-        'Payment finalisation requires a verified bank reference and is available from Cash & Bank.',
-      );
+    if (run.status == 'approved') {
+      return _finalisePayment(schoolId, run);
+    }
+  }
+
+  /// Finalise an approved payroll run's payment (audit area 4). Requires a
+  /// cash/bank account with enough balance for the net pay and a payment
+  /// reference; calls the existing `finalisePayrollPayment` callable, which
+  /// locks the run.
+  Future<void> _finalisePayment(String schoolId, PayrollRun run) async {
+    final accounts = await sl<BursarOpsReadRepository>()
+        .watchBankAccounts(schoolId)
+        .first;
+    final payable = accounts
+        .where((a) => a.kind == 'bank' || a.kind == 'cash')
+        .toList();
+    if (!mounted) return;
+    if (payable.isEmpty) {
+      _toast('No cash or bank account to pay from.');
+      return;
+    }
+    final reference = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          16,
+          20,
+          MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+        ),
+        child: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Finalise payroll payment',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary(sheetContext),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Net pay ${CurrencyFormatter.ugx(run.netPayUgx.toDouble())} · '
+                'once finalised the run is locked.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMuted(sheetContext),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: reference,
+                decoration: const InputDecoration(
+                  labelText: 'Bank/cash payment reference *',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 46,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (!(formKey.currentState?.validate() ?? false)) return;
+                    final navigator = Navigator.of(sheetContext);
+                    _call('finalisePayrollPayment', {
+                      'schoolId': schoolId,
+                      'runId': run.id,
+                      'reference': reference.text.trim(),
+                    }).then((_) {
+                      if (navigator.canPop()) navigator.pop();
+                    });
+                  },
+                  child: const Text('Finalise & lock'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   String _pretty(String value) => value.isEmpty

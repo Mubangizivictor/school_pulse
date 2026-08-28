@@ -29,11 +29,25 @@ class BursarOpsReadRepository {
   Stream<List<LedgerEntry>> watchBankLedger(
     String schoolId, {
     int limit = 40,
-  }) => _col(schoolId, 'bank_ledger')
-      .orderBy('date', descending: true)
-      .limit(limit)
-      .snapshots()
-      .map((s) => s.docs.map(LedgerEntry.fromDoc).toList());
+    String? accountId,
+    bool? reconciled,
+  }) {
+    Query<Map<String, dynamic>> q = _col(schoolId, 'bank_ledger');
+    if (accountId != null) q = q.where('accountId', isEqualTo: accountId);
+    if (reconciled != null) {
+      q = q.where('reconciled', isEqualTo: reconciled);
+    }
+    // Sort client-side — a just-written entry can momentarily lack `date`.
+    return q.limit(limit).snapshots().map((s) {
+      final list = s.docs.map(LedgerEntry.fromDoc).toList();
+      list.sort((a, b) {
+        final ad = a.date ?? DateTime(1970);
+        final bd = b.date ?? DateTime(1970);
+        return bd.compareTo(ad);
+      });
+      return list;
+    });
+  }
 
   // ---- Petty Cash --------------------------------------------------------
 
@@ -178,9 +192,13 @@ class LedgerEntry {
   final String id;
   final DateTime? date;
   final String description;
-  final String type; // Receipt | Payment | Deposit
+  final String type; // Receipt | Payment | Deposit | Adjustment …
   final int amountUgx; // signed
   final int? balanceUgx;
+  final String? accountId;
+  final bool reconciled;
+  final String? matchedEntryId;
+  final String? statementReference;
 
   LedgerEntry({
     required this.id,
@@ -189,6 +207,10 @@ class LedgerEntry {
     required this.type,
     required this.amountUgx,
     this.balanceUgx,
+    this.accountId,
+    this.reconciled = false,
+    this.matchedEntryId,
+    this.statementReference,
   });
 
   factory LedgerEntry.fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
@@ -200,6 +222,10 @@ class LedgerEntry {
       type: j['type'] as String? ?? '',
       amountUgx: _int(j['amountUgx']),
       balanceUgx: j['balanceUgx'] == null ? null : _int(j['balanceUgx']),
+      accountId: j['accountId'] as String?,
+      reconciled: j['reconciled'] as bool? ?? false,
+      matchedEntryId: j['matchedEntryId'] as String?,
+      statementReference: j['statementReference'] as String?,
     );
   }
 }

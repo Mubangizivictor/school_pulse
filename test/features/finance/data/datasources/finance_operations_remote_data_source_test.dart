@@ -144,4 +144,69 @@ void main() {
     final p = lastPayload();
     expect(p['archived'], true);
   });
+
+  // ---- Area 4: reconciliation + payroll finalisation ----------------
+
+  test('matchBankLedgerEntry: statement-reference form', () async {
+    await ds.matchBankLedgerEntry(
+      schoolId: 's1',
+      entryId: 'e1',
+      statementReference: 'STMT-9',
+    );
+    verify(() => functions.httpsCallable('matchBankLedgerEntry')).called(1);
+    final p = lastPayload();
+    expect(p['entryId'], 'e1');
+    expect(p['statementReference'], 'STMT-9');
+    expect(p.containsKey('counterEntryId'), isFalse);
+  });
+
+  test('matchBankLedgerEntry: pair form', () async {
+    await ds.matchBankLedgerEntry(
+      schoolId: 's1',
+      entryId: 'e1',
+      counterEntryId: 'e2',
+    );
+    final p = lastPayload();
+    expect(p['counterEntryId'], 'e2');
+    expect(p.containsKey('statementReference'), isFalse);
+  });
+
+  test('unmatchBankLedgerEntry: reason is passed through', () async {
+    await ds.unmatchBankLedgerEntry(
+      schoolId: 's1',
+      entryId: 'e1',
+      reason: 'wrong match',
+    );
+    final p = lastPayload();
+    expect(p['reason'], 'wrong match');
+  });
+
+  test('recordBankLedgerAdjustment: signed int amount + reference', () async {
+    final bal = await ds.recordBankLedgerAdjustment(
+      schoolId: 's1',
+      accountId: 'acc1',
+      amountUgx: -15000,
+      description: 'Bank charge',
+      reference: 'CHG-1',
+    );
+    expect(bal, 480000); // stubbed result.data['balanceUgx']
+    final p = lastPayload();
+    expect(p['amountUgx'], -15000);
+    expect(p['reference'], 'CHG-1');
+  });
+
+  test(
+    'finalisePayrollPayment: calls the payroll_compliance callable',
+    () async {
+      await ds.finalisePayrollPayment(
+        schoolId: 's1',
+        runId: 'run1',
+        reference: 'PAYRUN-1',
+      );
+      verify(() => functions.httpsCallable('finalisePayrollPayment')).called(1);
+      final p = lastPayload();
+      expect(p['runId'], 'run1');
+      expect(p['reference'], 'PAYRUN-1');
+    },
+  );
 }

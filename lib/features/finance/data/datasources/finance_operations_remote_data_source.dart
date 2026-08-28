@@ -175,4 +175,66 @@ class FinanceOperationsRemoteDataSource {
     });
     return (r['floatBalanceUgx'] as num?)?.toInt() ?? 0;
   }
+
+  // ---- Cash & Bank reconciliation (audit area 4) ------------------
+
+  /// Mark [entryId] reconciled — against a [statementReference] or paired
+  /// with [counterEntryId] (opposite sign, equal magnitude).
+  Future<void> matchBankLedgerEntry({
+    required String schoolId,
+    required String entryId,
+    String? counterEntryId,
+    String? statementReference,
+    DateTime? statementDate,
+    String? note,
+  }) => _call('matchBankLedgerEntry', {
+    'schoolId': schoolId,
+    'entryId': entryId,
+    'counterEntryId': ?counterEntryId,
+    'statementReference': ?statementReference,
+    'statementDate': ?statementDate?.toIso8601String(),
+    'note': ?note,
+  });
+
+  Future<void> unmatchBankLedgerEntry({
+    required String schoolId,
+    required String entryId,
+    required String reason,
+  }) => _call('unmatchBankLedgerEntry', {
+    'schoolId': schoolId,
+    'entryId': entryId,
+    'reason': reason,
+  });
+
+  /// Post a manual adjustment / journal entry ([amountUgx] signed).
+  Future<int> recordBankLedgerAdjustment({
+    required String schoolId,
+    required String accountId,
+    required int amountUgx,
+    required String description,
+    required String reference,
+    String? clientRequestId,
+  }) async {
+    final r = await _call('recordBankLedgerAdjustment', {
+      'schoolId': schoolId,
+      'accountId': accountId,
+      'amountUgx': amountUgx,
+      'description': description,
+      'reference': reference,
+      'clientRequestId': ?clientRequestId,
+    });
+    return (r['balanceUgx'] as num?)?.toInt() ?? 0;
+  }
+
+  /// Finalise an approved payroll run's payment (existing
+  /// `payroll_compliance.js` callable) with a bank/cash [reference].
+  Future<void> finalisePayrollPayment({
+    required String schoolId,
+    required String runId,
+    required String reference,
+  }) => _call('finalisePayrollPayment', {
+    'schoolId': schoolId,
+    'runId': runId,
+    'reference': reference,
+  });
 }

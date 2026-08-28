@@ -20,6 +20,7 @@ Object.assign(exports, require("./payment_vouchers")({ admin, onCall, HttpsError
 Object.assign(exports, require("./finance_governance")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./report_card_release")({ admin, onCall, HttpsError, onSchedule }));
 Object.assign(exports, require("./finance_operations")({ admin, onCall, HttpsError }));
+Object.assign(exports, require("./finance_reconciliation")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./health_clinic")({ admin, onCall, HttpsError }));
 
 /**
