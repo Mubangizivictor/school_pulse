@@ -38,11 +38,23 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
   final _studentRepository = sl<StudentRepository>();
   final _projectionService = sl<BursarStudentProjectionService>();
 
-  List<Student> _results = const [];
+  /// All learners for the school, loaded once on open (matches the
+  /// reference list). The search box filters this list client-side.
+  List<Student> _all = const [];
   final Map<String, BursarStudentView> _views = {};
-  bool _searching = false;
+  bool _loading = true;
   String? _error;
+  String _query = '';
   _FeeFilter _filter = _FeeFilter.all;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(
+      () => setState(() => _query = _searchController.text.trim()),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
 
   @override
   void dispose() {
@@ -50,35 +62,27 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
     super.dispose();
   }
 
-  Future<void> _search() async {
-    final query = _searchController.text.trim();
+  Future<void> _load() async {
     final auth = context.read<AuthBloc>().state;
     if (auth is! AuthAuthenticated) return;
-    if (query.isEmpty) {
-      setState(() {
-        _results = const [];
-        _error = null;
-      });
-      return;
-    }
     setState(() {
-      _searching = true;
+      _loading = true;
       _error = null;
     });
-    final result = await _studentRepository.searchStudents(
+    final result = await _studentRepository.getAllStudents(
       schoolId: auth.user.schoolId,
-      query: query,
     );
     if (!mounted) return;
     result.fold(
       (failure) => setState(() {
         _error = failure.message;
-        _searching = false;
+        _loading = false;
       }),
       (students) {
+        students.sort((a, b) => a.name.compareTo(b.name));
         setState(() {
-          _results = students;
-          _searching = false;
+          _all = students;
+          _loading = false;
         });
         _loadViews(auth, students);
       },
@@ -101,6 +105,15 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
     }
   }
 
+  bool _matchesQuery(Student s) {
+    if (_query.isEmpty) return true;
+    final q = _query.toLowerCase();
+    return s.name.toLowerCase().contains(q) ||
+        s.admissionNumber.toLowerCase().contains(q) ||
+        s.studentCode.toLowerCase().contains(q) ||
+        s.className.toLowerCase().contains(q);
+  }
+
   bool _matchesFilter(BursarStudentView? v) {
     if (_filter == _FeeFilter.all || v == null) return true;
     switch (_filter) {
@@ -117,7 +130,8 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final visible = _results
+    final visible = _all
+        .where(_matchesQuery)
         .where((s) => _matchesFilter(_views[s.id]))
         .toList();
 
@@ -169,23 +183,15 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
               child: TextField(
                 controller: _searchController,
                 textInputAction: TextInputAction.search,
-                onSubmitted: (_) => _search(),
-                onChanged: (v) {
-                  if (v.trim().isEmpty) _search();
-                },
                 decoration: InputDecoration(
                   hintText: 'Search learner by name or admission no.',
                   prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                  suffixIcon: _searching
-                      ? const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        )
-                      : null,
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 18),
+                          onPressed: () => _searchController.clear(),
+                        ),
                   filled: true,
                   fillColor: AppColors.surfaceElevated(context),
                   contentPadding: const EdgeInsets.symmetric(vertical: 4),
@@ -208,20 +214,19 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
   }
 
   Widget _buildBody(List<Student> visible) {
+    if (_loading) return FinanceStates.loading();
     if (_error != null) {
-      return FinanceStates.error(context, _error!, onRetry: _search);
+      return FinanceStates.error(context, _error!, onRetry: _load);
     }
-    if (_searchController.text.trim().isEmpty) {
+    if (_all.isEmpty) {
       return FinanceStates.empty(
         context,
-        icon: Icons.search_rounded,
-        title: 'Find a learner',
-        message:
-            'Search by name or admission number to view fees, record a '
-            'payment, or open a statement.',
+        icon: Icons.people_outline_rounded,
+        title: 'No learners yet',
+        message: 'Enrolled learners will appear here with their fee status.',
       );
     }
-    if (visible.isEmpty && !_searching) {
+    if (visible.isEmpty) {
       return FinanceStates.empty(
         context,
         icon: Icons.person_off_outlined,
@@ -230,37 +235,40 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
             'Try a different name or admission number, or clear the filter.',
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.l,
-        0,
-        AppSpacing.l,
-        AppSpacing.x3l,
-      ),
-      itemCount: visible.length + 1,
-      itemBuilder: (context, i) {
-        if (i == visible.length) {
-          return Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.m),
-            child: Center(
-              child: Text(
-                '${visible.length} learner${visible.length == 1 ? '' : 's'}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textMuted(context),
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.l,
+          0,
+          AppSpacing.l,
+          AppSpacing.x3l,
+        ),
+        itemCount: visible.length + 1,
+        itemBuilder: (context, i) {
+          if (i == visible.length) {
+            return Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.m),
+              child: Center(
+                child: Text(
+                  '${visible.length} learner${visible.length == 1 ? '' : 's'}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textMuted(context),
+                  ),
                 ),
               ),
-            ),
+            );
+          }
+          final s = visible[i];
+          final v = _views[s.id];
+          return _StudentRow(
+            student: s,
+            view: v,
+            onTap: () => context.push('/staff/bursar/student/${s.id}/bills'),
           );
-        }
-        final s = visible[i];
-        final v = _views[s.id];
-        return _StudentRow(
-          student: s,
-          view: v,
-          onTap: () => context.push('/staff/bursar/student/${s.id}/bills'),
-        );
-      },
+        },
+      ),
     );
   }
 }
