@@ -258,6 +258,7 @@ import 'package:school_pulse/features/discipline/presentation/bloc/discipline_bl
 // Finance
 import 'package:school_pulse/features/finance/domain/repositories/finance_repository.dart';
 import 'package:school_pulse/features/finance/domain/services/bursar_student_projection_service.dart';
+import 'package:school_pulse/features/finance/domain/services/finance_reports_service.dart';
 import 'package:school_pulse/features/finance/data/repositories/finance_repository_impl.dart';
 import 'package:school_pulse/features/finance/data/datasources/bursar_report_release_remote_data_source.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/report_release/bursar_report_release_bloc.dart';
@@ -1227,6 +1228,10 @@ Future<void> init() async {
   sl.registerLazySingleton<BursarOpsReadRepository>(
     () => BursarOpsReadRepository(firestore: sl()),
   );
+
+  // Finance reports engine (audit area 5) — 8 real reports from
+  // authoritative finance data, CSV for all + PDF for cashbook/arrears.
+  sl.registerLazySingleton(() => FinanceReportsService(firestore: sl()));
 
   // Features - Games
   sl.registerFactory(() => GamesBloc(repository: sl()));
