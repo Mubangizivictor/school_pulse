@@ -170,4 +170,59 @@ void main() {
       );
     });
   });
+
+  group('responsive shell wiring (source-level)', () {
+    late String shell;
+    late String webShell;
+
+    setUpAll(() {
+      shell = File(
+        'lib/features/finance/presentation/shell/bursar_shell.dart',
+      ).readAsStringSync();
+      webShell = File(
+        'lib/features/finance/presentation/shell/bursar_web_shell.dart',
+      ).readAsStringSync();
+    });
+
+    test('BursarShell branches on all three ResponsiveLayout values', () {
+      expect(shell.contains('ResponsiveLayout.mobile'), isTrue);
+      expect(shell.contains('ResponsiveLayout.tablet'), isTrue);
+      expect(shell.contains('ResponsiveLayout.desktop'), isTrue);
+    });
+
+    test('tablet renders the console (BursarWebShell), not the bottom-nav shell', () {
+      // The tablet case must build BursarWebShell (compact), never
+      // _BursarMobileShell — every Bursar workflow available on desktop is
+      // therefore available on tablet.
+      final tabletCase = shell.substring(
+        shell.indexOf('ResponsiveLayout.tablet'),
+        shell.indexOf('ResponsiveLayout.mobile'),
+      );
+      expect(tabletCase.contains('BursarWebShell'), isTrue);
+      expect(tabletCase.contains('compact: true'), isTrue);
+      expect(tabletCase.contains('_BursarMobileShell'), isFalse);
+    });
+
+    test('the tablet rail is an intentional labelled rail (200px), not a 76px icon strip', () {
+      expect(webShell.contains('? 200.0 : 248.0'), isTrue,
+          reason: 'tablet sidebar width should be a real rail, not 76px');
+      expect(webShell.contains('76.0'), isFalse,
+          reason: 'the tooltip-only 76px icon strip must be gone');
+    });
+
+    test('every section is reachable from the tablet/desktop sidebar groups', () {
+      // _mainNav + _toolsNav together must cover all 11 sections.
+      final navBlock = webShell.substring(
+        webShell.indexOf('const _mainNav'),
+        webShell.indexOf('class _BursarWebShellState'),
+      );
+      for (final s in BursarSection.values) {
+        expect(
+          navBlock.contains('BursarSection.${s.name}'),
+          isTrue,
+          reason: '${s.name} must appear in a sidebar nav group',
+        );
+      }
+    });
+  });
 }
