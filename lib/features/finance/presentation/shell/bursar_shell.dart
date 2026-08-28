@@ -13,6 +13,7 @@ import 'package:school_pulse/features/finance/presentation/screens/bursar_petty_
 import 'package:school_pulse/features/finance/presentation/screens/bursar_payroll_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/financial_reports_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_audit_trail_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/bursar_report_release_screen.dart';
 import 'package:school_pulse/features/finance/presentation/shell/bursar_section.dart';
 import 'package:school_pulse/features/finance/presentation/shell/bursar_web_shell.dart';
 
@@ -108,6 +109,8 @@ Widget _mobileSectionScreen(BursarSection s) {
       return const BursarPayrollScreen();
     case BursarSection.reports:
       return const FinancialReportsScreen();
+    case BursarSection.reportRelease:
+      return const BursarReportReleaseScreen();
     case BursarSection.audit:
       return const BursarAuditTrailScreen();
     case BursarSection.overview:

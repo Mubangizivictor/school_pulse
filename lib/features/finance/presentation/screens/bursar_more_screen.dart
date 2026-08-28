@@ -15,6 +15,8 @@ import 'bursar_payroll_screen.dart';
 import 'bursar_audit_trail_screen.dart';
 import 'financial_reports_screen.dart';
 import 'student_eligibility_screen.dart';
+import 'bursar_report_release_screen.dart';
+import 'clearance_policy_editor_screen.dart';
 
 /// Bursar "More" tab (bottom-nav slot 4).
 ///
@@ -69,6 +71,16 @@ class BursarMoreScreen extends StatelessWidget {
       icon: Icons.fact_check_outlined,
       label: 'Audit trail',
       builder: (_) => const BursarAuditTrailScreen(),
+    ),
+    _MoreItem(
+      icon: Icons.lock_open_outlined,
+      label: 'Report releases',
+      builder: (_) => const BursarReportReleaseScreen(),
+    ),
+    _MoreItem(
+      icon: Icons.rule_folder_outlined,
+      label: 'Clearance policy',
+      builder: (_) => const ClearancePolicyEditorScreen(),
     ),
     _MoreItem(
       icon: Icons.verified_user_outlined,

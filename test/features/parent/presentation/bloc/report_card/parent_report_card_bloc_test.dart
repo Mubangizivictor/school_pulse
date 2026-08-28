@@ -23,11 +23,17 @@ CanonicalReportCard _card({String id = 'rc1'}) => CanonicalReportCard(
 
 void main() {
   late ParentReportCardBloc bloc;
-  late MockParentReportCardRemoteDataSource mockDataSource;
+  late MockParentReportCardRemoteDataSource ds;
 
   setUp(() {
-    mockDataSource = MockParentReportCardRemoteDataSource();
-    bloc = ParentReportCardBloc(dataSource: mockDataSource);
+    ds = MockParentReportCardRemoteDataSource();
+    bloc = ParentReportCardBloc(dataSource: ds);
+    when(
+      () => ds.getRestrictionMessage(any()),
+    ).thenAnswer((_) async => 'Please contact the school bursar.');
+    when(
+      () => ds.recordParentView(any(), isDownload: any(named: 'isDownload')),
+    ).thenAnswer((_) async {});
   });
 
   tearDown(() => bloc.close());
@@ -36,9 +42,10 @@ void main() {
     'loads only the reports Firestore rules actually returned for this student',
     setUp: () {
       when(
-        () => mockDataSource.getReleasedReportCards(
+        () => ds.getReleasedReportCards(
           schoolId: 'schoolA',
           studentId: 'studentA',
+          parentId: any(named: 'parentId'),
         ),
       ).thenAnswer((_) async => [_card()]);
     },
@@ -50,24 +57,21 @@ void main() {
       ),
     ),
     expect: () => [
-      isA<ParentReportCardState>().having(
-        (s) => s.isLoading,
-        'isLoading',
-        true,
-      ),
+      isA<ParentReportCardState>().having((s) => s.isLoading, 'loading', true),
       isA<ParentReportCardState>()
-          .having((s) => s.isLoading, 'isLoading', false)
-          .having((s) => s.reportCards.length, 'reportCards.length', 1),
+          .having((s) => s.isLoading, 'loading', false)
+          .having((s) => s.reportCards.length, 'reportCards', 1),
     ],
   );
 
   blocTest<ParentReportCardBloc, ParentReportCardState>(
-    'an empty result (nothing released yet) is a normal, not-an-error state',
+    'an empty result pulls the configured restriction message and is not an error',
     setUp: () {
       when(
-        () => mockDataSource.getReleasedReportCards(
+        () => ds.getReleasedReportCards(
           schoolId: any(named: 'schoolId'),
           studentId: any(named: 'studentId'),
+          parentId: any(named: 'parentId'),
         ),
       ).thenAnswer((_) async => []);
     },
@@ -79,23 +83,36 @@ void main() {
       ),
     ),
     expect: () => [
-      isA<ParentReportCardState>().having(
-        (s) => s.isLoading,
-        'isLoading',
-        true,
-      ),
+      isA<ParentReportCardState>().having((s) => s.isLoading, 'loading', true),
       isA<ParentReportCardState>()
-          .having((s) => s.isLoading, 'isLoading', false)
+          .having((s) => s.isLoading, 'loading', false)
           .having((s) => s.reportCards, 'reportCards', isEmpty)
-          .having((s) => s.errorMessage, 'errorMessage', isNull),
+          .having((s) => s.errorMessage, 'error', isNull)
+          .having(
+            (s) => s.restrictionMessage,
+            'restrictionMessage',
+            'Please contact the school bursar.',
+          ),
     ],
+    verify: (_) {
+      verify(() => ds.getRestrictionMessage('schoolA')).called(1);
+    },
   );
 
   blocTest<ParentReportCardBloc, ParentReportCardState>(
-    'requesting the official PDF returns a signed download URL',
+    'opening a report fires a best-effort parent-view audit ping',
+    build: () => bloc,
+    act: (bloc) => bloc.add(const ParentReportCardOpened('rc1')),
+    verify: (_) {
+      verify(() => ds.recordParentView('rc1')).called(1);
+    },
+  );
+
+  blocTest<ParentReportCardBloc, ParentReportCardState>(
+    'requesting the official PDF returns a signed URL and records a download',
     setUp: () {
       when(
-        () => mockDataSource.getOfficialPdfDownloadUrl('rc1'),
+        () => ds.getOfficialPdfDownloadUrl('rc1'),
       ).thenAnswer((_) async => 'https://signed.example/rc1.pdf');
     },
     build: () => bloc,
@@ -103,24 +120,27 @@ void main() {
     expect: () => [
       isA<ParentReportCardState>().having(
         (s) => s.isDownloading,
-        'isDownloading',
+        'downloading',
         true,
       ),
       isA<ParentReportCardState>()
-          .having((s) => s.isDownloading, 'isDownloading', false)
+          .having((s) => s.isDownloading, 'downloading', false)
           .having(
             (s) => s.downloadUrl,
             'downloadUrl',
             'https://signed.example/rc1.pdf',
           ),
     ],
+    verify: (_) {
+      verify(() => ds.recordParentView('rc1', isDownload: true)).called(1);
+    },
   );
 
   blocTest<ParentReportCardBloc, ParentReportCardState>(
-    'a denied PDF request (e.g. access revoked underneath them) surfaces an error',
+    'a denied PDF request (access revoked underneath them) surfaces an error',
     setUp: () {
       when(
-        () => mockDataSource.getOfficialPdfDownloadUrl('rc1'),
+        () => ds.getOfficialPdfDownloadUrl('rc1'),
       ).thenThrow(Exception('permission-denied'));
     },
     build: () => bloc,
@@ -128,12 +148,12 @@ void main() {
     expect: () => [
       isA<ParentReportCardState>().having(
         (s) => s.isDownloading,
-        'isDownloading',
+        'downloading',
         true,
       ),
       isA<ParentReportCardState>()
-          .having((s) => s.isDownloading, 'isDownloading', false)
-          .having((s) => s.errorMessage, 'errorMessage', isNotNull),
+          .having((s) => s.isDownloading, 'downloading', false)
+          .having((s) => s.errorMessage, 'error', isNotNull),
     ],
   );
 }

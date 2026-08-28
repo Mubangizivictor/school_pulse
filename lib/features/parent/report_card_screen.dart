@@ -88,6 +88,9 @@ class _ParentReportCardBodyState extends State<ParentReportCardBody> {
       ParentReportCardsRequested(
         schoolId: authState.user.schoolId,
         studentId: studentId,
+        // A parent account's own uid scopes the offline cache; a student
+        // account has no separate parent id (offline cache is parent-only).
+        parentId: authState.user.studentId == null ? authState.user.id : null,
       ),
     );
   }
@@ -119,10 +122,8 @@ class _ParentReportCardBodyState extends State<ParentReportCardBody> {
           if (state.reportCards.isEmpty) {
             return EmptyState(
               icon: Icons.lock_outline,
-              title: 'Report not yet released',
-              message:
-                  "Please contact the school bursar's office for "
-                  'assistance.',
+              title: 'Report awaiting financial clearance',
+              message: state.restrictionMessage,
               ctaLabel: 'Refresh',
               onCtaPressed: _load,
             );
@@ -157,6 +158,13 @@ class _ReportCardList extends StatelessWidget {
         return AppCard(
           margin: const EdgeInsets.only(bottom: AppSpacing.m),
           child: ExpansionTile(
+            onExpansionChanged: (open) {
+              if (open) {
+                context.read<ParentReportCardBloc>().add(
+                  ParentReportCardOpened(card.reportCardId),
+                );
+              }
+            },
             title: Text(
               'Term ${card.termId} · ${card.academicYearId}',
               style: AppTypography.titleSmall,

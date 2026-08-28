@@ -9,67 +9,67 @@
  * can require it without a circular dependency (index.js requires
  * student_fee_billing.js at module-load time, before any of index.js's own
  * function declarations exist yet).
+ *
+ * "Financially cleared" is a per-school configurable policy (full balance
+ * zero / selected fee categories paid / minimum % paid) plus an active,
+ * authorised report-card release exception. The policy engine and the
+ * exception layer both live in report_card_release.js; this module lazily
+ * requires it (report_card_release.js is Object.assign()-ed onto exports in
+ * index.js AFTER this module, so a top-level require here would be circular).
  */
 module.exports = ({ admin }) => {
   const db = admin.firestore();
 
+  // Lazy handle to report_card_release.js's shared engine. Resolved on first
+  // use, never at module-load (avoids the require cycle described above).
+  let _release = null;
+  const release = () => {
+    if (!_release) {
+      _release = require("./report_card_release")({ admin }).__internals;
+    }
+    return _release;
+  };
+
   /**
-   * Whether a student's fees for one term are fully settled. "Fully paid"
-   * means every bill issued to this student for this exact
-   * academicYearId+termId has balanceUgx <= 0. A term with no bill at all is
-   * deliberately NOT treated as paid - a report must never auto-release just
-   * because billing was never set up for that term.
+   * Whether a student's fees for one term satisfy the school's configured
+   * clearance policy. Delegates to the policy engine in
+   * report_card_release.js. A term with no bill at all is deliberately NOT
+   * treated as cleared - a report must never auto-release just because
+   * billing was never set up for that term.
    */
   async function areTermFeesFullyPaid({ schoolId, studentId, academicYearId, termId }) {
-    const billsSnap = await db
-      .collection(`schools/${schoolId}/student_accounts/${studentId}/bills`)
-      .where("academicYearId", "==", academicYearId)
-      .where("termId", "==", termId)
-      .get();
-    if (billsSnap.empty) return false;
-    return billsSnap.docs.every((doc) => Number(doc.data().balanceUgx || 0) <= 0);
+    const { cleared } = await release().computeFinancialClearance({
+      schoolId,
+      studentId,
+      academicYearId,
+      termId,
+    });
+    return cleared;
   }
 
   /**
-   * Keeps financialAccessStatus in sync with fee payment for every finalized
-   * report still under automatic control (financialAccessSource === "auto").
-   * A report the Bursar has manually released/held/revoked
-   * (financialAccessSource === "bursar") is never touched here - a human
-   * override always wins over the automatic fee check until a Bursar changes
-   * it again via setReportCardFinancialAccess.
+   * Keeps financialAccessStatus in sync for every finalized report in a
+   * period, from the configured clearance policy AND any active authorised
+   * release exception. A report the Bursar has manually released/held/
+   * revoked (financialAccessSource === "bursar") is never touched here - a
+   * human override always wins until a Bursar changes it again via
+   * setReportCardFinancialAccess. Notifies linked parents when a previously
+   * withheld report becomes available.
    *
-   * Called after headteacher finalization (a fresh report, decide its
-   * opening state) and after any payment/adjustment/reversal that changes a
-   * bill's balanceUgx (an already-finalized report may need to flip either
-   * way).
+   * Called after headteacher finalization and after any payment/adjustment/
+   * reversal that changes a bill's balanceUgx.
    */
   async function maybeAutoUpdateReportCardFinancialAccess({ schoolId, studentId, academicYearId, termId }) {
-    const reportsSnap = await db
-      .collection(`schools/${schoolId}/reportCards`)
-      .where("studentId", "==", studentId)
-      .where("academicYearId", "==", academicYearId)
-      .where("termId", "==", termId)
-      .where("isFinalized", "==", true)
-      .get();
-    if (reportsSnap.empty) return;
-
-    const fullyPaid = await areTermFeesFullyPaid({ schoolId, studentId, academicYearId, termId });
-    const targetStatus = fullyPaid ? "released" : "held";
-
-    await Promise.all(reportsSnap.docs.map(async (doc) => {
-      const data = doc.data();
-      if (data.financialAccessSource === "bursar") return; // human override, never auto-touched
-      if (data.financialAccessStatus === targetStatus) return; // already correct, avoid a no-op write
-      await doc.ref.update({
-        financialAccessStatus: targetStatus,
-        financialAccessSource: "auto",
-        financialAccessUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        financialAccessUpdatedBy: null,
-        financialAccessReason: fullyPaid
-          ? "Automatically released: term fees fully paid."
-          : "Automatically held: term fees balance outstanding.",
-      });
-    }));
+    await release().syncPeriodReportAccess({
+      schoolId,
+      studentId,
+      academicYearId,
+      termId,
+      source: "auto",
+      reason: null,
+      exceptionId: null,
+      caller: null,
+    });
   }
 
   return { areTermFeesFullyPaid, maybeAutoUpdateReportCardFinancialAccess };

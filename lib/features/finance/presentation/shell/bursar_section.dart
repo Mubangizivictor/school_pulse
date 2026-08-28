@@ -60,6 +60,11 @@ enum BursarSection {
     icon: Icons.badge_outlined,
   ),
   reports(slug: 'reports', label: 'Reports', icon: Icons.assessment_outlined),
+  reportRelease(
+    slug: 'report-release',
+    label: 'Report releases',
+    icon: Icons.lock_open_outlined,
+  ),
   audit(slug: 'audit', label: 'Audit trail', icon: Icons.fact_check_outlined);
 
   const BursarSection({

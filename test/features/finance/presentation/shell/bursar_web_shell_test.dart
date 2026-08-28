@@ -126,9 +126,10 @@ void main() {
     );
   }
 
-  test('the console exposes the 11 reference sections in order', () {
+  test('the console exposes the reference sections in order', () {
     // Mirror of BursarWebShell._Section — a regression guard so the sidebar
-    // and the router sub-routes stay aligned with the mockup.
+    // and the router sub-routes stay aligned with the mockup. `report-release`
+    // is the Phase-2 Report Card Releases area.
     const expected = [
       'overview',
       'students',
@@ -140,9 +141,10 @@ void main() {
       'petty-cash',
       'payroll',
       'reports',
+      'report-release',
       'audit',
     ];
-    expect(expected.length, 11);
+    expect(expected.length, 12);
     expect(expected.first, 'overview');
     expect(expected.last, 'audit');
   });

@@ -4123,6 +4123,10 @@ async function enqueueReportCardNotification({
     senderRoleSnapshot: "Report Card Engine",
     senderKind: "automated",
     sourceModule: "reportCards",
+    // The app's deep-link router keys off sourceEntityId for reportCard
+    // destinations - set it so a parent "now available" notification opens
+    // the report screen (the router re-checks access server-side anyway).
+    ...(reportCardId ? { sourceEntityId: reportCardId } : {}),
     audience,
     status: "pending",
     idempotencyKey: `report_card_${action}_${reportCardId}_v${reportVersion}`,
@@ -5041,7 +5045,9 @@ exports.setReportCardFinancialAccess = onCall(async (request) => {
         await enqueueReportCardNotification({
           schoolId: caller.schoolId,
           recipientUid: u.id,
-          type: "report_card.released",
+          // Matches the app's reportCardPublished deep-link mapping so the
+          // parent lands on the report screen.
+          type: "reportCardPublished",
           title: "Report card now available",
           shortBody:
             "A report card that was awaiting financial clearance is now available to view.",

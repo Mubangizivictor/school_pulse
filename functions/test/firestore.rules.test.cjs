@@ -45,6 +45,7 @@ async function seed() {
         studentIds: [],
       },
       teacherA: { role: 'classTeacher', roles: ['classTeacher'], schoolId: 'schoolA', studentIds: [] },
+      headTeacherA: { role: 'headTeacher', roles: ['headTeacher'], schoolId: 'schoolA', studentIds: [] },
       storeA: { role: 'storeInventory', roles: ['storeInventory'], schoolId: 'schoolA', studentIds: [] },
       adminA: { role: 'schoolAdmin', roles: ['schoolAdmin'], schoolId: 'schoolA', studentIds: [] },
       bursarA: { role: 'bursar', roles: ['bursar'], schoolId: 'schoolA', studentIds: [] },
@@ -280,20 +281,22 @@ describe('clinical records', () => {
     await assertFails(getDoc(doc(dbFor('teacherA'), 'clinic_visits', 'visitA')));
   });
 
-  test('parents and students can read only their own learner records', async () => {
-    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'clinic_visits', 'visitA')));
-    await assertSucceeds(getDoc(doc(dbFor('studentUserA'), 'clinic_visits', 'visitA')));
+  test('parents and students cannot directly read clinical records', async () => {
+    // Parent-safe summaries are server-generated projections. Direct clinic
+    // documents contain clinical notes and remain nurse/admin-only.
+    await assertFails(getDoc(doc(dbFor('parentA'), 'clinic_visits', 'visitA')));
+    await assertFails(getDoc(doc(dbFor('studentUserA'), 'clinic_visits', 'visitA')));
     await assertFails(getDoc(doc(dbFor('parentOtherA'), 'clinic_visits', 'visitA')));
     await assertFails(updateDoc(doc(dbFor('parentA'), 'clinic_visits', 'visitA'), { reason: 'Changed' }));
   });
 
-  test('parent query must be constrained to school and linked student', async () => {
+  test('parent queries cannot enumerate clinical records', async () => {
     const allowedQuery = query(
       collection(dbFor('parentA'), 'clinic_visits'),
       where('schoolId', '==', 'schoolA'),
       where('studentId', '==', 'studentA'),
     );
-    await assertSucceeds(getDocs(allowedQuery));
+    await assertFails(getDocs(allowedQuery));
     await assertFails(getDocs(query(
       collection(dbFor('parentA'), 'clinic_visits'),
       where('schoolId', '==', 'schoolA'),
@@ -748,6 +751,111 @@ describe('reportCards: canonical snapshots are server-write-only', () => {
     await assertFails(setDoc(
       doc(dbFor('adminA'), 'schools/schoolA/reportCards/rc1/auditLog/forged'),
       { action: 'report_card.generated' },
+    ));
+  });
+});
+
+describe('reportCardReleaseExceptions + reportReleasePolicy: Bursar release layer', () => {
+  async function seedException() {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), 'schools/schoolA/reportCardReleaseExceptions/exc1'),
+        {
+          schoolId: 'schoolA', studentId: 'studentA', studentName: 'Student A',
+          academicYearId: '2026', termId: 't2', reasonCode: 'paymentPlan',
+          outstandingBalanceUgxAtRelease: 100000, status: 'active',
+          createdByUid: 'bursarA', createdByName: 'bursarA',
+        },
+      );
+    });
+  }
+
+  test('staff of the same school may read an exception record', async () => {
+    await seedException();
+    await assertSucceeds(
+      getDoc(doc(dbFor('teacherA'), 'schools/schoolA/reportCardReleaseExceptions/exc1')),
+    );
+    await assertSucceeds(
+      getDoc(doc(dbFor('bursarA'), 'schools/schoolA/reportCardReleaseExceptions/exc1')),
+    );
+  });
+
+  test('a parent - even the linked parent - can never read an exception record', async () => {
+    await seedException();
+    await assertFails(
+      getDoc(doc(dbFor('parentA'), 'schools/schoolA/reportCardReleaseExceptions/exc1')),
+    );
+    await assertFails(
+      getDoc(doc(dbFor('studentUserA'), 'schools/schoolA/reportCardReleaseExceptions/exc1')),
+    );
+  });
+
+  test('cross-school staff cannot read another school\'s exception records', async () => {
+    await seedException();
+    await assertFails(
+      getDoc(doc(dbFor('teacherB'), 'schools/schoolA/reportCardReleaseExceptions/exc1')),
+    );
+  });
+
+  test('no client - not even the Bursar - may write an exception record directly', async () => {
+    await assertFails(setDoc(
+      doc(dbFor('bursarA'), 'schools/schoolA/reportCardReleaseExceptions/forged'),
+      {
+        schoolId: 'schoolA', studentId: 'studentA', status: 'active',
+        outstandingBalanceUgxAtRelease: 0, reasonCode: 'custom',
+      },
+    ));
+    await seedException();
+    await assertFails(updateDoc(
+      doc(dbFor('bursarA'), 'schools/schoolA/reportCardReleaseExceptions/exc1'),
+      { status: 'revoked' },
+    ));
+  });
+
+  test('a held finalized report is unreadable by the linked parent even while an exception doc exists', async () => {
+    await seedException();
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/reportCards/rcHeldWithExc'), {
+        schoolId: 'schoolA', studentId: 'studentA', classId: 'p7',
+        academicYearId: '2026', termId: 't2', version: 1,
+        isFinalized: true, financialAccessStatus: 'held',
+      });
+    });
+    await assertFails(
+      getDoc(doc(dbFor('parentA'), 'schools/schoolA/reportCards/rcHeldWithExc')),
+    );
+  });
+
+  test('the release policy is readable by any same-school user (parent needs the restriction message)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/configs/reportReleasePolicy'), {
+        financialClearance: { mode: 'fullBalance', restrictionMessage: 'Contact the bursar.' },
+      });
+    });
+    await assertSucceeds(
+      getDoc(doc(dbFor('parentA'), 'schools/schoolA/configs/reportReleasePolicy')),
+    );
+    await assertSucceeds(
+      getDoc(doc(dbFor('teacherA'), 'schools/schoolA/configs/reportReleasePolicy')),
+    );
+  });
+
+  test('only finance/leadership may change the clearance policy', async () => {
+    await assertFails(setDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/configs/reportReleasePolicy'),
+      { financialClearance: { mode: 'minimumPercentage', minimumPercentagePaid: 0 } },
+    ));
+    await assertFails(setDoc(
+      doc(dbFor('parentA'), 'schools/schoolA/configs/reportReleasePolicy'),
+      { financialClearance: { mode: 'minimumPercentage', minimumPercentagePaid: 0 } },
+    ));
+    await assertSucceeds(setDoc(
+      doc(dbFor('bursarA'), 'schools/schoolA/configs/reportReleasePolicy'),
+      { financialClearance: { mode: 'fullBalance' } },
+    ));
+    await assertSucceeds(setDoc(
+      doc(dbFor('headTeacherA'), 'schools/schoolA/configs/reportReleasePolicy'),
+      { financialClearance: { mode: 'selectedCategories', feeCategoryIds: ['tuition'] } },
     ));
   });
 });

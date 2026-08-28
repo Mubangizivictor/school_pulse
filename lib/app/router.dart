@@ -182,6 +182,7 @@ import 'package:school_pulse/features/lesson_plans/presentation/lesson_plans_scr
 import 'package:school_pulse/features/finance/presentation/shell/bursar_shell.dart';
 import 'package:school_pulse/features/finance/presentation/shell/bursar_section.dart';
 import 'package:school_pulse/features/finance/presentation/screens/student_billing/student_bills_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/clearance_policy_editor_screen.dart';
 import 'package:school_pulse/features/nurse/presentation/shell/nurse_shell.dart';
 import 'package:school_pulse/features/health/presentation/screens/nurse_student_lookup_screen.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
@@ -1286,6 +1287,15 @@ final router = GoRouter(
               path: 'reports',
               builder: (context, state) =>
                   const BursarShell(section: BursarSection.reports),
+            ),
+            GoRoute(
+              path: 'report-release',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.reportRelease),
+            ),
+            GoRoute(
+              path: 'clearance-policy',
+              builder: (context, state) => const ClearancePolicyEditorScreen(),
             ),
             GoRoute(
               path: 'audit',
