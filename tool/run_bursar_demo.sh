@@ -24,6 +24,22 @@ if [[ "${1:-}" == "-d" && -n "${2:-}" ]]; then
   DEVICE_ARGS=(-d "$2")
 fi
 
+# firebase-tools needs a JDK 21+. Homebrew keeps versioned JDKs keg-only, so
+# point JAVA_HOME at openjdk@21 if it's installed and the default java is old.
+if ! java -version 2>&1 | grep -qE '"(2[1-9]|[3-9][0-9])'; then
+  for jdk in /opt/homebrew/opt/openjdk@21 /opt/homebrew/opt/openjdk \
+    /usr/local/opt/openjdk@21 /opt/homebrew/Cellar/openjdk@21/*; do
+    if [[ -x "$jdk/bin/java" || -x "$jdk/libexec/openjdk.jdk/Contents/Home/bin/java" ]]; then
+      [[ -d "$jdk/libexec/openjdk.jdk/Contents/Home" ]] \
+        && export JAVA_HOME="$jdk/libexec/openjdk.jdk/Contents/Home" \
+        || export JAVA_HOME="$jdk"
+      export PATH="$JAVA_HOME/bin:$PATH"
+      break
+    fi
+  done
+  echo "==> Using JAVA_HOME=$JAVA_HOME"
+fi
+
 export GCLOUD_PROJECT="school-pulse-3d95b"
 export FIRESTORE_EMULATOR_HOST="localhost:8080"
 export FIREBASE_AUTH_EMULATOR_HOST="localhost:9099"
