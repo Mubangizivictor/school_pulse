@@ -295,12 +295,16 @@ async function seedStudentsAndBilling(bursarUid) {
     // ---- legacy student_financials (dashboard KPIs + projection service)
     const paymentHistory = [];
     if (paidUgx > 0) {
-      // Split into up to 3 instalments over the term.
+      // Split into up to 3 instalments. Spread them across the LAST 7 days
+      // so the Home cash-flow line and "Recent activity" list have data
+      // (the dashboard buckets the trailing week).
       const chunks = mode === 0 ? 3 : 1;
       const per = Math.round(paidUgx / chunks);
       for (let c = 0; c < chunks; c++) {
         const amt = c === chunks - 1 ? paidUgx - per * (chunks - 1) : per;
-        const date = daysAgo(60 - c * 22 - s.i);
+        // Deterministic spread over days 0..6.
+        const dayOffset = (s.i + c * 2) % 7;
+        const date = daysAgo(dayOffset);
         const receiptNumber = `RCPT-${s.admissionNumber}-${c + 1}`;
         paymentHistory.push({
           id: `${s.id}-p${c + 1}`,
@@ -313,7 +317,8 @@ async function seedStudentsAndBilling(bursarUid) {
           method: c % 3 === 0 ? 'Cash' : c % 3 === 1 ? 'Mobile Money' : 'Bank',
           reference: `TXN${1000 + s.i * 7 + c}`,
           receiptNumber,
-          feeBreakdown: { tuition: amt },
+          // Map<String,double> on the client - values MUST be floats.
+          feeBreakdown: {},
           recordedBy: bursarUid,
         });
       }
@@ -440,7 +445,7 @@ async function seedStudentsAndBilling(bursarUid) {
         method: 'Cash',
         reference: `TXN-TODAY-${s.i}`,
         receiptNumber: `RCPT-${s.admissionNumber}-T`,
-        feeBreakdown: { activity: amt },
+        feeBreakdown: {},
         recordedBy: bursarUid,
       };
       await db
