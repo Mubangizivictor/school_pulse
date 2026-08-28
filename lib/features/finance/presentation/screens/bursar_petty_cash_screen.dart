@@ -6,6 +6,7 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/injection_container.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/finance/data/datasources/finance_offline_queue.dart';
 import 'package:school_pulse/features/finance/data/datasources/finance_operations_remote_data_source.dart';
 import 'package:school_pulse/features/finance/data/repositories/bursar_ops_read_repository.dart';
 import 'package:school_pulse/features/finance/presentation/widgets/finance_forms.dart';
@@ -18,8 +19,32 @@ const _pettyCashOperatorRoles = {'bursar', 'schoolAdmin'};
 /// cash/bank account into the tin) and **record disbursement** (money out,
 /// with payee/category/purpose/approver). Both go through
 /// `finance_operations.js`.
-class BursarPettyCashScreen extends StatelessWidget {
+class BursarPettyCashScreen extends StatefulWidget {
   const BursarPettyCashScreen({super.key});
+
+  @override
+  State<BursarPettyCashScreen> createState() => _BursarPettyCashScreenState();
+}
+
+class _BursarPettyCashScreenState extends State<BursarPettyCashScreen> {
+  List<FinanceQueuedDisbursement> _pending = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshQueue(trySync: true);
+  }
+
+  Future<void> _refreshQueue({bool trySync = false}) async {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return;
+    final queue = sl<FinanceOfflineQueue>();
+    if (trySync) {
+      await queue.sync(auth.user.schoolId);
+    }
+    if (!mounted) return;
+    setState(() => _pending = queue.pendingFor(auth.user.schoolId));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +85,10 @@ class BursarPettyCashScreen extends StatelessWidget {
                             ),
                           ),
                         )
-                      : () => _openDisbursement(context, schoolId, float),
+                      : () async {
+                          await _openDisbursement(context, schoolId, float);
+                          await _refreshQueue();
+                        },
                 )
               : null,
           body: !floatSnap.hasData
@@ -68,6 +96,14 @@ class BursarPettyCashScreen extends StatelessWidget {
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                   children: [
+                    if (_pending.isNotEmpty)
+                      _PendingSyncBanner(
+                        count: _pending.length,
+                        failed: _pending.any(
+                          (p) => p.status == FinanceQueueStatus.failed,
+                        ),
+                        onSync: () => _refreshQueue(trySync: true),
+                      ),
                     FinanceCard(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -269,7 +305,7 @@ Future<void> _openReplenish(
   );
 }
 
-void _openDisbursement(
+Future<void> _openDisbursement(
   BuildContext context,
   String schoolId,
   PettyCashFloat float,
@@ -282,7 +318,7 @@ void _openDisbursement(
   final approvedBy = TextEditingController();
   final formKey = GlobalKey<FormState>();
 
-  showModalBottomSheet<void>(
+  return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     builder: (sheetContext) => _Sheet(
@@ -326,6 +362,45 @@ void _openDisbursement(
               label: 'Record disbursement',
               onPressed: () async {
                 if (!(formKey.currentState?.validate() ?? false)) return;
+                final queue = sl<FinanceOfflineQueue>();
+                final online = await queue.isOnline;
+                final args = (
+                  payee: payee.text.trim(),
+                  category: category.text.trim(),
+                  purpose: purpose.text.trim(),
+                  amount: int.parse(amount.text.trim()),
+                  requestedBy: requestedBy.text.trim().isEmpty
+                      ? null
+                      : requestedBy.text.trim(),
+                  approvedBy: approvedBy.text.trim().isEmpty
+                      ? null
+                      : approvedBy.text.trim(),
+                );
+                if (!online) {
+                  // Offline: queue it (idempotency-keyed). Never queued:
+                  // approvals, reconciliation, payment finalisation.
+                  await queue.enqueueDisbursement(
+                    schoolId: schoolId,
+                    payee: args.payee,
+                    category: args.category,
+                    purpose: args.purpose,
+                    amountUgx: args.amount,
+                    requestedBy: args.requestedBy,
+                    approvedBy: args.approvedBy,
+                  );
+                  if (sheetContext.mounted) {
+                    Navigator.of(sheetContext).pop();
+                    ScaffoldMessenger.of(sheetContext).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Saved offline — it will sync when you reconnect.',
+                        ),
+                      ),
+                    );
+                  }
+                  return;
+                }
+                if (!sheetContext.mounted) return;
                 await runFinanceAction(
                   sheetContext,
                   successMessage: 'Disbursement recorded',
@@ -333,16 +408,12 @@ void _openDisbursement(
                   action: () => sl<FinanceOperationsRemoteDataSource>()
                       .recordPettyCashDisbursement(
                         schoolId: schoolId,
-                        payee: payee.text.trim(),
-                        category: category.text.trim(),
-                        purpose: purpose.text.trim(),
-                        amountUgx: int.parse(amount.text.trim()),
-                        requestedBy: requestedBy.text.trim().isEmpty
-                            ? null
-                            : requestedBy.text.trim(),
-                        approvedBy: approvedBy.text.trim().isEmpty
-                            ? null
-                            : approvedBy.text.trim(),
+                        payee: args.payee,
+                        category: args.category,
+                        purpose: args.purpose,
+                        amountUgx: args.amount,
+                        requestedBy: args.requestedBy,
+                        approvedBy: args.approvedBy,
                       ),
                 );
               },
@@ -501,6 +572,55 @@ class _PettyRow extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shows how many petty-cash disbursements are captured but not yet synced
+/// to the server, with a manual "Sync now" (they also sync automatically
+/// when the screen opens online). Failed items are called out in red.
+class _PendingSyncBanner extends StatelessWidget {
+  final int count;
+  final bool failed;
+  final VoidCallback onSync;
+
+  const _PendingSyncBanner({
+    required this.count,
+    required this.failed,
+    required this.onSync,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = failed
+        ? AppColors.danger(context)
+        : AppColors.textSecondary(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: tint.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            failed ? Icons.sync_problem_outlined : Icons.cloud_upload_outlined,
+            size: 18,
+            color: tint,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              failed
+                  ? '$count disbursement${count == 1 ? '' : 's'} failed to sync — tap to retry.'
+                  : '$count disbursement${count == 1 ? '' : 's'} waiting to sync.',
+              style: TextStyle(fontSize: 12, color: tint),
+            ),
+          ),
+          TextButton(onPressed: onSync, child: const Text('Sync now')),
         ],
       ),
     );

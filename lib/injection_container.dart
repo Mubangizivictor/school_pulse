@@ -262,9 +262,12 @@ import 'package:school_pulse/features/finance/domain/services/finance_reports_se
 import 'package:school_pulse/features/finance/data/repositories/finance_repository_impl.dart';
 import 'package:school_pulse/features/finance/data/datasources/bursar_report_release_remote_data_source.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/report_release/bursar_report_release_bloc.dart';
+import 'package:school_pulse/features/finance/data/datasources/clearance_policy_remote_data_source.dart';
+import 'package:school_pulse/features/finance/presentation/bloc/clearance_policy/clearance_policy_bloc.dart';
 import 'package:school_pulse/features/finance/data/datasources/finance_remote_data_source.dart';
 import 'package:school_pulse/features/finance/data/datasources/finance_governance_remote_data_source.dart';
 import 'package:school_pulse/features/finance/data/datasources/finance_operations_remote_data_source.dart';
+import 'package:school_pulse/features/finance/data/datasources/finance_offline_queue.dart';
 import 'package:school_pulse/features/finance/domain/repositories/fee_billing_repository.dart';
 import 'package:school_pulse/features/finance/data/repositories/fee_billing_repository_impl.dart';
 import 'package:school_pulse/features/finance/domain/repositories/fee_catalogue_repository.dart';
@@ -1169,6 +1172,15 @@ Future<void> init() async {
   sl.registerLazySingleton(
     () => BursarReportReleaseRemoteDataSource(firestore: sl(), functions: sl()),
   );
+  sl.registerLazySingleton(
+    () => ClearancePolicyRemoteDataSource(functions: sl()),
+  );
+  sl.registerFactory(
+    () => ClearancePolicyBloc(
+      dataSource: sl(),
+      feeCatalogueRepository: sl(),
+    ),
+  );
 
   sl.registerLazySingleton(
     () => BursarStudentProjectionService(
@@ -1232,6 +1244,13 @@ Future<void> init() async {
   // Finance reports engine (audit area 5) — 8 real reports from
   // authoritative finance data, CSV for all + PDF for cashbook/arrears.
   sl.registerLazySingleton(() => FinanceReportsService(firestore: sl()));
+
+  // Finance offline queue (audit area 6) — petty-cash disbursements only;
+  // idempotency-keyed, replay-on-reconnect. Nothing security-sensitive is
+  // ever queued.
+  sl.registerLazySingleton(
+    () => FinanceOfflineQueue(prefs: sl(), network: sl(), ops: sl()),
+  );
 
   // Features - Games
   sl.registerFactory(() => GamesBloc(repository: sl()));
@@ -2136,7 +2155,11 @@ Future<void> init() async {
 
   sl.registerFactory(() => ParentReportCardBloc(dataSource: sl()));
   sl.registerLazySingleton(
-    () => ParentReportCardRemoteDataSource(firestore: sl(), functions: sl()),
+    () => ParentReportCardRemoteDataSource(
+      firestore: sl(),
+      functions: sl(),
+      offlineCache: sl<ParentOfflineCacheService>(),
+    ),
   );
 
   // Features - Structure
