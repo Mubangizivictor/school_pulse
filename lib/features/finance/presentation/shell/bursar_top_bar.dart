@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
+import 'package:school_pulse/features/messages/presentation/screens/messages_list_screen.dart';
+import 'package:school_pulse/features/notifications/presentation/screens/notification_list_screen.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 /// The Bursar desktop console top bar: a `Finance / <section>` breadcrumb,
 /// a global search field (⌘K / Ctrl-K focuses it; submit routes to
@@ -82,19 +83,37 @@ class _BursarTopBarState extends State<BursarTopBar> {
           const SizedBox(width: 16),
           _circle(
             context,
-            child: const MessagesNavIcon(
-              icon: Icons.chat_bubble_outline_rounded,
-              size: 18,
+            child: _MessagesBadgeIcon(),
+            onTap: () => _openInSection(
+              context,
+              const MessagesListScreen(),
             ),
-            onTap: () => context.push('/staff/messages'),
           ),
           const SizedBox(width: 8),
-          _circle(context, child: const NotificationBellButton()),
+          _circle(
+            context,
+            child: Icon(
+              Icons.notifications_none_rounded,
+              size: 19,
+              color: AppColors.textSecondary(context),
+            ),
+            onTap: () => _openInSection(
+              context,
+              const NotificationListScreen(),
+            ),
+          ),
           const SizedBox(width: 8),
           const _ProfileMenu(),
         ],
       ),
     );
+  }
+
+  /// Opens [screen] inside the console's active section navigator so the
+  /// sidebar + top bar stay put (a root `context.push` would replace the
+  /// whole shell).
+  void _openInSection(BuildContext context, Widget screen) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
   Widget _circle(
@@ -205,6 +224,32 @@ class _BursarTopBarState extends State<BursarTopBar> {
 
 class _FocusSearchIntent extends Intent {
   const _FocusSearchIntent();
+}
+
+/// Chat-bubble icon with a live unread-messages badge (same source as the
+/// staff dashboards' MessagesNavIcon, drawn to fit the top bar's circle).
+class _MessagesBadgeIcon extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<MessagingBloc, MessagingState>(
+      bloc: di.sl<MessagingBloc>(),
+      buildWhen: (p, c) => p.totalUnreadCount != c.totalUnreadCount,
+      builder: (context, state) {
+        final count = state.totalUnreadCount;
+        return Badge(
+          backgroundColor: AppColors.danger(context),
+          textColor: AppColors.white,
+          isLabelVisible: count > 0,
+          label: Text(count > 99 ? '99+' : '$count'),
+          child: Icon(
+            Icons.chat_bubble_outline_rounded,
+            size: 18,
+            color: AppColors.textSecondary(context),
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// A single rounded keyboard key-cap (⌘ / K) for the search shortcut hint.
@@ -333,7 +378,9 @@ class _ProfileMenu extends StatelessWidget {
             };
             themeProvider.setThemeMode(next);
           case 'messages':
-            context.push('/staff/messages');
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MessagesListScreen()),
+            );
           case 'logout':
             context.read<AuthBloc>().add(LogoutPressed());
             context.go('/welcome');
