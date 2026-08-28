@@ -66,11 +66,31 @@ class BursarOpsReadRepository {
   }) {
     Query<Map<String, dynamic>> q = _col(schoolId, 'supplier_invoices');
     if (supplierId != null) q = q.where('supplierId', isEqualTo: supplierId);
-    return q
-        .orderBy('issuedAt', descending: true)
-        .snapshots()
-        .map((s) => s.docs.map(SupplierInvoice.fromDoc).toList());
+    // Order client-side: `issuedAt` can be null for a just-recorded invoice
+    // and a Firestore orderBy would drop those docs.
+    return q.snapshots().map((s) {
+      final list = s.docs.map(SupplierInvoice.fromDoc).toList();
+      list.sort((a, b) {
+        final ad = a.issuedAt ?? DateTime(1970);
+        final bd = b.issuedAt ?? DateTime(1970);
+        return bd.compareTo(ad);
+      });
+      return list;
+    });
   }
+
+  /// Every invoice for the school (all suppliers), newest first — used by
+  /// the Suppliers workspace invoice list and the approvals queue.
+  Stream<List<SupplierInvoice>> watchAllSupplierInvoices(String schoolId) =>
+      watchSupplierInvoices(schoolId);
+
+  Stream<PettyCashFloat?> watchPettyCashFloatById(
+    String schoolId,
+    String floatId,
+  ) => _col(schoolId, 'petty_cash')
+      .doc(floatId)
+      .snapshots()
+      .map((d) => d.exists ? PettyCashFloat.fromDoc(d) : null);
 
   // ---- Payment Vouchers -----------------------------------------------
 
@@ -239,20 +259,39 @@ class SupplierInvoice {
   final String id;
   final String supplierId;
   final String supplierName;
+  final String invoiceNumber;
   final String reference;
+  final String category;
   final DateTime? issuedAt;
+  final DateTime? dueAt;
   final int amountUgx;
-  final String status; // paid | outstanding | overdue
+
+  /// pending_approval | approved | rejected | returned | paid
+  /// (legacy demo docs may still carry paid | outstanding | overdue).
+  final String status;
+  final String? createdBy;
+  final String? paymentReference;
+  final List<String> attachmentPaths;
 
   SupplierInvoice({
     required this.id,
     required this.supplierId,
     required this.supplierName,
+    required this.invoiceNumber,
     required this.reference,
+    required this.category,
     required this.issuedAt,
+    required this.dueAt,
     required this.amountUgx,
     required this.status,
+    this.createdBy,
+    this.paymentReference,
+    this.attachmentPaths = const [],
   });
+
+  bool get isPendingApproval => status == 'pending_approval';
+  bool get isApproved => status == 'approved';
+  bool get isPayable => status == 'approved';
 
   factory SupplierInvoice.fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
     final j = d.data() ?? const {};
@@ -260,10 +299,19 @@ class SupplierInvoice {
       id: d.id,
       supplierId: j['supplierId'] as String? ?? '',
       supplierName: j['supplierName'] as String? ?? '',
+      invoiceNumber:
+          j['invoiceNumber'] as String? ?? (j['reference'] as String? ?? ''),
       reference: j['reference'] as String? ?? '',
+      category: j['category'] as String? ?? '',
       issuedAt: _date(j['issuedAt']),
+      dueAt: _date(j['dueAt']),
       amountUgx: _int(j['amountUgx']),
       status: j['status'] as String? ?? 'outstanding',
+      createdBy: j['createdBy'] as String?,
+      paymentReference: j['paymentReference'] as String?,
+      attachmentPaths: ((j['attachmentPaths'] as List?) ?? const [])
+          .map((e) => '$e')
+          .toList(),
     );
   }
 }

@@ -50,28 +50,32 @@ service cloud.firestore {
     }
 
     // Product decision (2026-08-26): role-list gating was intentionally
-    // dropped here - any staff member of a school tenant (schoolAdmin,
-    // headTeacher, director, teacher, bursar, nurse, receptionist, etc.) is
-    // now authorized wherever hasAnyRole() was used to gate a specific role
-    // list. The `allowedRoles` parameter is kept only so every existing call
-    // site (30+ across this file) stays source-compatible; it is no longer
-    // consulted. superAdmin (the SaaS platform owner, via isSuperAdmin())
-    // remains the one distinct, more-privileged tier above ordinary staff.
-    // This is unrelated to, and does not weaken, the tenant (cross-school)
-    // boundary - isSameSchool()/isActiveMembership() still enforce that a
-    // staff member can only touch their OWN school's data.
+    // dropped here for non-sensitive staff workspace records. Health uses
+    // hasClinicalRole below instead: clinical permission cannot inherit this
+    // broad compatibility helper.
     function hasAnyRole(allowedRoles) {
       return isStaff();
     }
 
+    // Clinical roles intentionally do not use hasAnyRole(). A primary role
+    // or explicitly-assigned secondary role is required for every access.
+    function hasClinicalRole(allowedRoles) {
+      return isSignedIn() && (
+        isSuperAdmin() || (isStaff() && (
+          myRole() in allowedRoles ||
+          myUser().get('roles', []).hasAny(allowedRoles)
+        ))
+      );
+    }
+
     function canManageClinicalRecords() {
-      return hasAnyRole([
+      return hasClinicalRole([
         'nurse', 'schoolAdmin', 'headTeacher', 'deputyHead', 'director'
       ]);
     }
 
     function canManageMedicalSupplies() {
-      return hasAnyRole([
+      return hasClinicalRole([
         'nurse', 'storeInventory', 'bursar', 'schoolAdmin',
         'headTeacher', 'director'
       ]);
@@ -756,14 +760,13 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
-    // School-scoped clinical records. Teachers and unrelated operational
-    // roles cannot browse medical information. Parents/students receive
-    // read-only access to records for their own learner account.
+    // School-scoped clinical records are never client-readable by parents,
+    // students, teachers, or other operational staff. Parent-facing safe
+    // summaries must be a separate, school-configured projection generated
+    // server-side; granting a parent the profile/visit document would expose
+    // every present and future medical field by accident.
     match /health_profiles/{docId} {
-      allow read: if isSameSchool(resource.data.schoolId) && (
-        canManageClinicalRecords() || isParentOf(resource.data.studentId) ||
-        isMe(resource.data.studentId)
-      );
+      allow read: if isSameSchool(resource.data.schoolId) && canManageClinicalRecords();
       allow create: if canManageClinicalRecords() &&
         isSameSchool(request.resource.data.schoolId);
       allow update: if canManageClinicalRecords() &&
@@ -774,10 +777,7 @@ service cloud.firestore {
     }
 
     match /clinic_visits/{docId} {
-      allow read: if isSameSchool(resource.data.schoolId) && (
-        canManageClinicalRecords() || isParentOf(resource.data.studentId) ||
-        isMe(resource.data.studentId)
-      );
+      allow read: if isSameSchool(resource.data.schoolId) && canManageClinicalRecords();
       allow create: if canManageClinicalRecords() &&
         isSameSchool(request.resource.data.schoolId) &&
         request.resource.data.recordedBy == request.auth.uid;
@@ -790,10 +790,7 @@ service cloud.firestore {
     }
 
     match /emergency_incidents/{docId} {
-      allow read: if isSameSchool(resource.data.schoolId) && (
-        canManageClinicalRecords() || isParentOf(resource.data.studentId) ||
-        isMe(resource.data.studentId)
-      );
+      allow read: if isSameSchool(resource.data.schoolId) && canManageClinicalRecords();
       allow create: if canManageClinicalRecords() &&
         isSameSchool(request.resource.data.schoolId) &&
         request.resource.data.recordedBy == request.auth.uid;
@@ -1121,8 +1118,23 @@ service cloud.firestore {
       allow read, write: if isStaff() && isSameSchool(schoolId);
     }
     match /schools/{schoolId}/configs/reportReleasePolicy {
+      // Any same-school signed-in user may read the policy (a parent needs
+      // the restriction message; the eligibility engine reads it too). Only
+      // finance/leadership may change it - a class/subject teacher must not
+      // be able to weaken the fee-clearance gate.
       allow read: if isSameSchool(schoolId);
-      allow write: if isStaff() && isSameSchool(schoolId);
+      allow write: if isSameSchool(schoolId) &&
+        myRole() in ['bursar', 'schoolAdmin', 'headTeacher', 'director'];
+    }
+    // Bursar report-card release exceptions. Staff-readable for the Bursar
+    // console and audit joins; NEVER readable by a parent/student (it would
+    // leak another learner's arrears and reason). All writes are callable-
+    // only (grant/approve/revoke/renew in functions/report_card_release.js)
+    // so the balance snapshot, status transitions and append-only
+    // auditTrail can never be forged or edited from a client.
+    match /schools/{schoolId}/reportCardReleaseExceptions/{exceptionId} {
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow write: if false;
     }
 
     // Library module. Catalog data (resources/policies) is school-wide
@@ -1380,7 +1392,16 @@ service cloud.firestore {
     // Suppliers, Payment Vouchers, Payroll). Staff of the tenant may read;
     // every write is server-side only (Cloud Functions / Admin SDK / the
     // demo seed script), never from the client, so money records stay
-    // immutable and auditable. Screens are read-only views for now.
+    // immutable and auditable.
+    //   - Suppliers + Petty Cash writes go through functions/
+    //     finance_operations.js (audit area 3): saveSupplier /
+    //     archiveSupplier / recordSupplierInvoice / decideSupplierInvoice /
+    //     paySupplierInvoice / recordPettyCashDisbursement /
+    //     replenishPettyCash. Every one is tenant + role gated, idempotent,
+    //     audited, and (for money moves) balance-authoritative in a
+    //     transaction. `allow write: if false` below is what forces that.
+    //   - Cash & Bank reconciliation + payroll finalisation (audit area 4)
+    //     likewise land as callables, not client writes.
     match /schools/{schoolId}/bank_accounts/{accountId} {
       allow read: if isSameSchool(schoolId) && isStaff();
       allow write: if false;

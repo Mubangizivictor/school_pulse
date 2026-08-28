@@ -18,6 +18,9 @@ Object.assign(exports, require("./payroll_compliance")({ admin, onCall, HttpsErr
 Object.assign(exports, require("./payment_codes")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./payment_vouchers")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./finance_governance")({ admin, onCall, HttpsError }));
+Object.assign(exports, require("./report_card_release")({ admin, onCall, HttpsError, onSchedule }));
+Object.assign(exports, require("./finance_operations")({ admin, onCall, HttpsError }));
+Object.assign(exports, require("./health_clinic")({ admin, onCall, HttpsError }));
 
 /**
  * Enqueue a templated transactional email for the `public_functions`
@@ -4676,6 +4679,30 @@ exports.signReportCardAsHeadteacher = onCall(async (request) => {
     }).catch((err) => {
       console.error("maybeAutoUpdateReportCardFinancialAccess failed after finalization", err);
     });
+
+    // If the report was published but the learner is not financially cleared
+    // (and no active exception released it), let the Bursar know - they may
+    // want to grant a release exception. Best-effort; never fails finalize.
+    try {
+      const rcSnap = await admin
+        .firestore()
+        .doc(`schools/${caller.schoolId}/reportCards/${reportCardId}`)
+        .get();
+      if (rcSnap.exists && rcSnap.data().financialAccessStatus !== "released") {
+        await enqueueReportCardNotification({
+          schoolId: caller.schoolId,
+          recipientRoles: ["bursar", "director", "schoolAdmin"],
+          type: "report_card.published_not_cleared",
+          title: "Report published — learner not financially cleared",
+          shortBody: `${rcSnap.data().studentName || "A learner"}'s report card is finalized but withheld pending financial clearance.`,
+          reportCardId,
+          action: "published_not_cleared",
+          reportVersion: rcSnap.data().version,
+        });
+      }
+    } catch (err) {
+      console.error("published_not_cleared Bursar notify failed", err);
+    }
   }
 
   await writeAudit(caller.schoolId, {
@@ -4942,6 +4969,7 @@ exports.setReportCardFinancialAccess = onCall(async (request) => {
   const db = admin.firestore();
   const succeeded = [];
   const failed = [];
+  const newlyReleased = []; // { reportCardId, studentId } for parent notify
 
   for (const reportCardId of reportCardIds) {
     try {
@@ -4959,6 +4987,9 @@ exports.setReportCardFinancialAccess = onCall(async (request) => {
             "failed-precondition",
             "Only an academically finalized report may have its financial access changed."
           );
+        }
+        if (action === "release" && data.financialAccessStatus !== "released") {
+          newlyReleased.push({ reportCardId, studentId: data.studentId });
         }
         tx.update(ref, {
           financialAccessStatus: statusFor,
@@ -4994,6 +5025,34 @@ exports.setReportCardFinancialAccess = onCall(async (request) => {
     entityId: reportCardIds.join(","),
     newValue: { succeeded: succeeded.length, failed: failed.length, reason },
   });
+
+  // Notify linked parents/students when a withheld report just became
+  // available. Best-effort; a failure here must not fail the release itself.
+  for (const { reportCardId, studentId } of newlyReleased) {
+    if (!succeeded.includes(reportCardId)) continue;
+    try {
+      const usersSnap = await db
+        .collection("users")
+        .where("schoolId", "==", caller.schoolId)
+        .where("studentIds", "array-contains", studentId)
+        .get();
+      for (const u of usersSnap.docs) {
+        await enqueueReportCardNotification({
+          schoolId: caller.schoolId,
+          recipientUid: u.id,
+          type: "report_card.released",
+          title: "Report card now available",
+          shortBody:
+            "A report card that was awaiting financial clearance is now available to view.",
+          reportCardId,
+          action: "released",
+          reportVersion: 0,
+        });
+      }
+    } catch (err) {
+      console.error("parent report_card.released notify failed", reportCardId, err);
+    }
+  }
 
   return { succeeded, failed };
 });

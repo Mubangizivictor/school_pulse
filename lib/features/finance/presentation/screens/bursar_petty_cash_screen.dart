@@ -6,12 +6,18 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/injection_container.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/finance/data/datasources/finance_operations_remote_data_source.dart';
 import 'package:school_pulse/features/finance/data/repositories/bursar_ops_read_repository.dart';
+import 'package:school_pulse/features/finance/presentation/widgets/finance_forms.dart';
 import 'package:school_pulse/features/finance/presentation/widgets/finance_kit.dart';
 
-/// Petty Cash — read-only view matching the reference: current float, total
-/// in/out, and a cash-in/out ledger with a running balance. Replenishment
-/// requests land in a later phase.
+const _pettyCashOperatorRoles = {'bursar', 'schoolAdmin'};
+
+/// Petty Cash — running float, in/out totals, full ledger, and the two real
+/// callable-backed actions: **replenish float** (moves money from a
+/// cash/bank account into the tin) and **record disbursement** (money out,
+/// with payee/category/purpose/approver). Both go through
+/// `finance_operations.js`.
 class BursarPettyCashScreen extends StatelessWidget {
   const BursarPettyCashScreen({super.key});
 
@@ -19,6 +25,10 @@ class BursarPettyCashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthBloc>().state;
     final schoolId = auth is AuthAuthenticated ? auth.user.schoolId : '';
+    final roles = auth is AuthAuthenticated
+        ? auth.user.roles.map((r) => r.name).toSet()
+        : <String>{};
+    final canOperate = roles.any(_pettyCashOperatorRoles.contains);
     final repo = sl<BursarOpsReadRepository>();
 
     return StreamBuilder<PettyCashFloat?>(
@@ -29,14 +39,30 @@ class BursarPettyCashScreen extends StatelessWidget {
           title: float == null
               ? 'Petty Cash'
               : 'Petty Cash — ${float.location}',
-          bottomBar: PrimaryActionBar(
-            label: 'Request replenishment',
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Replenishment requests are coming soon.'),
-              ),
-            ),
-          ),
+          actions: canOperate
+              ? [
+                  IconButton(
+                    tooltip: 'Replenish float',
+                    icon: const Icon(Icons.add_card_outlined),
+                    onPressed: () =>
+                        _openReplenish(context, schoolId, float?.location),
+                  ),
+                ]
+              : null,
+          bottomBar: canOperate
+              ? PrimaryActionBar(
+                  label: 'Record disbursement',
+                  onPressed: float == null
+                      ? () => ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Replenish the float before recording a disbursement.',
+                            ),
+                          ),
+                        )
+                      : () => _openDisbursement(context, schoolId, float),
+                )
+              : null,
           body: !floatSnap.hasData
               ? FinanceStates.loading()
               : ListView(
@@ -137,6 +163,237 @@ class BursarPettyCashScreen extends StatelessWidget {
                 ),
         );
       },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+//  Actions
+// ---------------------------------------------------------------------------
+
+Future<void> _openReplenish(
+  BuildContext context,
+  String schoolId,
+  String? location,
+) async {
+  final accounts = await sl<BursarOpsReadRepository>()
+      .watchBankAccounts(schoolId)
+      .first;
+  final payable = accounts
+      .where((a) => a.kind == 'bank' || a.kind == 'cash')
+      .toList();
+  if (!context.mounted) return;
+  if (payable.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No cash or bank account to replenish from.'),
+      ),
+    );
+    return;
+  }
+  String accountId = payable.first.id;
+  final amount = TextEditingController();
+  final reference = TextEditingController();
+  final locationCtl = TextEditingController(text: location ?? 'Main Office');
+  final formKey = GlobalKey<FormState>();
+
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) => StatefulBuilder(
+      builder: (sheetContext, setSheet) => _Sheet(
+        title: 'Replenish petty cash',
+        child: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: accountId,
+                decoration: const InputDecoration(
+                  labelText: 'From account',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                items: [
+                  for (final a in payable)
+                    DropdownMenuItem(
+                      value: a.id,
+                      child: Text(
+                        '${a.name} · ${CurrencyFormatter.ugx(a.balanceUgx.toDouble())}',
+                      ),
+                    ),
+                ],
+                onChanged: (v) => setSheet(() => accountId = v ?? accountId),
+              ),
+              const SizedBox(height: 12),
+              FinanceField(
+                controller: amount,
+                label: 'Amount',
+                moneyUgx: true,
+                required: true,
+              ),
+              FinanceField(
+                controller: reference,
+                label: 'Reference',
+                required: true,
+              ),
+              FinanceField(controller: locationCtl, label: 'Location'),
+              const SizedBox(height: 8),
+              FinanceSubmitButton(
+                label: 'Replenish',
+                onPressed: () async {
+                  if (!(formKey.currentState?.validate() ?? false)) return;
+                  await runFinanceAction(
+                    sheetContext,
+                    successMessage: 'Float replenished',
+                    popOnDone: 1,
+                    action: () => sl<FinanceOperationsRemoteDataSource>()
+                        .replenishPettyCash(
+                          schoolId: schoolId,
+                          accountId: accountId,
+                          amountUgx: int.parse(amount.text.trim()),
+                          reference: reference.text.trim(),
+                          location: locationCtl.text.trim().isEmpty
+                              ? null
+                              : locationCtl.text.trim(),
+                        ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+void _openDisbursement(
+  BuildContext context,
+  String schoolId,
+  PettyCashFloat float,
+) {
+  final payee = TextEditingController();
+  final category = TextEditingController();
+  final purpose = TextEditingController();
+  final amount = TextEditingController();
+  final requestedBy = TextEditingController();
+  final approvedBy = TextEditingController();
+  final formKey = GlobalKey<FormState>();
+
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) => _Sheet(
+      title: 'Record disbursement',
+      child: Form(
+        key: formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Available float: ${CurrencyFormatter.ugx(float.currentFloatUgx.toDouble())}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMuted(sheetContext),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            FinanceField(controller: payee, label: 'Paid to', required: true),
+            FinanceField(
+              controller: category,
+              label: 'Category',
+              required: true,
+            ),
+            FinanceField(controller: purpose, label: 'Purpose', required: true),
+            FinanceField(
+              controller: amount,
+              label: 'Amount',
+              moneyUgx: true,
+              required: true,
+            ),
+            FinanceField(controller: requestedBy, label: 'Requested by'),
+            FinanceField(
+              controller: approvedBy,
+              label: 'Approved by (required for large amounts)',
+            ),
+            const SizedBox(height: 8),
+            FinanceSubmitButton(
+              label: 'Record disbursement',
+              onPressed: () async {
+                if (!(formKey.currentState?.validate() ?? false)) return;
+                await runFinanceAction(
+                  sheetContext,
+                  successMessage: 'Disbursement recorded',
+                  popOnDone: 1,
+                  action: () => sl<FinanceOperationsRemoteDataSource>()
+                      .recordPettyCashDisbursement(
+                        schoolId: schoolId,
+                        payee: payee.text.trim(),
+                        category: category.text.trim(),
+                        purpose: purpose.text.trim(),
+                        amountUgx: int.parse(amount.text.trim()),
+                        requestedBy: requestedBy.text.trim().isEmpty
+                            ? null
+                            : requestedBy.text.trim(),
+                        approvedBy: approvedBy.text.trim().isEmpty
+                            ? null
+                            : approvedBy.text.trim(),
+                      ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _Sheet extends StatelessWidget {
+  final String title;
+  final Widget child;
+  const _Sheet({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        16,
+        20,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
     );
   }
 }
