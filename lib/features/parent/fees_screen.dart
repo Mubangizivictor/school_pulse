@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
+import 'package:school_pulse/design_system/responsive/app_responsive_content.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -166,40 +167,42 @@ class _BodyState extends State<_Body> {
               _saveToCache(balanceUgx: balanceUgx, code: code);
             });
 
-            return ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                if (_offline) ...[
-                  const ParentOfflineBanner(),
-                  const SizedBox(height: 12),
-                ],
-                _ChildSwitcherRow(student: widget.student),
-                const SizedBox(height: 16),
-                _BalanceCard(
-                  balanceUgx: balanceUgx,
-                  currentBill: currentBill,
-                  schoolId: widget.student.schoolId,
-                  studentId: widget.student.id,
-                ),
-                const SizedBox(height: 20),
-                _PaymentCodeCard(code: code, schoolName: schoolName),
-                const SizedBox(height: 16),
-                _NavRow(
-                  icon: Icons.info_outline,
-                  title: 'How to pay',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const HowToPayScreen()),
+            return AppResponsiveContent(
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  if (_offline) ...[
+                    const ParentOfflineBanner(),
+                    const SizedBox(height: 12),
+                  ],
+                  _ChildSwitcherRow(student: widget.student),
+                  const SizedBox(height: 16),
+                  _BalanceCard(
+                    balanceUgx: balanceUgx,
+                    currentBill: currentBill,
+                    schoolId: widget.student.schoolId,
+                    studentId: widget.student.id,
                   ),
-                ),
-                const SizedBox(height: 24),
-                const SectionHeader(title: 'Recent payment'),
-                const SizedBox(height: 8),
-                _RecentPaymentCard(
-                  schoolId: widget.student.schoolId,
-                  studentId: widget.student.id,
-                  bills: bills,
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  _PaymentCodeCard(code: code, schoolName: schoolName),
+                  const SizedBox(height: 16),
+                  _NavRow(
+                    icon: Icons.info_outline,
+                    title: 'How to pay',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const HowToPayScreen()),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const SectionHeader(title: 'Recent payment'),
+                  const SizedBox(height: 8),
+                  _RecentPaymentCard(
+                    schoolId: widget.student.schoolId,
+                    studentId: widget.student.id,
+                    bills: bills,
+                  ),
+                ],
+              ),
             );
           },
         );
@@ -208,37 +211,41 @@ class _BodyState extends State<_Body> {
   }
 
   Widget _offlineFallback(String schoolName) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        const ParentOfflineBanner(),
-        const SizedBox(height: 12),
-        _ChildSwitcherRow(student: widget.student),
-        const SizedBox(height: 16),
-        _BalanceCard(
-          balanceUgx: _cachedBalanceUgx ?? 0,
-          currentBill: null,
-          schoolId: widget.student.schoolId,
-          studentId: widget.student.id,
-        ),
-        const SizedBox(height: 20),
-        _PaymentCodeCard(code: _cachedCode, schoolName: schoolName),
-        const SizedBox(height: 8),
-        ParentLastUpdatedLabel(updatedAt: _cachedAt),
-      ],
+    return AppResponsiveContent(
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          const ParentOfflineBanner(),
+          const SizedBox(height: 12),
+          _ChildSwitcherRow(student: widget.student),
+          const SizedBox(height: 16),
+          _BalanceCard(
+            balanceUgx: _cachedBalanceUgx ?? 0,
+            currentBill: null,
+            schoolId: widget.student.schoolId,
+            studentId: widget.student.id,
+          ),
+          const SizedBox(height: 20),
+          _PaymentCodeCard(code: _cachedCode, schoolName: schoolName),
+          const SizedBox(height: 8),
+          ParentLastUpdatedLabel(updatedAt: _cachedAt),
+        ],
+      ),
     );
   }
 
   Widget _loadingSkeleton() {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: const [
-        Skeleton(height: 60, borderRadius: 16),
-        SizedBox(height: 16),
-        Skeleton(height: 140, borderRadius: 16),
-        SizedBox(height: 20),
-        Skeleton(height: 160, borderRadius: 16),
-      ],
+    return AppResponsiveContent(
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: const [
+          Skeleton(height: 60, borderRadius: 16),
+          SizedBox(height: 16),
+          Skeleton(height: 140, borderRadius: 16),
+          SizedBox(height: 20),
+          Skeleton(height: 160, borderRadius: 16),
+        ],
+      ),
     );
   }
 }

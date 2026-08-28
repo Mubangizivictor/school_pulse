@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
+import 'package:school_pulse/design_system/responsive/app_responsive_content.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
@@ -126,9 +127,11 @@ class _ParentReportCardBodyState extends State<ParentReportCardBody> {
               onCtaPressed: _load,
             );
           }
-          return _ReportCardList(
-            reportCards: state.reportCards,
-            isDownloading: state.isDownloading,
+          return AppResponsiveContent(
+            child: _ReportCardList(
+              reportCards: state.reportCards,
+              isDownloading: state.isDownloading,
+            ),
           );
         },
       ),

@@ -6,6 +6,7 @@ import 'package:school_pulse/features/parent/academics_screen.dart'
     show AcademicsTab;
 
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/responsive/app_responsive_content.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/features/academic/domain/entities/attendance_record.dart';
@@ -234,31 +235,33 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                                     authState.user.name,
                                   ),
                                   SliverToBoxAdapter(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(20.0),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _buildChildSwitcher(
-                                            context,
-                                            selectedStudent,
-                                          ),
-                                          const SizedBox(height: 28),
-                                          _buildPulseSection(
-                                            context,
-                                            selectedStudent,
-                                            visibility,
-                                          ),
-                                          const SizedBox(height: 32),
-                                          _buildActionsSection(
-                                            context,
-                                            visibility,
-                                          ),
-                                          const SizedBox(height: 32),
-                                          _buildWeekSection(context),
-                                          const SizedBox(height: 32),
-                                        ],
+                                    child: AppResponsiveContent(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(20.0),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            _buildChildSwitcher(
+                                              context,
+                                              selectedStudent,
+                                            ),
+                                            const SizedBox(height: 28),
+                                            _buildPulseSection(
+                                              context,
+                                              selectedStudent,
+                                              visibility,
+                                            ),
+                                            const SizedBox(height: 32),
+                                            _buildActionsSection(
+                                              context,
+                                              visibility,
+                                            ),
+                                            const SizedBox(height: 32),
+                                            _buildWeekSection(context),
+                                            const SizedBox(height: 32),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/responsive/app_responsive_content.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/academic/domain/entities/academic_record.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
@@ -129,14 +130,16 @@ class _AcademicsScreenState extends State<AcademicsScreen>
           children: [
             _buildSegmentedTabBar(context),
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildHomeworkTab(),
-                  _buildProgressTab(),
-                  _buildReportCardsTab(),
-                  _buildTimetableTab(),
-                ],
+              child: AppResponsiveContent(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildHomeworkTab(),
+                    _buildProgressTab(),
+                    _buildReportCardsTab(),
+                    _buildTimetableTab(),
+                  ],
+                ),
               ),
             ),
           ],
@@ -145,7 +148,12 @@ class _AcademicsScreenState extends State<AcademicsScreen>
     );
   }
 
-  static const _tabLabels = ['Homework', 'Progress', 'Report Cards', 'Timetable'];
+  static const _tabLabels = [
+    'Homework',
+    'Progress',
+    'Report Cards',
+    'Timetable',
+  ];
 
   Widget _buildSegmentedTabBar(BuildContext context) {
     return Container(

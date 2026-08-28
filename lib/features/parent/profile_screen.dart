@@ -3,6 +3,7 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/responsive/app_responsive_content.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -31,49 +32,52 @@ class ProfileScreen extends StatelessWidget {
           body: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-              child: Column(
-                children: [
-                  _buildProfileHero(context, parentName, state.user.photoUrl),
-                  const SizedBox(height: 32),
-                  _sectionLabel(context, 'CONTACT DETAILS'),
-                  const SizedBox(height: 12),
-                  _buildInfoCard(context, [
-                    _InfoRow(
-                      icon: Icons.phone_outlined,
-                      label: 'Phone Number',
-                      value: parentPhone,
-                    ),
-                    _InfoRow(
-                      icon: Icons.email_outlined,
-                      label: 'Email Address',
-                      value: parentEmail,
-                    ),
-                  ]),
-                  const SizedBox(height: 32),
-                  _sectionLabel(context, 'CONNECTED STUDENTS'),
-                  const SizedBox(height: 12),
-                  BlocBuilder<StudentsBloc, StudentsState>(
-                    builder: (context, studentsState) {
-                      if (studentsState is! StudentsLoaded ||
-                          studentsState.students.isEmpty) {
-                        return EmptyState(
-                          icon: Icons.person_off_outlined,
-                          title: 'No linked students',
-                          message:
-                              'Children linked to your account will appear here.',
+              child: AppResponsiveContent(
+                child: Column(
+                  children: [
+                    _buildProfileHero(context, parentName, state.user.photoUrl),
+                    const SizedBox(height: 32),
+                    _sectionLabel(context, 'CONTACT DETAILS'),
+                    const SizedBox(height: 12),
+                    _buildInfoCard(context, [
+                      _InfoRow(
+                        icon: Icons.phone_outlined,
+                        label: 'Phone Number',
+                        value: parentPhone,
+                      ),
+                      _InfoRow(
+                        icon: Icons.email_outlined,
+                        label: 'Email Address',
+                        value: parentEmail,
+                      ),
+                    ]),
+                    const SizedBox(height: 32),
+                    _sectionLabel(context, 'CONNECTED STUDENTS'),
+                    const SizedBox(height: 12),
+                    BlocBuilder<StudentsBloc, StudentsState>(
+                      builder: (context, studentsState) {
+                        if (studentsState is! StudentsLoaded ||
+                            studentsState.students.isEmpty) {
+                          return EmptyState(
+                            icon: Icons.person_off_outlined,
+                            title: 'No linked students',
+                            message:
+                                'Children linked to your account will appear here.',
+                          );
+                        }
+                        return Column(
+                          children: studentsState.students
+                              .map(
+                                (student) =>
+                                    _buildStudentTile(context, student),
+                              )
+                              .toList(),
                         );
-                      }
-                      return Column(
-                        children: studentsState.students
-                            .map(
-                              (student) => _buildStudentTile(context, student),
-                            )
-                            .toList(),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 32),
-                ],
+                      },
+                    ),
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
           ),
@@ -140,10 +144,7 @@ class ProfileScreen extends StatelessWidget {
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.border(context),
-                width: 2,
-              ),
+              border: Border.all(color: AppColors.border(context), width: 2),
             ),
             child: CircleAvatar(
               radius: 44,

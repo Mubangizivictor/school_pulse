@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
+import 'package:school_pulse/design_system/responsive/app_responsive_content.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/finance/domain/entities/payment_channel_config.dart';
 import 'package:school_pulse/features/finance/domain/repositories/student_billing_repository.dart';
@@ -92,66 +93,70 @@ class _Body extends StatelessWidget {
                 enabledBanks.isNotEmpty ||
                 enabledOthers.isNotEmpty;
 
-            return ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                _HeaderCard(studentName: studentName, code: code),
-                const SizedBox(height: 20),
-                if (!hasAnyChannel)
-                  const EmptyState(
-                    icon: Icons.storefront_outlined,
-                    title: 'No payment channels yet',
-                    message:
-                        'Your school hasn\'t configured any payment channels '
-                        'yet. Please contact the school office.',
-                  )
-                else ...[
-                  if (config.mtnMomo.enabled)
-                    _ChannelCard(
-                      icon: Icons.phone_android_outlined,
-                      title: 'MTN MoMo',
-                      subtitle: _momoInstructions(config.mtnMomo),
-                    ),
-                  if (config.airtelMoney.enabled)
-                    _ChannelCard(
-                      icon: Icons.phone_android_outlined,
-                      title: 'Airtel Money',
-                      subtitle: _momoInstructions(config.airtelMoney),
-                    ),
-                  for (final bank in enabledBanks)
-                    _ChannelCard(
-                      icon: Icons.account_balance_outlined,
-                      title: bank.bankName.isEmpty
-                          ? 'Bank or bank agent'
-                          : bank.bankName,
-                      subtitle: _bankInstructions(bank),
-                    ),
-                  for (final other in enabledOthers)
-                    _ChannelCard(
-                      icon: Icons.payments_outlined,
-                      title: other.label.isEmpty
-                          ? 'Other channel'
-                          : other.label,
-                      subtitle: other.instructions,
-                    ),
+            return AppResponsiveContent(
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  _HeaderCard(studentName: studentName, code: code),
+                  const SizedBox(height: 20),
+                  if (!hasAnyChannel)
+                    const EmptyState(
+                      icon: Icons.storefront_outlined,
+                      title: 'No payment channels yet',
+                      message:
+                          'Your school hasn\'t configured any payment channels '
+                          'yet. Please contact the school office.',
+                    )
+                  else ...[
+                    if (config.mtnMomo.enabled)
+                      _ChannelCard(
+                        icon: Icons.phone_android_outlined,
+                        title: 'MTN MoMo',
+                        subtitle: _momoInstructions(config.mtnMomo),
+                      ),
+                    if (config.airtelMoney.enabled)
+                      _ChannelCard(
+                        icon: Icons.phone_android_outlined,
+                        title: 'Airtel Money',
+                        subtitle: _momoInstructions(config.airtelMoney),
+                      ),
+                    for (final bank in enabledBanks)
+                      _ChannelCard(
+                        icon: Icons.account_balance_outlined,
+                        title: bank.bankName.isEmpty
+                            ? 'Bank or bank agent'
+                            : bank.bankName,
+                        subtitle: _bankInstructions(bank),
+                      ),
+                    for (final other in enabledOthers)
+                      _ChannelCard(
+                        icon: Icons.payments_outlined,
+                        title: other.label.isEmpty
+                            ? 'Other channel'
+                            : other.label,
+                        subtitle: other.instructions,
+                      ),
+                  ],
+                  const SizedBox(height: 8),
+                  const _NoticeCard(
+                    icon: Icons.shield_outlined,
+                    text:
+                        'Confirm the learner name before entering your '
+                        'mobile-money PIN.',
+                  ),
+                  const SizedBox(height: 12),
+                  const _NoticeCard(
+                    icon: Icons.info_outline,
+                    text: 'Payment channels are set by your school.',
+                  ),
+                  const SizedBox(height: 28),
+                  const SectionHeader(
+                    title: 'Paying with mobile money or bank',
+                  ),
+                  const SizedBox(height: 8),
+                  const _PaymentFaq(),
                 ],
-                const SizedBox(height: 8),
-                const _NoticeCard(
-                  icon: Icons.shield_outlined,
-                  text:
-                      'Confirm the learner name before entering your '
-                      'mobile-money PIN.',
-                ),
-                const SizedBox(height: 12),
-                const _NoticeCard(
-                  icon: Icons.info_outline,
-                  text: 'Payment channels are set by your school.',
-                ),
-                const SizedBox(height: 28),
-                const SectionHeader(title: 'Paying with mobile money or bank'),
-                const SizedBox(height: 8),
-                const _PaymentFaq(),
-              ],
+              ),
             );
           },
         );

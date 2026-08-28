@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/responsive/app_responsive_content.dart';
 import 'package:school_pulse/features/transport/presentation/bloc/transport_bloc.dart';
 import 'package:school_pulse/features/transport/presentation/bloc/transport_event.dart';
 import 'package:school_pulse/features/transport/presentation/bloc/transport_state.dart';
@@ -35,8 +36,6 @@ class _TransportScreenState extends State<TransportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
-
     return Scaffold(
       appBar: const StudentAppBar(title: 'Transport'),
       body: BlocListener<SelectedStudentBloc, SelectedStudentState>(
@@ -49,197 +48,190 @@ class _TransportScreenState extends State<TransportScreen> {
         },
         child: BlocBuilder<TransportBloc, TransportState>(
           builder: (context, state) {
-            if (state is TransportLoading || state is TransportInitial) {
-              return ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  const Skeleton(height: 120),
-                  const SizedBox(height: 24),
-                  const Skeleton(height: 24, width: 150),
-                  const SizedBox(height: 12),
-                  const Skeleton(height: 300),
-                ],
-              );
-            } else if (state is TransportError) {
-              return EmptyState(
-                icon: Icons.no_transfer_outlined,
-                title: 'No transport info',
-                message: state.message,
-                ctaLabel: 'Retry',
-                onCtaPressed: _fetchData,
-              );
-            } else if (state is TransportLoaded) {
-              final transport = state.info;
+            return AppResponsiveContent(child: _buildBody(context, state));
+          },
+        ),
+      ),
+    );
+  }
 
-              return ListView(
-                padding: const EdgeInsets.all(16),
+  Widget _buildBody(BuildContext context, TransportState state) {
+    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    if (state is TransportLoading || state is TransportInitial) {
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Skeleton(height: 120),
+          const SizedBox(height: 24),
+          const Skeleton(height: 24, width: 150),
+          const SizedBox(height: 12),
+          const Skeleton(height: 300),
+        ],
+      );
+    } else if (state is TransportError) {
+      return EmptyState(
+        icon: Icons.no_transfer_outlined,
+        title: 'No transport info',
+        message: state.message,
+        ctaLabel: 'Retry',
+        onCtaPressed: _fetchData,
+      );
+    } else if (state is TransportLoaded) {
+      final transport = state.info;
+
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          FadeInSlide(
+            child: AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FadeInSlide(
-                    child: AppCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Today\'s Status',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      StatusBadge(
+                        label: transport.status,
+                        color: semanticColors.info,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildRouteInfo(
+                    context,
+                    Icons.directions_bus,
+                    'Route',
+                    transport.routeName,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildRouteInfo(
+                    context,
+                    Icons.location_on,
+                    'Assigned Stop',
+                    transport.stopName,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const FadeInSlide(
+            delay: Duration(milliseconds: 100),
+            child: SectionHeader(title: 'Live Tracking'),
+          ),
+          FadeInSlide(
+            delay: const Duration(milliseconds: 200),
+            child: AppCard(
+              padding: EdgeInsets.zero,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  height: 300,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Theme.of(context).colorScheme.primary,
+                                Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                              ],
+                            ),
+                          ),
+                          child: CustomPaint(
+                            painter: _RoutePathPainter(
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 12,
+                        left: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                'Today\'s Status',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              StatusBadge(
-                                label: transport.status,
+                              Icon(
+                                Icons.satellite_alt_outlined,
+                                size: 14,
                                 color: semanticColors.info,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          _buildRouteInfo(
-                            context,
-                            Icons.directions_bus,
-                            'Route',
-                            transport.routeName,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildRouteInfo(
-                            context,
-                            Icons.location_on,
-                            'Assigned Stop',
-                            transport.stopName,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const FadeInSlide(
-                    delay: Duration(milliseconds: 100),
-                    child: SectionHeader(title: 'Live Tracking'),
-                  ),
-                  FadeInSlide(
-                    delay: const Duration(milliseconds: 200),
-                    child: AppCard(
-                      padding: EdgeInsets.zero,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: SizedBox(
-                          height: 300,
-                          child: Stack(
-                            children: [
-                              Positioned.fill(
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        Theme.of(context).colorScheme.primary,
-                                        Theme.of(
-                                          context,
-                                        ).colorScheme.surfaceContainerHighest,
-                                      ],
-                                    ),
-                                  ),
-                                  child: CustomPaint(
-                                    painter: _RoutePathPainter(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                top: 12,
-                                left: 12,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.satellite_alt_outlined,
-                                        size: 14,
-                                        color: semanticColors.info,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Live GPS tracking · coming soon',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .labelSmall
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const AnimatedBusMarker(),
-                              PositionDescriptor(
-                                top: 220,
-                                left: 60,
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.person_pin_circle,
-                                      color: semanticColors.error,
-                                      size: 32,
-                                    ),
-                                    Text(
-                                      'Home',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
-                                  ],
-                                ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Live GPS tracking · coming soon',
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
                         ),
                       ),
-                    ),
+                      const AnimatedBusMarker(),
+                      PositionDescriptor(
+                        top: 220,
+                        left: 60,
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.person_pin_circle,
+                              color: semanticColors.error,
+                              size: 32,
+                            ),
+                            Text(
+                              'Home',
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  FadeInSlide(
-                    delay: const Duration(milliseconds: 300),
-                    child: PrimaryButton(
-                      label: 'Report pickup change',
-                      icon: Icons.edit_calendar_outlined,
-                      onPressed: () => context.push('/parent/messages'),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  FadeInSlide(
-                    delay: const Duration(milliseconds: 350),
-                    child: SecondaryButton(
-                      label: 'Contact Transport Coordinator',
-                      icon: Icons.chat_bubble_outline,
-                      onPressed: () => context.push('/parent/messages'),
-                    ),
-                  ),
-                ],
-              );
-            }
-            return const SizedBox.shrink();
-          },
-        ),
-      ),
-    );
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          FadeInSlide(
+            delay: const Duration(milliseconds: 300),
+            child: PrimaryButton(
+              label: 'Report pickup change',
+              icon: Icons.edit_calendar_outlined,
+              onPressed: () => context.push('/parent/messages'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          FadeInSlide(
+            delay: const Duration(milliseconds: 350),
+            child: SecondaryButton(
+              label: 'Contact Transport Coordinator',
+              icon: Icons.chat_bubble_outline,
+              onPressed: () => context.push('/parent/messages'),
+            ),
+          ),
+        ],
+      );
+    }
+    return const SizedBox.shrink();
   }
 
   Widget _buildRouteInfo(
