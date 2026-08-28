@@ -2246,15 +2246,21 @@ service cloud.firestore {
     }
     match /schools/{schoolId}/expenditures/{expenditureId} {
       allow read: if isFinanceStaff() && isSameSchool(schoolId);
-      // Update covers approval decisions too - headTeacher/director act as
-      // approvers on the same collection, not just bursar/schoolAdmin.
-      allow create: if canWriteFinance() && isSameSchool(schoolId);
-      allow update: if isFinanceStaff() && isSameSchool(schoolId);
-      allow delete: if false;
+      // Callable-only (audit area 2). Raising a requisition and every
+      // approve/reject/return decision now goes through
+      // submitExpenditure / decideExpenditure in
+      // functions/finance_governance.js, which enforces validation,
+      // tenant/role checks, the requester-can't-self-approve rule,
+      // idempotency, and an audit event written in the same transaction.
+      // A direct client write would bypass all of that.
+      allow write: if false;
     }
     match /schools/{schoolId}/budgets/{budgetId} {
       allow read: if isFinanceStaff() && isSameSchool(schoolId);
-      allow write: if canWriteFinance() && isSameSchool(schoolId);
+      // Callable-only (audit area 2): saveSchoolBudget in
+      // functions/finance_governance.js. Client writes are denied so the
+      // server can keep `spentAmount` authoritative and audit every change.
+      allow write: if false;
     }
 
     // Director governance: Strategic Goals and Leadership Meetings are

@@ -2742,3 +2742,75 @@ describe('Parent Payments redesign (functions/payment_codes.js): '
     }));
   });
 });
+
+describe('Finance governance (functions/finance_governance.js): '
+  + 'expenditures + budgets are callable-only, cross-school reads denied', () => {
+  async function seedFinanceRecords() {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'schools/schoolA/expenditures/expA'), {
+        schoolId: 'schoolA', requesterId: 'bursarA', requesterName: 'Bursar A',
+        description: 'Lab reagents', amount: 450000, budgetCategoryId: 'cat-science',
+        status: 'pending', approvalHistory: [], createdAt: new Date(),
+      });
+      await setDoc(doc(db, 'schools/schoolA/budgets/bdgA'), {
+        schoolId: 'schoolA', name: 'Transport', academicYear: '2026', term: 'Term 1',
+        allocatedAmount: 10000000, spentAmount: 1200000, createdAt: new Date(),
+      });
+      await setDoc(doc(db, 'schools/schoolB/expenditures/expB'), {
+        schoolId: 'schoolB', requesterId: 'bursarB', description: 'Other school',
+        amount: 100000, budgetCategoryId: 'c', status: 'pending', approvalHistory: [],
+        createdAt: new Date(),
+      });
+      await setDoc(doc(db, 'schools/schoolB/budgets/bdgB'), {
+        schoolId: 'schoolB', name: 'Meals', academicYear: '2026', term: 'Term 1',
+        allocatedAmount: 5000000, spentAmount: 0, createdAt: new Date(),
+      });
+    });
+  }
+
+  test('expenditures: same-school finance staff read; a non-finance staff '
+    + 'and another school\'s staff are denied read', async () => {
+    await seedFinanceRecords();
+    await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/expenditures/expA')));
+    await assertFails(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/expenditures/expA')));
+    await assertFails(getDoc(doc(dbFor('bursarB'), 'schools/schoolA/expenditures/expA')));
+  });
+
+  test('expenditures: NO client may create, update, or delete - the '
+    + 'submit/decide callables are the only write path', async () => {
+    await seedFinanceRecords();
+    await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/expenditures/forged'), {
+      schoolId: 'schoolA', requesterId: 'bursarA', description: 'forged',
+      amount: 1, budgetCategoryId: 'c', status: 'pending',
+    }));
+    await assertFails(updateDoc(doc(dbFor('bursarA'), 'schools/schoolA/expenditures/expA'), {
+      status: 'approved',
+    }));
+    await assertFails(updateDoc(doc(dbFor('bursarA'), 'schools/schoolA/expenditures/expA'), {
+      amount: 999999999,
+    }));
+    await assertFails(deleteDoc(doc(dbFor('bursarA'), 'schools/schoolA/expenditures/expA')));
+    // and a cross-school actor certainly cannot
+    await assertFails(updateDoc(doc(dbFor('bursarB'), 'schools/schoolA/expenditures/expA'), {
+      status: 'approved',
+    }));
+  });
+
+  test('budgets: same-school finance staff read; other-school staff denied '
+    + 'read; NO client may write (saveSchoolBudget is the only path)', async () => {
+    await seedFinanceRecords();
+    await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/budgets/bdgA')));
+    await assertFails(getDoc(doc(dbFor('bursarB'), 'schools/schoolA/budgets/bdgA')));
+    await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/budgets/forged'), {
+      schoolId: 'schoolA', name: 'X', academicYear: '2026', term: 'Term 1',
+      allocatedAmount: 1, spentAmount: 0,
+    }));
+    await assertFails(updateDoc(doc(dbFor('bursarA'), 'schools/schoolA/budgets/bdgA'), {
+      allocatedAmount: 999999999,
+    }));
+    await assertFails(updateDoc(doc(dbFor('bursarA'), 'schools/schoolA/budgets/bdgA'), {
+      spentAmount: 0,
+    }));
+  });
+});

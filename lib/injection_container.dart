@@ -262,6 +262,7 @@ import 'package:school_pulse/features/finance/data/repositories/finance_reposito
 import 'package:school_pulse/features/finance/data/datasources/bursar_report_release_remote_data_source.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/report_release/bursar_report_release_bloc.dart';
 import 'package:school_pulse/features/finance/data/datasources/finance_remote_data_source.dart';
+import 'package:school_pulse/features/finance/data/datasources/finance_governance_remote_data_source.dart';
 import 'package:school_pulse/features/finance/domain/repositories/fee_billing_repository.dart';
 import 'package:school_pulse/features/finance/data/repositories/fee_billing_repository_impl.dart';
 import 'package:school_pulse/features/finance/domain/repositories/fee_catalogue_repository.dart';
@@ -1146,7 +1147,14 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<FinanceRepository>(
-    () => FinanceRepositoryImpl(remoteDataSource: sl()),
+    () => FinanceRepositoryImpl(remoteDataSource: sl(), governance: sl()),
+  );
+
+  // Callable-only finance governance writes (audit area 2):
+  // functions/finance_governance.js. Default region, same as the working
+  // student-billing callables.
+  sl.registerLazySingleton(
+    () => FinanceGovernanceRemoteDataSource(functions: sl()),
   );
 
   sl.registerFactory(() => BursarReportReleaseBloc(dataSource: sl()));

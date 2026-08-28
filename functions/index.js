@@ -17,6 +17,7 @@ Object.assign(exports, require("./staff_payroll_structure")({ admin, onCall, Htt
 Object.assign(exports, require("./payroll_compliance")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./payment_codes")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./payment_vouchers")({ admin, onCall, HttpsError }));
+Object.assign(exports, require("./finance_governance")({ admin, onCall, HttpsError }));
 
 /**
  * Enqueue a templated transactional email for the `public_functions`
