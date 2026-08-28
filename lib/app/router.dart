@@ -180,6 +180,7 @@ import 'package:school_pulse/features/shared/tasks/presentation/screens/task_rem
 import 'package:school_pulse/features/shared/tasks/domain/entities/mock_tasks.dart';
 import 'package:school_pulse/features/lesson_plans/presentation/lesson_plans_screen.dart';
 import 'package:school_pulse/features/finance/presentation/shell/bursar_shell.dart';
+import 'package:school_pulse/features/finance/presentation/shell/bursar_section.dart';
 import 'package:school_pulse/features/finance/presentation/screens/student_billing/student_bills_screen.dart';
 import 'package:school_pulse/features/nurse/presentation/shell/nurse_shell.dart';
 import 'package:school_pulse/features/health/presentation/screens/nurse_student_lookup_screen.dart';
@@ -1221,60 +1222,75 @@ final router = GoRouter(
             }
             return null;
           },
-          builder: (context, state) => const BursarShell(),
+          builder: (context, state) =>
+              const BursarShell(section: BursarSection.overview),
           routes: [
             GoRoute(
               path: 'lookup',
-              builder: (context, state) => const BursarShell(initialTab: 1),
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.students),
             ),
-            // Desktop console sections. Each re-renders BursarShell (which
-            // shows the width-appropriate chrome and reads the active
-            // section from the URL) so every section is deep-linkable and
-            // refresh-safe on web. On mobile the same paths fall back to
-            // the bottom-nav shell.
+            // Console sections. Every `/staff/bursar/<slug>` builds
+            // `BursarShell(section: …)`, which renders the width-appropriate
+            // chrome (desktop sidebar / tablet rail / mobile bottom-nav) and
+            // resolves that exact section — so direct URL load, browser
+            // refresh, back/forward and shared links all land correctly at
+            // every width. On mobile a section without its own tab opens on
+            // **More** with the section screen pushed.
             GoRoute(
               path: 'overview',
-              builder: (context, state) => const BursarShell(),
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.overview),
             ),
             GoRoute(
               path: 'students',
-              builder: (context, state) => const BursarShell(initialTab: 1),
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.students),
             ),
             GoRoute(
               path: 'approvals',
-              builder: (context, state) => const BursarShell(initialTab: 2),
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.approvals),
             ),
             GoRoute(
               path: 'cash-bank',
-              builder: (context, state) => const BursarShell(initialTab: 3),
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.cashBank),
             ),
             GoRoute(
               path: 'budget',
-              builder: (context, state) => const BursarShell(),
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.budget),
             ),
             GoRoute(
               path: 'expenses',
-              builder: (context, state) => const BursarShell(),
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.expenses),
             ),
             GoRoute(
               path: 'suppliers',
-              builder: (context, state) => const BursarShell(),
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.suppliers),
             ),
             GoRoute(
               path: 'petty-cash',
-              builder: (context, state) => const BursarShell(),
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.pettyCash),
             ),
             GoRoute(
               path: 'payroll',
-              builder: (context, state) => const BursarShell(),
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.payroll),
             ),
             GoRoute(
               path: 'reports',
-              builder: (context, state) => const BursarShell(),
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.reports),
             ),
             GoRoute(
               path: 'audit',
-              builder: (context, state) => const BursarShell(),
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.audit),
             ),
             GoRoute(
               path: 'student/:studentId/bills',
@@ -1284,7 +1300,7 @@ final router = GoRouter(
                     ? auth.user.schoolId
                     : '';
                 return BursarShell(
-                  initialTab: 1,
+                  section: BursarSection.students,
                   studentDetail: StudentBillsScreen(
                     schoolId: schoolId,
                     studentId: state.pathParameters['studentId']!,

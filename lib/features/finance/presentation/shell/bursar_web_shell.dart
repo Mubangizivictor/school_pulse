@@ -11,6 +11,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/domain/services/academic_calendar_service.dart';
 import 'package:school_pulse/injection_container.dart';
+import 'package:school_pulse/features/finance/presentation/shell/bursar_section.dart';
 import 'bursar_top_bar.dart';
 
 // Section screens.
@@ -42,50 +43,43 @@ class BursarWebShell extends StatefulWidget {
   /// finance navigation chrome on every bursar route.
   final Widget? studentDetail;
 
-  const BursarWebShell({super.key, this.compact = false, this.studentDetail});
+  /// The section this route resolved to. Used as the active section when the
+  /// nested-route URL can't be read (tests, or a transient build); the live
+  /// URL still wins once available.
+  final BursarSection? initialSection;
+
+  const BursarWebShell({
+    super.key,
+    this.compact = false,
+    this.studentDetail,
+    this.initialSection,
+  });
 
   @override
   State<BursarWebShell> createState() => _BursarWebShellState();
 }
 
-enum _Section {
-  overview('overview', 'Finance overview', Icons.pie_chart_outline_rounded),
-  students('students', 'Students & fees', Icons.people_outline_rounded),
-  approvals('approvals', 'Approvals', Icons.verified_outlined),
-  cashBank('cash-bank', 'Cash & bank', Icons.account_balance_outlined),
-  budget('budget', 'Budget', Icons.bar_chart_rounded),
-  expenses('expenses', 'Expenses', Icons.description_outlined),
-  suppliers('suppliers', 'Suppliers', Icons.local_shipping_outlined),
-  pettyCash('petty-cash', 'Petty cash', Icons.account_balance_wallet_outlined),
-  payroll('payroll', 'Payroll & compliance', Icons.badge_outlined),
-  reports('reports', 'Reports', Icons.assessment_outlined),
-  audit('audit', 'Audit trail', Icons.fact_check_outlined);
-
-  const _Section(this.slug, this.label, this.icon);
-  final String slug;
-  final String label;
-  final IconData icon;
-}
+typedef _Section = BursarSection;
 
 const _mainNav = [
-  _Section.overview,
-  _Section.students,
-  _Section.approvals,
-  _Section.cashBank,
+  BursarSection.overview,
+  BursarSection.students,
+  BursarSection.approvals,
+  BursarSection.cashBank,
 ];
 const _toolsNav = [
-  _Section.budget,
-  _Section.expenses,
-  _Section.suppliers,
-  _Section.pettyCash,
-  _Section.payroll,
-  _Section.reports,
-  _Section.audit,
+  BursarSection.budget,
+  BursarSection.expenses,
+  BursarSection.suppliers,
+  BursarSection.pettyCash,
+  BursarSection.payroll,
+  BursarSection.reports,
+  BursarSection.audit,
 ];
 
 class _BursarWebShellState extends State<BursarWebShell> {
   final _navKeys = {
-    for (final s in _Section.values) s: GlobalKey<NavigatorState>(),
+    for (final s in BursarSection.values) s: GlobalKey<NavigatorState>(),
   };
   String _termLabel = 'This term';
 
@@ -116,14 +110,18 @@ class _BursarWebShellState extends State<BursarWebShell> {
   }
 
   _Section _sectionForLocation(BuildContext context) {
-    final path = GoRouterState.of(context).uri.path;
-    for (final s in _Section.values) {
-      if (path == '/staff/bursar/${s.slug}') return s;
+    // The live URL is authoritative (survives refresh, back/forward, shared
+    // links). `initialSection` is the fallback for the brief window before
+    // GoRouterState is readable and for widget tests with no router.
+    try {
+      final path = GoRouterState.of(context).uri.path;
+      if (path.startsWith('/staff/bursar')) {
+        return BursarSection.fromLocation(path);
+      }
+    } catch (_) {
+      // No GoRouter in the tree (tests) — fall through.
     }
-    if (path.startsWith('/staff/bursar/student/')) return _Section.students;
-    if (path.startsWith('/staff/bursar/students')) return _Section.students;
-    if (path.startsWith('/staff/bursar/approvals')) return _Section.approvals;
-    return _Section.overview;
+    return widget.initialSection ?? BursarSection.overview;
   }
 
   Widget _screenFor(_Section s) {
