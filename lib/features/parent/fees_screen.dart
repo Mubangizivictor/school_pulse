@@ -1,215 +1,483 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_event.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_state.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/finance/domain/entities/student_bill.dart';
+import 'package:school_pulse/features/finance/domain/repositories/student_billing_repository.dart';
+import 'package:school_pulse/features/parent/how_to_pay_screen.dart';
+import 'package:school_pulse/features/parent/receipts_screen.dart';
+import 'package:school_pulse/features/parent/widgets/child_selector_sheet.dart';
+import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
-class FeesScreen extends StatefulWidget {
+/// Fees & payments - the redesigned Parent Payments landing screen. School
+/// Pulse never accepts money in-app: this screen shows the current balance,
+/// the learner's bursar-managed payment code (to quote at any external
+/// channel), and links to How to pay / Receipts. No checkout UI here.
+class FeesScreen extends StatelessWidget {
   const FeesScreen({super.key});
-
-  @override
-  State<FeesScreen> createState() => _FeesScreenState();
-}
-
-class _FeesScreenState extends State<FeesScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _fetchData();
-  }
-
-  void _fetchData() {
-    final studentState = context.read<SelectedStudentBloc>().state;
-    if (studentState is SelectedStudentLoaded) {
-      context.read<FinanceBloc>().add(FetchFees(studentState.student.id));
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        backgroundColor: AppColors.white,
+        backgroundColor: AppColors.background(context),
         elevation: 0,
         centerTitle: false,
-        title: const Text(
-          'Payments',
+        title: Text(
+          'Fees & payments',
           style: TextStyle(
-            color: AppColors.black,
-            fontSize: 24,
+            color: AppColors.textPrimary(context),
+            fontSize: 22,
             fontWeight: FontWeight.w900,
             letterSpacing: -0.5,
           ),
         ),
       ),
-      body: BlocBuilder<FinanceBloc, FinanceState>(
-        builder: (context, state) {
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              _buildBalanceCard(context),
-              const SizedBox(height: 32),
-              const Text(
-                'FEE BREAKDOWN',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.2,
-                  color: AppColors.grey500,
-                ),
-              ),
-              const SizedBox(height: 16),
-              AppCard(
-                padding: const EdgeInsets.all(20),
-                showShadow: false,
-                child: Column(
-                  children: [
-                    _buildFeeRow('Tuition Fees', 'UGX 1,200,000', 'Unpaid'),
-                    const Divider(height: 32),
-                    _buildFeeRow('Transport', 'UGX 300,000', 'Unpaid'),
-                    const Divider(height: 32),
-                    _buildFeeRow(
-                      'Lunch Program',
-                      'UGX 150,000',
-                      'Paid',
-                      isPaid: true,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
-              const Text(
-                'RECENT TRANSACTIONS',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.2,
-                  color: AppColors.grey500,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildTransactionItem(
-                'School Fees Payment',
-                '12 Oct 2023',
-                'UGX 500,000',
-              ),
-              const SizedBox(height: 12),
-              _buildTransactionItem(
-                'Uniform Purchase',
-                '05 Oct 2023',
-                'UGX 120,000',
-              ),
-            ],
-          );
+      body: BlocBuilder<SelectedStudentBloc, SelectedStudentState>(
+        builder: (context, studentState) {
+          if (studentState is! SelectedStudentLoaded) {
+            return const Center(child: SchoolPulseLoader());
+          }
+          return _Body(student: studentState.student);
         },
       ),
     );
   }
+}
 
-  Widget _buildBalanceCard(BuildContext context) {
+class _Body extends StatelessWidget {
+  final Student student;
+
+  const _Body({required this.student});
+
+  @override
+  Widget build(BuildContext context) {
+    final schoolName = context.watch<AuthBloc>().state is AuthAuthenticated
+        ? (context.read<AuthBloc>().state as AuthAuthenticated)
+                  .user
+                  .schoolName ??
+              'your school'
+        : 'your school';
+
+    return StreamBuilder<List<StudentBill>>(
+      stream: di.sl<StudentBillingRepository>().watchBills(
+        student.schoolId,
+        student.id,
+      ),
+      builder: (context, billsSnapshot) {
+        if (!billsSnapshot.hasData) {
+          return _loadingSkeleton();
+        }
+        final bills = billsSnapshot.data!;
+        final openBills = bills.where((b) => b.status != 'paid').toList();
+        final balanceUgx = bills.fold<int>(0, (sum, b) => sum + b.balanceUgx);
+        final currentBill = openBills.isNotEmpty ? openBills.first : null;
+
+        return StreamBuilder<String?>(
+          stream: di.sl<StudentBillingRepository>().watchStudentPaymentCode(
+            student.schoolId,
+            student.id,
+          ),
+          builder: (context, codeSnapshot) {
+            final code = codeSnapshot.data;
+
+            return ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                _ChildSwitcherRow(student: student),
+                const SizedBox(height: 16),
+                _BalanceCard(balanceUgx: balanceUgx, currentBill: currentBill),
+                const SizedBox(height: 20),
+                _PaymentCodeCard(code: code, schoolName: schoolName),
+                const SizedBox(height: 16),
+                _NavRow(
+                  icon: Icons.info_outline,
+                  title: 'How to pay',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const HowToPayScreen()),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const SectionHeader(title: 'Recent payment'),
+                const SizedBox(height: 8),
+                _RecentPaymentCard(
+                  schoolId: student.schoolId,
+                  studentId: student.id,
+                  bills: bills,
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _loadingSkeleton() {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: const [
+        Skeleton(height: 60, borderRadius: 16),
+        SizedBox(height: 16),
+        Skeleton(height: 140, borderRadius: 16),
+        SizedBox(height: 20),
+        Skeleton(height: 160, borderRadius: 16),
+      ],
+    );
+  }
+}
+
+class _ChildSwitcherRow extends StatelessWidget {
+  final Student student;
+
+  const _ChildSwitcherRow({required this.student});
+
+  @override
+  Widget build(BuildContext context) {
     return AppCard(
-      padding: const EdgeInsets.all(24),
-      color: AppColors.black,
+      showShadow: false,
+      onTap: () => ChildSelectorSheet.show(context),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: AppColors.surfaceContainerHigh(context),
+            backgroundImage: student.photoUrl != null
+                ? NetworkImage(student.photoUrl!)
+                : null,
+            child: student.photoUrl == null
+                ? Icon(
+                    Icons.person_outline,
+                    color: AppColors.textPrimary(context),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              student.name,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            ),
+          ),
+          const Icon(Icons.expand_more, color: AppColors.grey500),
+        ],
+      ),
+    );
+  }
+}
+
+class _BalanceCard extends StatelessWidget {
+  final int balanceUgx;
+  final StudentBill? currentBill;
+
+  const _BalanceCard({required this.balanceUgx, this.currentBill});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
       showShadow: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Total Outstanding',
-            style: TextStyle(
-              color: AppColors.grey300,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
+          Text(
+            'Balance',
+            style: TextStyle(fontSize: 13, color: AppColors.grey500),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'UGX 1,500,000',
-            style: TextStyle(
-              color: AppColors.white,
-              fontSize: 28,
+          const SizedBox(height: 6),
+          Text(
+            '${CurrencyFormatter.ugx(balanceUgx.toDouble())} due',
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+          ),
+          if (currentBill != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainerHigh(context),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.description_outlined,
+                    size: 18,
+                    color: AppColors.textPrimary(context),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Current bill',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          currentBill!.termId.isNotEmpty
+                              ? currentBill!.termId
+                              : 'Current term',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.grey500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: AppColors.grey500),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentCodeCard extends StatelessWidget {
+  final String? code;
+  final String schoolName;
+
+  const _PaymentCodeCard({this.code, required this.schoolName});
+
+  String _grouped(String raw) {
+    // "VHS-P1234567" -> "VHS-P123 4567", purely cosmetic grouping so the
+    // code is easier to read/say aloud, same idea as the mockup.
+    final dashIndex = raw.indexOf('-');
+    if (dashIndex == -1 || raw.length - dashIndex <= 5) return raw;
+    final prefix = raw.substring(0, dashIndex + 1);
+    final rest = raw.substring(dashIndex + 1);
+    final mid = rest.length - 4;
+    return '$prefix${rest.substring(0, mid)} ${rest.substring(mid)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerHigh(context),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Your payment code',
+            style: TextStyle(fontSize: 13, color: AppColors.grey500),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            code != null ? _grouped(code!) : '—',
+            style: const TextStyle(
+              fontSize: 26,
               fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: 24),
-          PrimaryButton(
-            label: 'Pay Now',
-            onPressed: () => context.push('/parent/payments/pay'),
+          const SizedBox(height: 14),
+          SecondaryButton(
+            label: 'Copy code',
+            icon: Icons.copy_outlined,
+            onPressed: code == null
+                ? null
+                : () {
+                    Clipboard.setData(ClipboardData(text: code!));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Payment code copied.')),
+                    );
+                  },
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Use this code for every payment to $schoolName.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: AppColors.grey500),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildFeeRow(
-    String label,
-    String amount,
-    String status, {
-    bool isPaid = false,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+class _NavRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  const _NavRow({required this.icon, required this.title, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      showShadow: false,
+      onTap: onTap,
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.textPrimary(context)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
             ),
-            Text(
-              status,
-              style: TextStyle(
-                fontSize: 12,
-                color: isPaid ? AppColors.successLight : AppColors.dangerLight,
-                fontWeight: FontWeight.w600,
+          ),
+          const Icon(Icons.chevron_right, color: AppColors.grey500),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecentPaymentCard extends StatefulWidget {
+  final String schoolId;
+  final String studentId;
+  final List<StudentBill> bills;
+
+  const _RecentPaymentCard({
+    required this.schoolId,
+    required this.studentId,
+    required this.bills,
+  });
+
+  @override
+  State<_RecentPaymentCard> createState() => _RecentPaymentCardState();
+}
+
+class _RecentPaymentCardState extends State<_RecentPaymentCard> {
+  final Map<String, List<StudentPayment>> _byBill = {};
+
+  @override
+  void initState() {
+    super.initState();
+    for (final bill in widget.bills) {
+      di
+          .sl<StudentBillingRepository>()
+          .watchPayments(widget.schoolId, widget.studentId, bill.id)
+          .listen((payments) {
+            if (!mounted) return;
+            setState(() => _byBill[bill.id] = payments);
+          });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final payments =
+        _byBill.values.expand((p) => p).where((p) => !p.isReversal).toList()
+          ..sort((a, b) {
+            final aDate = a.recordedAt ?? DateTime(0);
+            final bDate = b.recordedAt ?? DateTime(0);
+            return bDate.compareTo(aDate);
+          });
+
+    if (payments.isEmpty) {
+      return AppCard(
+        showShadow: false,
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const ReceiptsScreen())),
+        child: Row(
+          children: [
+            Icon(Icons.receipt_long_outlined, color: AppColors.grey500),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                'No payments yet',
+                style: TextStyle(color: AppColors.grey500),
               ),
             ),
           ],
         ),
-        Text(
-          amount,
-          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-        ),
-      ],
-    );
-  }
+      );
+    }
 
-  Widget _buildTransactionItem(String title, String date, String amount) {
+    final payment = payments.first;
     return AppCard(
-      padding: const EdgeInsets.all(16),
       showShadow: false,
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const ReceiptsScreen())),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
-              Text(
-                date,
-                style: const TextStyle(fontSize: 12, color: AppColors.grey500),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerHigh(context),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.receipt_outlined,
+              size: 20,
+              color: AppColors.textPrimary(context),
+            ),
           ),
-          Text(
-            amount,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Receipt ${payment.receiptNumber}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  '${CurrencyFormatter.ugx(payment.amountUgx.toDouble())} · '
+                  '${_methodLabel(payment.method)}',
+                  style: TextStyle(fontSize: 12, color: AppColors.grey500),
+                ),
+                Text(
+                  payment.recordedAt != null
+                      ? DateFormat('d MMM yyyy').format(payment.recordedAt!)
+                      : '—',
+                  style: TextStyle(fontSize: 12, color: AppColors.grey500),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerHigh(context),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'Confirmed',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  String _methodLabel(String method) {
+    switch (method) {
+      case 'mobile_money':
+        return 'Mobile Money';
+      case 'bank_transfer':
+        return 'Bank';
+      case 'cash':
+        return 'Cash';
+      default:
+        return method;
+    }
   }
 }

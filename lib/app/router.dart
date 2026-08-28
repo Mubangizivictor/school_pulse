@@ -103,8 +103,8 @@ import 'package:school_pulse/features/parent/academics_screen.dart';
 import 'package:school_pulse/features/parent/report_card_screen.dart';
 import 'package:school_pulse/features/parent/attendance_detail_screen.dart';
 import 'package:school_pulse/features/parent/fees_screen.dart';
-import 'package:school_pulse/features/parent/pay_now_screen.dart';
-import 'package:school_pulse/features/parent/payment_history_screen.dart';
+import 'package:school_pulse/features/parent/how_to_pay_screen.dart';
+import 'package:school_pulse/features/parent/receipts_screen.dart';
 import 'package:school_pulse/features/parent/health_screen.dart';
 import 'package:school_pulse/features/parent/library_screen.dart';
 import 'package:school_pulse/features/parent/discipline_screen.dart';
@@ -842,17 +842,17 @@ final router = GoRouter(
           ),
           routes: [
             GoRoute(
-              path: 'pay',
+              path: 'how-to-pay',
               builder: (context, state) => ParentModuleGuard(
                 isAllowed: (v) => v.fees,
-                child: const PayNowScreen(),
+                child: const HowToPayScreen(),
               ),
             ),
             GoRoute(
-              path: 'history',
+              path: 'receipts',
               builder: (context, state) => ParentModuleGuard(
                 isAllowed: (v) => v.fees,
-                child: const PaymentHistoryScreen(),
+                child: const ReceiptsScreen(),
               ),
             ),
           ],

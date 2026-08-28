@@ -166,6 +166,9 @@ class StudentPayment extends Equatable {
   final String? reversalOfPaymentId;
   final String? reversedByPaymentId;
   final DateTime? reversedAt;
+  final String? amountInWords;
+  final String? qrVerificationUrl;
+  final String? sourcePendingPaymentId;
 
   const StudentPayment({
     required this.id,
@@ -182,6 +185,9 @@ class StudentPayment extends Equatable {
     this.reversalOfPaymentId,
     this.reversedByPaymentId,
     this.reversedAt,
+    this.amountInWords,
+    this.qrVerificationUrl,
+    this.sourcePendingPaymentId,
   });
 
   bool get isReversal => status == 'reversal';
@@ -203,12 +209,19 @@ class StudentPayment extends Equatable {
       recordedBy: json['recordedBy'] as String? ?? '',
       recordedAt: recordedAtRaw == null
           ? null
-          : (recordedAtRaw is DateTime ? recordedAtRaw : recordedAtRaw.toDate()),
+          : (recordedAtRaw is DateTime
+                ? recordedAtRaw
+                : recordedAtRaw.toDate()),
       reversalOfPaymentId: json['reversalOfPaymentId'] as String?,
       reversedByPaymentId: json['reversalPaymentId'] as String?,
       reversedAt: reversedAtRaw == null
           ? null
-          : (reversedAtRaw is DateTime ? reversedAtRaw : reversedAtRaw.toDate()),
+          : (reversedAtRaw is DateTime
+                ? reversedAtRaw
+                : reversedAtRaw.toDate()),
+      amountInWords: json['amountInWords'] as String?,
+      qrVerificationUrl: json['qrVerificationUrl'] as String?,
+      sourcePendingPaymentId: json['sourcePendingPaymentId'] as String?,
     );
   }
 
@@ -228,5 +241,8 @@ class StudentPayment extends Equatable {
     reversalOfPaymentId,
     reversedByPaymentId,
     reversedAt,
+    amountInWords,
+    qrVerificationUrl,
+    sourcePendingPaymentId,
   ];
 }

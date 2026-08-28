@@ -184,3 +184,97 @@ describe("payment_codes: updatePaymentChannelConfig", () => {
     );
   });
 });
+
+describe("payment_codes: claim/confirm/reject pending payments", () => {
+  const PARENT_UID = "parentUid";
+  const OTHER_PARENT_UID = "otherParentUid";
+
+  beforeEach(async () => {
+    await clearFirestore();
+    await seedBaseFixtures();
+    await db.doc(`users/${PARENT_UID}`).set({ role: "parent", roles: ["parent"], schoolId: SCHOOL, studentIds: [STUDENT_ID] });
+    await db.doc(`users/${OTHER_PARENT_UID}`).set({ role: "parent", roles: ["parent"], schoolId: SCHOOL, studentIds: [STUDENT_2_ID] });
+    await functions.generatePaymentCodeCore({ schoolId: SCHOOL, studentId: STUDENT_ID, actorUid: BURSAR_UID });
+  });
+
+  async function seedBill() {
+    await db.doc(`schools/${SCHOOL}/student_accounts/${STUDENT_ID}/bills/billA`).set({
+      schoolId: SCHOOL, studentId: STUDENT_ID, billId: "billA", status: "open", currency: "UGX",
+      issuedTotalUgx: 500000, paidTotalUgx: 0, adjustmentTotalUgx: 0, balanceUgx: 500000, lines: [],
+    });
+  }
+
+  test("a linked parent can claim a pending payment; an unlinked parent cannot", async () => {
+    const claim = await functions.claimPendingPayment(
+      request(PARENT_UID, { schoolId: SCHOOL, studentId: STUDENT_ID, channel: "mtn_momo", amountUgx: 200000 })
+    );
+    assert.ok(claim.pendingPaymentId);
+    const snap = await db.doc(`schools/${SCHOOL}/pending_payments/${claim.pendingPaymentId}`).get();
+    assert.equal(snap.data().status, "pending");
+    assert.equal(snap.data().claimedByParentUid, PARENT_UID);
+
+    await assert.rejects(
+      functions.claimPendingPayment(
+        request(OTHER_PARENT_UID, { schoolId: SCHOOL, studentId: STUDENT_ID, channel: "mtn_momo", amountUgx: 200000 })
+      ),
+      /not linked/i
+    );
+  });
+
+  test("confirmPendingPayment records a real payment with receipt/amountInWords/qrVerificationUrl and marks the queue entry confirmed", async () => {
+    await seedBill();
+    const claim = await functions.claimPendingPayment(
+      request(PARENT_UID, { schoolId: SCHOOL, studentId: STUDENT_ID, channel: "mtn_momo", amountUgx: 200000 })
+    );
+    const result = await functions.confirmPendingPayment(
+      request(BURSAR_UID, { schoolId: SCHOOL, pendingPaymentId: claim.pendingPaymentId, billId: "billA" })
+    );
+    assert.ok(result.paymentId);
+    assert.match(result.receiptNumber, /^RCT-\d{6}$/);
+    assert.equal(result.balanceUgx, 300000);
+
+    const paymentSnap = await db.doc(`schools/${SCHOOL}/student_accounts/${STUDENT_ID}/bills/billA/payments/${result.paymentId}`).get();
+    const payment = paymentSnap.data();
+    assert.equal(payment.amountUgx, 200000);
+    assert.match(payment.amountInWords, /Two Hundred Thousand Shillings/);
+    assert.match(payment.qrVerificationUrl, /^https:\/\/.+verify-payment\?r=/);
+    assert.equal(payment.sourcePendingPaymentId, claim.pendingPaymentId);
+
+    const pendingSnap = await db.doc(`schools/${SCHOOL}/pending_payments/${claim.pendingPaymentId}`).get();
+    assert.equal(pendingSnap.data().status, "confirmed");
+    assert.equal(pendingSnap.data().resultingPaymentId, result.paymentId);
+  });
+
+  test("confirming the same pending payment twice fails the second time (idempotent against double-confirm)", async () => {
+    await seedBill();
+    const claim = await functions.claimPendingPayment(
+      request(PARENT_UID, { schoolId: SCHOOL, studentId: STUDENT_ID, channel: "mtn_momo", amountUgx: 200000 })
+    );
+    await functions.confirmPendingPayment(
+      request(BURSAR_UID, { schoolId: SCHOOL, pendingPaymentId: claim.pendingPaymentId, billId: "billA" })
+    );
+    await assert.rejects(
+      functions.confirmPendingPayment(
+        request(BURSAR_UID, { schoolId: SCHOOL, pendingPaymentId: claim.pendingPaymentId, billId: "billA" })
+      ),
+      /already been resolved/i
+    );
+    const paymentsSnap = await db.collection(`schools/${SCHOOL}/student_accounts/${STUDENT_ID}/bills/billA/payments`).get();
+    assert.equal(paymentsSnap.size, 1, "a duplicate confirm call must never create a second payment");
+  });
+
+  test("rejectPendingPayment marks the queue entry rejected and creates no payment", async () => {
+    await seedBill();
+    const claim = await functions.claimPendingPayment(
+      request(PARENT_UID, { schoolId: SCHOOL, studentId: STUDENT_ID, channel: "mtn_momo", amountUgx: 200000 })
+    );
+    await functions.rejectPendingPayment(
+      request(BURSAR_UID, { schoolId: SCHOOL, pendingPaymentId: claim.pendingPaymentId, reason: "No matching bank reference" })
+    );
+    const pendingSnap = await db.doc(`schools/${SCHOOL}/pending_payments/${claim.pendingPaymentId}`).get();
+    assert.equal(pendingSnap.data().status, "rejected");
+    assert.equal(pendingSnap.data().rejectionReason, "No matching bank reference");
+    const paymentsSnap = await db.collection(`schools/${SCHOOL}/student_accounts/${STUDENT_ID}/bills/billA/payments`).get();
+    assert.equal(paymentsSnap.size, 0);
+  });
+});
