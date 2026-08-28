@@ -9,12 +9,159 @@
 /// overdue/high-risk/unmatched/rejected/deadline.
 library;
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:go_router/go_router.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+
+/// The Bursar module's top bar for the tab roots (Home, Students, Approvals,
+/// Cash and Bank, More).
+///
+/// Matches the reference: a round initials avatar + the user's name and a
+/// "Bursar and the school name" caption on the left, and two circular icon
+/// buttons on the right - the messages icon and the notification bell, each
+/// carrying its own live unread badge (the exact same
+/// [MessagesNavIcon] / [NotificationBellButton] the admin/staff dashboards
+/// use). Over a hairline bottom divider. Mono only.
+PreferredSizeWidget bursarAppBar(BuildContext context) {
+  return const PreferredSize(
+    preferredSize: Size.fromHeight(60),
+    child: _BursarAppBar(),
+  );
+}
+
+class _BursarAppBar extends StatelessWidget {
+  const _BursarAppBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthBloc>().state;
+    final name = auth is AuthAuthenticated ? auth.user.name : 'Bursar';
+    final school = auth is AuthAuthenticated
+        ? (auth.user.schoolName ?? 'School Pulse')
+        : 'School Pulse';
+    final initials = name.trim().isEmpty
+        ? 'B'
+        : name
+              .trim()
+              .split(RegExp(r'\s+'))
+              .take(2)
+              .map((w) => w[0].toUpperCase())
+              .join();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.background(context),
+        border: Border(bottom: BorderSide(color: AppColors.border(context))),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 12, 10),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.surfaceContainer(context),
+                  border: Border.all(color: AppColors.border(context)),
+                ),
+                child: Text(
+                  initials,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        height: 1.1,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      'Bursar · $school',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _CircleAction(
+                onTap: () => context.push('/staff/messages'),
+                child: const MessagesNavIcon(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const _CircleAction(child: NotificationBellButton()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A 38px circular outline shell around one of the shared badge widgets, so
+/// the messages icon and the bell read as a matched pair in the app bar.
+class _CircleAction extends StatelessWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+
+  const _CircleAction({required this.child, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Center(child: child),
+        ),
+      ),
+    );
+  }
+}
 
 /// Standard page chrome for every Bursar screen pushed on top of a shell tab:
 /// centered title, back affordance, optional `…` overflow menu, mono
@@ -93,6 +240,141 @@ class FinanceScaffold extends StatelessWidget {
                 child: bottomBar,
               ),
             ),
+    );
+  }
+}
+
+/// A minimal weekly cash-flow line: a curved series over N buckets with
+/// exactly one x-label per bucket (fl_chart otherwise labels every tick, so
+/// a 7-point series renders "S S S M M M ..."). Monochrome, no gridlines,
+/// no touch tooltip - a glanceable trend, not a data table. With
+/// [showYAxis], a symmetric ±peak scale and 5 left-hand value labels
+/// (peak / half / 0 / -half / -peak) plus a dashed zero line, matching the
+/// reference dashboard.
+class FinanceTrendLine extends StatelessWidget {
+  final List<double> values;
+  final List<String> labels;
+  final double height;
+  final bool showYAxis;
+
+  const FinanceTrendLine({
+    super.key,
+    required this.values,
+    required this.labels,
+    this.height = 120,
+    this.showYAxis = false,
+  });
+
+  String _compact(double v) {
+    final a = v.abs();
+    final sign = v < 0 ? '-' : '';
+    if (a >= 1000000) return '$sign${(a / 1000000).toStringAsFixed(1)}M';
+    if (a >= 1000) return '$sign${(a / 1000).toStringAsFixed(0)}K';
+    return '$sign${a.toStringAsFixed(0)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final line = AppColors.primary(context);
+    final peak = values.fold<double>(0, (m, v) => v.abs() > m ? v.abs() : m);
+    final top = peak <= 0 ? 1.0 : peak * 1.15;
+
+    return SizedBox(
+      height: height,
+      child: LineChart(
+        LineChartData(
+          minX: 0,
+          maxX: (values.length - 1).toDouble(),
+          minY: showYAxis ? -top : 0,
+          maxY: top,
+          gridData: const FlGridData(show: false),
+          borderData: FlBorderData(show: false),
+          lineTouchData: const LineTouchData(enabled: false),
+          extraLinesData: showYAxis
+              ? ExtraLinesData(
+                  horizontalLines: [
+                    HorizontalLine(
+                      y: 0,
+                      color: AppColors.border(context),
+                      strokeWidth: 1,
+                      dashArray: [4, 4],
+                    ),
+                  ],
+                )
+              : const ExtraLinesData(),
+          titlesData: FlTitlesData(
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: showYAxis,
+                interval: top / 2,
+                reservedSize: 40,
+                getTitlesWidget: (value, meta) {
+                  if (value > meta.max || value < meta.min) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Text(
+                      _compact(value),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.textMuted(context),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                interval: 1,
+                reservedSize: 22,
+                getTitlesWidget: (value, meta) {
+                  final i = value.round();
+                  if ((value - i).abs() > 0.01 || i < 0 || i >= labels.length) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      labels[i],
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.textMuted(context),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          lineBarsData: [
+            LineChartBarData(
+              spots: [
+                for (var i = 0; i < values.length; i++)
+                  FlSpot(i.toDouble(), values[i]),
+              ],
+              isCurved: true,
+              preventCurveOverShooting: true,
+              color: line,
+              barWidth: 2,
+              dotData: FlDotData(
+                show: true,
+                getDotPainter: (spot, percent, bar, index) =>
+                    FlDotCirclePainter(radius: 3, color: line, strokeWidth: 0),
+              ),
+              belowBarData: BarAreaData(show: false),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -315,8 +597,12 @@ class FinanceStatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return FinanceCard(
       onTap: onTap,
-      padding: const EdgeInsets.all(AppSpacing.l),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.l,
+        vertical: AppSpacing.m,
+      ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -324,36 +610,40 @@ class FinanceStatTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textSecondary(context),
                   ),
                 ),
               ),
               if (icon != null)
-                Icon(icon, size: 16, color: AppColors.textMuted(context)),
+                Icon(icon, size: 14, color: AppColors.textMuted(context)),
             ],
           ),
-          const SizedBox(height: AppSpacing.m),
+          const SizedBox(height: 3),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 17,
               fontWeight: FontWeight.w800,
               color: emphasisColor ?? AppColors.textPrimary(context),
             ),
           ),
-          if (caption != null) ...[
-            const SizedBox(height: 2),
+          if (caption != null)
             Text(
               caption!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10.5,
                 color: AppColors.textMuted(context),
               ),
             ),
-          ],
         ],
       ),
     );

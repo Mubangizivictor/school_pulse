@@ -138,22 +138,34 @@ class _BudgetManagementScreenState extends State<BudgetManagementScreen> {
       child: Row(
         children: [
           Expanded(
-            child: DropdownButtonFormField<String>(
-              initialValue: _selectedYear,
-              decoration: const InputDecoration(
-                labelText: 'Year',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                '2023',
-                '2024',
-                '2025',
-              ].map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() => _selectedYear = val);
-                  _loadBudgets();
-                }
+            child: Builder(
+              builder: (context) {
+                final years =
+                    <String>{
+                      '2023',
+                      '2024',
+                      '2025',
+                      if (_selectedYear.isNotEmpty) _selectedYear,
+                    }.toList()
+                      ..sort();
+                return DropdownButtonFormField<String>(
+                  initialValue: _selectedYear.isEmpty ? null : _selectedYear,
+                  decoration: const InputDecoration(
+                    labelText: 'Year',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: years
+                      .map(
+                        (y) => DropdownMenuItem(value: y, child: Text(y)),
+                      )
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() => _selectedYear = val);
+                      _loadBudgets();
+                    }
+                  },
+                );
               },
             ),
           ),

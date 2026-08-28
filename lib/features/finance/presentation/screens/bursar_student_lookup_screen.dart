@@ -290,7 +290,6 @@ class _StudentRow extends StatelessWidget {
     final balance = v?.balance ?? 0;
 
     return FinanceListRow(
-      leadingIcon: Icons.person_outline_rounded,
       title: student.name,
       subtitle:
           '${student.admissionNumber.isNotEmpty ? student.admissionNumber : student.studentCode} · ${student.className}',

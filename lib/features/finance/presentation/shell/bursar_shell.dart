@@ -9,13 +9,21 @@ import 'package:school_pulse/features/finance/presentation/screens/bursar_more_s
 /// Bottom-navigation shell for the Bursar / Finance module.
 ///
 /// 5 tabs, matching the locked reference screenshots exactly:
-/// **Home | Students | Approvals | Cash & Bank | More**.
-/// The active tab is black, inactive tabs grey. Each tab owns a nested
-/// [Navigator] so screens pushed on top of a tab keep this bottom nav
-/// visible (push-on-top-of-tab pattern). Receive Payment is reached from a
-/// Home quick action or the student statement screen, not a tab.
+/// **Home | Students | Approvals | Cash & Bank | More**. The active tab is
+/// black (icon + label), inactive tabs grey (icon + label) — the label is
+/// always shown, active or not. Each tab owns a nested [Navigator] so
+/// screens pushed on top of a tab keep this bottom nav visible
+/// (push-on-top-of-tab pattern). Receive Payment is reached from a Home
+/// quick action or the student statement screen, not a tab.
 class BursarShell extends StatefulWidget {
   const BursarShell({super.key});
+
+  /// Lets a descendant (e.g. a Home quick action) switch the visible tab
+  /// instead of pushing a duplicate screen onto the Home navigator.
+  /// Tab indices: 0 Home · 1 Students · 2 Approvals · 3 Cash & Bank · 4 More.
+  static void goToTab(BuildContext context, int index) {
+    context.findAncestorStateOfType<_BursarShellState>()?._selectTab(index);
+  }
 
   @override
   State<BursarShell> createState() => _BursarShellState();
@@ -24,6 +32,12 @@ class BursarShell extends StatefulWidget {
 class _BursarShellState extends State<BursarShell> {
   int _selectedIndex = 0;
 
+  void _selectTab(int index) {
+    if (!mounted) return;
+    _navigatorKeys[index].currentState?.popUntil((r) => r.isFirst);
+    setState(() => _selectedIndex = index);
+  }
+
   final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate(
     5,
     (_) => GlobalKey<NavigatorState>(),
@@ -31,11 +45,7 @@ class _BursarShellState extends State<BursarShell> {
 
   static const List<_TabSpec> _tabs = [
     _TabSpec(Icons.home_outlined, Icons.home_rounded, 'Home'),
-    _TabSpec(
-      Icons.people_outline_rounded,
-      Icons.people_alt_rounded,
-      'Students',
-    ),
+    _TabSpec(Icons.people_outline_rounded, Icons.people_alt_rounded, 'Students'),
     _TabSpec(Icons.verified_outlined, Icons.verified_rounded, 'Approvals'),
     _TabSpec(
       Icons.account_balance_outlined,
@@ -95,8 +105,8 @@ class _BursarShellState extends State<BursarShell> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = AppColors.primary(context);
-    final muted = AppColors.textMuted(context);
+    final active = AppColors.primary(context);
+    final inactive = AppColors.textMuted(context);
 
     return PopScope(
       canPop: false,
@@ -112,44 +122,74 @@ class _BursarShellState extends State<BursarShell> {
           index: _selectedIndex,
           children: List.generate(5, _buildTabNavigator),
         ),
-        bottomNavigationBar: DecoratedBox(
+        bottomNavigationBar: Container(
           decoration: BoxDecoration(
+            color: AppColors.surfaceElevated(context),
             border: Border(top: BorderSide(color: AppColors.border(context))),
           ),
-          child: NavigationBarTheme(
-            data: NavigationBarThemeData(
-              backgroundColor: AppColors.surfaceElevated(context),
-              indicatorColor: AppColors.surfaceContainer(context),
-              labelTextStyle: WidgetStateProperty.resolveWith(
-                (states) => TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: states.contains(WidgetState.selected)
-                      ? primary
-                      : muted,
-                ),
-              ),
-            ),
-            child: NavigationBar(
-              height: 64,
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: _onDestinationSelected,
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              destinations: [
-                for (final tab in _tabs)
-                  NavigationDestination(
-                    icon: Icon(tab.icon, size: 24, color: muted),
-                    selectedIcon: Icon(
-                      tab.selectedIcon,
-                      size: 24,
-                      color: primary,
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: 60,
+              child: Row(
+                children: [
+                  for (var i = 0; i < _tabs.length; i++)
+                    Expanded(
+                      child: _NavItem(
+                        spec: _tabs[i],
+                        selected: i == _selectedIndex,
+                        activeColor: active,
+                        inactiveColor: inactive,
+                        onTap: () => _onDestinationSelected(i),
+                      ),
                     ),
-                    label: tab.label,
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final _TabSpec spec;
+  final bool selected;
+  final Color activeColor;
+  final Color inactiveColor;
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.spec,
+    required this.selected,
+    required this.activeColor,
+    required this.inactiveColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? activeColor : inactiveColor;
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(selected ? spec.selectedIcon : spec.icon, size: 24, color: color),
+          const SizedBox(height: 3),
+          Text(
+            spec.label,
+            maxLines: 1,
+            overflow: TextOverflow.visible,
+            softWrap: false,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }

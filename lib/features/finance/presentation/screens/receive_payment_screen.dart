@@ -247,7 +247,7 @@ class _ReceivePaymentScreenState extends State<ReceivePaymentScreen> {
           Text(
             'Amount',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppColors.textSecondary(context),
             ),
@@ -258,24 +258,23 @@ class _ReceivePaymentScreenState extends State<ReceivePaymentScreen> {
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             style: TextStyle(
-              fontSize: 30,
+              fontSize: 34,
               fontWeight: FontWeight.w900,
               color: AppColors.textPrimary(context),
             ),
             decoration: InputDecoration(
               prefixText: 'UGX ',
               prefixStyle: TextStyle(
-                fontSize: 20,
+                fontSize: 22,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textSecondary(context),
               ),
-              border: const UnderlineInputBorder(),
+              isCollapsed: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+              border: InputBorder.none,
             ),
           ),
-          Text(
-            'Bill balance ${CurrencyFormatter.ugx(widget.bill.balanceUgx.toDouble())}',
-            style: TextStyle(fontSize: 11, color: AppColors.textMuted(context)),
-          ),
+          Divider(color: AppColors.border(context), height: 1),
           const SizedBox(height: AppSpacing.x2l),
 
           MethodSegments(
@@ -305,126 +304,42 @@ class _ReceivePaymentScreenState extends State<ReceivePaymentScreen> {
           ),
           const SizedBox(height: AppSpacing.x2l),
 
-          SectionCard(
-            title: 'ALLOCATE TO',
-            child: Column(
-              children: [
-                for (final line in widget.bill.lines)
-                  _AllocationRow(
-                    label: line.name,
-                    max: line.amountUgx,
-                    value: _allocations[line.chargeId] ?? 0,
-                    onChanged: (v) =>
-                        setState(() => _allocations[line.chargeId] = v),
-                  ),
-                const Divider(height: AppSpacing.x2l),
-                KeyValueRow(
-                  'Total allocated',
-                  CurrencyFormatter.ugx(_allocated.toDouble()),
-                  bold: true,
-                ),
-                KeyValueRow(
-                  'Unallocated',
-                  CurrencyFormatter.ugx(unallocated.toDouble()),
-                  valueColor: unallocated == 0
-                      ? AppColors.success(context)
-                      : AppColors.danger(context),
-                ),
-              ],
+          Text(
+            'Allocate to',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary(context),
             ),
+          ),
+          const SizedBox(height: AppSpacing.m),
+          for (final line in widget.bill.lines)
+            KeyValueRow(
+              line.name,
+              CurrencyFormatter.ugx(
+                (_allocations[line.chargeId] ?? 0).toDouble(),
+              ),
+            ),
+          const Divider(height: AppSpacing.x2l),
+          KeyValueRow(
+            'Total allocated',
+            CurrencyFormatter.ugx(_allocated.toDouble()),
+            bold: true,
+          ),
+          KeyValueRow(
+            'Balance',
+            CurrencyFormatter.ugx(unallocated.toDouble()),
+            bold: true,
+            valueColor: unallocated == 0
+                ? AppColors.textPrimary(context)
+                : AppColors.danger(context),
           ),
           const SizedBox(height: AppSpacing.l),
           TextField(
             controller: _noteController,
-            maxLines: 2,
             decoration: InputDecoration(
-              labelText: 'Add payment note (optional)',
+              hintText: 'Add payment note (optional)',
               border: OutlineInputBorder(borderRadius: AppRadius.medium),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AllocationRow extends StatefulWidget {
-  final String label;
-  final int max;
-  final int value;
-  final ValueChanged<int> onChanged;
-
-  const _AllocationRow({
-    required this.label,
-    required this.max,
-    required this.value,
-    required this.onChanged,
-  });
-
-  @override
-  State<_AllocationRow> createState() => _AllocationRowState();
-}
-
-class _AllocationRowState extends State<_AllocationRow> {
-  late final _controller = TextEditingController(text: widget.value.toString());
-
-  @override
-  void didUpdateWidget(_AllocationRow old) {
-    super.didUpdateWidget(old);
-    final current = int.tryParse(_controller.text) ?? 0;
-    if (current != widget.value) {
-      _controller.text = widget.value.toString();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.label,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  'of ${CurrencyFormatter.ugx(widget.max.toDouble())}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textMuted(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(
-            width: 110,
-            child: TextField(
-              controller: _controller,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.right,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                isDense: true,
-                prefixText: 'UGX ',
-              ),
-              onChanged: (v) {
-                final parsed = (int.tryParse(v) ?? 0).clamp(0, widget.max);
-                widget.onChanged(parsed);
-              },
             ),
           ),
         ],

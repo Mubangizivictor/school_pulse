@@ -366,37 +366,28 @@ class _RequestCard extends StatelessWidget {
           if (canApprove && request.status == ExpenditureStatus.pending) ...[
             const SizedBox(height: AppSpacing.l),
             Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.danger(context),
-                      side: BorderSide(color: AppColors.danger(context)),
-                    ),
-                    onPressed: () =>
-                        onDecision(request, ExpenditureStatus.rejected),
-                    child: const Text('Reject'),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary(context),
+                    side: BorderSide(color: AppColors.border(context)),
+                    shape: const StadiumBorder(),
                   ),
+                  onPressed: () =>
+                      onDecision(request, ExpenditureStatus.rejected),
+                  child: const Text('Reject'),
                 ),
                 const SizedBox(width: AppSpacing.m),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () =>
-                        onDecision(request, ExpenditureStatus.reviewed),
-                    child: const Text('Changes'),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary(context),
+                    foregroundColor: AppColors.background(context),
+                    shape: const StadiumBorder(),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.m),
-                Expanded(
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary(context),
-                      foregroundColor: AppColors.background(context),
-                    ),
-                    onPressed: () =>
-                        onDecision(request, ExpenditureStatus.approved),
-                    child: const Text('Approve'),
-                  ),
+                  onPressed: () =>
+                      onDecision(request, ExpenditureStatus.approved),
+                  child: const Text('Approve'),
                 ),
               ],
             ),
