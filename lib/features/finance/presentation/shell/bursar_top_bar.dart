@@ -138,7 +138,7 @@ class _BursarTopBarState extends State<BursarTopBar> {
           ),
         },
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
+          constraints: const BoxConstraints(maxWidth: 620),
           child: TextField(
             controller: _searchController,
             focusNode: _searchFocus,
@@ -148,51 +148,48 @@ class _BursarTopBarState extends State<BursarTopBar> {
               color: AppColors.textPrimary(context),
             ),
             decoration: InputDecoration(
-              hintText: 'Search student, receipt or voucher',
+              hintText: 'Search students, receipts, vouchers…',
               hintStyle: TextStyle(
                 fontSize: 13,
                 color: AppColors.textMuted(context),
               ),
-              prefixIcon: Icon(
-                Icons.search_rounded,
-                size: 20,
-                color: AppColors.textSecondary(context),
-              ),
-              suffixIcon: Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Align(
-                  widthFactor: 1,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceContainer(context),
-                      borderRadius: BorderRadius.circular(AppRadius.s),
-                      border: Border.all(color: AppColors.border(context)),
-                    ),
-                    child: Text(
-                      '⌘K',
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textMuted(context),
-                      ),
-                    ),
-                  ),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 16, right: 10),
+                child: Icon(
+                  Icons.search_rounded,
+                  size: 19,
+                  color: AppColors.textMuted(context),
                 ),
               ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 0,
+                minHeight: 0,
+              ),
+              suffixIcon: Padding(
+                padding: const EdgeInsets.only(right: 14),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _keyCap(context, '⌘'),
+                    const SizedBox(width: 3),
+                    _keyCap(context, 'K'),
+                  ],
+                ),
+              ),
+              suffixIconConstraints: const BoxConstraints(
+                minWidth: 0,
+                minHeight: 0,
+              ),
               filled: true,
-              fillColor: AppColors.surfaceElevated(context),
+              fillColor: AppColors.surfaceContainer(context),
               isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(vertical: 13),
               enabledBorder: OutlineInputBorder(
-                borderRadius: AppRadius.medium,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
                 borderSide: BorderSide(color: AppColors.border(context)),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: AppRadius.medium,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
                 borderSide: BorderSide(
                   color: AppColors.primary(context),
                   width: 1.4,
@@ -208,6 +205,26 @@ class _BursarTopBarState extends State<BursarTopBar> {
 
 class _FocusSearchIntent extends Intent {
   const _FocusSearchIntent();
+}
+
+/// A single rounded keyboard key-cap (⌘ / K) for the search shortcut hint.
+Widget _keyCap(BuildContext context, String label) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceElevated(context),
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: AppColors.border(context)),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        fontSize: 10.5,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textMuted(context),
+      ),
+    ),
+  );
 }
 
 class _Breadcrumb extends StatelessWidget {

@@ -371,6 +371,16 @@ class StaffShell extends StatelessWidget {
     final isAddStaffWizardRoute =
         GoRouterState.of(context).uri.path == '/staff/admin/users/add-staff';
 
+    // The Bursar section owns a full-screen responsive shell of its own
+    // (BursarShell: mobile bottom nav < 600, desktop sidebar console >=
+    // 1024). Rendering this shell's chrome around it stacks two bottom navs
+    // on mobile / two sidebars on desktop, so hand it the routed child bare
+    // at every width. (Dean/Nurse are still handled below by the
+    // bottom-nav suppression only, since they have no desktop shell yet.)
+    if (isBursarSection) {
+      return child;
+    }
+
     final List<NavigationDestination> subjectTeacherDestinations = [
       const NavigationDestination(
         icon: Icon(Icons.home_outlined, size: 24),

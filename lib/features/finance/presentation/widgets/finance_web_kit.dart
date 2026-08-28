@@ -96,9 +96,9 @@ class _HeaderRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.6,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
                   color: AppColors.textPrimary(context),
                 ),
               ),
@@ -248,10 +248,11 @@ class WorkspaceCard extends StatelessWidget {
                       child: Text(
                         actionLabel!,
                         style: TextStyle(
-                          fontSize: 12.5,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           decoration: TextDecoration.underline,
-                          color: AppColors.textSecondary(context),
+                          decorationColor: AppColors.textMuted(context),
+                          color: AppColors.textMuted(context),
                         ),
                       ),
                     ),

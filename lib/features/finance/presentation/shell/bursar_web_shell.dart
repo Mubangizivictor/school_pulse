@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/components/pulse_logo.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
+import 'package:school_pulse/features/branding/presentation/widgets/school_badge.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -229,19 +231,16 @@ class _Sidebar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(compact ? 14 : 20, 20, 16, 16),
-            child: compact
-                ? Icon(
-                    Icons.show_chart_rounded,
-                    color: AppColors.textPrimary(context),
-                  )
-                : const PulseLogo(variant: PulseLogoVariant.full, height: 26),
+            padding: EdgeInsets.fromLTRB(compact ? 14 : 16, 18, 16, 16),
+            child: _SchoolHeader(compact: compact),
           ),
+          Divider(height: 1, color: AppColors.border(context)),
+          const SizedBox(height: 8),
           Expanded(
             child: ListView(
               padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
               children: [
-                if (!compact) _GroupLabel('MAIN NAVIGATION'),
+                if (!compact) _GroupLabel('MAIN'),
                 for (final s in _mainNav)
                   _Item(
                     section: s,
@@ -249,7 +248,7 @@ class _Sidebar extends StatelessWidget {
                     selected: s == active,
                     onTap: () => onSelect(s),
                   ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 if (!compact) _GroupLabel('FINANCE TOOLS'),
                 for (final s in _toolsNav)
                   _Item(
@@ -265,6 +264,53 @@ class _Sidebar extends StatelessWidget {
           _FooterRow(compact: compact),
         ],
       ),
+    );
+  }
+}
+
+/// School badge + name at the top of the sidebar, from the live
+/// [BrandingBloc] (falls back to the auth user's `schoolName`).
+class _SchoolHeader extends StatelessWidget {
+  final bool compact;
+  const _SchoolHeader({required this.compact});
+
+  @override
+  Widget build(BuildContext context) {
+    final brandingState = context.watch<BrandingBloc>().state;
+    final branding = brandingState is BrandingLoaded
+        ? brandingState.branding
+        : null;
+    final auth = context.watch<AuthBloc>().state;
+    final name = branding?.schoolName.isNotEmpty == true
+        ? branding!.schoolName
+        : (auth is AuthAuthenticated
+              ? (auth.user.schoolName ?? 'School Pulse')
+              : 'School Pulse');
+    final badge = SchoolBadge(
+      badgeUrl: branding?.badgeUrl ?? branding?.logoUrl,
+      size: compact ? 34 : 30,
+    );
+
+    if (compact) return Center(child: badge);
+
+    return Row(
+      children: [
+        badge,
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.15,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -309,7 +355,7 @@ class _Item extends StatelessWidget {
         ? AppColors.background(context)
         : AppColors.textSecondary(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 1),
       child: Material(
         color: selected ? AppColors.primary(context) : Colors.transparent,
         borderRadius: AppRadius.medium,
@@ -321,7 +367,7 @@ class _Item extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: compact ? 0 : 12,
-                vertical: 11,
+                vertical: 9,
               ),
               child: Row(
                 mainAxisAlignment: compact
