@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
+import 'package:school_pulse/design_system/responsive/app_responsive_content.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -191,6 +192,12 @@ class FinanceScaffold extends StatelessWidget {
   final bool showBack;
   final VoidCallback? onBack;
 
+  /// Caps the body width on tablet/desktop/web so a phone-shaped screen
+  /// rendered directly in the wide console content pane (Budget, Audit,
+  /// Reports, Clearance policy) doesn't stretch edge-to-edge. No-op on
+  /// mobile. Screens with their own responsive split-pane leave this off.
+  final bool constrainWidth;
+
   const FinanceScaffold({
     super.key,
     required this.title,
@@ -200,6 +207,7 @@ class FinanceScaffold extends StatelessWidget {
     this.isOffline = false,
     this.showBack = true,
     this.onBack,
+    this.constrainWidth = false,
   });
 
   @override
@@ -233,7 +241,11 @@ class FinanceScaffold extends StatelessWidget {
         child: Column(
           children: [
             if (isOffline) const FinanceOfflineBanner(),
-            Expanded(child: body),
+            Expanded(
+              child: constrainWidth
+                  ? AppResponsiveContent(maxWidth: 960, child: body)
+                  : body,
+            ),
           ],
         ),
       ),

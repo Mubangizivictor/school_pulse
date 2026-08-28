@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/responsive/app_responsive_content.dart';
 import 'package:school_pulse/features/finance/presentation/widgets/finance_kit.dart';
 
 Widget _wrap(Widget child, {required Brightness brightness}) => MaterialApp(
@@ -9,6 +10,33 @@ Widget _wrap(Widget child, {required Brightness brightness}) => MaterialApp(
 );
 
 void main() {
+  group('FinanceScaffold constrainWidth', () {
+    testWidgets('off by default - body is not width-capped', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const FinanceScaffold(title: 'Budget', body: Text('b')),
+          brightness: Brightness.light,
+        ),
+      );
+      expect(find.byType(AppResponsiveContent), findsNothing);
+    });
+
+    testWidgets('on - wraps the body in AppResponsiveContent', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const FinanceScaffold(
+            title: 'Budget',
+            constrainWidth: true,
+            body: Text('b'),
+          ),
+          brightness: Brightness.light,
+        ),
+      );
+      expect(find.byType(AppResponsiveContent), findsOneWidget);
+      expect(find.text('b'), findsOneWidget);
+    });
+  });
+
   group('FinanceStatusChip.forStatus', () {
     test('maps settled statuses to a positive tone', () {
       for (final s in ['Paid', 'compliant', 'Released', 'approved']) {

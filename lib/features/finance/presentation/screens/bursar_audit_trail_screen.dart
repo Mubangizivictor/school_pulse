@@ -24,6 +24,7 @@ class BursarAuditTrailScreen extends StatelessWidget {
 
     return FinanceScaffold(
       title: 'Audit trail',
+      constrainWidth: true,
       body: StreamBuilder<List<AuditEvent>>(
         stream: repo.watchAuditEvents(schoolId),
         builder: (context, snap) {

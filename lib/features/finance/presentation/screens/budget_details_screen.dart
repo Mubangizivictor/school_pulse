@@ -56,6 +56,7 @@ class _BudgetDetailsScreenState extends State<BudgetDetailsScreen> {
   Widget build(BuildContext context) {
     return FinanceScaffold(
       title: 'Budget Details',
+      constrainWidth: true,
       bottomBar: PrimaryActionBar(
         label: 'Create requisition',
         onPressed: () => Navigator.of(

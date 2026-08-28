@@ -95,6 +95,7 @@ class _FinancialReportsScreenState extends State<FinancialReportsScreen> {
   Widget build(BuildContext context) {
     return FinanceScaffold(
       title: 'Financial reports',
+      constrainWidth: true,
       body: Column(
         children: [
           Padding(

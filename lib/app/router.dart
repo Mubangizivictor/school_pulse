@@ -183,6 +183,7 @@ import 'package:school_pulse/features/finance/presentation/shell/bursar_shell.da
 import 'package:school_pulse/features/finance/presentation/shell/bursar_section.dart';
 import 'package:school_pulse/features/finance/presentation/screens/student_billing/student_bills_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/clearance_policy_editor_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/payment_voucher_screen.dart';
 import 'package:school_pulse/features/nurse/presentation/shell/nurse_shell.dart';
 import 'package:school_pulse/features/health/presentation/screens/nurse_student_lookup_screen.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
@@ -1296,6 +1297,14 @@ final router = GoRouter(
             GoRoute(
               path: 'clearance-policy',
               builder: (context, state) => const ClearancePolicyEditorScreen(),
+            ),
+            // Payment vouchers is reachable from the mobile "More" list; this
+            // route gives it a URL + deep link so it is also reachable on
+            // tablet/desktop/web (the sidebar button for it is added with the
+            // tablet-rail work in bursar_web_shell.dart).
+            GoRoute(
+              path: 'payment-vouchers',
+              builder: (context, state) => const PaymentVouchersListScreen(),
             ),
             GoRoute(
               path: 'audit',

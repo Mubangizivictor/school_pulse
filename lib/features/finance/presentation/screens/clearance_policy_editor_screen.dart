@@ -39,6 +39,7 @@ class ClearancePolicyEditorScreen extends StatelessWidget {
     if (roles.intersection(_allowedRoles).isEmpty) {
       return FinanceScaffold(
         title: 'Financial Clearance Policy',
+        constrainWidth: true,
         body: FinanceStates.empty(
           context,
           icon: Icons.lock_outline,
@@ -90,6 +91,7 @@ class _Editor extends StatelessWidget {
 
         return FinanceScaffold(
           title: 'Financial Clearance Policy',
+          constrainWidth: true,
           bottomBar:
               state.status == ClearancePolicyStatus.ready ||
                   state.status == ClearancePolicyStatus.saving
