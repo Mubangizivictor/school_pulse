@@ -15,8 +15,8 @@ import 'bursar_top_bar.dart';
 
 // Section screens.
 import 'package:school_pulse/features/finance/presentation/screens/web/bursar_web_overview_screen.dart';
-import 'package:school_pulse/features/finance/presentation/screens/bursar_student_lookup_screen.dart';
-import 'package:school_pulse/features/finance/presentation/screens/bursar_approvals_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/web/bursar_web_students_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/web/bursar_web_approvals_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_cash_bank_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/budget_details_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/expenditure_screen.dart';
@@ -131,9 +131,9 @@ class _BursarWebShellState extends State<BursarWebShell> {
       case _Section.overview:
         return const BursarWebOverviewScreen();
       case _Section.students:
-        return widget.studentDetail ?? const BursarStudentLookupScreen();
+        return widget.studentDetail ?? const BursarWebStudentsScreen();
       case _Section.approvals:
-        return const BursarApprovalsScreen();
+        return const BursarWebApprovalsScreen();
       case _Section.cashBank:
         return const BursarCashBankScreen();
       case _Section.budget:

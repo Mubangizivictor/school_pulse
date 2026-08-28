@@ -8,6 +8,7 @@ import 'package:school_pulse/injection_container.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/finance/data/repositories/bursar_ops_read_repository.dart';
+import 'package:school_pulse/features/finance/presentation/screens/financial_reports_screen.dart';
 import 'package:school_pulse/features/finance/presentation/widgets/finance_kit.dart';
 
 /// Cash & Bank tab (bottom-nav slot 3).
@@ -43,8 +44,11 @@ class BursarCashBankScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.description_outlined),
-            onPressed: () {},
+            icon: const Icon(Icons.assessment_outlined),
+            tooltip: 'Cashbook report',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const FinancialReportsScreen()),
+            ),
           ),
           const SizedBox(width: AppSpacing.s),
         ],

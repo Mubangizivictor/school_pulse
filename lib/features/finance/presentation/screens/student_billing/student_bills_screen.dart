@@ -29,11 +29,17 @@ class StudentBillsScreen extends StatelessWidget {
   final String studentId;
   final bool embedded;
 
+  /// The learner's display name. Falls back to the signed-in user's name for
+  /// backward compatibility with callers that don't have it (a bug the
+  /// desktop split-pane fixes by always passing the real name).
+  final String? studentName;
+
   const StudentBillsScreen({
     super.key,
     required this.schoolId,
     required this.studentId,
     this.embedded = false,
+    this.studentName,
   });
 
   static const _financeRoles = {
@@ -49,7 +55,8 @@ class StudentBillsScreen extends StatelessWidget {
     final canManage =
         auth is AuthAuthenticated &&
         auth.user.roles.any(_financeRoles.contains);
-    final studentName = auth is AuthAuthenticated ? auth.user.name : '';
+    final resolvedName =
+        studentName ?? (auth is AuthAuthenticated ? auth.user.name : '');
 
     final body = StreamBuilder<List<StudentBill>>(
       stream: sl<StudentBillingRepository>().watchBills(schoolId, studentId),
@@ -72,7 +79,7 @@ class StudentBillsScreen extends StatelessWidget {
         return _StatementBody(
           schoolId: schoolId,
           studentId: studentId,
-          studentName: studentName,
+          studentName: resolvedName,
           bills: bills,
           canManage: canManage,
           embedded: embedded,
