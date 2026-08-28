@@ -272,6 +272,7 @@ import 'package:school_pulse/features/hr/domain/repositories/pay_component_catal
 import 'package:school_pulse/features/hr/data/repositories/pay_component_catalogue_repository_impl.dart';
 import 'package:school_pulse/features/finance/domain/repositories/student_billing_repository.dart';
 import 'package:school_pulse/features/finance/data/repositories/student_billing_repository_impl.dart';
+import 'package:school_pulse/features/finance/data/repositories/bursar_ops_read_repository.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
 
 // Games
@@ -1203,6 +1204,13 @@ Future<void> init() async {
   // applyBillAdjustment/recordStudentPayment/reverseStudentPayment.
   sl.registerLazySingleton<StudentBillingRepository>(
     () => StudentBillingRepositoryImpl(firestore: sl(), functions: sl()),
+  );
+
+  // Bursar Phase 2/3 read models (Cash & Bank, Petty Cash, Suppliers,
+  // Payment Vouchers, Payroll, Audit trail). Read-only views; writes are
+  // server-side only per firestore.rules.
+  sl.registerLazySingleton<BursarOpsReadRepository>(
+    () => BursarOpsReadRepository(firestore: sl()),
   );
 
   // Features - Games

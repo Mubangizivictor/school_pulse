@@ -5,20 +5,22 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
-import 'package:school_pulse/features/hr/presentation/screens/payroll_management_screen.dart';
 import 'package:school_pulse/features/finance/presentation/widgets/finance_kit.dart';
-import 'budget_management_screen.dart';
+import 'budget_details_screen.dart';
 import 'expenditure_screen.dart';
+import 'payment_voucher_screen.dart';
+import 'bursar_suppliers_screen.dart';
+import 'bursar_petty_cash_screen.dart';
+import 'bursar_payroll_screen.dart';
+import 'bursar_audit_trail_screen.dart';
 import 'financial_reports_screen.dart';
 import 'student_eligibility_screen.dart';
 
 /// Bursar "More" tab (bottom-nav slot 4).
 ///
-/// The reference "More" screenshot lists: Budget, Expenses, Suppliers,
-/// Petty Cash, Payroll, Tax & NSSF, Reports, Audit trail. Items whose
-/// backend lands in a later phase (Suppliers, Petty Cash, Tax & NSSF, Audit
-/// trail) route to the shared "coming soon" state so nothing here shows
-/// fabricated data.
+/// The reference "More" screenshot: Budget, Expenses, Suppliers, Petty Cash,
+/// Payroll, Tax & NSSF, Reports, Audit trail. Every item now routes to a
+/// real screen (read-only where the write flow is still being built).
 class BursarMoreScreen extends StatelessWidget {
   const BursarMoreScreen({super.key});
 
@@ -26,7 +28,7 @@ class BursarMoreScreen extends StatelessWidget {
     _MoreItem(
       icon: Icons.pie_chart_outline_rounded,
       label: 'Budget',
-      builder: (_) => const BudgetManagementScreen(),
+      builder: (_) => const BudgetDetailsScreen(),
     ),
     _MoreItem(
       icon: Icons.request_page_outlined,
@@ -34,39 +36,29 @@ class BursarMoreScreen extends StatelessWidget {
       builder: (_) => const ExpenditureScreen(),
     ),
     _MoreItem(
+      icon: Icons.description_outlined,
+      label: 'Payment vouchers',
+      builder: (_) => const PaymentVouchersListScreen(),
+    ),
+    _MoreItem(
       icon: Icons.local_shipping_outlined,
       label: 'Suppliers',
-      builder: (_) => const _ComingSoonScreen(
-        title: 'Suppliers',
-        detail:
-            'Supplier profiles, invoices and payable balances are '
-            'being built.',
-      ),
+      builder: (_) => const BursarSuppliersScreen(),
     ),
     _MoreItem(
       icon: Icons.savings_outlined,
       label: 'Petty Cash',
-      builder: (_) => const _ComingSoonScreen(
-        title: 'Petty Cash',
-        detail:
-            'Float, cash-in/out ledger, vouchers and replenishment '
-            'are being built.',
-      ),
+      builder: (_) => const BursarPettyCashScreen(),
     ),
     _MoreItem(
       icon: Icons.badge_outlined,
       label: 'Payroll',
-      builder: (_) => const PayrollManagementScreen(),
+      builder: (_) => const BursarPayrollScreen(),
     ),
     _MoreItem(
       icon: Icons.receipt_long_outlined,
       label: 'Tax & NSSF',
-      builder: (_) => const _ComingSoonScreen(
-        title: 'Tax & NSSF',
-        detail:
-            'PAYE and NSSF compliance summaries and submission '
-            'reminders are being built.',
-      ),
+      builder: (_) => const BursarPayrollScreen(),
     ),
     _MoreItem(
       icon: Icons.assessment_outlined,
@@ -76,12 +68,7 @@ class BursarMoreScreen extends StatelessWidget {
     _MoreItem(
       icon: Icons.fact_check_outlined,
       label: 'Audit trail',
-      builder: (_) => const _ComingSoonScreen(
-        title: 'Audit trail',
-        detail:
-            'A read-only viewer over finance_audit_events is being '
-            'built.',
-      ),
+      builder: (_) => const BursarAuditTrailScreen(),
     ),
     _MoreItem(
       icon: Icons.verified_user_outlined,
@@ -182,19 +169,4 @@ class _MoreItem {
     required this.label,
     required this.builder,
   });
-}
-
-class _ComingSoonScreen extends StatelessWidget {
-  final String title;
-  final String detail;
-
-  const _ComingSoonScreen({required this.title, required this.detail});
-
-  @override
-  Widget build(BuildContext context) {
-    return FinanceScaffold(
-      title: title,
-      body: FinanceStates.comingSoon(context, feature: title, detail: detail),
-    );
-  }
 }

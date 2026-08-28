@@ -1361,6 +1361,56 @@ service cloud.firestore {
       allow read: if isSameSchool(schoolId) && isStaff();
       allow write: if false;
     }
+
+    // ---- Bursar Phase 2/3 read models (Cash & Bank, Petty Cash,
+    // Suppliers, Payment Vouchers, Payroll). Staff of the tenant may read;
+    // every write is server-side only (Cloud Functions / Admin SDK / the
+    // demo seed script), never from the client, so money records stay
+    // immutable and auditable. Screens are read-only views for now.
+    match /schools/{schoolId}/bank_accounts/{accountId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if false;
+    }
+    match /schools/{schoolId}/bank_ledger/{entryId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if false;
+    }
+    match /schools/{schoolId}/bank_reconciliations/{reconId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if false;
+    }
+    match /schools/{schoolId}/petty_cash/{floatId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if false;
+    }
+    match /schools/{schoolId}/petty_cash_ledger/{entryId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if false;
+    }
+    match /schools/{schoolId}/petty_cash_vouchers/{voucherId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if false;
+    }
+    match /schools/{schoolId}/finance_suppliers/{supplierId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if false;
+    }
+    match /schools/{schoolId}/supplier_invoices/{invoiceId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if false;
+    }
+    match /schools/{schoolId}/payment_vouchers/{voucherId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if false;
+    }
+    match /schools/{schoolId}/payroll_runs/{runId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if false;
+    }
+    match /schools/{schoolId}/payroll_compliance/{periodId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if false;
+    }
     // Verification engine's own audit trail (Phase 1). This match block
     // was missing even though VerificationEventRecorderImpl has pushed to
     // this path since Phase 1 shipped - every push was silently rejected
