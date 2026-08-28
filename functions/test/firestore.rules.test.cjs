@@ -2650,3 +2650,95 @@ describe('Fee-plan/billing backend (functions/student_fee_billing.js): '
       await assertFails(getDoc(doc(dbFor('ownerA'), 'schools/schoolA/audit_events/fake')));
     });
   });
+
+describe('Parent Payments redesign (functions/payment_codes.js): '
+  + 'payment_config/channels, pending_payments, finance_audit_events', () => {
+  async function seedPaymentConfig() {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'schools/schoolA/payment_config/channels'), {
+        schoolId: 'schoolA', schoolDisplayName: 'Victoria High School',
+        mtnMomo: { enabled: true, ussdCode: '*165*80#', steps: [], merchantLabel: 'School Pay' },
+        airtelMoney: { enabled: false, ussdCode: '', steps: [], merchantLabel: '' },
+        bankAccounts: [], otherChannels: [],
+      });
+      await setDoc(doc(db, 'schools/schoolB/payment_config/channels'), {
+        schoolId: 'schoolB', schoolDisplayName: 'School B',
+        mtnMomo: { enabled: false, ussdCode: '', steps: [], merchantLabel: '' },
+        airtelMoney: { enabled: false, ussdCode: '', steps: [], merchantLabel: '' },
+        bankAccounts: [], otherChannels: [],
+      });
+      await setDoc(doc(db, 'schools/schoolA/pending_payments/pendingA'), {
+        schoolId: 'schoolA', studentId: 'studentA', paymentCode: 'VHS-P1234567',
+        channel: 'mtn_momo', amountUgx: 200000, status: 'pending',
+        dedupeKey: 'mtn_momo:txA:200000', createdAt: new Date(),
+      });
+      await setDoc(doc(db, 'schools/schoolA/finance_audit_events/eventA'), {
+        schoolId: 'schoolA', type: 'pending_confirmed', actorUid: 'bursarA',
+        targetId: 'pendingA', occurredAt: new Date(),
+      });
+    });
+  }
+
+  test('payment_config/channels: any signed-in member of the tenant can '
+    + 'read it (parents need it for How to pay); a different tenant\'s '
+    + 'member is denied; writes are callable-only', async () => {
+    await seedPaymentConfig();
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'schools/schoolA/payment_config/channels')));
+    await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/payment_config/channels')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools/schoolA/payment_config/channels')));
+    await assertFails(getDoc(doc(dbFor('bursarB'), 'schools/schoolA/payment_config/channels')));
+    await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/payment_config/channels'), {
+      schoolDisplayName: 'Forged Name',
+    }));
+    await assertFails(updateDoc(doc(dbFor('bursarA'), 'schools/schoolA/payment_config/channels'), {
+      schoolDisplayName: 'Forged Name',
+    }));
+  });
+
+  test('pending_payments: staff of the owning school can read the '
+    + 'reconciliation queue; parents and other-school staff are denied; '
+    + 'writes are callable-only (no client self-confirmation)', async () => {
+    await seedPaymentConfig();
+    await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/pending_payments/pendingA')));
+    await assertFails(getDoc(doc(dbFor('parentA'), 'schools/schoolA/pending_payments/pendingA')));
+    await assertFails(getDoc(doc(dbFor('bursarB'), 'schools/schoolA/pending_payments/pendingA')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'schools/schoolA/pending_payments/pendingA')));
+    await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/pending_payments/forged'), {
+      studentId: 'studentA', amountUgx: 999999999, status: 'confirmed',
+    }));
+    await assertFails(updateDoc(doc(dbFor('bursarA'), 'schools/schoolA/pending_payments/pendingA'), {
+      status: 'confirmed',
+    }));
+  });
+
+  test('finance_audit_events: staff of the owning school can read the '
+    + 'audit trail; parents and other-school staff are denied; writes are '
+    + 'admin-SDK only', async () => {
+    await seedPaymentConfig();
+    await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/finance_audit_events/eventA')));
+    await assertFails(getDoc(doc(dbFor('parentA'), 'schools/schoolA/finance_audit_events/eventA')));
+    await assertFails(getDoc(doc(dbFor('bursarB'), 'schools/schoolA/finance_audit_events/eventA')));
+    await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/finance_audit_events/forged'), {
+      type: 'forged', actorUid: 'bursarA',
+    }));
+  });
+
+  test('student_accounts.paymentCode: readable by the owning school\'s '
+    + 'staff and the linked parent via the existing student_accounts rule; '
+    + 'denied to another school\'s staff and an unlinked parent', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'schools/schoolA/student_accounts/studentA'), {
+        schoolId: 'schoolA', studentId: 'studentA', currency: 'UGX',
+        paymentCode: 'VHS-P1234567', paymentCodeGeneratedBy: 'bursarA',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/student_accounts/studentA')));
+    await assertSucceeds(getDoc(doc(dbFor('parentA'), 'schools/schoolA/student_accounts/studentA')));
+    await assertFails(getDoc(doc(dbFor('bursarB'), 'schools/schoolA/student_accounts/studentA')));
+    await assertFails(getDoc(doc(dbFor('parentOtherA'), 'schools/schoolA/student_accounts/studentA')));
+    await assertFails(updateDoc(doc(dbFor('bursarA'), 'schools/schoolA/student_accounts/studentA'), {
+      paymentCode: 'FORGED-CODE',
+    }));
+  });
+});

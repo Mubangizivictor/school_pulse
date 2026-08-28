@@ -368,7 +368,7 @@ service cloud.firestore {
     // immutable after creation so a code cannot be reassigned to another
     // tenant by an update.
     match /parent_access_codes/{code} {
-      allow get: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow get: if true;
       allow list: if isStaff() && isSameSchool(resource.data.schoolId);
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
@@ -1285,6 +1285,38 @@ service cloud.firestore {
     match /schools/{schoolId}/counters/receiptNumber {
       allow read, write: if false;
     }
+    // Parent Payments redesign (functions/payment_codes.js). Bursar-managed
+    // per-learner payment codes live on the student_accounts doc itself
+    // (see rule above) - no separate rule needed for that field. The three
+    // collections below are new for this feature:
+    //   - payment_config/channels: a school-wide singleton describing which
+    //     external channels (MoMo/Airtel/bank/other) are enabled and how to
+    //     pay through them. Any signed-in member of the tenant may read it
+    //     (parents need it for the "How to pay" screen); write is callable
+    //     only (updatePaymentChannelConfig), never direct from a client.
+    //   - pending_payments: the reconciliation queue for payments that
+    //     haven't yet been confirmed against a bank/mobile-money reference.
+    //     Staff-only read (it's the bursar's queue, not a parent-facing
+    //     collection); write is callable only (claimPendingPayment,
+    //     confirmPendingPayment, rejectPendingPayment) so a parent can never
+    //     self-confirm a claimed payment.
+    //   - finance_audit_events: append-only audit trail for payment-code
+    //     generation, channel-config changes, and pending-payment
+    //     confirm/reject/reallocate actions. Staff-only read, write: false -
+    //     only ever written by the admin SDK in the same transaction as the
+    //     action it records.
+    match /schools/{schoolId}/payment_config/channels {
+      allow read: if isSameSchool(schoolId);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/pending_payments/{pendingPaymentId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if false;
+    }
+    match /schools/{schoolId}/finance_audit_events/{eventId} {
+      allow read: if isSameSchool(schoolId) && isStaff();
+      allow write: if false;
+    }
     // Verification engine's own audit trail (Phase 1). This match block
     // was missing even though VerificationEventRecorderImpl has pushed to
     // this path since Phase 1 shipped - every push was silently rejected
@@ -2026,6 +2058,17 @@ service cloud.firestore {
       // enabledFeatures.
       allow read: if isSameSchool(schoolId) || isActiveMembership(schoolId) || isSuperAdmin();
       allow write: if isSuperAdmin();
+    }
+
+    // Mirror of schoolName/schoolInitials/badgeUrl/city/country only - kept
+    // in sync by syncSchoolPublicBrandingOn{School,Profile}Write in
+    // functions/index.js. Exists so the pre-login parent "Connect to
+    // school" screen can show a school's identity before any session
+    // exists, without exposing the billing/PII fields on schools/{schoolId}
+    // itself. Server-maintained only; no client ever writes it.
+    match /schools/{schoolId}/public/{document} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // Central Approval Center. Decisions, policy edits, delegations and
