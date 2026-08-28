@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
+import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -54,6 +56,25 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
       () => setState(() => _query = _searchController.text.trim()),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Seed / update the filter from the console top-bar search (`?q=`).
+    final q = _routeQuery();
+    if (q.isNotEmpty && q != _searchController.text) {
+      _searchController.text = q;
+      _query = q;
+    }
+  }
+
+  String _routeQuery() {
+    try {
+      return GoRouterState.of(context).uri.queryParameters['q']?.trim() ?? '';
+    } catch (_) {
+      return '';
+    }
   }
 
   @override
@@ -134,6 +155,75 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
         .where(_matchesQuery)
         .where((s) => _matchesFilter(_views[s.id]))
         .toList();
+    final isDesktop = ResponsiveBuilder.isDesktop(context);
+
+    final filterMenu = PopupMenuButton<_FeeFilter>(
+      icon: Icon(
+        Icons.filter_list_rounded,
+        color: _filter == _FeeFilter.all
+            ? AppColors.textPrimary(context)
+            : AppColors.primary(context),
+      ),
+      onSelected: (f) => setState(() => _filter = f),
+      itemBuilder: (context) => const [
+        PopupMenuItem(value: _FeeFilter.all, child: Text('All learners')),
+        PopupMenuItem(value: _FeeFilter.paid, child: Text('Paid')),
+        PopupMenuItem(value: _FeeFilter.partial, child: Text('Partial')),
+        PopupMenuItem(value: _FeeFilter.overdue, child: Text('Overdue')),
+      ],
+    );
+
+    // On desktop the console top bar already carries the global search, so
+    // this screen drops its own app bar + inline search field and just shows
+    // the title + filter above the list.
+    if (isDesktop) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(32, 24, 32, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Students & fees',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.4,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+                if (_query.isNotEmpty) ...[
+                  const SizedBox(width: 12),
+                  Chip(
+                    label: Text('“$_query”'),
+                    onDeleted: () {
+                      _searchController.clear();
+                      GoRouter.of(context).go('/staff/bursar/students');
+                    },
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+                const Spacer(),
+                filterMenu,
+              ],
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated(context),
+                  borderRadius: AppRadius.large,
+                  border: Border.all(color: AppColors.border(context)),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: _buildBody(visible),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
@@ -151,21 +241,7 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
           ),
         ),
         actions: [
-          PopupMenuButton<_FeeFilter>(
-            icon: Icon(
-              Icons.filter_list_rounded,
-              color: _filter == _FeeFilter.all
-                  ? AppColors.textPrimary(context)
-                  : AppColors.primary(context),
-            ),
-            onSelected: (f) => setState(() => _filter = f),
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: _FeeFilter.all, child: Text('All learners')),
-              PopupMenuItem(value: _FeeFilter.paid, child: Text('Paid')),
-              PopupMenuItem(value: _FeeFilter.partial, child: Text('Partial')),
-              PopupMenuItem(value: _FeeFilter.overdue, child: Text('Overdue')),
-            ],
-          ),
+          filterMenu,
           const SizedBox(width: AppSpacing.s),
         ],
       ),

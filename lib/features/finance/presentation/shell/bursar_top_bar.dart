@@ -51,17 +51,19 @@ class _BursarTopBarState extends State<BursarTopBar> {
 
   void _submitSearch(String q) {
     final query = q.trim();
-    if (query.isEmpty) return;
+    final encoded = Uri.encodeComponent(query);
     // Route to the section most likely to answer it.
     final looksLikeVoucher = RegExp(
       r'(pv|rcp|inv)[- ]',
       caseSensitive: false,
     ).hasMatch(query);
-    context.go(
-      looksLikeVoucher
-          ? '/staff/bursar/approvals?q=${Uri.encodeComponent(query)}'
-          : '/staff/bursar/students?q=${Uri.encodeComponent(query)}',
-    );
+    final base = looksLikeVoucher
+        ? '/staff/bursar/approvals'
+        : '/staff/bursar/students';
+    final target = query.isEmpty ? base : '$base?q=$encoded';
+    final current = GoRouterState.of(context).uri.toString();
+    if (current == target) return;
+    context.go(target);
   }
 
   @override
@@ -84,10 +86,7 @@ class _BursarTopBarState extends State<BursarTopBar> {
           _circle(
             context,
             child: _MessagesBadgeIcon(),
-            onTap: () => _openInSection(
-              context,
-              const MessagesListScreen(),
-            ),
+            onTap: () => _openInSection(context, const MessagesListScreen()),
           ),
           const SizedBox(width: 8),
           _circle(
@@ -97,10 +96,8 @@ class _BursarTopBarState extends State<BursarTopBar> {
               size: 19,
               color: AppColors.textSecondary(context),
             ),
-            onTap: () => _openInSection(
-              context,
-              const NotificationListScreen(),
-            ),
+            onTap: () =>
+                _openInSection(context, const NotificationListScreen()),
           ),
           const SizedBox(width: 8),
           const _ProfileMenu(),
