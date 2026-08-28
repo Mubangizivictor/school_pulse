@@ -37,7 +37,11 @@ import 'package:school_pulse/features/finance/presentation/screens/bursar_report
 /// section derived from the URL so every section is deep-linkable and
 /// refresh-safe on web.
 class BursarWebShell extends StatefulWidget {
-  /// When true (tablet), the sidebar collapses to an icon rail.
+  /// Tablet (768–1023): an intentional two-column layout — a slim but
+  /// **labelled** navigation rail (not a tooltip-only icon strip) beside
+  /// the same section content as desktop, so every Bursar workflow that
+  /// exists on mobile/desktop is here too. `< desktop` widths pass this;
+  /// desktop passes neither and gets the full 248px sidebar.
   final bool compact;
 
   /// A deep-linked student statement. Keeping it in this shell preserves the
@@ -167,7 +171,9 @@ class _BursarWebShellState extends State<BursarWebShell> {
   @override
   Widget build(BuildContext context) {
     final active = _sectionForLocation(context);
-    final sidebarWidth = widget.compact ? 76.0 : 248.0;
+    // Tablet gets a real labelled rail (200px), not a 76px icon strip —
+    // an intentional two-column layout for the 768–1023 band.
+    final sidebarWidth = widget.compact ? 200.0 : 248.0;
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
@@ -242,7 +248,7 @@ class _Sidebar extends StatelessWidget {
             child: ListView(
               padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
               children: [
-                if (!compact) _GroupLabel('MAIN'),
+                _GroupLabel('MAIN'),
                 for (final s in _mainNav)
                   _Item(
                     section: s,
@@ -251,7 +257,7 @@ class _Sidebar extends StatelessWidget {
                     onTap: () => onSelect(s),
                   ),
                 const SizedBox(height: 14),
-                if (!compact) _GroupLabel('FINANCE TOOLS'),
+                _GroupLabel('FINANCE TOOLS'),
                 for (final s in _toolsNav)
                   _Item(
                     section: s,
@@ -364,38 +370,28 @@ class _Item extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: AppRadius.medium,
-          child: Tooltip(
-            message: compact ? section.label : '',
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: compact ? 0 : 12,
-                vertical: 9,
-              ),
-              child: Row(
-                mainAxisAlignment: compact
-                    ? MainAxisAlignment.center
-                    : MainAxisAlignment.start,
-                children: [
-                  Icon(section.icon, size: 19, color: fg),
-                  if (!compact) ...[
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        section.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                          color: fg,
-                        ),
-                      ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 10 : 12,
+              vertical: 9,
+            ),
+            child: Row(
+              children: [
+                Icon(section.icon, size: 19, color: fg),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    section.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: fg,
                     ),
-                  ],
-                ],
-              ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
