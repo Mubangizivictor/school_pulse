@@ -6,6 +6,7 @@ import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/responsive/app_responsive_content.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/student/presentation/bloc/students_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/students_state.dart';
@@ -76,6 +77,8 @@ class ProfileScreen extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 32),
+                    _buildLogoutButton(context),
+                    const SizedBox(height: 12),
                   ],
                 ),
               ),
@@ -272,6 +275,54 @@ class ProfileScreen extends StatelessWidget {
                 color: AppColors.textMuted(context),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => _confirmLogout(context),
+        icon: Icon(Icons.logout_rounded, color: AppColors.danger(context)),
+        label: Text(
+          'Logout',
+          style: TextStyle(
+            color: AppColors.danger(context),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(52),
+          side: BorderSide(color: AppColors.danger(context)),
+        ),
+      ),
+    );
+  }
+
+  void _confirmLogout(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<AuthBloc>().add(LogoutPressed());
+              Navigator.pop(dialogContext);
+              context.go('/welcome');
+            },
+            child: Text(
+              'Logout',
+              style: TextStyle(color: AppColors.danger(context)),
+            ),
+          ),
         ],
       ),
     );

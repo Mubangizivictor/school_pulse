@@ -20,6 +20,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/finance/domain/entities/student_bill.dart';
 import 'package:school_pulse/features/finance/domain/repositories/student_billing_repository.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/parent/presentation/bloc/parent_timetable_bloc.dart';
 import 'package:school_pulse/features/parent/widgets/child_selector_sheet.dart';
 import 'package:school_pulse/features/parent_access/domain/entities/parent_module_visibility.dart';
@@ -307,6 +308,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
         ),
       ),
       actions: [
+        const NotificationBellButton(),
         IconButton(
           tooltip: themeProvider.themeMode == ThemeMode.dark
               ? 'Use light theme'

@@ -15,7 +15,15 @@ import 'package:school_pulse/features/student/presentation/bloc/students_state.d
 class NotificationBellButton extends StatefulWidget {
   final Color? backgroundColor;
 
-  const NotificationBellButton({super.key, this.backgroundColor});
+  /// Lets nested shells retain their own navigator instead of routing to the
+  /// global staff shell.
+  final VoidCallback? onPressed;
+
+  const NotificationBellButton({
+    super.key,
+    this.backgroundColor,
+    this.onPressed,
+  });
 
   @override
   State<NotificationBellButton> createState() => _NotificationBellButtonState();
@@ -82,7 +90,7 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
       // better than an exception thrown mid-build.
       return IconButton(
         icon: const Icon(Icons.notifications_none_outlined),
-        onPressed: () => context.push(notificationRoute),
+        onPressed: widget.onPressed ?? () => context.push(notificationRoute),
         style: backgroundColor != null
             ? IconButton.styleFrom(backgroundColor: backgroundColor)
             : null,
@@ -104,7 +112,8 @@ class _NotificationBellButtonState extends State<NotificationBellButton> {
           children: [
             IconButton(
               icon: const Icon(Icons.notifications_none_outlined),
-              onPressed: () => context.push(notificationRoute),
+              onPressed:
+                  widget.onPressed ?? () => context.push(notificationRoute),
               style: backgroundColor != null
                   ? IconButton.styleFrom(backgroundColor: backgroundColor)
                   : null,

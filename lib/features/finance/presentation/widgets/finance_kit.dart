@@ -17,11 +17,12 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
-import 'package:go_router/go_router.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
+import 'package:school_pulse/features/messages/presentation/screens/messages_list_screen.dart';
 import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/notifications/presentation/screens/notification_list_screen.dart';
 
 /// The Bursar module's top bar for the tab roots (Home, Students, Approvals,
 /// Cash and Bank, More).
@@ -118,14 +119,24 @@ class _BursarAppBar extends StatelessWidget {
                 ),
               ),
               _CircleAction(
-                onTap: () => context.push('/staff/messages'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MessagesListScreen()),
+                ),
                 child: const MessagesNavIcon(
                   icon: Icons.chat_bubble_outline_rounded,
                   size: 18,
                 ),
               ),
               const SizedBox(width: 8),
-              const _CircleAction(child: NotificationBellButton()),
+              _CircleAction(
+                child: NotificationBellButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationListScreen(),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

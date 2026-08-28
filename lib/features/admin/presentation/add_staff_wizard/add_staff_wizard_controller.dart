@@ -80,6 +80,10 @@ class AddStaffWizardController extends ChangeNotifier {
   String? resultStaffCode;
   String? resultUid;
 
+  /// Admin-set initial password must be at least 8 chars. Enforced before
+  /// leaving the Access stage and mirrored by the field validators in the UI.
+  bool get isInitialPasswordValid => draft.initialPassword.trim().length >= 8;
+
   List<UserRole> get rolesNeedingConfig => draft.selectedRoles
       .where(
         (r) =>
@@ -128,6 +132,7 @@ class AddStaffWizardController extends ChangeNotifier {
         _rolesNext();
         break;
       case WizardStage.access:
+        if (!isInitialPasswordValid) return;
         _stage = WizardStage.review;
         break;
       case WizardStage.review:
@@ -347,8 +352,7 @@ class AddStaffWizardController extends ChangeNotifier {
         name: draft.fullName,
         schoolId: schoolId,
         roles: draft.selectedRoles.toList(),
-        password:
-            '', // server always generates its own; see AuthRemoteDataSource.
+        password: draft.initialPassword,
         assignedClass: classTeacherConfig?.className,
         subjects: subjectTeacherConfig?.subjectAssignments,
         academicYearId: currentAcademicYearId,

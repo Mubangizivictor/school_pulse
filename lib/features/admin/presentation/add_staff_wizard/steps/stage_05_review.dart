@@ -168,11 +168,9 @@ class Stage05Review extends StatelessWidget {
             icon: Icons.lock_outline,
             title: 'Account access',
             summary: [
-              draft.sendLoginDetailsViaEmail
-                  ? 'Secure setup link will be sent'
-                  : 'No setup email will be sent',
+              'Initial password set by admin',
               draft.forcePasswordChange
-                  ? 'password update required'
+                  ? 'password update required on first sign-in'
                   : 'no forced password update',
             ].join(' · '),
             onEdit: () => controller.goToStage(WizardStage.access),
@@ -195,9 +193,8 @@ class Stage05Review extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    draft.sendLoginDetailsViaEmail
-                        ? 'A secure setup email will be sent.'
-                        : 'No setup email will be sent.',
+                    'Share the password you set with the staff member. '
+                    'They will be asked to choose their own on first sign-in.',
                     style: TextStyle(
                       color: AppColors.textSecondary(context),
                       fontSize: 12.5,
@@ -428,9 +425,10 @@ class _SuccessScreen extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      draft.sendLoginDetailsViaEmail
-                          ? 'A secure password-setup link has been sent. No password is displayed or emailed.'
-                          : 'No setup email was sent, as selected. No password is displayed or emailed.',
+                      draft.forcePasswordChange
+                          ? 'Sign-in is ready with the password you set. The staff '
+                                'member will choose their own on first sign-in.'
+                          : 'Sign-in is ready with the password you set.',
                       style: TextStyle(color: AppColors.textPrimary(context)),
                     ),
                   ],

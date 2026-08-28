@@ -14,7 +14,9 @@ const enrollmentAuditFunctions = require("./enrollment_audit")({ admin, onCall, 
 const { maybeAutoUpdateReportCardFinancialAccess } = require("./report_card_financial_gate")({ admin });
 Object.assign(exports, require("./student_fee_billing")({ admin, onCall, HttpsError, maybeAutoUpdateReportCardFinancialAccess }));
 Object.assign(exports, require("./staff_payroll_structure")({ admin, onCall, HttpsError }));
+Object.assign(exports, require("./payroll_compliance")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./payment_codes")({ admin, onCall, HttpsError }));
+Object.assign(exports, require("./payment_vouchers")({ admin, onCall, HttpsError }));
 
 /**
  * Enqueue a templated transactional email for the `public_functions`
@@ -180,6 +182,17 @@ async function approvalCaller(request, schoolId) {
   return user;
 }
 function isApprovalAdmin(user) { return APPROVAL_ADMIN_ROLES.includes(user.role) || (user.roles || []).some((r) => APPROVAL_ADMIN_ROLES.includes(r)) || (user.permissions || []).includes("approvals.approve"); }
+async function approvalStageApprovers(schoolId, stage) {
+  const users = await admin.firestore().collection("users").where("schoolId", "==", schoolId).get();
+  return users.docs.filter((doc) => {
+    const user = doc.data() || {};
+    if (user.isActive === false) return false;
+    const roles = Array.isArray(user.roles) ? user.roles : [user.role].filter(Boolean);
+    const permissions = user.permissions || [];
+    return (!stage.requiredRoleTemplate || roles.includes(stage.requiredRoleTemplate)) &&
+      (permissions.includes(stage.requiredPermission || "approvals.approve") || isApprovalAdmin(user));
+  }).map((doc) => doc.id);
+}
 // Pure so it can be unit-tested without the emulator; `nowMs` defaults to
 // Date.now() but is injectable for expiry tests.
 function isDelegationValid(delegation, moduleKey, requestType, nowMs = Date.now()) {
@@ -203,7 +216,10 @@ exports.submitApprovalRequest = onCall(async (request) => {
   const db = admin.firestore(); const requestId = d.idempotencyKey || `${d.sourceRecordId}_${d.requestType}`;
   const ref = approvalRef(schoolId, requestId); const policy = await db.doc(`schools/${schoolId}/approval_policies/${d.approvalPolicyId}`).get();
   if (!policy.exists || policy.data().status !== "active") throw new HttpsError("failed-precondition", "The approval policy is not active.");
-  await db.runTransaction(async (tx) => { const existing = await tx.get(ref); if (existing.exists && ["submitted", "pending", "inReview", "awaitingInformation", "escalated", "delegated"].includes(existing.data().currentStatus)) throw new HttpsError("already-exists", "An active request already exists for this source record."); const now = admin.firestore.FieldValue.serverTimestamp(); tx.set(ref, { approvalRequestId: requestId, institutionId: schoolId, moduleKey: d.moduleKey, requestType: d.requestType, sourceRecordType: d.sourceRecordType, sourceRecordId: d.sourceRecordId, sourceRoute: d.sourceRoute || "", title: d.title, summary: d.summary || "", requestedBy: request.auth.uid, requesterRole: user.role || "", requesterDepartment: user.departmentId || null, requesterCampus: user.campusId || null, requesterDivision: user.divisionId || null, currentStage: (policy.data().stages || [])[0]?.stageId || "", currentStatus: "pending", priority: d.priority || "normal", sensitivity: d.sensitivity || "normal", amount: d.amount || null, oldValue: d.oldValue || null, proposedValue: d.proposedValue || null, reason: d.reason || null, attachments: d.attachments || [], requiredApprovers: [], approvalPolicyId: d.approvalPolicyId, escalationPolicyId: d.escalationPolicyId || null, sourceRecordVersion: String(d.sourceRecordVersion), createdAt: now, submittedAt: now, dueAt: d.dueAt ? admin.firestore.Timestamp.fromDate(new Date(d.dueAt)) : null, resolvedAt: null, version: 1, correlationId: d.correlationId || requestId }); });
+  const firstStage = (policy.data().stages || [])[0] || {};
+  const requiredApprovers = await approvalStageApprovers(schoolId, firstStage);
+  if (!requiredApprovers.length) throw new HttpsError("failed-precondition", "No active approver is configured for the first workflow stage.");
+  await db.runTransaction(async (tx) => { const existing = await tx.get(ref); if (existing.exists && ["submitted", "pending", "inReview", "awaitingInformation", "escalated", "delegated"].includes(existing.data().currentStatus)) throw new HttpsError("already-exists", "An active request already exists for this source record."); const now = admin.firestore.FieldValue.serverTimestamp(); tx.set(ref, { approvalRequestId: requestId, institutionId: schoolId, moduleKey: d.moduleKey, requestType: d.requestType, sourceRecordType: d.sourceRecordType, sourceRecordId: d.sourceRecordId, sourceRoute: d.sourceRoute || "", title: d.title, summary: d.summary || "", requestedBy: request.auth.uid, requesterRole: user.role || "", requesterDepartment: user.departmentId || null, requesterCampus: user.campusId || null, requesterDivision: user.divisionId || null, currentStage: firstStage.stageId || "", currentStatus: "pending", priority: d.priority || "normal", sensitivity: d.sensitivity || "normal", amount: d.amount || null, oldValue: d.oldValue || null, proposedValue: d.proposedValue || null, reason: d.reason || null, attachments: d.attachments || [], requiredApprovers, approvalPolicyId: d.approvalPolicyId, escalationPolicyId: d.escalationPolicyId || null, sourceRecordVersion: String(d.sourceRecordVersion), createdAt: now, submittedAt: now, dueAt: d.dueAt ? admin.firestore.Timestamp.fromDate(new Date(d.dueAt)) : null, resolvedAt: null, version: 1, correlationId: d.correlationId || requestId }); });
   await ref.collection("actions").add({ actorId: request.auth.uid, action: "submitted", stage: "", comment: "", timestamp: admin.firestore.FieldValue.serverTimestamp(), correlationId: d.correlationId || requestId });
   return { requestId };
 });
@@ -217,15 +233,20 @@ exports.decideApprovalRequest = onCall(async (request) => {
   if (!preSnap.exists) throw new HttpsError("not-found", "Approval request not found.");
   const preRow = preSnap.data();
   const hasDelegation = isApprovalAdmin(user) ? false : await hasValidApprovalDelegation(schoolId, uid, preRow.moduleKey, preRow.requestType);
-  if (!isApprovalAdmin(user) && !hasDelegation) throw new HttpsError("permission-denied", "Your current assignment does not allow approval.");
+  if (!(preRow.requiredApprovers || []).includes(uid) && !hasDelegation) throw new HttpsError("permission-denied", "You are not assigned to the current approval step.");
+  const prePolicy = await db.doc(`schools/${schoolId}/approval_policies/${preRow.approvalPolicyId}`).get();
+  const preStages = prePolicy.exists ? prePolicy.data().stages || [] : [];
+  const preIndex = preStages.findIndex((s) => s.stageId === preRow.currentStage);
+  const preNext = preIndex >= 0 && preIndex < preStages.length - 1 ? preStages[preIndex + 1] : null;
+  const nextApprovers = preNext ? await approvalStageApprovers(schoolId, preNext) : [];
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref); if (!snap.exists) throw new HttpsError("not-found", "Approval request not found."); const row = snap.data();
     if (row.currentStatus !== "pending" && row.currentStatus !== "partiallyApproved") throw new HttpsError("failed-precondition", "This request is no longer awaiting a decision.");
-    if (row.requestedBy === uid) throw new HttpsError("permission-denied", "Self approval is not allowed.");
     if (d.expectedVersion != null && row.version !== d.expectedVersion) throw new HttpsError("aborted", "The request changed; reload it before deciding.");
     const policySnap = await tx.get(db.doc(`schools/${schoolId}/approval_policies/${row.approvalPolicyId}`));
     if (!policySnap.exists || policySnap.data().status !== "active") throw new HttpsError("failed-precondition", "The workflow policy is no longer active.");
     const policy = policySnap.data(); const stages = policy.stages || []; const index = stages.findIndex((s) => s.stageId === row.currentStage); const stage = stages[index] || {};
+    if (row.requestedBy === uid && !policy.selfApprovalAllowed) throw new HttpsError("permission-denied", "Self approval is not allowed.");
     let status, nextStage = row.currentStage, stageApprovals = (row.stageApprovals || 0);
     if (d.decision === "approved") {
       stageApprovals += 1;
@@ -244,7 +265,8 @@ exports.decideApprovalRequest = onCall(async (request) => {
       status = d.decision;
     }
     const resolved = ["approved", "rejected", "returned", "cancelled"].includes(status) && !(d.decision === "approved" && status === "pending");
-    tx.update(ref, { currentStatus: status, currentStage: nextStage, stageApprovals: status === "pending" || status === "partiallyApproved" ? stageApprovals : 0, version: admin.firestore.FieldValue.increment(1), resolvedAt: resolved ? admin.firestore.FieldValue.serverTimestamp() : null });
+    if (d.decision === "approved" && status === "pending" && !nextApprovers.length) throw new HttpsError("failed-precondition", "No active approver is configured for the next workflow stage.");
+    tx.update(ref, { currentStatus: status, currentStage: nextStage, requiredApprovers: status === "pending" && d.decision === "approved" ? nextApprovers : row.requiredApprovers || [], stageApprovals: status === "pending" || status === "partiallyApproved" ? stageApprovals : 0, version: admin.firestore.FieldValue.increment(1), resolvedAt: resolved ? admin.firestore.FieldValue.serverTimestamp() : null });
     tx.set(ref.collection("actions").doc(), { actorId: uid, action: d.decision, stage: row.currentStage, comment: String(d.comment || ""), viaDelegation: hasDelegation, timestamp: admin.firestore.FieldValue.serverTimestamp(), correlationId: row.correlationId || "" });
   });
   return { ok: true };
@@ -556,7 +578,7 @@ exports.createStaffAccount = onCall(async (request) => {
     gender, phoneNumber, alternatePhone, address, nationality,
     emergencyContact, roleConfigs, idempotencyKey,
     forcePasswordChange = false, sendLoginDetailsViaEmail = false,
-    selectedPayComponentIds,
+    selectedPayComponentIds, password,
   } = request.data || {};
   // Accept the current multi-role `roles` array, falling back to a legacy
   // singular `role` from any older client build still calling this.
@@ -573,7 +595,17 @@ exports.createStaffAccount = onCall(async (request) => {
   if (roles.length === 0 || !roles.every((r) => STAFF_ROLES.includes(r))) {
     throw new HttpsError("invalid-argument", "Invalid staff role.");
   }
-
+  // The admin sets the staff member's initial password in the Add Staff
+  // wizard; the account is created with it and forcePasswordChange makes
+  // them pick their own on first sign-in. A missing/short value falls back
+  // to a generated temporary password below.
+  const adminPassword =
+    (typeof password === "string" && password.trim().length >= 8)
+      ? password
+      : null;
+  if (typeof password === "string" && password.length > 0 && !adminPassword) {
+    throw new HttpsError("invalid-argument", "Password must be at least 8 characters.");
+  }
   // The Admin SDK bypasses Firestore rules entirely, so this check is the
   // only gate on who may create staff accounts - it must happen here.
   const callerDoc = await admin.firestore().collection("users").doc(auth.uid).get();
@@ -738,7 +770,7 @@ exports.createStaffAccount = onCall(async (request) => {
     });
   }
 
-  const temporaryPassword = generateTemporaryPassword();
+  const temporaryPassword = adminPassword || generateTemporaryPassword();
 
   const schoolDoc = await db.collection("schools").doc(schoolId).get();
   const schoolPrefix = schoolPrefixFrom(schoolDoc.exists ? schoolDoc.data().name : null);

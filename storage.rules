@@ -11,6 +11,12 @@ service firebase.storage {
          (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles is list &&
           firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles.hasAny(['director', 'headTeacher', 'schoolAdmin', 'hrOfficer'])));
     }
+    function canManagePayroll(schoolId) {
+      return isSameSchool(schoolId) &&
+        (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['bursar', 'hrOfficer', 'schoolAdmin', 'headTeacher', 'director'] ||
+         (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles is list &&
+          firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles.hasAny(['bursar', 'hrOfficer', 'schoolAdmin', 'headTeacher', 'director'])));
+    }
     function isStaffOwner(schoolId, staffUid) {
       return isSameSchool(schoolId) && request.auth.uid == staffUid;
     }
@@ -80,6 +86,13 @@ service firebase.storage {
       allow read: if isSchoolStaffAdmin(schoolId) || isStaffOwner(schoolId, staffUid);
       allow create, update: if (isSchoolStaffAdmin(schoolId) || isStaffOwner(schoolId, staffUid)) && isSafeStaffDocument();
       allow delete: if isSchoolStaffAdmin(schoolId) || isStaffOwner(schoolId, staffUid);
+    }
+    // A statutory proof may be uploaded once by finance, then becomes an
+    // immutable evidence object referenced by submitPayrollRemittance.
+    match /schools/{schoolId}/payroll_remittances/{runId}/{fileName} {
+      allow read: if canManagePayroll(schoolId);
+      allow create: if canManagePayroll(schoolId) && isSafeStaffDocument();
+      allow update, delete: if false;
     }
     function isConversationParticipant(conversationId) {
       return request.auth != null &&

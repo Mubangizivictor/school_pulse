@@ -8,14 +8,39 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import '../add_staff_wizard_controller.dart';
 import '../role_config/access_preview_mapper.dart';
 
-/// Stage 4 - Access: "Set up account access". Replaces the previous
-/// Access Preview + Login & Security steps with one stage matching the
-/// reference design - the login email summary, secure-setup toggles, and
-/// an access preview that names role/module scope truthfully.
-class Stage04Access extends StatelessWidget {
+/// Stage 4 - Access: "Set up account access". The admin sets an initial
+/// password here; the staff member is then forced to choose their own on
+/// first sign-in (forcePasswordChange). Also shows the login email summary
+/// and a truthful access preview of role/module scope.
+class Stage04Access extends StatefulWidget {
   final VoidCallback onSaveDraft;
 
   const Stage04Access({super.key, required this.onSaveDraft});
+
+  @override
+  State<Stage04Access> createState() => _Stage04AccessState();
+}
+
+class _Stage04AccessState extends State<Stage04Access> {
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+  late final TextEditingController _passwordController;
+  late final TextEditingController _confirmController;
+
+  @override
+  void initState() {
+    super.initState();
+    final draft = context.read<AddStaffWizardController>().draft;
+    _passwordController = TextEditingController(text: draft.initialPassword);
+    _confirmController = TextEditingController(text: draft.initialPassword);
+  }
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +61,7 @@ class Stage04Access extends StatelessWidget {
       stageLabels: kWizardStageLabels,
       currentStageIndex: stageIndexFor(WizardStage.access),
       onBack: () => controller.back(),
-      onSaveDraft: onSaveDraft,
+      onSaveDraft: widget.onSaveDraft,
       footer: WizardFooterButtons(
         backLabel: 'Back',
         nextLabel: 'Continue',
@@ -71,15 +96,94 @@ class Stage04Access extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          _ToggleRow(
-            title: 'Send secure setup link',
-            helper:
-                'The staff member receives a one-time password setup email.',
-            value: draft.sendLoginDetailsViaEmail,
-            onChanged: (v) {
-              draft.sendLoginDetailsViaEmail = v;
-              controller.notifyDraftChanged();
-            },
+          _labeledField(
+            context,
+            'Initial password',
+            TextFormField(
+              controller: _passwordController,
+              obscureText: _obscurePassword,
+              autofillHints: const [],
+              decoration: InputDecoration(
+                hintText: 'At least 8 characters',
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 18,
+                  ),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
+                ),
+              ),
+              onChanged: (v) {
+                draft.initialPassword = v;
+                controller.notifyDraftChanged();
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          _labeledField(
+            context,
+            'Confirm password',
+            TextFormField(
+              controller: _confirmController,
+              obscureText: _obscureConfirm,
+              autofillHints: const [],
+              decoration: InputDecoration(
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirm
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 18,
+                  ),
+                  onPressed: () =>
+                      setState(() => _obscureConfirm = !_obscureConfirm),
+                ),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+          if (_passwordController.text.isNotEmpty &&
+              _passwordController.text != _confirmController.text)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Passwords do not match.',
+                style: TextStyle(color: AppColors.error, fontSize: 12),
+              ),
+            )
+          else if (_passwordController.text.isNotEmpty &&
+              _passwordController.text.trim().length < 8)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Use at least 8 characters.',
+                style: TextStyle(color: AppColors.error, fontSize: 12),
+              ),
+            ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline,
+                size: 16,
+                color: AppColors.textMuted(context),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Share this password with the staff member securely. They '
+                  'will be asked to set their own the first time they sign in.',
+                  style: TextStyle(
+                    color: AppColors.textMuted(context),
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
           ),
           const Divider(height: 28),
           _ToggleRow(
@@ -91,27 +195,6 @@ class Stage04Access extends StatelessWidget {
               draft.forcePasswordChange = v;
               controller.notifyDraftChanged();
             },
-          ),
-          const SizedBox(height: 20),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.shield_outlined,
-                size: 16,
-                color: AppColors.textMuted(context),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'We never display or send temporary passwords.',
-                  style: TextStyle(
-                    color: AppColors.textMuted(context),
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
           ),
           const SizedBox(height: 28),
           const Divider(height: 1),

@@ -27,6 +27,20 @@ service cloud.firestore {
       return isSignedIn() && myRole() != 'parent' && myRole() != 'student';
     }
 
+    // Payroll exposes salaries and statutory deductions.  It is deliberately
+    // narrower than ordinary finance reads: teachers, learners and parents
+    // must never be able to query a payroll run or a remittance attachment.
+    function canReadPayroll() {
+      return isSignedIn() && (
+        myRole() in ['bursar', 'hrOfficer', 'schoolAdmin', 'headTeacher', 'director'] ||
+        'bursar' in myUser().get('roles', []) ||
+        'hrOfficer' in myUser().get('roles', []) ||
+        'schoolAdmin' in myUser().get('roles', []) ||
+        'headTeacher' in myUser().get('roles', []) ||
+        'director' in myUser().get('roles', [])
+      );
+    }
+
     // The SaaS platform owner. Deliberately checked against myRole() only
     // (not hasAnyRole/roles[]) - superAdmin is never a secondary role on a
     // school-scoped staff account, it is seeded once via a server-side
@@ -1404,11 +1418,19 @@ service cloud.firestore {
       allow write: if false;
     }
     match /schools/{schoolId}/payroll_runs/{runId} {
-      allow read: if isSameSchool(schoolId) && isStaff();
+      allow read: if isSameSchool(schoolId) && canReadPayroll();
       allow write: if false;
     }
     match /schools/{schoolId}/payroll_compliance/{periodId} {
-      allow read: if isSameSchool(schoolId) && isStaff();
+      allow read: if isSameSchool(schoolId) && canReadPayroll();
+      allow write: if false;
+    }
+    match /schools/{schoolId}/payroll_remittances/{remittanceId} {
+      allow read: if isSameSchool(schoolId) && canReadPayroll();
+      allow write: if false;
+    }
+    match /schools/{schoolId}/payroll_preparations/{periodId} {
+      allow read: if isSameSchool(schoolId) && canReadPayroll();
       allow write: if false;
     }
     // Verification engine's own audit trail (Phase 1). This match block
@@ -1877,8 +1899,9 @@ service cloud.firestore {
     // client-side and locked this down; existing docs written before this
     // fix have no schoolId and will fail isSameSchool() until re-saved.
     match /payroll/{id} {
-      allow read, update, delete: if isStaff() && isSameSchool(resource.data.schoolId);
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      // Retired client-authored ledger. Payroll is now available only through
+      // tenant-scoped immutable `payroll_runs` read models and callables.
+      allow read, write: if false;
     }
     match /pickup_logs/{id} {
       allow read, write: if isStaff();

@@ -89,6 +89,11 @@ class AddStaffDraft {
   bool forcePasswordChange = true;
   bool sendLoginDetailsViaEmail = true;
 
+  // Admin-set initial password. Deliberately NOT serialized to the saved-draft
+  // JSON so a plaintext password never lands in local storage - the admin
+  // re-enters it if a draft is restored.
+  String initialPassword = '';
+
   // Step 10: Documents (staged only; uploaded post-creation)
   List<StagedDocument> documents = [];
 

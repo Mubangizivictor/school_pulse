@@ -97,6 +97,14 @@ class BursarOpsReadRepository {
           .snapshots()
           .map((s) => s.docs.isEmpty ? null : PayrollRun.fromDoc(s.docs.first));
 
+  Stream<List<PayrollRemittance>> watchPayrollRemittances(
+    String schoolId,
+    String runId,
+  ) => _col(schoolId, 'payroll_remittances')
+      .where('runId', isEqualTo: runId)
+      .snapshots()
+      .map((s) => s.docs.map(PayrollRemittance.fromDoc).toList());
+
   // ---- Audit trail --------------------------------------------------
 
   Stream<List<AuditEvent>> watchAuditEvents(
@@ -345,6 +353,8 @@ class PayrollRun {
   final bool payeCompliant;
   final bool nssfCompliant;
   final List<PayrollLine> lines;
+  final String status;
+  final String? paymentReference;
 
   PayrollRun({
     required this.id,
@@ -359,6 +369,8 @@ class PayrollRun {
     required this.payeCompliant,
     required this.nssfCompliant,
     required this.lines,
+    required this.status,
+    this.paymentReference,
   });
 
   factory PayrollRun.fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
@@ -378,6 +390,46 @@ class PayrollRun {
       lines: ((j['lines'] as List?) ?? const [])
           .map((e) => PayrollLine.fromMap((e as Map).cast<String, dynamic>()))
           .toList(),
+      status: j['status'] as String? ?? 'draft',
+      paymentReference: j['paymentReference'] as String?,
+    );
+  }
+}
+
+class PayrollRemittance {
+  final String id;
+  final String type;
+  final int amountUgx;
+  final DateTime? dueDate;
+  final String status;
+  final String reference;
+  final DateTime? remittedAt;
+  final String? verifierName;
+
+  const PayrollRemittance({
+    required this.id,
+    required this.type,
+    required this.amountUgx,
+    required this.dueDate,
+    required this.status,
+    required this.reference,
+    required this.remittedAt,
+    this.verifierName,
+  });
+
+  bool get isVerified => status == 'verified';
+
+  factory PayrollRemittance.fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
+    final j = d.data() ?? const {};
+    return PayrollRemittance(
+      id: d.id,
+      type: j['type'] as String? ?? '',
+      amountUgx: _int(j['amountUgx']),
+      dueDate: _date(j['dueDate']),
+      status: j['status'] as String? ?? 'pending',
+      reference: j['reference'] as String? ?? '',
+      remittedAt: _date(j['remittedAt']),
+      verifierName: j['verifierName'] as String?,
     );
   }
 }
