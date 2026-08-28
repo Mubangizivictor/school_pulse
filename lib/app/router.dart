@@ -180,7 +180,6 @@ import 'package:school_pulse/features/shared/tasks/presentation/screens/task_rem
 import 'package:school_pulse/features/shared/tasks/domain/entities/mock_tasks.dart';
 import 'package:school_pulse/features/lesson_plans/presentation/lesson_plans_screen.dart';
 import 'package:school_pulse/features/finance/presentation/shell/bursar_shell.dart';
-import 'package:school_pulse/features/finance/presentation/screens/bursar_student_lookup_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/student_billing/student_bills_screen.dart';
 import 'package:school_pulse/features/nurse/presentation/shell/nurse_shell.dart';
 import 'package:school_pulse/features/health/presentation/screens/nurse_student_lookup_screen.dart';
@@ -1226,7 +1225,56 @@ final router = GoRouter(
           routes: [
             GoRoute(
               path: 'lookup',
-              builder: (context, state) => const BursarStudentLookupScreen(),
+              builder: (context, state) => const BursarShell(initialTab: 1),
+            ),
+            // Desktop console sections. Each re-renders BursarShell (which
+            // shows the width-appropriate chrome and reads the active
+            // section from the URL) so every section is deep-linkable and
+            // refresh-safe on web. On mobile the same paths fall back to
+            // the bottom-nav shell.
+            GoRoute(
+              path: 'overview',
+              builder: (context, state) => const BursarShell(),
+            ),
+            GoRoute(
+              path: 'students',
+              builder: (context, state) => const BursarShell(initialTab: 1),
+            ),
+            GoRoute(
+              path: 'approvals',
+              builder: (context, state) => const BursarShell(initialTab: 2),
+            ),
+            GoRoute(
+              path: 'cash-bank',
+              builder: (context, state) => const BursarShell(initialTab: 3),
+            ),
+            GoRoute(
+              path: 'budget',
+              builder: (context, state) => const BursarShell(),
+            ),
+            GoRoute(
+              path: 'expenses',
+              builder: (context, state) => const BursarShell(),
+            ),
+            GoRoute(
+              path: 'suppliers',
+              builder: (context, state) => const BursarShell(),
+            ),
+            GoRoute(
+              path: 'petty-cash',
+              builder: (context, state) => const BursarShell(),
+            ),
+            GoRoute(
+              path: 'payroll',
+              builder: (context, state) => const BursarShell(),
+            ),
+            GoRoute(
+              path: 'reports',
+              builder: (context, state) => const BursarShell(),
+            ),
+            GoRoute(
+              path: 'audit',
+              builder: (context, state) => const BursarShell(),
             ),
             GoRoute(
               path: 'student/:studentId/bills',
@@ -1235,9 +1283,12 @@ final router = GoRouter(
                 final schoolId = auth is AuthAuthenticated
                     ? auth.user.schoolId
                     : '';
-                return StudentBillsScreen(
-                  schoolId: schoolId,
-                  studentId: state.pathParameters['studentId']!,
+                return BursarShell(
+                  initialTab: 1,
+                  studentDetail: StudentBillsScreen(
+                    schoolId: schoolId,
+                    studentId: state.pathParameters['studentId']!,
+                  ),
                 );
               },
             ),

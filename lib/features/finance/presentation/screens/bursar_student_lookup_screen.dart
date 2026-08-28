@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
@@ -12,6 +11,7 @@ import 'package:school_pulse/features/student/domain/repositories/student_reposi
 import 'package:school_pulse/injection_container.dart';
 import '../../domain/entities/bursar_student_view.dart';
 import '../../domain/services/bursar_student_projection_service.dart';
+import 'student_billing/student_bills_screen.dart';
 import '../widgets/finance_kit.dart';
 
 /// Which fee-status band a learner falls in - drives the row chip and the
@@ -23,7 +23,7 @@ enum _FeeFilter { all, paid, partial, overdue }
 /// Matches the reference "Student Fees" screenshot: a search field + filter,
 /// then a scrollable list of learners with `name`, `admissionNumber · class`,
 /// a Paid/Partial/Overdue chip and their outstanding balance. Tapping a row
-/// opens that learner's statement (`/staff/bursar/student/:id/bills`).
+/// opens that learner's statement inside the Students tab navigator.
 /// Balances come from [BursarStudentProjectionService] (permission-gated).
 class BursarStudentLookupScreen extends StatefulWidget {
   const BursarStudentLookupScreen({super.key});
@@ -265,7 +265,18 @@ class _BursarStudentLookupScreenState extends State<BursarStudentLookupScreen> {
           return _StudentRow(
             student: s,
             view: v,
-            onTap: () => context.push('/staff/bursar/student/${s.id}/bills'),
+            onTap: () {
+              final auth = context.read<AuthBloc>().state;
+              if (auth is! AuthAuthenticated) return;
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => StudentBillsScreen(
+                    schoolId: auth.user.schoolId,
+                    studentId: s.id,
+                  ),
+                ),
+              );
+            },
           );
         },
       ),

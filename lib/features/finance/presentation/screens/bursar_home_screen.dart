@@ -507,22 +507,22 @@ class _QuickActions extends StatelessWidget {
       (
         icon: Icons.add_card_outlined,
         label: 'Receive\npayment',
-        onTap: () => BursarShell.goToTab(context, 1),
+        onTap: () => BursarShellNav.goToTab(context, 1),
       ),
       (
         icon: Icons.receipt_long_outlined,
         label: 'Student\nfees',
-        onTap: () => BursarShell.goToTab(context, 1),
+        onTap: () => BursarShellNav.goToTab(context, 1),
       ),
       (
         icon: Icons.verified_outlined,
         label: 'Approvals',
-        onTap: () => BursarShell.goToTab(context, 2),
+        onTap: () => BursarShellNav.goToTab(context, 2),
       ),
       (
         icon: Icons.account_balance_outlined,
         label: 'Cash &\nbank',
-        onTap: () => BursarShell.goToTab(context, 3),
+        onTap: () => BursarShellNav.goToTab(context, 3),
       ),
     ];
     return Column(

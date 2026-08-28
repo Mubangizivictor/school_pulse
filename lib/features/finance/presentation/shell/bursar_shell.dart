@@ -1,36 +1,96 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_home_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_student_lookup_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_approvals_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_cash_bank_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_more_screen.dart';
+import 'package:school_pulse/features/finance/presentation/shell/bursar_web_shell.dart';
 
-/// Bottom-navigation shell for the Bursar / Finance module.
+/// Width-adaptive shell for the Bursar / Finance module.
 ///
-/// 5 tabs, matching the locked reference screenshots exactly:
-/// **Home | Students | Approvals | Cash & Bank | More**. The active tab is
-/// black (icon + label), inactive tabs grey (icon + label) — the label is
-/// always shown, active or not. Each tab owns a nested [Navigator] so
-/// screens pushed on top of a tab keep this bottom nav visible
-/// (push-on-top-of-tab pattern). Receive Payment is reached from a Home
-/// quick action or the student statement screen, not a tab.
-class BursarShell extends StatefulWidget {
-  const BursarShell({super.key});
+/// - `< 600` (mobile): the 5-tab bottom-navigation shell
+///   (**Home | Students | Approvals | Cash & Bank | More**) — unchanged.
+/// - `600–1023` (tablet): the desktop console with a collapsed icon rail.
+/// - `>= 1024` (desktop): the full [BursarWebShell] — sidebar + top bar +
+///   11 URL-addressable sections.
+///
+/// Mobile keeps per-tab nested [Navigator]s (push-on-top-of-tab). Receive
+/// Payment is reached from a Home quick action or the student statement
+/// screen, not a tab.
+class BursarShell extends StatelessWidget {
+  /// The tab that opens for a direct mobile route into this module.
+  final int initialTab;
 
-  /// Lets a descendant (e.g. a Home quick action) switch the visible tab
-  /// instead of pushing a duplicate screen onto the Home navigator.
-  /// Tab indices: 0 Home · 1 Students · 2 Approvals · 3 Cash & Bank · 4 More.
+  /// A student statement opened through a deep link. It is deliberately
+  /// rendered inside the Students tab navigator so the mobile bottom nav is
+  /// still present, just as it is for statements opened from the list.
+  final Widget? studentDetail;
+
+  const BursarShell({super.key, this.initialTab = 0, this.studentDetail});
+
+  @override
+  Widget build(BuildContext context) {
+    return ResponsiveBuilder(
+      builder: (context, layout) {
+        switch (layout) {
+          case ResponsiveLayout.desktop:
+            return BursarWebShell(studentDetail: studentDetail);
+          case ResponsiveLayout.tablet:
+            return BursarWebShell(compact: true, studentDetail: studentDetail);
+          case ResponsiveLayout.mobile:
+            return _BursarMobileShell(
+              initialTab: initialTab,
+              studentDetail: studentDetail,
+            );
+        }
+      },
+    );
+  }
+}
+
+/// The original mobile bottom-navigation shell.
+class _BursarMobileShell extends StatefulWidget {
+  final int initialTab;
+  final Widget? studentDetail;
+
+  const _BursarMobileShell({required this.initialTab, this.studentDetail});
+
+  @override
+  State<_BursarMobileShell> createState() => _BursarMobileShellState();
+}
+
+/// Lets a descendant (e.g. a Home quick action) switch the visible mobile
+/// tab instead of pushing a duplicate screen onto the Home navigator; a
+/// no-op on the desktop console (which routes by URL). Tab indices:
+/// 0 Home · 1 Students · 2 Approvals · 3 Cash & Bank · 4 More.
+class BursarShellNav {
+  const BursarShellNav._();
   static void goToTab(BuildContext context, int index) {
-    context.findAncestorStateOfType<_BursarShellState>()?._selectTab(index);
+    context.findAncestorStateOfType<_BursarMobileShellState>()?._selectTab(
+      index,
+    );
+  }
+}
+
+class _BursarMobileShellState extends State<_BursarMobileShell> {
+  late int _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.studentDetail == null ? widget.initialTab : 1;
   }
 
   @override
-  State<BursarShell> createState() => _BursarShellState();
-}
-
-class _BursarShellState extends State<BursarShell> {
-  int _selectedIndex = 0;
+  void didUpdateWidget(covariant _BursarMobileShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.studentDetail != oldWidget.studentDetail ||
+        widget.initialTab != oldWidget.initialTab) {
+      _selectedIndex = widget.studentDetail == null ? widget.initialTab : 1;
+    }
+  }
 
   void _selectTab(int index) {
     if (!mounted) return;
@@ -45,7 +105,11 @@ class _BursarShellState extends State<BursarShell> {
 
   static const List<_TabSpec> _tabs = [
     _TabSpec(Icons.home_outlined, Icons.home_rounded, 'Home'),
-    _TabSpec(Icons.people_outline_rounded, Icons.people_alt_rounded, 'Students'),
+    _TabSpec(
+      Icons.people_outline_rounded,
+      Icons.people_alt_rounded,
+      'Students',
+    ),
     _TabSpec(Icons.verified_outlined, Icons.verified_rounded, 'Approvals'),
     _TabSpec(
       Icons.account_balance_outlined,
@@ -60,7 +124,7 @@ class _BursarShellState extends State<BursarShell> {
       case 0:
         return const BursarHomeScreen();
       case 1:
-        return const BursarStudentLookupScreen();
+        return widget.studentDetail ?? const BursarStudentLookupScreen();
       case 2:
         return const BursarApprovalsScreen();
       case 3:
@@ -176,7 +240,11 @@ class _NavItem extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(selected ? spec.selectedIcon : spec.icon, size: 24, color: color),
+          Icon(
+            selected ? spec.selectedIcon : spec.icon,
+            size: 24,
+            color: color,
+          ),
           const SizedBox(height: 3),
           Text(
             spec.label,
