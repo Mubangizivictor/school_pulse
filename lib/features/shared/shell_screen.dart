@@ -89,14 +89,6 @@ class StaffShell extends StatelessWidget {
     return false;
   }
 
-  bool _isNurse(BuildContext context) {
-    final state = context.read<AuthBloc>().state;
-    if (state is AuthAuthenticated) {
-      return state.user.roles.contains(UserRole.nurse);
-    }
-    return false;
-  }
-
   bool _isDirector(BuildContext context) {
     final state = context.read<AuthBloc>().state;
     if (state is AuthAuthenticated) {
@@ -156,17 +148,6 @@ class StaffShell extends StatelessWidget {
       if (location.startsWith('$root/roll-call')) return 2;
       if (location.startsWith('$root/dorms')) return 1;
       if (isMoreSubRoute(location)) return 4;
-      return 0;
-    }
-
-    if (_isNurse(context)) {
-      if (location.startsWith('/staff/nurse/records') ||
-          location.startsWith('/staff/nurse/visits') ||
-          location.startsWith('/staff/nurse/medications')) {
-        return 1;
-      }
-      if (location.startsWith('/staff/messages')) return 2;
-      if (isMoreSubRoute(location)) return 3;
       return 0;
     }
 
@@ -267,26 +248,6 @@ class StaffShell extends StatelessWidget {
           break;
         case 4:
           context.go('$root/more');
-          break;
-      }
-      return;
-    }
-
-    if (_isNurse(context)) {
-      switch (index) {
-        case 0:
-          context.go(_homePath(context));
-          break;
-        case 1:
-          context.go('/staff/nurse/records');
-          break;
-        case 2:
-          context.go('/staff/messages');
-          break;
-        case 3:
-          // Nurse has a dedicated five-tab clinic shell. Never hand its More
-          // tab to the shared staff/admin profile area.
-          context.go('/staff/nurse');
           break;
       }
       return;
@@ -546,29 +507,6 @@ class StaffShell extends StatelessWidget {
       ),
     ];
 
-    final List<NavigationDestination> nurseDestinations = [
-      const NavigationDestination(
-        icon: Icon(Icons.home_outlined, size: 24),
-        selectedIcon: Icon(Icons.home_rounded, size: 24),
-        label: 'Home',
-      ),
-      const NavigationDestination(
-        icon: Icon(Icons.assignment_outlined, size: 24),
-        selectedIcon: Icon(Icons.assignment_rounded, size: 24),
-        label: 'Records',
-      ),
-      const NavigationDestination(
-        icon: MessagesNavIcon(icon: Icons.chat_bubble_outline_rounded),
-        selectedIcon: MessagesNavIcon(icon: Icons.chat_bubble_rounded),
-        label: 'Messages',
-      ),
-      const NavigationDestination(
-        icon: Icon(Icons.grid_view_outlined, size: 24),
-        selectedIcon: Icon(Icons.grid_view_rounded, size: 24),
-        label: 'More',
-      ),
-    ];
-
     final isDirector = _isDirector(context);
     final location = GoRouterState.of(context).uri.path;
     // Direct enrolment owns its complete-screen navigation and draft
@@ -591,8 +529,6 @@ class StaffShell extends StatelessWidget {
               : classTeacherDestinations)
         : isBoarding
         ? boardingDestinations
-        : _isNurse(context)
-        ? nurseDestinations
         : operationalDestinations;
 
     return Scaffold(
