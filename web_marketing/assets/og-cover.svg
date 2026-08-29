@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="School Pulse — Educate, Empower, Excel">
+  <rect width="1200" height="630" fill="#0c1116"/>
+  <rect x="0" y="0" width="1200" height="8" fill="#0b5fff"/>
+  <text x="80" y="250" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="86" font-weight="700" fill="#ffffff">School Pulse</text>
+  <text x="80" y="330" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="40" fill="#a3aeb9">School management software for Uganda</text>
+  <text x="80" y="400" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="30" fill="#4d8bff">Educate &#8226; Empower &#8226; Excel</text>
+  <text x="80" y="560" font-family="ui-monospace, Menlo, monospace" font-size="26" fill="#55606b">schoolpulseapp.com</text>
+</svg>
