@@ -48,13 +48,8 @@ class NurseMoreScreen extends StatelessWidget {
         _Group(
           rows: [
             _Row(
-              Icons.settings_outlined,
-              'Settings',
-              () => context.push('/staff/more'),
-            ),
-            _Row(
-              Icons.verified_user_outlined,
-              'Audit trail',
+              Icons.history_outlined,
+              'Clinic activity',
               () => context.push('/staff/nurse/history'),
             ),
           ],
