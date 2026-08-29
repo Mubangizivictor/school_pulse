@@ -88,6 +88,17 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Keep the two message streams locked to opposite edges. This is explicit
+    // rather than relying on Column cross-axis sizing, which caused short
+    // bubbles to appear centred on some iOS layouts. Per the chat convention
+    // used here, sent messages are on the left and received messages on the
+    // right.
+    final bubbleAlignment = message.isMe
+        ? Alignment.centerLeft
+        : Alignment.centerRight;
+    final bubbleCrossAxisAlignment = message.isMe
+        ? CrossAxisAlignment.start
+        : CrossAxisAlignment.end;
 
     return Container(
       padding: const EdgeInsets.only(bottom: AppSpacing.m),
@@ -96,159 +107,170 @@ class MessageBubble extends StatelessWidget {
           ? (isDark ? AppColors.grey850 : AppColors.grey100)
           : null,
       child: Column(
-        crossAxisAlignment: message.isMe
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
         children: [
           if (!message.isMe)
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 4),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundColor: isDark
-                        ? AppColors.grey850
-                        : AppColors.grey100,
-                    backgroundImage: senderAvatarUrl?.isNotEmpty == true
-                        ? NetworkImage(senderAvatarUrl!)
-                        : null,
-                    child: senderAvatarUrl?.isNotEmpty == true
-                        ? null
-                        : Text(
-                            _initials(message.senderName),
-                            style: AppTypography.labelSmall.copyWith(
-                              color: isDark ? Colors.white : Colors.black,
-                              fontWeight: FontWeight.w800,
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 4, bottom: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: isDark
+                          ? AppColors.grey850
+                          : AppColors.grey100,
+                      backgroundImage: senderAvatarUrl?.isNotEmpty == true
+                          ? NetworkImage(senderAvatarUrl!)
+                          : null,
+                      child: senderAvatarUrl?.isNotEmpty == true
+                          ? null
+                          : Text(
+                              _initials(message.senderName),
+                              style: AppTypography.labelSmall.copyWith(
+                                color: isDark ? Colors.white : Colors.black,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
-                          ),
-                  ),
-                  const SizedBox(width: 7),
-                  Text(
-                    message.senderName,
-                    style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.textMuted(context),
-                      fontWeight: FontWeight.w700,
                     ),
-                  ),
-                ],
-              ),
-            ),
-          GestureDetector(
-            onTap: selectionMode ? onToggleSelected : null,
-            onLongPress: message.isDeleted || selectionMode
-                ? null
-                : () => _showMessageActions(context),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.8,
-              ),
-              decoration: BoxDecoration(
-                color: message.isMe
-                    ? (isDark ? Colors.white : Colors.black)
-                    : (isDark ? AppColors.grey850 : AppColors.grey50),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: message.isMe
-                      ? (isDark ? Colors.white : Colors.black)
-                      : (isDark ? AppColors.borderDark : AppColors.grey200),
-                  width: 1.25,
+                    const SizedBox(width: 7),
+                    Text(
+                      message.senderName,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textMuted(context),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (message.replyToId != null) _buildQuote(context, isDark),
-                  if (!message.isDeleted) _buildAttachment(context, isDark),
-                  if (message.isDeleted)
-                    Text(
-                      'This message was deleted',
-                      style: TextStyle(
-                        fontStyle: FontStyle.italic,
-                        fontSize: 13,
+            ),
+          Align(
+            alignment: bubbleAlignment,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: bubbleCrossAxisAlignment,
+              children: [
+                GestureDetector(
+                  onTap: selectionMode ? onToggleSelected : null,
+                  onLongPress: message.isDeleted || selectionMode
+                      ? null
+                      : () => _showMessageActions(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.78,
+                    ),
+                    decoration: BoxDecoration(
+                      // Both modes maintain contrast: the sent surface flips
+                      // black/white, while received messages stay a distinct
+                      // neutral surface with a visible border.
+                      color: message.isMe
+                          ? (isDark ? Colors.white : Colors.black)
+                          : (isDark ? AppColors.grey850 : AppColors.grey50),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
                         color: message.isMe
-                            ? (isDark ? Colors.black : Colors.white)
-                            : AppColors.textMuted(context),
-                      ),
-                    )
-                  else if (message.content.isNotEmpty)
-                    Text(
-                      message.content,
-                      textScaler: TextScaler.linear(textScale),
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: message.isMe
-                            ? (isDark ? Colors.black : Colors.white)
-                            : (isDark ? Colors.white : Colors.black),
-                        height: 1.4,
+                            ? (isDark ? Colors.white : Colors.black)
+                            : (isDark
+                                  ? AppColors.borderDark
+                                  : AppColors.grey200),
+                        width: 1.25,
                       ),
                     ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (message.isStarred) ...[
-                        Icon(
-                          Icons.star,
-                          size: 10,
-                          color: message.isMe
-                              ? (isDark ? Colors.black : Colors.white)
-                              : (isDark ? Colors.white : Colors.black),
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                      if (message.isPinned) ...[
-                        Icon(
-                          Icons.push_pin,
-                          size: 10,
-                          color: message.isMe
-                              ? (isDark ? Colors.black : Colors.white)
-                              : (isDark ? Colors.white : Colors.black),
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                      if (message.editedAt != null) ...[
-                        Text(
-                          'edited',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            color: message.isMe
-                                ? (isDark ? Colors.black : Colors.white)
-                                : AppColors.textMuted(context),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (message.replyToId != null)
+                          _buildQuote(context, isDark),
+                        if (!message.isDeleted)
+                          _buildAttachment(context, isDark),
+                        if (message.isDeleted)
+                          Text(
+                            'This message was deleted',
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
+                              fontSize: 13,
+                              color: message.isMe
+                                  ? (isDark ? Colors.black : Colors.white)
+                                  : AppColors.textMuted(context),
+                            ),
+                          )
+                        else if (message.content.isNotEmpty)
+                          Text(
+                            message.content,
+                            textScaler: TextScaler.linear(textScale),
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: message.isMe
+                                  ? (isDark ? Colors.black : Colors.white)
+                                  : (isDark ? Colors.white : Colors.black),
+                              height: 1.4,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
+                        const SizedBox(height: 6),
+                        _buildMetadataRow(context, isDark),
                       ],
-                      Text(
-                        '${DateFormat('HH:mm').format(message.timestamp)} · '
-                        '${message.isSending ? 'Sending' : (message.isRead ? 'Read' : 'Delivered')}',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: message.isMe
-                              ? (isDark ? Colors.black : Colors.white)
-                              : AppColors.textMuted(context),
-                        ),
-                      ),
-                      if (message.isMe) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          message.isRead ? Icons.done_all : Icons.done,
-                          size: 12,
-                          color: isDark ? Colors.black : Colors.white,
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+                if (message.reactions.isNotEmpty)
+                  _buildReactions(context, isDark),
+              ],
             ),
           ),
-          if (message.reactions.isNotEmpty) _buildReactions(context, isDark),
         ],
       ),
+    );
+  }
+
+  Widget _buildMetadataRow(BuildContext context, bool isDark) {
+    final onSentBubble = isDark ? Colors.black : Colors.white;
+    final onReceivedBubble = isDark ? Colors.white : Colors.black;
+    final color = message.isMe ? onSentBubble : onReceivedBubble;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (message.isStarred) ...[
+          Icon(Icons.star, size: 10, color: color),
+          const SizedBox(width: 4),
+        ],
+        if (message.isPinned) ...[
+          Icon(Icons.push_pin, size: 10, color: color),
+          const SizedBox(width: 4),
+        ],
+        if (message.editedAt != null) ...[
+          Text(
+            'edited',
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
+        Text(
+          '${DateFormat('HH:mm').format(message.timestamp)} · '
+          '${message.isSending ? 'Sending' : (message.isRead ? 'Read' : 'Delivered')}',
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+        if (message.isMe) ...[
+          const SizedBox(width: 4),
+          Icon(
+            message.isRead ? Icons.done_all : Icons.done,
+            size: 12,
+            color: onSentBubble,
+          ),
+        ],
+      ],
     );
   }
 
