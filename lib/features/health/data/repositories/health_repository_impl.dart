@@ -59,6 +59,7 @@ class HealthRepositoryImpl implements HealthRepository {
       outcome: visit.outcome,
       recordedBy: visit.recordedBy,
       schoolId: visit.schoolId,
+      attachmentPaths: visit.attachmentPaths,
     );
   }
 

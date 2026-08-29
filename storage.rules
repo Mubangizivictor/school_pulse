@@ -31,6 +31,22 @@ service firebase.storage {
          request.resource.contentType == 'application/msword' ||
          request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.*'));
     }
+    // Clinical-record access mirrors firestore.rules' canManageClinicalRecords():
+    // a nurse or school-leadership role, scoped to the caller's own school.
+    // hasAnyRole()'s 2026-08-26 relaxation does NOT apply to clinical data.
+    function canManageClinicalRecords(schoolId) {
+      return isSameSchool(schoolId) &&
+        (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['nurse', 'schoolAdmin', 'headTeacher', 'deputyHead', 'director'] ||
+         (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles is list &&
+          firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles.hasAny(['nurse', 'schoolAdmin', 'headTeacher', 'deputyHead', 'director'])));
+    }
+    // A clinic-visit attachment: an image or a PDF, capped at 10 MB. No Office
+    // formats — a clinic photographs or scans, it does not attach spreadsheets.
+    function isSafeClinicalAttachment() {
+      return request.resource.size < 10 * 1024 * 1024 &&
+        (request.resource.contentType.matches('image/(png|jpe?g|webp)') ||
+         request.resource.contentType == 'application/pdf');
+    }
     function isActiveInstitutionMember(institutionId) {
       return request.auth != null && (
         isSameSchool(institutionId) ||
@@ -171,6 +187,24 @@ service firebase.storage {
           || request.resource.contentType == 'application/pdf'
         );
       allow update, delete: if false;
+    }
+
+    // Clinic-visit attachments (photos of an injury, a scanned referral
+    // letter, a lab slip). Clinical data: readable and writable only by a
+    // nurse or leadership role in the SAME school - never a parent, teacher,
+    // student, or ordinary staff member. Immutable once uploaded (a
+    // correction is a new file plus a linked amendment on the visit),
+    // matching firestore.rules' `delete: if false` on clinic_visits.
+    match /schools/{schoolId}/clinic_visits/{visitId}/attachments/{fileName} {
+      allow read: if canManageClinicalRecords(schoolId);
+      allow write: if canManageClinicalRecords(schoolId) && isSafeClinicalAttachment();
+      // No delete: an attachment, once uploaded, stays with the visit for the
+      // record. A correction is a new file plus a linked amendment on the
+      // clinic_visits doc (which is itself `delete: if false` in
+      // firestore.rules). Overwrite of the same object path is permitted by
+      // `write` above; the app always writes a uuid filename so this is not a
+      // path a client can collide on in practice.
+      allow delete: if false;
     }
 
     // Official report-card PDFs. No client - staff, parent or student -

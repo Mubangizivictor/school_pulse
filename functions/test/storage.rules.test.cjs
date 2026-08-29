@@ -59,6 +59,11 @@ async function seed() {
       // A different, non-admin staff member in the SAME school as staffA -
       // must not be able to touch staffA's files.
       coworkerA: { role: 'classTeacher', roles: ['classTeacher'], schoolId: 'schoolA' },
+      // Clinical roles for the clinic-visit attachment path.
+      nurseA: { role: 'nurse', roles: ['nurse'], schoolId: 'schoolA' },
+      nurseB: { role: 'nurse', roles: ['nurse'], schoolId: 'schoolB' },
+      headA: { role: 'headTeacher', roles: ['headTeacher'], schoolId: 'schoolA' },
+      parentA: { role: 'parent', roles: ['parent'], schoolId: 'schoolA' },
     };
     await Promise.all(
       Object.entries(users).map(([uid, data]) => setDoc(doc(db, 'users', uid), data)),
@@ -240,5 +245,96 @@ describe('staff storage rules do not silently widen to same-school-any-role', ()
     assert.equal(adminResult.status, 'fulfilled');
     assert.equal(ownerResult.status, 'fulfilled');
     assert.equal(peerResult.status, 'rejected');
+  });
+});
+
+describe('clinic visit attachment storage rules', () => {
+  const PATH = 'schools/schoolA/clinic_visits/visit-1/attachments/injury.png';
+  const PDF_BYTES = Uint8Array.from([0x25, 0x50, 0x44, 0x46, 0x2d]); // %PDF-
+
+  test('a nurse in the same school can upload an image and a PDF attachment', async () => {
+    await assertSucceeds(
+      uploadBytes(ref(storageFor('nurseA'), PATH), PNG_BYTES, {
+        contentType: 'image/png',
+      }),
+    );
+    await assertSucceeds(
+      uploadBytes(
+        ref(storageFor('nurseA'), 'schools/schoolA/clinic_visits/visit-1/attachments/referral.pdf'),
+        PDF_BYTES,
+        { contentType: 'application/pdf' },
+      ),
+    );
+  });
+
+  test('a same-school leadership role can also upload', async () => {
+    await assertSucceeds(
+      uploadBytes(ref(storageFor('headA'), PATH), PNG_BYTES, {
+        contentType: 'image/png',
+      }),
+    );
+  });
+
+  test('a parent, an ordinary teacher, and an unauthenticated caller are all denied upload and read', async () => {
+    await assertFails(
+      uploadBytes(ref(storageFor('parentA'), PATH), PNG_BYTES, { contentType: 'image/png' }),
+    );
+    await assertFails(
+      uploadBytes(ref(storageFor('coworkerA'), PATH), PNG_BYTES, { contentType: 'image/png' }),
+    );
+    await assertFails(
+      uploadBytes(
+        ref(testEnv.unauthenticatedContext().storage(), PATH),
+        PNG_BYTES,
+        { contentType: 'image/png' },
+      ),
+    );
+
+    // Seed a real object as the nurse, then confirm the parent/teacher cannot read it.
+    await assertSucceeds(
+      uploadBytes(ref(storageFor('nurseA'), PATH), PNG_BYTES, { contentType: 'image/png' }),
+    );
+    const { getBytes } = require('firebase/storage');
+    await assertFails(getBytes(ref(storageFor('parentA'), PATH)));
+    await assertFails(getBytes(ref(storageFor('coworkerA'), PATH)));
+  });
+
+  test('a nurse from another school cannot upload into or read this school clinic attachments', async () => {
+    await assertFails(
+      uploadBytes(ref(storageFor('nurseB'), PATH), PNG_BYTES, { contentType: 'image/png' }),
+    );
+    await assertSucceeds(
+      uploadBytes(ref(storageFor('nurseA'), PATH), PNG_BYTES, { contentType: 'image/png' }),
+    );
+    const { getBytes } = require('firebase/storage');
+    await assertFails(getBytes(ref(storageFor('nurseB'), PATH)));
+  });
+
+  test('a non-image, non-PDF content type is rejected', async () => {
+    await assertFails(
+      uploadBytes(
+        ref(storageFor('nurseA'), 'schools/schoolA/clinic_visits/visit-1/attachments/notes.docx'),
+        PNG_BYTES,
+        {
+          contentType:
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        },
+      ),
+    );
+  });
+
+  test('an attachment over 10MB is rejected', async () => {
+    const oversized = new Uint8Array(11 * 1024 * 1024);
+    await assertFails(
+      uploadBytes(ref(storageFor('nurseA'), PATH), oversized, { contentType: 'image/png' }),
+    );
+  });
+
+  test('a clinic attachment cannot be deleted, even by the uploader', async () => {
+    const p = 'schools/schoolA/clinic_visits/visit-del/attachments/x.png';
+    await assertSucceeds(
+      uploadBytes(ref(storageFor('nurseA'), p), PNG_BYTES, { contentType: 'image/png' }),
+    );
+    await assertFails(deleteObject(ref(storageFor('nurseA'), p)));
   });
 });

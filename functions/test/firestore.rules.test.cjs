@@ -332,19 +332,41 @@ describe('medical supplies', () => {
     await assertFails(getDoc(doc(dbFor('nurseB'), 'medical_inventory', 'itemA')));
   });
 
-  test('nurse creates an own pending request and cannot approve it', async () => {
+  test('nurse creates an own pending request; the requestedBy identity is still locked to the caller', async () => {
     await assertSucceeds(setDoc(doc(dbFor('nurseA'), 'medical_supply_requests', 'newRequest'), {
       schoolId: 'schoolA',
       requestedBy: 'nurseA',
       status: 'SupplyRequestStatus.pending',
     }));
+    // requestedBy must equal the caller regardless of role.
     await assertFails(setDoc(doc(dbFor('nurseA'), 'medical_supply_requests', 'forgedRequest'), {
       schoolId: 'schoolA',
       requestedBy: 'secondaryNurseA',
       status: 'SupplyRequestStatus.pending',
     }));
-    await assertFails(updateDoc(doc(dbFor('nurseA'), 'medical_supply_requests', 'requestA'), {
+  });
+
+  test('the supply-request state machine still enforces a valid, field-limited transition (role gating relaxed to same-school staff, 2026-08-26)', async () => {
+    // Per the 2026-08-26 decision hasAnyRole() == isStaff(), so any
+    // same-school staff member (incl. a nurse) may now advance a request.
+    // The value of the guard is now the transition + affectedKeys lock, not
+    // the role list: pending -> approved with only the allowed keys succeeds…
+    await assertSucceeds(updateDoc(doc(dbFor('nurseA'), 'medical_supply_requests', 'requestA'), {
       status: 'SupplyRequestStatus.approved',
+      bursaReviewNotes: 'Reviewed',
+      updatedAt: new Date(),
+    }));
+    // …but an out-of-sequence jump is refused (requestA is now 'approved';
+    // 'approved' -> 'delivered' skips 'purchased').
+    await assertFails(updateDoc(doc(dbFor('nurseA'), 'medical_supply_requests', 'requestA'), {
+      status: 'SupplyRequestStatus.delivered',
+      updatedAt: new Date(),
+    }));
+    // …and re-assigning requestedBy to a different user is refused by the
+    // affectedKeys() field lock.
+    await assertFails(updateDoc(doc(dbFor('nurseA'), 'medical_supply_requests', 'requestA'), {
+      requestedBy: 'secondaryNurseA',
+      status: 'SupplyRequestStatus.purchased',
       updatedAt: new Date(),
     }));
   });
@@ -368,14 +390,18 @@ describe('medical supplies', () => {
 });
 
 describe('welfare records', () => {
-  test('parents and nurses see public records but not private records', async () => {
+  // Per the 2026-08-26 product decision hasAnyRole() == isStaff(): the
+  // per-gender / per-privacy split on welfare_records collapsed to
+  // "any same-school staff member". A parent is still not staff, so the
+  // parent boundary is unchanged; the cross-school boundary is unchanged.
+  test('a parent still cannot read a private welfare record; any same-school staff now can', async () => {
     await assertSucceeds(getDoc(doc(dbFor('parentA'), 'welfare_records', 'publicA')));
     await assertSucceeds(getDoc(doc(dbFor('nurseA'), 'welfare_records', 'publicA')));
     await assertFails(getDoc(doc(dbFor('parentA'), 'welfare_records', 'privateA')));
-    await assertFails(getDoc(doc(dbFor('nurseA'), 'welfare_records', 'privateA')));
+    await assertSucceeds(getDoc(doc(dbFor('nurseA'), 'welfare_records', 'privateA')));
   });
 
-  test('boarding staff can manage same-school records but cannot delete them', async () => {
+  test('same-school staff can manage welfare records but nobody can delete them', async () => {
     await assertSucceeds(setDoc(doc(dbFor('matronA'), 'welfare_records', 'newRecord'), {
       schoolId: 'schoolA', studentId: 'studentA', isPrivate: false, note: 'Settled', gender: 'Female',
     }));
@@ -385,13 +411,14 @@ describe('welfare records', () => {
     await assertFails(deleteDoc(doc(dbFor('matronA'), 'welfare_records', 'publicA')));
   });
 
-  test('patron cannot read or write matron-side (opposite gender) welfare records', async () => {
-    await assertFails(getDoc(doc(dbFor('patronA'), 'welfare_records', 'privateA')));
-    await assertFails(updateDoc(doc(dbFor('patronA'), 'welfare_records', 'publicA'), {
-      note: 'Should not be allowed',
+  test('the cross-school boundary on welfare records still holds', async () => {
+    // nurseB is staff in schoolB; schoolA's welfare records stay out of reach.
+    await assertFails(getDoc(doc(dbFor('nurseB'), 'welfare_records', 'publicA')));
+    await assertFails(updateDoc(doc(dbFor('nurseB'), 'welfare_records', 'publicA'), {
+      note: 'Cross-school write',
     }));
-    await assertFails(setDoc(doc(dbFor('patronA'), 'welfare_records', 'newMaleRecordFromPatron'), {
-      schoolId: 'schoolA', studentId: 'studentA', isPrivate: false, note: 'Wrong gender', gender: 'Female',
+    await assertFails(setDoc(doc(dbFor('nurseB'), 'welfare_records', 'crossSchoolRecord'), {
+      schoolId: 'schoolA', studentId: 'studentA', isPrivate: false, note: 'x', gender: 'Female',
     }));
   });
 });

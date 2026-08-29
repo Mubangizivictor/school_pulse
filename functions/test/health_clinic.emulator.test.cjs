@@ -290,6 +290,45 @@ describe("dispenseMedicalItem", () => {
     assert.equal((await db.collection("medical_inventory").doc("itemA").get()).data().quantity, 9);
   });
 
+  test("a visit with no linked learner cannot have items dispensed against it", async () => {
+    await db.collection("medical_inventory").doc("itemA").set({
+      schoolId: SCHOOL, name: "Paracetamol", quantity: 10, unit: "tablets",
+    });
+    await db.collection("clinic_visits").doc("visitA").set({
+      schoolId: SCHOOL, studentId: "  ", recordedBy: NURSE, status: "completed",
+    });
+    await assert.rejects(
+      () => fns.dispenseMedicalItem(req(NURSE, { itemId: "itemA", visitId: "visitA", quantity: 1 })),
+      /not linked to a learner/,
+    );
+    assert.equal((await db.collection("medical_inventory").doc("itemA").get()).data().quantity, 10);
+    assert.equal((await db.collection("medical_inventory_movements").get()).size, 0);
+  });
+
+  test("a caller-supplied studentId that does not match the visit's learner is rejected", async () => {
+    await seedItemAndVisit({ qty: 10 }); // visit's studentId is "studentA"
+    await assert.rejects(
+      () =>
+        fns.dispenseMedicalItem(
+          req(NURSE, { itemId: "itemA", visitId: "visitA", studentId: "studentZ", quantity: 2 }),
+        ),
+      /does not belong to that learner/,
+    );
+    assert.equal((await db.collection("medical_inventory").doc("itemA").get()).data().quantity, 10);
+    assert.equal((await db.collection("medical_inventory_movements").get()).size, 0);
+  });
+
+  test("a caller-supplied studentId that matches the visit's learner is accepted and recorded on the movement", async () => {
+    await seedItemAndVisit({ qty: 10 });
+    await fns.dispenseMedicalItem(
+      req(NURSE, { itemId: "itemA", visitId: "visitA", studentId: "studentA", quantity: 2 }),
+    );
+    const moves = await db.collection("medical_inventory_movements").get();
+    assert.equal(moves.size, 1);
+    assert.equal(moves.docs[0].data().studentId, "studentA");
+    assert.equal((await db.collection("medical_inventory").doc("itemA").get()).data().quantity, 8);
+  });
+
   test("unauthenticated and non-clinical roles are denied before any stock read", async () => {
     await seedItemAndVisit();
     await assert.rejects(

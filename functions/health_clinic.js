@@ -32,15 +32,23 @@ module.exports = ({ admin, onCall, HttpsError }) => {
       const user = await actor(request); const data = request.data || {}; const quantity = Number(data.quantity);
       if (!Number.isInteger(quantity) || quantity <= 0 || !data.itemId || !data.visitId) throw new HttpsError('invalid-argument', 'A visit, item, and positive quantity are required.');
       const item = db.collection('medical_inventory').doc(String(data.itemId)); const visit = db.collection('clinic_visits').doc(String(data.visitId));
+      const expectedStudentId = String(data.studentId || '').trim();
       await db.runTransaction(async (tx) => {
         const [itemSnap, visitSnap] = await Promise.all([tx.get(item), tx.get(visit)]);
         if (!itemSnap.exists || !visitSnap.exists || itemSnap.data().schoolId !== user.schoolId || visitSnap.data().schoolId !== user.schoolId) throw new HttpsError('permission-denied', 'The requested record is outside your school.');
+        // A dispense must be attributable to a learner. The visit's own
+        // studentId is the source of truth; if the caller names a student it
+        // must match, so a stale/confused client can never charge stock
+        // against the wrong learner's visit.
+        const visitStudentId = String(visitSnap.data().studentId || '').trim();
+        if (!visitStudentId) throw new HttpsError('failed-precondition', 'This visit is not linked to a learner.');
+        if (expectedStudentId && expectedStudentId !== visitStudentId) throw new HttpsError('failed-precondition', 'The visit does not belong to that learner.');
         if (!['in_progress', 'completed'].includes(visitSnap.data().status || 'completed')) throw new HttpsError('failed-precondition', 'Items may only be dispensed for an active or completed visit.');
         const remaining = Number(itemSnap.data().quantity || 0) - quantity;
         if (remaining < 0) throw new HttpsError('failed-precondition', 'Insufficient stock.');
         tx.update(item, { quantity: remaining, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
         const movement = db.collection('medical_inventory_movements').doc();
-        tx.set(movement, { schoolId: user.schoolId, itemId: item.id, visitId: visit.id, studentId: visitSnap.data().studentId, quantity, type: 'dispensed', recordedBy: user.uid, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+        tx.set(movement, { schoolId: user.schoolId, itemId: item.id, visitId: visit.id, studentId: visitStudentId, quantity, type: 'dispensed', recordedBy: user.uid, createdAt: admin.firestore.FieldValue.serverTimestamp() });
         audit(tx, user.schoolId, user.uid, 'medical_inventory.dispensed', movement.id);
       });
       return { ok: true };
