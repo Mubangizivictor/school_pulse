@@ -31,7 +31,9 @@ class FeeCatalogueRepositoryImpl implements FeeCatalogueRepository {
       if (item.id.isEmpty) {
         await collection.add(item.toJson());
       } else {
-        await collection.doc(item.id).set(item.toJson(), SetOptions(merge: true));
+        await collection
+            .doc(item.id)
+            .set(item.toJson(), SetOptions(merge: true));
       }
       return const Right(null);
     } catch (e) {
@@ -45,9 +47,7 @@ class FeeCatalogueRepositoryImpl implements FeeCatalogueRepository {
     String chargeId,
   ) async {
     try {
-      await firestore
-          .doc('schools/$schoolId/fee_catalogue/$chargeId')
-          .delete();
+      await firestore.doc('schools/$schoolId/fee_catalogue/$chargeId').delete();
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

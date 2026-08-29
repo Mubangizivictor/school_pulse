@@ -17,6 +17,7 @@ import 'financial_reports_screen.dart';
 import 'student_eligibility_screen.dart';
 import 'bursar_report_release_screen.dart';
 import 'clearance_policy_editor_screen.dart';
+import 'financial_entitlements_screen.dart';
 
 /// Bursar "More" tab (bottom-nav slot 4).
 ///
@@ -27,6 +28,11 @@ class BursarMoreScreen extends StatelessWidget {
   const BursarMoreScreen({super.key});
 
   List<_MoreItem> _items(BuildContext context) => [
+    _MoreItem(
+      icon: Icons.verified_user_outlined,
+      label: 'Financial entitlements',
+      builder: (_) => const FinancialEntitlementsScreen(),
+    ),
     _MoreItem(
       icon: Icons.pie_chart_outline_rounded,
       label: 'Budget',

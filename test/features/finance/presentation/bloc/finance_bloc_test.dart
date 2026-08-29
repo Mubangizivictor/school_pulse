@@ -73,9 +73,9 @@ void main() {
     blocTest<FinanceBloc, FinanceState>(
       'emits FinanceError when the repository fails to save the budget',
       setUp: () {
-        when(() => mockRepository.saveBudget(budget)).thenAnswer(
-          (_) async => Left(ServerFailure('boom')),
-        );
+        when(
+          () => mockRepository.saveBudget(budget),
+        ).thenAnswer((_) async => Left(ServerFailure('boom')));
       },
       build: () => bloc,
       act: (bloc) => bloc.add(SaveSchoolBudget(budget)),

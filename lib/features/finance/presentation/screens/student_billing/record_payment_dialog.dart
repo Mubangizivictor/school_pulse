@@ -98,7 +98,9 @@ class _RecordPaymentDialogState extends State<RecordPaymentDialog> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Payment recorded. Receipt ${success.receiptNumber}.'),
+            content: Text(
+              'Payment recorded. Receipt ${success.receiptNumber}.',
+            ),
           ),
         );
       },

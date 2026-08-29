@@ -218,8 +218,10 @@ class _FeePlanEditorDialogState extends State<FeePlanEditorDialog> {
                     initialValue: _academicYearId,
                     items: years
                         .map(
-                          (y) =>
-                              DropdownMenuItem(value: y.id, child: Text(y.name)),
+                          (y) => DropdownMenuItem(
+                            value: y.id,
+                            child: Text(y.name),
+                          ),
                         )
                         .toList(),
                     onChanged: widget.existingPlan != null
@@ -228,7 +230,9 @@ class _FeePlanEditorDialogState extends State<FeePlanEditorDialog> {
                             setState(() => _academicYearId = v);
                             _checkOverlap();
                           },
-                    decoration: const InputDecoration(labelText: 'Academic year'),
+                    decoration: const InputDecoration(
+                      labelText: 'Academic year',
+                    ),
                   );
                 },
               ),
@@ -245,8 +249,10 @@ class _FeePlanEditorDialogState extends State<FeePlanEditorDialog> {
                     initialValue: _termId,
                     items: terms
                         .map(
-                          (t) =>
-                              DropdownMenuItem(value: t.id, child: Text(t.name)),
+                          (t) => DropdownMenuItem(
+                            value: t.id,
+                            child: Text(t.name),
+                          ),
                         )
                         .toList(),
                     onChanged: widget.existingPlan != null
@@ -268,8 +274,10 @@ class _FeePlanEditorDialogState extends State<FeePlanEditorDialog> {
                     initialValue: _classId,
                     items: classes
                         .map(
-                          (c) =>
-                              DropdownMenuItem(value: c.id, child: Text(c.name)),
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.name),
+                          ),
                         )
                         .toList(),
                     onChanged: widget.existingPlan != null
@@ -295,7 +303,9 @@ class _FeePlanEditorDialogState extends State<FeePlanEditorDialog> {
                         setState(() => _studentCategory = v ?? 'day');
                         _checkOverlap();
                       },
-                decoration: const InputDecoration(labelText: 'Student category'),
+                decoration: const InputDecoration(
+                  labelText: 'Student category',
+                ),
               ),
               if (_checkingOverlap)
                 const Padding(
@@ -334,7 +344,8 @@ class _FeePlanEditorDialogState extends State<FeePlanEditorDialog> {
                       : null,
                 ),
               TextButton.icon(
-                onPressed: () => setState(() => _lines.add(_FeePlanLineDraft())),
+                onPressed: () =>
+                    setState(() => _lines.add(_FeePlanLineDraft())),
                 icon: const Icon(Icons.add),
                 label: const Text('Add line'),
               ),
@@ -468,10 +479,7 @@ class _LineEditorState extends State<_LineEditor> {
                     widget.onChanged();
                   },
                 ),
-                Text(
-                  'Required',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                Text('Required', style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
           ),

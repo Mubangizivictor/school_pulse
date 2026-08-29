@@ -65,6 +65,11 @@ enum BursarSection {
     label: 'Report releases',
     icon: Icons.lock_open_outlined,
   ),
+  entitlements(
+    slug: 'entitlements',
+    label: 'Financial entitlements',
+    icon: Icons.verified_user_outlined,
+  ),
   audit(slug: 'audit', label: 'Audit trail', icon: Icons.fact_check_outlined);
 
   const BursarSection({

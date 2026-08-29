@@ -1295,6 +1295,11 @@ final router = GoRouter(
                   const BursarShell(section: BursarSection.reportRelease),
             ),
             GoRoute(
+              path: 'entitlements',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.entitlements),
+            ),
+            GoRoute(
               path: 'clearance-policy',
               builder: (context, state) => const ClearancePolicyEditorScreen(),
             ),

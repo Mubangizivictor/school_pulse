@@ -110,9 +110,8 @@ class FeeBillingRepositoryImpl implements FeeBillingRepository {
         .collection('schools/$schoolId/fee_plans')
         .snapshots()
         .map(
-          (snap) => snap.docs
-              .map((d) => FeePlan.fromJson(d.id, d.data()))
-              .toList(),
+          (snap) =>
+              snap.docs.map((d) => FeePlan.fromJson(d.id, d.data())).toList(),
         );
   }
 

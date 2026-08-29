@@ -22,7 +22,12 @@ void main() {
         'adjustmentTotalUgx': 50000,
         'balanceUgx': 250000,
         'lines': [
-          {'chargeId': 'tuition', 'name': 'Tuition', 'amountUgx': 500000, 'required': true},
+          {
+            'chargeId': 'tuition',
+            'name': 'Tuition',
+            'amountUgx': 500000,
+            'required': true,
+          },
         ],
       });
       expect(bill.issuedTotalUgx, 500000);

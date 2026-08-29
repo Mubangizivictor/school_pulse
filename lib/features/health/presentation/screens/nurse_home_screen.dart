@@ -1,566 +1,327 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/design_system/theme/app_spacing.dart';
-import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:intl/intl.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/health/domain/entities/clinic_visit.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_event.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_state.dart';
-import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
+import 'package:school_pulse/features/nurse/presentation/clinic_ui.dart';
 
-/// Nurse Home tab. Matches the attached reference: greeting header with a
-/// term/date chip, a "Clinic overview" summary card, primary CTAs, quick
-/// actions, a "Needs attention" list and today's follow-ups. All figures
-/// come from [HealthBloc]'s [HealthDashboardLoaded] state - no mock data.
 class NurseHomeScreen extends StatefulWidget {
   const NurseHomeScreen({super.key});
-
   @override
   State<NurseHomeScreen> createState() => _NurseHomeScreenState();
 }
 
 class _NurseHomeScreenState extends State<NurseHomeScreen> {
-  static const _bg = Colors.black;
-  static const _card = Colors.black;
-  static const _muted = Colors.black;
+  String get _schoolId {
+    final s = context.read<AuthBloc>().state;
+    return s is AuthAuthenticated ? s.user.schoolId : '';
+  }
 
-  UserAuthDetails? get _currentUser {
-    final state = context.read<AuthBloc>().state;
-    return state is AuthAuthenticated
-        ? UserAuthDetails(name: state.user.name, schoolId: state.user.schoolId)
-        : null;
+  String get _name {
+    final s = context.read<AuthBloc>().state;
+    return s is AuthAuthenticated ? s.user.name : 'Nurse';
   }
 
   @override
   void initState() {
     super.initState();
-    final schoolId = _currentUser?.schoolId ?? '';
-    if (schoolId.isNotEmpty) {
-      context.read<HealthBloc>().add(FetchHealthDashboardData(schoolId));
+    if (_schoolId.isNotEmpty) {
+      context.read<HealthBloc>().add(FetchHealthDashboardData(_schoolId));
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final schoolId = _currentUser?.schoolId ?? '';
-
-    return Scaffold(
-      backgroundColor: _bg,
-      appBar: staffDashboardAppBar(context, roleLabel: 'Nurse'),
-      body: SafeArea(
-        child: schoolId.isEmpty
-            ? const _NoSchoolAssigned()
-            : BlocBuilder<HealthBloc, HealthState>(
-                builder: (context, state) {
-                  if (state is HealthLoading || state is HealthInitial) {
-                    return const Center(child: SchoolPulseLoader());
-                  }
-                  if (state is HealthError) {
-                    return _ErrorState(
-                      message: state.message,
-                      onRetry: () => context.read<HealthBloc>().add(
-                        FetchHealthDashboardData(schoolId),
-                      ),
-                    );
-                  }
-                  if (state is HealthDashboardLoaded) {
-                    final inClinic = state.todayVisits
-                        .where(
-                          (v) => v.outcome == VisitOutcome.admittedToSickBay,
-                        )
-                        .length;
-                    final urgent = state.todayEmergencies.length;
-                    final today = DateTime.now();
-                    const months = [
-                      'Jan',
-                      'Feb',
-                      'Mar',
-                      'Apr',
-                      'May',
-                      'Jun',
-                      'Jul',
-                      'Aug',
-                      'Sep',
-                      'Oct',
-                      'Nov',
-                      'Dec',
-                    ];
-                    final periodLabel =
-                        '${months[today.month - 1]} ${today.day}, ${today.year}';
-                    return RefreshIndicator(
-                      onRefresh: () async => context.read<HealthBloc>().add(
-                        FetchHealthDashboardData(schoolId),
-                      ),
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 640),
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                AppSpacing.xl,
-                                AppSpacing.l,
-                                AppSpacing.xl,
-                                AppSpacing.x3l,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  StaffHeroSummaryCard(
-                                    greetingNameFallback: 'Nurse',
-                                    periodLabel: periodLabel,
-                                    kpis: [
-                                      StaffKpiData(
-                                        title: 'In Clinic',
-                                        valueText: '$inClinic',
-                                        subtitle: 'Students',
-                                        icon: Icons.groups_outlined,
-                                        color: AppColors.information(context),
-                                      ),
-                                      StaffKpiData(
-                                        title: 'Visits Today',
-                                        valueText:
-                                            '${state.todayVisits.length}',
-                                        subtitle: 'Logged',
-                                        icon: Icons.monitor_heart_outlined,
-                                        color: AppColors.success(context),
-                                      ),
-                                      StaffKpiData(
-                                        title: 'Urgent',
-                                        valueText: '$urgent',
-                                        subtitle: 'Needs attention',
-                                        icon: Icons.warning_amber_rounded,
-                                        color: AppColors.danger(context),
-                                      ),
-                                      StaffKpiData(
-                                        title: 'Low Stock',
-                                        valueText:
-                                            '${state.lowStockItems.length}',
-                                        subtitle: 'Items',
-                                        icon: Icons.inventory_2_outlined,
-                                        color: AppColors.warning(context),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _PrimaryActions(schoolId: schoolId),
-                                  const SizedBox(height: 24),
-                                  const _SectionLabel('Quick actions'),
-                                  const SizedBox(height: 12),
-                                  _QuickActions(schoolId: schoolId),
-                                  const SizedBox(height: 24),
-                                  const _SectionLabel('Needs attention'),
-                                  const SizedBox(height: 12),
-                                  _NeedsAttentionList(state: state),
-                                  const SizedBox(height: 24),
-                                  _FollowUpsSection(state: state),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-      ),
-    );
-  }
-}
-
-class UserAuthDetails {
-  final String name;
-  final String schoolId;
-  const UserAuthDetails({required this.name, required this.schoolId});
-}
-
-class _NoSchoolAssigned extends StatelessWidget {
-  const _NoSchoolAssigned();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(32),
-        child: Text(
-          'This nurse account is not assigned to a school. Ask an administrator to update the account.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorState({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.cloud_off_outlined, color: Colors.white, size: 40),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onRetry, child: const Text('Retry')),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PrimaryActions extends StatelessWidget {
-  final String schoolId;
-  const _PrimaryActions({required this.schoolId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: FilledButton.icon(
-            key: const Key('nurse-new-visit-button'),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            onPressed: () => context.push('/staff/nurse/visits/new', extra: ''),
-            icon: const Icon(Icons.add_circle_outline),
-            label: const Text('Start new visit'),
+  Widget build(BuildContext context) => ClinicPage(
+    child: BlocBuilder<HealthBloc, HealthState>(
+      builder: (_, state) {
+        if (state is HealthLoading || state is HealthInitial) {
+          return const Center(
+            child: CircularProgressIndicator(color: ClinicUi.black),
+          );
+        }
+        if (state is HealthError) {
+          return ClinicEmptyState(
+            title: 'Unable to load clinic',
+            message: state.message,
+            icon: Icons.cloud_off_outlined,
+          );
+        }
+        final data = state is HealthDashboardLoaded ? state : null;
+        final visits = data?.todayVisits ?? const <ClinicVisit>[];
+        final waiting = visits
+            .where((v) => v.outcome == VisitOutcome.admittedToSickBay)
+            .length;
+        final followUps = visits.where((v) => v.followUpRequired).length;
+        return RefreshIndicator(
+          color: ClinicUi.black,
+          onRefresh: () async => context.read<HealthBloc>().add(
+            FetchHealthDashboardData(_schoolId),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              side: const BorderSide(color: Colors.black),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            onPressed: () => context.push('/staff/nurse/lookup'),
-            icon: const Icon(Icons.qr_code_scanner, size: 20),
-            label: const Text('Scan student ID'),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  final String label;
-  const _SectionLabel(this.label);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: AppTypography.titleMedium.copyWith(
-        color: Colors.white,
-        fontWeight: FontWeight.bold,
-      ),
-    );
-  }
-}
-
-class _QuickActions extends StatelessWidget {
-  final String schoolId;
-  const _QuickActions({required this.schoolId});
-
-  @override
-  Widget build(BuildContext context) {
-    final actions = [
-      _QuickActionData(
-        'Medication',
-        Icons.medication_outlined,
-        Colors.black,
-        () {
-          context.push('/staff/nurse/inventory');
-        },
-      ),
-      _QuickActionData('Sick bay', Icons.bed_outlined, Colors.black, () {
-        context.push('/staff/nurse/records');
-      }),
-      _QuickActionData('Send home', Icons.home_outlined, Colors.black, () {
-        context.push('/staff/nurse/visits/new', extra: '');
-      }),
-      _QuickActionData('Emergency', Icons.emergency_outlined, Colors.black, () {
-        context.push('/staff/nurse/records');
-      }),
-    ];
-
-    return Row(
-      children: actions
-          .map((a) => Expanded(child: _QuickActionButton(data: a)))
-          .toList(),
-    );
-  }
-}
-
-class _QuickActionData {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-  const _QuickActionData(this.label, this.icon, this.color, this.onTap);
-}
-
-class _QuickActionButton extends StatelessWidget {
-  final _QuickActionData data;
-  const _QuickActionButton({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: InkWell(
-        onTap: data.onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: _NurseHomeScreenState._card,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
-              Icon(data.icon, color: data.color, size: 26),
-              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${_name.split(' ').first} · School Nurse',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: ClinicUi.foreground(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.chat_bubble_outline),
+                  ),
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.notifications_none),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
               Text(
-                data.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontSize: 11.5),
+                'Clinic overview',
+                style: TextStyle(
+                  fontSize: 23,
+                  color: ClinicUi.foreground(context),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 14),
+              LayoutBuilder(
+                builder: (_, c) => Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _Metric(
+                      'Today’s visits',
+                      visits.length,
+                      'View all',
+                      () => context.push('/staff/nurse/visits'),
+                      width: (c.maxWidth - 8) / 2,
+                    ),
+                    _Metric(
+                      'Waiting now',
+                      waiting,
+                      'View queue',
+                      () => context.push('/staff/nurse/visits'),
+                      danger: waiting > 0,
+                      width: (c.maxWidth - 8) / 2,
+                    ),
+                    _Metric(
+                      'Follow-ups due',
+                      followUps,
+                      'View list',
+                      () => context.push('/staff/nurse/visits'),
+                      width: (c.maxWidth - 8) / 2,
+                    ),
+                    _Metric(
+                      'Low-stock items',
+                      data?.lowStockItems.length ?? 0,
+                      'View inventory',
+                      () => context.push('/staff/nurse/inventory'),
+                      danger: (data?.lowStockItems.isNotEmpty ?? false),
+                      width: (c.maxWidth - 8) / 2,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Today · ${DateFormat('MMM d').format(DateTime.now())}',
+                style: TextStyle(
+                  color: ClinicUi.foreground(context),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (visits.isEmpty)
+                const _CompactEmpty()
+              else
+                ...visits.take(6).map((v) => _TimelineVisit(visit: v)),
+              const SizedBox(height: 16),
+              Text(
+                'Quick actions',
+                style: TextStyle(
+                  color: ClinicUi.foreground(context),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _Quick(
+                    icon: Icons.assignment_outlined,
+                    label: 'Record visit',
+                    onTap: () => context.push('/staff/nurse/lookup'),
+                  ),
+                  _Quick(
+                    icon: Icons.search,
+                    label: 'Search learner',
+                    onTap: () => context.push('/staff/nurse/lookup'),
+                  ),
+                  _Quick(
+                    icon: Icons.monitor_heart_outlined,
+                    label: 'Add vitals',
+                    onTap: () => context.push('/staff/nurse/lookup'),
+                  ),
+                  _Quick(
+                    icon: Icons.medication_outlined,
+                    label: 'Dispense item',
+                    onTap: () => context.push('/staff/nurse/inventory'),
+                  ),
+                ],
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
+        );
+      },
+    ),
+  );
 }
 
-class _NeedsAttentionList extends StatelessWidget {
-  final HealthDashboardLoaded state;
-  const _NeedsAttentionList({required this.state});
+class _Metric extends StatelessWidget {
+  const _Metric(
+    this.label,
+    this.value,
+    this.action,
+    this.onTap, {
+    required this.width,
+    this.danger = false,
+  });
+  final String label, action;
+  final int value;
+  final VoidCallback onTap;
+  final double width;
+  final bool danger;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: width,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(9),
+      child: Container(
+        height: 93,
+        padding: const EdgeInsets.all(11),
+        decoration: ClinicUi.outlinedCard(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 11)),
+            const Spacer(),
+            Text(
+              '$value',
+              style: TextStyle(
+                fontSize: 25,
+                height: .9,
+                color: danger ? ClinicUi.red : ClinicUi.foreground(context),
+              ),
+            ),
+            const Spacer(),
+            Text(
+              action,
+              style: TextStyle(
+                fontSize: 11,
+                color: danger ? ClinicUi.red : ClinicUi.foreground(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
 
+class _TimelineVisit extends StatelessWidget {
+  const _TimelineVisit({required this.visit});
+  final ClinicVisit visit;
   @override
   Widget build(BuildContext context) {
-    final lowStockCount = state.lowStockItems.length;
-
-    final items = <Widget>[];
-    if (lowStockCount > 0) {
-      items.add(
-        _AttentionRow(
-          icon: Icons.inventory_2_outlined,
-          color: Colors.black,
-          title:
-              '$lowStockCount low-stock item${lowStockCount == 1 ? '' : 's'}',
-          actionLabel: 'Review',
-          onTap: () => context.push('/staff/nurse/inventory'),
-        ),
-      );
-    }
-
-    if (items.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: _NurseHomeScreenState._card,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Text(
-          'Nothing needs attention right now.',
-          style: TextStyle(color: _NurseHomeScreenState._muted),
-        ),
-      );
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: _NurseHomeScreenState._card,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
+    final isFollowUp = visit.followUpRequired;
+    final status = isFollowUp ? 'Follow-up' : 'Completed';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
         children: [
-          for (var i = 0; i < items.length; i++) ...[
-            items[i],
-            if (i != items.length - 1)
-              const Divider(
-                height: 1,
-                color: Colors.white,
-                indent: 16,
-                endIndent: 16,
+          SizedBox(
+            width: 54,
+            child: Text(
+              DateFormat('h:mm a').format(visit.dateTime),
+              style: const TextStyle(fontSize: 11),
+            ),
+          ),
+          Icon(
+            isFollowUp ? Icons.radio_button_checked : Icons.check_circle,
+            size: 17,
+            color: isFollowUp ? ClinicUi.red : ClinicUi.green,
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              visit.studentId.length > 11
+                  ? visit.studentId.substring(0, 11)
+                  : visit.studentId,
+              style: TextStyle(
+                color: ClinicUi.foreground(context),
+                fontSize: 13,
               ),
-          ],
+            ),
+          ),
+          ClinicUi.pill(
+            status,
+            color: isFollowUp ? ClinicUi.red : ClinicUi.green,
+          ),
         ],
       ),
     );
   }
 }
 
-class _AttentionRow extends StatelessWidget {
+class _Quick extends StatelessWidget {
+  const _Quick({required this.icon, required this.label, required this.onTap});
   final IconData icon;
-  final Color color;
-  final String title;
-  final String actionLabel;
+  final String label;
   final VoidCallback onTap;
-
-  const _AttentionRow({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.actionLabel,
-    required this.onTap,
-  });
-
   @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        child: Icon(icon, color: color, size: 18),
+  Widget build(BuildContext context) => SizedBox(
+    width: (MediaQuery.sizeOf(context).width - 48) / 2,
+    child: OutlinedButton.icon(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        alignment: Alignment.centerLeft,
+        foregroundColor: ClinicUi.foreground(context),
+        side: const BorderSide(color: ClinicUi.line),
+        minimumSize: const Size(0, 48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      title: Text(
-        title,
-        style: const TextStyle(color: Colors.white, fontSize: 14),
-      ),
-      trailing: TextButton(
-        onPressed: onTap,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(actionLabel, style: const TextStyle(color: Colors.black)),
-            const Icon(Icons.chevron_right, color: Colors.black, size: 18),
-          ],
-        ),
-      ),
-    );
-  }
+      icon: Icon(icon, size: 21),
+      label: Text(label, style: const TextStyle(fontSize: 11)),
+    ),
+  );
 }
 
-class _FollowUpsSection extends StatelessWidget {
-  final HealthDashboardLoaded state;
-  const _FollowUpsSection({required this.state});
-
+class _CompactEmpty extends StatelessWidget {
+  const _CompactEmpty();
   @override
-  Widget build(BuildContext context) {
-    final upcoming = state.todayVisits
-        .where((v) => v.followUpRequired)
-        .toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const _SectionLabel("Today's follow-ups"),
-            TextButton(
-              onPressed: () => context.push('/staff/nurse/visits'),
-              child: const Text('View all'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        if (upcoming.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _NurseHomeScreenState._card,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Text(
-              'No follow-ups scheduled for today.',
-              style: TextStyle(color: _NurseHomeScreenState._muted),
-            ),
-          )
-        else
-          Container(
-            decoration: BoxDecoration(
-              color: _NurseHomeScreenState._card,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              children: [
-                for (var i = 0; i < upcoming.length && i < 5; i++) ...[
-                  _FollowUpRow(visit: upcoming[i]),
-                  if (i != upcoming.length - 1 && i != 4)
-                    const Divider(
-                      height: 1,
-                      color: Colors.white,
-                      indent: 16,
-                      endIndent: 16,
-                    ),
-                ],
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _FollowUpRow extends StatelessWidget {
-  final ClinicVisit visit;
-  const _FollowUpRow({required this.visit});
-
-  @override
-  Widget build(BuildContext context) {
-    final time = TimeOfDay.fromDateTime(visit.dateTime);
-    final label = time.format(context);
-
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: Colors.black, shape: BoxShape.circle),
-        child: const Icon(
-          Icons.schedule_outlined,
-          color: Colors.black,
-          size: 18,
-        ),
-      ),
-      title: Text(
-        label,
-        style: const TextStyle(color: Colors.black, fontSize: 12),
-      ),
-      subtitle: Text(
-        visit.reason,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.white),
-      onTap: () => context.push('/staff/nurse/profile/${visit.studentId}'),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(14),
+    decoration: ClinicUi.outlinedCard(context),
+    child: const Text(
+      'No visits have been recorded today.',
+      style: TextStyle(color: ClinicUi.muted, fontSize: 12),
+    ),
+  );
 }

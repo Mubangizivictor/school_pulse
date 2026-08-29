@@ -1177,10 +1177,7 @@ Future<void> init() async {
     () => ClearancePolicyRemoteDataSource(functions: sl()),
   );
   sl.registerFactory(
-    () => ClearancePolicyBloc(
-      dataSource: sl(),
-      feeCatalogueRepository: sl(),
-    ),
+    () => ClearancePolicyBloc(dataSource: sl(), feeCatalogueRepository: sl()),
   );
 
   sl.registerLazySingleton(

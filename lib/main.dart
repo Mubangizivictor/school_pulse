@@ -154,7 +154,19 @@ void main() async {
   // here must never block runApp() (e.g. on web, where some of these
   // services may be unavailable or misconfigured).
   try {
-    await NotificationService().initialize();
+    // Bounded: on some iOS simulators the FCM plugin's getToken()/APNs
+    // registration never completes, which would otherwise wedge startup
+    // here (initialize() is awaited before runApp()). The listener wiring
+    // it does is not load-bearing for the first frame, so cap the wait and
+    // let the rest finish in the background.
+    await NotificationService().initialize().timeout(
+      const Duration(seconds: 8),
+      onTimeout: () {
+        if (kDebugMode) {
+          debugPrint('NotificationService.initialize timed out; continuing startup');
+        }
+      },
+    );
     await di.init();
 
     // Notification pipeline: register channels and bind the FCM listeners.

@@ -237,11 +237,10 @@ class HealthRemoteDataSourceImpl implements HealthRemoteDataSource {
     final tenant = _requireSchoolId(visit.schoolId);
     final collection = firestore.collection('clinic_visits');
     final doc = visit.id.isEmpty ? collection.doc() : collection.doc(visit.id);
-    final recipients = await _healthRecipients(
-      tenant,
-      visit.studentId,
-      includeTeacher: visit.outcome.name != 'sentBackToClass',
-    );
+    // Clinical notes and reasons never leave the clinical workflow. A future
+    // server-side parent-safe projection may decide whether a guardian gets a
+    // redacted notification, but teachers are never recipients of a visit.
+    final recipients = await _healthRecipients(tenant, visit.studentId);
     await _writeRecordAndAlerts(
       record: doc,
       recordData: {...visit.toJson(), 'id': doc.id, 'schoolId': tenant},
@@ -250,9 +249,7 @@ class HealthRemoteDataSourceImpl implements HealthRemoteDataSource {
       studentId: visit.studentId,
       senderId: visit.recordedBy,
       title: 'School clinic visit',
-      body: visit.outcome.name == 'sentHome'
-          ? 'The student was seen by the nurse and has been sent home.'
-          : 'A school clinic visit was recorded: ${visit.reason}.',
+      body: 'A school clinic update is available in the authorised portal.',
       type: 'clinic_visit',
       recordId: doc.id,
     );
@@ -264,11 +261,7 @@ class HealthRemoteDataSourceImpl implements HealthRemoteDataSource {
     final doc = firestore.collection('clinic_visits').doc(visit.id);
     final existing = await doc.get();
     if (existing.exists) return;
-    final recipients = await _healthRecipients(
-      tenant,
-      visit.studentId,
-      includeTeacher: visit.outcome.name != 'sentBackToClass',
-    );
+    final recipients = await _healthRecipients(tenant, visit.studentId);
     await _writeRecordAndAlerts(
       record: doc,
       recordData: {...visit.toJson(), 'id': doc.id, 'schoolId': tenant},
@@ -277,9 +270,7 @@ class HealthRemoteDataSourceImpl implements HealthRemoteDataSource {
       studentId: visit.studentId,
       senderId: visit.recordedBy,
       title: 'School clinic visit',
-      body: visit.outcome.name == 'sentHome'
-          ? 'The student was seen by the nurse and has been sent home.'
-          : 'A school clinic visit was recorded: ${visit.reason}.',
+      body: 'A school clinic update is available in the authorised portal.',
       type: 'clinic_visit',
       recordId: doc.id,
     );
@@ -321,7 +312,6 @@ class HealthRemoteDataSourceImpl implements HealthRemoteDataSource {
     final recipients = await _healthRecipients(
       tenant,
       incident.studentId,
-      includeTeacher: true,
       includeLeadership: true,
     );
     await _writeRecordAndAlerts(
@@ -339,7 +329,7 @@ class HealthRemoteDataSourceImpl implements HealthRemoteDataSource {
       studentId: incident.studentId,
       senderId: incident.recordedBy,
       title: 'Emergency health incident',
-      body: incident.incidentDetails,
+      body: 'An urgent school clinic update requires authorised review.',
       type: 'emergency_incident',
       recordId: doc.id,
     );

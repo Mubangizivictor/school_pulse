@@ -18,7 +18,8 @@ import 'package:school_pulse/features/dean/presentation/screens/workload/teacher
 
 /// Bottom-navigation shell for the Dean of Studies (DOS) module.
 ///
-/// 5 tabs: Overview / Teaching / Assessments / Reports / More.
+/// 5 tabs mirror the compact DOS mobile workflow: Home / Timetable /
+/// Assessments / Performance / More.
 /// Each tab owns a nested [Navigator] so that screens pushed on top of a
 /// tab's root keep the [DeanShell]'s bottom nav visible (push-on-top-of-tab
 /// pattern). Pushed screens are reached via named routes registered on each
@@ -44,12 +45,12 @@ class _DeanShellState extends State<DeanShell> {
       NavigationDestination(
         icon: const Icon(Icons.dashboard_outlined, size: 24),
         selectedIcon: Icon(Icons.dashboard_rounded, size: 24, color: primary),
-        label: 'Overview',
+        label: 'Home',
       ),
       NavigationDestination(
         icon: const Icon(Icons.school_outlined, size: 24),
         selectedIcon: Icon(Icons.school_rounded, size: 24, color: primary),
-        label: 'Teaching',
+        label: 'Timetable',
       ),
       NavigationDestination(
         icon: const Icon(Icons.fact_check_outlined, size: 24),
@@ -59,7 +60,7 @@ class _DeanShellState extends State<DeanShell> {
       NavigationDestination(
         icon: const Icon(Icons.bar_chart_outlined, size: 24),
         selectedIcon: Icon(Icons.bar_chart_rounded, size: 24, color: primary),
-        label: 'Reports',
+        label: 'Performance',
       ),
       NavigationDestination(
         icon: const Icon(Icons.grid_view_outlined, size: 24),
@@ -158,8 +159,6 @@ class _DeanShellState extends State<DeanShell> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -174,27 +173,14 @@ class _DeanShellState extends State<DeanShell> {
           index: _selectedIndex,
           children: List.generate(5, _buildTabNavigator),
         ),
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow(context),
-                blurRadius: 20,
-                offset: const Offset(0, -5),
-              ),
-            ],
-          ),
-          child: NavigationBar(
-            height: 64,
-            backgroundColor: isDark
-                ? AppColors.surfaceDark
-                : AppColors.surfaceLight,
-            indicatorColor: AppColors.primary(context),
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: _onDestinationSelected,
-            destinations: _destinations(context),
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          ),
+        bottomNavigationBar: NavigationBar(
+          height: 68,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          indicatorColor: Colors.transparent,
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onDestinationSelected,
+          destinations: _destinations(context),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         ),
       ),
     );

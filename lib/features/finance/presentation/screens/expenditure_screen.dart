@@ -226,9 +226,7 @@ class _ExpenditureScreenState extends State<ExpenditureScreen> {
                 TextFormField(
                   controller: amountController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Amount (UGX)',
-                  ),
+                  decoration: const InputDecoration(labelText: 'Amount (UGX)'),
                   validator: (v) {
                     final parsed = double.tryParse(v ?? '');
                     if (parsed == null || parsed <= 0) {

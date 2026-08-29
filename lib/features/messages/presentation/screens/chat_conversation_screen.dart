@@ -265,8 +265,26 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
       appBar: AppBar(
         backgroundColor: isDark ? AppColors.bgDark : Colors.white,
         elevation: 0,
-        leadingWidth: 40,
-        titleSpacing: 0,
+        toolbarHeight: 72,
+        // Keep the title clear of the screen edge. Previously titleSpacing
+        // was zero without a leading widget, which let the avatar sit flush
+        // against the device edge on routes that had no back affordance.
+        leadingWidth: 52,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: AppSpacing.s),
+          child: IconButton(
+            tooltip: 'Back to messages',
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/messages');
+              }
+            },
+          ),
+        ),
+        titleSpacing: AppSpacing.s,
         title: InkWell(
           // Broadcast lists and channels have their own info screen (it is
           // about recipients and delivery, not group membership).
@@ -279,14 +297,15 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           child: Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.grey850 : AppColors.grey100,
                   border: Border.all(
                     color: isDark ? AppColors.borderDark : AppColors.black,
                     width: 1,
                   ),
+                  borderRadius: BorderRadius.circular(12),
                   image: conversation.avatarUrl != null
                       ? DecorationImage(
                           image: NetworkImage(conversation.avatarUrl!),
@@ -306,7 +325,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                         ),
                       ),
               ),
-              const SizedBox(width: AppSpacing.s),
+              const SizedBox(width: AppSpacing.m),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,17 +361,20 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           ),
         ),
         actions: [
-          PopupMenuButton<String>(
-            tooltip: 'Conversation options',
-            icon: const Icon(Icons.more_horiz_rounded),
-            onSelected: (value) {
-              if (value == 'info') {
-                context.push('/messages/chat/${widget.chatId}/info');
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'info', child: Text('Conversation info')),
-            ],
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.s),
+            child: PopupMenuButton<String>(
+              tooltip: 'Conversation options',
+              icon: const Icon(Icons.more_horiz_rounded),
+              onSelected: (value) {
+                if (value == 'info') {
+                  context.push('/messages/chat/${widget.chatId}/info');
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'info', child: Text('Conversation info')),
+              ],
+            ),
           ),
         ],
       ),
@@ -520,8 +542,10 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
             ),
           ),
         if (_selectedIds.isEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 7),
+            color: isDark ? AppColors.bgDark : Colors.white,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -531,10 +555,13 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                   color: AppColors.textMuted(context),
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  'Messages are recorded for school safeguarding.',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.textMuted(context),
+                Flexible(
+                  child: Text(
+                    'Messages are recorded for school safeguarding.',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textMuted(context),
+                    ),
                   ),
                 ),
               ],
@@ -725,8 +752,8 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.s,
-        vertical: AppSpacing.s,
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.m,
       ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.bgDark : Colors.white,
@@ -752,16 +779,15 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                     icon: Icon(
                       Icons.add_circle_outline,
                       color: isDark ? AppColors.white : AppColors.black,
-                      size: 24,
+                      size: 26,
                     ),
                     onPressed: () =>
                         _showAttachmentMenu(context, user, conversation),
                   ),
                   Expanded(
                     child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.m,
+                        horizontal: AppSpacing.l,
                       ),
                       decoration: BoxDecoration(
                         color: isDark ? AppColors.grey850 : AppColors.grey50,
@@ -779,6 +805,11 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                         maxLines: 4,
                         minLines: 1,
                         textInputAction: TextInputAction.newline,
+                        onSubmitted: (_) {
+                          if (_preferences.enterIsSend && _composerHadText) {
+                            _send(user, conversation);
+                          }
+                        },
                         textCapitalization: TextCapitalization.sentences,
                         style: AppTypography.bodyMedium.copyWith(
                           color: isDark ? Colors.white : Colors.black,
@@ -794,39 +825,43 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                           contentPadding: const EdgeInsets.symmetric(
                             vertical: 10,
                           ),
-                          suffixIcon: Icon(
-                            Icons.emoji_emotions_outlined,
-                            color: isDark ? AppColors.white : AppColors.black,
-                            size: 20,
+                          suffixIcon: IconButton(
+                            tooltip: 'Add emoji',
+                            icon: Icon(
+                              Icons.emoji_emotions_outlined,
+                              color: isDark ? AppColors.white : AppColors.black,
+                              size: 21,
+                            ),
+                            onPressed: _showEmojiPicker,
                           ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.s),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: _composerHadText
+                          ? (isDark ? AppColors.white : AppColors.black)
+                          : (isDark ? AppColors.grey850 : AppColors.grey100),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      tooltip: _composerHadText
+                          ? 'Send message'
+                          : 'Write a message to send',
+                      icon: Icon(
+                        Icons.send_rounded,
                         color: _composerHadText
-                            ? (isDark ? AppColors.white : AppColors.black)
-                            : (isDark ? AppColors.grey850 : AppColors.grey100),
-                        shape: BoxShape.circle,
+                            ? (isDark ? AppColors.black : AppColors.white)
+                            : AppColors.textMuted(context),
+                        size: 20,
                       ),
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.send_rounded,
-                          color: _composerHadText
-                              ? (isDark ? AppColors.black : AppColors.white)
-                              : AppColors.textMuted(context),
-                          size: 18,
-                        ),
-                        onPressed: _composerHadText
-                            ? () => _send(user, conversation)
-                            : null,
-                      ),
+                      onPressed: _composerHadText
+                          ? () => _send(user, conversation)
+                          : null,
                     ),
                   ),
                 ],
@@ -937,6 +972,53 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
         ConversationMessageSendRequested(content: text, replyTo: replyTo),
       );
     }
+  }
+
+  /// A lightweight picker keeps the composer useful without adding a second
+  /// keyboard dependency. It inserts at the cursor, so emoji can be used in
+  /// the middle of a draft as well as at the end.
+  Future<void> _showEmojiPicker() async {
+    const emojis = ['😀', '😊', '👍', '❤️', '👏', '🙏', '🎉', '📚', '✅', '❗'];
+    final emoji = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+          child: Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            spacing: 8,
+            runSpacing: 8,
+            children: emojis
+                .map(
+                  (item) => IconButton(
+                    tooltip: item,
+                    onPressed: () => Navigator.pop(sheetContext, item),
+                    icon: Text(item, style: const TextStyle(fontSize: 26)),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      ),
+    );
+    if (emoji == null || !mounted) return;
+
+    final current = _messageController.value;
+    final selection = current.selection.isValid
+        ? current.selection
+        : TextSelection.collapsed(offset: current.text.length);
+    final updated = current.text.replaceRange(
+      selection.start,
+      selection.end,
+      emoji,
+    );
+    final cursor = selection.start + emoji.length;
+    _messageController.value = TextEditingValue(
+      text: updated,
+      selection: TextSelection.collapsed(offset: cursor),
+    );
   }
 
   Future<void> _forward(UserEntity user, ChatMessage message) async {

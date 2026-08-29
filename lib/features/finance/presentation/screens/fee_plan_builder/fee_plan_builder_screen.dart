@@ -43,8 +43,9 @@ class FeePlanBuilderScreen extends StatelessWidget {
     final schoolId = authState.user.schoolId;
 
     return BlocProvider(
-      create: (_) => FeePlanBuilderBloc(repository: sl())
-        ..add(FeePlansSubscriptionRequested(schoolId)),
+      create: (_) =>
+          FeePlanBuilderBloc(repository: sl())
+            ..add(FeePlansSubscriptionRequested(schoolId)),
       child: _BuilderView(schoolId: schoolId, canManage: canManage),
     );
   }
@@ -79,7 +80,8 @@ class _BuilderViewState extends State<_BuilderView>
   Widget build(BuildContext context) {
     return BlocListener<FeePlanBuilderBloc, FeePlanBuilderState>(
       listenWhen: (prev, curr) =>
-          curr.error != prev.error || curr.successMessage != prev.successMessage,
+          curr.error != prev.error ||
+          curr.successMessage != prev.successMessage,
       listener: (context, state) {
         if (state.error != null) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -90,9 +92,9 @@ class _BuilderViewState extends State<_BuilderView>
           );
         }
         if (state.successMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.successMessage!)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.successMessage!)));
         }
       },
       child: Scaffold(
@@ -109,7 +111,10 @@ class _BuilderViewState extends State<_BuilderView>
         body: TabBarView(
           controller: _tabController,
           children: [
-            _FeePlansTab(schoolId: widget.schoolId, canManage: widget.canManage),
+            _FeePlansTab(
+              schoolId: widget.schoolId,
+              canManage: widget.canManage,
+            ),
             _FeeCatalogueTab(
               schoolId: widget.schoolId,
               canManage: widget.canManage,
@@ -168,21 +173,29 @@ class _FeePlansTab extends StatelessWidget {
                             itemCount: state.plans.length,
                             itemBuilder: (context, index) {
                               final plan = state.plans[index];
-                              final className = classes
-                                      .where((c) => c.id == plan.selector.classId)
+                              final className =
+                                  classes
+                                      .where(
+                                        (c) => c.id == plan.selector.classId,
+                                      )
                                       .firstOrNull
                                       ?.name ??
                                   plan.selector.classId;
-                              final yearName = years
+                              final yearName =
+                                  years
                                       .where(
                                         (y) =>
-                                            y.id == plan.selector.academicYearId,
+                                            y.id ==
+                                            plan.selector.academicYearId,
                                       )
                                       .firstOrNull
                                       ?.name ??
                                   plan.selector.academicYearId;
-                              final termName = terms
-                                      .where((t) => t.id == plan.selector.termId)
+                              final termName =
+                                  terms
+                                      .where(
+                                        (t) => t.id == plan.selector.termId,
+                                      )
                                       .firstOrNull
                                       ?.name ??
                                   plan.selector.termId;
@@ -271,7 +284,10 @@ class _FeePlansTab extends StatelessWidget {
       context: context,
       builder: (dialogContext) => BlocProvider.value(
         value: bloc,
-        child: FeePlanEditorDialog(schoolId: schoolId, existingPlan: existingPlan),
+        child: FeePlanEditorDialog(
+          schoolId: schoolId,
+          existingPlan: existingPlan,
+        ),
       ),
     );
   }
@@ -365,7 +381,10 @@ class _FeeCatalogueTab extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, FeeCatalogueItem item) async {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    FeeCatalogueItem item,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -417,43 +436,43 @@ class _FeeCatalogueTab extends StatelessWidget {
         content: SizedBox(
           width: 420,
           child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Common charges',
-              style: Theme.of(dialogContext).textTheme.labelLarge,
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final preset in _presetCharges)
-                  ActionChip(
-                    label: Text(preset.$1),
-                    onPressed: () {
-                      nameController.text = preset.$1;
-                      serviceKeyController.text = preset.$2;
-                    },
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Name (e.g. Tuition)',
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Common charges',
+                style: Theme.of(dialogContext).textTheme.labelLarge,
               ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: serviceKeyController,
-              decoration: const InputDecoration(
-                labelText: 'Service key (optional)',
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final preset in _presetCharges)
+                    ActionChip(
+                      label: Text(preset.$1),
+                      onPressed: () {
+                        nameController.text = preset.$1;
+                        serviceKeyController.text = preset.$2;
+                      },
+                    ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name (e.g. Tuition)',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: serviceKeyController,
+                decoration: const InputDecoration(
+                  labelText: 'Service key (optional)',
+                ),
+              ),
+            ],
           ),
         ),
         actions: [

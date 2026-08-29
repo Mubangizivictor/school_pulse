@@ -11,12 +11,14 @@ void main() {
   for (final brightness in [Brightness.light, Brightness.dark]) {
     final label = brightness == Brightness.dark ? 'dark' : 'light';
 
-    testWidgets('FinanceScaffold renders its title + body in $label mode',
-        (tester) async {
+    testWidgets('FinanceScaffold renders its title + body in $label mode', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme:
-              brightness == Brightness.dark ? AppTheme.dark() : AppTheme.light(),
+          theme: brightness == Brightness.dark
+              ? AppTheme.dark()
+              : AppTheme.light(),
           home: const FinanceScaffold(
             title: 'Cash & Bank',
             body: Center(child: Text('cash-bank-body')),

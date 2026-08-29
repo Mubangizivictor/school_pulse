@@ -270,7 +270,9 @@ class _ReceivePaymentScreenState extends State<ReceivePaymentScreen> {
                 color: AppColors.textSecondary(context),
               ),
               isCollapsed: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.s),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: AppSpacing.s,
+              ),
               border: InputBorder.none,
             ),
           ),

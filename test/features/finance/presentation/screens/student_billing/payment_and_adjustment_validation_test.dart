@@ -82,22 +82,37 @@ void main() {
 
   group('validatePaymentDraft', () {
     test('accepts a valid whole-number-UGX amount within the balance', () {
-      final error = validatePaymentDraft(amountText: '200000', balanceUgx: 500000);
+      final error = validatePaymentDraft(
+        amountText: '200000',
+        balanceUgx: 500000,
+      );
       expect(error, isNull);
     });
 
     test('rejects a decimal amount rather than rounding it', () {
-      final error = validatePaymentDraft(amountText: '1000.75', balanceUgx: 500000);
+      final error = validatePaymentDraft(
+        amountText: '1000.75',
+        balanceUgx: 500000,
+      );
       expect(error, contains('whole number'));
     });
 
     test('rejects zero and negative amounts', () {
-      expect(validatePaymentDraft(amountText: '0', balanceUgx: 500000), isNotNull);
-      expect(validatePaymentDraft(amountText: '-1000', balanceUgx: 500000), isNotNull);
+      expect(
+        validatePaymentDraft(amountText: '0', balanceUgx: 500000),
+        isNotNull,
+      );
+      expect(
+        validatePaymentDraft(amountText: '-1000', balanceUgx: 500000),
+        isNotNull,
+      );
     });
 
     test('rejects an amount exceeding the remaining balance', () {
-      final error = validatePaymentDraft(amountText: '600000', balanceUgx: 500000);
+      final error = validatePaymentDraft(
+        amountText: '600000',
+        balanceUgx: 500000,
+      );
       expect(error, contains('exceeds'));
     });
 

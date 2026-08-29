@@ -151,7 +151,9 @@ class FeePlanVersion extends Equatable {
         planId: json['planId'] as String? ?? '',
         version: (json['version'] as num?)?.toInt() ?? 0,
         lines: ((json['lines'] as List?) ?? const [])
-            .map((l) => FeePlanLine.fromJson((l as Map).cast<String, dynamic>()))
+            .map(
+              (l) => FeePlanLine.fromJson((l as Map).cast<String, dynamic>()),
+            )
             .toList(),
         totalUgx: (json['totalUgx'] as num?)?.toInt() ?? 0,
       );
@@ -178,16 +180,15 @@ class MatchedFeePlan extends Equatable {
     required this.lines,
   });
 
-  factory MatchedFeePlan.fromJson(Map<String, dynamic> json) =>
-      MatchedFeePlan(
-        planId: json['planId'] as String? ?? '',
-        versionId: json['versionId'] as String? ?? '',
-        name: json['name'] as String? ?? '',
-        totalUgx: (json['totalUgx'] as num?)?.toInt() ?? 0,
-        lines: ((json['lines'] as List?) ?? const [])
-            .map((l) => FeePlanLine.fromJson((l as Map).cast<String, dynamic>()))
-            .toList(),
-      );
+  factory MatchedFeePlan.fromJson(Map<String, dynamic> json) => MatchedFeePlan(
+    planId: json['planId'] as String? ?? '',
+    versionId: json['versionId'] as String? ?? '',
+    name: json['name'] as String? ?? '',
+    totalUgx: (json['totalUgx'] as num?)?.toInt() ?? 0,
+    lines: ((json['lines'] as List?) ?? const [])
+        .map((l) => FeePlanLine.fromJson((l as Map).cast<String, dynamic>()))
+        .toList(),
+  );
 
   @override
   List<Object?> get props => [planId, versionId, name, totalUgx, lines];

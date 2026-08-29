@@ -9,7 +9,8 @@ import 'fee_plan_builder_state.dart';
 /// plans is a live Firestore stream (not money-authoritative); publishing
 /// and archiving go through [FeeBillingRepository], which itself calls the
 /// `publishFeePlan` callable for the money-bearing parts.
-class FeePlanBuilderBloc extends Bloc<FeePlanBuilderEvent, FeePlanBuilderState> {
+class FeePlanBuilderBloc
+    extends Bloc<FeePlanBuilderEvent, FeePlanBuilderState> {
   final FeeBillingRepository repository;
   StreamSubscription? _plansSub;
 

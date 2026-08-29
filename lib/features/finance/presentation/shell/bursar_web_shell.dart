@@ -27,6 +27,7 @@ import 'package:school_pulse/features/finance/presentation/screens/bursar_payrol
 import 'package:school_pulse/features/finance/presentation/screens/financial_reports_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_audit_trail_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/bursar_report_release_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/financial_entitlements_screen.dart';
 
 /// The Bursar console for tablet-rail-and-up widths (used by `BursarShell`'s
 /// `ResponsiveBuilder` branch at >= 1024px; the tablet 600-1023 branch uses
@@ -80,6 +81,7 @@ const _toolsNav = [
   BursarSection.payroll,
   BursarSection.reports,
   BursarSection.reportRelease,
+  BursarSection.entitlements,
   BursarSection.audit,
 ];
 
@@ -154,6 +156,8 @@ class _BursarWebShellState extends State<BursarWebShell> {
         return const FinancialReportsScreen();
       case _Section.reportRelease:
         return const BursarReportReleaseScreen();
+      case _Section.entitlements:
+        return const FinancialEntitlementsScreen();
       case _Section.audit:
         return const BursarAuditTrailScreen();
     }

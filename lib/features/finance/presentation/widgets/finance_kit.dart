@@ -1050,7 +1050,6 @@ class FinanceStates {
       ),
     );
   }
-
 }
 
 /// Segmented method selector (Cash / Mobile Money / Bank) matching the
