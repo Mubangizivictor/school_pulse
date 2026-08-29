@@ -1051,23 +1051,6 @@ class FinanceStates {
     );
   }
 
-  /// A "this part isn't wired up yet" placeholder for Phase-1 tabs whose
-  /// backend lands in a later phase (Cash & Bank, Petty Cash, Suppliers …).
-  static Widget comingSoon(
-    BuildContext context, {
-    required String feature,
-    String? detail,
-  }) {
-    return empty(
-      context,
-      icon: Icons.hourglass_empty_rounded,
-      title: '$feature is coming soon',
-      message:
-          detail ??
-          'This area is being built. Your existing finance data is safe and '
-              'nothing here has changed.',
-    );
-  }
 }
 
 /// Segmented method selector (Cash / Mobile Money / Bank) matching the

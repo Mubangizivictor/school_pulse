@@ -17,11 +17,13 @@ const _reconcileRoles = {'bursar', 'schoolAdmin'};
 
 /// Cash & Bank tab (bottom-nav slot 3).
 ///
-/// Read-only view matching the reference: till / bank / mobile-money
-/// accounts with balance + reconciliation progress + unmatched counts, then
-/// a recent ledger. Data comes from `schools/{id}/bank_accounts` and
-/// `schools/{id}/bank_ledger` (server-written; the demo seed populates
-/// them). Deposit / reconcile write flows land in a later phase.
+/// Till / bank / mobile-money accounts with balance + reconciliation
+/// progress + unmatched counts, then a recent ledger. Data comes from
+/// `schools/{id}/bank_accounts` / `schools/{id}/bank_ledger` (server-written
+/// only). Tapping an account opens its reconciliation screen: match an
+/// entry to a bank-statement reference or pair it with an opposite entry,
+/// unmatch, and post manual adjustments — all via the
+/// `finance_reconciliation.js` callables.
 class BursarCashBankScreen extends StatelessWidget {
   const BursarCashBankScreen({super.key});
 

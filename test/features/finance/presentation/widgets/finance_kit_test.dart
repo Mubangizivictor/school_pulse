@@ -83,21 +83,23 @@ void main() {
       expect(find.textContaining('1,250,000'), findsOneWidget);
     });
 
-    testWidgets(
-      'FinanceStates.comingSoon shows the feature name in $label mode',
-      (tester) async {
-        await tester.pumpWidget(
-          _wrap(
-            Builder(
-              builder: (context) =>
-                  FinanceStates.comingSoon(context, feature: 'Cash & Bank'),
+    testWidgets('FinanceStates.empty shows its title in $label mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          Builder(
+            builder: (context) => FinanceStates.empty(
+              context,
+              icon: Icons.inbox_outlined,
+              title: 'Nothing yet',
             ),
-            brightness: brightness,
           ),
-        );
-        expect(find.textContaining('Cash & Bank'), findsOneWidget);
-      },
-    );
+          brightness: brightness,
+        ),
+      );
+      expect(find.text('Nothing yet'), findsOneWidget);
+    });
 
     testWidgets('MethodSegments marks the selected method in $label mode', (
       tester,

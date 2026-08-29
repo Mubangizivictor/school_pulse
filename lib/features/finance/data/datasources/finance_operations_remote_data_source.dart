@@ -237,4 +237,30 @@ class FinanceOperationsRemoteDataSource {
     'runId': runId,
     'reference': reference,
   });
+
+  // ---- Payment vouchers (existing payment_vouchers.js callables) ----
+
+  /// Move a draft/returned voucher into the approval workflow.
+  Future<void> submitPaymentVoucher({
+    required String schoolId,
+    required String voucherId,
+  }) => _call('submitPaymentVoucher', {
+    'schoolId': schoolId,
+    'voucherId': voucherId,
+  });
+
+  /// Mark an approved voucher paid, with a payment reference + proof path.
+  Future<void> markVoucherPaid({
+    required String schoolId,
+    required String voucherId,
+    required String paymentReference,
+    required String proofPath,
+    String? paymentMethod,
+  }) => _call('markVoucherPaid', {
+    'schoolId': schoolId,
+    'voucherId': voucherId,
+    'paymentReference': paymentReference,
+    'proofPath': proofPath,
+    'paymentMethod': ?paymentMethod,
+  });
 }

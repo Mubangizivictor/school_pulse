@@ -14,7 +14,7 @@
 // no-op — see the note atop student_fee_billing.js).
 module.exports = ({ admin, onCall, HttpsError }) => {
   const db = admin.firestore();
-  const FieldValue = admin.firestore.FieldValue;
+  const { FieldValue, Timestamp } = require("firebase-admin/firestore");
 
   const txt = (v, n = 240) => String(v == null ? "" : v).trim().slice(0, n);
   const slug = (v) =>
@@ -265,7 +265,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
         approverRole: caller.primaryRole,
         status: decision,
         comment: comment || null,
-        updatedAt: admin.firestore.Timestamp.now(),
+        updatedAt: Timestamp.now(),
       });
       tx.update(ref, {
         status: target,

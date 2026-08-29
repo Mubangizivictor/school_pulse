@@ -13,7 +13,7 @@
 // Factory MUST return `api` (see the note atop student_fee_billing.js).
 module.exports = ({ admin, onCall, HttpsError }) => {
   const db = admin.firestore();
-  const FieldValue = admin.firestore.FieldValue;
+  const { FieldValue, Timestamp } = require("firebase-admin/firestore");
 
   const txt = (v, n = 240) => String(v == null ? "" : v).trim().slice(0, n);
   const slug = (v) =>
@@ -35,7 +35,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
       ? (() => {
           throw new HttpsError("invalid-argument", "Invalid date.");
         })()
-      : admin.firestore.Timestamp.fromDate(d);
+      : Timestamp.fromDate(d);
   };
 
   const FINANCE_ROLES = new Set([
@@ -387,7 +387,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
         actorRole: caller.primaryRole,
         decision,
         comment: comment || null,
-        at: admin.firestore.Timestamp.now(),
+        at: Timestamp.now(),
       });
       tx.update(ref, {
         status: target,
@@ -554,7 +554,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     const category = txt(d.category, 120);
     const purpose = txt(d.purpose, 500);
     const amountUgx = wholeUgx(d.amountUgx, "Disbursement amount");
-    const spentAt = dateOrNull(d.spentAt) || admin.firestore.Timestamp.now();
+    const spentAt = dateOrNull(d.spentAt) || Timestamp.now();
     const requestedBy = txt(d.requestedBy, 200) || caller.name;
     const receiptPath = d.receiptPath ? txt(d.receiptPath, 500) : null;
     const approvedBy = d.approvedBy ? txt(d.approvedBy, 200) : null;
@@ -724,9 +724,9 @@ module.exports = ({ admin, onCall, HttpsError }) => {
           approvalThresholdUgx: fSnap.exists
             ? fSnap.data().approvalThresholdUgx || 50000
             : 50000,
-          createdAt: fSnap.exists
-            ? fSnap.data().createdAt
-            : FieldValue.serverTimestamp(),
+          createdAt:
+            (fSnap.exists && fSnap.data().createdAt) ||
+            FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true },

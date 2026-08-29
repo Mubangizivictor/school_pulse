@@ -15,7 +15,7 @@
 // Factory MUST return `api`.
 module.exports = ({ admin, onCall, HttpsError }) => {
   const db = admin.firestore();
-  const FieldValue = admin.firestore.FieldValue;
+  const { FieldValue, Timestamp } = require("firebase-admin/firestore");
   const txt = (v, n = 240) => String(v == null ? "" : v).trim().slice(0, n);
   const wholeUgx = (v, label) => {
     const n = typeof v === "number" ? v : Number(v);
@@ -216,7 +216,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
         matchedEntryId: counterEntryId || null,
         statementReference: statementReference || null,
         statementDate: d.statementDate
-          ? admin.firestore.Timestamp.fromDate(new Date(d.statementDate))
+          ? Timestamp.fromDate(new Date(d.statementDate))
           : null,
       });
       if (counter) {

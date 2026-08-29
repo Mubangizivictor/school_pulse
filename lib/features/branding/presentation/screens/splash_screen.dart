@@ -26,12 +26,21 @@ class _SplashScreenState extends State<SplashScreen> {
     final authBloc = context.read<AuthBloc>();
     final authState = authBloc.state;
 
+    // When the auth state is already resolved at first build (e.g. a warm
+    // start, or a test that signs in before pumping), navigating straight
+    // from initState runs router redirects against a not-yet-stable element
+    // tree ("deactivated widget's ancestor"). Defer to after the first
+    // frame; the async branch below is already post-frame by construction.
     if (authState is AuthAuthenticated) {
-      _navigate(authState);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _navigate(authState);
+      });
       return;
     }
     if (authState is AuthUnauthenticated) {
-      context.go('/welcome');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.go('/welcome');
+      });
       return;
     }
 

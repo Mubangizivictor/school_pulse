@@ -316,14 +316,17 @@ class _BursarPayrollScreenState extends State<BursarPayrollScreen> {
         else
           SizedBox(
             height: desktop ? 190 : 130,
-            child: ListView.separated(
-              itemCount: run.lines.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (_, i) => ListTile(
-                dense: true,
-                title: Text(run.lines[i].label),
-                trailing: Text(
-                  CurrencyFormatter.ugx(run.lines[i].amountUgx.toDouble()),
+            child: Material(
+              type: MaterialType.transparency,
+              child: ListView.separated(
+                itemCount: run.lines.length,
+                separatorBuilder: (_, _) => const Divider(height: 1),
+                itemBuilder: (_, i) => ListTile(
+                  dense: true,
+                  title: Text(run.lines[i].label),
+                  trailing: Text(
+                    CurrencyFormatter.ugx(run.lines[i].amountUgx.toDouble()),
+                  ),
                 ),
               ),
             ),
@@ -338,12 +341,19 @@ class _BursarPayrollScreenState extends State<BursarPayrollScreen> {
     PayrollRemittance? nssf,
   ) => SectionCard(
     title: 'REMITTANCE OBLIGATIONS',
-    child: Column(
-      children: [
-        _remittanceRow('PAYE', run.payeUgx, paye),
-        const Divider(),
-        _remittanceRow('NSSF', run.nssfEmployerUgx + run.nssfEmployeeUgx, nssf),
-      ],
+    child: Material(
+      type: MaterialType.transparency,
+      child: Column(
+        children: [
+          _remittanceRow('PAYE', run.payeUgx, paye),
+          const Divider(),
+          _remittanceRow(
+            'NSSF',
+            run.nssfEmployerUgx + run.nssfEmployeeUgx,
+            nssf,
+          ),
+        ],
+      ),
     ),
   );
   Widget _remittanceRow(

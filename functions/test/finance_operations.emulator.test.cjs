@@ -218,6 +218,18 @@ describe("petty cash", () => {
     assert.equal(petty.data().type, "Replenishment");
   });
 
+  test("replenish onto a pre-existing float doc that has no createdAt field succeeds", async () => {
+    // The demo seed writes petty_cash/main with only location + balances, no
+    // createdAt — merging must not push `undefined` into Firestore.
+    await db.doc(`schools/${SCHOOL}/petty_cash/main`).set({
+      location: "Main Office", currentFloatUgx: 50000, totalInUgx: 50000, totalOutUgx: 0,
+    });
+    const r = await replenish(200000);
+    assert.equal(r.floatBalanceUgx, 250000);
+    const f = await db.doc(`schools/${SCHOOL}/petty_cash/main`).get();
+    assert.ok(f.data().createdAt, "createdAt should be backfilled");
+  });
+
   test("disbursement moves the float down and writes a signed ledger entry", async () => {
     await replenish(500000);
     const r = await fns.recordPettyCashDisbursement(
