@@ -57,6 +57,15 @@ const FINANCE_COLLECTIONS = [
   "payments",
   "fee_categories",
   "fee_structures",
+  // Financial Entitlements & NFC service access
+  "financial_entitlement_policy",
+  "financial_entitlement_policy_proposals",
+  "financial_entitlement_overrides",
+  "financial_entitlement_audit",
+  "entitlement_terminals",
+  "entitlement_taps",
+  "entitlement_terminal_nonces",
+  "credentials",
 ];
 
 async function deleteCollection(ref) {
