@@ -6,9 +6,7 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/components/wizard_scaffold.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/hr/domain/entities/salary_structure.dart';
-import 'package:school_pulse/features/hr/domain/repositories/salary_structure_repository.dart';
 import 'package:school_pulse/features/structure/domain/entities/campus_entities.dart';
-import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
@@ -43,20 +41,11 @@ class _Stage02WorkState extends State<Stage02Work> {
   }
 
   void _lookupMatch(AddStaffWizardController controller) {
-    final designationId = controller.draft.designationId;
-    if (_matchedForDesignationId == designationId) return;
-    _matchedForDesignationId = designationId;
-    if (designationId == null || designationId.isEmpty) {
-      _matchFuture = Future.value(null);
-      return;
-    }
-    _matchFuture = di
-        .sl<SalaryStructureRepository>()
-        .findMatchingSalaryStructure(
-          schoolId: controller.schoolId,
-          designationId: designationId,
-        )
-        .then((result) => result.fold((_) => null, (m) => m));
+    // Work details no longer collect a role, so pay is deliberately set up
+    // later in HR rather than being matched from an onboarding selection.
+    if (_matchedForDesignationId == '') return;
+    _matchedForDesignationId = '';
+    _matchFuture = Future.value(null);
   }
 
   int _billedTotalUgx(
@@ -109,8 +98,7 @@ class _Stage02WorkState extends State<Stage02Work> {
           children: [
             const WizardStageHeading(
               title: 'Where will they work?',
-              subtitle:
-                  'Tell us where the staff member will work and their role details.',
+              subtitle: 'Add their employment details and start date.',
             ),
             const SizedBox(height: 24),
             StreamBuilder<List<Campus>>(
@@ -166,49 +154,6 @@ class _Stage02WorkState extends State<Stage02Work> {
                 );
               },
             ),
-            const SizedBox(height: 16),
-            StreamBuilder<List<StaffDesignation>>(
-              stream: _structureRepository.watchDesignations(schoolId),
-              builder: (context, snapshot) {
-                final designations =
-                    (snapshot.data ?? const [])
-                        .where((d) => !d.isArchived)
-                        .toList()
-                      ..sort((a, b) => a.name.compareTo(b.name));
-                return _labeledField(
-                  'Role',
-                  DropdownButtonFormField<String>(
-                    initialValue:
-                        designations.any((d) => d.id == draft.designationId)
-                        ? draft.designationId
-                        : null,
-                    decoration: const InputDecoration(hintText: 'Select role'),
-                    items: designations
-                        .map(
-                          (d) => DropdownMenuItem(
-                            value: d.id,
-                            child: Text(d.name),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      final picked = designations
-                          .where((d) => d.id == value)
-                          .firstOrNullExt();
-                      if (picked != null) {
-                        draft.designationId = picked.id;
-                        draft.designation = picked.name;
-                        controller.notifyDraftChanged();
-                      }
-                    },
-                    validator: (value) =>
-                        value == null || value.isEmpty ? 'Required' : null,
-                  ),
-                  required: true,
-                );
-              },
-            ),
-            const SizedBox(height: 16),
             _labeledField(
               'Employment type',
               DropdownButtonFormField<String>(
@@ -408,10 +353,8 @@ class _Stage02WorkState extends State<Stage02Work> {
           ),
           const SizedBox(height: 8),
           Text(
-            'No published salary structure matches this role yet. '
-            'You can continue adding this staff member - pay setup will '
-            'stay pending until a salary structure is published in '
-            'Structure > People > Salary Structures.',
+            'Continue to add this staff member, then set up their pay in HR '
+            'when you are ready.',
             style: TextStyle(color: AppColors.textMuted(context)),
           ),
         ],

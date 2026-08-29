@@ -109,14 +109,6 @@ class Stage05Review extends StatelessWidget {
                         fontSize: 15.5,
                       ),
                     ),
-                    if (draft.designation.isNotEmpty)
-                      Text(
-                        draft.designation,
-                        style: TextStyle(
-                          color: AppColors.textMuted(context),
-                          fontSize: 12.5,
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -137,7 +129,6 @@ class Stage05Review extends StatelessWidget {
             icon: Icons.work_outline,
             title: 'Work',
             summary: [
-              if (draft.designation.isNotEmpty) draft.designation,
               draft.employmentType,
             ].where((s) => s.isNotEmpty).join(' · '),
             onEdit: () => controller.goToStage(WizardStage.work),

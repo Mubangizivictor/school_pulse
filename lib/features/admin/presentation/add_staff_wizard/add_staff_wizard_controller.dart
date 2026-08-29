@@ -359,7 +359,7 @@ class AddStaffWizardController extends ChangeNotifier {
         // Department is intentionally not part of staff onboarding. Role
         // scope is configured separately in the following Roles stage.
         departmentId: null,
-        designationId: draft.designationId,
+        designationId: null,
         campusId: draft.campusId,
         employmentType: draft.employmentType,
         dateJoined: draft.dateJoined,

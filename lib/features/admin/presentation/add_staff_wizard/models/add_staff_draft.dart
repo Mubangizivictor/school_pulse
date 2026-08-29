@@ -62,10 +62,8 @@ class AddStaffDraft {
 
   // Step 5: Employment Information
   String employmentType = 'Permanent';
-  // designation holds the selected staff-role display name (for the Review
-  // step and Firestore write); designationId is the Structure role id. The
-  // legacy department fields remain only so old saved drafts can be restored;
-  // staff registration no longer collects or submits a department.
+  // Legacy department/designation values are retained only to restore older
+  // saved drafts. Staff registration no longer collects or submits either.
   String department = '';
   String? departmentId;
   String designation = '';
@@ -109,7 +107,7 @@ class AddStaffDraft {
   bool get contactInfoComplete =>
       email.trim().isNotEmpty && phoneNumber.trim().isNotEmpty;
 
-  bool get employmentInfoComplete => designationId?.trim().isNotEmpty ?? false;
+  bool get employmentInfoComplete => true;
 
   bool get rolesSelected => selectedRoles.isNotEmpty;
 
