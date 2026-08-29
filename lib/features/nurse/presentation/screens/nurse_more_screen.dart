@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/nurse/presentation/clinic_ui.dart';
 
 /// Compact service directory matching the clinic reference. Each destination
@@ -54,6 +57,8 @@ class NurseMoreScreen extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        _LogoutRow(onTap: () => _confirmLogout(context)),
         const SizedBox(height: 36),
         Container(
           padding: const EdgeInsets.all(16),
@@ -88,6 +93,31 @@ class NurseMoreScreen extends StatelessWidget {
       ],
     ),
   );
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Log out?'),
+        content: const Text(
+          'You will need to sign in again to access clinic records.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Log out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      context.read<AuthBloc>().add(LogoutPressed());
+    }
+  }
 }
 
 class _Group extends StatelessWidget {
@@ -126,6 +156,25 @@ class _Row extends StatelessWidget {
           const Icon(Icons.chevron_right, size: 20, color: ClinicUi.muted),
         ],
       ),
+    ),
+  );
+}
+
+class _LogoutRow extends StatelessWidget {
+  const _LogoutRow({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => OutlinedButton.icon(
+    onPressed: onTap,
+    icon: const Icon(Icons.logout),
+    label: const Text('Log out'),
+    style: OutlinedButton.styleFrom(
+      foregroundColor: Theme.of(context).colorScheme.error,
+      side: BorderSide(color: Theme.of(context).colorScheme.error),
+      minimumSize: const Size.fromHeight(48),
+      alignment: Alignment.centerLeft,
     ),
   );
 }
