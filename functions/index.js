@@ -699,10 +699,14 @@ exports.createStaffAccount = onCall(async (request) => {
   if (resolvedCampusId && !campusDocs.docs.some((doc) => doc.id === resolvedCampusId)) {
     throw new HttpsError("invalid-argument", "Selected campus does not belong to this school.");
   }
-  if (!designationId) throw new HttpsError("invalid-argument", "Designation is required.");
-  const designation = await db.collection("staff_designations").doc(designationId).get();
-  if (!designation.exists || designation.data().schoolId !== schoolId) {
-    throw new HttpsError("invalid-argument", "Selected designation does not belong to this school.");
+  // Designations are optional. Staff roles and their scopes are assigned in
+  // the Roles stage; onboarding intentionally no longer asks for a legacy
+  // department or designation.
+  if (designationId) {
+    const designation = await db.collection("staff_designations").doc(designationId).get();
+    if (!designation.exists || designation.data().schoolId !== schoolId) {
+      throw new HttpsError("invalid-argument", "Selected designation does not belong to this school.");
+    }
   }
 
   // The canonical staff_role_assignments row is the only thing the teacher

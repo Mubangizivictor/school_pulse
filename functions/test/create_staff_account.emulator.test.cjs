@@ -159,6 +159,16 @@ describe("createStaffAccount", () => {
     });
   });
 
+  test("creates staff without a legacy designation", async () => {
+    const payload = baseStaffPayload({ designationId: null });
+
+    const result = await createStaffAccount.run(request(ADMIN_UID, payload));
+    const userDoc = await db.doc(`users/${result.uid}`).get();
+
+    assert.equal(userDoc.exists, true);
+    assert.equal(userDoc.data().designationId, undefined);
+  });
+
   // --- (c) Idempotency retry ---
   test("retrying with the same idempotencyKey does not create duplicate Auth users or user docs", async () => {
     const payload = baseStaffPayload({ idempotencyKey: "fixed-retry-key-0000000000" });
