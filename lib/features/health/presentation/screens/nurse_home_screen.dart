@@ -37,159 +37,167 @@ class _NurseHomeScreenState extends State<NurseHomeScreen> {
 
   @override
   Widget build(BuildContext context) => ClinicPage(
-    child: BlocBuilder<HealthBloc, HealthState>(
-      builder: (_, state) {
-        if (state is HealthLoading || state is HealthInitial) {
-          return const Center(
-            child: CircularProgressIndicator(color: ClinicUi.black),
-          );
-        }
-        if (state is HealthError) {
-          return ClinicEmptyState(
-            title: 'Unable to load clinic',
-            message: state.message,
-            icon: Icons.cloud_off_outlined,
-          );
-        }
-        final data = state is HealthDashboardLoaded ? state : null;
-        final visits = data?.todayVisits ?? const <ClinicVisit>[];
-        final waiting = visits
-            .where((v) => v.outcome == VisitOutcome.admittedToSickBay)
-            .length;
-        final followUps = visits.where((v) => v.followUpRequired).length;
-        return RefreshIndicator(
-          color: ClinicUi.black,
-          onRefresh: () async => context.read<HealthBloc>().add(
-            FetchHealthDashboardData(_schoolId),
-          ),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${_name.split(' ').first} · School Nurse',
+    child: _schoolId.isEmpty
+        ? const ClinicEmptyState(
+            title: 'No clinic assigned',
+            message:
+                'Your account is not assigned to a school. Ask an administrator '
+                'to link you to a clinic before recording visits.',
+            icon: Icons.location_off_outlined,
+          )
+        : BlocBuilder<HealthBloc, HealthState>(
+            builder: (_, state) {
+              if (state is HealthLoading || state is HealthInitial) {
+                return const Center(
+                  child: CircularProgressIndicator(color: ClinicUi.black),
+                );
+              }
+              if (state is HealthError) {
+                return ClinicEmptyState(
+                  title: 'Unable to load clinic',
+                  message: state.message,
+                  icon: Icons.cloud_off_outlined,
+                );
+              }
+              final data = state is HealthDashboardLoaded ? state : null;
+              final visits = data?.todayVisits ?? const <ClinicVisit>[];
+              final waiting = visits
+                  .where((v) => v.outcome == VisitOutcome.admittedToSickBay)
+                  .length;
+              final followUps = visits.where((v) => v.followUpRequired).length;
+              return RefreshIndicator(
+                color: ClinicUi.black,
+                onRefresh: () async => context.read<HealthBloc>().add(
+                  FetchHealthDashboardData(_schoolId),
+                ),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${_name.split(' ').first} · School Nurse',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: ClinicUi.foreground(context),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {},
+                          icon: const Icon(Icons.chat_bubble_outline),
+                        ),
+                        IconButton(
+                          onPressed: () {},
+                          icon: const Icon(Icons.notifications_none),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      'Clinic overview',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 23,
                         color: ClinicUi.foreground(context),
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.chat_bubble_outline),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.notifications_none),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              Text(
-                'Clinic overview',
-                style: TextStyle(
-                  fontSize: 23,
-                  color: ClinicUi.foreground(context),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 14),
-              LayoutBuilder(
-                builder: (_, c) => Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _Metric(
-                      'Today’s visits',
-                      visits.length,
-                      'View all',
-                      () => context.push('/staff/nurse/visits'),
-                      width: (c.maxWidth - 8) / 2,
+                    const SizedBox(height: 14),
+                    LayoutBuilder(
+                      builder: (_, c) => Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _Metric(
+                            'Today’s visits',
+                            visits.length,
+                            'View all',
+                            () => context.push('/staff/nurse/visits'),
+                            width: (c.maxWidth - 8) / 2,
+                          ),
+                          _Metric(
+                            'Waiting now',
+                            waiting,
+                            'View queue',
+                            () => context.push('/staff/nurse/visits'),
+                            danger: waiting > 0,
+                            width: (c.maxWidth - 8) / 2,
+                          ),
+                          _Metric(
+                            'Follow-ups due',
+                            followUps,
+                            'View list',
+                            () => context.push('/staff/nurse/visits'),
+                            width: (c.maxWidth - 8) / 2,
+                          ),
+                          _Metric(
+                            'Low-stock items',
+                            data?.lowStockItems.length ?? 0,
+                            'View inventory',
+                            () => context.push('/staff/nurse/inventory'),
+                            danger: (data?.lowStockItems.isNotEmpty ?? false),
+                            width: (c.maxWidth - 8) / 2,
+                          ),
+                        ],
+                      ),
                     ),
-                    _Metric(
-                      'Waiting now',
-                      waiting,
-                      'View queue',
-                      () => context.push('/staff/nurse/visits'),
-                      danger: waiting > 0,
-                      width: (c.maxWidth - 8) / 2,
+                    const SizedBox(height: 18),
+                    Text(
+                      'Today · ${DateFormat('MMM d').format(DateTime.now())}',
+                      style: TextStyle(
+                        color: ClinicUi.foreground(context),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                     ),
-                    _Metric(
-                      'Follow-ups due',
-                      followUps,
-                      'View list',
-                      () => context.push('/staff/nurse/visits'),
-                      width: (c.maxWidth - 8) / 2,
+                    const SizedBox(height: 8),
+                    if (visits.isEmpty)
+                      const _CompactEmpty()
+                    else
+                      ...visits.take(6).map((v) => _TimelineVisit(visit: v)),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Quick actions',
+                      style: TextStyle(
+                        color: ClinicUi.foreground(context),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                     ),
-                    _Metric(
-                      'Low-stock items',
-                      data?.lowStockItems.length ?? 0,
-                      'View inventory',
-                      () => context.push('/staff/nurse/inventory'),
-                      danger: (data?.lowStockItems.isNotEmpty ?? false),
-                      width: (c.maxWidth - 8) / 2,
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _Quick(
+                          icon: Icons.assignment_outlined,
+                          label: 'Record visit',
+                          onTap: () => context.push('/staff/nurse/lookup'),
+                        ),
+                        _Quick(
+                          icon: Icons.search,
+                          label: 'Search learner',
+                          onTap: () => context.push('/staff/nurse/lookup'),
+                        ),
+                        _Quick(
+                          icon: Icons.monitor_heart_outlined,
+                          label: 'Add vitals',
+                          onTap: () => context.push('/staff/nurse/lookup'),
+                        ),
+                        _Quick(
+                          icon: Icons.medication_outlined,
+                          label: 'Dispense item',
+                          onTap: () => context.push('/staff/nurse/inventory'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                'Today · ${DateFormat('MMM d').format(DateTime.now())}',
-                style: TextStyle(
-                  color: ClinicUi.foreground(context),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (visits.isEmpty)
-                const _CompactEmpty()
-              else
-                ...visits.take(6).map((v) => _TimelineVisit(visit: v)),
-              const SizedBox(height: 16),
-              Text(
-                'Quick actions',
-                style: TextStyle(
-                  color: ClinicUi.foreground(context),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _Quick(
-                    icon: Icons.assignment_outlined,
-                    label: 'Record visit',
-                    onTap: () => context.push('/staff/nurse/lookup'),
-                  ),
-                  _Quick(
-                    icon: Icons.search,
-                    label: 'Search learner',
-                    onTap: () => context.push('/staff/nurse/lookup'),
-                  ),
-                  _Quick(
-                    icon: Icons.monitor_heart_outlined,
-                    label: 'Add vitals',
-                    onTap: () => context.push('/staff/nurse/lookup'),
-                  ),
-                  _Quick(
-                    icon: Icons.medication_outlined,
-                    label: 'Dispense item',
-                    onTap: () => context.push('/staff/nurse/inventory'),
-                  ),
-                ],
-              ),
-            ],
+              );
+            },
           ),
-        );
-      },
-    ),
   );
 }
 

@@ -141,16 +141,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Nurse'), findsWidgets);
-    expect(find.text('In Clinic'), findsOneWidget);
-    expect(find.text('Visits Today'), findsOneWidget);
-    expect(find.text('Urgent'), findsOneWidget);
-    expect(find.text('Low Stock'), findsOneWidget);
-    expect(find.text('Start new visit'), findsOneWidget);
-    expect(find.text('Scan student ID'), findsOneWidget);
-    expect(find.text('1 low-stock item'), findsOneWidget);
+    expect(find.text('Clinic overview'), findsOneWidget);
+    expect(find.text('Today’s visits'), findsOneWidget);
+    expect(find.text('Waiting now'), findsOneWidget);
+    expect(find.text('Follow-ups due'), findsOneWidget);
+    expect(find.text('Low-stock items'), findsOneWidget);
+    expect(find.text('Record visit'), findsOneWidget);
+    expect(find.text('Search learner'), findsOneWidget);
+    // One low-stock item drives the metric count and its danger styling.
+    expect(find.text('1'), findsWidgets);
   });
 
-  testWidgets('shows a needs-attention row only when there is low stock', (
+  testWidgets('surfaces the low-stock count in its metric card', (
     tester,
   ) async {
     when(() => healthBloc.state).thenReturn(
@@ -176,10 +178,11 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('1 low-stock item'), findsOneWidget);
+    expect(find.text('Low-stock items'), findsOneWidget);
+    expect(find.text('View inventory'), findsOneWidget);
   });
 
-  testWidgets('shows the empty needs-attention state when nothing is due', (
+  testWidgets('shows the compact empty state when no visits recorded today', (
     tester,
   ) async {
     when(() => healthBloc.state).thenReturn(
@@ -195,7 +198,7 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Nothing needs attention right now.'), findsOneWidget);
+    expect(find.text('No visits have been recorded today.'), findsOneWidget);
   });
 
   testWidgets('shows school-assignment message when nurse has no schoolId', (
