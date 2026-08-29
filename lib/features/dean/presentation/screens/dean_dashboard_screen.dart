@@ -17,10 +17,11 @@ class DeanDashboardScreen extends StatelessWidget {
       body: SafeArea(
         child: BlocBuilder<DeanBloc, DeanState>(
           builder: (context, state) {
-            if (state is! AcademicDashboardLoaded)
+            if (state is! AcademicDashboardLoaded) {
               return const Center(
                 child: CircularProgressIndicator(color: Colors.black),
               );
+            }
             final s = state.stats;
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
