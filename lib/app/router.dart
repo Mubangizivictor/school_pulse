@@ -2907,6 +2907,15 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/more',
+          // A nurse must never fall through to the shared admin/teacher More
+          // route. Their portal owns its own navigation and More screen.
+          redirect: (context, state) {
+            final auth = context.read<AuthBloc>().state;
+            if (auth is AuthAuthenticated && auth.user.role == UserRole.nurse) {
+              return '/staff/nurse';
+            }
+            return null;
+          },
           builder: (context, state) => const ProfileMoreScreen(),
           routes: [
             GoRoute(

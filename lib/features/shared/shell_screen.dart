@@ -284,7 +284,9 @@ class StaffShell extends StatelessWidget {
           context.go('/staff/messages');
           break;
         case 3:
-          context.go('/staff/more');
+          // Nurse has a dedicated five-tab clinic shell. Never hand its More
+          // tab to the shared staff/admin profile area.
+          context.go('/staff/nurse');
           break;
       }
       return;
