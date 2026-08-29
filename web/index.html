@@ -51,6 +51,8 @@
   
   
   
+  
+  
   <style id="splash-screen-style">
     html {
       height: 100%
@@ -121,20 +123,6 @@
       document.getElementById("splash-branding")?.remove();
       document.body.style.background = "transparent";
     }
-
-    // Flutter adds its view after the engine has initialized.  Remove the
-    // static native splash at that point so a dark-mode browser is never
-    // left showing a black page over a running app.
-    const splashObserver = new MutationObserver(() => {
-      if (document.querySelector('flutter-view, flt-glass-pane')) {
-        removeSplashFromWeb();
-        splashObserver.disconnect();
-      }
-    });
-    splashObserver.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-    });
   </script>
 </head>
 <body>
@@ -143,6 +131,7 @@
       <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
       <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
   </picture>
+  
   
   
   
@@ -157,6 +146,7 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script src="flutter_bootstrap.js" async=""></script>
+
 
 
 </body></html>
