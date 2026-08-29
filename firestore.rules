@@ -2246,6 +2246,20 @@ service cloud.firestore {
     function canWriteFinance() {
       return hasAnyRole(['bursar', 'schoolAdmin']);
     }
+    // A REAL finance-role check (not the hasAnyRole() staff-wide shim) for
+    // reads that carry learner-linked financial sensitivity - Financial
+    // Entitlements policy/overrides/audit/taps. Catering / transport /
+    // library / lab / boarding staff must never see these; they only get a
+    // minimal decision from the authenticated terminal callable.
+    function isEntitlementFinanceReader() {
+      return isSignedIn() && (
+        myRole() in ['bursar', 'schoolAdmin', 'headTeacher', 'director'] ||
+        'bursar' in myUser().get('roles', []) ||
+        'schoolAdmin' in myUser().get('roles', []) ||
+        'headTeacher' in myUser().get('roles', []) ||
+        'director' in myUser().get('roles', [])
+      );
+    }
     match /schools/{schoolId}/fee_categories/{categoryId} {
       allow read: if isFinanceStaff() && isSameSchool(schoolId);
       allow write: if canWriteFinance() && isSameSchool(schoolId);
@@ -2282,6 +2296,39 @@ service cloud.firestore {
       // functions/finance_governance.js. Client writes are denied so the
       // server can keep `spentAmount` authoritative and audit every change.
       allow write: if false;
+    }
+
+    // Financial Entitlements: all mutations and terminal decisions are
+    // callable-only.  In particular, service staff cannot query a learner's
+    // balance, scholarship, override note, NFC credential or decision log.
+    // They receive a minimal allow/deny result only from the authenticated
+    // terminal callable.
+    match /schools/{schoolId}/financial_entitlement_policy/{policyId} {
+      allow read: if isEntitlementFinanceReader() && isSameSchool(schoolId);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/financial_entitlement_policy_proposals/{proposalId} {
+      allow read: if isEntitlementFinanceReader() && isSameSchool(schoolId);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/financial_entitlement_overrides/{overrideId} {
+      allow read: if isEntitlementFinanceReader() && isSameSchool(schoolId);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/financial_entitlement_audit/{auditId} {
+      allow read: if isEntitlementFinanceReader() && isSameSchool(schoolId);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/entitlement_terminals/{terminalId} {
+      allow read: if isEntitlementFinanceReader() && isSameSchool(schoolId);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/entitlement_taps/{tapId} {
+      allow read: if isEntitlementFinanceReader() && isSameSchool(schoolId);
+      allow write: if false;
+    }
+    match /schools/{schoolId}/entitlement_terminal_nonces/{nonceId} {
+      allow read, write: if false;
     }
 
     // Director governance: Strategic Goals and Leadership Meetings are

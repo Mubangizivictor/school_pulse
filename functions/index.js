@@ -22,6 +22,7 @@ Object.assign(exports, require("./report_card_release")({ admin, onCall, HttpsEr
 Object.assign(exports, require("./finance_operations")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./finance_reconciliation")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./health_clinic")({ admin, onCall, HttpsError }));
+Object.assign(exports, require("./financial_entitlements")({ admin, onCall, HttpsError }));
 
 /**
  * Enqueue a templated transactional email for the `public_functions`

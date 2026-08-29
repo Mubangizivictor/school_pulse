@@ -2926,3 +2926,60 @@ describe('Finance governance (functions/finance_governance.js): '
     }));
   });
 });
+
+describe('Financial Entitlements (functions/financial_entitlements.js): '
+  + 'policy / overrides / audit / terminals / taps are callable-only, '
+  + 'finance-read, and service staff see nothing', () => {
+  async function seed() {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'schools/schoolA/financial_entitlement_policy/current'), {
+        services: { dining: { enabled: true, minimumPaymentPercentage: 75 } }, version: 1,
+      });
+      await setDoc(doc(db, 'schools/schoolA/financial_entitlement_policy_proposals/p1'), {
+        services: {}, status: 'pendingApproval', proposedBy: 'bursarA',
+      });
+      await setDoc(doc(db, 'schools/schoolA/financial_entitlement_overrides/o1'), {
+        studentId: 'studentA', service: 'dining', decision: 'allow', status: 'active',
+      });
+      await setDoc(doc(db, 'schools/schoolA/financial_entitlement_audit/a1'), {
+        action: 'policy.updated', actorId: 'bursarA',
+      });
+      await setDoc(doc(db, 'schools/schoolA/entitlement_terminals/t1'), {
+        service: 'dining', secretHash: 'x'.repeat(64), status: 'active',
+      });
+      await setDoc(doc(db, 'schools/schoolA/entitlement_taps/tap1'), {
+        studentId: 'studentA', service: 'dining', decision: 'allow',
+      });
+      await setDoc(doc(db, 'schools/schoolA/entitlement_terminal_nonces/n1'), { createdAt: new Date() });
+    });
+  }
+
+  test('policy/overrides/audit/taps: same-school finance staff read; '
+    + 'non-finance staff and other-school staff are denied; NO client writes', async () => {
+    await seed();
+    for (const col of ['financial_entitlement_policy/current', 'financial_entitlement_overrides/o1',
+      'financial_entitlement_audit/a1', 'entitlement_taps/tap1']) {
+      await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/' + col)));
+      await assertFails(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/' + col)));
+      await assertFails(getDoc(doc(dbFor('bursarB'), 'schools/schoolA/' + col)));
+    }
+    await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/financial_entitlement_policy/current'), { services: {} }));
+    await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/financial_entitlement_overrides/forged'), { decision: 'allow' }));
+    await assertFails(updateDoc(doc(dbFor('bursarA'), 'schools/schoolA/entitlement_taps/tap1'), { decision: 'deny' }));
+  });
+
+  test('entitlement_terminals: only canWriteFinance() reads; write denied to all', async () => {
+    await seed();
+    await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/entitlement_terminals/t1')));
+    await assertFails(getDoc(doc(dbFor('teacherA'), 'schools/schoolA/entitlement_terminals/t1')));
+    await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/entitlement_terminals/forged'), { service: 'dining' }));
+  });
+
+  test('entitlement_terminal_nonces: no client can ever read or write them', async () => {
+    await seed();
+    await assertFails(getDoc(doc(dbFor('bursarA'), 'schools/schoolA/entitlement_terminal_nonces/n1')));
+    await assertFails(setDoc(doc(dbFor('bursarA'), 'schools/schoolA/entitlement_terminal_nonces/forged'), { x: 1 }));
+  });
+});
+

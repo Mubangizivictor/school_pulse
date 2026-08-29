@@ -142,22 +142,25 @@ void main() {
       final decideRes = await FirebaseFunctions.instance
           .httpsCallable('decideExpenditure')
           .call<Map<String, dynamic>>({
-        'schoolId': _school,
-        'expenditureId': decidable.id,
-        'decision': 'approve',
-      });
+            'schoolId': _school,
+            'expenditureId': decidable.id,
+            'decision': 'approve',
+          });
       expect(decideRes.data['status'], 'approved');
-      final afterDecide =
-          await db.doc('schools/$_school/expenditures/${decidable.id}').get();
+      final afterDecide = await db
+          .doc('schools/$_school/expenditures/${decidable.id}')
+          .get();
       expect(afterDecide.data()!['status'], 'approved');
       expect(afterDecide.data()!['approvalHistory'], isNotEmpty);
 
       // ---- 3. Supplier invoice: record → approve → pay ----------------
-      final suppliers =
-          await db.collection('schools/$_school/finance_suppliers').get();
+      final suppliers = await db
+          .collection('schools/$_school/finance_suppliers')
+          .get();
       final supplierId = suppliers.docs.first.id;
-      final accounts =
-          await db.collection('schools/$_school/bank_accounts').get();
+      final accounts = await db
+          .collection('schools/$_school/bank_accounts')
+          .get();
       final bankAcc = [
         ...accounts.docs.where((d) => d.data()['kind'] == 'bank'),
         ...accounts.docs,
@@ -166,12 +169,12 @@ void main() {
       final rec = await FirebaseFunctions.instance
           .httpsCallable('recordSupplierInvoice')
           .call<Map<String, dynamic>>({
-        'schoolId': _school,
-        'supplierId': supplierId,
-        'invoiceNumber': 'E2E-${DateTime.now().millisecondsSinceEpoch}',
-        'category': 'Supplies',
-        'amountUgx': 250000,
-      });
+            'schoolId': _school,
+            'supplierId': supplierId,
+            'invoiceNumber': 'E2E-${DateTime.now().millisecondsSinceEpoch}',
+            'category': 'Supplies',
+            'amountUgx': 250000,
+          });
       final invId = rec.data['invoiceId'] as String;
 
       // A *different* finance user must approve (four-eyes). The seed only
@@ -182,10 +185,10 @@ void main() {
         FirebaseFunctions.instance
             .httpsCallable('decideSupplierInvoice')
             .call<Map<String, dynamic>>({
-          'schoolId': _school,
-          'invoiceId': invId,
-          'decision': 'approve',
-        }),
+              'schoolId': _school,
+              'invoiceId': invId,
+              'decision': 'approve',
+            }),
         throwsA(
           isA<FirebaseFunctionsException>().having(
             (e) => e.message,
@@ -200,30 +203,34 @@ void main() {
       // re-run mints a new invoice number, no duplicate clash.)
 
       // ---- 4. Petty cash: replenish then disburse --------------------
-      final floatBefore =
-          await db.doc('schools/$_school/petty_cash/main').get();
+      final floatBefore = await db
+          .doc('schools/$_school/petty_cash/main')
+          .get();
       final startFloat =
           (floatBefore.data()?['currentFloatUgx'] as num?)?.toInt() ?? 0;
 
       final repl = await FirebaseFunctions.instance
           .httpsCallable('replenishPettyCash')
           .call<Map<String, dynamic>>({
-        'schoolId': _school,
-        'accountId': bankAcc.id,
-        'amountUgx': 100000,
-        'reference': 'E2E-REPL-${DateTime.now().millisecondsSinceEpoch}',
-      });
-      expect((repl.data['floatBalanceUgx'] as num).toInt(), startFloat + 100000);
+            'schoolId': _school,
+            'accountId': bankAcc.id,
+            'amountUgx': 100000,
+            'reference': 'E2E-REPL-${DateTime.now().millisecondsSinceEpoch}',
+          });
+      expect(
+        (repl.data['floatBalanceUgx'] as num).toInt(),
+        startFloat + 100000,
+      );
 
       final disb = await FirebaseFunctions.instance
           .httpsCallable('recordPettyCashDisbursement')
           .call<Map<String, dynamic>>({
-        'schoolId': _school,
-        'payee': 'E2E Boda',
-        'category': 'Transport',
-        'purpose': 'integration test run',
-        'amountUgx': 15000,
-      });
+            'schoolId': _school,
+            'payee': 'E2E Boda',
+            'category': 'Transport',
+            'purpose': 'integration test run',
+            'amountUgx': 15000,
+          });
       expect(
         (disb.data['balanceUgx'] as num).toInt(),
         startFloat + 100000 - 15000,
@@ -242,26 +249,28 @@ void main() {
         final match = await FirebaseFunctions.instance
             .httpsCallable('matchBankLedgerEntry')
             .call<Map<String, dynamic>>({
-          'schoolId': _school,
-          'entryId': entryId,
-          'statementReference':
-              'E2E-STMT-${DateTime.now().millisecondsSinceEpoch}',
-        });
+              'schoolId': _school,
+              'entryId': entryId,
+              'statementReference':
+                  'E2E-STMT-${DateTime.now().millisecondsSinceEpoch}',
+            });
         expect(match.data['idempotent'], false);
-        final after =
-            await db.doc('schools/$_school/bank_ledger/$entryId').get();
+        final after = await db
+            .doc('schools/$_school/bank_ledger/$entryId')
+            .get();
         expect(after.data()!['reconciled'], true);
 
         // and it can be unmatched again (the transaction-order fix)
         await FirebaseFunctions.instance
             .httpsCallable('unmatchBankLedgerEntry')
             .call<Map<String, dynamic>>({
-          'schoolId': _school,
-          'entryId': entryId,
-          'reason': 'E2E cleanup',
-        });
-        final reverted =
-            await db.doc('schools/$_school/bank_ledger/$entryId').get();
+              'schoolId': _school,
+              'entryId': entryId,
+              'reason': 'E2E cleanup',
+            });
+        final reverted = await db
+            .doc('schools/$_school/bank_ledger/$entryId')
+            .get();
         expect(reverted.data()!['reconciled'], false);
       }
 
@@ -269,33 +278,156 @@ void main() {
       final bdg = await FirebaseFunctions.instance
           .httpsCallable('saveSchoolBudget')
           .call<Map<String, dynamic>>({
-        'schoolId': _school,
-        'name': 'E2E Line',
-        'academicYear': '2026',
-        'term': 'Term 1',
-        'allocatedAmount': 4000000,
-        'spentAmount': 999999, // must be ignored
-      });
-      final bdgDoc =
-          await db.doc('schools/$_school/budgets/${bdg.data['budgetId']}').get();
+            'schoolId': _school,
+            'name': 'E2E Line',
+            'academicYear': '2026',
+            'term': 'Term 1',
+            'allocatedAmount': 4000000,
+            'spentAmount': 999999, // must be ignored
+          });
+      final bdgDoc = await db
+          .doc('schools/$_school/budgets/${bdg.data['budgetId']}')
+          .get();
       expect(bdgDoc.data()!['allocatedAmount'], 4000000);
       expect(bdgDoc.data()!['spentAmount'], 0);
 
       // ---- 7. Audit trail recorded every mutation --------------------
       final audit = await db
           .collection('schools/$_school/finance_audit_events')
-          .where('module', whereIn: [
-        'expenditure',
-        'supplier_invoice',
-        'petty_cash',
-        'reconciliation',
-        'budget',
-      ]).get();
+          .where(
+            'module',
+            whereIn: [
+              'expenditure',
+              'supplier_invoice',
+              'petty_cash',
+              'reconciliation',
+              'budget',
+            ],
+          )
+          .get();
       expect(
         audit.docs.length,
         greaterThanOrEqualTo(5),
         reason: 'each callable must write a finance_audit_events row',
       );
+
+      // ---- 8. Financial Entitlements + NFC service access -----------
+      // Open the Entitlements section (no throw), then drive the callable
+      // chain: policy → override → terminal register → card mint → tap.
+      await go('/staff/bursar/entitlements');
+      expect(find.byType(Scaffold), findsWidgets);
+      expect(tester.takeException(), isNull);
+
+      final fns = FirebaseFunctions.instance;
+
+      // Enable a dining fee-gate at 75%.
+      final pol = await fns
+          .httpsCallable('saveFinancialEntitlementPolicy')
+          .call<Map<String, dynamic>>({
+            'schoolId': _school,
+            'services': {
+              'dining': {
+                'enabled': true,
+                'minimumPaymentPercentage': 75,
+                'maximumBalance': 0,
+              },
+            },
+          });
+      expect(pol.data['status'], 'active');
+      final policyDoc = await db
+          .doc('schools/$_school/financial_entitlement_policy/current')
+          .get();
+      expect(policyDoc.data()!['services']['dining']['enabled'], true);
+
+      // A learner below the band, then rescued by a time-bound override.
+      final anyStudent = await db
+          .collection('schools/$_school/student_financials')
+          .limit(1)
+          .get();
+      if (anyStudent.docs.isNotEmpty) {
+        final sid = anyStudent.docs.first.id;
+        await db.doc('schools/$_school/student_financials/$sid').set({
+          'paymentPercentage': 40,
+          'balance': 120000,
+        }, SetOptions(merge: true));
+        final ov = await fns
+            .httpsCallable('setFinancialEntitlementOverride')
+            .call<Map<String, dynamic>>({
+              'schoolId': _school,
+              'studentId': sid,
+              'service': 'dining',
+              'decision': 'allow',
+              'reasonCode': 'HARDSHIP',
+              'expiresAt': DateTime.now()
+                  .add(const Duration(hours: 6))
+                  .millisecondsSinceEpoch,
+            });
+        expect(ov.data['status'], 'active');
+      }
+
+      // A safety service can never be fee-gated from the policy screen.
+      await expectLater(
+        fns.httpsCallable('saveFinancialEntitlementPolicy').call({
+          'schoolId': _school,
+          'services': {
+            'guardianRelease': {'enabled': true},
+          },
+        }),
+        throwsA(isA<FirebaseFunctionsException>()),
+      );
+
+      // Register a dining terminal + mint a card token for a real
+      // credential, then tap it and confirm the terminal response carries
+      // NO balance / note, and a tap row is logged.
+      final creds = await db
+          .collection('schools/$_school/credentials')
+          .where('identityType', isEqualTo: 'student')
+          .where('status', isEqualTo: 'active')
+          .limit(1)
+          .get();
+      if (creds.docs.isNotEmpty) {
+        final term = await fns
+            .httpsCallable('registerEntitlementTerminal')
+            .call<Map<String, dynamic>>({
+              'schoolId': _school,
+              'service': 'dining',
+              'label': 'E2E dining till',
+            });
+        final card = await fns
+            .httpsCallable('mintEntitlementCardToken')
+            .call<Map<String, dynamic>>({
+              'schoolId': _school,
+              'credentialId': creds.docs.first.id,
+              'ttlMs': 300000,
+            });
+        final tap = await fns
+            .httpsCallable('checkServiceEntitlement')
+            .call<Map<String, dynamic>>({
+              'schoolId': _school,
+              'terminalId': term.data['terminalId'],
+              'terminalSecret': term.data['terminalSecret'],
+              'cardToken': card.data['cardToken'],
+              'nonce': 'e2e-${DateTime.now().microsecondsSinceEpoch}',
+              'timestamp': DateTime.now().millisecondsSinceEpoch,
+            });
+        expect(
+          tap.data['decision'],
+          anyOf('allow', 'deny', 'needsStaffReview'),
+        );
+        expect(tap.data['service'], 'dining');
+        expect(tap.data.containsKey('balance'), isFalse);
+        expect(tap.data.containsKey('note'), isFalse);
+        final taps = await db
+            .collection('schools/$_school/entitlement_taps')
+            .get();
+        expect(taps.docs, isNotEmpty);
+      }
+
+      // Entitlement actions are audited on their own trail.
+      final entAudit = await db
+          .collection('schools/$_school/financial_entitlement_audit')
+          .get();
+      expect(entAudit.docs, isNotEmpty);
     },
   );
 }
