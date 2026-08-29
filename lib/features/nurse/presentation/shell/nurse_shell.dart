@@ -1,53 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/features/health/presentation/screens/nurse_clinic_visits_screen.dart';
-import 'package:school_pulse/features/health/presentation/screens/nurse_home_screen.dart';
-import 'package:school_pulse/features/health/presentation/screens/nurse_student_lookup_screen.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/features/nurse/presentation/clinic_ui.dart';
-import 'package:school_pulse/features/nurse/presentation/screens/medicine_inventory_screen.dart';
-import 'package:school_pulse/features/nurse/presentation/screens/nurse_more_screen.dart';
 
-/// Adaptive clinic shell. Mobile keeps the five persistent destinations from
-/// the nurse workflow; wide layouts expose the same destinations in a rail.
-class NurseShell extends StatefulWidget {
-  const NurseShell({super.key});
-  @override
-  State<NurseShell> createState() => _NurseShellState();
-}
+/// The authenticated clinic navigation frame.
+///
+/// This is a router shell rather than a page switcher: every nurse URL is
+/// rendered inside it, including records, visit forms and student profiles.
+/// That keeps the clinic navigation available throughout the nurse module.
+class NurseShell extends StatelessWidget {
+  const NurseShell({super.key, required this.child});
 
-class _NurseShellState extends State<NurseShell> {
-  int _index = 0;
-  final _pages = const [
-    NurseHomeScreen(),
-    NurseClinicVisitsScreen(),
-    NurseStudentLookupScreen(),
-    MedicineInventoryScreen(),
-    NurseMoreScreen(),
-  ];
-  static const _labels = ['Home', 'Visits', 'Students', 'Inventory', 'More'];
-  static const _icons = [
-    Icons.home_outlined,
-    Icons.calendar_today_outlined,
-    Icons.groups_outlined,
-    Icons.inventory_2_outlined,
-    Icons.more_horiz,
-  ];
-  static const _selected = [
-    Icons.home,
-    Icons.calendar_today,
-    Icons.groups,
-    Icons.inventory_2,
-    Icons.more_horiz,
-  ];
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
+    final path = GoRouterState.of(context).uri.path;
+    final index = _indexFor(path);
     final wide = MediaQuery.sizeOf(context).width >= 720;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedColor = ClinicUi.foreground(context);
     final unselectedColor = isDark ? Colors.white70 : ClinicUi.muted;
     final rail = NavigationRail(
-      selectedIndex: _index,
-      onDestinationSelected: (value) => setState(() => _index = value),
+      selectedIndex: index,
+      onDestinationSelected: (value) => _goToDestination(context, value),
       labelType: NavigationRailLabelType.all,
       backgroundColor: ClinicUi.background(context),
       selectedIconTheme: IconThemeData(color: selectedColor),
@@ -73,17 +48,15 @@ class _NurseShellState extends State<NurseShell> {
               children: [
                 rail,
                 const VerticalDivider(width: 1),
-                Expanded(child: _pages[_index]),
+                Expanded(child: child),
               ],
             )
-          : _pages[_index],
+          : child,
       bottomNavigationBar: wide
           ? null
           : NavigationBarTheme(
               data: NavigationBarThemeData(
                 backgroundColor: ClinicUi.background(context),
-                // A transparent indicator plus a fixed black selected icon
-                // made the active Home tab disappear in dark mode.
                 indicatorColor: isDark
                     ? Colors.white.withValues(alpha: 0.16)
                     : ClinicUi.black.withValues(alpha: 0.10),
@@ -104,9 +77,9 @@ class _NurseShellState extends State<NurseShell> {
               ),
               child: NavigationBar(
                 height: 76,
-                selectedIndex: _index,
+                selectedIndex: index,
                 onDestinationSelected: (value) =>
-                    setState(() => _index = value),
+                    _goToDestination(context, value),
                 labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                 destinations: List.generate(
                   _labels.length,
@@ -119,5 +92,43 @@ class _NurseShellState extends State<NurseShell> {
               ),
             ),
     );
+  }
+
+  static const _labels = ['Home', 'Visits', 'Students', 'Inventory', 'More'];
+  static const _paths = [
+    '/staff/nurse',
+    '/staff/nurse/visits',
+    '/staff/nurse/lookup',
+    '/staff/nurse/inventory',
+    '/staff/nurse/more',
+  ];
+  static const _icons = [
+    Icons.home_outlined,
+    Icons.calendar_today_outlined,
+    Icons.groups_outlined,
+    Icons.inventory_2_outlined,
+    Icons.more_horiz,
+  ];
+  static const _selected = [
+    Icons.home,
+    Icons.calendar_today,
+    Icons.groups,
+    Icons.inventory_2,
+    Icons.more_horiz,
+  ];
+
+  static int _indexFor(String path) {
+    if (path == '/staff/nurse') return 0;
+    if (path.startsWith('/staff/nurse/visits')) return 1;
+    if (path.startsWith('/staff/nurse/lookup') ||
+        path.startsWith('/staff/nurse/profile')) {
+      return 2;
+    }
+    if (path.startsWith('/staff/nurse/inventory')) return 3;
+    return 4;
+  }
+
+  static void _goToDestination(BuildContext context, int index) {
+    context.go(_paths[index]);
   }
 }

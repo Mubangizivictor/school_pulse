@@ -368,6 +368,8 @@ import 'package:school_pulse/features/teacher/presentation/screens/lessons/lesso
 
 import 'package:school_pulse/features/health/presentation/screens/nurse_records_hub_screen.dart';
 import 'package:school_pulse/features/health/presentation/screens/nurse_clinic_visits_screen.dart';
+import 'package:school_pulse/features/health/presentation/screens/nurse_home_screen.dart';
+import 'package:school_pulse/features/nurse/presentation/screens/nurse_more_screen.dart';
 import 'package:school_pulse/features/health/presentation/screens/record_clinic_visit_screen.dart';
 import 'package:school_pulse/features/health/presentation/screens/student_health_profile_screen.dart';
 import 'package:school_pulse/features/health/presentation/screens/health_history_screen.dart';
@@ -1334,85 +1336,97 @@ final router = GoRouter(
             ),
           ],
         ),
-        GoRoute(
-          path: '/staff/nurse',
-          redirect: (context, state) {
-            final auth = context.read<AuthBloc>().state;
-            if (auth is! AuthAuthenticated) return '/welcome';
-            const permitted = {
-              UserRole.nurse,
-              UserRole.schoolAdmin,
-              UserRole.headTeacher,
-              UserRole.deputyHead,
-              UserRole.director,
-            };
-            if (!auth.user.roles.any(permitted.contains)) {
-              return UserRoleRouting.dashboardPath(auth.user.role);
-            }
-            return null;
-          },
-          builder: (context, state) => const NurseShell(),
+        ShellRoute(
+          builder: (context, state, child) => NurseShell(child: child),
           routes: [
             GoRoute(
-              path: 'records',
+              path: '/staff/nurse',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                const permitted = {
+                  UserRole.nurse,
+                  UserRole.schoolAdmin,
+                  UserRole.headTeacher,
+                  UserRole.deputyHead,
+                  UserRole.director,
+                };
+                if (!auth.user.roles.any(permitted.contains)) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
               builder: (context, state) => BlocProvider.value(
                 value: context.read<HealthBloc>(),
-                child: const NurseRecordsHubScreen(),
-              ),
-            ),
-            GoRoute(
-              path: 'visits',
-              builder: (context, state) => BlocProvider.value(
-                value: context.read<HealthBloc>(),
-                child: const NurseClinicVisitsScreen(),
+                child: const NurseHomeScreen(),
               ),
               routes: [
                 GoRoute(
-                  path: 'new',
+                  path: 'records',
                   builder: (context, state) => BlocProvider.value(
                     value: context.read<HealthBloc>(),
-                    child: RecordClinicVisitScreen(
-                      studentId: state.extra as String,
+                    child: const NurseRecordsHubScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'visits',
+                  builder: (context, state) => BlocProvider.value(
+                    value: context.read<HealthBloc>(),
+                    child: const NurseClinicVisitsScreen(),
+                  ),
+                  routes: [
+                    GoRoute(
+                      path: 'new',
+                      builder: (context, state) => BlocProvider.value(
+                        value: context.read<HealthBloc>(),
+                        child: RecordClinicVisitScreen(
+                          studentId: state.extra as String,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                GoRoute(
+                  path: 'inventory',
+                  builder: (context, state) => BlocProvider.value(
+                    value: context.read<HealthBloc>(),
+                    child: const MedicineInventoryScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'history',
+                  builder: (context, state) => BlocProvider.value(
+                    value: context.read<HealthBloc>(),
+                    child: const HealthHistoryScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'profile/:id',
+                  builder: (context, state) => BlocProvider.value(
+                    value: context.read<HealthBloc>(),
+                    child: StudentHealthProfileScreen(
+                      studentId: state.pathParameters['id']!,
                     ),
                   ),
                 ),
+                GoRoute(
+                  path: 'incident/:id',
+                  builder: (context, state) => BlocProvider.value(
+                    value: context.read<HealthBloc>(),
+                    child: IncidentDetailsScreen(
+                      incidentId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'lookup',
+                  builder: (context, state) => const NurseStudentLookupScreen(),
+                ),
+                GoRoute(
+                  path: 'more',
+                  builder: (context, state) => const NurseMoreScreen(),
+                ),
               ],
-            ),
-            GoRoute(
-              path: 'inventory',
-              builder: (context, state) => BlocProvider.value(
-                value: context.read<HealthBloc>(),
-                child: const MedicineInventoryScreen(),
-              ),
-            ),
-            GoRoute(
-              path: 'history',
-              builder: (context, state) => BlocProvider.value(
-                value: context.read<HealthBloc>(),
-                child: const HealthHistoryScreen(),
-              ),
-            ),
-            GoRoute(
-              path: 'profile/:id',
-              builder: (context, state) => BlocProvider.value(
-                value: context.read<HealthBloc>(),
-                child: StudentHealthProfileScreen(
-                  studentId: state.pathParameters['id']!,
-                ),
-              ),
-            ),
-            GoRoute(
-              path: 'incident/:id',
-              builder: (context, state) => BlocProvider.value(
-                value: context.read<HealthBloc>(),
-                child: IncidentDetailsScreen(
-                  incidentId: state.pathParameters['id']!,
-                ),
-              ),
-            ),
-            GoRoute(
-              path: 'lookup',
-              builder: (context, state) => const NurseStudentLookupScreen(),
             ),
           ],
         ),
