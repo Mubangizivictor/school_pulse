@@ -356,7 +356,9 @@ class AddStaffWizardController extends ChangeNotifier {
         assignedClass: classTeacherConfig?.className,
         subjects: subjectTeacherConfig?.subjectAssignments,
         academicYearId: currentAcademicYearId,
-        departmentId: draft.departmentId,
+        // Department is intentionally not part of staff onboarding. Role
+        // scope is configured separately in the following Roles stage.
+        departmentId: null,
         designationId: draft.designationId,
         campusId: draft.campusId,
         employmentType: draft.employmentType,

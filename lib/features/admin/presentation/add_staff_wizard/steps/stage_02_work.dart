@@ -166,50 +166,6 @@ class _Stage02WorkState extends State<Stage02Work> {
                 );
               },
             ),
-            const SizedBox(height: 4),
-            StreamBuilder<List<Department>>(
-              stream: _structureRepository.watchDepartments(schoolId),
-              builder: (context, snapshot) {
-                final departments =
-                    (snapshot.data ?? const [])
-                        .where((d) => d.isActive)
-                        .toList()
-                      ..sort((a, b) => a.name.compareTo(b.name));
-                return _labeledField(
-                  'Department',
-                  DropdownButtonFormField<String>(
-                    initialValue:
-                        departments.any((d) => d.id == draft.departmentId)
-                        ? draft.departmentId
-                        : null,
-                    decoration: const InputDecoration(
-                      hintText: 'Select department',
-                    ),
-                    items: departments
-                        .map(
-                          (d) => DropdownMenuItem(
-                            value: d.id,
-                            child: Text(d.name),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) {
-                      final picked = departments
-                          .where((d) => d.id == v)
-                          .firstOrNullExt();
-                      if (picked != null) {
-                        draft.departmentId = picked.id;
-                        draft.department = picked.name;
-                        controller.notifyDraftChanged();
-                      }
-                    },
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Required' : null,
-                  ),
-                  required: true,
-                );
-              },
-            ),
             const SizedBox(height: 16),
             StreamBuilder<List<StaffDesignation>>(
               stream: _structureRepository.watchDesignations(schoolId),
@@ -220,15 +176,13 @@ class _Stage02WorkState extends State<Stage02Work> {
                         .toList()
                       ..sort((a, b) => a.name.compareTo(b.name));
                 return _labeledField(
-                  'Designation',
+                  'Role',
                   DropdownButtonFormField<String>(
                     initialValue:
                         designations.any((d) => d.id == draft.designationId)
                         ? draft.designationId
                         : null,
-                    decoration: const InputDecoration(
-                      hintText: 'Select designation',
-                    ),
+                    decoration: const InputDecoration(hintText: 'Select role'),
                     items: designations
                         .map(
                           (d) => DropdownMenuItem(
@@ -454,7 +408,7 @@ class _Stage02WorkState extends State<Stage02Work> {
           ),
           const SizedBox(height: 8),
           Text(
-            'No published salary structure matches this designation yet. '
+            'No published salary structure matches this role yet. '
             'You can continue adding this staff member - pay setup will '
             'stay pending until a salary structure is published in '
             'Structure > People > Salary Structures.',

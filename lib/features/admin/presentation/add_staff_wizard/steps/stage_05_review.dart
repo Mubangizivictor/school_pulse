@@ -138,7 +138,6 @@ class Stage05Review extends StatelessWidget {
             title: 'Work',
             summary: [
               if (draft.designation.isNotEmpty) draft.designation,
-              if (draft.department.isNotEmpty) draft.department,
               draft.employmentType,
             ].where((s) => s.isNotEmpty).join(' · '),
             onEdit: () => controller.goToStage(WizardStage.work),
