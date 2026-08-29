@@ -4,7 +4,7 @@ const entitlements = require('./financial_entitlements');
 
 const factory = entitlements({
   admin: { firestore: Object.assign(() => ({}), { FieldValue: {}, Timestamp: {} }) },
-  onCall: (handler) => handler,
+  onCall: (a, b) => (typeof a === "function" ? a : b),
   HttpsError: class HttpsError extends Error {},
 });
 

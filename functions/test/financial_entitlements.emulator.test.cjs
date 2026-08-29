@@ -31,7 +31,7 @@ class HttpsError extends Error {
 }
 const fns = require("../financial_entitlements")({
   admin,
-  onCall: (h) => h,
+  onCall: (a, b) => (typeof a === "function" ? a : b),
   HttpsError,
 });
 

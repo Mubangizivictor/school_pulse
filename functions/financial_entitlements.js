@@ -117,7 +117,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
   // A short-lived, signed opaque token is the only card value accepted by
   // terminals. The canonical credential remains server-side and can be
   // revoked/replaced using the existing student credential lifecycle.
-  api.mintEntitlementCardToken = onCall(async (request) => {
+  api.mintEntitlementCardToken = onCall({ secrets: ["ENTITLEMENT_CARD_TOKEN_KEY"] }, async (request) => {
     const d = request.data || {}; const schoolId = text(d.schoolId); const credentialId = text(d.credentialId, 512);
     const user = await caller(request, schoolId);
     if (!hasRole(user, [...FINANCE, ...LEADERSHIP, ...Object.values(SERVICE_STAFF).flat()])) throw new HttpsError('permission-denied', 'Not authorised to issue a service token.');
@@ -127,7 +127,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     return { cardToken: `${payload}.${signCardPayload(payload)}`, expiresAt: JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')).exp };
   });
 
-  api.checkServiceEntitlement = onCall(async (request) => {
+  api.checkServiceEntitlement = onCall({ secrets: ["ENTITLEMENT_CARD_TOKEN_KEY"] }, async (request) => {
     const d = request.data || {}; const schoolId = text(d.schoolId); const terminalId = text(d.terminalId); const token = text(d.cardToken, 1024); const nonce = text(d.nonce, 128); const timestamp = Number(d.timestamp);
     if (!schoolId || !terminalId || !token || !nonce || !Number.isFinite(timestamp) || Math.abs(Date.now() - timestamp) > 120000) throw new HttpsError('invalid-argument', 'Invalid terminal request.');
     const terminal = (await db.doc(`schools/${schoolId}/entitlement_terminals/${terminalId}`).get()).data();
