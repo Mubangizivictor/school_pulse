@@ -193,7 +193,7 @@ describe("overrides", () => {
     const r = await fns.setFinancialEntitlementOverride(
       req(BURSAR, {
         schoolId: SCHOOL, studentId: STUDENT, service: "dining", decision: "allow",
-        reasonCode: "HARDSHIP", note: "matron confirmed", expiresAt: Date.now() + 3600000,
+        reasonCode: "HARDSHIP", note: "matron confirmed", expiresAt: Date.now() + 30 * 86400000,
       }),
     );
     assert.equal(r.status, "active");
@@ -226,7 +226,7 @@ describe("overrides", () => {
     );
   });
 
-  test("an expired override no longer applies", async () => {
+  test("a lapsed allow-override + a policy block reads as 'expired'", async () => {
     await enableDining();
     await db.collection(`schools/${SCHOOL}/financial_entitlement_overrides`).add({
       studentId: STUDENT, service: "dining", decision: "allow", status: "active",
@@ -234,7 +234,240 @@ describe("overrides", () => {
       createdAt: admin.firestore.Timestamp.now(),
     });
     const c = await fns.compute({ schoolId: SCHOOL, studentId: STUDENT, service: "dining" });
+    assert.equal(c.status, "expired");
+    assert.ok(c.expiredOverrideId);
+  });
+});
+
+describe("full status + source derivation (area 2)", () => {
+  // maxBal high by default so these tests isolate the % band; balance-gate
+  // behaviour is covered in "compute — payment bands".
+  async function enable(min, extra = {}) {
+    await fns.saveFinancialEntitlementPolicy(
+      req(BURSAR, { schoolId: SCHOOL, services: { dining: { enabled: true, minimumPaymentPercentage: min, maximumBalance: 9999999, ...extra } } } ),
+    );
+  }
+
+  test("percentage is derived from totalBilled/totalPaid when not explicit", async () => {
+    await enable(75);
+    // No paymentPercentage field — only totals.
+    await db.doc(`schools/${SCHOOL}/student_financials/${STUDENT}`).set({
+      totalBilled: 1000000, totalPaid: 800000, scholarshipAmount: 0, discountAmount: 0,
+    });
+    const c = await fns.compute({ schoolId: SCHOOL, studentId: STUDENT, service: "dining" });
+    assert.equal(c.status, "allowed"); // 80% >= 75%
+    await db.doc(`schools/${SCHOOL}/student_financials/${STUDENT}`).set({
+      totalBilled: 1000000, totalPaid: 400000, scholarshipAmount: 0, discountAmount: 0,
+    });
+    const c2 = await fns.compute({ schoolId: SCHOOL, studentId: STUDENT, service: "dining" });
+    assert.equal(c2.status, "blocked"); // 40%
+  });
+
+  test("a met policy where a honoured scholarship is materially why is attributed to 'scholarship'", async () => {
+    await enable(100, { honorScholarship: true });
+    // Billed 1M, scholarship 600k, paid 400k -> net 400k, 100% paid -> policy met
+    await db.doc(`schools/${SCHOOL}/student_financials/${STUDENT}`).set({
+      totalBilled: 1000000, totalPaid: 400000, scholarshipAmount: 600000, discountAmount: 0,
+    });
+    const c = await fns.compute({ schoolId: SCHOOL, studentId: STUDENT, service: "dining" });
+    assert.equal(c.status, "allowed");
+    assert.equal(c.source, "scholarship");
+    assert.equal(c.reasonCode, "POLICY_MET_VIA_SCHOLARSHIP");
+    assert.ok(c.sourceChain.includes("scholarship") && c.sourceChain.includes("feePolicy"),
+      "the chain records both scholarship and feePolicy");
+  });
+
+  test("scholarship relief lifts an actual policy block", async () => {
+    await enable(80, { honorScholarship: true });
+    // 60% paid overall, but with scholarship netted the effective pct meets 80
+    await db.doc(`schools/${SCHOOL}/student_financials/${STUDENT}`).set({
+      totalBilled: 1000000, totalPaid: 400000, scholarshipAmount: 500000, discountAmount: 0,
+    });
+    // net = 500k, paid 400k -> 80% -> policy met via scholarship
+    const c = await fns.compute({ schoolId: SCHOOL, studentId: STUDENT, service: "dining" });
+    assert.equal(c.status, "allowed");
+    assert.equal(c.source, "scholarship");
+  });
+
+  test("waiver relief is honoured only when the policy opts in", async () => {
+    await db.doc(`schools/${SCHOOL}/student_financials/${STUDENT}`).set({
+      totalBilled: 1000000, totalPaid: 0, scholarshipAmount: 0, discountAmount: 1000000,
+    });
+    await enable(100); // honorWaiver not set
+    let c = await fns.compute({ schoolId: SCHOOL, studentId: STUDENT, service: "dining" });
     assert.equal(c.status, "blocked");
+    await enable(100, { honorWaiver: true });
+    c = await fns.compute({ schoolId: SCHOOL, studentId: STUDENT, service: "dining" });
+    assert.equal(c.status, "allowed");
+    assert.equal(c.source, "waiver");
+  });
+
+  test("payment-plan relief needs a plan + balance under the plan cap", async () => {
+    await enable(100, { honorPaymentPlan: true, paymentPlanMaxBalance: 300000 });
+    await db.doc(`schools/${SCHOOL}/student_financials/${STUDENT}`).set({
+      totalBilled: 1000000, totalPaid: 800000, scholarshipAmount: 0, discountAmount: 0,
+      feeStructureId: "plan-x",
+    });
+    const c = await fns.compute({ schoolId: SCHOOL, studentId: STUDENT, service: "dining" });
+    assert.equal(c.status, "allowed");
+    assert.equal(c.source, "paymentPlan");
+  });
+
+  test("a deny (suspension) beats every allow relief and override", async () => {
+    await enable(100, { honorScholarship: true });
+    await db.doc(`schools/${SCHOOL}/student_financials/${STUDENT}`).set({
+      totalBilled: 1000000, totalPaid: 1000000, scholarshipAmount: 0, discountAmount: 0,
+    });
+    await fns.setFinancialEntitlementOverride(
+      req(HEAD, { schoolId: SCHOOL, studentId: STUDENT, service: "dining", decision: "deny", reasonCode: "INVESTIGATION" }),
+    );
+    await fns.setFinancialEntitlementOverride(
+      req(BURSAR, { schoolId: SCHOOL, studentId: STUDENT, service: "dining", decision: "allow", expiresAt: Date.now() + 3600000 }),
+    );
+    const c = await fns.compute({ schoolId: SCHOOL, studentId: STUDENT, service: "dining" });
+    assert.equal(c.status, "suspended");
+    assert.equal(c.source, "suspension");
+    assert.equal(c.sourceChain[0], "suspension");
+  });
+
+  test("an allow override expiring within the warning window reads 'expiring'", async () => {
+    await fns.saveFinancialEntitlementPolicy(
+      req(BURSAR, { schoolId: SCHOOL, expiryWarningDays: 3, services: { dining: { enabled: true, minimumPaymentPercentage: 100, maximumBalance: 0 } } }),
+    );
+    await db.doc(`schools/${SCHOOL}/student_financials/${STUDENT}`).set({ totalBilled: 1000000, totalPaid: 0 });
+    await fns.setFinancialEntitlementOverride(
+      req(BURSAR, { schoolId: SCHOOL, studentId: STUDENT, service: "dining", decision: "allow", expiresAt: Date.now() + 2 * 86400000 }),
+    );
+    const c = await fns.compute({ schoolId: SCHOOL, studentId: STUDENT, service: "dining" });
+    assert.equal(c.status, "expiring");
+    assert.equal(c.expiringSoon, true);
+  });
+});
+
+describe("second approval + decide/renew/revoke", () => {
+  async function enableWithThreshold(days) {
+    await fns.saveFinancialEntitlementPolicy(
+      req(BURSAR, { schoolId: SCHOOL, secondApprovalThresholdDays: days, services: { dining: { enabled: true, minimumPaymentPercentage: 100, maximumBalance: 0 } } }),
+    );
+    await db.doc(`schools/${SCHOOL}/student_financials/${STUDENT}`).set({ totalBilled: 1000000, totalPaid: 0 });
+  }
+
+  test("a long grant by a bursar lands pendingApproval; leadership approve activates it", async () => {
+    await enableWithThreshold(7);
+    const r = await fns.setFinancialEntitlementOverride(
+      req(BURSAR, { schoolId: SCHOOL, studentId: STUDENT, service: "dining", decision: "allow", expiresAt: Date.now() + 30 * 86400000 }),
+    );
+    assert.equal(r.status, "pendingApproval");
+    let c = await fns.compute({ schoolId: SCHOOL, studentId: STUDENT, service: "dining" });
+    assert.equal(c.status, "pendingApproval");
+
+    // the proposer cannot approve their own
+    await assert.rejects(
+      () => fns.decideEntitlementOverride(req(BURSAR, { schoolId: SCHOOL, overrideId: r.overrideId, decision: "approve" })),
+      /cannot approve an override you proposed|Only leadership/,
+    );
+    await fns.decideEntitlementOverride(req(HEAD, { schoolId: SCHOOL, overrideId: r.overrideId, decision: "approve" }));
+    c = await fns.compute({ schoolId: SCHOOL, studentId: STUDENT, service: "dining" });
+    assert.equal(c.status, "overrideActive");
+  });
+
+  test("a short grant under the threshold is active immediately", async () => {
+    await enableWithThreshold(30);
+    const r = await fns.setFinancialEntitlementOverride(
+      req(BURSAR, { schoolId: SCHOOL, studentId: STUDENT, service: "dining", decision: "allow", expiresAt: Date.now() + 5 * 86400000 }),
+    );
+    assert.equal(r.status, "active");
+  });
+
+  test("revoke ends an active override; renew extends it", async () => {
+    await enableWithThreshold(0);
+    const r = await fns.setFinancialEntitlementOverride(
+      req(BURSAR, { schoolId: SCHOOL, studentId: STUDENT, service: "dining", decision: "allow", expiresAt: Date.now() + 3600000 }),
+    );
+    await fns.decideEntitlementOverride(req(BURSAR, { schoolId: SCHOOL, overrideId: r.overrideId, decision: "revoke", note: "no longer needed" }));
+    let c = await fns.compute({ schoolId: SCHOOL, studentId: STUDENT, service: "dining" });
+    assert.equal(c.status, "blocked");
+
+    const r2 = await fns.setFinancialEntitlementOverride(
+      req(BURSAR, { schoolId: SCHOOL, studentId: STUDENT, service: "dining", decision: "allow", expiresAt: Date.now() + 3600000 }),
+    );
+    await fns.decideEntitlementOverride(req(BURSAR, { schoolId: SCHOOL, overrideId: r2.overrideId, decision: "renew", expiresAt: Date.now() + 60 * 86400000 }));
+    c = await fns.compute({ schoolId: SCHOOL, studentId: STUDENT, service: "dining" });
+    assert.equal(c.status, "overrideActive");
+  });
+});
+
+describe("getLearnerEntitlementProfile + bulkEntitlementAction", () => {
+  async function twoServices() {
+    await fns.saveFinancialEntitlementPolicy(
+      req(BURSAR, {
+        schoolId: SCHOOL,
+        services: {
+          dining: { enabled: true, minimumPaymentPercentage: 75, maximumBalance: 0 },
+          library: { enabled: true, minimumPaymentPercentage: 50, maximumBalance: 9999999 },
+        },
+      }),
+    );
+    await db.doc(`schools/${SCHOOL}/student_financials/${STUDENT}`).set({ totalBilled: 1000000, totalPaid: 600000 });
+  }
+
+  test("profile returns a result per configured service + the learner's %/balance", async () => {
+    await twoServices();
+    const p = await fns.getLearnerEntitlementProfile(req(BURSAR, { schoolId: SCHOOL, studentId: STUDENT }));
+    assert.equal(p.overallPaymentPercentage, 60);
+    assert.equal(p.balance, 400000);
+    assert.equal(p.services.dining.status, "blocked"); // 60% < 75
+    assert.equal(p.services.library.status, "allowed"); // 60% >= 50
+  });
+
+  test("catering staff cannot read a learner profile", async () => {
+    await twoServices();
+    await assert.rejects(
+      () => fns.getLearnerEntitlementProfile(req(CATERER, { schoolId: SCHOOL, studentId: STUDENT })),
+      /Only finance or leadership/,
+    );
+  });
+
+  test("bulk grant creates one audited override per learner; bulk revoke clears them", async () => {
+    await twoServices();
+    await db.doc(`schools/${SCHOOL}/student_financials/s2`).set({ totalBilled: 1000000, totalPaid: 0 });
+    const grant = await fns.bulkEntitlementAction(
+      req(BURSAR, {
+        schoolId: SCHOOL, action: "grant", service: "dining",
+        studentIds: [STUDENT, "s2"], reasonCode: "TERM_START_GRACE",
+        expiresAt: Date.now() + 14 * 86400000,
+      }),
+    );
+    assert.equal(grant.results.length, 2);
+    assert.ok(grant.results.every((r) => r.status === "active"));
+    let c = await fns.compute({ schoolId: SCHOOL, studentId: "s2", service: "dining" });
+    assert.equal(c.status, "overrideActive");
+
+    await fns.bulkEntitlementAction(
+      req(BURSAR, { schoolId: SCHOOL, action: "revoke", service: "dining", studentIds: [STUDENT, "s2"], reasonCode: "GRACE_ENDED" }),
+    );
+    c = await fns.compute({ schoolId: SCHOOL, studentId: "s2", service: "dining" });
+    assert.equal(c.status, "blocked");
+    const audits = await db.collection(`schools/${SCHOOL}/financial_entitlement_audit`).where("action", "in", ["bulk.grant", "bulk.revoke"]).get();
+    assert.equal(audits.size, 2);
+  });
+
+  test("a bulk grant over the threshold lands pendingApproval, not active", async () => {
+    await fns.saveFinancialEntitlementPolicy(
+      req(BURSAR, { schoolId: SCHOOL, secondApprovalThresholdDays: 7, services: { dining: { enabled: true, minimumPaymentPercentage: 100 } } }),
+    );
+    await db.doc(`schools/${SCHOOL}/student_financials/${STUDENT}`).set({ totalBilled: 1000000, totalPaid: 0 });
+    const r = await fns.bulkEntitlementAction(
+      req(BURSAR, { schoolId: SCHOOL, action: "grant", service: "dining", studentIds: [STUDENT], expiresAt: Date.now() + 60 * 86400000 }),
+    );
+    assert.equal(r.results[0].status, "pendingApproval");
+  });
+
+  test("safety services cannot be bulk-actioned", async () => {
+    await assert.rejects(
+      () => fns.bulkEntitlementAction(req(BURSAR, { schoolId: SCHOOL, action: "grant", service: "guardianRelease", studentIds: [STUDENT], expiresAt: Date.now() + 86400000 })),
+      /non-safety service/,
+    );
   });
 });
 

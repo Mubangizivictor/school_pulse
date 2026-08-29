@@ -267,6 +267,7 @@ import 'package:school_pulse/features/finance/presentation/bloc/clearance_policy
 import 'package:school_pulse/features/finance/data/datasources/finance_remote_data_source.dart';
 import 'package:school_pulse/features/finance/data/datasources/finance_governance_remote_data_source.dart';
 import 'package:school_pulse/features/finance/data/datasources/finance_operations_remote_data_source.dart';
+import 'package:school_pulse/features/finance/data/datasources/entitlements_remote_data_source.dart';
 import 'package:school_pulse/features/finance/data/datasources/finance_offline_queue.dart';
 import 'package:school_pulse/features/finance/domain/repositories/fee_billing_repository.dart';
 import 'package:school_pulse/features/finance/data/repositories/fee_billing_repository_impl.dart';
@@ -1244,6 +1245,12 @@ Future<void> init() async {
   // Finance reports engine (audit area 5) — 8 real reports from
   // authoritative finance data, CSV for all + PDF for cashbook/arrears.
   sl.registerLazySingleton(() => FinanceReportsService(firestore: sl()));
+
+  // Financial Entitlements dashboard data source (areas 1+2): reads
+  // student_financials + policy, writes via the deployed callables.
+  sl.registerLazySingleton(
+    () => EntitlementsRemoteDataSource(firestore: sl(), functions: sl()),
+  );
 
   // Finance offline queue (audit area 6) — petty-cash disbursements only;
   // idempotency-keyed, replay-on-reconnect. Nothing security-sensitive is

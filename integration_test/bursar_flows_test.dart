@@ -428,6 +428,90 @@ void main() {
           .collection('schools/$_school/financial_entitlement_audit')
           .get();
       expect(entAudit.docs, isNotEmpty);
+
+      // ---- 9. Entitlements dashboard — area 1+2 derivation + callables --
+      final fin = await db
+          .collection('schools/$_school/student_financials')
+          .limit(3)
+          .get();
+      if (fin.docs.length >= 2) {
+        final s1 = fin.docs[0].id;
+        final s2 = fin.docs[1].id;
+
+        // getLearnerEntitlementProfile: a result per configured service + %.
+        final profile = await fns
+            .httpsCallable('getLearnerEntitlementProfile')
+            .call<Map<String, dynamic>>({'schoolId': _school, 'studentId': s1});
+        expect(profile.data['services'], isA<Map>());
+        expect(profile.data.containsKey('overallPaymentPercentage'), isTrue);
+        expect(
+          (profile.data['services'] as Map).containsKey('dining'),
+          isTrue,
+          reason: 'dining is a configured service',
+        );
+
+        // second-approval threshold: a long grant lands pendingApproval.
+        await fns.httpsCallable('saveFinancialEntitlementPolicy').call({
+          'schoolId': _school,
+          'secondApprovalThresholdDays': 7,
+          'services': {
+            'library': {'enabled': true, 'minimumPaymentPercentage': 100},
+          },
+        });
+        final longGrant = await fns
+            .httpsCallable('setFinancialEntitlementOverride')
+            .call<Map<String, dynamic>>({
+              'schoolId': _school,
+              'studentId': s1,
+              'service': 'library',
+              'decision': 'allow',
+              'reasonCode': 'LONG_GRANT',
+              'expiresAt': DateTime.now()
+                  .add(const Duration(days: 60))
+                  .millisecondsSinceEpoch,
+            });
+        expect(longGrant.data['status'], 'pendingApproval');
+
+        // decideEntitlementOverride: leadership can't approve here (bursar
+        // only in this seed) so assert the pending guard, then revoke it.
+        await fns
+            .httpsCallable('decideEntitlementOverride')
+            .call<Map<String, dynamic>>({
+              'schoolId': _school,
+              'overrideId': longGrant.data['overrideId'],
+              'decision': 'revoke',
+              'note': 'E2E cleanup',
+            });
+        final revoked = await db
+            .doc(
+              'schools/$_school/financial_entitlement_overrides/'
+              '${longGrant.data['overrideId']}',
+            )
+            .get();
+        expect(revoked.data()!['status'], 'revoked');
+
+        // bulkEntitlementAction: one audited override per learner.
+        final bulk = await fns
+            .httpsCallable('bulkEntitlementAction')
+            .call<Map<String, dynamic>>({
+              'schoolId': _school,
+              'action': 'grant',
+              'service': 'library',
+              'studentIds': [s1, s2],
+              'reasonCode': 'TERM_START_GRACE',
+              'expiresAt': DateTime.now()
+                  .add(const Duration(days: 5))
+                  .millisecondsSinceEpoch,
+            });
+        expect((bulk.data['results'] as List).length, 2);
+        final s2Lib = await db
+            .collection('schools/$_school/financial_entitlement_overrides')
+            .where('studentId', isEqualTo: s2)
+            .where('service', isEqualTo: 'library')
+            .where('status', isEqualTo: 'active')
+            .get();
+        expect(s2Lib.docs, isNotEmpty);
+      }
     },
   );
 }
