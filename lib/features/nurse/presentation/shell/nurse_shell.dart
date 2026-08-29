@@ -42,11 +42,21 @@ class _NurseShellState extends State<NurseShell> {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 720;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final selectedColor = ClinicUi.foreground(context);
+    final unselectedColor = isDark ? Colors.white70 : ClinicUi.muted;
     final rail = NavigationRail(
       selectedIndex: _index,
       onDestinationSelected: (value) => setState(() => _index = value),
       labelType: NavigationRailLabelType.all,
-      selectedIconTheme: const IconThemeData(color: ClinicUi.black),
+      backgroundColor: ClinicUi.background(context),
+      selectedIconTheme: IconThemeData(color: selectedColor),
+      unselectedIconTheme: IconThemeData(color: unselectedColor),
+      selectedLabelTextStyle: TextStyle(
+        color: selectedColor,
+        fontWeight: FontWeight.w700,
+      ),
+      unselectedLabelTextStyle: TextStyle(color: unselectedColor),
       destinations: List.generate(
         _labels.length,
         (i) => NavigationRailDestination(
@@ -69,23 +79,42 @@ class _NurseShellState extends State<NurseShell> {
           : _pages[_index],
       bottomNavigationBar: wide
           ? null
-          : NavigationBar(
-              height: 68,
-              backgroundColor: ClinicUi.background(context),
-              indicatorColor: Colors.transparent,
-              selectedIndex: _index,
-              onDestinationSelected: (value) => setState(() => _index = value),
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              destinations: List.generate(
-                _labels.length,
-                (i) => NavigationDestination(
-                  icon: Icon(_icons[i], size: 22),
-                  selectedIcon: Icon(
-                    _selected[i],
-                    size: 22,
-                    color: ClinicUi.black,
+          : NavigationBarTheme(
+              data: NavigationBarThemeData(
+                backgroundColor: ClinicUi.background(context),
+                // A transparent indicator plus a fixed black selected icon
+                // made the active Home tab disappear in dark mode.
+                indicatorColor: isDark
+                    ? Colors.white.withValues(alpha: 0.16)
+                    : ClinicUi.black.withValues(alpha: 0.10),
+                iconTheme: WidgetStateProperty.resolveWith((states) {
+                  return IconThemeData(
+                    color: states.contains(WidgetState.selected)
+                        ? selectedColor
+                        : unselectedColor,
+                  );
+                }),
+                labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                  final selected = states.contains(WidgetState.selected);
+                  return TextStyle(
+                    color: selected ? selectedColor : unselectedColor,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  );
+                }),
+              ),
+              child: NavigationBar(
+                height: 76,
+                selectedIndex: _index,
+                onDestinationSelected: (value) =>
+                    setState(() => _index = value),
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                destinations: List.generate(
+                  _labels.length,
+                  (i) => NavigationDestination(
+                    icon: Icon(_icons[i], size: 22),
+                    selectedIcon: Icon(_selected[i], size: 22),
+                    label: _labels[i],
                   ),
-                  label: _labels[i],
                 ),
               ),
             ),
