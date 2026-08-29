@@ -34,6 +34,17 @@ abstract class HealthRepository {
   /// opportunistically (app resume, connectivity restored).
   Future<void> syncPendingClinicVisits(String schoolId);
 
+  /// Dispenses [quantity] of [itemId] against an authorised, in-progress or
+  /// completed visit for [studentId], through the server-authoritative
+  /// callable (atomic stock decrement, no-negative guard, movement + audit
+  /// rows). Online-only: dispensing is never queued offline.
+  Future<Either<Failure, void>> dispenseMedicalItem({
+    required String itemId,
+    required String visitId,
+    required String studentId,
+    required int quantity,
+  });
+
   // Emergency Incidents
   Future<Either<Failure, List<EmergencyIncident>>> getEmergencyIncidents({
     required String schoolId,

@@ -105,6 +105,24 @@ class UpdateInventoryItem {
   }
 }
 
+class DispenseMedicalItem {
+  final HealthRepository repository;
+  DispenseMedicalItem(this.repository);
+  Future<Either<Failure, void>> call({
+    required String itemId,
+    required String visitId,
+    required String studentId,
+    required int quantity,
+  }) {
+    return repository.dispenseMedicalItem(
+      itemId: itemId,
+      visitId: visitId,
+      studentId: studentId,
+      quantity: quantity,
+    );
+  }
+}
+
 class GetMedicalSupplyRequests {
   final HealthRepository repository;
   GetMedicalSupplyRequests(this.repository);

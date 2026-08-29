@@ -778,9 +778,15 @@ service cloud.firestore {
 
     match /clinic_visits/{docId} {
       allow read: if isSameSchool(resource.data.schoolId) && canManageClinicalRecords();
-      allow create: if canManageClinicalRecords() &&
-        isSameSchool(request.resource.data.schoolId) &&
-        request.resource.data.recordedBy == request.auth.uid;
+      // Creation is callable-only (functions/health_clinic.js createClinicVisit,
+      // Admin SDK): the server stamps recordedBy/status/completedAt, is
+      // idempotent on the id, and writes a health_audit row. A direct client
+      // create would bypass all of that, so it is refused here.
+      allow create: if false;
+      // Amendments stay client-writable by a same-school clinical role
+      // (no callable covers them): schoolId, studentId and recordedBy are
+      // immutable, so a correction is an auditable field change, never a
+      // re-attribution or a tenant move.
       allow update: if canManageClinicalRecords() &&
         isSameSchool(resource.data.schoolId) &&
         request.resource.data.schoolId == resource.data.schoolId &&

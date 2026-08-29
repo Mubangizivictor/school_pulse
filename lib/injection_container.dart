@@ -1279,6 +1279,7 @@ Future<void> init() async {
       recordEmergencyIncident: sl(),
       getMedicalInventory: sl(),
       updateInventoryItem: sl(),
+      dispenseMedicalItem: sl(),
       getMedicalSupplyRequests: sl(),
       createSupplyRequest: sl(),
       getHealthAnalytics: sl(),
@@ -1295,6 +1296,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => RecordEmergencyIncident(sl()));
   sl.registerLazySingleton(() => GetMedicalInventory(sl()));
   sl.registerLazySingleton(() => UpdateInventoryItem(sl()));
+  sl.registerLazySingleton(() => DispenseMedicalItem(sl()));
   sl.registerLazySingleton(() => GetMedicalSupplyRequests(sl()));
   sl.registerLazySingleton(() => CreateSupplyRequest(sl()));
   sl.registerLazySingleton(() => UpdateSupplyRequestStatus(sl()));

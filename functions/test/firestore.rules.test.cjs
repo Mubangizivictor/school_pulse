@@ -264,18 +264,26 @@ after(async () => {
 });
 
 describe('clinical records', () => {
-  test('nurse and secondary nurse roles can write only inside their school', async () => {
-    await assertSucceeds(setDoc(doc(dbFor('nurseA'), 'clinic_visits', 'newVisit'), {
+  test('clinic-visit creation is callable-only — even a same-school nurse cannot write the doc directly', async () => {
+    // createClinicVisit (Admin SDK) owns the create path now; a direct
+    // client write is refused regardless of role or school.
+    await assertFails(setDoc(doc(dbFor('nurseA'), 'clinic_visits', 'newVisit'), {
       schoolId: 'schoolA', studentId: 'studentA', recordedBy: 'nurseA', reason: 'Headache',
     }));
+    await assertFails(setDoc(doc(dbFor('adminA'), 'clinic_visits', 'newVisit2'), {
+      schoolId: 'schoolA', studentId: 'studentA', recordedBy: 'adminA', reason: 'Headache',
+    }));
+  });
+
+  test('nurse and secondary nurse roles can write health profiles only inside their school', async () => {
     await assertSucceeds(setDoc(doc(dbFor('secondaryNurseA'), 'health_profiles', 'newProfile'), {
       schoolId: 'schoolA', studentId: 'studentA', bloodGroup: 'A+',
     }));
     await assertSucceeds(updateDoc(doc(dbFor('nurseA'), 'health_profiles', 'profileA'), {
       bloodGroup: 'A-',
     }));
-    await assertFails(setDoc(doc(dbFor('nurseA'), 'clinic_visits', 'crossSchoolVisit'), {
-      schoolId: 'schoolB', studentId: 'studentB', recordedBy: 'nurseA', reason: 'Headache',
+    await assertFails(setDoc(doc(dbFor('nurseA'), 'health_profiles', 'crossSchoolProfile'), {
+      schoolId: 'schoolB', studentId: 'studentB', bloodGroup: 'O+',
     }));
     await assertFails(getDoc(doc(dbFor('nurseA'), 'clinic_visits', 'visitB')));
     await assertFails(getDoc(doc(dbFor('teacherA'), 'clinic_visits', 'visitA')));

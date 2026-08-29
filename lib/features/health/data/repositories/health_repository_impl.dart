@@ -190,6 +190,48 @@ class HealthRepositoryImpl implements HealthRepository {
   }
 
   @override
+  Future<Either<Failure, void>> dispenseMedicalItem({
+    required String itemId,
+    required String visitId,
+    required String studentId,
+    required int quantity,
+  }) async {
+    // Online-only and server-authoritative: no Isar cache, no offline queue.
+    if (!await networkInfo.isConnected) {
+      return Left(ServerFailure('Dispensing needs a connection.'));
+    }
+    try {
+      await remoteDataSource.dispenseMedicalItem(
+        itemId: itemId,
+        visitId: visitId,
+        studentId: studentId,
+        quantity: quantity,
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(_dispenseMessage(e)));
+    }
+  }
+
+  String _dispenseMessage(Object e) {
+    final raw = e.toString();
+    // Surface the callable's own precondition messages to the nurse verbatim
+    // (insufficient stock, wrong learner, inactive visit); fall back to a
+    // generic line for anything unexpected.
+    for (final known in const [
+      'Insufficient stock',
+      'does not belong to that learner',
+      'not linked to a learner',
+      'active or completed visit',
+      'outside your school',
+      'positive quantity',
+    ]) {
+      if (raw.contains(known)) return raw.split(RegExp('[:\\]] ')).last.trim();
+    }
+    return 'The item could not be dispensed. Please try again.';
+  }
+
+  @override
   Future<Either<Failure, List<EmergencyIncident>>> getEmergencyIncidents({
     required String schoolId,
     String? studentId,

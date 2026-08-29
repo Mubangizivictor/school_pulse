@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/health/domain/entities/clinic_visit.dart';
+import 'package:school_pulse/features/health/domain/entities/medical_inventory.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_event.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_state.dart';
@@ -157,6 +158,24 @@ class _NurseClinicVisitsScreenState extends State<NurseClinicVisitsScreen> {
 class _VisitCard extends StatelessWidget {
   const _VisitCard({required this.visit});
   final ClinicVisit visit;
+
+  void _openDispense(BuildContext context) {
+    final schoolId = () {
+      final a = context.read<AuthBloc>().state;
+      return a is AuthAuthenticated ? a.user.schoolId : '';
+    }();
+    if (schoolId.isEmpty) return;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: ClinicUi.background(context),
+      builder: (_) => BlocProvider.value(
+        value: context.read<HealthBloc>(),
+        child: DispenseMedicineSheet(visit: visit, schoolId: schoolId),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final needsReview = visit.followUpRequired;
@@ -231,7 +250,166 @@ class _VisitCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: ClinicUi.muted),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: ClinicUi.muted),
+              onSelected: (v) {
+                if (v == 'profile') {
+                  context.push('/staff/nurse/profile/${visit.studentId}');
+                } else if (v == 'dispense') {
+                  _openDispense(context);
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'profile', child: Text('Open profile')),
+                PopupMenuItem(
+                  value: 'dispense',
+                  child: Text('Dispense medicine'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Dispenses a medicine or supply against [visit] through the
+/// `dispenseMedicalItem` callable (server-authoritative: atomic decrement,
+/// no-negative guard, learner check, movement + audit rows). The visit's own
+/// studentId is sent, so the server rejects a mismatch.
+class DispenseMedicineSheet extends StatefulWidget {
+  const DispenseMedicineSheet({
+    required this.visit,
+    required this.schoolId,
+    super.key,
+  });
+  final ClinicVisit visit;
+  final String schoolId;
+
+  @override
+  State<DispenseMedicineSheet> createState() => _DispenseMedicineSheetState();
+}
+
+class _DispenseMedicineSheetState extends State<DispenseMedicineSheet> {
+  MedicalInventoryItem? _item;
+  final _qty = TextEditingController(text: '1');
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<HealthBloc>().add(FetchInventory(widget.schoolId));
+  }
+
+  @override
+  void dispose() {
+    _qty.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final item = _item;
+    final qty = int.tryParse(_qty.text.trim()) ?? 0;
+    if (item == null || qty <= 0) return;
+    setState(() => _submitting = true);
+    context.read<HealthBloc>().add(
+      DispenseMedicalItemEvent(
+        itemId: item.id,
+        visitId: widget.visit.id,
+        studentId: widget.visit.studentId,
+        quantity: qty,
+        schoolId: widget.schoolId,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    return BlocListener<HealthBloc, HealthState>(
+      listenWhen: (_, s) =>
+          s is HealthActionSuccess || s is HealthError || s is InventoryLoaded,
+      listener: (context, state) {
+        if (state is HealthActionSuccess && _submitting) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Item dispensed')));
+        } else if (state is HealthError && _submitting) {
+          setState(() => _submitting = false);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
+        }
+      },
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Dispense for ${widget.visit.studentId}',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: ClinicUi.foreground(context),
+              ),
+            ),
+            const SizedBox(height: 14),
+            BlocBuilder<HealthBloc, HealthState>(
+              buildWhen: (_, s) => s is InventoryLoaded || s is HealthLoading,
+              builder: (_, state) {
+                if (state is! InventoryLoaded) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(
+                      child: CircularProgressIndicator(color: ClinicUi.black),
+                    ),
+                  );
+                }
+                final items = state.items;
+                if (items.isEmpty) {
+                  return const ClinicEmptyState(
+                    title: 'No stock',
+                    message: 'There are no inventory items to dispense.',
+                  );
+                }
+                _item ??= items.first;
+                return DropdownButtonFormField<MedicalInventoryItem>(
+                  initialValue: _item,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Item'),
+                  items: [
+                    for (final it in items)
+                      DropdownMenuItem(
+                        value: it,
+                        child: Text(
+                          '${it.name} · ${it.quantity} ${it.unit} in stock',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => _item = v),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _qty,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Quantity'),
+            ),
+            const SizedBox(height: 18),
+            FilledButton(
+              onPressed: _submitting ? null : _submit,
+              style: FilledButton.styleFrom(
+                backgroundColor: ClinicUi.black,
+                minimumSize: const Size(0, 48),
+              ),
+              child: Text(_submitting ? 'Dispensing…' : 'Dispense'),
+            ),
           ],
         ),
       ),

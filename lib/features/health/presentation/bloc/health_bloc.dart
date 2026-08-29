@@ -22,6 +22,7 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
   final RecordEmergencyIncident recordEmergencyIncident;
   final GetMedicalInventory getMedicalInventory;
   final UpdateInventoryItem updateInventoryItem;
+  final DispenseMedicalItem dispenseMedicalItem;
   final GetMedicalSupplyRequests getMedicalSupplyRequests;
   final CreateSupplyRequest createSupplyRequest;
   final GetHealthAnalytics getHealthAnalytics;
@@ -37,6 +38,7 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
     required this.recordEmergencyIncident,
     required this.getMedicalInventory,
     required this.updateInventoryItem,
+    required this.dispenseMedicalItem,
     required this.getMedicalSupplyRequests,
     required this.createSupplyRequest,
     required this.getHealthAnalytics,
@@ -51,6 +53,7 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
     on<RecordNewEmergencyIncident>(_onRecordNewEmergencyIncident);
     on<FetchInventory>(_onFetchInventory);
     on<UpdateInventoryItemEvent>(_onUpdateInventoryItem);
+    on<DispenseMedicalItemEvent>(_onDispenseMedicalItem);
     on<FetchSupplyRequests>(_onFetchSupplyRequests);
     on<CreateNewSupplyRequest>(_onCreateNewSupplyRequest);
   }
@@ -319,6 +322,27 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
       (failure) => emit(const HealthError('Failed to update item')),
       (_) => emit(const HealthActionSuccess('Inventory updated successfully')),
     );
+  }
+
+  Future<void> _onDispenseMedicalItem(
+    DispenseMedicalItemEvent event,
+    Emitter<HealthState> emit,
+  ) async {
+    emit(HealthLoading());
+    final result = await dispenseMedicalItem(
+      itemId: event.itemId,
+      visitId: event.visitId,
+      studentId: event.studentId,
+      quantity: event.quantity,
+    );
+    await result.fold((failure) async => emit(HealthError(failure.message)), (
+      _,
+    ) async {
+      emit(const HealthActionSuccess('Item dispensed'));
+      // Refresh stock so the nurse sees the decremented quantity.
+      final refreshed = await getMedicalInventory(event.schoolId);
+      refreshed.fold((_) {}, (items) => emit(InventoryLoaded(items)));
+    });
   }
 
   Future<void> _onFetchSupplyRequests(
