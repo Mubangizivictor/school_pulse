@@ -293,223 +293,222 @@ class _ExamSeriesEditorScreenState extends State<ExamSeriesEditorScreen> {
       );
 
       return Form(
-      key: _formKey,
-      child: ListView(
-        padding: const EdgeInsets.all(AppSpacing.l),
-        children: [
-          TextFormField(
-            controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Series name'),
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Name is required' : null,
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: academicYears.isEmpty
-                    ? TextFormField(
-                        controller: _yearController,
-                        decoration: const InputDecoration(
-                          labelText: 'Academic year',
-                        ),
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Required'
-                            : null,
-                      )
-                    : DropdownButtonFormField<String>(
-                        initialValue: academicYears.any(
-                          (y) => y.id == _academicYearId,
-                        )
-                            ? _academicYearId
-                            : null,
-                        decoration: const InputDecoration(
-                          labelText: 'Academic year',
-                        ),
-                        items: academicYears
-                            .map(
-                              (y) => DropdownMenuItem(
-                                value: y.id,
-                                child: Text(y.name),
-                              ),
-                            )
-                            .toList(),
-                        validator: (v) => v == null ? 'Required' : null,
-                        onChanged: (v) => setState(() {
-                          _academicYearId = v;
-                          _yearController.text = academicYears
-                              .firstWhere((y) => y.id == v)
-                              .name;
-                          // The selected term may belong to a different
-                          // academic year - reset it so the user picks one
-                          // from the newly-filtered list below.
-                          _term = '';
-                        }),
-                      ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: terms.isEmpty
-                    ? TextFormField(
-                        initialValue: _term,
-                        decoration: const InputDecoration(labelText: 'Term'),
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Required'
-                            : null,
-                        onChanged: (v) => _term = v,
-                      )
-                    : DropdownButtonFormField<String>(
-                        initialValue: terms.any((t) => t.name == _term)
-                            ? _term
-                            : null,
-                        decoration: const InputDecoration(labelText: 'Term'),
-                        items: terms
-                            .map(
-                              (t) => DropdownMenuItem(
-                                value: t.name,
-                                child: Text(t.name),
-                              ),
-                            )
-                            .toList(),
-                        validator: (v) => v == null ? 'Required' : null,
-                        onChanged: (v) => setState(() => _term = v ?? _term),
-                      ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          examTypes.isEmpty
-              ? DropdownButtonFormField<String>(
-                  initialValue: _fallbackExamTypes.contains(_type)
-                      ? _type
-                      : _fallbackExamTypes.first,
-                  decoration: const InputDecoration(
-                    labelText: 'Examination type',
-                  ),
-                  items: _fallbackExamTypes
-                      .map(
-                        (t) => DropdownMenuItem(
-                          value: t,
-                          child: Text(_fallbackExamTypeLabel(t)),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() => _type = v ?? _type),
-                )
-              : DropdownButtonFormField<String>(
-                  initialValue: examTypes.any((t) => t.name == _type)
-                      ? _type
-                      : null,
-                  decoration: const InputDecoration(
-                    labelText: 'Examination type',
-                  ),
-                  items: examTypes
-                      .map(
-                        (t) => DropdownMenuItem(
-                          value: t.name,
-                          child: Text(t.name),
-                        ),
-                      )
-                      .toList(),
-                  validator: (v) => v == null ? 'Required' : null,
-                  onChanged: (v) => setState(() => _type = v ?? _type),
-                ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _DatePickerTile(
-                  label: 'Start date',
-                  value: _startDate,
-                  onTap: () => _pickDate(
-                    initial: _startDate,
-                    onPicked: (d) => setState(() => _startDate = d),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _DatePickerTile(
-                  label: 'End date',
-                  value: _endDate,
-                  onTap: () => _pickDate(
-                    initial: _endDate,
-                    onPicked: (d) => setState(() => _endDate = d),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _DatePickerTile(
-            label: 'Question submission deadline',
-            value: _questionDeadline,
-            onTap: () => _pickDate(
-              initial: _questionDeadline,
-              onPicked: (d) => setState(() => _questionDeadline = d),
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.l),
+          children: [
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: 'Series name'),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Name is required' : null,
             ),
-          ),
-          const SizedBox(height: 18),
-          Text('Included classes', style: AppTypography.titleSmall),
-          const SizedBox(height: 12),
-          for (final level in levels)
-            if (classesByLevel[level.id]!.isNotEmpty) ...[
-              Text(
-                level.name,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textMuted(context),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: academicYears.isEmpty
+                      ? TextFormField(
+                          controller: _yearController,
+                          decoration: const InputDecoration(
+                            labelText: 'Academic year',
+                          ),
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Required'
+                              : null,
+                        )
+                      : DropdownButtonFormField<String>(
+                          initialValue:
+                              academicYears.any((y) => y.id == _academicYearId)
+                              ? _academicYearId
+                              : null,
+                          decoration: const InputDecoration(
+                            labelText: 'Academic year',
+                          ),
+                          items: academicYears
+                              .map(
+                                (y) => DropdownMenuItem(
+                                  value: y.id,
+                                  child: Text(y.name),
+                                ),
+                              )
+                              .toList(),
+                          validator: (v) => v == null ? 'Required' : null,
+                          onChanged: (v) => setState(() {
+                            _academicYearId = v;
+                            _yearController.text = academicYears
+                                .firstWhere((y) => y.id == v)
+                                .name;
+                            // The selected term may belong to a different
+                            // academic year - reset it so the user picks one
+                            // from the newly-filtered list below.
+                            _term = '';
+                          }),
+                        ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              classChips(classesByLevel[level.id]!),
-              const SizedBox(height: 14),
-            ],
-          if (unleveled.isNotEmpty) ...[
-            if (levels.isNotEmpty) ...[
-              Text(
-                'Other classes',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textMuted(context),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: terms.isEmpty
+                      ? TextFormField(
+                          initialValue: _term,
+                          decoration: const InputDecoration(labelText: 'Term'),
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Required'
+                              : null,
+                          onChanged: (v) => _term = v,
+                        )
+                      : DropdownButtonFormField<String>(
+                          initialValue: terms.any((t) => t.name == _term)
+                              ? _term
+                              : null,
+                          decoration: const InputDecoration(labelText: 'Term'),
+                          items: terms
+                              .map(
+                                (t) => DropdownMenuItem(
+                                  value: t.name,
+                                  child: Text(t.name),
+                                ),
+                              )
+                              .toList(),
+                          validator: (v) => v == null ? 'Required' : null,
+                          onChanged: (v) => setState(() => _term = v ?? _term),
+                        ),
                 ),
-              ),
-              const SizedBox(height: 8),
-            ],
-            classChips(unleveled),
-          ],
-          const SizedBox(height: 18),
-          Text('Included subjects', style: AppTypography.titleSmall),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: subjects
-                .map(
-                  (s) => FilterChip(
-                    label: Text(s.name),
-                    selected: _subjectIds.contains(s.id),
-                    onSelected: (sel) => setState(
-                      () => sel
-                          ? _subjectIds.add(s.id)
-                          : _subjectIds.remove(s.id),
+              ],
+            ),
+            const SizedBox(height: 14),
+            examTypes.isEmpty
+                ? DropdownButtonFormField<String>(
+                    initialValue: _fallbackExamTypes.contains(_type)
+                        ? _type
+                        : _fallbackExamTypes.first,
+                    decoration: const InputDecoration(
+                      labelText: 'Examination type',
+                    ),
+                    items: _fallbackExamTypes
+                        .map(
+                          (t) => DropdownMenuItem(
+                            value: t,
+                            child: Text(_fallbackExamTypeLabel(t)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _type = v ?? _type),
+                  )
+                : DropdownButtonFormField<String>(
+                    initialValue: examTypes.any((t) => t.name == _type)
+                        ? _type
+                        : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Examination type',
+                    ),
+                    items: examTypes
+                        .map(
+                          (t) => DropdownMenuItem(
+                            value: t.name,
+                            child: Text(t.name),
+                          ),
+                        )
+                        .toList(),
+                    validator: (v) => v == null ? 'Required' : null,
+                    onChanged: (v) => setState(() => _type = v ?? _type),
+                  ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: _DatePickerTile(
+                    label: 'Start date',
+                    value: _startDate,
+                    onTap: () => _pickDate(
+                      initial: _startDate,
+                      onPicked: (d) => setState(() => _startDate = d),
                     ),
                   ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: _saving ? null : () => _save(cubit, seriesId),
-            icon: _saving
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _DatePickerTile(
+                    label: 'End date',
+                    value: _endDate,
+                    onTap: () => _pickDate(
+                      initial: _endDate,
+                      onPicked: (d) => setState(() => _endDate = d),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _DatePickerTile(
+              label: 'Question submission deadline',
+              value: _questionDeadline,
+              onTap: () => _pickDate(
+                initial: _questionDeadline,
+                onPicked: (d) => setState(() => _questionDeadline = d),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text('Included classes', style: AppTypography.titleSmall),
+            const SizedBox(height: 12),
+            for (final level in levels)
+              if (classesByLevel[level.id]!.isNotEmpty) ...[
+                Text(
+                  level.name,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                classChips(classesByLevel[level.id]!),
+                const SizedBox(height: 14),
+              ],
+            if (unleveled.isNotEmpty) ...[
+              if (levels.isNotEmpty) ...[
+                Text(
+                  'Other classes',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              classChips(unleveled),
+            ],
+            const SizedBox(height: 18),
+            Text('Included subjects', style: AppTypography.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: subjects
+                  .map(
+                    (s) => FilterChip(
+                      label: Text(s.name),
+                      selected: _subjectIds.contains(s.id),
+                      onSelected: (sel) => setState(
+                        () => sel
+                            ? _subjectIds.add(s.id)
+                            : _subjectIds.remove(s.id),
+                      ),
+                    ),
                   )
-                : const Icon(Icons.save_outlined),
-            label: Text(_saving ? 'Saving…' : 'Save series'),
-          ),
-        ],
-      ),
+                  .toList(),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: _saving ? null : () => _save(cubit, seriesId),
+              icon: _saving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save_outlined),
+              label: Text(_saving ? 'Saving…' : 'Save series'),
+            ),
+          ],
+        ),
       );
     }
 

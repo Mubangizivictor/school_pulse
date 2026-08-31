@@ -8,6 +8,7 @@ import 'package:school_pulse/features/exam_factory/domain/entities/exam_factory_
 import 'package:school_pulse/features/exam_factory/domain/repositories/exam_factory_repository.dart';
 import 'package:school_pulse/features/exam_factory/presentation/bloc/exam_factory_cubit.dart';
 import 'package:school_pulse/features/exam_factory/presentation/screens/series/exam_series_screens.dart';
+import 'package:school_pulse/features/structure/domain/entities/assessment_grading_entities.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_event.dart';
@@ -26,6 +27,63 @@ const _classes = [
 const _subjects = [
   Subject(id: 'maths', schoolId: 'school-1', name: 'Mathematics'),
   Subject(id: 'eng', schoolId: 'school-1', name: 'English'),
+];
+
+const _levels = [
+  EducationalLevel(
+    id: 'lower',
+    schoolId: 'school-1',
+    name: 'Lower Primary',
+    order: 0,
+  ),
+  EducationalLevel(
+    id: 'upper',
+    schoolId: 'school-1',
+    name: 'Upper Primary',
+    order: 1,
+  ),
+];
+
+const _leveledClasses = [
+  SchoolClass(id: 'p1', schoolId: 'school-1', name: 'P1', levelId: 'lower'),
+  SchoolClass(id: 'p6', schoolId: 'school-1', name: 'P6', levelId: 'upper'),
+  SchoolClass(id: 'x1', schoolId: 'school-1', name: 'Unassigned Class'),
+];
+
+final _academicYear = AcademicYear(
+  id: 'year-2026',
+  schoolId: 'school-1',
+  name: '2026',
+  startDate: DateTime(2026, 1, 1),
+  endDate: DateTime(2026, 12, 1),
+  isCurrent: true,
+);
+
+final _academicTerms = [
+  AcademicTerm(
+    id: 'term-1',
+    schoolId: 'school-1',
+    academicYearId: 'year-2026',
+    name: 'Semester 1',
+    startDate: DateTime(2026, 1, 1),
+    endDate: DateTime(2026, 6, 1),
+    periodType: AcademicPeriodType.semester,
+  ),
+  AcademicTerm(
+    id: 'term-2',
+    schoolId: 'school-1',
+    academicYearId: 'year-2026',
+    name: 'Semester 2',
+    startDate: DateTime(2026, 6, 2),
+    endDate: DateTime(2026, 12, 1),
+    periodType: AcademicPeriodType.semester,
+    isCurrent: true,
+  ),
+];
+
+const _assessmentTypes = [
+  AssessmentTypeDef(id: 'cat', schoolId: 'school-1', name: 'CAT'),
+  AssessmentTypeDef(id: 'prelim', schoolId: 'school-1', name: 'Prelim'),
 ];
 
 Widget _wrap({
@@ -304,4 +362,56 @@ void main() {
     ).called(1);
     expect(find.text('Examination series saved.'), findsOneWidget);
   });
+
+  testWidgets('groups classes under their configured level, with a fallback '
+      'section for classes that have none', (tester) async {
+    _useTallViewport(tester);
+    when(() => structureBloc.state).thenReturn(
+      const StructureState(
+        classes: _leveledClasses,
+        subjects: _subjects,
+        levels: _levels,
+      ),
+    );
+
+    await tester.pumpWidget(
+      _wrap(repository: repository, structureBloc: structureBloc),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lower Primary'), findsOneWidget);
+    expect(find.text('Upper Primary'), findsOneWidget);
+    expect(find.text('Other classes'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'P1'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'P6'), findsOneWidget);
+    expect(find.widgetWithText(FilterChip, 'Unassigned Class'), findsOneWidget);
+  });
+
+  testWidgets(
+    'sources academic year, term and exam type from Structure config when '
+    'the school has set them up',
+    (tester) async {
+      when(() => structureBloc.state).thenReturn(
+        StructureState(
+          classes: _classes,
+          subjects: _subjects,
+          academicYears: [_academicYear],
+          academicTerms: _academicTerms,
+          assessmentTypes: _assessmentTypes,
+        ),
+      );
+
+      await tester.pumpWidget(
+        _wrap(repository: repository, structureBloc: structureBloc),
+      );
+      await tester.pumpAndSettle();
+
+      // No free-text fallback fields - the school's own catalog drives these.
+      expect(find.text('2026'), findsOneWidget);
+      expect(find.text('Semester 2'), findsOneWidget); // the current term
+      expect(find.text('CAT'), findsOneWidget); // first defined type
+      expect(find.text('Term 1'), findsNothing);
+      expect(find.text('Midterm'), findsNothing);
+    },
+  );
 }
