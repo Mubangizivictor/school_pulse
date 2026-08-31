@@ -471,11 +471,16 @@ describe('SaaS owner / platform layer', () => {
     await assertFails(setDoc(doc(dbFor('adminA'), 'schools', 'schoolB'), { name: 'Forged School' }));
   });
 
-  test('only the owner can manage tenants and the subscription plan catalog', async () => {
+  test('only the owner can manage tenants; the subscription plan catalog is shared read, owner-write', async () => {
     await assertSucceeds(setDoc(doc(dbFor('ownerA'), 'tenants', 'tenantA'), { schoolId: 'schoolA' }));
     await assertFails(setDoc(doc(dbFor('adminA'), 'tenants', 'tenantB'), { schoolId: 'schoolA' }));
     await assertSucceeds(setDoc(doc(dbFor('ownerA'), 'subscription_plans', 'planA'), { name: 'Pro' }));
-    await assertFails(getDoc(doc(dbFor('adminA'), 'subscription_plans', 'planA')));
+    // subscription_plans is shared catalog data, not tenant-scoped - any
+    // signed-in staff member needs read access to it (see firestore.rules'
+    // own comment on this collection), so a same-tenant admin reading it
+    // back is expected to succeed, not fail.
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'subscription_plans', 'planA')));
+    await assertFails(setDoc(doc(dbFor('adminA'), 'subscription_plans', 'planB'), { name: 'Forged' }));
   });
 
   test('school admin invitations can be created by the owner but never read back by anyone', async () => {
@@ -1271,10 +1276,21 @@ describe('Phase 3 people/roles/permissions', () => {
     await assertFails(deleteDoc(doc(dbFor('adminA'), 'schools/schoolA/role_permission_overrides/nurse')));
   });
 
-  test('student_access_codes: only tenant administrators can list/write, direct-by-id get is public', async () => {
-    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'student_access_codes', 'STU123'), {
-      schoolId: 'schoolA', studentId: 'studentA', studentName: 'Student A',
-      phoneNumber: '+256700000000', pin: '1234', isActive: true,
+  test('student_access_codes: no client (including a tenant administrator) may write directly - '
+    + 'provisionStudentAccessCode/resetStudentPin/setStudentAccessCodeStatus are the only writers; '
+    + 'list is staff-only same-school, direct-by-id get is public', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'student_access_codes', 'STU123'), {
+        schoolId: 'schoolA', studentId: 'studentA', studentName: 'Student A',
+        phoneNumber: '+256700000000', pin: '1234', isActive: true,
+      });
+    });
+    await assertFails(setDoc(doc(dbFor('adminA'), 'student_access_codes', 'STU456'), {
+      schoolId: 'schoolA', studentId: 'studentB', studentName: 'Student B',
+      phoneNumber: '+256700000001', pin: '5678', isActive: true,
+    }));
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'student_access_codes', 'STU123'), {
+      pin: '9999',
     }));
     await assertSucceeds(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'student_access_codes', 'STU123')));
     await assertFails(getDocs(collection(dbFor('teacherA'), 'student_access_codes')));
@@ -1810,15 +1826,16 @@ describe('Gate ops visitors and movement events', () => {
 });
 
 describe('Phase 14 IDOR fixes: payroll, discipline/counseling, homework', () => {
-  test('payroll: same-school staff can read/write, cross-school staff cannot', async () => {
+  test('payroll: retired client-authored ledger - no client, including same-school staff, '
+    + 'may read or write it; tenant-scoped payroll_runs/callables are the only path now', async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       await setDoc(doc(context.firestore(), 'payroll', 'pay1'), {
         schoolId: 'schoolA', staffId: 'teacherA', netPay: 100000,
       });
     });
-    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'payroll', 'pay1')));
+    await assertFails(getDoc(doc(dbFor('adminA'), 'payroll', 'pay1')));
     await assertFails(getDoc(doc(dbFor('teacherB'), 'payroll', 'pay1')));
-    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'payroll', 'pay2'), {
+    await assertFails(setDoc(doc(dbFor('adminA'), 'payroll', 'pay2'), {
       schoolId: 'schoolA', staffId: 'teacherA', netPay: 200000,
     }));
     await assertFails(setDoc(doc(dbFor('teacherB'), 'payroll', 'pay3'), {
@@ -2416,7 +2433,13 @@ describe('student identity + credential tenant isolation', () => {
         schoolId: 'schoolB', name: 'B Student', status: 'active',
       });
     });
-    await assertFails(getDoc(doc(dbFor('teacherA'), 'students/studentInSchoolB')));
+    // otherTeacherA, not teacherA, is the right fixture here: teacherA holds
+    // a real, active institution_memberships doc into School B elsewhere in
+    // this file (the institution-switcher fixtures), so isSameSchool('schoolB')
+    // is genuinely, correctly true for teacherA - that's a different feature
+    // being exercised, not a tenant-isolation hole. otherTeacherA has no
+    // School B membership at all, which is what this test needs.
+    await assertFails(getDoc(doc(dbFor('otherTeacherA'), 'students/studentInSchoolB')));
     await assertSucceeds(getDoc(doc(dbFor('teacherB'), 'students/studentInSchoolB')));
   });
 
@@ -2453,7 +2476,12 @@ describe('student identity + credential tenant isolation', () => {
 
   test('student_identities: a School A staff member cannot create an identity '
     + 'doc claiming schoolId: schoolB', async () => {
-    await assertFails(setDoc(doc(dbFor('teacherA'), 'student_identities/forgedIdentity'), {
+    // otherTeacherA, not teacherA - see the comment on the read-isolation
+    // test above: teacherA has a genuine active School B membership from an
+    // unrelated fixture, so isSameSchool('schoolB') is correctly true for
+    // teacherA and this assertion would not be testing tenant isolation at
+    // all with that fixture.
+    await assertFails(setDoc(doc(dbFor('otherTeacherA'), 'student_identities/forgedIdentity'), {
       studentId: 'someStudent', schoolId: 'schoolB',
       uniqueSystemId: 'SP-STUDENT-forged', schoolStudentId: 'SP2026000998',
     }));
