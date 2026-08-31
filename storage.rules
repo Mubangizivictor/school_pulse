@@ -62,6 +62,16 @@ service firebase.storage {
     function canManageInstitutionBranding(schoolId) {
       return isActiveInstitutionMember(schoolId);
     }
+    function canAccessExamFiles(institutionId) {
+      // Print officers may download controlled files too - that is the
+      // entire purpose of Secure Print Room - but never browse the question
+      // bank, so this stays a Storage-only grant, not folded into
+      // hasExamRole()'s Firestore counterpart.
+      return isActiveInstitutionMember(institutionId) &&
+        (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['director', 'headTeacher', 'deputyHead', 'deanOfStudies', 'hod', 'moderator', 'schoolAdmin', 'printOfficer'] ||
+         (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles is list &&
+          firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles.hasAny(['director', 'headTeacher', 'deputyHead', 'deanOfStudies', 'hod', 'moderator', 'schoolAdmin', 'printOfficer'])));
+    }
 
     match /school_assets/{fileName} {
       allow read: if true;
@@ -263,6 +273,14 @@ service firebase.storage {
       allow write: if isSameSchool(schoolId)
         && request.resource.size < 15 * 1024 * 1024;
       allow delete: if isSameSchool(schoolId);
+    }
+
+    // Generated papers live in a protected, institution-scoped path. The
+    // backend generates and writes them; clients cannot upload, replace or
+    // delete a secure PDF. Download authorization is deliberately role-gated.
+    match /schools/{institutionId}/exam_factory/{seriesId}/{paperId}/{fileName} {
+      allow read: if canAccessExamFiles(institutionId);
+      allow write: if false;
     }
 
     match /{allPaths=**} {
