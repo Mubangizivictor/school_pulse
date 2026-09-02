@@ -9,8 +9,8 @@ import 'package:school_pulse/core/network/network_info.dart';
 import '../../domain/entities/owner_notification.dart';
 import '../../domain/entities/owner_notification_preferences.dart';
 import '../mappers/owner_notification_preferences_mapper.dart';
-import 'owner_notification_isar_store.dart';
-import 'owner_notification_offline_store.dart';
+import 'owner_notification_default_store.dart';
+import 'owner_notification_store.dart';
 
 /// SaaS Owner notification client.
 ///
@@ -62,7 +62,7 @@ class OwnerNotificationService {
         _network = null;
 
   static OwnerNotificationCacheStore _defaultStore() =>
-      kIsWeb ? OwnerNotificationOfflineStore() : OwnerNotificationIsarStore();
+      createDefaultOwnerNotificationStore();
 
   late final FirebaseFirestore _firestore;
   late final FirebaseAuth _auth;
