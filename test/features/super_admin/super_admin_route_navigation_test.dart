@@ -32,6 +32,23 @@ void main() {
           4,
         );
         expect(superAdminSectionForPath('/super-admin/notifications'), 4);
+        // Redesigned owner notification nested routes keep Settings selected.
+        expect(
+          superAdminSectionForPath('/super-admin/settings/notifications'),
+          4,
+        );
+        expect(
+          superAdminSectionForPath(
+            '/super-admin/settings/notifications/preferences',
+          ),
+          4,
+        );
+        expect(
+          superAdminSectionForPath(
+            '/super-admin/settings/notifications/history',
+          ),
+          4,
+        );
         expect(
           superAdminSectionForPath('/super-admin/settings/support/ticket/1'),
           4,

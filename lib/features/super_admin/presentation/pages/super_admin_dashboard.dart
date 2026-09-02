@@ -9,6 +9,8 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/components/pulse_logo.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/manual_subscription_payment.dart';
 
+import 'package:school_pulse/features/super_admin/data/services/owner_push_token_service.dart';
+
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../responsive.dart';
@@ -140,6 +142,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
     // The overview timeline consumes this already-supported dashboard state.
     context.read<SuperAdminBloc>().add(const LoadAuditLogsEvent());
+    // Register this device in the dedicated owner FCM token store (data-only
+    // owner push). Best-effort; safe to call on every owner-console entry.
+    OwnerPushTokenService().registerCurrentDevice();
   }
 
   void _popToRoot(GlobalKey<NavigatorState> key) {

@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
+import 'owner_notification_taxonomy.dart';
+
 /// Durable platform notification surfaced to the SaaS Owner.
 /// Supports school applications, manual payments and platform alerts.
 class OwnerNotification extends Equatable {
@@ -17,7 +19,12 @@ class OwnerNotification extends Equatable {
     required this.amountUgx,
     required this.method,
     required this.createdAt,
+    required this.category,
+    required this.severity,
+    this.reference = '',
     this.resolvedAt,
+    this.openedAt,
+    this.platformHealthDegraded = false,
     this.pushStatus,
     this.emailStatus,
     this.inAppStatus,
@@ -35,7 +42,29 @@ class OwnerNotification extends Equatable {
   final int amountUgx;
   final String method;
   final DateTime createdAt;
+
+  /// Owner grouping — drives the tonal icon and the filter chips.
+  final OwnerNotificationCategory category;
+
+  /// Severity/status chip. Always shown on the detail screen; only shown on
+  /// a tile for [OwnerNotificationSeverity.showsOnTile].
+  final OwnerNotificationSeverity severity;
+
+  /// A short, already-masked reference for the detail card (e.g.
+  /// `MOMO •••• 4821`). Never a full PAN / raw payment reference.
+  final String reference;
+
   final DateTime? resolvedAt;
+
+  /// When the owner first opened this notification's detail — drives the
+  /// "Opened by you · 1:33 PM" audit strip. Server-stamped.
+  final DateTime? openedAt;
+
+  /// True only when a `platform` notification represents a degraded / outage
+  /// state (red pulse). A healthy / operational platform notification is
+  /// false (green pulse).
+  final bool platformHealthDegraded;
+
   final String? pushStatus;
   final String? emailStatus;
   final String? inAppStatus;
@@ -43,14 +72,16 @@ class OwnerNotification extends Equatable {
   bool get isUnread => status == 'unread';
   bool get isRead => status == 'read';
   bool get isResolved => status == 'resolved' || resolvedAt != null;
-  bool get isPayment => paymentId.isNotEmpty || type.contains('payment');
+  bool get isPayment =>
+      category == OwnerNotificationCategory.billing ||
+      paymentId.isNotEmpty ||
+      type.contains('payment');
   bool get isApplication =>
-      applicationId.isNotEmpty || type.contains('application');
+      category == OwnerNotificationCategory.schools ||
+      applicationId.isNotEmpty ||
+      type.contains('application');
 
-  /// Tri-state display label derived from [status]/[resolvedAt]. Any status
-  /// that isn't explicitly 'unread' or 'resolved' (including older documents
-  /// with unexpected values) is treated as read rather than resolved, since
-  /// "resolved" is a stronger claim that requires explicit evidence.
+  /// Tri-state display label derived from [status]/[resolvedAt].
   String get displayStatus {
     if (isResolved) return 'RESOLVED';
     if (isUnread) return 'NEW';
@@ -109,20 +140,90 @@ class OwnerNotification extends Equatable {
         ? amountRaw.round()
         : int.tryParse(amountRaw?.toString() ?? '') ?? 0;
 
+    final status = json['status']?.toString() ?? 'unread';
+    final resolvedAt = nullableDate(json['resolvedAt']);
+
+    // --- Category: explicit `category` wins; else derive from shape ------
+    OwnerNotificationCategory category;
+    if (json['category'] != null) {
+      category = OwnerNotificationCategory.fromWire(json['category'].toString());
+    } else if (paymentId.isNotEmpty) {
+      // Explicit foreign keys are stronger signals than the free-text type,
+      // whose default value ('platform_event') would otherwise mis-bucket.
+      category = OwnerNotificationCategory.billing;
+    } else if (applicationId.isNotEmpty) {
+      category = OwnerNotificationCategory.schools;
+    } else if (type.contains('payment') || type.contains('billing')) {
+      category = OwnerNotificationCategory.billing;
+    } else if (type.contains('incident') ||
+        type.contains('health') ||
+        type == 'platform_health' ||
+        type.contains('platform_health')) {
+      category = OwnerNotificationCategory.platform;
+    } else if (type.contains('application') ||
+        type.contains('domain') ||
+        type.contains('school') ||
+        type.contains('onboarding')) {
+      category = OwnerNotificationCategory.schools;
+    } else if (type.contains('security') || type.contains('sign_in')) {
+      category = OwnerNotificationCategory.security;
+    } else if (type.contains('digest')) {
+      category = OwnerNotificationCategory.digest;
+    } else {
+      category = OwnerNotificationCategory.digest;
+    }
+
+    final degraded = (json['platformHealthDegraded'] ??
+                data['platformHealthDegraded'] ??
+                (json['healthState']?.toString() == 'degraded') ??
+                false) ==
+            true ||
+        json['healthState']?.toString() == 'degraded' ||
+        json['healthState']?.toString() == 'outage';
+
+    // --- Severity: explicit `severity` wins; else derive ----------------
+    OwnerNotificationSeverity severity;
+    if (json['severity'] != null) {
+      severity =
+          OwnerNotificationSeverity.fromWire(json['severity'].toString());
+    } else if (status == 'resolved' || resolvedAt != null) {
+      severity = OwnerNotificationSeverity.resolved;
+    } else if (category == OwnerNotificationCategory.billing &&
+        (paymentId.isNotEmpty || type.contains('pending'))) {
+      severity = OwnerNotificationSeverity.requiresReview;
+    } else if (category == OwnerNotificationCategory.platform && degraded) {
+      severity = OwnerNotificationSeverity.critical;
+    } else if (category == OwnerNotificationCategory.security &&
+        type.contains('alert')) {
+      severity = OwnerNotificationSeverity.critical;
+    } else if (category == OwnerNotificationCategory.schools &&
+        (applicationId.isNotEmpty || type.contains('request'))) {
+      severity = OwnerNotificationSeverity.requiresReview;
+    } else {
+      severity = OwnerNotificationSeverity.information;
+    }
+
     String defaultTitle() {
-      if (paymentId.isNotEmpty || type.contains('payment')) {
-        return 'Payment verification required';
+      switch (category) {
+        case OwnerNotificationCategory.billing:
+          return 'Payment awaiting review';
+        case OwnerNotificationCategory.platform:
+          return degraded
+              ? 'Platform health needs attention'
+              : 'Platform health update';
+        case OwnerNotificationCategory.schools:
+          return 'New school request';
+        case OwnerNotificationCategory.security:
+          return 'Security alert';
+        case OwnerNotificationCategory.digest:
+          return 'Owner digest ready';
       }
-      if (applicationId.isNotEmpty || type.contains('application')) {
-        return 'New school application';
-      }
-      return 'School Pulse notification';
     }
 
     return OwnerNotification(
       id: json['id']?.toString() ?? '',
       type: type,
-      status: json['status']?.toString() ?? 'unread',
+      status: status,
       title: json['title']?.toString() ?? defaultTitle(),
       body: json['body']?.toString() ?? '',
       paymentId: paymentId,
@@ -132,7 +233,15 @@ class OwnerNotification extends Equatable {
       amountUgx: amount,
       method: (json['method'] ?? data['method'])?.toString() ?? '',
       createdAt: date(json['createdAt']),
-      resolvedAt: nullableDate(json['resolvedAt']),
+      category: category,
+      severity: severity,
+      reference:
+          (json['reference'] ?? data['reference'] ?? data['maskedReference'])
+              ?.toString() ??
+          '',
+      resolvedAt: resolvedAt,
+      openedAt: nullableDate(json['openedAt']),
+      platformHealthDegraded: degraded,
       pushStatus: friendlyStatus(push),
       emailStatus: friendlyStatus(email),
       inAppStatus: friendlyStatus(inApp),
@@ -153,7 +262,12 @@ class OwnerNotification extends Equatable {
     amountUgx,
     method,
     createdAt,
+    category,
+    severity,
+    reference,
     resolvedAt,
+    openedAt,
+    platformHealthDegraded,
     pushStatus,
     emailStatus,
     inAppStatus,

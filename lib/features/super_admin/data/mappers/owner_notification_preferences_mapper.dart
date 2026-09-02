@@ -29,14 +29,21 @@ class OwnerNotificationPreferencesMapper {
 
     return OwnerNotificationPreferences(
       ownerId: ownerId,
+      inAppEnabled: data['inAppEnabled'] as bool? ?? true,
       pushEnabled: data['pushEnabled'] as bool? ?? true,
       emailEnabled: data['emailEnabled'] as bool? ?? true,
-      billingAlerts: categories['billing'] as bool? ?? true,
-      schoolApplicationAlerts:
-          categories['schoolApplications'] as bool? ?? true,
-      paymentAlerts: categories['payments'] as bool? ?? true,
-      platformActivityAlerts:
-          categories['platformActivity'] as bool? ?? true,
+      paymentAlerts:
+          (categories['payments'] ?? categories['billing']) as bool? ?? true,
+      platformHealthAlerts: (categories['platformHealth'] ??
+              categories['platformActivity']) as bool? ??
+          true,
+      schoolAlerts: (categories['schools'] ??
+              categories['schoolApplications']) as bool? ??
+          true,
+      securityAlerts: categories['security'] as bool? ?? true,
+      weeklyDigestEnabled: (categories['weeklyDigest'] ??
+              categories['digest']) as bool? ??
+          true,
       quietHoursEnabled: quiet['enabled'] as bool? ?? false,
       quietHoursStart:
           _timeFrom(quiet['start']) ?? const TimeOfDay(hour: 22, minute: 0),
@@ -56,13 +63,19 @@ class OwnerNotificationPreferencesMapper {
     OwnerNotificationPreferences p,
   ) {
     return {
+      'inAppEnabled': p.inAppEnabled,
       'pushEnabled': p.pushEnabled,
       'emailEnabled': p.emailEnabled,
       'categories': {
-        'billing': p.billingAlerts,
-        'schoolApplications': p.schoolApplicationAlerts,
         'payments': p.paymentAlerts,
-        'platformActivity': p.platformActivityAlerts,
+        'platformHealth': p.platformHealthAlerts,
+        'schools': p.schoolAlerts,
+        'security': p.securityAlerts,
+        'weeklyDigest': p.weeklyDigestEnabled,
+        // Legacy keys the current callable still writes/reads.
+        'billing': p.paymentAlerts,
+        'schoolApplications': p.schoolAlerts,
+        'platformActivity': p.platformHealthAlerts,
       },
       'quietHours': {
         'enabled': p.quietHoursEnabled,

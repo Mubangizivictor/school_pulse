@@ -2524,6 +2524,18 @@ service cloud.firestore {
           resource.data.ownerId == request.auth.uid);
       allow create, update, delete: if false;
     }
+    match /super_admin_notification_tokens/{ownerId} {
+      // Dedicated FCM device-token store for OWNER-ONLY notifications.
+      // Completely separate from users/{uid}/tokens/{token} (school-role
+      // devices). A superAdmin may only touch the subtree under their own
+      // uid; every other role is denied read and write outright. The
+      // server (owner_notification_engine, Admin SDK) reads these to fan
+      // out data-only owner push.
+      allow read, write: if false; // parent doc itself is unused
+      match /devices/{token} {
+        allow read, write: if isSuperAdmin() && request.auth.uid == ownerId;
+      }
+    }
     match /invoices/{id} {
       allow read, write: if isSuperAdmin();
     }

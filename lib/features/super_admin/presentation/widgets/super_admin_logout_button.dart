@@ -5,6 +5,7 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_service.dart';
+import 'package:school_pulse/features/super_admin/data/services/owner_push_token_service.dart';
 
 Future<void> handleSuperAdminLogout(BuildContext context) async {
   final confirmed = await showDialog<bool>(
@@ -20,6 +21,9 @@ Future<void> handleSuperAdminLogout(BuildContext context) async {
     // the next account (account switch / role loss / session revocation all
     // funnel through here).
     await OwnerNotificationService().clearOfflineState();
+    // Also drop this device's owner FCM token so a former-owner device
+    // stops receiving owner push.
+    await OwnerPushTokenService().unregisterCurrentDevice();
     if (!context.mounted) return;
     context.read<AuthBloc>().add(LogoutPressed());
     context.go('/welcome');

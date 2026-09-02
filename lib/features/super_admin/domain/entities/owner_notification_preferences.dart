@@ -4,14 +4,11 @@ import 'package:flutter/material.dart';
 ///
 /// Only the two values the backend callable
 /// (`public_functions/owner_notification_preferences.js`) accepts:
-/// `realtime` and `daily_digest`. Daily-digest delivery is stored for
-/// forward compatibility; the server still delivers realtime until a digest
-/// worker is implemented (surfaced to the UI via [dailyDigestDelivered]).
+/// `realtime` and `daily_digest`.
 enum OwnerNotificationFrequency {
   realtime,
   dailyDigest;
 
-  /// Wire value used by the callable payload/response.
   String get wire =>
       this == OwnerNotificationFrequency.dailyDigest ? 'daily_digest' : 'realtime';
 
@@ -24,48 +21,57 @@ enum OwnerNotificationFrequency {
 
 /// SaaS Owner notification settings.
 ///
-/// Shape is the canonical one owned by the backend callable: two delivery
-/// channels (push, email), four category toggles, wall-clock quiet hours,
-/// and a two-value frequency. There is deliberately no in-app channel
-/// toggle - the owner feed is the durable source of truth and is never
-/// suppressed - and no per-category "critical" switch: security alerts,
-/// payment failures and platform outages are simply never offered here, so
-/// nothing this model persists can gate them.
+/// Matches the redesigned owner "Notification settings" screen:
+///  * Delivery: in-app + push toggles.
+///  * Categories: Payments, Platform health, Schools, Security, Weekly
+///    digest.
+///  * Preferences: quiet hours, digest frequency.
+///
+/// There is deliberately no per-category "critical" switch: a degraded
+/// platform, a security alert or a payment failure is always delivered.
+/// Turning *Platform health* or *Security* off here only suppresses the
+/// routine / informational entries in those categories.
 @immutable
 class OwnerNotificationPreferences {
   final String ownerId;
 
   // Delivery channels.
+  final bool inAppEnabled;
   final bool pushEnabled;
   final bool emailEnabled;
 
-  // Category toggles (non-critical only).
-  final bool billingAlerts;
-  final bool schoolApplicationAlerts;
+  // Category toggles (routine / non-critical entries only).
   final bool paymentAlerts;
-  final bool platformActivityAlerts;
+  final bool platformHealthAlerts;
+  final bool schoolAlerts;
+  final bool securityAlerts;
+  final bool weeklyDigestEnabled;
 
-  /// Suppresses non-critical delivery between these times when
-  /// [quietHoursEnabled]. Wall-clock (must not shift with timezone/travel).
+  /// Legacy aliases kept so existing callers/tests keep compiling. Billing
+  /// and school-application alerts are folded into [paymentAlerts] /
+  /// [schoolAlerts]; "platform activity" into [platformHealthAlerts].
+  bool get billingAlerts => paymentAlerts;
+  bool get schoolApplicationAlerts => schoolAlerts;
+  bool get platformActivityAlerts => platformHealthAlerts;
+
   final bool quietHoursEnabled;
   final TimeOfDay quietHoursStart;
   final TimeOfDay quietHoursEnd;
 
   final OwnerNotificationFrequency frequency;
 
-  /// True when the backend reports a digest worker actually runs. Until
-  /// then the UI shows "delivered in real time for now" next to the
-  /// daily-digest option rather than implying batching already happens.
   final bool dailyDigestDelivered;
 
   const OwnerNotificationPreferences({
     required this.ownerId,
+    this.inAppEnabled = true,
     this.pushEnabled = true,
     this.emailEnabled = true,
-    this.billingAlerts = true,
-    this.schoolApplicationAlerts = true,
     this.paymentAlerts = true,
-    this.platformActivityAlerts = true,
+    this.platformHealthAlerts = true,
+    this.schoolAlerts = true,
+    this.securityAlerts = true,
+    this.weeklyDigestEnabled = true,
     this.quietHoursEnabled = false,
     this.quietHoursStart = const TimeOfDay(hour: 22, minute: 0),
     this.quietHoursEnd = const TimeOfDay(hour: 7, minute: 0),
@@ -80,28 +86,38 @@ class OwnerNotificationPreferences {
       'Security alerts, payment failures and platform outages';
 
   OwnerNotificationPreferences copyWith({
+    bool? inAppEnabled,
     bool? pushEnabled,
     bool? emailEnabled,
-    bool? billingAlerts,
-    bool? schoolApplicationAlerts,
     bool? paymentAlerts,
-    bool? platformActivityAlerts,
+    bool? platformHealthAlerts,
+    bool? schoolAlerts,
+    bool? securityAlerts,
+    bool? weeklyDigestEnabled,
     bool? quietHoursEnabled,
     TimeOfDay? quietHoursStart,
     TimeOfDay? quietHoursEnd,
     OwnerNotificationFrequency? frequency,
     bool? dailyDigestDelivered,
+    // Legacy names — folded onto the new fields.
+    bool? billingAlerts,
+    bool? schoolApplicationAlerts,
+    bool? platformActivityAlerts,
   }) {
     return OwnerNotificationPreferences(
       ownerId: ownerId,
+      inAppEnabled: inAppEnabled ?? this.inAppEnabled,
       pushEnabled: pushEnabled ?? this.pushEnabled,
       emailEnabled: emailEnabled ?? this.emailEnabled,
-      billingAlerts: billingAlerts ?? this.billingAlerts,
-      schoolApplicationAlerts:
-          schoolApplicationAlerts ?? this.schoolApplicationAlerts,
-      paymentAlerts: paymentAlerts ?? this.paymentAlerts,
-      platformActivityAlerts:
-          platformActivityAlerts ?? this.platformActivityAlerts,
+      paymentAlerts:
+          paymentAlerts ?? billingAlerts ?? this.paymentAlerts,
+      platformHealthAlerts: platformHealthAlerts ??
+          platformActivityAlerts ??
+          this.platformHealthAlerts,
+      schoolAlerts:
+          schoolAlerts ?? schoolApplicationAlerts ?? this.schoolAlerts,
+      securityAlerts: securityAlerts ?? this.securityAlerts,
+      weeklyDigestEnabled: weeklyDigestEnabled ?? this.weeklyDigestEnabled,
       quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
       quietHoursStart: quietHoursStart ?? this.quietHoursStart,
       quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,
@@ -109,4 +125,18 @@ class OwnerNotificationPreferences {
       dailyDigestDelivered: dailyDigestDelivered ?? this.dailyDigestDelivered,
     );
   }
+
+  bool sameAs(OwnerNotificationPreferences other) =>
+      inAppEnabled == other.inAppEnabled &&
+      pushEnabled == other.pushEnabled &&
+      emailEnabled == other.emailEnabled &&
+      paymentAlerts == other.paymentAlerts &&
+      platformHealthAlerts == other.platformHealthAlerts &&
+      schoolAlerts == other.schoolAlerts &&
+      securityAlerts == other.securityAlerts &&
+      weeklyDigestEnabled == other.weeklyDigestEnabled &&
+      quietHoursEnabled == other.quietHoursEnabled &&
+      quietHoursStart == other.quietHoursStart &&
+      quietHoursEnd == other.quietHoursEnd &&
+      frequency == other.frequency;
 }

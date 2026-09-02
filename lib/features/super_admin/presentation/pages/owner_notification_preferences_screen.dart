@@ -2,32 +2,25 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'package:school_pulse/core/notification/notification_service.dart';
-import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/design_system/theme/app_radius.dart';
-import 'package:school_pulse/design_system/theme/app_spacing.dart';
-import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification_preferences.dart';
 
-/// Delivery-channel, category and scheduling preferences for the SaaS
-/// Owner.
+/// SaaS Owner "Notification settings" — an owner-only nested route under
+/// Settings, with the persistent owner bottom navigation still visible.
 ///
-/// All reads and writes go through the owner-only preference callables
-/// (`getOwnerNotificationPreferences` / `updateOwnerNotificationPreferences`)
-/// via [OwnerNotificationService] - never a direct Firestore write. The
-/// backing document is Admin-SDK-only, so this screen is pull-based: it
-/// loads once, and re-applies the server's sanitised result after every
-/// successful save so a value never appears to "revert".
+/// Compact grouped rows matching the redesign:
+///   Delivery      · In-app · Push
+///   Categories    · Payments · Platform health · Schools · Security ·
+///                   Weekly digest
+///   Preferences   · Quiet hours · Digest frequency
 ///
-/// Critical categories (security, payment failure, platform outage) are
-/// never offered as switches here - [OwnerNotificationPreferences] has no
-/// field that could gate them.
+/// One compact blue "Save preferences" button, shown only when a change is
+/// pending. All reads/writes go through the owner-only preference callables
+/// via [OwnerNotificationService].
 class OwnerNotificationPreferencesScreen extends StatefulWidget {
   const OwnerNotificationPreferencesScreen({super.key, this.service});
 
-  /// Injectable for tests; production uses the default [OwnerNotificationService].
   final OwnerNotificationService? service;
 
   @override
@@ -43,9 +36,13 @@ class _OwnerNotificationPreferencesScreenState
   bool _loading = true;
   bool _saving = false;
   String? _error;
-  OwnerNotificationPreferences? _prefs;
+
+  OwnerNotificationPreferences? _saved;
+  OwnerNotificationPreferences? _draft;
 
   String? get _ownerId => _service.currentOwnerId;
+  bool get _dirty =>
+      _saved != null && _draft != null && !_saved!.sameAs(_draft!);
 
   @override
   void initState() {
@@ -67,7 +64,8 @@ class _OwnerNotificationPreferencesScreenState
       final prefs = await _service.getPreferences(ownerId);
       if (!mounted) return;
       setState(() {
-        _prefs = prefs;
+        _saved = prefs;
+        _draft = prefs;
         _loading = false;
       });
     } catch (error) {
@@ -79,10 +77,38 @@ class _OwnerNotificationPreferencesScreenState
     }
   }
 
-  Future<void> _togglePush(
-    OwnerNotificationPreferences prefs,
-    bool value,
-  ) async {
+  void _update(OwnerNotificationPreferences next) =>
+      setState(() => _draft = next);
+
+  Future<void> _save() async {
+    final draft = _draft;
+    if (draft == null || _saving) return;
+    setState(() => _saving = true);
+    try {
+      final result = await _service.savePreferences(draft);
+      if (mounted) {
+        setState(() {
+          _saved = result;
+          _draft = result;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Preferences saved')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_friendlyError(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _togglePush(bool value) async {
+    final draft = _draft;
+    if (draft == null) return;
     if (kIsWeb && value) {
       final granted = await NotificationService().requestWebPushPermission();
       if (!granted) {
@@ -91,7 +117,7 @@ class _OwnerNotificationPreferencesScreenState
             const SnackBar(
               content: Text(
                 'Browser notifications were blocked. Enable them in your '
-                "browser's site settings to receive push alerts here.",
+                "browser's site settings.",
               ),
             ),
           );
@@ -99,397 +125,388 @@ class _OwnerNotificationPreferencesScreenState
         return;
       }
     }
-    await _save(prefs.copyWith(pushEnabled: value));
-  }
-
-  Future<void> _save(OwnerNotificationPreferences updated) async {
-    setState(() {
-      _saving = true;
-      // Optimistic: reflect the change immediately, reconcile with the
-      // server's sanitised copy when the callable returns.
-      _prefs = updated;
-    });
-    try {
-      final saved = await _service.savePreferences(updated);
-      if (mounted) setState(() => _prefs = saved);
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(_friendlyError(error))));
-      }
-      // Roll back to the server's truth on failure.
-      await _load();
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
+    _update(draft.copyWith(pushEnabled: value));
   }
 
   String _friendlyError(Object error) {
-    final value = error.toString();
-    if (value.contains('permission-denied')) {
-      return 'Only the seeded School Pulse SaaS Owner can perform this action.';
+    final v = error.toString();
+    if (v.contains('permission-denied')) {
+      return 'Only the School Pulse SaaS Owner can change these settings.';
     }
-    if (value.contains('unauthenticated')) {
+    if (v.contains('unauthenticated')) {
       return 'Your owner session expired. Sign in again.';
     }
-    if (value.contains('not-found')) {
-      return 'The notification backend has not been deployed yet.';
+    if (v.contains('not-found')) {
+      return 'The owner notification backend is not deployed yet.';
     }
     return 'Could not save your changes. Please try again.';
   }
 
-  Future<void> _pickQuietHours(OwnerNotificationPreferences prefs) async {
-    if (prefs.quietHoursEnabled) {
+  static String _fmtTime(TimeOfDay t) {
+    final h = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final m = t.minute.toString().padLeft(2, '0');
+    return '$h:$m ${t.period == DayPeriod.am ? 'AM' : 'PM'}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background(context),
+      appBar: AppBar(
+        centerTitle: true,
+        backgroundColor: AppColors.background(context),
+        title: const Text('Notification settings'),
+      ),
+      body: _ownerId == null
+          ? const Center(child: Text('Sign in to manage notifications'))
+          : _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+                  ? _ErrorState(message: _error!, onRetry: _load)
+                  : _body(context, _draft!),
+    );
+  }
+
+  Widget _body(BuildContext context, OwnerNotificationPreferences p) {
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              _sectionLabel('DELIVERY'),
+              _group([
+                _switchRow(
+                  'In-app notifications',
+                  p.inAppEnabled,
+                  (v) => _update(p.copyWith(inAppEnabled: v)),
+                ),
+                _divider(),
+                _switchRow(
+                  'Push notifications',
+                  p.pushEnabled,
+                  (v) => _togglePush(v),
+                ),
+              ]),
+              const SizedBox(height: 18),
+              _sectionLabel('CATEGORIES'),
+              _group([
+                _switchRow(
+                  'Payments',
+                  p.paymentAlerts,
+                  (v) => _update(p.copyWith(paymentAlerts: v)),
+                  icon: Icons.payments_rounded,
+                  iconColor: AppColors.warning(context),
+                ),
+                _divider(),
+                _switchRow(
+                  'Platform health',
+                  p.platformHealthAlerts,
+                  (v) => _update(p.copyWith(platformHealthAlerts: v)),
+                  icon: Icons.monitor_heart_rounded,
+                  iconColor: AppColors.danger(context),
+                ),
+                _divider(),
+                _switchRow(
+                  'Schools',
+                  p.schoolAlerts,
+                  (v) => _update(p.copyWith(schoolAlerts: v)),
+                  icon: Icons.school_rounded,
+                  iconColor: AppColors.information(context),
+                ),
+                _divider(),
+                _switchRow(
+                  'Security',
+                  p.securityAlerts,
+                  (v) => _update(p.copyWith(securityAlerts: v)),
+                  icon: Icons.shield_rounded,
+                  iconColor: AppColors.success(context),
+                ),
+                _divider(),
+                _switchRow(
+                  'Weekly digest',
+                  p.weeklyDigestEnabled,
+                  (v) => _update(p.copyWith(weeklyDigestEnabled: v)),
+                  icon: Icons.summarize_rounded,
+                  iconColor: AppColors.textMuted(context),
+                ),
+              ]),
+              const SizedBox(height: 18),
+              _sectionLabel('QUIET HOURS'),
+              _group([
+                _navRow(
+                  'Quiet hours',
+                  p.quietHoursEnabled
+                      ? '${_fmtTime(p.quietHoursStart)} – ${_fmtTime(p.quietHoursEnd)}'
+                      : 'Off',
+                  () => _pickQuietHours(p),
+                  icon: Icons.bedtime_outlined,
+                ),
+              ]),
+              const SizedBox(height: 18),
+              _sectionLabel('DIGEST FREQUENCY'),
+              _group([
+                _navRow(
+                  'Digest frequency',
+                  p.frequency == OwnerNotificationFrequency.dailyDigest
+                      ? 'Daily'
+                      : 'Weekly',
+                  () => _pickFrequency(p),
+                  icon: Icons.mail_outline_rounded,
+                ),
+              ]),
+              const SizedBox(height: 16),
+              _PrivacyCard(),
+            ],
+          ),
+        ),
+        if (_dirty)
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _saving ? null : _save,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.information(context),
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Save preferences',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _pickQuietHours(OwnerNotificationPreferences p) async {
+    if (p.quietHoursEnabled) {
       final choice = await showModalBottomSheet<String>(
         context: context,
         showDragHandle: true,
-        builder: (sheetContext) => SafeArea(
+        builder: (ctx) => SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 title: const Text('Change times'),
-                onTap: () => Navigator.pop(sheetContext, 'change'),
+                onTap: () => Navigator.pop(ctx, 'change'),
               ),
               ListTile(
                 title: const Text('Turn off quiet hours'),
-                onTap: () => Navigator.pop(sheetContext, 'off'),
+                onTap: () => Navigator.pop(ctx, 'off'),
               ),
             ],
           ),
         ),
       );
       if (choice == 'off') {
-        await _save(prefs.copyWith(quietHoursEnabled: false));
+        _update(p.copyWith(quietHoursEnabled: false));
         return;
       }
       if (choice != 'change') return;
     }
-
     if (!mounted) return;
     final start = await showTimePicker(
       context: context,
-      initialTime: prefs.quietHoursStart,
+      initialTime: p.quietHoursStart,
       helpText: 'Quiet hours start',
     );
     if (start == null || !mounted) return;
-
     final end = await showTimePicker(
       context: context,
-      initialTime: prefs.quietHoursEnd,
+      initialTime: p.quietHoursEnd,
       helpText: 'Quiet hours end',
     );
     if (end == null) return;
-
-    await _save(
-      prefs.copyWith(
-        quietHoursEnabled: true,
-        quietHoursStart: start,
-        quietHoursEnd: end,
-      ),
-    );
+    _update(p.copyWith(
+      quietHoursEnabled: true,
+      quietHoursStart: start,
+      quietHoursEnd: end,
+    ));
   }
 
-  Future<void> _pickFrequency(OwnerNotificationPreferences prefs) async {
+  Future<void> _pickFrequency(OwnerNotificationPreferences p) async {
     final choice = await showModalBottomSheet<OwnerNotificationFrequency>(
       context: context,
       showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
+      builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Notification Frequency',
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ),
-            ),
-            for (final option in OwnerNotificationFrequency.values)
+            for (final f in OwnerNotificationFrequency.values)
               ListTile(
-                title: Text(_frequencyLabel(option)),
-                subtitle: Text(_frequencyDescription(option, prefs)),
-                trailing: option == prefs.frequency
-                    ? Icon(
-                        Icons.check_circle_rounded,
-                        color: AppColors.primary(context),
-                      )
+                title: Text(
+                  f == OwnerNotificationFrequency.dailyDigest
+                      ? 'Daily'
+                      : 'Weekly',
+                ),
+                trailing: f == p.frequency
+                    ? Icon(Icons.check_rounded,
+                        color: AppColors.information(context))
                     : null,
-                onTap: () => Navigator.pop(sheetContext, option),
+                onTap: () => Navigator.pop(ctx, f),
               ),
           ],
         ),
       ),
     );
-    if (choice != null) await _save(prefs.copyWith(frequency: choice));
+    if (choice != null) _update(p.copyWith(frequency: choice));
   }
 
-  static String _frequencyLabel(OwnerNotificationFrequency f) {
-    switch (f) {
-      case OwnerNotificationFrequency.realtime:
-        return 'Real-time';
-      case OwnerNotificationFrequency.dailyDigest:
-        return 'Daily digest';
-    }
-  }
+  // --- compact row primitives ------------------------------------------
 
-  static String _frequencyDescription(
-    OwnerNotificationFrequency f,
-    OwnerNotificationPreferences prefs,
-  ) {
-    switch (f) {
-      case OwnerNotificationFrequency.realtime:
-        return 'Deliver alerts as they happen';
-      case OwnerNotificationFrequency.dailyDigest:
-        return prefs.dailyDigestDelivered
-            ? 'Bundle non-critical alerts into one delivery per day'
-            : 'Saved as your preference; delivered in real time until digest '
-                  'sending is switched on';
-    }
-  }
-
-  static String _formatTime(TimeOfDay time) {
-    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
-    final minute = time.minute.toString().padLeft(2, '0');
-    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
-    return '$hour:$minute $period';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ownerId = _ownerId;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notification Preferences'),
-        actions: [
-          if (_saving)
-            const Padding(
-              padding: EdgeInsets.only(right: 16),
-              child: Center(
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            ),
-        ],
-      ),
-      body: ownerId == null
-          ? const Center(child: Text('Sign in to manage notifications'))
-          : _loading
-          ? const Center(child: SchoolPulseLoader())
-          : _error != null
-          ? _ErrorState(message: _error!, onRetry: _load)
-          : _body(context, _prefs ?? OwnerNotificationPreferences.defaults(ownerId)),
-    );
-  }
-
-  Widget _body(BuildContext context, OwnerNotificationPreferences prefs) {
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      children: [
-        Text(
-          'Delivery Channels',
-          style: AppTypography.titleMedium.copyWith(
-            color: AppColors.textPrimary(context),
+  Widget _sectionLabel(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.8,
+            color: AppColors.textMuted(context),
           ),
         ),
-        const SizedBox(height: AppSpacing.m),
-        _channelTile(
-          context,
-          icon: Icons.smartphone_outlined,
-          title: 'In-App',
-          subtitle: 'Always on – the owner notification centre is the '
-              'durable record and is never silenced',
-          value: true,
-          onChanged: null,
-        ),
-        _channelTile(
-          context,
-          icon: Icons.notifications_active_outlined,
-          title: 'Push',
-          subtitle: kIsWeb
-              ? 'Send browser notifications to this device'
-              : 'Send push notifications to this device',
-          value: prefs.pushEnabled,
-          onChanged: (value) => _togglePush(prefs, value),
-        ),
-        _channelTile(
-          context,
-          icon: Icons.email_outlined,
-          title: 'Email',
-          subtitle: 'Send a copy to the owner email address',
-          value: prefs.emailEnabled,
-          onChanged: (value) => _save(prefs.copyWith(emailEnabled: value)),
-        ),
-        const SizedBox(height: AppSpacing.l),
-        AlertBanner(
-          title: 'Critical alerts are always on',
-          message:
-              'Security alerts, payment failures and platform outages are '
-              'delivered regardless of the channel settings above and cannot '
-              'be turned off.',
-          color: AppColors.information(context),
-          icon: Icons.shield_outlined,
-        ),
-        const SizedBox(height: AppSpacing.x2l),
-        Text(
-          'Categories',
-          style: AppTypography.titleMedium.copyWith(
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.m),
-        _channelTile(
-          context,
-          icon: Icons.school_outlined,
-          title: 'School applications',
-          subtitle: 'New schools applying to join the platform',
-          value: prefs.schoolApplicationAlerts,
-          onChanged: (v) => _save(prefs.copyWith(schoolApplicationAlerts: v)),
-        ),
-        _channelTile(
-          context,
-          icon: Icons.payments_outlined,
-          title: 'Payments',
-          subtitle: 'Manual subscription payments awaiting verification',
-          value: prefs.paymentAlerts,
-          onChanged: (v) => _save(prefs.copyWith(paymentAlerts: v)),
-        ),
-        _channelTile(
-          context,
-          icon: Icons.receipt_long_outlined,
-          title: 'Billing',
-          subtitle: 'Renewals, plan changes and billing events',
-          value: prefs.billingAlerts,
-          onChanged: (v) => _save(prefs.copyWith(billingAlerts: v)),
-        ),
-        _channelTile(
-          context,
-          icon: Icons.insights_outlined,
-          title: 'Platform activity',
-          subtitle: 'Other non-critical platform events',
-          value: prefs.platformActivityAlerts,
-          onChanged: (v) => _save(prefs.copyWith(platformActivityAlerts: v)),
-        ),
-        const SizedBox(height: AppSpacing.x2l),
-        Text(
-          'Scheduling',
-          style: AppTypography.titleMedium.copyWith(
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.m),
-        _actionTile(
-          context,
-          icon: Icons.bedtime_outlined,
-          title: 'Quiet Hours',
-          value: prefs.quietHoursEnabled
-              ? '${_formatTime(prefs.quietHoursStart)} – ${_formatTime(prefs.quietHoursEnd)}'
-              : 'Off',
-          onTap: () => _pickQuietHours(prefs),
-        ),
-        _actionTile(
-          context,
-          icon: Icons.schedule_outlined,
-          title: 'Notification Frequency',
-          value: _frequencyLabel(prefs.frequency),
-          onTap: () => _pickFrequency(prefs),
-        ),
-      ],
-    );
-  }
+      );
 
-  Widget _channelTile(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool>? onChanged,
+  Widget _group(List<Widget> children) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceElevated(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border(context)),
+        ),
+        child: Column(children: children),
+      );
+
+  Widget _divider() => Divider(
+        height: 1,
+        thickness: 1,
+        color: AppColors.border(context),
+      );
+
+  Widget _switchRow(
+    String title,
+    bool value,
+    ValueChanged<bool> onChanged, {
+    IconData? icon,
+    Color? iconColor,
   }) {
-    return AppCard(
-      margin: const EdgeInsets.only(bottom: 10),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 8, 4),
       child: Row(
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.primarySoft(context),
-              borderRadius: BorderRadius.circular(AppRadius.m),
-            ),
-            child: Icon(icon, color: AppColors.primary(context), size: 20),
-          ),
-          const SizedBox(width: AppSpacing.l),
+          if (icon != null) ...[
+            Icon(icon, size: 18, color: iconColor),
+            const SizedBox(width: 10),
+          ],
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary(context),
-                  ),
-                ),
-              ],
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 13.5,
+                color: AppColors.textPrimary(context),
+              ),
             ),
           ),
           Switch(
             value: value,
-            onChanged: (_saving || onChanged == null) ? null : onChanged,
+            onChanged: _saving ? null : onChanged,
+            activeTrackColor: AppColors.information(context),
           ),
         ],
       ),
     );
   }
 
-  Widget _actionTile(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String value,
-    required VoidCallback onTap,
+  Widget _navRow(
+    String title,
+    String value,
+    VoidCallback onTap, {
+    IconData? icon,
   }) {
-    return AppCard(
-      margin: const EdgeInsets.only(bottom: 10),
+    return InkWell(
       onTap: _saving ? null : onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+        child: Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 18, color: AppColors.textSecondary(context)),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+            ),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: AppColors.textSecondary(context),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: AppColors.textMuted(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PrivacyCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.information(context).withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: AppColors.information(context).withValues(alpha: 0.4),
+        ),
+      ),
       child: Row(
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.primarySoft(context),
-              borderRadius: BorderRadius.circular(AppRadius.m),
-            ),
-            child: Icon(icon, color: AppColors.primary(context), size: 20),
+          Icon(
+            Icons.info_outline_rounded,
+            size: 16,
+            color: AppColors.information(context),
           ),
-          const SizedBox(width: AppSpacing.l),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              'Owner notifications are private to Super Admin devices.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary(context),
+              ),
             ),
           ),
-          Text(
-            value,
-            style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary(context),
-            ),
-          ),
-          const SizedBox(width: 6),
-          const Icon(Icons.chevron_right_rounded),
         ],
       ),
     );
@@ -512,14 +529,14 @@ class _ErrorState extends StatelessWidget {
             Icon(
               Icons.error_outline_rounded,
               size: 42,
-              color: Theme.of(context).colorScheme.error,
+              color: AppColors.danger(context),
             ),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
             FilledButton.tonal(
               onPressed: onRetry,
-              child: const Text('Try Again'),
+              child: const Text('Try again'),
             ),
           ],
         ),

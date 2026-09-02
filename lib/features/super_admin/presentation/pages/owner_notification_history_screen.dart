@@ -1,24 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/design_system/theme/app_spacing.dart';
-import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification.dart';
+import 'package:school_pulse/features/super_admin/domain/entities/owner_notification_taxonomy.dart';
 
+import '../widgets/owner_notification_visuals.dart';
 import 'owner_notification_detail_screen.dart';
+import 'super_admin_notifications_screen.dart';
 
-enum _ChannelFilter { all, push, email }
-
-/// Full history of SaaS Owner notifications, grouped by date, with a channel
-/// filter. Sourced entirely from [OwnerNotificationService.watchNotifications]
-/// - the same realtime `super_admin_notifications` feed as the Overview
-/// screen's "Recent Notifications" section, just unbounded and grouped.
+/// Full, date-grouped history of owner notifications. Same realtime
+/// `super_admin_notifications` feed as the main screen, unbounded and
+/// grouped, with the same six owner filter chips.
 class OwnerNotificationHistoryScreen extends StatefulWidget {
-  const OwnerNotificationHistoryScreen({super.key});
+  const OwnerNotificationHistoryScreen({super.key, this.service});
+
+  final OwnerNotificationService? service;
 
   @override
   State<OwnerNotificationHistoryScreen> createState() =>
@@ -27,29 +25,26 @@ class OwnerNotificationHistoryScreen extends StatefulWidget {
 
 class _OwnerNotificationHistoryScreenState
     extends State<OwnerNotificationHistoryScreen> {
-  final OwnerNotificationService _service = OwnerNotificationService();
+  late final OwnerNotificationService _service =
+      widget.service ?? OwnerNotificationService();
   final DateFormat _time = DateFormat('h:mm a');
-  _ChannelFilter _filter = _ChannelFilter.all;
+  OwnerNotificationFilter _filter = OwnerNotificationFilter.all;
 
-  String _filterLabel(_ChannelFilter filter) {
-    switch (filter) {
-      case _ChannelFilter.all:
-        return 'All Channels';
-      case _ChannelFilter.push:
-        return 'Push';
-      case _ChannelFilter.email:
-        return 'Email';
-    }
-  }
-
-  bool _matchesFilter(OwnerNotification notification) {
+  bool _matches(OwnerNotification n) {
     switch (_filter) {
-      case _ChannelFilter.all:
+      case OwnerNotificationFilter.all:
         return true;
-      case _ChannelFilter.push:
-        return notification.pushStatus != null;
-      case _ChannelFilter.email:
-        return notification.emailStatus != null;
+      case OwnerNotificationFilter.critical:
+        return n.severity == OwnerNotificationSeverity.critical ||
+            n.severity == OwnerNotificationSeverity.requiresReview;
+      case OwnerNotificationFilter.billing:
+        return n.category == OwnerNotificationCategory.billing;
+      case OwnerNotificationFilter.platform:
+        return n.category == OwnerNotificationCategory.platform;
+      case OwnerNotificationFilter.schools:
+        return n.category == OwnerNotificationCategory.schools;
+      case OwnerNotificationFilter.security:
+        return n.category == OwnerNotificationCategory.security;
     }
   }
 
@@ -67,22 +62,19 @@ class _OwnerNotificationHistoryScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Notification History')),
+      backgroundColor: AppColors.background(context),
+      appBar: AppBar(
+        centerTitle: true,
+        backgroundColor: AppColors.background(context),
+        title: const Text('Notification history'),
+      ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xl,
-              AppSpacing.l,
-              AppSpacing.xl,
-              AppSpacing.s,
-            ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: _FilterDropdown(
-                label: _filterLabel(_filter),
-                onSelected: (filter) => setState(() => _filter = filter),
-              ),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: OwnerFilterChips(
+              selected: _filter,
+              onSelected: (f) => setState(() => _filter = f),
             ),
           ),
           Expanded(
@@ -91,23 +83,29 @@ class _OwnerNotificationHistoryScreenState
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting &&
                     !snapshot.hasData) {
-                  return const Center(child: SchoolPulseLoader());
+                  return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return Center(
+                  return const Center(
                     child: Text('Could not load notification history.'),
                   );
                 }
 
                 final items = (snapshot.data ?? const <OwnerNotification>[])
-                    .where(_matchesFilter)
+                    .where(_matches)
                     .toList();
 
                 if (items.isEmpty) {
-                  return const EmptyState(
-                    icon: Icons.history_outlined,
-                    title: 'No notifications',
-                    message: 'No notifications match this filter yet.',
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(
+                        'Nothing in ${_filter.label} yet.',
+                        style: TextStyle(
+                          color: AppColors.textSecondary(context),
+                        ),
+                      ),
+                    ),
                   );
                 }
 
@@ -119,41 +117,44 @@ class _OwnerNotificationHistoryScreenState
                 }
 
                 return ListView(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    AppSpacing.s,
-                    AppSpacing.xl,
-                    AppSpacing.x3l,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
                   children: [
                     for (final entry in grouped.entries) ...[
                       Padding(
-                        padding: const EdgeInsets.only(
-                          top: AppSpacing.l,
-                          bottom: AppSpacing.s,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
                         child: Text(
-                          entry.key,
-                          style: AppTypography.labelSmall.copyWith(
-                            color: AppColors.textSecondary(context),
+                          entry.key.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 11,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.6,
+                            color: AppColors.textMuted(context),
                           ),
                         ),
                       ),
                       ...entry.value.map(
-                        (notification) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _HistoryTile(
-                            notification: notification,
-                            time: _time.format(notification.createdAt),
+                        (n) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: OwnerNotificationTile(
+                            notification: n,
+                            timestamp: _time.format(n.createdAt),
+                            busy: false,
                             onTap: () => Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) => OwnerNotificationDetailScreen(
-                                  notification: notification,
+                                  notification: n,
+                                  service: _service,
                                 ),
                               ),
                             ),
+                            onMarkRead: n.isUnread
+                                ? () => _service.markRead(n.id)
+                                : null,
+                            onMarkUnread: null,
+                            onArchive: () =>
+                                _service.archiveNotification(n.id),
+                            onDelete: () =>
+                                _service.deleteNotification(n.id),
                           ),
                         ),
                       ),
@@ -161,123 +162,6 @@ class _OwnerNotificationHistoryScreenState
                   ],
                 );
               },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FilterDropdown extends StatelessWidget {
-  const _FilterDropdown({required this.label, required this.onSelected});
-
-  final String label;
-  final ValueChanged<_ChannelFilter> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<_ChannelFilter>(
-      onSelected: onSelected,
-      itemBuilder: (context) => const [
-        PopupMenuItem(value: _ChannelFilter.all, child: Text('All Channels')),
-        PopupMenuItem(value: _ChannelFilter.push, child: Text('Push')),
-        PopupMenuItem(value: _ChannelFilter.email, child: Text('Email')),
-      ],
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceContainer(context),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border(context)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: AppTypography.bodyMedium.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary(context),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Icon(
-              Icons.expand_more_rounded,
-              size: 18,
-              color: AppColors.textSecondary(context),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HistoryTile extends StatelessWidget {
-  const _HistoryTile({
-    required this.notification,
-    required this.time,
-    required this.onTap,
-  });
-
-  final OwnerNotification notification;
-  final String time;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = notification.isApplication
-        ? Icons.school_outlined
-        : notification.method == 'bank'
-        ? Icons.account_balance_rounded
-        : Icons.payments_outlined;
-
-    return AppCard(
-      onTap: onTap,
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              size: 18,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.l),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  notification.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  notification.schoolName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            time,
-            style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary(context),
             ),
           ),
         ],

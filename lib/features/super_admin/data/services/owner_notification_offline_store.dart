@@ -3,28 +3,32 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/entities/owner_notification.dart';
+import 'owner_notification_store.dart';
+
+export 'owner_notification_store.dart'
+    show
+        OwnerNotificationCacheStore,
+        OwnerQueuedActionType,
+        OwnerQueuedAction,
+        OwnerPermanentSyncError,
+        OwnerQueueSyncResult;
 
 /// Owner-only offline cache + safe-action queue for the SaaS Owner
-/// notification feed.
+/// notification feed — SharedPreferences backing.
+///
+/// Used on **web** (Isar has no owner instance there) and as the default in
+/// tests. On mobile / desktop the app uses [OwnerNotificationIsarStore]
+/// instead, which opens a dedicated per-owner Isar instance.
 ///
 /// Scope, deliberately narrow:
 ///  * Only the currently authenticated owner's authorized feed documents
 ///    are cached, under a key namespaced by that owner's uid.
-///  * Only *safe* mutations queue: mark read, mark all read, delete one,
-///    clear all, and preference updates. Sensitive owner actions
-///    (subscription/plan edits, school lifecycle, permissions,
-///    impersonation, custom-domain approval) are never queued or cached
-///    offline - those callers never touch this store.
-///  * Nothing sensitive is persisted: only notification ids, titles, a
-///    short body and timestamps. No payment details, no plan data, no
-///    credentials. Safe for the web's SharedPreferences/localStorage
-///    backing per the "no unsafe browser storage of sensitive owner data"
-///    rule.
-///
-/// On logout / account switch / role loss / session revocation the caller
-/// invokes [clearForOwner] (or [clearEverything]) which wipes both the
-/// cache and the queue for that owner.
-class OwnerNotificationOfflineStore {
+///  * Only *safe* mutations queue: mark read, mark all read, archive, delete
+///    one, clear all, and preference updates. Sensitive owner actions are
+///    never queued or cached — those callers never touch this store.
+///  * Nothing sensitive is persisted: only ids, titles, a short body,
+///    category / severity tokens and timestamps.
+class OwnerNotificationOfflineStore implements OwnerNotificationCacheStore {
   OwnerNotificationOfflineStore({SharedPreferences? prefs}) : _injected = prefs;
 
   final SharedPreferences? _injected;
@@ -41,6 +45,7 @@ class OwnerNotificationOfflineStore {
 
   // ---- Cache ---------------------------------------------------------
 
+  @override
   Future<void> writeCache(
     String ownerId,
     List<OwnerNotification> notifications,
@@ -56,6 +61,10 @@ class OwnerNotificationOfflineStore {
             'title': n.title,
             'body': n.body,
             'schoolName': n.schoolName,
+            'category': n.category.wire,
+            'severity': n.severity.name,
+            'reference': n.reference,
+            'platformHealthDegraded': n.platformHealthDegraded,
             'createdAt': n.createdAt.toIso8601String(),
           },
         )
@@ -63,6 +72,7 @@ class OwnerNotificationOfflineStore {
     await prefs.setString(_cacheKey(ownerId), jsonEncode(payload));
   }
 
+  @override
   Future<List<OwnerNotification>> readCache(String ownerId) async {
     final prefs = await _prefs;
     final raw = prefs.getString(_cacheKey(ownerId));
@@ -76,15 +86,12 @@ class OwnerNotificationOfflineStore {
           .map(OwnerNotification.fromJson)
           .toList(growable: false);
     } catch (_) {
-      // Corrupt cache is evicted rather than surfaced.
       await prefs.remove(_cacheKey(ownerId));
       return const [];
     }
   }
 
-  /// Drops cached rows (and any queued actions targeting them) whose ids are
-  /// no longer present server-side - the "evict stale / revoked / deleted"
-  /// rule.
+  @override
   Future<void> reconcile(String ownerId, Set<String> liveIds) async {
     final cached = await readCache(ownerId);
     final kept = cached.where((n) => liveIds.contains(n.id)).toList();
@@ -110,6 +117,7 @@ class OwnerNotificationOfflineStore {
 
   // ---- Queue -------------------------------------------------------
 
+  @override
   Future<List<OwnerQueuedAction>> readQueue(String ownerId) async {
     final prefs = await _prefs;
     final raw = prefs.getString(_queueKey(ownerId));
@@ -138,30 +146,20 @@ class OwnerNotificationOfflineStore {
     );
   }
 
-  /// Enqueues a safe action. A [markAllRead] / [clearAll] / [updatePreferences]
-  /// collapses any earlier same-type entry so the queue never grows
-  /// unbounded from repeated taps while offline.
+  @override
   Future<OwnerQueuedAction> enqueue({
     required String ownerId,
     required OwnerQueuedActionType type,
     String? notificationId,
     Map<String, dynamic>? payload,
   }) async {
-    final queue = [...await readQueue(ownerId)];
-    final collapsible = type == OwnerQueuedActionType.markAllRead ||
-        type == OwnerQueuedActionType.clearAll ||
-        type == OwnerQueuedActionType.updatePreferences;
-    if (collapsible) {
-      queue.removeWhere((a) => a.type == type);
-    } else if (notificationId != null) {
-      // A later delete supersedes a queued mark-read for the same id.
-      queue.removeWhere(
-        (a) => a.notificationId == notificationId && a.type == type,
-      );
-    }
+    final queue = applyQueueCollapse(
+      await readQueue(ownerId),
+      type,
+      notificationId,
+    );
     final action = OwnerQueuedAction(
-      idempotencyKey:
-          '${ownerId}_${type.name}_${notificationId ?? '*'}_${DateTime.now().microsecondsSinceEpoch}',
+      idempotencyKey: newIdempotencyKey(ownerId, type, notificationId),
       ownerId: ownerId,
       type: type,
       notificationId: notificationId,
@@ -175,11 +173,7 @@ class OwnerNotificationOfflineStore {
     return action;
   }
 
-  /// Replays every pending action in creation order. [send] performs the
-  /// real callable for one action; it must throw on failure. A thrown
-  /// [OwnerPermanentSyncError] drops the action (permanent failure); any
-  /// other error bumps the attempt count and is retried on the next sync,
-  /// up to [maxAttempts] after which it is also dropped.
+  @override
   Future<OwnerQueueSyncResult> sync({
     required String ownerId,
     required Future<void> Function(OwnerQueuedAction action) send,
@@ -221,20 +215,20 @@ class OwnerNotificationOfflineStore {
     );
   }
 
+  @override
   Future<int> pendingCount(String ownerId) async =>
       (await readQueue(ownerId)).length;
 
   // ---- Teardown --------------------------------------------------
 
+  @override
   Future<void> clearForOwner(String ownerId) async {
     final prefs = await _prefs;
     await prefs.remove(_cacheKey(ownerId));
     await prefs.remove(_queueKey(ownerId));
   }
 
-  /// Nukes every owner's cache + queue - used when the current uid cannot
-  /// be resolved (full sign-out) so nothing is left behind for the next
-  /// account on a shared device.
+  @override
   Future<void> clearEverything() async {
     final prefs = await _prefs;
     final keys = prefs
@@ -245,102 +239,4 @@ class OwnerNotificationOfflineStore {
       await prefs.remove(key);
     }
   }
-}
-
-enum OwnerQueuedActionType {
-  markRead,
-  markAllRead,
-  delete,
-  clearAll,
-  updatePreferences,
-}
-
-/// A durable, replayable safe action. Carries exactly the envelope the
-/// spec requires: owner id, action type, target document id (where
-/// applicable), an idempotency key, a created timestamp and retry state.
-class OwnerQueuedAction {
-  const OwnerQueuedAction({
-    required this.idempotencyKey,
-    required this.ownerId,
-    required this.type,
-    required this.createdAt,
-    required this.attempts,
-    this.notificationId,
-    this.payload,
-    this.lastError,
-  });
-
-  final String idempotencyKey;
-  final String ownerId;
-  final OwnerQueuedActionType type;
-  final String? notificationId;
-  final Map<String, dynamic>? payload;
-  final DateTime createdAt;
-  final int attempts;
-  final String? lastError;
-
-  OwnerQueuedAction copyWith({int? attempts, String? lastError}) {
-    return OwnerQueuedAction(
-      idempotencyKey: idempotencyKey,
-      ownerId: ownerId,
-      type: type,
-      notificationId: notificationId,
-      payload: payload,
-      createdAt: createdAt,
-      attempts: attempts ?? this.attempts,
-      lastError: lastError ?? this.lastError,
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-    'idempotencyKey': idempotencyKey,
-    'ownerId': ownerId,
-    'type': type.name,
-    'notificationId': notificationId,
-    'payload': payload,
-    'createdAt': createdAt.toIso8601String(),
-    'attempts': attempts,
-    'lastError': lastError,
-  };
-
-  factory OwnerQueuedAction.fromJson(Map<String, dynamic> json) {
-    return OwnerQueuedAction(
-      idempotencyKey: json['idempotencyKey']?.toString() ?? '',
-      ownerId: json['ownerId']?.toString() ?? '',
-      type: OwnerQueuedActionType.values.firstWhere(
-        (t) => t.name == json['type'],
-        orElse: () => OwnerQueuedActionType.markRead,
-      ),
-      notificationId: json['notificationId']?.toString(),
-      payload: json['payload'] is Map
-          ? Map<String, dynamic>.from(json['payload'] as Map)
-          : null,
-      createdAt:
-          DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
-          DateTime.now(),
-      attempts: (json['attempts'] as num?)?.toInt() ?? 0,
-      lastError: json['lastError']?.toString(),
-    );
-  }
-}
-
-/// Thrown by a queue [send] callback when the failure is permanent
-/// (e.g. `not-found`, `permission-denied`) so the action is dropped rather
-/// than retried forever.
-class OwnerPermanentSyncError implements Exception {
-  const OwnerPermanentSyncError(this.message);
-  final String message;
-  @override
-  String toString() => 'OwnerPermanentSyncError: $message';
-}
-
-class OwnerQueueSyncResult {
-  const OwnerQueueSyncResult({
-    required this.synced,
-    required this.dropped,
-    required this.remaining,
-  });
-  final int synced;
-  final int dropped;
-  final int remaining;
 }

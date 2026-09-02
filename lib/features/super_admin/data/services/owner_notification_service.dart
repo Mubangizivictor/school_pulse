@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 
 import 'package:school_pulse/core/network/network_info.dart';
@@ -9,51 +9,65 @@ import 'package:school_pulse/core/network/network_info.dart';
 import '../../domain/entities/owner_notification.dart';
 import '../../domain/entities/owner_notification_preferences.dart';
 import '../mappers/owner_notification_preferences_mapper.dart';
+import 'owner_notification_isar_store.dart';
 import 'owner_notification_offline_store.dart';
 
 /// SaaS Owner notification client.
 ///
-/// The feed is written server-side to `super_admin_notifications` and read
-/// back directly (that collection is owner-readable, scoped per-owner by an
-/// `ownerId` field the Firestore rule enforces). Every *mutation* -
-/// mark-read, mark-all-read, delete, clear - goes through owner-only
-/// callables in `public_functions/owner_notifications_admin.js`; the client
-/// never writes a feed document.
+/// Completely separate from every school-role notification stack. The feed
+/// is written server-side to `super_admin_notifications` (owner-readable,
+/// scoped per-owner by an `ownerId` field the Firestore rule enforces) and
+/// read back directly. Every *mutation* — mark read, mark all read, archive,
+/// delete, clear — goes through owner-only callables in
+/// `public_functions/owner_notifications_admin.js`; the client never writes
+/// a feed document.
 ///
 /// Preferences are read and written exclusively through the
 /// `getOwnerNotificationPreferences` / `updateOwnerNotificationPreferences`
-/// callables. The backing document (`platform_owner_settings/{ownerId}`) is
-/// Admin-SDK-only.
+/// callables.
 ///
-/// Offline: when an [OwnerNotificationOfflineStore] is supplied, feed reads
-/// fall back to the owner-scoped cache and safe mutations queue while
-/// offline, replaying on reconnect. Sensitive owner actions never touch
-/// this service and are never cached or queued.
+/// Offline: an [OwnerNotificationCacheStore] holds the current owner's feed
+/// in a dedicated per-owner namespace — a named Isar instance on
+/// mobile/desktop ([OwnerNotificationIsarStore]), SharedPreferences on web
+/// ([OwnerNotificationOfflineStore]). Safe mutations queue while offline and
+/// replay once on reconnect. Sensitive owner actions never touch this
+/// service and are never cached or queued.
 class OwnerNotificationService {
   OwnerNotificationService({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
     FirebaseFunctions? functions,
-    OwnerNotificationOfflineStore? offlineStore,
+    OwnerNotificationCacheStore? offlineStore,
     NetworkInfo? networkInfo,
     bool enableOffline = true,
-  }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _auth = auth ?? FirebaseAuth.instance,
-       _functions =
-           functions ?? FirebaseFunctions.instanceFor(region: 'europe-west1'),
-       _offline = offlineStore ??
-           (enableOffline ? OwnerNotificationOfflineStore() : null),
-       _network = networkInfo ??
-           (enableOffline
-               ? (kIsWeb
-                     ? const WebNetworkInfo()
-                     : NetworkInfoImpl(InternetConnectionChecker()))
-               : null);
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _auth = auth ?? FirebaseAuth.instance,
+        _functions =
+            functions ?? FirebaseFunctions.instanceFor(region: 'europe-west1'),
+        _offline = offlineStore ??
+            (enableOffline ? _defaultStore() : null),
+        _network = networkInfo ??
+            (enableOffline
+                ? (kIsWeb
+                      ? const WebNetworkInfo()
+                      : NetworkInfoImpl(InternetConnectionChecker()))
+                : null);
 
-  final FirebaseFirestore _firestore;
-  final FirebaseAuth _auth;
-  final FirebaseFunctions _functions;
-  final OwnerNotificationOfflineStore? _offline;
+  /// For widget tests only: builds an instance that touches no Firebase
+  /// singletons. Subclasses must override every public method the UI calls;
+  /// the base Firebase fields are never read.
+  @visibleForTesting
+  OwnerNotificationService.forTest({OwnerNotificationCacheStore? offlineStore})
+      : _offline = offlineStore,
+        _network = null;
+
+  static OwnerNotificationCacheStore _defaultStore() =>
+      kIsWeb ? OwnerNotificationOfflineStore() : OwnerNotificationIsarStore();
+
+  late final FirebaseFirestore _firestore;
+  late final FirebaseAuth _auth;
+  late final FirebaseFunctions _functions;
+  final OwnerNotificationCacheStore? _offline;
   final NetworkInfo? _network;
 
   static const _feedCollection = 'super_admin_notifications';
@@ -77,12 +91,13 @@ class OwnerNotificationService {
     return _feedQuery().snapshots().map((snapshot) {
       final items = snapshot.docs
           .map((doc) => OwnerNotification.fromJson({...doc.data(), 'id': doc.id}))
+          // Archived notifications stay in Firestore for audit but drop out
+          // of the owner feed.
+          .where((n) => n.status != 'archived')
           .toList(growable: false);
       final ownerId = currentOwnerId;
       final store = _offline;
       if (ownerId != null && store != null) {
-        // Fire-and-forget: keep the owner-scoped cache warm and evict any
-        // row/queued action that no longer exists server-side.
         store.writeCache(ownerId, items);
         store.reconcile(ownerId, items.map((n) => n.id).toSet());
       }
@@ -96,13 +111,15 @@ class OwnerNotificationService {
       final snapshot = await _feedQuery().get();
       final items = snapshot.docs
           .map((doc) => OwnerNotification.fromJson({...doc.data(), 'id': doc.id}))
+          // Archived notifications stay in Firestore for audit but drop out
+          // of the owner feed.
+          .where((n) => n.status != 'archived')
           .toList(growable: false);
       if (ownerId != null && _offline != null) {
         await _offline.writeCache(ownerId, items);
       }
       return items;
     } catch (error) {
-      // Offline / unreachable: serve the owner-scoped cache if we have one.
       if (ownerId != null && _offline != null) {
         final cached = await _offline.readCache(ownerId);
         if (cached.isNotEmpty) return cached;
@@ -125,7 +142,15 @@ class OwnerNotificationService {
   }
 
   /// The signed-in owner's uid, or null if nobody is signed in.
-  String? get currentOwnerId => _auth.currentUser?.uid;
+  String? get currentOwnerId {
+    // `forTest()` leaves the Firebase fields unset; a bare test instance has
+    // no signed-in owner.
+    try {
+      return _auth.currentUser?.uid;
+    } on Error {
+      return null;
+    }
+  }
 
   Future<bool> get _online async => (await _network?.isConnected) ?? true;
 
@@ -159,6 +184,19 @@ class OwnerNotificationService {
     return 0;
   }
 
+  Future<void> archiveNotification(String notificationId) async {
+    await _mutate(
+      online: () => _functions
+          .httpsCallable('archiveOwnerNotification')
+          .call({'id': notificationId}),
+      queue: (store, ownerId) => store.enqueue(
+        ownerId: ownerId,
+        type: OwnerQueuedActionType.archive,
+        notificationId: notificationId,
+      ),
+    );
+  }
+
   Future<void> deleteNotification(String notificationId) async {
     await _mutate(
       online: () => _functions
@@ -187,13 +225,10 @@ class OwnerNotificationService {
     return 0;
   }
 
-  /// Runs [online] when connected; otherwise records the safe action in the
-  /// owner queue (if an offline store is configured) and returns null so the
-  /// caller can show an "applies when you reconnect" state.
   Future<HttpsCallableResult?> _mutate({
     required Future<HttpsCallableResult> Function() online,
     required Future<void> Function(
-      OwnerNotificationOfflineStore store,
+      OwnerNotificationCacheStore store,
       String ownerId,
     ) queue,
   }) async {
@@ -206,7 +241,6 @@ class OwnerNotificationService {
     try {
       return await online();
     } catch (error) {
-      // A transient network failure at call time also queues, when possible.
       if (store != null && ownerId != null && _looksTransient(error)) {
         await queue(store, ownerId);
         return null;
@@ -243,6 +277,10 @@ class OwnerNotificationService {
               await _functions
                   .httpsCallable('markAllOwnerNotificationsRead')
                   .call();
+            case OwnerQueuedActionType.archive:
+              await _functions
+                  .httpsCallable('archiveOwnerNotification')
+                  .call({'id': action.notificationId});
             case OwnerQueuedActionType.delete:
               await _functions
                   .httpsCallable('deleteOwnerNotification')
@@ -255,9 +293,6 @@ class OwnerNotificationService {
                   .call({'notificationPreferences': action.payload});
           }
         } on FirebaseFunctionsException catch (e) {
-          // Permanent: the target is gone or we are not allowed. Drop it
-          // rather than retrying forever. `not-found` on a delete/mark is
-          // effectively success (already removed).
           if (e.code == 'not-found' ||
               e.code == 'permission-denied' ||
               e.code == 'unauthenticated' ||
@@ -270,8 +305,9 @@ class OwnerNotificationService {
     );
   }
 
-  /// Wipes the owner-scoped cache + queue. Call on logout, account switch,
-  /// role loss or session revocation.
+  /// Wipes the owner-scoped cache + queue (and, on mobile, closes and
+  /// deletes the dedicated per-owner Isar instance). Call on logout, account
+  /// switch, role loss or session revocation.
   Future<void> clearOfflineState({String? ownerId}) async {
     final store = _offline;
     if (store == null) return;
@@ -298,8 +334,6 @@ class OwnerNotificationService {
     final payload =
         OwnerNotificationPreferencesMapper.toCallablePayload(preferences);
     final store = _offline;
-    // Preference updates are a safe queued action too, but only when a
-    // store is configured and we're offline.
     if (store != null && !(await _online)) {
       await store.enqueue(
         ownerId: preferences.ownerId,

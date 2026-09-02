@@ -100,6 +100,36 @@ exports.markAllOwnerNotificationsRead = onCall(
 );
 
 /**
+ * Archives a single owner notification: it stays in Firestore (so it can be
+ * audited) but is stamped `archived` and drops out of the owner feed query.
+ * Owner-only; the underlying school application / payment record is
+ * untouched.
+ */
+exports.archiveOwnerNotification = onCall(
+  { region: 'europe-west1' },
+  async (request) => {
+    const owner = await requireOwner(request);
+    const id = text(request.data?.id, 300);
+    if (!id) throw new HttpsError('invalid-argument', 'A notification id is required.');
+
+    const ref = db.collection('super_admin_notifications').doc(id);
+    const snap = await ref.get();
+    if (!snap.exists) throw new HttpsError('not-found', 'Notification not found.');
+    if (!belongsToOwner(snap.data(), owner.uid)) {
+      throw new HttpsError('permission-denied', 'That notification is not in your feed.');
+    }
+
+    await ref.set({
+      status: 'archived',
+      archivedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    return { ok: true, id };
+  },
+);
+
+/**
  * Permanently deletes a single owner notification. Owner-only; the
  * underlying school application/payment record is untouched - this only
  * removes the notification feed entry.

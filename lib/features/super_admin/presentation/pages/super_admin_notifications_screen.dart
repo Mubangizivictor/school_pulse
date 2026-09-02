@@ -4,26 +4,25 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/design_system/theme/app_spacing.dart';
-import 'package:school_pulse/features/super_admin/data/services/manual_payment_service.dart';
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification.dart';
+import 'package:school_pulse/features/super_admin/domain/entities/owner_notification_taxonomy.dart';
 
 import '../responsive.dart';
-import 'payment_review_screen.dart';
-import 'school_management_screen.dart';
+import '../widgets/owner_notification_visuals.dart';
+import 'owner_notification_detail_screen.dart';
 
-/// SaaS Owner "Notifications" overview.
+/// SaaS Owner "Notifications" screen — an owner-only nested route under
+/// Settings. The persistent owner bottom navigation stays visible (Settings
+/// selected) because the route is wrapped in `SuperAdminMobileNavShell`.
 ///
-/// The feed streams from `super_admin_notifications` (owner-scoped by an
-/// `ownerId` field the Firestore rule enforces). Every mutation - mark one
-/// read, mark all read, delete one, clear all - goes through the owner-only
-/// callables in [OwnerNotificationService], never a direct Firestore write.
-/// The unread count in the header and the top-bar bell both derive from the
-/// same live stream, so they update the instant a callable resolves.
+/// Dark-premium: near-black page, charcoal tiles with a 1px grey border,
+/// royal-blue selected/filter accent, compact 8px rhythm. Light theme uses
+/// the identical layout on an off-white ground with white tiles.
+///
+/// Shares nothing with any school-role notification screen: its own screen,
+/// its own [OwnerNotificationService], its own tile, its own filters.
 class SuperAdminNotificationsScreen extends StatefulWidget {
   const SuperAdminNotificationsScreen({super.key, this.service});
 
@@ -39,16 +38,12 @@ class _SuperAdminNotificationsScreenState
     extends State<SuperAdminNotificationsScreen> {
   late final OwnerNotificationService _notifications =
       widget.service ?? OwnerNotificationService();
-  final ManualPaymentService _payments = ManualPaymentService();
-  final NumberFormat _money = NumberFormat.currency(
-    symbol: 'UGX ',
-    decimalDigits: 0,
-  );
   final DateFormat _dateTime = DateFormat('MMM d, yyyy • h:mm a');
 
-  String? _openingNotificationId;
+  OwnerNotificationFilter _filter = OwnerNotificationFilter.all;
   bool _busy = false;
   int _pendingOffline = 0;
+  List<OwnerNotification>? _cachedFallback;
 
   String? get _ownerId => _notifications.currentOwnerId;
 
@@ -56,7 +51,11 @@ class _SuperAdminNotificationsScreenState
   void initState() {
     super.initState();
     _refreshPending();
-    // Best-effort: replay any actions queued from a previous offline session.
+    _notifications.cachedNotifications().then((cached) {
+      if (mounted && cached.isNotEmpty) {
+        setState(() => _cachedFallback = cached);
+      }
+    });
     _notifications.syncPending().then((_) => _refreshPending());
   }
 
@@ -67,101 +66,81 @@ class _SuperAdminNotificationsScreenState
     }
   }
 
-  Future<void> _refresh() async {
-    if (_busy) return;
-    // The feed is already a live, owner-scoped stream. Replaying approved
-    // offline actions and rebuilding the subscription is its real refresh;
-    // no duplicate direct Firestore read is introduced here.
-    setState(() => _busy = true);
-    try {
-      await _notifications.syncPending();
-      await _refreshPending();
-      if (mounted) setState(() {});
-    } catch (error) {
-      if (mounted) _showSnack(_friendlyError(error), isError: true);
-    } finally {
-      if (mounted) setState(() => _busy = false);
+  bool _matches(OwnerNotification n) {
+    switch (_filter) {
+      case OwnerNotificationFilter.all:
+        return true;
+      case OwnerNotificationFilter.critical:
+        return n.severity == OwnerNotificationSeverity.critical ||
+            n.severity == OwnerNotificationSeverity.requiresReview;
+      case OwnerNotificationFilter.billing:
+        return n.category == OwnerNotificationCategory.billing;
+      case OwnerNotificationFilter.platform:
+        return n.category == OwnerNotificationCategory.platform;
+      case OwnerNotificationFilter.schools:
+        return n.category == OwnerNotificationCategory.schools;
+      case OwnerNotificationFilter.security:
+        return n.category == OwnerNotificationCategory.security;
     }
   }
 
-  Future<void> _openNotification(OwnerNotification notification) async {
-    // Opening a notification also clears its unread state - matches the
-    // behaviour of every other notification surface in the app.
-    if (notification.isUnread) {
-      unawaited(_notifications.markRead(notification.id));
-    }
+  void _openSettings() =>
+      context.go('/super-admin/settings/notifications/preferences');
 
-    if (notification.isApplication) {
-      await Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (_) => const SchoolManagementScreen()));
-      return;
-    }
-
-    if (!notification.isPayment || notification.paymentId.isEmpty) return;
-    setState(() => _openingNotificationId = notification.id);
-    try {
-      final payments = await _payments.getPayments();
-      final match = payments
-          .where((payment) => payment.id == notification.paymentId)
-          .toList();
-      if (!mounted) return;
-      if (match.isEmpty) {
-        _showSnack(
-          'This payment could no longer be found. It may already have been resolved.',
-          isError: true,
-        );
-        return;
-      }
-      await PaymentReviewScreen.open(context, match.first);
-    } catch (error) {
-      if (mounted) _showSnack(_friendlyError(error), isError: true);
-    } finally {
-      if (mounted) setState(() => _openingNotificationId = null);
-    }
-  }
-
-  Future<void> _markRead(OwnerNotification notification) async {
-    await _run(() => _notifications.markRead(notification.id));
-  }
-
-  Future<void> _markAllRead() async {
-    await _run(() async {
-      final n = await _notifications.markAllRead();
-      if (mounted) {
-        _showSnack(n == 0 ? 'Nothing to mark' : 'Marked $n as read');
-      }
-    });
-  }
-
-  Future<void> _delete(OwnerNotification notification) async {
-    final confirmed = await confirmActionDialog(
-      context,
-      title: 'Delete this notification?',
-      message:
-          'It is removed from your feed only. The underlying school '
-          'application or payment record is untouched.',
-      confirmLabel: 'Delete',
-      isDestructive: true,
+  Future<void> _openDetail(OwnerNotification n) async {
+    if (n.isUnread) unawaited(_run(() => _notifications.markRead(n.id)));
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => OwnerNotificationDetailScreen(
+          notification: n,
+          service: _notifications,
+        ),
+      ),
     );
-    if (confirmed != true) return;
-    await _run(() => _notifications.deleteNotification(notification.id));
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _markAllRead() => _run(() async {
+        final n = await _notifications.markAllRead();
+        if (mounted) {
+          _snack(n == 0 ? 'Nothing to mark' : 'Marked $n as read');
+        }
+      });
+
+  Future<void> _markRead(OwnerNotification n) =>
+      _run(() => _notifications.markRead(n.id));
+
+  Future<void> _markUnread(OwnerNotification n) =>
+      // No "mark unread" callable exists; surface honestly rather than fake it.
+      _run(() async {
+        if (mounted) _snack('Marking unread is not available for owner alerts.');
+      });
+
+  Future<void> _archive(OwnerNotification n) =>
+      _run(() => _notifications.archiveNotification(n.id));
+
+  Future<void> _delete(OwnerNotification n) async {
+    final ok = await _confirm(
+      title: 'Delete this notification?',
+      message: 'It is removed from your owner feed only. The underlying '
+          'record is untouched.',
+      confirmLabel: 'Delete',
+    );
+    if (ok != true) return;
+    await _run(() => _notifications.deleteNotification(n.id));
   }
 
   Future<void> _clearAll() async {
-    final confirmed = await confirmActionDialog(
-      context,
+    final ok = await _confirm(
       title: 'Clear all notifications?',
-      message:
-          'Every notification in your feed is permanently removed. This '
-          'cannot be undone. Underlying records are untouched.',
+      message: 'Every notification in your owner feed is permanently removed. '
+          'This cannot be undone. Underlying records are untouched.',
       confirmLabel: 'Clear all',
-      isDestructive: true,
     );
-    if (confirmed != true) return;
+    if (ok != true) return;
     await _run(() async {
       final n = await _notifications.clearAll();
-      if (mounted) _showSnack('Cleared $n notification${n == 1 ? '' : 's'}');
+      if (mounted) _snack('Cleared $n notification${n == 1 ? '' : 's'}');
     });
   }
 
@@ -171,370 +150,493 @@ class _SuperAdminNotificationsScreenState
     try {
       await action();
     } catch (error) {
-      if (mounted) _showSnack(_friendlyError(error), isError: true);
+      if (mounted) _snack(_friendlyError(error), isError: true);
     } finally {
       if (mounted) setState(() => _busy = false);
       await _refreshPending();
     }
   }
 
-  void _showSnack(String text, {bool isError = false}) {
+  Future<bool?> _confirm({
+    required String title,
+    required String message,
+    required String confirmLabel,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.danger(ctx),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _snack(String text, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(text),
-        backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
+        backgroundColor: isError ? AppColors.danger(context) : null,
       ),
     );
   }
 
   String _friendlyError(Object error) {
-    final value = error.toString();
-    if (value.contains('permission-denied')) {
-      return 'Only the seeded School Pulse SaaS Owner can perform this action.';
+    final v = error.toString();
+    if (v.contains('permission-denied')) {
+      return 'Only the School Pulse SaaS Owner can perform this action.';
     }
-    if (value.contains('unauthenticated')) {
+    if (v.contains('unauthenticated')) {
       return 'Your owner session expired. Sign in again.';
     }
-    if (value.contains('not-found')) {
-      return 'The notification backend has not been deployed yet.';
+    if (v.contains('not-found')) {
+      return 'The owner notification backend is not deployed yet.';
     }
-    if (value.contains('unavailable') || value.contains('network')) {
-      return 'You appear to be offline. This action will not apply until '
-          'you reconnect.';
+    if (v.contains('unavailable') || v.contains('network')) {
+      return 'You appear to be offline. This applies when you reconnect.';
     }
-    return value.replaceFirst(RegExp(r'^Exception:\s*'), '');
-  }
-
-  void _openSettings() {
-    context.push('/super-admin/settings/notifications/preferences');
+    return v.replaceFirst(RegExp(r'^Exception:\s*'), '');
   }
 
   @override
   Widget build(BuildContext context) {
-    final ownerId = _ownerId;
     final wide = isSuperAdminWide(context);
-    final showAppBar = !wide || Navigator.canPop(context);
     return Scaffold(
-      appBar: showAppBar
-          ? AppBar(
-              title: const Text('Notifications'),
-              actions: [
-                IconButton(
-                  tooltip: 'Notification settings',
-                  icon: const Icon(Icons.settings_outlined),
-                  onPressed: _openSettings,
-                ),
-              ],
-            )
-          : null,
-      body: ownerId == null
+      backgroundColor: AppColors.background(context),
+      appBar: AppBar(
+        centerTitle: true,
+        backgroundColor: AppColors.background(context),
+        title: const Text('Notifications'),
+        actions: [
+          IconButton(
+            tooltip: 'Notification settings',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: _openSettings,
+          ),
+        ],
+      ),
+      body: _ownerId == null
           ? const Center(child: Text('Sign in to manage notifications'))
           : StreamBuilder<List<OwnerNotification>>(
               stream: _notifications.watchNotifications(),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting &&
-                    !snapshot.hasData) {
-                  return const Center(child: SchoolPulseLoader());
+                final live = snapshot.data;
+                final items = live ?? _cachedFallback ?? const [];
+                final offline = live == null && _cachedFallback != null;
+
+                if (live == null &&
+                    _cachedFallback == null &&
+                    snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
                 }
-                if (snapshot.hasError) {
+                if (snapshot.hasError && _cachedFallback == null) {
                   return _ErrorState(
                     message: _friendlyError(snapshot.error!),
                     onRetry: () => setState(() {}),
                   );
                 }
 
-                final items = snapshot.data ?? const <OwnerNotification>[];
+                final filtered =
+                    items.where(_matches).toList(growable: false);
+                final unread = items.where((n) => n.isUnread).length;
 
-                final list = RefreshIndicator(
-                  onRefresh: _refresh,
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(
-                      wide ? AppSpacing.x2l : AppSpacing.xl,
-                      AppSpacing.xl,
-                      wide ? AppSpacing.x2l : AppSpacing.xl,
-                      AppSpacing.x3l,
+                final body = ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                  children: [
+                    _TopControls(
+                      unread: unread,
+                      busy: _busy,
+                      hasItems: items.isNotEmpty,
+                      onMarkAll: unread > 0 ? _markAllRead : null,
+                      onClearAll: items.isNotEmpty ? _clearAll : null,
                     ),
-                    children: [
-                      _header(context, items, showSettingsButton: !showAppBar),
-                      const SizedBox(height: AppSpacing.xl),
-                      _recentSection(context, items),
+                    const SizedBox(height: 12),
+                    OwnerFilterChips(
+                      selected: _filter,
+                      onSelected: (f) => setState(() => _filter = f),
+                    ),
+                    if (offline) ...[
+                      const SizedBox(height: 12),
+                      _OfflineBanner(pending: _pendingOffline),
                     ],
-                  ),
+                    const SizedBox(height: 12),
+                    if (filtered.isEmpty)
+                      _EmptyState(filter: _filter)
+                    else
+                      ...filtered.map(
+                        (n) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: OwnerNotificationTile(
+                            notification: n,
+                            timestamp: _dateTime.format(n.createdAt),
+                            busy: _busy,
+                            onTap: () => _openDetail(n),
+                            onMarkRead:
+                                n.isUnread ? () => _markRead(n) : null,
+                            onMarkUnread:
+                                n.isUnread ? null : () => _markUnread(n),
+                            onArchive: () => _archive(n),
+                            onDelete: () => _delete(n),
+                          ),
+                        ),
+                      ),
+                  ],
                 );
-                if (!wide) return list;
+
+                if (!wide) return body;
                 return Align(
                   alignment: Alignment.topCenter,
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 900),
-                    child: list,
+                    constraints: const BoxConstraints(maxWidth: 760),
+                    child: body,
                   ),
                 );
               },
             ),
     );
   }
+}
 
-  Widget _header(
-    BuildContext context,
-    List<OwnerNotification> items, {
-    required bool showSettingsButton,
-  }) {
-    final unread = items.where((item) => item.isUnread).length;
+class _TopControls extends StatelessWidget {
+  const _TopControls({
+    required this.unread,
+    required this.busy,
+    required this.hasItems,
+    required this.onMarkAll,
+    required this.onClearAll,
+  });
+
+  final int unread;
+  final bool busy;
+  final bool hasItems;
+  final VoidCallback? onMarkAll;
+  final VoidCallback? onClearAll;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
+        Flexible(
           child: Text(
-            'Recent Notifications',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+            'Recent',
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary(context),
+                ),
           ),
         ),
         if (unread > 0) ...[
-          StatusBadge(label: '$unread new', color: AppColors.warning(context)),
-          const SizedBox(width: AppSpacing.s),
+          const SizedBox(width: 10),
+          OwnerUnreadChip(count: unread),
         ],
-        if (items.isNotEmpty)
-          PopupMenuButton<String>(
-            enabled: !_busy,
-            tooltip: 'Notification actions',
-            icon: _busy
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.more_horiz_rounded),
-            onSelected: (value) {
-              switch (value) {
-                case 'mark_all':
-                  _markAllRead();
-                case 'clear_all':
-                  _clearAll();
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'mark_all',
-                enabled: unread > 0,
-                child: const Text('Mark all as read'),
-              ),
-              const PopupMenuItem(value: 'clear_all', child: Text('Clear all')),
-            ],
-          ),
-        if (showSettingsButton)
-          IconButton(
-            tooltip: 'Notification settings',
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: _openSettings,
-          ),
-      ],
-    );
-  }
-
-  Widget _recentSection(BuildContext context, List<OwnerNotification> recent) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (recent.isEmpty)
-          const EmptyState(
-            icon: Icons.notifications_none_rounded,
-            title: 'No notifications yet',
-            message:
-                'New school applications and payment proofs that need your attention will appear here in real time.',
-          )
-        else
-          ...recent.map(
-            (notification) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _NotificationCard(
-                notification: notification,
-                amount: notification.amountUgx > 0
-                    ? _money.format(notification.amountUgx)
-                    : null,
-                createdAt: _dateTime.format(notification.createdAt),
-                isOpening: _openingNotificationId == notification.id,
-                busy: _busy,
-                onTap: () => _openNotification(notification),
-                onMarkRead: notification.isUnread
-                    ? () => _markRead(notification)
-                    : null,
-                onDelete: () => _delete(notification),
-              ),
+        const Spacer(),
+        if (onMarkAll != null)
+          TextButton(
+            onPressed: busy ? null : onMarkAll,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.information(context),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              minimumSize: const Size(0, 36),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
             ),
+            child: const Text(
+              'Mark all read',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            ),
+          ),
+        if (hasItems)
+          PopupMenuButton<String>(
+            enabled: !busy,
+            tooltip: 'More',
+            icon: Icon(
+              Icons.more_horiz_rounded,
+              color: AppColors.textSecondary(context),
+            ),
+            onSelected: (v) {
+              if (v == 'clear') onClearAll?.call();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'clear', child: Text('Clear all')),
+            ],
           ),
       ],
     );
   }
 }
 
-class _NotificationCard extends StatelessWidget {
-  const _NotificationCard({
+/// Compact 88px owner notification tile.
+class OwnerNotificationTile extends StatelessWidget {
+  const OwnerNotificationTile({
+    super.key,
     required this.notification,
-    required this.amount,
-    required this.createdAt,
-    required this.isOpening,
+    required this.timestamp,
     required this.busy,
     required this.onTap,
     required this.onMarkRead,
+    required this.onMarkUnread,
+    required this.onArchive,
     required this.onDelete,
   });
 
   final OwnerNotification notification;
-  final String? amount;
-  final String createdAt;
-  final bool isOpening;
+  final String timestamp;
   final bool busy;
   final VoidCallback onTap;
   final VoidCallback? onMarkRead;
+  final VoidCallback? onMarkUnread;
+  final VoidCallback onArchive;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final icon = notification.isApplication
-        ? Icons.school_outlined
-        : notification.method == 'bank'
-        ? Icons.account_balance_rounded
-        : Icons.payments_outlined;
+    final visuals =
+        OwnerNotificationVisuals.forNotification(context, notification);
+    return Material(
+      color: AppColors.surfaceElevated(context),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: busy ? null : () => _showActions(context),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 84),
+          padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border(context)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              OwnerIconSquare(icon: visuals.icon, accent: visuals.accent),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            notification.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              height: 1.25,
+                              color: AppColors.textPrimary(context),
+                            ),
+                          ),
+                        ),
+                        if (notification.isUnread) ...[
+                          const SizedBox(width: 8),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 5),
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: AppColors.information(context),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      _summary(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        Text(
+                          timestamp,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.textMuted(context),
+                          ),
+                        ),
+                        if (notification.severity.showsOnTile)
+                          OwnerSeverityChip(severity: notification.severity),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-    return AppCard(
-      onTap: isOpening ? null : onTap,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: Icon(icon, color: theme.colorScheme.onPrimaryContainer),
-          ),
-          const SizedBox(width: AppSpacing.l),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        notification.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    StatusBadge(
-                      label: notification.displayStatus == 'NEW'
-                          ? 'New'
-                          : notification.displayStatus == 'RESOLVED'
-                          ? 'Resolved'
-                          : 'Read',
-                      color: notification.isUnread
-                          ? AppColors.warning(context)
-                          : AppColors.textSecondary(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  notification.schoolName,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (notification.body.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    notification.body,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 5,
-                  children: [
-                    if (amount != null)
-                      Text(
-                        amount!,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    Text(createdAt, style: theme.textTheme.bodySmall),
-                    if (notification.pushStatus != null)
-                      _DeliveryChip(
-                        icon: Icons.notifications_active_outlined,
-                        label: 'Push ${notification.pushStatus}',
-                      ),
-                    if (notification.emailStatus != null)
-                      _DeliveryChip(
-                        icon: Icons.email_outlined,
-                        label: 'Email ${notification.emailStatus}',
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 4),
-          if (isOpening)
-            const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else
-            PopupMenuButton<String>(
-              enabled: !busy,
-              tooltip: 'Actions',
-              icon: const Icon(Icons.more_vert_rounded),
-              onSelected: (value) {
-                if (value == 'read') onMarkRead?.call();
-                if (value == 'delete') onDelete();
+  String _summary() {
+    if (notification.body.isNotEmpty) return notification.body;
+    if (notification.schoolName.isNotEmpty &&
+        notification.schoolName != 'School Pulse') {
+      return notification.schoolName;
+    }
+    return notification.category.wire;
+  }
+
+  void _showActions(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onMarkRead != null)
+              ListTile(
+                leading: const Icon(Icons.mark_email_read_outlined),
+                title: const Text('Mark read'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onMarkRead!();
+                },
+              ),
+            if (onMarkUnread != null)
+              ListTile(
+                leading: const Icon(Icons.mark_email_unread_outlined),
+                title: const Text('Mark unread'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onMarkUnread!();
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.archive_outlined),
+              title: const Text('Archive notification'),
+              onTap: () {
+                Navigator.pop(ctx);
+                onArchive();
               },
-              itemBuilder: (context) => [
-                if (onMarkRead != null)
-                  const PopupMenuItem(
-                    value: 'read',
-                    child: Text('Mark as read'),
-                  ),
-                const PopupMenuItem(value: 'delete', child: Text('Delete')),
-              ],
             ),
+            ListTile(
+              leading: Icon(
+                Icons.delete_outline_rounded,
+                color: AppColors.danger(ctx),
+              ),
+              title: Text(
+                'Delete notification',
+                style: TextStyle(color: AppColors.danger(ctx)),
+              ),
+              onTap: () {
+                Navigator.pop(ctx);
+                onDelete();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner({required this.pending});
+  final int pending;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.textMuted(context).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.cloud_off_rounded,
+            size: 16,
+            color: AppColors.textSecondary(context),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              pending > 0
+                  ? 'Offline — showing your last synced feed. $pending change'
+                      "${pending == 1 ? '' : 's'} will apply when you reconnect."
+                  : 'Offline — showing your last synced feed.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary(context),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _DeliveryChip extends StatelessWidget {
-  const _DeliveryChip({required this.icon, required this.label});
-  final IconData icon;
-  final String label;
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.filter});
+  final OwnerNotificationFilter filter;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: AppColors.textSecondary(context)),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppColors.textSecondary(context),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 56),
+      child: Column(
+        children: [
+          Icon(
+            Icons.notifications_none_rounded,
+            size: 40,
+            color: AppColors.textMuted(context),
           ),
-        ),
-      ],
+          const SizedBox(height: 12),
+          Text(
+            filter == OwnerNotificationFilter.all
+                ? 'No notifications yet'
+                : 'Nothing in ${filter.label}',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Owner-level events — payment reviews, platform health, school '
+            'requests and security — appear here.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: AppColors.textSecondary(context),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -555,14 +657,14 @@ class _ErrorState extends StatelessWidget {
             Icon(
               Icons.error_outline_rounded,
               size: 42,
-              color: Theme.of(context).colorScheme.error,
+              color: AppColors.danger(context),
             ),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
             FilledButton.tonal(
               onPressed: onRetry,
-              child: const Text('Try Again'),
+              child: const Text('Try again'),
             ),
           ],
         ),
