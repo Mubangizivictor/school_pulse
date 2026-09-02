@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../../domain/entities/owner_session.dart';
 
@@ -29,24 +30,37 @@ abstract class OwnerSessionRemoteDataSource {
     required String deviceId,
   });
 
+  /// Security-sensitive: routed through the owner-only `setOwnerDeviceTrust`
+  /// callable, which re-checks the canonical owner boundary and writes an
+  /// audit record. [deviceName] optionally renames the device on the same
+  /// write.
   Future<void> setTrusted({
     required String ownerId,
     required String deviceId,
     required bool trusted,
+    String? deviceName,
   });
 
   /// Removes a device doc entirely, revoking its trust and dropping it from
-  /// the registry.
+  /// the registry. Security-sensitive: routed through the owner-only
+  /// `revokeOwnerDevice` callable (audit + owner-token disable). The current
+  /// device cannot be revoked here.
   Future<void> removeSession({
     required String ownerId,
     required String deviceId,
+    String? currentDeviceId,
   });
 }
 
 class OwnerSessionRemoteDataSourceImpl implements OwnerSessionRemoteDataSource {
   final FirebaseFirestore firestore;
+  final FirebaseFunctions functions;
 
-  OwnerSessionRemoteDataSourceImpl({required this.firestore});
+  OwnerSessionRemoteDataSourceImpl({
+    required this.firestore,
+    FirebaseFunctions? functions,
+  }) : functions =
+           functions ?? FirebaseFunctions.instanceFor(region: 'europe-west1');
 
   CollectionReference<Map<String, dynamic>> _sessions(String ownerId) =>
       firestore
@@ -102,17 +116,24 @@ class OwnerSessionRemoteDataSourceImpl implements OwnerSessionRemoteDataSource {
     required String ownerId,
     required String deviceId,
     required bool trusted,
+    String? deviceName,
   }) async {
-    await _sessions(
-      ownerId,
-    ).doc(deviceId).set({'trusted': trusted}, SetOptions(merge: true));
+    await functions.httpsCallable('setOwnerDeviceTrust').call({
+      'deviceId': deviceId,
+      'trusted': trusted,
+      if (deviceName != null && deviceName.trim().isNotEmpty)
+        'deviceName': deviceName.trim(),
+    });
   }
 
   @override
   Future<void> removeSession({
     required String ownerId,
     required String deviceId,
+    String? currentDeviceId,
   }) async {
-    await _sessions(ownerId).doc(deviceId).delete();
+    final payload = <String, dynamic>{'deviceId': deviceId};
+    if (currentDeviceId != null) payload['currentDeviceId'] = currentDeviceId;
+    await functions.httpsCallable('revokeOwnerDevice').call(payload);
   }
 }

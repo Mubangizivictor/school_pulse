@@ -19,6 +19,8 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart';
 
+import '../widgets/super_admin_unsaved_changes_guard.dart';
+
 /// Editable profile screen for the SaaS Owner, reached from the Account
 /// tile on Settings. Mirrors the parent/staff EditProfileScreen's avatar
 /// upload + form pattern, but writes only to `users/{uid}` — the platform
@@ -39,6 +41,7 @@ class _SuperAdminProfileScreenState extends State<SuperAdminProfileScreen> {
   bool _initialized = false;
   bool _saving = false;
   bool _uploadingPhoto = false;
+  bool _dirty = false;
   String? _photoUrl;
 
   static final _phoneInputFormatter = TextInputFormatter.withFunction(
@@ -63,6 +66,10 @@ class _SuperAdminProfileScreenState extends State<SuperAdminProfileScreen> {
     super.dispose();
   }
 
+  void _markDirty() {
+    if (!_dirty && mounted) setState(() => _dirty = true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthBloc>().state;
@@ -76,145 +83,154 @@ class _SuperAdminProfileScreenState extends State<SuperAdminProfileScreen> {
       _nameController.text = user.name;
       _phoneController.text = user.phoneNumber ?? '';
       _photoUrl = user.photoUrl;
+      _nameController.addListener(_markDirty);
+      _phoneController.addListener(_markDirty);
       _initialized = true;
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: const Text('Profile'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          children: [
-            Center(
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  CircleAvatar(
-                    radius: 64,
-                    backgroundColor: colors.onSurface,
-                    backgroundImage: _photoUrl?.isNotEmpty == true
-                        ? NetworkImage(_photoUrl!)
-                        : null,
-                    child: _photoUrl?.isNotEmpty == true
-                        ? null
-                        : Text(
-                            _initials(user.name),
-                            style: TextStyle(
-                              fontSize: 34,
-                              color: colors.surface,
+    return SuperAdminUnsavedChangesGuard(
+      hasUnsavedChanges: _dirty && !_saving && !_uploadingPhoto,
+      message: 'Your profile changes have not been saved.',
+      child: Scaffold(
+        backgroundColor: AppColors.background(context),
+        appBar: AppBar(
+          title: const Text('Profile'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            children: [
+              Center(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    CircleAvatar(
+                      radius: 64,
+                      backgroundColor: colors.onSurface,
+                      backgroundImage: _photoUrl?.isNotEmpty == true
+                          ? NetworkImage(_photoUrl!)
+                          : null,
+                      child: _photoUrl?.isNotEmpty == true
+                          ? null
+                          : Text(
+                              _initials(user.name),
+                              style: TextStyle(
+                                fontSize: 34,
+                                color: colors.surface,
+                              ),
                             ),
-                          ),
-                  ),
-                  Positioned(
-                    right: -4,
-                    bottom: -4,
-                    child: IconButton.filled(
-                      tooltip: 'Change profile picture',
-                      onPressed: _uploadingPhoto ? null : _choosePhoto,
-                      icon: _uploadingPhoto
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.camera_alt_outlined),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Center(
-              child: Text(
-                'Platform Owner',
-                style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.textSecondary(context),
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.6,
+                    Positioned(
+                      right: -4,
+                      bottom: -4,
+                      child: IconButton.filled(
+                        tooltip: 'Change profile picture',
+                        onPressed: _uploadingPhoto ? null : _choosePhoto,
+                        icon: _uploadingPhoto
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.camera_alt_outlined),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            PulseTextField(
-              label: 'Full Name',
-              controller: _nameController,
-              prefixIcon: Icons.person_outline,
-              isRequired: true,
-              validator: (value) => value == null || value.trim().isEmpty
-                  ? 'Enter your full name.'
-                  : null,
-            ),
-            const SizedBox(height: AppSpacing.m),
-            PulseTextField(
-              label: 'Email Address',
-              controller: TextEditingController(text: user.email),
-              prefixIcon: Icons.email_outlined,
-              enabled: false,
-            ),
-            const SizedBox(height: AppSpacing.m),
-            PulseTextField(
-              label: 'Phone Number',
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              prefixIcon: Icons.phone_outlined,
-              helperText: 'Use digits, optionally starting with +.',
-              inputFormatters: [_phoneInputFormatter],
-              validator: _validatePhone,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            PrimaryButton(
-              label: 'Save Changes',
-              isLoading: _saving,
-              onPressed: () async {
-                if (!(_formKey.currentState?.validate() ?? false)) return;
-                setState(() => _saving = true);
-                final updated = UserEntity(
-                  id: user.id,
-                  staffCode: user.staffCode,
-                  name: _nameController.text.trim(),
-                  email: user.email,
-                  schoolId: user.schoolId,
-                  schoolName: user.schoolName,
-                  phoneNumber: _phoneController.text.trim().isEmpty
-                      ? null
-                      : _phoneController.text.trim(),
-                  roles: user.roles,
-                  photoUrl: _photoUrl,
-                  studentIds: user.studentIds,
-                  studentId: user.studentId,
-                  assignedClass: user.assignedClass,
-                  subjects: user.subjects,
-                  isActive: user.isActive,
-                  deactivationReason: user.deactivationReason,
-                  mustChangePassword: user.mustChangePassword,
-                  mfaEnabled: user.mfaEnabled,
-                );
-                final result = await sl<AuthRepository>().updateProfile(
-                  updated,
-                );
-                if (!context.mounted) return;
-                setState(() => _saving = false);
-                result.fold(
-                  (failure) => ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(failure.message))),
-                  (_) {
-                    context.read<AuthBloc>().add(AuthCheckRequested());
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Profile updated')),
-                    );
-                    Navigator.pop(context);
-                  },
-                );
-              },
-            ),
-          ],
+              const SizedBox(height: AppSpacing.xl),
+              Center(
+                child: Text(
+                  'Platform Owner',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textSecondary(context),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              PulseTextField(
+                label: 'Full Name',
+                controller: _nameController,
+                prefixIcon: Icons.person_outline,
+                isRequired: true,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Enter your full name.'
+                    : null,
+              ),
+              const SizedBox(height: AppSpacing.m),
+              PulseTextField(
+                label: 'Email Address',
+                controller: TextEditingController(text: user.email),
+                prefixIcon: Icons.email_outlined,
+                enabled: false,
+              ),
+              const SizedBox(height: AppSpacing.m),
+              PulseTextField(
+                label: 'Phone Number',
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                prefixIcon: Icons.phone_outlined,
+                helperText: 'Use digits, optionally starting with +.',
+                inputFormatters: [_phoneInputFormatter],
+                validator: _validatePhone,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              PrimaryButton(
+                label: 'Save Changes',
+                isLoading: _saving,
+                onPressed: () async {
+                  if (!(_formKey.currentState?.validate() ?? false)) return;
+                  setState(() => _saving = true);
+                  final updated = UserEntity(
+                    id: user.id,
+                    staffCode: user.staffCode,
+                    name: _nameController.text.trim(),
+                    email: user.email,
+                    schoolId: user.schoolId,
+                    schoolName: user.schoolName,
+                    phoneNumber: _phoneController.text.trim().isEmpty
+                        ? null
+                        : _phoneController.text.trim(),
+                    roles: user.roles,
+                    photoUrl: _photoUrl,
+                    studentIds: user.studentIds,
+                    studentId: user.studentId,
+                    assignedClass: user.assignedClass,
+                    subjects: user.subjects,
+                    isActive: user.isActive,
+                    deactivationReason: user.deactivationReason,
+                    mustChangePassword: user.mustChangePassword,
+                    mfaEnabled: user.mfaEnabled,
+                  );
+                  final result = await sl<AuthRepository>().updateProfile(
+                    updated,
+                  );
+                  if (!context.mounted) return;
+                  setState(() => _saving = false);
+                  result.fold(
+                    (failure) => ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(failure.message))),
+                    (_) {
+                      context.read<AuthBloc>().add(AuthCheckRequested());
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Profile updated')),
+                      );
+                      setState(() => _dirty = false);
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -257,6 +273,7 @@ class _SuperAdminProfileScreenState extends State<SuperAdminProfileScreen> {
       imageQuality: 85,
     );
     if (image == null || !mounted) return;
+    _markDirty();
 
     final cropped = await ImageCropper().cropImage(
       sourcePath: image.path,

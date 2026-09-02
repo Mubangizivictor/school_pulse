@@ -132,7 +132,9 @@ function parseAndValidatePlanFields(data, planId) {
   const description = text(data?.description, 220);
   const price = Math.round(Number(data?.price));
   const billingCycle = text(data?.billingCycle || 'termly', 20).toLowerCase();
-  const termLengthDays = Math.round(Number(data?.termLengthDays || 120));
+  const termLengthDays = Math.round(
+    Number(data?.termLengthDays === undefined ? 120 : data.termLengthDays),
+  );
   const trialDays = Math.round(Number(data?.trialDays || 0));
   const maxStudents = Math.round(Number(data?.maxStudents || 0));
   const maxStaff = Math.round(Number(data?.maxStaff || 0));
@@ -229,6 +231,25 @@ async function requireOwner(request) {
     }
     throw error;
   }
+}
+
+// The canonical seeded platform-owner uid, used to scope owner-feed
+// notification documents (super_admin_notifications.ownerId). Read from the
+// same single authorization boundary requirePlatformOwner uses. Returns ''
+// if the seed is somehow missing rather than throwing - a missing ownerId
+// on the doc is treated by the owner-feed callables as "belongs to the
+// seeded owner" anyway, so an unscoped write degrades safely.
+let _cachedOwnerUid;
+async function seededOwnerUid() {
+  if (_cachedOwnerUid !== undefined) return _cachedOwnerUid;
+  try {
+    const snap = await db.collection('platform_config').doc('owner_seed').get();
+    const seed = snap.exists ? snap.data() : null;
+    _cachedOwnerUid = seed?.seeded ? String(seed.ownerUid || '') : '';
+  } catch (_) {
+    _cachedOwnerUid = '';
+  }
+  return _cachedOwnerUid;
 }
 
 async function ensureBillingDefaults() {
@@ -724,6 +745,7 @@ exports.submitManualPayment = onRequest({ region: 'europe-west1' }, async (req, 
   const referenceKey = crypto.createHash('sha256').update(`${schoolId}|${method}|${referenceNormalized}`).digest('hex');
   const referenceRef = db.collection('manual_payment_references').doc(referenceKey);
   const notificationRef = db.collection('super_admin_notifications').doc(`payment_${paymentId}`);
+  const notificationOwnerUid = await seededOwnerUid();
   const serverTime = admin.firestore.FieldValue.serverTimestamp();
   const termLengthDays = Math.max(1, Math.round(Number(plan.termLengthDays || 120)));
 
@@ -787,6 +809,7 @@ exports.submitManualPayment = onRequest({ region: 'europe-west1' }, async (req, 
       }
       tx.set(notificationRef, {
         id: notificationRef.id,
+        ownerId: notificationOwnerUid,
         type: 'manual_payment_submitted',
         status: 'unread',
         paymentId,
@@ -1387,4 +1410,8 @@ module.exports.__internal = {
   subscriberCanManagePayment,
   schoolAdminEmail,
   getPlan,
+  normalizedModuleList,
+  parseAndValidatePlanFields,
+  PLAN_CODE_RE,
+  ALLOWED_PLAN_MODULE_KEYS,
 };

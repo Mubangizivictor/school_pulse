@@ -1,6 +1,7 @@
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const admin = require('firebase-admin');
+const { recordJobRun } = require('./platform_health_instrumentation')({ admin });
 
 function text(value, max = 200) {
   return String(value ?? '').trim().slice(0, max);
@@ -192,6 +193,7 @@ exports.notifyAppointmentStatusChange = onDocumentUpdated(
 exports.sendAppointmentReminderEmails = onSchedule(
   { region: 'europe-west1', schedule: 'every 5 minutes' },
   async () => {
+    await recordJobRun('sendAppointmentReminderEmails', 5, async () => {
     const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();
     // Filters on emailQueued + scheduledAt only (matching the existing
@@ -241,6 +243,7 @@ exports.sendAppointmentReminderEmails = onSchedule(
       }
       await doc.ref.set({ emailQueued: true }, { merge: true });
     }
+    });
   },
 );
 

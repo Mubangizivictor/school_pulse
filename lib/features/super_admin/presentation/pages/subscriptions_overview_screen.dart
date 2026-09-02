@@ -43,9 +43,29 @@ class _SubscriptionsOverviewScreenState
     extends State<SubscriptionsOverviewScreen> {
   final ManualPaymentService _payments = ManualPaymentService();
   final DateFormat _date = DateFormat('MMM dd, yyyy');
+  final TextEditingController _searchController = TextEditingController();
 
   bool _loadingPending = true;
   int _pendingPaymentsCount = 0;
+  String _search = '';
+  String _planFilter = 'all';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  bool _matchesSearch(School school, List<SubscriptionPlan> plans) {
+    if (_search.isEmpty) return true;
+    final q = _search.toLowerCase();
+    if (school.name.toLowerCase().contains(q)) return true;
+    final plan = _planName(plans, school.subscriptionPlanId).toLowerCase();
+    return plan.contains(q);
+  }
+
+  bool _matchesPlan(School school) =>
+      _planFilter == 'all' || school.subscriptionPlanId == _planFilter;
 
   @override
   void initState() {
@@ -119,8 +139,22 @@ class _SubscriptionsOverviewScreenState
           final expiringSoon = <School>[];
           final expired = <School>[];
           final trial = <School>[];
+          final suspended = <School>[];
+          final cancelled = <School>[];
 
-          for (final school in state.schools) {
+          final visibleSchools = state.schools
+              .where((s) => _matchesSearch(s, state.plans) && _matchesPlan(s))
+              .toList();
+
+          for (final school in visibleSchools) {
+            if (school.status == SchoolStatus.suspended) {
+              suspended.add(school);
+              continue;
+            }
+            if (school.status == SchoolStatus.archived) {
+              cancelled.add(school);
+              continue;
+            }
             if (date_math.isExpired(school.subscriptionExpiry, now: now)) {
               expired.add(school);
               continue;
@@ -144,7 +178,14 @@ class _SubscriptionsOverviewScreenState
             }
           }
 
-          for (final bucket in [active, expiringSoon, expired, trial]) {
+          for (final bucket in [
+            active,
+            expiringSoon,
+            expired,
+            trial,
+            suspended,
+            cancelled,
+          ]) {
             bucket.sort(
               (a, b) => a.subscriptionExpiry.compareTo(b.subscriptionExpiry),
             );
@@ -168,7 +209,57 @@ class _SubscriptionsOverviewScreenState
                   ),
                 ),
                 const SizedBox(height: AppSpacing.l),
+                TextField(
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _search = value.trim()),
+                  decoration: InputDecoration(
+                    hintText: 'Search by school or plan',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: _search.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _search = '');
+                            },
+                          ),
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.m),
+                _PlanFilterChips(
+                  plans: state.plans,
+                  selected: _planFilter,
+                  onSelected: (value) => setState(() => _planFilter = value),
+                ),
+                const SizedBox(height: AppSpacing.l),
                 _pendingPaymentsBanner(context),
+                const SizedBox(height: AppSpacing.xl),
+                _section(
+                  context,
+                  title: 'Suspended',
+                  subtitle: 'Access suspended by the platform owner',
+                  schools: suspended,
+                  plans: state.plans,
+                  now: now,
+                  emptyLabel: 'No suspended schools.',
+                  accentColor: AppColors.warning(context),
+                  icon: Icons.pause_circle_outline_rounded,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                _section(
+                  context,
+                  title: 'Cancelled',
+                  subtitle: 'Archived / cancelled schools',
+                  schools: cancelled,
+                  plans: state.plans,
+                  now: now,
+                  emptyLabel: 'No cancelled schools.',
+                  accentColor: AppColors.textSecondary(context),
+                  icon: Icons.archive_outlined,
+                ),
                 const SizedBox(height: AppSpacing.xl),
                 _section(
                   context,
@@ -355,6 +446,43 @@ class _SubscriptionsOverviewScreenState
             ),
           ),
       ],
+    );
+  }
+}
+
+class _PlanFilterChips extends StatelessWidget {
+  const _PlanFilterChips({
+    required this.plans,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final List<SubscriptionPlan> plans;
+  final String selected;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    if (plans.isEmpty) return const SizedBox.shrink();
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          ChoiceChip(
+            label: const Text('All plans'),
+            selected: selected == 'all',
+            onSelected: (_) => onSelected('all'),
+          ),
+          for (final plan in plans) ...[
+            const SizedBox(width: 8),
+            ChoiceChip(
+              label: Text(plan.name),
+              selected: selected == plan.id,
+              onSelected: (_) => onSelected(plan.id),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

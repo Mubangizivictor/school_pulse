@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "security_events",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "riskLevel", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "class_resources",
       "queryScope": "COLLECTION",
       "fields": [

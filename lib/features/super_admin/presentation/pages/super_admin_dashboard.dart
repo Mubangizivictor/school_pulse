@@ -13,6 +13,7 @@ import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../responsive.dart';
 import '../widgets/super_admin_logout_button.dart';
+import '../widgets/super_admin_mobile_nav_shell.dart';
 import '../widgets/super_admin_tab_navigator.dart';
 import 'audit_logs_screen.dart';
 import 'billing_home_screen.dart';
@@ -43,15 +44,7 @@ const _kSectionPaths = [
 /// resolve to Billing and Overview respectively (see the fallback below)
 /// so existing bookmarks/pushes keep working under the collapsed nav.
 int _sectionIndexForLocation(String location) {
-  final path = location.startsWith('/super-admin')
-      ? location.substring('/super-admin'.length)
-      : '';
-  final segment = path.startsWith('/') ? path.substring(1) : path;
-  final top = segment.split('/').first;
-  if (top.isEmpty) return 0;
-  if (top == 'plans') return 2; // Billing hosts Plans as a tab now.
-  final index = _kSectionPaths.indexOf(top);
-  return index == -1 ? 0 : index;
+  return superAdminSectionForPath(location);
 }
 
 /// Top-level sections, shown identically in the desktop sidebar and the
@@ -180,7 +173,6 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final branches = [
       SuperAdminOverviewScreen(
         onOpenBilling: () =>
@@ -222,87 +214,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
 
     return Scaffold(
       body: content,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surfaceElevated(context),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border(top: BorderSide(color: AppColors.border(context))),
-          boxShadow: [
-            if (!isDark)
-              BoxShadow(
-                color: Colors.black.withValues(alpha: .10),
-                blurRadius: 18,
-                offset: const Offset(0, -5),
-              ),
-          ],
-        ),
-        child: NavigationBarTheme(
-          data: NavigationBarTheme.of(context).copyWith(
-            iconTheme: WidgetStateProperty.resolveWith(
-              (states) => IconThemeData(
-                color: states.contains(WidgetState.selected)
-                    ? Colors.white
-                    : AppColors.textMuted(context),
-              ),
-            ),
-          ),
-          child: NavigationBar(
-            height: 88,
-            backgroundColor: Colors.transparent,
-            surfaceTintColor: Colors.transparent,
-            indicatorShape: const StadiumBorder(),
-            indicatorColor: AppColors.information(context),
-            labelTextStyle: WidgetStateProperty.resolveWith(
-              (states) => TextStyle(
-                color: states.contains(WidgetState.selected)
-                    ? AppColors.information(context)
-                    : AppColors.textMuted(context),
-                fontSize: 12.5,
-                fontWeight: states.contains(WidgetState.selected)
-                    ? FontWeight.w700
-                    : FontWeight.w500,
-              ),
-            ),
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (index) {
-              if (index == _selectedIndex) {
-                // Re-tapping the active tab returns it to its root screen,
-                // matching standard tab-bar behavior.
-                _popToRoot(_navigatorKeys[index]);
-                return;
-              }
-              setState(() => _selectedIndex = index);
-              _syncRouteToSection(_kSectionPaths[index]);
-            },
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Overview',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.school_outlined),
-                selectedIcon: Icon(Icons.school),
-                label: 'Schools',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.receipt_long_outlined),
-                selectedIcon: Icon(Icons.receipt_long),
-                label: 'Billing',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.history_outlined),
-                selectedIcon: Icon(Icons.history),
-                label: 'Activity',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings),
-                label: 'Settings',
-              ),
-            ],
-          ),
-        ),
+      bottomNavigationBar: SuperAdminBottomNavigation(
+        selectedIndex: _selectedIndex,
+        onReselect: () => _popToRoot(_navigatorKeys[_selectedIndex]),
       ),
     );
   }

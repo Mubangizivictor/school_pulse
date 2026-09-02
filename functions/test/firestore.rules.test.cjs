@@ -51,6 +51,10 @@ async function seed() {
       bursarA: { role: 'bursar', roles: ['bursar'], schoolId: 'schoolA', studentIds: [] },
       bursarB: { role: 'bursar', roles: ['bursar'], schoolId: 'schoolB', studentIds: [] },
       ownerA: { role: 'superAdmin', roles: ['superAdmin'], schoolId: null, studentIds: [] },
+      // A second superAdmin, used only to prove per-owner isolation of the
+      // owner notification feed. There is one seeded owner in production;
+      // this fixture just exercises the ownerId predicate in the rule.
+      ownerB: { role: 'superAdmin', roles: ['superAdmin'], schoolId: null, studentIds: [] },
       matronA: { role: 'boardingMatron', roles: ['boardingMatron'], schoolId: 'schoolA', studentIds: [] },
       patronA: { role: 'boardingPatron', roles: ['boardingPatron'], schoolId: 'schoolA', studentIds: [] },
       parentA: { role: 'parent', roles: ['parent'], schoolId: 'schoolA', studentIds: ['studentA'] },
@@ -162,6 +166,22 @@ async function seed() {
       }),
       setDoc(doc(db, 'super_admin_audit_logs', 'logA'), {
         ownerId: 'ownerA', action: 'CREATE_SCHOOL', schoolId: 'schoolA', device: 'Platform Dashboard',
+      }),
+      // Owner notification feed fixtures for the per-owner-isolation tests.
+      // notifOwnerA belongs to ownerA; notifOwnerB to ownerB; notifLegacy
+      // predates ownerId scoping and carries no ownerId (must stay readable
+      // by the single seeded owner).
+      setDoc(doc(db, 'super_admin_notifications', 'notifOwnerA'), {
+        ownerId: 'ownerA', type: 'manual_payment_submitted', status: 'unread',
+        title: 'Payment verification required', schoolId: 'schoolA',
+      }),
+      setDoc(doc(db, 'super_admin_notifications', 'notifOwnerB'), {
+        ownerId: 'ownerB', type: 'manual_payment_submitted', status: 'unread',
+        title: 'Payment verification required', schoolId: 'schoolB',
+      }),
+      setDoc(doc(db, 'super_admin_notifications', 'notifLegacy'), {
+        type: 'school_application', status: 'unread',
+        title: 'New school application',
       }),
       setDoc(doc(db, 'invoices', 'invoiceA'), {
         schoolId: 'schoolA', status: 'pending', amount: 100,
@@ -511,9 +531,126 @@ describe('SaaS owner / platform layer', () => {
     await assertFails(updateDoc(doc(dbFor('adminA'), 'invoices', 'invoiceA'), { status: 'completed' }));
   });
 
+  describe('super_admin_notifications: owner-only feed, per-owner isolation, server-write-only', () => {
+    test('the owner it belongs to can read their own notification', async () => {
+      await assertSucceeds(
+        getDoc(doc(dbFor('ownerA'), 'super_admin_notifications', 'notifOwnerA')),
+      );
+    });
+
+    test('a legacy notification with no ownerId stays readable by a superAdmin', async () => {
+      await assertSucceeds(
+        getDoc(doc(dbFor('ownerA'), 'super_admin_notifications', 'notifLegacy')),
+      );
+    });
+
+    test('a superAdmin cannot read another owner\'s notification (no cross-owner access)', async () => {
+      await assertFails(
+        getDoc(doc(dbFor('ownerA'), 'super_admin_notifications', 'notifOwnerB')),
+      );
+      await assertFails(
+        getDoc(doc(dbFor('ownerB'), 'super_admin_notifications', 'notifOwnerA')),
+      );
+    });
+
+    test('a school admin is denied even with a known document id', async () => {
+      await assertFails(
+        getDoc(doc(dbFor('adminA'), 'super_admin_notifications', 'notifOwnerA')),
+      );
+      await assertFails(
+        getDoc(doc(dbFor('adminA'), 'super_admin_notifications', 'notifLegacy')),
+      );
+    });
+
+    test('staff (teacher, bursar, nurse) are denied', async () => {
+      await assertFails(
+        getDoc(doc(dbFor('teacherA'), 'super_admin_notifications', 'notifOwnerA')),
+      );
+      await assertFails(
+        getDoc(doc(dbFor('bursarA'), 'super_admin_notifications', 'notifOwnerA')),
+      );
+      await assertFails(
+        getDoc(doc(dbFor('nurseA'), 'super_admin_notifications', 'notifOwnerA')),
+      );
+    });
+
+    test('a parent is denied', async () => {
+      await assertFails(
+        getDoc(doc(dbFor('parentA'), 'super_admin_notifications', 'notifOwnerA')),
+      );
+    });
+
+    test('an unauthenticated caller is denied', async () => {
+      const anon = testEnv.unauthenticatedContext().firestore();
+      await assertFails(
+        getDoc(doc(anon, 'super_admin_notifications', 'notifOwnerA')),
+      );
+    });
+
+    test('no client can create, update or delete a notification - not even the owner', async () => {
+      await assertFails(
+        setDoc(doc(dbFor('ownerA'), 'super_admin_notifications', 'forged'), {
+          ownerId: 'ownerA', type: 'forged', status: 'unread', title: 'x',
+        }),
+      );
+      await assertFails(
+        updateDoc(doc(dbFor('ownerA'), 'super_admin_notifications', 'notifOwnerA'), {
+          status: 'read',
+        }),
+      );
+      await assertFails(
+        deleteDoc(doc(dbFor('ownerA'), 'super_admin_notifications', 'notifOwnerA')),
+      );
+    });
+
+    test('a school admin cannot forge an owner notification addressed to themselves', async () => {
+      await assertFails(
+        setDoc(doc(dbFor('adminA'), 'super_admin_notifications', 'forgedByAdmin'), {
+          ownerId: 'adminA', type: 'forged', status: 'unread', title: 'x',
+        }),
+      );
+    });
+
+    test('owner-to-tenant leakage: an owner notification never lands in a tenant-readable path', async () => {
+      // The feed lives only at the top-level super_admin_notifications
+      // collection; there is no schools/{id}/... mirror a school role could
+      // read. Confirm a same-school admin cannot reach it by any id.
+      await assertFails(
+        getDoc(doc(dbFor('adminA'), 'super_admin_notifications', 'notifOwnerB')),
+      );
+      await assertFails(
+        getDocs(query(collection(dbFor('adminA'), 'super_admin_notifications'))),
+      );
+    });
+  });
+
   test('platform_config is owner-readable and never client-writable, even by the owner', async () => {
     await assertFails(setDoc(doc(dbFor('ownerA'), 'platform_config', 'ownerSeed'), { seeded: true }));
     await assertFails(getDoc(doc(dbFor('adminA'), 'platform_config', 'ownerSeed')));
+  });
+
+  describe('Platform Health: platform_health/job_runs/platform_job_failures are owner-read-only, no client writes', () => {
+    test('platform_health/current is owner-readable and never client-writable, even by the owner', async () => {
+      await assertSucceeds(getDoc(doc(dbFor('ownerA'), 'platform_health', 'current')));
+      await assertFails(getDoc(doc(dbFor('adminA'), 'platform_health', 'current')));
+      await assertFails(getDoc(doc(dbFor('teacherA'), 'platform_health', 'current')));
+      await assertFails(setDoc(doc(dbFor('ownerA'), 'platform_health', 'current'), { status: 'operational' }));
+      await assertFails(updateDoc(doc(dbFor('ownerA'), 'platform_health', 'current'), { status: 'outage' }));
+    });
+
+    test('job_runs is owner-readable and never client-writable, even by the owner', async () => {
+      await assertSucceeds(getDoc(doc(dbFor('ownerA'), 'job_runs', 'purgeExpiredNotifications')));
+      await assertFails(getDoc(doc(dbFor('adminA'), 'job_runs', 'purgeExpiredNotifications')));
+      await assertFails(setDoc(doc(dbFor('ownerA'), 'job_runs', 'forgedJob'), { lastStatus: 'success' }));
+    });
+
+    test('platform_job_failures is owner-readable and never client-writable, even by the owner', async () => {
+      await assertSucceeds(getDoc(doc(dbFor('ownerA'), 'platform_job_failures', 'failureA')));
+      await assertFails(getDoc(doc(dbFor('adminA'), 'platform_job_failures', 'failureA')));
+      await assertFails(setDoc(doc(dbFor('ownerA'), 'platform_job_failures', 'forgedFailure'), {
+        category: 'payment_processing', source: 'forged',
+      }));
+    });
   });
 
   describe('Class Teacher panel', () => {

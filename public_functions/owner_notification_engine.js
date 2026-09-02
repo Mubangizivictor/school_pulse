@@ -334,10 +334,15 @@ async function deliverEmail(ownerDocs, payload) {
   };
 }
 
-function ownerNotificationDocument(eventId, eventType, title, body, schoolName, data) {
+function ownerNotificationDocument(eventId, eventType, title, body, schoolName, data, ownerId = '') {
   const isPayment = Boolean(data?.paymentId);
   return {
     eventId,
+    // Scopes the feed document to the canonical platform owner. There is
+    // exactly one seeded owner today, but every owner-feed write stamps
+    // this so the read/mark/delete/clear callables and the Firestore rule
+    // can enforce per-owner isolation rather than "any superAdmin".
+    ownerId: text(ownerId, 200),
     type: text(data?.type || eventType, 100),
     eventType: text(eventType, 120),
     status: 'unread',
@@ -363,6 +368,10 @@ async function createInAppAlerts(ownerDocs, eventId, payload) {
   // application event could be delivered server-side yet never appear in the
   // SaaS Owner Notifications screen.
   const ownerFeedRef = db.collection('super_admin_notifications').doc(eventId);
+  // With exactly one canonical seeded owner, every owner-feed doc is scoped
+  // to that single uid. If the platform ever supports multiple owners this
+  // fan-out already writes one doc per owner id.
+  const primaryOwnerId = ownerDocs.length > 0 ? ownerDocs[0].id : '';
   batch.set(ownerFeedRef, ownerNotificationDocument(
     eventId,
     payload.eventType,
@@ -370,6 +379,7 @@ async function createInAppAlerts(ownerDocs, eventId, payload) {
     payload.body,
     payload.schoolName,
     payload.data,
+    primaryOwnerId,
   ), { merge: true });
 
   // Also write user-scoped alerts so the shared notification centre/badge
@@ -484,4 +494,8 @@ module.exports = {
   notifyOwners,
   getOwnerDocs,
   isOwnerData,
+  // Exported for unit tests: the data-only FCM payload builder. Asserts
+  // owner pushes carry only stringified title/body/ids and never leak an
+  // internal object, undefined/null field, or an oversized blob.
+  pushData,
 };

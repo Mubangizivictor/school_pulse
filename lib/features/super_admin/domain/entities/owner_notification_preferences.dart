@@ -1,100 +1,99 @@
 import 'package:flutter/material.dart';
 
 /// Delivery frequency for non-critical owner notifications.
+///
+/// Only the two values the backend callable
+/// (`public_functions/owner_notification_preferences.js`) accepts:
+/// `realtime` and `daily_digest`. Daily-digest delivery is stored for
+/// forward compatibility; the server still delivers realtime until a digest
+/// worker is implemented (surfaced to the UI via [dailyDigestDelivered]).
 enum OwnerNotificationFrequency {
-  /// Delivered as they happen.
   realtime,
+  dailyDigest;
 
-  /// Batched into a single delivery per hour.
-  hourlyDigest,
+  /// Wire value used by the callable payload/response.
+  String get wire =>
+      this == OwnerNotificationFrequency.dailyDigest ? 'daily_digest' : 'realtime';
 
-  /// Batched into a single delivery per day.
-  dailyDigest,
+  static OwnerNotificationFrequency fromWire(String? value) {
+    return value == 'daily_digest'
+        ? OwnerNotificationFrequency.dailyDigest
+        : OwnerNotificationFrequency.realtime;
+  }
 }
 
 /// SaaS Owner notification settings.
 ///
-/// Mirrors the shape of [NotificationPreferences] (the staff/parent
-/// equivalent) but is scoped to the single platform owner account and to the
-/// category set that actually applies to platform-level alerts (billing,
-/// school applications, payments, platform activity) rather than
-/// school-tenant categories like homework or transport.
-///
-/// Critical categories - security alerts, payment failures and platform
-/// outages - are never present as togglable entries: [isCriticalCategory]
-/// is enforced both here and at the persistence layer so a stale or
-/// maliciously-crafted write can never suppress them.
+/// Shape is the canonical one owned by the backend callable: two delivery
+/// channels (push, email), four category toggles, wall-clock quiet hours,
+/// and a two-value frequency. There is deliberately no in-app channel
+/// toggle - the owner feed is the durable source of truth and is never
+/// suppressed - and no per-category "critical" switch: security alerts,
+/// payment failures and platform outages are simply never offered here, so
+/// nothing this model persists can gate them.
 @immutable
 class OwnerNotificationPreferences {
   final String ownerId;
 
   // Delivery channels.
-  final bool inAppEnabled;
   final bool pushEnabled;
   final bool emailEnabled;
 
-  // Category toggles (non-critical only - see [isCriticalCategory]).
+  // Category toggles (non-critical only).
   final bool billingAlerts;
   final bool schoolApplicationAlerts;
   final bool paymentAlerts;
   final bool platformActivityAlerts;
 
-  /// Suppresses non-critical delivery between these times. Both null means
-  /// quiet hours are off. Wall-clock, same rationale as the staff/parent
-  /// preferences: must not shift with timezone/travel.
-  final TimeOfDay? quietHoursStart;
-  final TimeOfDay? quietHoursEnd;
+  /// Suppresses non-critical delivery between these times when
+  /// [quietHoursEnabled]. Wall-clock (must not shift with timezone/travel).
+  final bool quietHoursEnabled;
+  final TimeOfDay quietHoursStart;
+  final TimeOfDay quietHoursEnd;
 
   final OwnerNotificationFrequency frequency;
 
-  final DateTime? updatedAt;
+  /// True when the backend reports a digest worker actually runs. Until
+  /// then the UI shows "delivered in real time for now" next to the
+  /// daily-digest option rather than implying batching already happens.
+  final bool dailyDigestDelivered;
 
   const OwnerNotificationPreferences({
     required this.ownerId,
-    this.inAppEnabled = true,
     this.pushEnabled = true,
     this.emailEnabled = true,
     this.billingAlerts = true,
     this.schoolApplicationAlerts = true,
     this.paymentAlerts = true,
     this.platformActivityAlerts = true,
-    this.quietHoursStart,
-    this.quietHoursEnd,
+    this.quietHoursEnabled = false,
+    this.quietHoursStart = const TimeOfDay(hour: 22, minute: 0),
+    this.quietHoursEnd = const TimeOfDay(hour: 7, minute: 0),
     this.frequency = OwnerNotificationFrequency.realtime,
-    this.updatedAt,
+    this.dailyDigestDelivered = false,
   });
 
   factory OwnerNotificationPreferences.defaults(String ownerId) =>
       OwnerNotificationPreferences(ownerId: ownerId);
 
-  bool get quietHoursConfigured =>
-      quietHoursStart != null && quietHoursEnd != null;
-
-  /// Security, payment-failure and platform-outage notifications are always
-  /// delivered regardless of channel/category toggles above. There is no
-  /// stored flag for these - they are simply never offered as a switch, and
-  /// [OwnerNotificationPreferencesMapper] never writes a field that could
-  /// gate them.
   static const criticalCategoriesDescription =
       'Security alerts, payment failures and platform outages';
 
   OwnerNotificationPreferences copyWith({
-    bool? inAppEnabled,
     bool? pushEnabled,
     bool? emailEnabled,
     bool? billingAlerts,
     bool? schoolApplicationAlerts,
     bool? paymentAlerts,
     bool? platformActivityAlerts,
+    bool? quietHoursEnabled,
     TimeOfDay? quietHoursStart,
     TimeOfDay? quietHoursEnd,
-    bool clearQuietHours = false,
     OwnerNotificationFrequency? frequency,
-    DateTime? updatedAt,
+    bool? dailyDigestDelivered,
   }) {
     return OwnerNotificationPreferences(
       ownerId: ownerId,
-      inAppEnabled: inAppEnabled ?? this.inAppEnabled,
       pushEnabled: pushEnabled ?? this.pushEnabled,
       emailEnabled: emailEnabled ?? this.emailEnabled,
       billingAlerts: billingAlerts ?? this.billingAlerts,
@@ -103,14 +102,11 @@ class OwnerNotificationPreferences {
       paymentAlerts: paymentAlerts ?? this.paymentAlerts,
       platformActivityAlerts:
           platformActivityAlerts ?? this.platformActivityAlerts,
-      quietHoursStart: clearQuietHours
-          ? null
-          : (quietHoursStart ?? this.quietHoursStart),
-      quietHoursEnd: clearQuietHours
-          ? null
-          : (quietHoursEnd ?? this.quietHoursEnd),
+      quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
+      quietHoursStart: quietHoursStart ?? this.quietHoursStart,
+      quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,
       frequency: frequency ?? this.frequency,
-      updatedAt: updatedAt ?? this.updatedAt,
+      dailyDigestDelivered: dailyDigestDelivered ?? this.dailyDigestDelivered,
     );
   }
 }

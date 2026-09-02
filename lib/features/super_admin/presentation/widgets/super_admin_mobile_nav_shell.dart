@@ -3,38 +3,58 @@ import 'package:go_router/go_router.dart';
 
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 
-import '../responsive.dart';
-
-/// Keeps the owner-console navigation available when a settings sub-route is
-/// opened as a full GoRouter page rather than inside the dashboard tab stack.
-class SuperAdminMobileNavShell extends StatelessWidget {
-  const SuperAdminMobileNavShell({super.key, required this.child});
-
-  final Widget child;
-
-  int _selectedIndex(BuildContext context) {
-    final path = GoRouterState.of(context).uri.path;
-    if (path.startsWith('/super-admin/schools')) return 1;
-    if (path.startsWith('/super-admin/payments')) return 2;
-    if (path.startsWith('/super-admin/audit-logs')) return 3;
-    if (path.startsWith('/super-admin/settings')) return 4;
-    return 0;
+/// Resolves a Super Admin URL to the owning console section. Keep this in
+/// the shared navigation layer so full-page routes and dashboard tab routes
+/// cannot drift apart.
+int superAdminSectionForPath(String path) {
+  if (path.startsWith('/super-admin/schools')) return 1;
+  if (path.startsWith('/super-admin/payments') ||
+      path.startsWith('/super-admin/plans') ||
+      path.startsWith('/super-admin/subscriptions') ||
+      path.startsWith('/super-admin/billing')) {
+    return 2;
   }
+  if (path.startsWith('/super-admin/audit-logs') ||
+      path.startsWith('/super-admin/activity')) {
+    return 3;
+  }
+  // Notifications are owner preferences/supporting owner UI, rather than a
+  // sixth destination. Platform Health intentionally belongs to Overview.
+  if (path.startsWith('/super-admin/settings') ||
+      path.startsWith('/super-admin/notifications')) {
+    return 4;
+  }
+  return 0;
+}
+
+const _kSuperAdminSectionPaths = [
+  '/super-admin',
+  '/super-admin/schools',
+  '/super-admin/payments',
+  '/super-admin/audit-logs',
+  '/super-admin/settings',
+];
+
+/// The one compact owner-console navigation control used by both the
+/// dashboard and full-page Super Admin routes. It deliberately performs
+/// real GoRouter navigation so browser/Android Back and iOS edge-back retain
+/// their route history.
+class SuperAdminBottomNavigation extends StatelessWidget {
+  const SuperAdminBottomNavigation({
+    super.key,
+    required this.selectedIndex,
+    this.onReselect,
+  });
+
+  final int selectedIndex;
+  final VoidCallback? onReselect;
 
   @override
   Widget build(BuildContext context) {
-    if (isSuperAdminWide(context)) return child;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      // Some owner settings screens use Navigator.push for their follow-up
-      // pages. Keeping that Navigator inside this Scaffold means those pages
-      // remain above the content, but below the persistent bottom navigation.
-      body: Navigator(
-        onGenerateRoute: (settings) =>
-            MaterialPageRoute(builder: (_) => child, settings: settings),
-      ),
-      bottomNavigationBar: Container(
+    return SafeArea(
+      top: false,
+      child: Container(
         decoration: BoxDecoration(
           color: AppColors.surfaceElevated(context),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -59,7 +79,7 @@ class SuperAdminMobileNavShell extends StatelessWidget {
             ),
           ),
           child: NavigationBar(
-            height: 88,
+            height: 72,
             backgroundColor: Colors.transparent,
             surfaceTintColor: Colors.transparent,
             indicatorColor: AppColors.information(context),
@@ -68,22 +88,19 @@ class SuperAdminMobileNavShell extends StatelessWidget {
                 color: states.contains(WidgetState.selected)
                     ? AppColors.information(context)
                     : AppColors.textMuted(context),
-                fontSize: 12.5,
+                fontSize: 12,
                 fontWeight: states.contains(WidgetState.selected)
                     ? FontWeight.w700
                     : FontWeight.w500,
               ),
             ),
-            selectedIndex: _selectedIndex(context),
+            selectedIndex: selectedIndex,
             onDestinationSelected: (index) {
-              const paths = [
-                '/super-admin',
-                '/super-admin/schools',
-                '/super-admin/payments',
-                '/super-admin/audit-logs',
-                '/super-admin/settings',
-              ];
-              context.go(paths[index]);
+              if (index == selectedIndex) {
+                onReselect?.call();
+                return;
+              }
+              context.go(_kSuperAdminSectionPaths[index]);
             },
             destinations: const [
               NavigationDestination(
@@ -114,6 +131,39 @@ class SuperAdminMobileNavShell extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Keeps the owner-console navigation available when a settings sub-route is
+/// opened as a full GoRouter page rather than inside the dashboard tab stack.
+class SuperAdminMobileNavShell extends StatelessWidget {
+  const SuperAdminMobileNavShell({super.key, required this.child});
+
+  final Widget child;
+
+  int _selectedIndex(BuildContext context) {
+    return superAdminSectionForPath(GoRouterState.of(context).uri.path);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      // Some owner settings screens use Navigator.push for their follow-up
+      // pages. Keeping that Navigator inside this Scaffold means those pages
+      // remain above the content, but below the persistent bottom navigation.
+      body: Navigator(
+        onGenerateRoute: (settings) =>
+            MaterialPageRoute(builder: (_) => child, settings: settings),
+      ),
+      bottomNavigationBar: SuperAdminBottomNavigation(
+        selectedIndex: _selectedIndex(context),
+        // A full-page sub-route has no dashboard tab Navigator to pop. Its
+        // established reselect behavior is therefore to return to the real
+        // parent section route.
+        onReselect: () =>
+            context.go(_kSuperAdminSectionPaths[_selectedIndex(context)]),
       ),
     );
   }

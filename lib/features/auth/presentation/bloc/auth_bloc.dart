@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:dartz/dartz.dart';
+import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/notification/notification_service.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
@@ -90,7 +92,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    final result = await getCurrentUser(NoParams());
+    // A completed MFA sign-in must never leave the router on
+    // `/school-splash` indefinitely. On web, a stalled Firestore/profile
+    // read used to keep this event in flight forever, which also meant the
+    // router quite correctly kept treating the session as AuthLoading.
+    // Fail closed with a recoverable sign-in error instead.
+    final Either<Failure, UserEntity?> result;
+    try {
+      result = await getCurrentUser(
+        NoParams(),
+      ).timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      emit(
+        const AuthFailureState(
+          'We could not finish restoring your session. Please sign in again.',
+        ),
+      );
+      return;
+    }
     final resolved = await result.fold<Future<UserEntity?>>(
       (failure) async => null,
       (user) async => user,
@@ -105,7 +124,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     // server-side owner authorization here so the check still gates every
     // such session, not just the Platform Owner Access screen's own logins.
     if (resolved.roles.contains(UserRole.superAdmin)) {
-      final ownerCheck = await verifyOwnerSession(NoParams());
+      final Either<Failure, void> ownerCheck;
+      try {
+        ownerCheck = await verifyOwnerSession(
+          NoParams(),
+        ).timeout(const Duration(seconds: 15));
+      } on TimeoutException {
+        emit(
+          const AuthFailureState(
+            'Owner verification timed out. Please sign in again.',
+          ),
+        );
+        return;
+      }
       final denied = ownerCheck.fold((failure) => true, (_) => false);
       if (denied) {
         emit(AuthUnauthenticated());

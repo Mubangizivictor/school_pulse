@@ -26,6 +26,7 @@ Object.assign(exports, require("./financial_entitlements")({ admin, onCall, Http
 Object.assign(exports, require("./exam_factory")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./exam_factory_operations")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./exam_factory_reminders")({ admin, onSchedule }));
+const { recordJobRun, recordJobFailure } = require("./platform_health_instrumentation")({ admin });
 
 /**
  * Enqueue a templated transactional email for the `public_functions`
@@ -89,6 +90,15 @@ async function requireOwner(request) {
     throw error;
   }
 }
+
+// Placed after requireOwner's own definition above (not up with the other
+// Object.assign(exports, require(...)) calls near the top of this file) -
+// platform_health.js needs requireOwner passed in, which would otherwise
+// be undefined at that point in the file due to how the interpreter
+// executes top-to-bottom.
+const platformHealthFunctions = require("./platform_health")({ admin, onCall, HttpsError, requireOwner });
+exports.checkPlatformHealth = platformHealthFunctions.checkPlatformHealth;
+exports.acknowledgePlatformHealthIncident = platformHealthFunctions.acknowledgePlatformHealthIncident;
 
 // ... existing roles and helper functions ...
 const ADMIN_ROLES = ["director", "headTeacher", "schoolAdmin"];
@@ -370,6 +380,7 @@ exports.escalateApprovalRequest = onCall(async (request) => {
 // failing that, the policy dueTimeMinutes) determines how long a request may
 // sit unresolved before this scheduled sweep escalates it and logs why.
 exports.autoEscalateApprovalRequests = onSchedule("every 15 minutes", async () => {
+  await recordJobRun("autoEscalateApprovalRequests", 15, async () => {
   const db = admin.firestore();
   const schools = await db.collection("schools").get();
   for (const school of schools.docs) {
@@ -397,6 +408,7 @@ exports.autoEscalateApprovalRequests = onSchedule("every 15 minutes", async () =
       await doc.ref.collection("actions").add({ actorId: "system", action: "escalated", stage: row.currentStage, comment: `Auto-escalated after ${timeoutMinutes} minutes without a decision.`, timestamp: admin.firestore.FieldValue.serverTimestamp() });
     }
   }
+  });
 });
 
 function generateTemporaryPassword() {
@@ -1563,6 +1575,7 @@ exports.provisionSchoolAdmin = onDocumentCreated(
         error: "Invitation is missing email, schoolId, or tempPassword.",
         failedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+      await recordJobFailure("school_onboarding", "provisionSchoolAdmin", event.data.id, "Invitation is missing email, schoolId, or tempPassword.");
       return;
     }
 
@@ -1579,6 +1592,7 @@ exports.provisionSchoolAdmin = onDocumentCreated(
         error: `School ${schoolId} does not exist.`,
         failedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+      await recordJobFailure("school_onboarding", "provisionSchoolAdmin", event.data.id, `School ${schoolId} does not exist.`);
       return;
     }
     const schoolName = schoolDoc.data().name || "";
@@ -1598,6 +1612,7 @@ exports.provisionSchoolAdmin = onDocumentCreated(
           error: err.message || "Failed to look up existing account.",
           failedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
+        await recordJobFailure("school_onboarding", "provisionSchoolAdmin", event.data.id, err.message || "Failed to look up existing account.");
         return;
       }
       try {
@@ -1614,6 +1629,7 @@ exports.provisionSchoolAdmin = onDocumentCreated(
           error: createErr.message || "Failed to create the admin account.",
           failedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
+        await recordJobFailure("school_onboarding", "provisionSchoolAdmin", event.data.id, createErr.message || "Failed to create the admin account.");
         return;
       }
     }
@@ -1940,6 +1956,7 @@ exports.initiateMobileMoneyCharge = onCall(async (request) => {
       status: "failed",
       failureReason: err.message,
     });
+    await recordJobFailure("payment_processing", "initiateMobileMoneyCharge", transactionId, err.message);
     throw new HttpsError("internal", `Could not start payment: ${err.message}`);
   }
 
@@ -2007,18 +2024,21 @@ async function markTransactionResult(transactionId, { status, failureReason }) {
         },
       });
     }
-  } else if (status === "failed" && recipientEmail) {
-    await enqueueTransactionalEmail({
-      eventId: `mobile_money_payment_failed_${transactionId}`,
-      templateId: "mobile_money_payment_failed",
-      to: recipientEmail,
-      data: {
-        schoolName,
-        paymentId: transactionId,
-        amount: tx.amountUgx,
-        reason: failureReason || "The payment was not completed.",
-      },
-    });
+  } else if (status === "failed") {
+    await recordJobFailure("payment_processing", "markTransactionResult", transactionId, failureReason || "Payment failed");
+    if (recipientEmail) {
+      await enqueueTransactionalEmail({
+        eventId: `mobile_money_payment_failed_${transactionId}`,
+        templateId: "mobile_money_payment_failed",
+        to: recipientEmail,
+        data: {
+          schoolName,
+          paymentId: transactionId,
+          amount: tx.amountUgx,
+          reason: failureReason || "The payment was not completed.",
+        },
+      });
+    }
   }
 }
 
@@ -2064,6 +2084,7 @@ exports.mtnMomoWebhook = onRequest(async (req, res) => {
  * and sends alerts to their hosts and security personnel.
  */
 exports.checkVisitorOverstays = onSchedule("every 15 minutes", async () => {
+  await recordJobRun("checkVisitorOverstays", 15, async () => {
   const now = admin.firestore.Timestamp.now();
   const db = admin.firestore();
 
@@ -2126,6 +2147,7 @@ exports.checkVisitorOverstays = onSchedule("every 15 minutes", async () => {
       console.error(`Failed to process overstay for visitor ${visitorId}:`, err);
     }
   }
+  });
 });
 
 // Register this URL as the Collection callback on the Airtel developer
@@ -3026,6 +3048,7 @@ exports.processSmsQueue = onDocumentCreated("sms_queue/{id}", async (event) => {
  * whose scheduled time has arrived.
  */
 exports.processScheduledBroadcasts = onSchedule("every 5 minutes", async () => {
+  await recordJobRun("processScheduledBroadcasts", 5, async () => {
   const now = admin.firestore.Timestamp.now();
 
   const dueBroadcasts = await admin.firestore()
@@ -3076,6 +3099,7 @@ exports.processScheduledBroadcasts = onSchedule("every 5 minutes", async () => {
     const isSms = doc.data().type === "SMS";
     await doc.ref.update({ status: isSms ? "not_configured" : "sent" });
   }
+  });
 });
 
 /**

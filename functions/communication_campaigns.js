@@ -8,6 +8,7 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 const { resolveRecipients } = require("./notifications").__internal;
+const { recordJobRun } = require("./platform_health_instrumentation")({ admin });
 
 const db = () => admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
@@ -333,6 +334,7 @@ exports.cancelCommunicationCampaign = onCall(async (request) => {
 });
 
 exports.reconcileCommunicationCampaigns = onSchedule("every 5 minutes", async () => {
+  await recordJobRun("reconcileCommunicationCampaigns", 5, async () => {
   const due = await db().collectionGroup("communication_campaigns").where("status", "==", "scheduled").where("scheduledAt", "<=", admin.firestore.Timestamp.now()).limit(50).get();
   for (const doc of due.docs) {
     const campaign = doc.data();
@@ -361,6 +363,7 @@ exports.reconcileCommunicationCampaigns = onSchedule("every 5 minutes", async ()
     if (data.status === "sent") await doc.ref.update({ status: data.failureCount > 0 ? "partiallyDelivered" : "delivered", deliverySummary: { totalAudience: data.recipientCount || 0, pushSent: data.successCount || 0, pushFailed: data.failureCount || 0 }, updatedAt: FieldValue.serverTimestamp() });
     if (data.status === "failed") await doc.ref.update({ status: "failed", failureSummary: { reason: data.error || "Delivery request failed" }, updatedAt: FieldValue.serverTimestamp() });
   }
+  });
 });
 
 // --- Templates -------------------------------------------------------------

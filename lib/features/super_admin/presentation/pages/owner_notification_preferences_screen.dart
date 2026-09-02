@@ -11,18 +11,24 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification_preferences.dart';
 
-/// Delivery-channel and scheduling preferences for the SaaS Owner.
+/// Delivery-channel, category and scheduling preferences for the SaaS
+/// Owner.
 ///
-/// All toggles persist immediately to `super_admin_settings/{ownerId}` via
-/// [OwnerNotificationService.savePreferences] and reload from the same
-/// document, so a value never appears to "revert" after leaving the screen.
+/// All reads and writes go through the owner-only preference callables
+/// (`getOwnerNotificationPreferences` / `updateOwnerNotificationPreferences`)
+/// via [OwnerNotificationService] - never a direct Firestore write. The
+/// backing document is Admin-SDK-only, so this screen is pull-based: it
+/// loads once, and re-applies the server's sanitised result after every
+/// successful save so a value never appears to "revert".
 ///
 /// Critical categories (security, payment failure, platform outage) are
 /// never offered as switches here - [OwnerNotificationPreferences] has no
-/// field that could gate them, so there is nothing for this screen's
-/// persistence logic to accidentally disable.
+/// field that could gate them.
 class OwnerNotificationPreferencesScreen extends StatefulWidget {
-  const OwnerNotificationPreferencesScreen({super.key});
+  const OwnerNotificationPreferencesScreen({super.key, this.service});
+
+  /// Injectable for tests; production uses the default [OwnerNotificationService].
+  final OwnerNotificationService? service;
 
   @override
   State<OwnerNotificationPreferencesScreen> createState() =>
@@ -31,16 +37,48 @@ class OwnerNotificationPreferencesScreen extends StatefulWidget {
 
 class _OwnerNotificationPreferencesScreenState
     extends State<OwnerNotificationPreferencesScreen> {
-  final OwnerNotificationService _service = OwnerNotificationService();
+  late final OwnerNotificationService _service =
+      widget.service ?? OwnerNotificationService();
+
+  bool _loading = true;
   bool _saving = false;
+  String? _error;
+  OwnerNotificationPreferences? _prefs;
 
   String? get _ownerId => _service.currentOwnerId;
 
-  /// Toggling Push on is the one explicit user action that's allowed to
-  /// trigger the browser's notification-permission prompt on web (per the
-  /// "never request at startup" requirement). If the owner declines, the
-  /// preference is left off so the UI doesn't claim push is enabled when
-  /// the browser will never actually deliver it.
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final ownerId = _ownerId;
+    if (ownerId == null) {
+      setState(() => _loading = false);
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final prefs = await _service.getPreferences(ownerId);
+      if (!mounted) return;
+      setState(() {
+        _prefs = prefs;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = _friendlyError(error);
+      });
+    }
+  }
+
   Future<void> _togglePush(
     OwnerNotificationPreferences prefs,
     bool value,
@@ -65,15 +103,23 @@ class _OwnerNotificationPreferencesScreenState
   }
 
   Future<void> _save(OwnerNotificationPreferences updated) async {
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      // Optimistic: reflect the change immediately, reconcile with the
+      // server's sanitised copy when the callable returns.
+      _prefs = updated;
+    });
     try {
-      await _service.savePreferences(updated);
+      final saved = await _service.savePreferences(updated);
+      if (mounted) setState(() => _prefs = saved);
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(_friendlyError(error))));
       }
+      // Roll back to the server's truth on failure.
+      await _load();
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -87,11 +133,14 @@ class _OwnerNotificationPreferencesScreenState
     if (value.contains('unauthenticated')) {
       return 'Your owner session expired. Sign in again.';
     }
+    if (value.contains('not-found')) {
+      return 'The notification backend has not been deployed yet.';
+    }
     return 'Could not save your changes. Please try again.';
   }
 
   Future<void> _pickQuietHours(OwnerNotificationPreferences prefs) async {
-    if (prefs.quietHoursConfigured) {
+    if (prefs.quietHoursEnabled) {
       final choice = await showModalBottomSheet<String>(
         context: context,
         showDragHandle: true,
@@ -112,7 +161,7 @@ class _OwnerNotificationPreferencesScreenState
         ),
       );
       if (choice == 'off') {
-        await _save(prefs.copyWith(clearQuietHours: true));
+        await _save(prefs.copyWith(quietHoursEnabled: false));
         return;
       }
       if (choice != 'change') return;
@@ -121,20 +170,25 @@ class _OwnerNotificationPreferencesScreenState
     if (!mounted) return;
     final start = await showTimePicker(
       context: context,
-      initialTime:
-          prefs.quietHoursStart ?? const TimeOfDay(hour: 21, minute: 0),
+      initialTime: prefs.quietHoursStart,
       helpText: 'Quiet hours start',
     );
     if (start == null || !mounted) return;
 
     final end = await showTimePicker(
       context: context,
-      initialTime: prefs.quietHoursEnd ?? const TimeOfDay(hour: 6, minute: 0),
+      initialTime: prefs.quietHoursEnd,
       helpText: 'Quiet hours end',
     );
     if (end == null) return;
 
-    await _save(prefs.copyWith(quietHoursStart: start, quietHoursEnd: end));
+    await _save(
+      prefs.copyWith(
+        quietHoursEnabled: true,
+        quietHoursStart: start,
+        quietHoursEnd: end,
+      ),
+    );
   }
 
   Future<void> _pickFrequency(OwnerNotificationPreferences prefs) async {
@@ -158,7 +212,7 @@ class _OwnerNotificationPreferencesScreenState
             for (final option in OwnerNotificationFrequency.values)
               ListTile(
                 title: Text(_frequencyLabel(option)),
-                subtitle: Text(_frequencyDescription(option)),
+                subtitle: Text(_frequencyDescription(option, prefs)),
                 trailing: option == prefs.frequency
                     ? Icon(
                         Icons.check_circle_rounded,
@@ -178,21 +232,23 @@ class _OwnerNotificationPreferencesScreenState
     switch (f) {
       case OwnerNotificationFrequency.realtime:
         return 'Real-time';
-      case OwnerNotificationFrequency.hourlyDigest:
-        return 'Hourly digest';
       case OwnerNotificationFrequency.dailyDigest:
         return 'Daily digest';
     }
   }
 
-  static String _frequencyDescription(OwnerNotificationFrequency f) {
+  static String _frequencyDescription(
+    OwnerNotificationFrequency f,
+    OwnerNotificationPreferences prefs,
+  ) {
     switch (f) {
       case OwnerNotificationFrequency.realtime:
         return 'Deliver alerts as they happen';
-      case OwnerNotificationFrequency.hourlyDigest:
-        return 'Bundle non-critical alerts into one delivery per hour';
       case OwnerNotificationFrequency.dailyDigest:
-        return 'Bundle non-critical alerts into one delivery per day';
+        return prefs.dailyDigestDelivered
+            ? 'Bundle non-critical alerts into one delivery per day'
+            : 'Saved as your preference; delivered in real time until digest '
+                  'sending is switched on';
     }
   }
 
@@ -225,19 +281,11 @@ class _OwnerNotificationPreferencesScreenState
       ),
       body: ownerId == null
           ? const Center(child: Text('Sign in to manage notifications'))
-          : StreamBuilder<OwnerNotificationPreferences>(
-              stream: _service.watchPreferences(ownerId),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting &&
-                    !snapshot.hasData) {
-                  return const Center(child: SchoolPulseLoader());
-                }
-                final prefs =
-                    snapshot.data ??
-                    OwnerNotificationPreferences.defaults(ownerId);
-                return _body(context, prefs);
-              },
-            ),
+          : _loading
+          ? const Center(child: SchoolPulseLoader())
+          : _error != null
+          ? _ErrorState(message: _error!, onRetry: _load)
+          : _body(context, _prefs ?? OwnerNotificationPreferences.defaults(ownerId)),
     );
   }
 
@@ -256,9 +304,10 @@ class _OwnerNotificationPreferencesScreenState
           context,
           icon: Icons.smartphone_outlined,
           title: 'In-App',
-          subtitle: 'Show alerts in the owner notification center',
-          value: prefs.inAppEnabled,
-          onChanged: (value) => _save(prefs.copyWith(inAppEnabled: value)),
+          subtitle: 'Always on – the owner notification centre is the '
+              'durable record and is never silenced',
+          value: true,
+          onChanged: null,
         ),
         _channelTile(
           context,
@@ -290,6 +339,46 @@ class _OwnerNotificationPreferencesScreenState
         ),
         const SizedBox(height: AppSpacing.x2l),
         Text(
+          'Categories',
+          style: AppTypography.titleMedium.copyWith(
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.m),
+        _channelTile(
+          context,
+          icon: Icons.school_outlined,
+          title: 'School applications',
+          subtitle: 'New schools applying to join the platform',
+          value: prefs.schoolApplicationAlerts,
+          onChanged: (v) => _save(prefs.copyWith(schoolApplicationAlerts: v)),
+        ),
+        _channelTile(
+          context,
+          icon: Icons.payments_outlined,
+          title: 'Payments',
+          subtitle: 'Manual subscription payments awaiting verification',
+          value: prefs.paymentAlerts,
+          onChanged: (v) => _save(prefs.copyWith(paymentAlerts: v)),
+        ),
+        _channelTile(
+          context,
+          icon: Icons.receipt_long_outlined,
+          title: 'Billing',
+          subtitle: 'Renewals, plan changes and billing events',
+          value: prefs.billingAlerts,
+          onChanged: (v) => _save(prefs.copyWith(billingAlerts: v)),
+        ),
+        _channelTile(
+          context,
+          icon: Icons.insights_outlined,
+          title: 'Platform activity',
+          subtitle: 'Other non-critical platform events',
+          value: prefs.platformActivityAlerts,
+          onChanged: (v) => _save(prefs.copyWith(platformActivityAlerts: v)),
+        ),
+        const SizedBox(height: AppSpacing.x2l),
+        Text(
           'Scheduling',
           style: AppTypography.titleMedium.copyWith(
             color: AppColors.textPrimary(context),
@@ -300,8 +389,8 @@ class _OwnerNotificationPreferencesScreenState
           context,
           icon: Icons.bedtime_outlined,
           title: 'Quiet Hours',
-          value: prefs.quietHoursConfigured
-              ? '${_formatTime(prefs.quietHoursStart!)} – ${_formatTime(prefs.quietHoursEnd!)}'
+          value: prefs.quietHoursEnabled
+              ? '${_formatTime(prefs.quietHoursStart)} – ${_formatTime(prefs.quietHoursEnd)}'
               : 'Off',
           onTap: () => _pickQuietHours(prefs),
         ),
@@ -322,7 +411,7 @@ class _OwnerNotificationPreferencesScreenState
     required String title,
     required String subtitle,
     required bool value,
-    required ValueChanged<bool> onChanged,
+    required ValueChanged<bool>? onChanged,
   }) {
     return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
@@ -356,7 +445,10 @@ class _OwnerNotificationPreferencesScreenState
               ],
             ),
           ),
-          Switch(value: value, onChanged: _saving ? null : onChanged),
+          Switch(
+            value: value,
+            onChanged: (_saving || onChanged == null) ? null : onChanged,
+          ),
         ],
       ),
     );
@@ -399,6 +491,38 @@ class _OwnerNotificationPreferencesScreenState
           const SizedBox(width: 6),
           const Icon(Icons.chevron_right_rounded),
         ],
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: 42,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton.tonal(
+              onPressed: onRetry,
+              child: const Text('Try Again'),
+            ),
+          ],
+        ),
       ),
     );
   }

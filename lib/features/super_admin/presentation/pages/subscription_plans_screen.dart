@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/components/pulse_logo.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -50,9 +49,9 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
   }
 
   Future<void> _openEdit(SubscriptionPlan plan) async {
-    final updated = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => PlanEditorPage(plan: plan)),
-    );
+    final updated = await Navigator.of(
+      context,
+    ).push<bool>(MaterialPageRoute(builder: (_) => PlanEditorPage(plan: plan)));
     if (updated == true && mounted) {
       context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
     }
@@ -80,13 +79,7 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
     return Scaffold(
       appBar: AppBar(
         leadingWidth: isWide ? null : 44,
-        title: isWide
-            ? const Text('Manage plans')
-            : const PulseLogo(
-                variant: PulseLogoVariant.header,
-                width: 132,
-                height: 32,
-              ),
+        title: isWide ? const Text('Manage plans') : null,
         actions: [
           IconButton(
             tooltip: 'Refresh plans',
@@ -292,7 +285,8 @@ class _FilterMenu extends StatelessWidget {
       onSelected: onChanged,
       itemBuilder: (context) => _PlanStatusFilter.values
           .map(
-            (filter) => PopupMenuItem(value: filter, child: Text(_label(filter))),
+            (filter) =>
+                PopupMenuItem(value: filter, child: Text(_label(filter))),
           )
           .toList(),
       child: Container(

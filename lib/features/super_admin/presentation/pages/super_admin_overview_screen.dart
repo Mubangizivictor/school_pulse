@@ -6,9 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:school_pulse/design_system/components/pulse_card.dart';
-import 'package:school_pulse/design_system/components/pulse_logo.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/platform_health/data/platform_health_repository.dart';
+import 'package:school_pulse/features/platform_health/domain/platform_health_models.dart';
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/audit_log.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification.dart';
@@ -113,7 +114,7 @@ class _OverviewBody extends StatelessWidget {
       children: [
         const _CompactTopBar(),
         const SizedBox(height: 18),
-        _PlatformHealthCard(hasError: state.status == SuperAdminStatus.failure),
+        const _PlatformHealthCard(),
         const SizedBox(height: 16),
         if (state.status == SuperAdminStatus.loading)
           const _MetricLoading()
@@ -153,64 +154,85 @@ class _OverviewBody extends StatelessWidget {
   }
 }
 
-/// Reflects whether the dashboard was able to load platform data — there is
-/// no separate infra-health signal in the current backend, so this honestly
-/// represents data-load status rather than inventing a service-health metric.
-class _PlatformHealthCard extends StatelessWidget {
-  const _PlatformHealthCard({required this.hasError});
-  final bool hasError;
+/// Real Platform Health signal, streamed from platform_health/current (the
+/// checkPlatformHealth Cloud Function's cached aggregate) via
+/// PlatformHealthRepository — never derived from whether this screen's own
+/// Firestore reads happened to succeed. A missing aggregate (no check has
+/// run yet) shows a neutral "checking" state, never a false-positive
+/// "All systems operational".
+class _PlatformHealthCard extends StatefulWidget {
+  const _PlatformHealthCard();
   @override
-  Widget build(BuildContext context) {
-    final color = hasError
-        ? AppColors.danger(context)
-        : AppColors.success(context);
-    return PulseCard(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  hasError ? 'Platform data unavailable' : 'Platform healthy',
-                  style: _section(context),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  hasError
-                      ? 'Could not load latest data'
-                      : 'All systems operational',
-                  style: _body(context),
-                ),
-              ],
+  State<_PlatformHealthCard> createState() => _PlatformHealthCardState();
+}
+
+class _PlatformHealthCardState extends State<_PlatformHealthCard> {
+  final PlatformHealthRepository _repo = PlatformHealthRepository();
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<PlatformHealthSummary?>(
+    stream: _repo.watchCurrent(),
+    builder: (context, snapshot) {
+      final summary = snapshot.data;
+      final color = _colorFor(context, summary?.status);
+      final healthy = summary?.status == PlatformHealthStatus.operational;
+      return PulseCard(
+        onTap: () => context.go('/super-admin/platform-health'),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
-          ),
-          TextButton(
-            onPressed: () => context.go('/super-admin/audit-logs'),
-            style: TextButton.styleFrom(
-              minimumSize: Size.zero,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    summary == null
+                        ? 'Checking platform status…'
+                        : healthy
+                        ? 'Platform healthy'
+                        : 'Attention needed',
+                    style: _section(context),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    summary == null
+                        ? 'No health check has run yet'
+                        : summary.summary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: _body(context),
+                  ),
+                ],
+              ),
             ),
-            child: const Row(
+            const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Live status'),
                 Icon(Icons.chevron_right_rounded, size: 18),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      );
+    },
+  );
+
+  Color _colorFor(BuildContext context, PlatformHealthStatus? status) =>
+      switch (status) {
+        PlatformHealthStatus.operational => AppColors.success(context),
+        PlatformHealthStatus.degraded => AppColors.warning(context),
+        PlatformHealthStatus.outage => AppColors.danger(context),
+        PlatformHealthStatus.unknown => AppColors.textMuted(context),
+        PlatformHealthStatus.notConfigured => AppColors.textMuted(context),
+        null => AppColors.textMuted(context),
+      };
 }
 
 class _CompactTopBar extends StatelessWidget {
@@ -222,11 +244,12 @@ class _CompactTopBar extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) => Row(
           children: [
-            PulseLogo(
-              variant: PulseLogoVariant.full,
-              width: constraints.maxWidth < 350 ? 118 : 138,
-              height: constraints.maxWidth < 350 ? 34 : 40,
-              fit: BoxFit.fill,
+            Text(
+              'School Pulse Admin',
+              style: AppTypography.titleMedium.copyWith(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const Spacer(),
             _NotificationsButton(),

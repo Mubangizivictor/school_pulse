@@ -1,63 +1,86 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/owner_notification_preferences.dart';
 
-/// Firestore serialisation for [OwnerNotificationPreferences].
+/// Serialisation between [OwnerNotificationPreferences] and the payload
+/// shape of the owner-preferences callables in
+/// `public_functions/owner_notification_preferences.js`.
 ///
-/// Stored at `super_admin_settings/{ownerId}` under a `notification_preferences`
-/// map field, alongside other owner-scoped settings documents (matches the
-/// naming convention already used for `super_admin_audit_logs` and
-/// `super_admin_notifications`). Quiet hours are stored as `"HH:mm"` strings,
-/// same rationale as [NotificationPreferencesMapper]: a wall-clock concept
-/// that must not shift with timezone.
+/// The callable is the single source of truth for storage
+/// (`platform_owner_settings/{ownerId}`, Admin-SDK-only). The client never
+/// reads or writes that document directly, so there is no Firestore
+/// serialisation here any more - only callable payload <-> entity.
 class OwnerNotificationPreferencesMapper {
   const OwnerNotificationPreferencesMapper._();
 
-  static const fieldName = 'notification_preferences';
-
-  static OwnerNotificationPreferences fromFirestore(
-    Map<String, dynamic>? data,
+  /// Builds an [OwnerNotificationPreferences] from the
+  /// `notificationPreferences` map returned by `getOwnerNotificationPreferences`
+  /// / `updateOwnerNotificationPreferences`.
+  static OwnerNotificationPreferences fromCallable(
+    Map<String, dynamic> data,
     String ownerId,
   ) {
-    if (data == null) return OwnerNotificationPreferences.defaults(ownerId);
+    final categories = data['categories'] is Map
+        ? Map<String, dynamic>.from(data['categories'] as Map)
+        : const <String, dynamic>{};
+    final quiet = data['quietHours'] is Map
+        ? Map<String, dynamic>.from(data['quietHours'] as Map)
+        : const <String, dynamic>{};
+
     return OwnerNotificationPreferences(
       ownerId: ownerId,
-      inAppEnabled: data['inAppEnabled'] as bool? ?? true,
       pushEnabled: data['pushEnabled'] as bool? ?? true,
       emailEnabled: data['emailEnabled'] as bool? ?? true,
-      billingAlerts: data['billingAlerts'] as bool? ?? true,
-      schoolApplicationAlerts: data['schoolApplicationAlerts'] as bool? ?? true,
-      paymentAlerts: data['paymentAlerts'] as bool? ?? true,
-      platformActivityAlerts: data['platformActivityAlerts'] as bool? ?? true,
-      quietHoursStart: _timeFrom(data['quietHoursStart']),
-      quietHoursEnd: _timeFrom(data['quietHoursEnd']),
-      frequency: _frequencyFromName(data['frequency'] as String?),
-      updatedAt: _dateFrom(data['updatedAt']),
+      billingAlerts: categories['billing'] as bool? ?? true,
+      schoolApplicationAlerts:
+          categories['schoolApplications'] as bool? ?? true,
+      paymentAlerts: categories['payments'] as bool? ?? true,
+      platformActivityAlerts:
+          categories['platformActivity'] as bool? ?? true,
+      quietHoursEnabled: quiet['enabled'] as bool? ?? false,
+      quietHoursStart:
+          _timeFrom(quiet['start']) ?? const TimeOfDay(hour: 22, minute: 0),
+      quietHoursEnd:
+          _timeFrom(quiet['end']) ?? const TimeOfDay(hour: 7, minute: 0),
+      frequency: OwnerNotificationFrequency.fromWire(
+        data['frequency'] as String?,
+      ),
+      dailyDigestDelivered: _digestDelivered(data),
     );
   }
 
-  static Map<String, dynamic> toFirestore(OwnerNotificationPreferences p) {
+  /// The map the client sends as `notificationPreferences` to
+  /// `updateOwnerNotificationPreferences`. The callable sanitises every
+  /// field server-side; this just mirrors the accepted shape.
+  static Map<String, dynamic> toCallablePayload(
+    OwnerNotificationPreferences p,
+  ) {
     return {
-      'inAppEnabled': p.inAppEnabled,
       'pushEnabled': p.pushEnabled,
       'emailEnabled': p.emailEnabled,
-      'billingAlerts': p.billingAlerts,
-      'schoolApplicationAlerts': p.schoolApplicationAlerts,
-      'paymentAlerts': p.paymentAlerts,
-      'platformActivityAlerts': p.platformActivityAlerts,
-      // Explicitly deleted rather than omitted so clearing quiet hours
-      // actually removes them server-side instead of a merge write
-      // preserving the stale value.
-      'quietHoursStart': p.quietHoursStart == null
-          ? FieldValue.delete()
-          : _timeToString(p.quietHoursStart!),
-      'quietHoursEnd': p.quietHoursEnd == null
-          ? FieldValue.delete()
-          : _timeToString(p.quietHoursEnd!),
-      'frequency': p.frequency.name,
-      'updatedAt': FieldValue.serverTimestamp(),
+      'categories': {
+        'billing': p.billingAlerts,
+        'schoolApplications': p.schoolApplicationAlerts,
+        'payments': p.paymentAlerts,
+        'platformActivity': p.platformActivityAlerts,
+      },
+      'quietHours': {
+        'enabled': p.quietHoursEnabled,
+        'start': _timeToString(p.quietHoursStart),
+        'end': _timeToString(p.quietHoursEnd),
+      },
+      'frequency': p.frequency.wire,
     };
+  }
+
+  static bool _digestDelivered(Map<String, dynamic> data) {
+    // The get callable nests this under `capabilities`; the update callable
+    // does not return it, so default to the entity's existing value there.
+    final caps = data['capabilities'];
+    if (caps is Map && caps['dailyDigestDeliveryImplemented'] is bool) {
+      return caps['dailyDigestDeliveryImplemented'] as bool;
+    }
+    return false;
   }
 
   static TimeOfDay? _timeFrom(dynamic value) {
@@ -74,19 +97,4 @@ class OwnerNotificationPreferencesMapper {
   static String _timeToString(TimeOfDay time) =>
       '${time.hour.toString().padLeft(2, '0')}:'
       '${time.minute.toString().padLeft(2, '0')}';
-
-  static OwnerNotificationFrequency _frequencyFromName(String? name) {
-    for (final value in OwnerNotificationFrequency.values) {
-      if (value.name == name) return value;
-    }
-    return OwnerNotificationFrequency.realtime;
-  }
-
-  static DateTime? _dateFrom(dynamic value) {
-    if (value == null) return null;
-    if (value is Timestamp) return value.toDate();
-    if (value is DateTime) return value;
-    if (value is String) return DateTime.tryParse(value);
-    return null;
-  }
 }

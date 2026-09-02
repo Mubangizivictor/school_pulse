@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -14,16 +16,19 @@ import '../responsive.dart';
 import 'payment_review_screen.dart';
 import 'school_management_screen.dart';
 
-/// SaaS Owner "Notifications" overview: recent alerts from the realtime feed
-/// front and center, with a settings action in the app bar for channel and
-/// scheduling preferences.
+/// SaaS Owner "Notifications" overview.
 ///
-/// New school applications and payment proofs are written by the Cloud
-/// notification engine to `super_admin_notifications`. Push/email delivery is
-/// secondary: this feed remains the durable source of truth even if an
-/// external channel is unavailable.
+/// The feed streams from `super_admin_notifications` (owner-scoped by an
+/// `ownerId` field the Firestore rule enforces). Every mutation - mark one
+/// read, mark all read, delete one, clear all - goes through the owner-only
+/// callables in [OwnerNotificationService], never a direct Firestore write.
+/// The unread count in the header and the top-bar bell both derive from the
+/// same live stream, so they update the instant a callable resolves.
 class SuperAdminNotificationsScreen extends StatefulWidget {
-  const SuperAdminNotificationsScreen({super.key});
+  const SuperAdminNotificationsScreen({super.key, this.service});
+
+  /// Injectable for tests; production uses the default [OwnerNotificationService].
+  final OwnerNotificationService? service;
 
   @override
   State<SuperAdminNotificationsScreen> createState() =>
@@ -32,7 +37,8 @@ class SuperAdminNotificationsScreen extends StatefulWidget {
 
 class _SuperAdminNotificationsScreenState
     extends State<SuperAdminNotificationsScreen> {
-  final OwnerNotificationService _notifications = OwnerNotificationService();
+  late final OwnerNotificationService _notifications =
+      widget.service ?? OwnerNotificationService();
   final ManualPaymentService _payments = ManualPaymentService();
   final NumberFormat _money = NumberFormat.currency(
     symbol: 'UGX ',
@@ -41,10 +47,50 @@ class _SuperAdminNotificationsScreenState
   final DateFormat _dateTime = DateFormat('MMM d, yyyy • h:mm a');
 
   String? _openingNotificationId;
+  bool _busy = false;
+  int _pendingOffline = 0;
 
   String? get _ownerId => _notifications.currentOwnerId;
 
+  @override
+  void initState() {
+    super.initState();
+    _refreshPending();
+    // Best-effort: replay any actions queued from a previous offline session.
+    _notifications.syncPending().then((_) => _refreshPending());
+  }
+
+  Future<void> _refreshPending() async {
+    final count = await _notifications.pendingActionCount();
+    if (mounted && count != _pendingOffline) {
+      setState(() => _pendingOffline = count);
+    }
+  }
+
+  Future<void> _refresh() async {
+    if (_busy) return;
+    // The feed is already a live, owner-scoped stream. Replaying approved
+    // offline actions and rebuilding the subscription is its real refresh;
+    // no duplicate direct Firestore read is introduced here.
+    setState(() => _busy = true);
+    try {
+      await _notifications.syncPending();
+      await _refreshPending();
+      if (mounted) setState(() {});
+    } catch (error) {
+      if (mounted) _showSnack(_friendlyError(error), isError: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _openNotification(OwnerNotification notification) async {
+    // Opening a notification also clears its unread state - matches the
+    // behaviour of every other notification surface in the app.
+    if (notification.isUnread) {
+      unawaited(_notifications.markRead(notification.id));
+    }
+
     if (notification.isApplication) {
       await Navigator.of(
         context,
@@ -75,6 +121,63 @@ class _SuperAdminNotificationsScreenState
     }
   }
 
+  Future<void> _markRead(OwnerNotification notification) async {
+    await _run(() => _notifications.markRead(notification.id));
+  }
+
+  Future<void> _markAllRead() async {
+    await _run(() async {
+      final n = await _notifications.markAllRead();
+      if (mounted) {
+        _showSnack(n == 0 ? 'Nothing to mark' : 'Marked $n as read');
+      }
+    });
+  }
+
+  Future<void> _delete(OwnerNotification notification) async {
+    final confirmed = await confirmActionDialog(
+      context,
+      title: 'Delete this notification?',
+      message:
+          'It is removed from your feed only. The underlying school '
+          'application or payment record is untouched.',
+      confirmLabel: 'Delete',
+      isDestructive: true,
+    );
+    if (confirmed != true) return;
+    await _run(() => _notifications.deleteNotification(notification.id));
+  }
+
+  Future<void> _clearAll() async {
+    final confirmed = await confirmActionDialog(
+      context,
+      title: 'Clear all notifications?',
+      message:
+          'Every notification in your feed is permanently removed. This '
+          'cannot be undone. Underlying records are untouched.',
+      confirmLabel: 'Clear all',
+      isDestructive: true,
+    );
+    if (confirmed != true) return;
+    await _run(() async {
+      final n = await _notifications.clearAll();
+      if (mounted) _showSnack('Cleared $n notification${n == 1 ? '' : 's'}');
+    });
+  }
+
+  Future<void> _run(Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+    } catch (error) {
+      if (mounted) _showSnack(_friendlyError(error), isError: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+      await _refreshPending();
+    }
+  }
+
   void _showSnack(String text, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -95,6 +198,10 @@ class _SuperAdminNotificationsScreenState
     if (value.contains('not-found')) {
       return 'The notification backend has not been deployed yet.';
     }
+    if (value.contains('unavailable') || value.contains('network')) {
+      return 'You appear to be offline. This action will not apply until '
+          'you reconnect.';
+    }
     return value.replaceFirst(RegExp(r'^Exception:\s*'), '');
   }
 
@@ -106,12 +213,6 @@ class _SuperAdminNotificationsScreenState
   Widget build(BuildContext context) {
     final ownerId = _ownerId;
     final wide = isSuperAdminWide(context);
-    // As a sidebar destination (desktop, root of its own nested Navigator)
-    // there is nothing to pop back to, and the persistent SuperAdminTopBar
-    // already sits above this content, so the flat in-page header below is
-    // used instead of a redundant AppBar. When pushed on top of another
-    // screen (e.g. from the top bar bell or the mobile overview header) it
-    // keeps its own AppBar with a back button.
     final showAppBar = !wide || Navigator.canPop(context);
     return Scaffold(
       appBar: showAppBar
@@ -144,18 +245,22 @@ class _SuperAdminNotificationsScreenState
 
                 final items = snapshot.data ?? const <OwnerNotification>[];
 
-                final list = ListView(
-                  padding: EdgeInsets.fromLTRB(
-                    wide ? AppSpacing.x2l : AppSpacing.xl,
-                    AppSpacing.xl,
-                    wide ? AppSpacing.x2l : AppSpacing.xl,
-                    AppSpacing.x3l,
+                final list = RefreshIndicator(
+                  onRefresh: _refresh,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      wide ? AppSpacing.x2l : AppSpacing.xl,
+                      AppSpacing.xl,
+                      wide ? AppSpacing.x2l : AppSpacing.xl,
+                      AppSpacing.x3l,
+                    ),
+                    children: [
+                      _header(context, items, showSettingsButton: !showAppBar),
+                      const SizedBox(height: AppSpacing.xl),
+                      _recentSection(context, items),
+                    ],
                   ),
-                  children: [
-                    _header(context, items, showSettingsButton: !showAppBar),
-                    const SizedBox(height: AppSpacing.xl),
-                    _recentSection(context, items),
-                  ],
                 );
                 if (!wide) return list;
                 return Align(
@@ -190,6 +295,34 @@ class _SuperAdminNotificationsScreenState
           StatusBadge(label: '$unread new', color: AppColors.warning(context)),
           const SizedBox(width: AppSpacing.s),
         ],
+        if (items.isNotEmpty)
+          PopupMenuButton<String>(
+            enabled: !_busy,
+            tooltip: 'Notification actions',
+            icon: _busy
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.more_horiz_rounded),
+            onSelected: (value) {
+              switch (value) {
+                case 'mark_all':
+                  _markAllRead();
+                case 'clear_all':
+                  _clearAll();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'mark_all',
+                enabled: unread > 0,
+                child: const Text('Mark all as read'),
+              ),
+              const PopupMenuItem(value: 'clear_all', child: Text('Clear all')),
+            ],
+          ),
         if (showSettingsButton)
           IconButton(
             tooltip: 'Notification settings',
@@ -222,7 +355,12 @@ class _SuperAdminNotificationsScreenState
                     : null,
                 createdAt: _dateTime.format(notification.createdAt),
                 isOpening: _openingNotificationId == notification.id,
+                busy: _busy,
                 onTap: () => _openNotification(notification),
+                onMarkRead: notification.isUnread
+                    ? () => _markRead(notification)
+                    : null,
+                onDelete: () => _delete(notification),
               ),
             ),
           ),
@@ -237,14 +375,20 @@ class _NotificationCard extends StatelessWidget {
     required this.amount,
     required this.createdAt,
     required this.isOpening,
+    required this.busy,
     required this.onTap,
+    required this.onMarkRead,
+    required this.onDelete,
   });
 
   final OwnerNotification notification;
   final String? amount;
   final String createdAt;
   final bool isOpening;
+  final bool busy;
   final VoidCallback onTap;
+  final VoidCallback? onMarkRead;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -286,7 +430,11 @@ class _NotificationCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     StatusBadge(
-                      label: notification.isUnread ? 'New' : 'Resolved',
+                      label: notification.displayStatus == 'NEW'
+                          ? 'New'
+                          : notification.displayStatus == 'RESOLVED'
+                          ? 'Resolved'
+                          : 'Read',
                       color: notification.isUnread
                           ? AppColors.warning(context)
                           : AppColors.textSecondary(context),
@@ -337,14 +485,31 @@ class _NotificationCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          isOpening
-              ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.chevron_right_rounded),
+          const SizedBox(width: 4),
+          if (isOpening)
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            PopupMenuButton<String>(
+              enabled: !busy,
+              tooltip: 'Actions',
+              icon: const Icon(Icons.more_vert_rounded),
+              onSelected: (value) {
+                if (value == 'read') onMarkRead?.call();
+                if (value == 'delete') onDelete();
+              },
+              itemBuilder: (context) => [
+                if (onMarkRead != null)
+                  const PopupMenuItem(
+                    value: 'read',
+                    child: Text('Mark as read'),
+                  ),
+                const PopupMenuItem(value: 'delete', child: Text('Delete')),
+              ],
+            ),
         ],
       ),
     );

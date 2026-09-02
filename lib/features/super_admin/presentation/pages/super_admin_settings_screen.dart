@@ -73,6 +73,13 @@ class SuperAdminSettingsScreen extends StatelessWidget {
       ),
       PlatformSettingsRow(
         standalone: standalone,
+        icon: Icons.dns_outlined,
+        title: 'Custom domains',
+        subtitle: 'Verify and activate schools\' custom portal hostnames',
+        onTap: () => context.push('/super-admin/settings/custom-domains'),
+      ),
+      PlatformSettingsRow(
+        standalone: standalone,
         icon: Icons.assignment_outlined,
         title: 'Platform audit logs',
         subtitle: 'View system-wide audit logs and activity',

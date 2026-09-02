@@ -26,6 +26,7 @@ module.exports = ({ admin, onCall, HttpsError, onSchedule }) => {
   const FieldValue = admin.firestore.FieldValue;
   const Timestamp = admin.firestore.Timestamp;
   const { enqueueNotification: sharedEnqueueNotification } = require("./notification_helpers")({ admin });
+  const { recordJobRun } = require("./platform_health_instrumentation")({ admin });
 
   const BURSAR_ROLES = ["bursar", "director", "schoolAdmin"];
   const DEFAULT_APPROVER_ROLES = ["headTeacher", "director"];
@@ -1470,6 +1471,7 @@ module.exports = ({ admin, onCall, HttpsError, onSchedule }) => {
     api.expireLapsedReportCardExceptions = onSchedule(
       "every 6 hours",
       async () => {
+        await recordJobRun("expireLapsedReportCardExceptions", 360, async () => {
         const now = nowTs();
         // listDocuments() (not get()) so a school whose top-level doc has no
         // fields - only subcollections - is still swept.
@@ -1529,6 +1531,7 @@ module.exports = ({ admin, onCall, HttpsError, onSchedule }) => {
             });
           }
         }
+        });
       },
     );
   }

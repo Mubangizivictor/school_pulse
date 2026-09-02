@@ -19,6 +19,7 @@ import 'billing_page.dart';
 import 'manual_payment_config_screen.dart';
 import 'payment_review_screen.dart';
 import 'subscription_plans_screen.dart';
+import 'subscriptions_overview_screen.dart';
 
 enum _Period { today, thisWeek, thisMonth, thisYear, all }
 
@@ -327,6 +328,12 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
         onTap: () => _openPlans(context),
       ),
       _ActionCard(
+        icon: Icons.workspace_premium_outlined,
+        title: 'Subscriptions',
+        subtitle: 'Every school\'s standing',
+        onTap: () => _openSubscriptions(context),
+      ),
+      _ActionCard(
         icon: Icons.credit_card_outlined,
         title: 'Payment methods',
         subtitle: 'Manage bank & mobile',
@@ -374,6 +381,12 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
   void _openPaymentMethods(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const ManualPaymentConfigScreen()),
+    );
+  }
+
+  void _openSubscriptions(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SubscriptionsOverviewScreen()),
     );
   }
 }

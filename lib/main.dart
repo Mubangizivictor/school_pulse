@@ -164,7 +164,9 @@ void main() async {
       const Duration(seconds: 2),
       onTimeout: () {
         if (kDebugMode) {
-          debugPrint('NotificationService.initialize timed out; continuing startup');
+          debugPrint(
+            'NotificationService.initialize timed out; continuing startup',
+          );
         }
       },
     );
@@ -288,8 +290,25 @@ class SchoolPulseApp extends StatelessWidget {
   }
 }
 
-class SchoolPulseAppView extends StatelessWidget {
+class SchoolPulseAppView extends StatefulWidget {
   const SchoolPulseAppView({super.key});
+
+  @override
+  State<SchoolPulseAppView> createState() => _SchoolPulseAppViewState();
+}
+
+class _SchoolPulseAppViewState extends State<SchoolPulseAppView> {
+  @override
+  void initState() {
+    super.initState();
+    // On web a direct, restored route (such as /super-admin) can bypass the
+    // route-level splash hand-off. Remove the generated native splash after
+    // Flutter's first frame as a safety net, so a successful app boot can
+    // never remain hidden behind the logo indefinitely.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FlutterNativeSplash.remove();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

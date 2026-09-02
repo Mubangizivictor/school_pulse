@@ -109,6 +109,10 @@ class OwnerSessionCubit extends Cubit<OwnerSessionState> {
   }
 
   Future<void> removeSession(String deviceId) {
-    return dataSource.removeSession(ownerId: ownerId, deviceId: deviceId);
+    return dataSource.removeSession(
+      ownerId: ownerId,
+      deviceId: deviceId,
+      currentDeviceId: state.currentDeviceId,
+    );
   }
 }

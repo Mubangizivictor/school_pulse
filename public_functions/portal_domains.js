@@ -98,6 +98,65 @@ exports.updateSchoolSubscriptionPlan = onCall({ region: 'europe-west1' }, async 
 });
 exports.requestCustomPortalDomain = onCall({ region: 'europe-west1' }, async r => { const actor = await schoolAdmin(r), host = clean(r.data?.hostname); if (!validHost(host)) throw new HttpsError('invalid-argument', 'Enter a valid custom hostname.'); const ref = db.doc(`portal_domain_requests/${host}`); await db.runTransaction(async tx => { const old = await tx.get(ref); if (old.exists && old.data().schoolId !== actor.schoolId) throw new HttpsError('already-exists', 'This domain is already requested.'); tx.set(ref, { hostname: host, schoolId: actor.schoolId, status: 'pending', cnameTarget: TARGET, requestedBy: actor.uid, requestedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true }); }); return { hostname: host, cnameTarget: TARGET, status: 'pending' }; });
 exports.verifyAndActivateCustomPortalDomain = onCall({ region: 'europe-west1' }, async r => { const actor = await owner(r), host = clean(r.data?.hostname); if (!validHost(host)) throw new HttpsError('invalid-argument', 'Invalid hostname.'); const ref = db.doc(`portal_domain_requests/${host}`), request = await ref.get(); if (!request.exists) throw new HttpsError('not-found', 'Domain request not found.'); let cnames = []; try { cnames = await dns.resolveCname(host); } catch (_) {} if (!cnames.some(v => v.toLowerCase().replace(/\.$/, '') === TARGET)) { await ref.set({ status: 'verification_failed', lastError: `CNAME must point to ${TARGET}`, checkedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true }); throw new HttpsError('failed-precondition', `CNAME must point to ${TARGET}.`); } const school = await db.doc(`schools/${request.data().schoolId}`).get(); if (!school.exists) throw new HttpsError('not-found', 'School not found.'); await db.runTransaction(async tx => { tx.set(db.doc(`portal_domains/${host}`), publicDomain(school.id, school.data(), host)); tx.update(ref, { status: 'active', approvedBy: actor.uid, approvedAt: admin.firestore.FieldValue.serverTimestamp(), lastError: null }); tx.update(school.ref, { customDomains: admin.firestore.FieldValue.arrayUnion(host) }); tx.set(db.collection('super_admin_audit_logs').doc(), { action: 'ACTIVATE_CUSTOM_PORTAL_DOMAIN', schoolId: school.id, hostname: host, ownerId: actor.uid, timestamp: admin.firestore.FieldValue.serverTimestamp() }); }); return { hostname: host, status: 'active' }; });
+// Owner re-runs the CNAME check for a request without activating it - used
+// by the "Recheck" action so a failed/pending request can be re-evaluated
+// after the school fixes their DNS, and the owner sees a fresh
+// lastChecked/lastError without any change to portal_domains.
+exports.recheckCustomPortalDomain = onCall({ region: 'europe-west1' }, async r => {
+  const actor = await owner(r), host = clean(r.data?.hostname);
+  if (!validHost(host)) throw new HttpsError('invalid-argument', 'Invalid hostname.');
+  const ref = db.doc(`portal_domain_requests/${host}`), request = await ref.get();
+  if (!request.exists) throw new HttpsError('not-found', 'Domain request not found.');
+  const current = request.data() || {};
+  if (current.status === 'active') return { hostname: host, status: 'active', cnameOk: true };
+  let cnames = [];
+  try { cnames = await dns.resolveCname(host); } catch (_) {}
+  const cnameOk = cnames.some(v => v.toLowerCase().replace(/\.$/, '') === TARGET);
+  await ref.set({
+    status: cnameOk ? 'verified' : 'verification_failed',
+    lastError: cnameOk ? null : `CNAME must point to ${TARGET}`,
+    checkedAt: admin.firestore.FieldValue.serverTimestamp(),
+    checkedBy: actor.uid,
+  }, { merge: true });
+  return { hostname: host, status: cnameOk ? 'verified' : 'verification_failed', cnameOk };
+});
+// Owner rejects or removes a custom-domain request. A rejected/removed
+// request stops appearing as actionable in the console; if the domain was
+// already active its public projection is torn down and it is dropped from
+// the school's customDomains array. Always writes an audit entry, matching
+// verifyAndActivateCustomPortalDomain.
+exports.rejectCustomPortalDomain = onCall({ region: 'europe-west1' }, async r => {
+  const actor = await owner(r), host = clean(r.data?.hostname);
+  const reason = String(r.data?.reason || '').trim().slice(0, 500);
+  if (!validHost(host)) throw new HttpsError('invalid-argument', 'Invalid hostname.');
+  const ref = db.doc(`portal_domain_requests/${host}`), request = await ref.get();
+  if (!request.exists) throw new HttpsError('not-found', 'Domain request not found.');
+  const data = request.data() || {};
+  await db.runTransaction(async tx => {
+    tx.set(ref, {
+      status: 'rejected',
+      rejectionReason: reason || 'No reason provided',
+      rejectedBy: actor.uid,
+      rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    if (data.status === 'active' && data.schoolId) {
+      tx.delete(db.doc(`portal_domains/${host}`));
+      tx.update(db.doc(`schools/${data.schoolId}`), {
+        customDomains: admin.firestore.FieldValue.arrayRemove(host),
+      });
+    }
+    tx.set(db.collection('super_admin_audit_logs').doc(), {
+      action: 'REJECT_CUSTOM_PORTAL_DOMAIN',
+      schoolId: data.schoolId || null,
+      hostname: host,
+      ownerId: actor.uid,
+      reason: reason || null,
+      metadata: { previousStatus: data.status || 'unknown' },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+  return { hostname: host, status: 'rejected' };
+});
 // Keep the public projection in sync when the owner changes branding or
 // suspends a tenant. This is deliberately a one-way projection: no public
 // directory write can ever modify schools/{id}.

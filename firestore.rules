@@ -2506,11 +2506,22 @@ service cloud.firestore {
     }
     match /super_admin_notifications/{id} {
       // Server-written only (manual payment submission/approval/rejection
-      // Cloud Functions via the Admin SDK, which bypasses these rules). The
-      // owner console reads this collection directly, same trust model as
-      // super_admin_audit_logs above; the client never creates, updates or
-      // deletes a notification doc.
-      allow read: if isSuperAdmin();
+      // Cloud Functions via the Admin SDK, which bypasses these rules).
+      // The owner console reads this collection directly; mark-read /
+      // delete / clear all go through owner-only callables
+      // (owner_notifications_admin.js), never a direct client write.
+      //
+      // Per-owner isolation: a notification doc is readable only by the
+      // superAdmin whose uid it is stamped with. Legacy docs written
+      // before ownerId scoping have no `ownerId` field - there is exactly
+      // one canonical seeded platform owner, so an unscoped doc can only
+      // ever have been meant for them and stays readable. A doc carrying a
+      // *different* ownerId is never readable here, matching the extra
+      // check the callables enforce server-side.
+      allow read: if isSuperAdmin() &&
+        (!('ownerId' in resource.data) ||
+          resource.data.ownerId == '' ||
+          resource.data.ownerId == request.auth.uid);
       allow create, update, delete: if false;
     }
     match /invoices/{id} {
@@ -2523,6 +2534,29 @@ service cloud.firestore {
       // Owner-seed idempotency flag, maintenance mode, etc. Only ever
       // written by trusted server-side scripts/Cloud Functions via the
       // Admin SDK; the dashboard may read it, never write it directly.
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+    match /platform_health/{id} {
+      // Cached aggregate health summary, written only by the
+      // checkPlatformHealth Cloud Function (Admin SDK, bypasses these
+      // rules). The owner console reads it directly for a fast Home-card
+      // stream; the client never writes it.
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+    match /job_runs/{jobName} {
+      // Per-scheduled-job last-run status, written only by the scheduled
+      // jobs themselves (Admin SDK). Read by checkPlatformHealth and,
+      // for transparency, directly by the owner console.
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+    match /platform_job_failures/{id} {
+      // Append-only failure log for payment/subscription processing and
+      // school onboarding, written only by the existing Cloud Function
+      // catch sites (Admin SDK). No tenant-identifying fields are stored
+      // here by design - see functions/platform_health_instrumentation.js.
       allow read: if isSuperAdmin();
       allow write: if false;
     }

@@ -292,6 +292,8 @@ import 'package:school_pulse/features/super_admin/presentation/pages/super_admin
 import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_preferences_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_history_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/security_center_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/pages/custom_domains_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/pages/platform_health_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/help_support_home_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/submit_support_request_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/support_ticket_conversation_screen.dart';
@@ -3739,7 +3741,9 @@ final router = GoRouter(
         ),
         GoRoute(
           path: 'notifications',
-          builder: (context, state) => const SuperAdminDashboard(),
+          builder: (context, state) => const SuperAdminMobileNavShell(
+            child: SuperAdminNotificationsScreen(),
+          ),
         ),
         GoRoute(
           path: 'audit-logs',
@@ -3773,6 +3777,16 @@ final router = GoRouter(
           path: 'settings/security',
           builder: (context, state) =>
               const SuperAdminMobileNavShell(child: SecurityCenterScreen()),
+        ),
+        GoRoute(
+          path: 'settings/custom-domains',
+          builder: (context, state) =>
+              const SuperAdminMobileNavShell(child: CustomDomainsScreen()),
+        ),
+        GoRoute(
+          path: 'platform-health',
+          builder: (context, state) =>
+              const SuperAdminMobileNavShell(child: PlatformHealthScreen()),
         ),
         GoRoute(
           path: 'settings/support',

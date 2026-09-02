@@ -23,6 +23,7 @@ const admin = require("firebase-admin");
 
 const db = () => admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
+const { recordJobRun } = require("./platform_health_instrumentation")({ admin });
 
 /** Firestore caps a batch at 500 writes; leave headroom for retries. */
 const BATCH_LIMIT = 400;
@@ -611,6 +612,7 @@ exports.processNotificationRequest = onDocumentCreated(
 exports.dispatchScheduledNotifications = onSchedule(
   "every 5 minutes",
   async () => {
+    await recordJobRun("dispatchScheduledNotifications", 5, async () => {
     const firestore = db();
     const now = admin.firestore.Timestamp.now();
 
@@ -647,6 +649,7 @@ exports.dispatchScheduledNotifications = onSchedule(
         await doc.ref.update({ status: "failed", error: err.message });
       }
     }
+    });
   }
 );
 
@@ -660,6 +663,7 @@ exports.dispatchScheduledNotifications = onSchedule(
 exports.escalateUnacknowledgedAlerts = onSchedule(
   "every 15 minutes",
   async () => {
+    await recordJobRun("escalateUnacknowledgedAlerts", 15, async () => {
     const firestore = db();
     const cutoff = admin.firestore.Timestamp.fromMillis(
       Date.now() - 15 * 60 * 1000
@@ -707,6 +711,7 @@ exports.escalateUnacknowledgedAlerts = onSchedule(
         lastEscalatedAt: FieldValue.serverTimestamp(),
       });
     }
+    });
   }
 );
 
@@ -717,6 +722,7 @@ exports.escalateUnacknowledgedAlerts = onSchedule(
  * client's cache purge applies.
  */
 exports.purgeExpiredNotifications = onSchedule("every 24 hours", async () => {
+  await recordJobRun("purgeExpiredNotifications", 1440, async () => {
   const firestore = db();
   const now = admin.firestore.Timestamp.now();
 
@@ -739,6 +745,7 @@ exports.purgeExpiredNotifications = onSchedule("every 24 hours", async () => {
   }
 
   console.log(`purged ${deleted} expired notifications`);
+  });
 });
 
 /**

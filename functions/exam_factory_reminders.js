@@ -13,6 +13,7 @@ module.exports = ({ admin, onSchedule }) => {
   const db = admin.firestore();
   const FieldValue = admin.firestore.FieldValue;
   const { enqueueNotification } = require('./notification_helpers')({ admin });
+  const { recordJobRun } = require('./platform_health_instrumentation')({ admin });
   const LEAD_ROLES = ['director', 'headTeacher', 'deputyHead', 'deanOfStudies', 'hod', 'moderator', 'schoolAdmin'];
 
   const auditRef = (schoolId, id) => db.collection('schools').doc(schoolId).collection('exam_factory_audit').doc(id);
@@ -31,6 +32,7 @@ module.exports = ({ admin, onSchedule }) => {
   const api = {};
 
   api.sendExamFactoryDeadlineReminders = onSchedule('every 6 hours', async () => {
+    await recordJobRun('sendExamFactoryDeadlineReminders', 360, async () => {
     const now = admin.firestore.Timestamp.now();
     const soon = admin.firestore.Timestamp.fromMillis(now.toMillis() + 48 * 60 * 60 * 1000);
 
@@ -138,6 +140,7 @@ module.exports = ({ admin, onSchedule }) => {
         }
       }
     }
+    });
   });
 
   return api;

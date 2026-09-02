@@ -52,14 +52,9 @@ void main() {
     expect(find.text('Archive plan'), findsNothing);
     expect(find.text('Reactivate plan'), findsNothing);
 
-    final codeField = tester.widget<TextField>(
-      find
-          .descendant(
-            of: find.widgetWithText(InputDecorator, 'Plan code'),
-            matching: find.byType(TextField),
-          )
-          .first,
-    );
+    // Field order: Plan name, Plan code, Description, ... — Plan code is
+    // the 2nd PulseTextField/TextField in the form.
+    final codeField = tester.widget<TextField>(find.byType(TextField).at(1));
     expect(codeField.enabled, isTrue);
   });
 
@@ -70,8 +65,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Edit plan'), findsOneWidget);
+
+    final codeField = tester.widget<TextField>(find.byType(TextField).at(1));
+    expect(codeField.readOnly, isTrue);
+
     await tester.dragUntilVisible(
-      find.text('Archive plan'),
+      find.text("You can't delete a plan that is assigned to one or more schools."),
       find.byType(ListView).first,
       const Offset(0, -200),
     );
@@ -80,16 +79,6 @@ void main() {
       find.text("You can't delete a plan that is assigned to one or more schools."),
       findsOneWidget,
     );
-
-    final codeField = tester.widget<TextField>(
-      find
-          .descendant(
-            of: find.widgetWithText(InputDecorator, 'Plan code'),
-            matching: find.byType(TextField),
-          )
-          .first,
-    );
-    expect(codeField.readOnly, isTrue);
   });
 
   testWidgets('included module chips reflect the plan and can be toggled', (
@@ -97,9 +86,10 @@ void main() {
   ) async {
     await tester.pumpWidget(subject(starter));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.widgetWithText(FilterChip, 'Attendance'),
-      200,
+    await tester.dragUntilVisible(
+      find.widgetWithText(FilterChip, 'Finance'),
+      find.byType(ListView).first,
+      const Offset(0, -150),
     );
 
     final attendanceChip = tester.widget<FilterChip>(
@@ -113,7 +103,7 @@ void main() {
     expect(financeChip.selected, isFalse);
 
     await tester.tap(find.widgetWithText(FilterChip, 'Finance'));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     final financeChipAfter = tester.widget<FilterChip>(
       find.widgetWithText(FilterChip, 'Finance'),
@@ -126,7 +116,11 @@ void main() {
   ) async {
     await tester.pumpWidget(subject(archived));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Reactivate plan'), 200);
+    await tester.dragUntilVisible(
+      find.text('Reactivate plan'),
+      find.byType(ListView).first,
+      const Offset(0, -200),
+    );
 
     expect(find.text('Reactivate plan'), findsOneWidget);
     expect(find.text('Archive plan'), findsNothing);

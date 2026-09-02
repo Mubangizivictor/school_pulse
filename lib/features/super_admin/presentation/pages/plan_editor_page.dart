@@ -9,6 +9,8 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/super_admin/data/services/manual_payment_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/subscription_plan.dart';
 
+import '../widgets/super_admin_unsaved_changes_guard.dart';
+
 /// Full-screen plan editor covering everything the SaaS Owner can configure
 /// for a plan: identity, pricing/billing, trial, limits, included modules,
 /// visibility, and archive/reactivate lifecycle. `plan == null` means
@@ -52,6 +54,7 @@ class _PlanEditorPageState extends State<PlanEditorPage> {
 
   bool _saving = false;
   bool _archiving = false;
+  bool _dirty = false;
   String? _error;
 
   bool get _isCreate => widget.plan == null;
@@ -101,6 +104,26 @@ class _PlanEditorPageState extends State<PlanEditorPage> {
     _isPublic = plan?.isPublic ?? true;
     _isActive = plan?.isActive ?? true;
     _isPopular = plan?.isPopular ?? false;
+    for (final controller in [
+      _codeController,
+      _nameController,
+      _descriptionController,
+      _priceController,
+      _daysController,
+      _trialDaysController,
+      _maxStudentsController,
+      _maxStaffController,
+      _storageController,
+      _smsLimitController,
+      _displayOrderController,
+      _featureController,
+    ]) {
+      controller.addListener(_markDirty);
+    }
+  }
+
+  void _markDirty() {
+    if (!_dirty && mounted) setState(() => _dirty = true);
   }
 
   @override
@@ -126,11 +149,15 @@ class _PlanEditorPageState extends State<PlanEditorPage> {
     setState(() {
       _features = [..._features, value];
       _featureController.clear();
+      _dirty = true;
     });
   }
 
   void _removeFeature(String value) {
-    setState(() => _features = _features.where((f) => f != value).toList());
+    setState(() {
+      _features = _features.where((f) => f != value).toList();
+      _dirty = true;
+    });
   }
 
   void _toggleModule(String key, bool selected) {
@@ -140,387 +167,413 @@ class _PlanEditorPageState extends State<PlanEditorPage> {
       } else {
         _includedModules.remove(key);
       }
+      _dirty = true;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final busy = _saving || _archiving;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isCreate ? 'New plan' : 'Edit plan'),
-        actions: [
-          TextButton(
-            onPressed: busy ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Save'),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    AppSpacing.l,
-                    AppSpacing.xl,
-                    AppSpacing.xl,
-                  ),
-                  children: [
-                    PulseTextField(
-                      label: 'Plan name',
-                      controller: _nameController,
-                      enabled: !busy,
-                      isRequired: true,
-                      validator: (value) =>
-                          (value == null || value.trim().isEmpty)
-                          ? 'Required'
-                          : null,
+    return SuperAdminUnsavedChangesGuard(
+      hasUnsavedChanges: _dirty && !busy,
+      message: 'Your plan edits have not been saved.',
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_isCreate ? 'New plan' : 'Edit plan'),
+          actions: [
+            TextButton(
+              onPressed: busy ? null : _save,
+              child: _saving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save'),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.l,
+                      AppSpacing.xl,
+                      AppSpacing.xl,
                     ),
-                    const SizedBox(height: AppSpacing.m),
-                    PulseTextField(
-                      label: 'Plan code',
-                      controller: _codeController,
-                      enabled: !busy && _isCreate,
-                      readOnly: !_isCreate,
-                      isRequired: true,
-                      helperText: _isCreate
-                          ? 'Lowercase letters, numbers, underscores. Cannot be changed after creation.'
-                          : 'Plan code cannot be changed after creation.',
-                      validator: _isCreate ? _validateCode : null,
-                    ),
-                    const SizedBox(height: AppSpacing.m),
-                    PulseTextField(
-                      label: 'Description',
-                      controller: _descriptionController,
-                      enabled: !busy,
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: AppSpacing.m),
-                    PulseTextField(
-                      label: 'Monthly price (UGX)',
-                      controller: _priceController,
-                      enabled: !busy,
-                      keyboardType: TextInputType.number,
-                      isRequired: true,
-                      helperText: _isEnterprise
-                          ? 'Use 0 to keep Enterprise as custom pricing.'
-                          : 'Full payment is required; partial payments are disabled.',
-                      validator: _validatePrice,
-                    ),
-                    const SizedBox(height: AppSpacing.m),
-                    if (_isEnterprise) ...[
-                      DropdownButtonFormField<BillingCycle>(
-                        initialValue: _cycle,
-                        decoration: const InputDecoration(
-                          labelText: 'Billing interval',
-                        ),
-                        items: BillingCycle.values
-                            .map(
-                              (cycle) => DropdownMenuItem(
-                                value: cycle,
-                                child: Text(_cycleLabel(cycle)),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: busy
-                            ? null
-                            : (value) {
-                                if (value != null) {
-                                  setState(() => _cycle = value);
-                                }
-                              },
+                    children: [
+                      PulseTextField(
+                        label: 'Plan name',
+                        controller: _nameController,
+                        enabled: !busy,
+                        isRequired: true,
+                        validator: (value) =>
+                            (value == null || value.trim().isEmpty)
+                            ? 'Required'
+                            : null,
                       ),
                       const SizedBox(height: AppSpacing.m),
                       PulseTextField(
-                        label: 'Paid period length (days)',
-                        controller: _daysController,
+                        label: 'Plan code',
+                        controller: _codeController,
+                        enabled: !busy && _isCreate,
+                        readOnly: !_isCreate,
+                        isRequired: true,
+                        helperText: _isCreate
+                            ? 'Lowercase letters, numbers, underscores. Cannot be changed after creation.'
+                            : 'Plan code cannot be changed after creation.',
+                        validator: _isCreate ? _validateCode : null,
+                      ),
+                      const SizedBox(height: AppSpacing.m),
+                      PulseTextField(
+                        label: 'Description',
+                        controller: _descriptionController,
+                        enabled: !busy,
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: AppSpacing.m),
+                      PulseTextField(
+                        label: 'Monthly price (UGX)',
+                        controller: _priceController,
                         enabled: !busy,
                         keyboardType: TextInputType.number,
                         isRequired: true,
-                        validator: _validateDays,
+                        helperText: _isEnterprise
+                            ? 'Use 0 to keep Enterprise as custom pricing.'
+                            : 'Full payment is required; partial payments are disabled.',
+                        validator: _validatePrice,
                       ),
-                    ] else ...[
-                      _BillingIntervalToggle(
-                        cycle: _cycle,
+                      const SizedBox(height: AppSpacing.m),
+                      if (_isEnterprise) ...[
+                        DropdownButtonFormField<BillingCycle>(
+                          initialValue: _cycle,
+                          decoration: const InputDecoration(
+                            labelText: 'Billing interval',
+                          ),
+                          items: BillingCycle.values
+                              .map(
+                                (cycle) => DropdownMenuItem(
+                                  value: cycle,
+                                  child: Text(_cycleLabel(cycle)),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: busy
+                              ? null
+                              : (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      _cycle = value;
+                                      _dirty = true;
+                                    });
+                                  }
+                                },
+                        ),
+                        const SizedBox(height: AppSpacing.m),
+                        PulseTextField(
+                          label: 'Paid period length (days)',
+                          controller: _daysController,
+                          enabled: !busy,
+                          keyboardType: TextInputType.number,
+                          isRequired: true,
+                          validator: _validateDays,
+                        ),
+                      ] else ...[
+                        _BillingIntervalToggle(
+                          cycle: _cycle,
+                          enabled: !busy,
+                          onChanged: (value) => setState(() {
+                            _cycle = value;
+                            _dirty = true;
+                          }),
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.m),
+                      PulseTextField(
+                        label: 'Trial days',
+                        controller: _trialDaysController,
                         enabled: !busy,
-                        onChanged: (value) => setState(() => _cycle = value),
+                        keyboardType: TextInputType.number,
+                        helperText:
+                            'Number of free trial days before billing starts.',
+                        validator: _validateTrialDays,
                       ),
-                    ],
-                    const SizedBox(height: AppSpacing.m),
-                    PulseTextField(
-                      label: 'Trial days',
-                      controller: _trialDaysController,
-                      enabled: !busy,
-                      keyboardType: TextInputType.number,
-                      helperText: 'Number of free trial days before billing starts.',
-                      validator: _validateTrialDays,
-                    ),
-                    const SizedBox(height: AppSpacing.m),
-                    PulseTextField(
-                      label: 'Student limit',
-                      controller: _maxStudentsController,
-                      enabled: !busy,
-                      keyboardType: TextInputType.number,
-                      validator: _validateNonNegativeInt,
-                    ),
-                    const SizedBox(height: AppSpacing.m),
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      value: _isActive,
-                      onChanged: (!busy && !_isArchived)
-                          ? (value) => setState(() => _isActive = value)
-                          : null,
-                      title: const Text('Active'),
-                      subtitle: const Text(
-                        'Available for new subscriptions when on.',
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.l),
-                    SectionHeader(title: 'Included modules'),
-                    const SizedBox(height: AppSpacing.s),
-                    Text(
-                      'Modules included in this plan\'s description. Informational only — does not automatically enable modules for a school.',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary(context),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.s),
-                    Wrap(
-                      spacing: AppSpacing.s,
-                      runSpacing: AppSpacing.s,
-                      children: kPlanModuleKeys
-                          .map(
-                            (key) => FilterChip(
-                              label: Text(_moduleLabel(key)),
-                              selected: _includedModules.contains(key),
-                              onSelected: busy
-                                  ? null
-                                  : (selected) => _toggleModule(key, selected),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                    const SizedBox(height: AppSpacing.l),
-                    SectionHeader(title: 'Limits'),
-                    const SizedBox(height: AppSpacing.s),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: PulseTextField(
-                            label: 'Staff limit',
-                            controller: _maxStaffController,
-                            enabled: !busy,
-                            keyboardType: TextInputType.number,
-                            validator: _validateNonNegativeInt,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.m),
-                        Expanded(
-                          child: PulseTextField(
-                            label: 'Storage limit (GB)',
-                            controller: _storageController,
-                            enabled: !busy,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            validator: (value) {
-                              final parsed = double.tryParse(
-                                (value ?? '').trim(),
-                              );
-                              if (parsed == null || parsed < 0) {
-                                return 'Enter a valid number';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.m),
-                    PulseTextField(
-                      label: 'SMS limit per month',
-                      controller: _smsLimitController,
-                      enabled: !busy,
-                      keyboardType: TextInputType.number,
-                      validator: _validateSmsLimit,
-                    ),
-                    const SizedBox(height: AppSpacing.l),
-                    SectionHeader(title: 'Advanced'),
-                    const SizedBox(height: AppSpacing.s),
-                    Text(
-                      'Included features',
-                      style: AppTypography.labelLarge.copyWith(
-                        color: AppColors.textPrimary(context),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.s),
-                    Wrap(
-                      spacing: AppSpacing.s,
-                      runSpacing: AppSpacing.s,
-                      children: _features
-                          .map(
-                            (feature) => Chip(
-                              label: Text(feature),
-                              onDeleted: busy
-                                  ? null
-                                  : () => _removeFeature(feature),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                    const SizedBox(height: AppSpacing.s),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: PulseTextField(
-                            label: 'Add a feature',
-                            controller: _featureController,
-                            enabled: !busy,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.s),
-                        IconButton(
-                          onPressed: busy ? null : _addFeature,
-                          icon: const Icon(Icons.add_circle_outline_rounded),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.l),
-                    PulseTextField(
-                      label: 'Display order',
-                      controller: _displayOrderController,
-                      enabled: !busy,
-                      keyboardType: TextInputType.number,
-                      helperText: 'Lower numbers appear first on the website.',
-                      validator: (value) {
-                        final parsed = int.tryParse((value ?? '').trim());
-                        if (parsed == null) return 'Enter a valid number';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.m),
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      value: _isPublic,
-                      onChanged: busy
-                          ? null
-                          : (value) => setState(() => _isPublic = value),
-                      title: const Text('Visible on public website'),
-                    ),
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      value: _isPopular,
-                      onChanged: busy
-                          ? null
-                          : (value) => setState(() => _isPopular = value),
-                      title: const Text('Recommended plan'),
-                      subtitle: const Text(
-                        'Highlighted as "Recommended" on the website.',
-                      ),
-                    ),
-                    if (_error != null) ...[
                       const SizedBox(height: AppSpacing.m),
+                      PulseTextField(
+                        label: 'Student limit',
+                        controller: _maxStudentsController,
+                        enabled: !busy,
+                        keyboardType: TextInputType.number,
+                        validator: _validateNonNegativeInt,
+                      ),
+                      const SizedBox(height: AppSpacing.m),
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        value: _isActive,
+                        onChanged: (!busy && !_isArchived)
+                            ? (value) => setState(() {
+                                _isActive = value;
+                                _dirty = true;
+                              })
+                            : null,
+                        title: const Text('Active'),
+                        subtitle: const Text(
+                          'Available for new subscriptions when on.',
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.l),
+                      SectionHeader(title: 'Included modules'),
+                      const SizedBox(height: AppSpacing.s),
                       Text(
-                        _error!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+                        'Modules included in this plan\'s description. Informational only — does not automatically enable modules for a school.',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textSecondary(context),
                         ),
                       ),
-                    ],
-                    if (!_isCreate) ...[
-                      const SizedBox(height: AppSpacing.xl),
-                      const Divider(),
+                      const SizedBox(height: AppSpacing.s),
+                      Wrap(
+                        spacing: AppSpacing.s,
+                        runSpacing: AppSpacing.s,
+                        children: kPlanModuleKeys
+                            .map(
+                              (key) => FilterChip(
+                                label: Text(_moduleLabel(key)),
+                                selected: _includedModules.contains(key),
+                                onSelected: busy
+                                    ? null
+                                    : (selected) =>
+                                          _toggleModule(key, selected),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                      const SizedBox(height: AppSpacing.l),
+                      SectionHeader(title: 'Limits'),
+                      const SizedBox(height: AppSpacing.s),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: PulseTextField(
+                              label: 'Staff limit',
+                              controller: _maxStaffController,
+                              enabled: !busy,
+                              keyboardType: TextInputType.number,
+                              validator: _validateNonNegativeInt,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.m),
+                          Expanded(
+                            child: PulseTextField(
+                              label: 'Storage limit (GB)',
+                              controller: _storageController,
+                              enabled: !busy,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              validator: (value) {
+                                final parsed = double.tryParse(
+                                  (value ?? '').trim(),
+                                );
+                                if (parsed == null || parsed < 0) {
+                                  return 'Enter a valid number';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: AppSpacing.m),
-                      if (_isArchived)
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _archiving ? null : _reactivate,
-                            icon: _archiving
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.refresh_rounded),
-                            label: const Text('Reactivate plan'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.success(context),
-                              side: BorderSide(
-                                color: AppColors.success(context),
+                      PulseTextField(
+                        label: 'SMS limit per month',
+                        controller: _smsLimitController,
+                        enabled: !busy,
+                        keyboardType: TextInputType.number,
+                        validator: _validateSmsLimit,
+                      ),
+                      const SizedBox(height: AppSpacing.l),
+                      SectionHeader(title: 'Advanced'),
+                      const SizedBox(height: AppSpacing.s),
+                      Text(
+                        'Included features',
+                        style: AppTypography.labelLarge.copyWith(
+                          color: AppColors.textPrimary(context),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.s),
+                      Wrap(
+                        spacing: AppSpacing.s,
+                        runSpacing: AppSpacing.s,
+                        children: _features
+                            .map(
+                              (feature) => Chip(
+                                label: Text(feature),
+                                onDeleted: busy
+                                    ? null
+                                    : () => _removeFeature(feature),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                      const SizedBox(height: AppSpacing.s),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: PulseTextField(
+                              label: 'Add a feature',
+                              controller: _featureController,
+                              enabled: !busy,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.s),
+                          IconButton(
+                            onPressed: busy ? null : _addFeature,
+                            icon: const Icon(Icons.add_circle_outline_rounded),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.l),
+                      PulseTextField(
+                        label: 'Display order',
+                        controller: _displayOrderController,
+                        enabled: !busy,
+                        keyboardType: TextInputType.number,
+                        helperText:
+                            'Lower numbers appear first on the website.',
+                        validator: (value) {
+                          final parsed = int.tryParse((value ?? '').trim());
+                          if (parsed == null) return 'Enter a valid number';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.m),
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        value: _isPublic,
+                        onChanged: busy
+                            ? null
+                            : (value) => setState(() {
+                                _isPublic = value;
+                                _dirty = true;
+                              }),
+                        title: const Text('Visible on public website'),
+                      ),
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        value: _isPopular,
+                        onChanged: busy
+                            ? null
+                            : (value) => setState(() {
+                                _isPopular = value;
+                                _dirty = true;
+                              }),
+                        title: const Text('Recommended plan'),
+                        subtitle: const Text(
+                          'Highlighted as "Recommended" on the website.',
+                        ),
+                      ),
+                      if (_error != null) ...[
+                        const SizedBox(height: AppSpacing.m),
+                        Text(
+                          _error!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
+                      if (!_isCreate) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        const Divider(),
+                        const SizedBox(height: AppSpacing.m),
+                        if (_isArchived)
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _archiving ? null : _reactivate,
+                              icon: _archiving
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.refresh_rounded),
+                              label: const Text('Reactivate plan'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.success(context),
+                                side: BorderSide(
+                                  color: AppColors.success(context),
+                                ),
+                              ),
+                            ),
+                          )
+                        else ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _archiving ? null : _archive,
+                              icon: _archiving
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.archive_outlined),
+                              label: const Text('Archive plan'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.danger(context),
+                                side: BorderSide(
+                                  color: AppColors.danger(context),
+                                ),
                               ),
                             ),
                           ),
-                        )
-                      else ...[
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _archiving ? null : _archive,
-                            icon: _archiving
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.archive_outlined),
-                            label: const Text('Archive plan'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.danger(context),
-                              side: BorderSide(color: AppColors.danger(context)),
+                          const SizedBox(height: AppSpacing.s),
+                          Text(
+                            "You can't delete a plan that is assigned to one or more schools.",
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textSecondary(context),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.s),
-                        Text(
-                          "You can't delete a plan that is assigned to one or more schools.",
-                          style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.textSecondary(context),
-                          ),
-                        ),
+                        ],
                       ],
                     ],
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xl,
-                  0,
-                  AppSpacing.xl,
-                  AppSpacing.l,
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: FilledButton.icon(
-                    onPressed: busy ? null : _save,
-                    icon: _saving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.save_outlined),
-                    label: Text(_saving ? 'Saving…' : 'Save plan'),
                   ),
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    0,
+                    AppSpacing.xl,
+                    AppSpacing.l,
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: FilledButton.icon(
+                      onPressed: busy ? null : _save,
+                      icon: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save_outlined),
+                      label: Text(_saving ? 'Saving…' : 'Save plan'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -676,7 +729,10 @@ class _PlanEditorPageState extends State<PlanEditorPage> {
           displayOrder: displayOrder,
         );
       }
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) {
+        setState(() => _dirty = false);
+        Navigator.pop(context, true);
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
