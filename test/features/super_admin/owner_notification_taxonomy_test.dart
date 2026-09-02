@@ -46,6 +46,29 @@ void main() {
       expect(n.severity.showsOnTile, isTrue);
     });
 
+    test(
+      'an already-approved school request is information, not requires-review '
+      '(even if it still carries the original applicationId)',
+      () {
+        final n = _n({
+          'category': 'schools',
+          'type': 'school_payment_method_approved',
+          'applicationId': 'app_1',
+        });
+        expect(n.severity, OwnerNotificationSeverity.information);
+        expect(n.severity.showsOnTile, isFalse);
+      },
+    );
+
+    test('a new/pending school application requires review', () {
+      final n = _n({
+        'category': 'schools',
+        'type': 'new_application_submitted',
+        'applicationId': 'app_2',
+      });
+      expect(n.severity, OwnerNotificationSeverity.requiresReview);
+    });
+
     test('a degraded platform event is critical', () {
       final n = _n({'category': 'platform', 'healthState': 'degraded'});
       expect(n.severity, OwnerNotificationSeverity.critical);

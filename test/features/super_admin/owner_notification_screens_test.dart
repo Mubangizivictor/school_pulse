@@ -123,7 +123,12 @@ void main() {
 
       expect(find.text('Notifications'), findsOneWidget); // app bar title
       expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsOneWidget);
-      expect(find.text('Recent'), findsOneWidget);
+      // "Recent" heading removed - the app bar title says Notifications.
+      expect(find.text('Recent'), findsNothing);
+      // Mark all read + the overflow menu now live in the app bar, next to
+      // the title, not in a separate "Recent" row.
+      expect(find.text('Mark all read'), findsOneWidget);
+      expect(find.byIcon(Icons.more_horiz_rounded), findsOneWidget);
       expect(find.text('3 NEW'), findsOneWidget);
       for (final label in ['All', 'Critical', 'Billing', 'Platform', 'Schools',
           'Security']) {

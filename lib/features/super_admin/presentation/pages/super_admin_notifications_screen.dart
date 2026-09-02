@@ -207,174 +207,153 @@ class _SuperAdminNotificationsScreenState
     return v.replaceFirst(RegExp(r'^Exception:\s*'), '');
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final wide = isSuperAdminWide(context);
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        centerTitle: true,
-        backgroundColor: AppColors.background(context),
+  Widget _backButton(BuildContext context) => IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+        tooltip: 'Back',
         // Reached via context.go from the Overview bell (not a stacked
         // push), so Navigator.canPop is false here and Flutter's AppBar
         // would render no back control at all. An explicit back button
         // returns to Overview - the section this screen belongs to.
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          tooltip: 'Back',
-          onPressed: () => Navigator.canPop(context)
-              ? Navigator.of(context).pop()
-              : context.go('/super-admin'),
-        ),
-        title: const Text('Notifications'),
-      ),
-      body: _ownerId == null
-          ? const Center(child: Text('Sign in to manage notifications'))
-          : StreamBuilder<List<OwnerNotification>>(
-              stream: _notifications.watchNotifications(),
-              builder: (context, snapshot) {
-                final live = snapshot.data;
-                final items = live ?? _cachedFallback ?? const [];
-                final offline = live == null && _cachedFallback != null;
-
-                if (live == null &&
-                    _cachedFallback == null &&
-                    snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError && _cachedFallback == null) {
-                  return _ErrorState(
-                    message: _friendlyError(snapshot.error!),
-                    onRetry: () => setState(() {}),
-                  );
-                }
-
-                final filtered =
-                    items.where(_matches).toList(growable: false);
-                final unread = items.where((n) => n.isUnread).length;
-
-                final body = ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                  children: [
-                    _TopControls(
-                      unread: unread,
-                      busy: _busy,
-                      hasItems: items.isNotEmpty,
-                      onMarkAll: unread > 0 ? _markAllRead : null,
-                      onClearAll: items.isNotEmpty ? _clearAll : null,
-                    ),
-                    const SizedBox(height: 12),
-                    OwnerFilterChips(
-                      selected: _filter,
-                      onSelected: (f) => setState(() => _filter = f),
-                    ),
-                    if (offline) ...[
-                      const SizedBox(height: 12),
-                      _OfflineBanner(pending: _pendingOffline),
-                    ],
-                    const SizedBox(height: 12),
-                    if (filtered.isEmpty)
-                      _EmptyState(filter: _filter)
-                    else
-                      ...filtered.map(
-                        (n) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: OwnerNotificationTile(
-                            notification: n,
-                            timestamp: _dateTime.format(n.createdAt),
-                            busy: _busy,
-                            onTap: () => _openDetail(n),
-                            onMarkRead:
-                                n.isUnread ? () => _markRead(n) : null,
-                            onMarkUnread:
-                                n.isUnread ? null : () => _markUnread(n),
-                            onArchive: () => _archive(n),
-                            onDelete: () => _delete(n),
-                          ),
-                        ),
-                      ),
-                  ],
-                );
-
-                if (!wide) return body;
-                return Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 760),
-                    child: body,
-                  ),
-                );
-              },
-            ),
-    );
-  }
-}
-
-class _TopControls extends StatelessWidget {
-  const _TopControls({
-    required this.unread,
-    required this.busy,
-    required this.hasItems,
-    required this.onMarkAll,
-    required this.onClearAll,
-  });
-
-  final int unread;
-  final bool busy;
-  final bool hasItems;
-  final VoidCallback? onMarkAll;
-  final VoidCallback? onClearAll;
+        onPressed: () => Navigator.canPop(context)
+            ? Navigator.of(context).pop()
+            : context.go('/super-admin'),
+      );
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Flexible(
-          child: Text(
-            'Recent',
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary(context),
-                ),
-          ),
+    final wide = isSuperAdminWide(context);
+    if (_ownerId == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background(context),
+        appBar: AppBar(
+          centerTitle: true,
+          backgroundColor: AppColors.background(context),
+          leading: _backButton(context),
+          title: const Text('Notifications'),
         ),
-        if (unread > 0) ...[
-          const SizedBox(width: 10),
-          OwnerUnreadChip(count: unread),
-        ],
-        const Spacer(),
-        if (onMarkAll != null)
-          TextButton(
-            onPressed: busy ? null : onMarkAll,
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.information(context),
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              minimumSize: const Size(0, 36),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-            ),
-            child: const Text(
-              'Mark all read',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-            ),
-          ),
-        if (hasItems)
-          PopupMenuButton<String>(
-            enabled: !busy,
-            tooltip: 'More',
-            icon: Icon(
-              Icons.more_horiz_rounded,
-              color: AppColors.textSecondary(context),
-            ),
-            onSelected: (v) {
-              if (v == 'clear') onClearAll?.call();
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'clear', child: Text('Clear all')),
+        body: const Center(child: Text('Sign in to manage notifications')),
+      );
+    }
+    return StreamBuilder<List<OwnerNotification>>(
+      stream: _notifications.watchNotifications(),
+      builder: (context, snapshot) {
+        final live = snapshot.data;
+        final items = live ?? _cachedFallback ?? const [];
+        final offline = live == null && _cachedFallback != null;
+        final unread = items.where((n) => n.isUnread).length;
+
+        return Scaffold(
+          backgroundColor: AppColors.background(context),
+          appBar: AppBar(
+            centerTitle: true,
+            backgroundColor: AppColors.background(context),
+            leading: _backButton(context),
+            title: const Text('Notifications'),
+            actions: [
+              if (unread > 0)
+                TextButton(
+                  onPressed: _busy ? null : _markAllRead,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.information(context),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: const Size(0, 36),
+                  ),
+                  child: const Text(
+                    'Mark all read',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              if (items.isNotEmpty)
+                PopupMenuButton<String>(
+                  enabled: !_busy,
+                  tooltip: 'More',
+                  icon: Icon(
+                    Icons.more_horiz_rounded,
+                    color: AppColors.textSecondary(context),
+                  ),
+                  onSelected: (v) {
+                    if (v == 'clear') _clearAll();
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'clear', child: Text('Clear all')),
+                  ],
+                ),
             ],
           ),
-      ],
+          body: Builder(
+            builder: (context) {
+              if (live == null &&
+                  _cachedFallback == null &&
+                  snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError && _cachedFallback == null) {
+                return _ErrorState(
+                  message: _friendlyError(snapshot.error!),
+                  onRetry: () => setState(() {}),
+                );
+              }
+
+              final filtered = items.where(_matches).toList(growable: false);
+
+              final unreadChip = unread > 0
+                  ? Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: OwnerUnreadChip(count: unread),
+                      ),
+                    )
+                  : null;
+
+              final body = ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                children: [
+                  if (unreadChip != null) unreadChip,
+                  OwnerFilterChips(
+                    selected: _filter,
+                    onSelected: (f) => setState(() => _filter = f),
+                  ),
+                  if (offline) ...[
+                    const SizedBox(height: 12),
+                    _OfflineBanner(pending: _pendingOffline),
+                  ],
+                  const SizedBox(height: 12),
+                  if (filtered.isEmpty)
+                    _EmptyState(filter: _filter)
+                  else
+                    ...filtered.map(
+                      (n) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: OwnerNotificationTile(
+                          notification: n,
+                          timestamp: _dateTime.format(n.createdAt),
+                          busy: _busy,
+                          onTap: () => _openDetail(n),
+                          onMarkRead:
+                              n.isUnread ? () => _markRead(n) : null,
+                          onMarkUnread:
+                              n.isUnread ? null : () => _markUnread(n),
+                          onArchive: () => _archive(n),
+                          onDelete: () => _delete(n),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+
+              if (!wide) return body;
+              return Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 760),
+                  child: body,
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

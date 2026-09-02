@@ -197,7 +197,13 @@ class OwnerNotification extends Equatable {
         type.contains('alert')) {
       severity = OwnerNotificationSeverity.critical;
     } else if (category == OwnerNotificationCategory.schools &&
-        (applicationId.isNotEmpty || type.contains('request'))) {
+        !type.contains('approved') &&
+        !type.contains('rejected') &&
+        !type.contains('resolved') &&
+        (applicationId.isNotEmpty ||
+            type.contains('request') ||
+            type.contains('pending') ||
+            type.contains('new_application'))) {
       severity = OwnerNotificationSeverity.requiresReview;
     } else {
       severity = OwnerNotificationSeverity.information;
