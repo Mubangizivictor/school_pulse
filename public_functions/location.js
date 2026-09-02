@@ -6,7 +6,7 @@ const db = admin.firestore();
 
 const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
-const USER_AGENT = 'SchoolPulse-Registration/1.0 (contact: support@schoolpulse.victorbee.com)';
+const USER_AGENT = 'SchoolPulse-Registration/1.0 (contact: support@schoolpulseapp.com)';
 const CACHE_COLLECTION = '_public_geocode_cache';
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days — Uganda place names don't move.
 const UGANDA_REGION_BY_DISTRICT = require('./uganda_regions.json');

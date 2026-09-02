@@ -138,11 +138,11 @@ async function seed() {
         // No accessMode field - the fail-open default case: a school this
         // rules deploy hasn't touched yet must still be fully writable.
       }),
-      setDoc(doc(db, 'portal_domains', 'greena.schoolpulse.ug'), {
+      setDoc(doc(db, 'portal_domains', 'greena.schoolpulseapp.com'), {
         schoolId: 'schoolA', slug: 'greena', schoolName: 'School A',
         status: 'active', primaryColor: '#123456',
       }),
-      setDoc(doc(db, 'portal_domains', 'suspended.schoolpulse.ug'), {
+      setDoc(doc(db, 'portal_domains', 'suspended.schoolpulseapp.com'), {
         schoolId: 'schoolB', slug: 'suspended', schoolName: 'School B', status: 'suspended',
       }),
       setDoc(doc(db, 'schools', 'schoolB'), {
@@ -476,9 +476,9 @@ describe('school contact directory', () => {
 describe('SaaS owner / platform layer', () => {
   test('portal directory exposes only active mappings and is never client writable', async () => {
     const anonymous = testEnv.unauthenticatedContext().firestore();
-    await assertSucceeds(getDoc(doc(anonymous, 'portal_domains', 'greena.schoolpulse.ug')));
-    await assertFails(getDoc(doc(anonymous, 'portal_domains', 'suspended.schoolpulse.ug')));
-    await assertFails(setDoc(doc(dbFor('adminA'), 'portal_domains', 'forged.schoolpulse.ug'), {
+    await assertSucceeds(getDoc(doc(anonymous, 'portal_domains', 'greena.schoolpulseapp.com')));
+    await assertFails(getDoc(doc(anonymous, 'portal_domains', 'suspended.schoolpulseapp.com')));
+    await assertFails(setDoc(doc(dbFor('adminA'), 'portal_domains', 'forged.schoolpulseapp.com'), {
       schoolId: 'schoolB', status: 'active', schoolName: 'Forged',
     }));
   });

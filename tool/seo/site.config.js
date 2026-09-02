@@ -154,7 +154,7 @@ const PAGES = [
     title: 'School Websites & Portal Subdomains — School Pulse',
     description:
       'Every School Pulse school gets its own branded portal at ' +
-      'your-school.schoolpulse.ug, with the option to connect a custom ' +
+      'your-school.schoolpulseapp.com, with the option to connect a custom ' +
       'domain.',
     h1: 'Your school’s own branded portal',
     priority: '0.6',

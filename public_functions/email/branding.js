@@ -3,49 +3,50 @@
 // sender identity, support address, and footer legal text never change —
 // every transactional email is sent and owned by School Pulse itself.
 
-const SENDER = 'School Pulse <notifications@schoolpulse.victorbee.com>';
-const SUPPORT_EMAIL = 'support@schoolpulse.victorbee.com';
+const SENDER = 'School Pulse <notifications@schoolpulseapp.com>';
+const SUPPORT_EMAIL = 'support@schoolpulseapp.com';
 const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
 const STATUS_URL = `${WEBSITE_ORIGIN}/application-status`;
 
-// Per-category senders remain under the already-verified
-// schoolpulse.victorbee.com email domain. Falls back to the general
+// Per-category senders under the schoolpulseapp.com email domain
+// (requires Resend domain verification + SPF/DKIM for schoolpulseapp.com).
+// Falls back to the general
 // `notifications@` sender (SENDER) for any templateId not listed below.
 const SENDER_BY_TEMPLATE = {
-  application_received: 'School Pulse <applications@schoolpulse.victorbee.com>',
-  application_approved: 'School Pulse <applications@schoolpulse.victorbee.com>',
-  application_rejected: 'School Pulse <applications@schoolpulse.victorbee.com>',
+  application_received: 'School Pulse <applications@schoolpulseapp.com>',
+  application_approved: 'School Pulse <applications@schoolpulseapp.com>',
+  application_rejected: 'School Pulse <applications@schoolpulseapp.com>',
 
-  payment_proof_received: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  manual_payment_approved: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  manual_payment_rejected: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  mobile_money_payment_success: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  mobile_money_payment_failed: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  payment_receipt: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  payment_reversed: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  payment_overdue: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  subscription_activated: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  subscription_renewed: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  subscription_expiring: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  subscription_expired: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  subscription_suspended: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  subscription_reactivated: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  payment_proof_received: 'School Pulse <payments@schoolpulseapp.com>',
+  manual_payment_approved: 'School Pulse <payments@schoolpulseapp.com>',
+  manual_payment_rejected: 'School Pulse <payments@schoolpulseapp.com>',
+  mobile_money_payment_success: 'School Pulse <payments@schoolpulseapp.com>',
+  mobile_money_payment_failed: 'School Pulse <payments@schoolpulseapp.com>',
+  payment_receipt: 'School Pulse <payments@schoolpulseapp.com>',
+  payment_reversed: 'School Pulse <payments@schoolpulseapp.com>',
+  payment_overdue: 'School Pulse <payments@schoolpulseapp.com>',
+  subscription_activated: 'School Pulse <payments@schoolpulseapp.com>',
+  subscription_renewed: 'School Pulse <payments@schoolpulseapp.com>',
+  subscription_expiring: 'School Pulse <payments@schoolpulseapp.com>',
+  subscription_expired: 'School Pulse <payments@schoolpulseapp.com>',
+  subscription_suspended: 'School Pulse <payments@schoolpulseapp.com>',
+  subscription_reactivated: 'School Pulse <payments@schoolpulseapp.com>',
 
-  school_admin_account_created: 'School Pulse <accounts@schoolpulse.victorbee.com>',
-  staff_account_created: 'School Pulse <accounts@schoolpulse.victorbee.com>',
-  password_reset: 'School Pulse <accounts@schoolpulse.victorbee.com>',
+  school_admin_account_created: 'School Pulse <accounts@schoolpulseapp.com>',
+  staff_account_created: 'School Pulse <accounts@schoolpulseapp.com>',
+  password_reset: 'School Pulse <accounts@schoolpulseapp.com>',
 
-  email_verification: 'School Pulse <security@schoolpulse.victorbee.com>',
-  new_login_alert: 'School Pulse <security@schoolpulse.victorbee.com>',
-  suspicious_login_alert: 'School Pulse <security@schoolpulse.victorbee.com>',
-  sessions_revoked: 'School Pulse <security@schoolpulse.victorbee.com>',
-  account_locked: 'School Pulse <security@schoolpulse.victorbee.com>',
-  account_reactivated: 'School Pulse <security@schoolpulse.victorbee.com>',
-  password_changed: 'School Pulse <security@schoolpulse.victorbee.com>',
-  two_step_verification_enabled: 'School Pulse <security@schoolpulse.victorbee.com>',
-  two_step_verification_disabled: 'School Pulse <security@schoolpulse.victorbee.com>',
-  trusted_device_added: 'School Pulse <security@schoolpulse.victorbee.com>',
-  trusted_device_removed: 'School Pulse <security@schoolpulse.victorbee.com>',
+  email_verification: 'School Pulse <security@schoolpulseapp.com>',
+  new_login_alert: 'School Pulse <security@schoolpulseapp.com>',
+  suspicious_login_alert: 'School Pulse <security@schoolpulseapp.com>',
+  sessions_revoked: 'School Pulse <security@schoolpulseapp.com>',
+  account_locked: 'School Pulse <security@schoolpulseapp.com>',
+  account_reactivated: 'School Pulse <security@schoolpulseapp.com>',
+  password_changed: 'School Pulse <security@schoolpulseapp.com>',
+  two_step_verification_enabled: 'School Pulse <security@schoolpulseapp.com>',
+  two_step_verification_disabled: 'School Pulse <security@schoolpulseapp.com>',
+  trusted_device_added: 'School Pulse <security@schoolpulseapp.com>',
+  trusted_device_removed: 'School Pulse <security@schoolpulseapp.com>',
 };
 
 /**

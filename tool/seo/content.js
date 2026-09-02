@@ -37,7 +37,7 @@ const featureGrid = () => `
       <li><h3><a href="/parent-portal">Parent portal</a></h3><p>Parents follow their own child’s attendance, progress and fee balance.</p></li>
       <li><h3><a href="/transport-and-boarding">Transport &amp; boarding</a></h3><p>Transport and boarding information kept alongside the rest of the record.</p></li>
       <li><h3><a href="/health-and-welfare">Health &amp; welfare</a></h3><p>Clinic visits, medicine stock and welfare notes with role-based access.</p></li>
-      <li><h3><a href="/school-websites">School websites</a></h3><p>A branded portal at your-school.schoolpulse.ug, with optional custom domain.</p></li>
+      <li><h3><a href="/school-websites">School websites</a></h3><p>A branded portal at your-school.schoolpulseapp.com, with optional custom domain.</p></li>
     </ul>
   </section>`;
 
@@ -63,7 +63,7 @@ const CONTENT = {
     <ul class="checks">
       <li><strong>Mobile Money fee records.</strong> Fee payments carry MTN Mobile Money transaction references, so the bursar’s office and parents see the same balance.</li>
       <li><strong>Works on any phone.</strong> The parent portal opens in a browser — no app install required.</li>
-      <li><strong>Your own portal address.</strong> Each school runs at your-school.schoolpulse.ug, with the option to connect a custom domain.</li>
+      <li><strong>Your own portal address.</strong> Each school runs at your-school.schoolpulseapp.com, with the option to connect a custom domain.</li>
       <li><strong>Term-based structure.</strong> Classes, streams, subjects and report cards follow the Ugandan term system.</li>
     </ul>
   </section>
@@ -222,13 +222,13 @@ const CONTENT = {
   <section class="hero" aria-labelledby="page-h1">
     <h1 id="page-h1">Your school’s own branded portal</h1>
     <p class="lede">Every School Pulse school gets a portal at
-      <span class="mono">your-school.schoolpulse.ug</span>, carrying your school’s
+      <span class="mono">your-school.schoolpulseapp.com</span>, carrying your school’s
       name and colours. You can connect a custom domain when you’re ready.</p>
   </section>
   <section aria-labelledby="sw-heading">
     <h2 id="sw-heading">How the address works</h2>
     <ul class="checks">
-      <li>A reserved subdomain on schoolpulse.ug for each school.</li>
+      <li>A reserved subdomain on schoolpulseapp.com for each school.</li>
       <li>School name, logo and colours applied to the portal.</li>
       <li>Optional custom domain, verified by CNAME.</li>
     </ul>
@@ -366,7 +366,7 @@ const HOME_FAQ = [
   {
     q: 'Does each school get its own web address?',
     a:
-      'Yes. Each school runs at your-school.schoolpulse.ug with its own name ' +
+      'Yes. Each school runs at your-school.schoolpulseapp.com with its own name ' +
       'and colours, and can connect a custom domain later.',
   },
   {

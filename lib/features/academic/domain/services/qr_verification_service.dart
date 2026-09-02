@@ -43,6 +43,6 @@ class QrVerificationService {
       year: year,
     );
 
-    return "https://verify.schoolpulse.ug/report?s=$schoolId&st=$studentId&t=$term&y=$year&v=$verificationCode";
+    return "https://verify.schoolpulseapp.com/report?s=$schoolId&st=$studentId&t=$term&y=$year&v=$verificationCode";
   }
 }

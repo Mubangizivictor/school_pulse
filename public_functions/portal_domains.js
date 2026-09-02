@@ -5,7 +5,7 @@ const dns = require('node:dns').promises;
 const { requirePlatformOwner, OwnerAuthorizationError } = require('./vendor/owner-auth');
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
-const ROOT = 'schoolpulse.ug', TARGET = 'ghs.googlehosted.com';
+const ROOT = 'schoolpulseapp.com', TARGET = 'ghs.googlehosted.com';
 const TRIAL_DAYS = 14;
 const LIFECYCLE_STATUSES = new Set(['active', 'suspended', 'archived', 'trial']);
 const RESERVED = new Set(['admin', 'api', 'www', 'support', 'schoolpulse', 'app', 'mail', 'status', 'portal']);

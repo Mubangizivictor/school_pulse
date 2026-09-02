@@ -140,7 +140,7 @@ test('verification_url is present as a key even with empty input (never entirely
 
 console.log('\nSender mapping');
 test('email_verification sends from the security@ sender, matching other account-security emails', () => {
-  assert.equal(senderForTemplate('email_verification'), 'School Pulse <security@schoolpulse.victorbee.com>');
+  assert.equal(senderForTemplate('email_verification'), 'School Pulse <security@schoolpulseapp.com>');
 });
 
 console.log('\nNo secret/credential leakage');

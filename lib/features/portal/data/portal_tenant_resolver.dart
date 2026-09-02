@@ -21,8 +21,10 @@ class PortalTenantResolver {
   PortalTenantResolver(this._db);
   final FirebaseFirestore _db;
   static const _platform = {
-    'schoolpulse.ug',
-    'www.schoolpulse.ug',
+    'schoolpulseapp.com',
+    'www.schoolpulseapp.com',
+    'school-pulse-3d95b.web.app',
+    'school-pulse-3d95b.firebaseapp.com',
     'localhost',
     '127.0.0.1',
   };

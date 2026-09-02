@@ -8,7 +8,7 @@ test('portal slugs reject reserved and unsafe values', () => {
 });
 test('custom host excludes platform wildcard', () => {
   assert.equal(__test__.validHost('portal.greenhill.ac.ug'), true);
-  assert.equal(__test__.validHost('greenhill.schoolpulse.ug'), false);
+  assert.equal(__test__.validHost('greenhill.schoolpulseapp.com'), false);
 });
 test('new schools get a real trial window, not an already-expired one', () => {
   // createSchoolPortal used to set subscriptionExpiry: Date.now(), so a
