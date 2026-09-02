@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -214,6 +215,17 @@ class _SuperAdminNotificationsScreenState
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: AppColors.background(context),
+        // Reached via context.go from the Overview bell (not a stacked
+        // push), so Navigator.canPop is false here and Flutter's AppBar
+        // would render no back control at all. An explicit back button
+        // returns to Overview - the section this screen belongs to.
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          tooltip: 'Back',
+          onPressed: () => Navigator.canPop(context)
+              ? Navigator.of(context).pop()
+              : context.go('/super-admin'),
+        ),
         title: const Text('Notifications'),
       ),
       body: _ownerId == null

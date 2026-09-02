@@ -122,6 +122,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Notifications'), findsOneWidget); // app bar title
+      expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsOneWidget);
       expect(find.text('Recent'), findsOneWidget);
       expect(find.text('3 NEW'), findsOneWidget);
       for (final label in ['All', 'Critical', 'Billing', 'Platform', 'Schools',
