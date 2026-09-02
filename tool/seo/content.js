@@ -42,9 +42,14 @@ const featureGrid = () => `
   </section>`;
 
 const CONTENT = {
-  // Primary indexable landing page. "/" is the Flutter app, so this page
-  // carries the strongest overview copy plus the site-wide JSON-LD entity
-  // graph (wired in generate.js).
+  // Marketing homepage at "/" — same copy as the primary landing page
+  // below, since both cover the same core positioning. The Flutter app
+  // boots at /app/ instead of "/" (see web/index.html's --base-href).
+  home: () => CONTENT['school-management-software-uganda'](),
+
+  // Primary indexable landing page, also reused verbatim as the homepage
+  // (see `home` above). Carries the strongest overview copy plus the
+  // site-wide JSON-LD entity graph (wired in generate.js).
   'school-management-software-uganda': () => `
   <section class="hero" aria-labelledby="page-h1">
     <p class="eyebrow">${CONTACT.tagline}</p>

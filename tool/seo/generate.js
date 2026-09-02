@@ -2,18 +2,19 @@
 /**
  * Generates the School Pulse public marketing site into build/web/.
  *
- * Run AFTER `flutter build web` (which populates build/web/ with the app),
- * and BEFORE `firebase deploy --only hosting`. It writes:
+ * Run AFTER:
+ *   flutter build web --release --base-href=/app/ --output=build/web/app
+ * (which populates build/web/app/ with the Flutter SPA — it now boots at
+ * /app/, not "/"), and BEFORE `firebase deploy --only hosting`. It writes:
  *
- *   build/web/<slug>/index.html   one static page per marketing route
- *   build/web/index.html          left as the Flutter app entry (only its
- *                                 <head> is rewritten — see patchAppIndex)
+ *   build/web/<slug>/index.html   one static page per marketing route,
+ *                                 including "/" itself (the homepage)
  *   build/web/robots.txt
  *   build/web/sitemap.xml         sitemap index
  *   build/web/sitemap-marketing.xml
  *   build/web/assets-marketing/*  shared css + og image
  *
- * It never touches Flutter's JS, wasm, or asset bundles.
+ * It never touches build/web/app/ (Flutter's JS, wasm, or asset bundles).
  */
 'use strict';
 
@@ -123,10 +124,8 @@ function softwareApplicationLd() {
 }
 
 function breadcrumbLd(page) {
-  const items = [
-    { name: 'School Pulse', item: `${CANONICAL_HOST}/school-management-software-uganda` },
-  ];
-  if (page.path !== '/school-management-software-uganda') {
+  const items = [{ name: 'School Pulse', item: `${CANONICAL_HOST}/` }];
+  if (page.path !== '/') {
     items.push({
       name: page.h1 || page.title,
       item: `${CANONICAL_HOST}${page.path}`,
@@ -156,10 +155,9 @@ function faqLd() {
   };
 }
 
-// The primary indexable landing page carries the site-wide entity graph
-// (Organization / WebSite / SoftwareApplication) and the product FAQ, since
-// "/" itself is the Flutter app and is not in the marketing set.
-const PRIMARY_LANDING = '/school-management-software-uganda';
+// The homepage carries the site-wide entity graph (Organization / WebSite /
+// SoftwareApplication) and the product FAQ.
+const PRIMARY_LANDING = '/';
 
 function ldFor(page) {
   const blocks = [breadcrumbLd(page)];
@@ -241,7 +239,10 @@ function render(page) {
           ${NAV.map(([h, t]) => `<li><a href="${h}">${esc(t)}</a></li>`).join('\n          ')}
         </ul>
       </nav>
-      <a class="btn btn-primary header-cta" href="/request-demo">Request a demo</a>
+      <div class="header-actions">
+        <a class="header-cta-login" href="/app/">Login</a>
+        <a class="btn btn-primary" href="/request-demo">Register your school</a>
+      </div>
     </div>
   </header>
   <main id="main" class="wrap">
@@ -344,15 +345,18 @@ function sitemapIndex() {
 
 // ---------------------------------------------------------------------------
 // Verify the built Flutter index.html carries real School Pulse metadata.
-// The real fix lives in web/index.html (source), so `flutter build web`
-// already produces a correct build/web/index.html. This is a guard: if the
+// The real fix lives in web/index.html (source), so
+// `flutter build web --base-href=/app/ --output=build/web/app` already
+// produces a correct build/web/app/index.html. This is a guard: if the
 // Flutter placeholder ever comes back, the build fails loudly instead of
 // silently redeploying "A new Flutter project".
 // ---------------------------------------------------------------------------
 function verifyAppIndex() {
-  const file = path.join(OUT, 'index.html');
+  const file = path.join(OUT, 'app', 'index.html');
   if (!fs.existsSync(file)) {
-    throw new Error(`missing ${file} — run flutter build web first`);
+    throw new Error(
+      `missing ${file} — run: flutter build web --release --base-href=/app/ --output=build/web/app`,
+    );
   }
   const html = fs.readFileSync(file, 'utf8');
   const problems = [];
@@ -374,7 +378,9 @@ function verifyAppIndex() {
 // ---------------------------------------------------------------------------
 function main() {
   if (!fs.existsSync(OUT)) {
-    console.error(`✗ ${OUT} not found. Run: flutter build web --release`);
+    console.error(
+      `✗ ${OUT} not found. Run: flutter build web --release --base-href=/app/ --output=build/web/app`,
+    );
     process.exit(1);
   }
 

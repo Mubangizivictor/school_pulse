@@ -62,7 +62,9 @@ h3 { font-size: 1.05rem; margin: 0 0 .3em; }
 }
 .site-header nav a { color: var(--muted); text-decoration: none; font-size: .95rem; }
 .site-header nav a:hover { color: var(--ink); }
-.header-cta { margin-left: auto; }
+.header-actions { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+.header-cta-login { color: var(--ink); text-decoration: none; font-weight: 600; font-size: .95rem; }
+.header-cta-login:hover { color: var(--brand); }
 
 .btn {
   display: inline-block; padding: 11px 20px; border-radius: var(--radius);

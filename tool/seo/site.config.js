@@ -36,13 +36,22 @@ const POSITIONING =
 // time from git history of the generator + config (best available signal
 // for hand-authored pages).
 const PAGES = [
-  // NOTE: There is no marketing page at "/". The Flutter app owns the root
-  // URL (it boots there and every deep link / notification / OAuth redirect
-  // assumes it), so "/" is NOT in this list and NOT in the sitemap. The
-  // strongest indexable landing page is /school-management-software-uganda.
-  // The app's own build/web/index.html still carries real School Pulse
-  // <title>/description/canonical/OG (see web/index.html), so the root no
-  // longer reads as "A new Flutter project" to crawlers or link unfurlers.
+  // "/" is the marketing homepage (same content as the primary landing
+  // page below, at the canonical root path). The Flutter app now boots
+  // at /app/ instead — see web/index.html's --base-href=/app/ build flag
+  // and firebase.json's rewrite of unmatched paths to /app/index.html.
+  {
+    path: '/',
+    slug: 'home',
+    title: 'School Pulse — School Management Software for Uganda',
+    description:
+      'School management software built for Ugandan schools. Manage students, ' +
+      'staff, attendance, fees and academics, with MTN Mobile Money fee ' +
+      'records and parent access on any phone.',
+    h1: 'School management software built for Ugandan schools',
+    priority: '1.0',
+    changefreq: 'monthly',
+  },
   {
     path: '/school-management-software-uganda',
     slug: 'school-management-software-uganda',
@@ -217,21 +226,13 @@ const PAGES = [
   },
 ];
 
-// App / auth / tenant paths that must never be indexed and should fall
-// through to the Flutter SPA. Used to build robots.txt Disallow rules.
+// The whole Flutter SPA now lives under /app/ (see web/index.html's
+// --base-href=/app/ build flag and firebase.json's rewrite of unmatched
+// paths to /app/index.html) — one Disallow line covers every app/auth/
+// tenant route. /verify* stay separate: they're Cloud Function rewrites,
+// not app routes, but still carry no marketing/SEO value.
 const APP_DISALLOW = [
-  '/welcome',
-  '/login',
-  '/owner-login',
-  '/owner/',
-  '/owner-',
-  '/auth/',
-  '/school-splash',
-  '/institution-suspended',
-  '/staff/',
-  '/parent/',
-  '/student/',
-  '/super-admin/',
+  '/app/',
   '/verify',
   '/verify-student',
   '/verify-report',
