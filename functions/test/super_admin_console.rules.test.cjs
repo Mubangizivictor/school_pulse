@@ -196,44 +196,17 @@ describe('super_admin_notifications (server-written, per-owner read)', () => {
   });
 });
 
-describe('super_admin_notification_tokens (owner-only FCM device tokens)', () => {
-  test('an owner can write + read their own device token', async () => {
-    await assertSucceeds(setDoc(
-      doc(dbFor(OWNER_A), 'super_admin_notification_tokens/ownerA/devices/tok1'),
-      { token: 'tok1', ownerId: OWNER_A, platform: 'ios', dataOnly: true },
-    ));
-    await assertSucceeds(getDoc(
-      doc(dbFor(OWNER_A), 'super_admin_notification_tokens/ownerA/devices/tok1'),
-    ));
-    await assertSucceeds(deleteDoc(
-      doc(dbFor(OWNER_A), 'super_admin_notification_tokens/ownerA/devices/tok1'),
-    ));
-  });
-
-  test('an owner cannot touch another owner\'s device tokens', async () => {
+describe('platform_owner_device_tokens (canonical owner FCM registry, server-write only)', () => {
+  // Written only by registerOwnerNotificationDevice / unregisterOwnerNotificationDevice
+  // (Admin SDK) - no client, owner included, ever writes here directly.
+  test('no client can read or write the canonical token registry', async () => {
     await assertFails(setDoc(
-      doc(dbFor(OWNER_A), 'super_admin_notification_tokens/ownerB/devices/x'),
-      { token: 'x', ownerId: OWNER_B },
+      doc(dbFor(OWNER_A), 'platform_owner_device_tokens/tok1'),
+      { token: 'tok1', ownerId: OWNER_A },
     ));
-    await assertFails(getDoc(
-      doc(dbFor(OWNER_A), 'super_admin_notification_tokens/ownerB/devices/x'),
-    ));
-  });
-
-  test('a school admin is denied owner device tokens entirely', async () => {
-    await assertFails(setDoc(
-      doc(dbFor(ADMIN_A), 'super_admin_notification_tokens/adminA/devices/x'),
-      { token: 'x' },
-    ));
-    await assertFails(getDoc(
-      doc(dbFor(ADMIN_A), 'super_admin_notification_tokens/ownerA/devices/tok1'),
-    ));
-  });
-
-  test('an anonymous client is denied owner device tokens', async () => {
-    await assertFails(getDoc(
-      doc(anon(), 'super_admin_notification_tokens/ownerA/devices/tok1'),
-    ));
+    await assertFails(getDoc(doc(dbFor(OWNER_A), 'platform_owner_device_tokens/tok1')));
+    await assertFails(getDoc(doc(dbFor(ADMIN_A), 'platform_owner_device_tokens/tok1')));
+    await assertFails(getDoc(doc(anon(), 'platform_owner_device_tokens/tok1')));
   });
 });
 

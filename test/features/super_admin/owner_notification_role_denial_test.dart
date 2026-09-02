@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_service.dart';
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_offline_store.dart';
-import 'package:school_pulse/features/super_admin/data/services/owner_push_token_service.dart';
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_isar_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,9 +16,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///    `users/{uid}/...` or role notification path;
 ///  * cache   — the owner cache is namespaced by owner uid and the Isar
 ///    instance name is `owner_notifications_<uid>`;
-///  * push    — the owner FCM token path is
-///    `super_admin_notification_tokens/{uid}/devices/{token}`, distinct from
-///    the school-role `users/{uid}/tokens/{token}` path;
+///  * push    — device registration goes through the canonical, already
+///    server-verified `registerOwnerNotificationDevice` /
+///    `unregisterOwnerNotificationDevice` callables (never a client write
+///    to `platform_owner_device_tokens` directly);
 ///  * teardown wipes all of it.
 void main() {
   test('owner notification routes live entirely under the guarded '
@@ -58,20 +58,27 @@ void main() {
     expect(svc.contains("core/notification/"), isFalse);
   });
 
-  test('the owner push-token path is dedicated and distinct from the '
-      'school-role token path', () {
-    expect(
-      OwnerPushTokenService.rootCollection,
-      'super_admin_notification_tokens',
-    );
-    expect(OwnerPushTokenService.devicesSub, 'devices');
-    final src = File(
-      'lib/features/super_admin/data/services/owner_push_token_service.dart',
-    ).readAsStringSync();
-    // Never writes to the school-role token path.
-    expect(src.contains(".collection('users')"), isFalse);
-    expect(src.contains("users/\${"), isFalse);
-  });
+  test(
+    'owner push registration goes through the canonical server-verified '
+    'callables, not a direct client Firestore write',
+    () {
+      final src = File(
+        'lib/features/super_admin/data/services/owner_push_token_service.dart',
+      ).readAsStringSync();
+      expect(
+        src.contains("httpsCallable('registerOwnerNotificationDevice')"),
+        isTrue,
+      );
+      expect(
+        src.contains("httpsCallable('unregisterOwnerNotificationDevice')"),
+        isTrue,
+      );
+      // No direct client write to any token collection - registration is
+      // callable-only so the server's send path and the client can never
+      // drift onto different token stores.
+      expect(src.contains('.collection('), isFalse);
+    },
+  );
 
   test('the owner Isar cache instance name is per-owner and owner-prefixed',
       () {
