@@ -26,7 +26,6 @@ void main() {
   test('settings rows are in the spec order with real routes/screens, not dead taps', () {
     final order = [
       'Billing & payment methods',
-      'Notification delivery',
       'Security & sessions',
       'Platform audit logs',
       'Support & legal',
@@ -38,8 +37,10 @@ void main() {
       expect(index, greaterThan(lastIndex), reason: '$title out of order');
       lastIndex = index;
     }
+    // Notifications is reached from the Overview bell, not listed in
+    // Settings - Overview stays highlighted while it's open.
+    expect(source.contains("title: 'Notification delivery'"), isFalse);
     expect(source.contains('ManualPaymentConfigScreen()'), isTrue);
-    expect(source.contains("/super-admin/settings/notifications"), isTrue);
     expect(source.contains("/super-admin/settings/security"), isTrue);
     expect(source.contains('AuditLogsScreen()'), isTrue);
     expect(source.contains("/super-admin/settings/support"), isTrue);

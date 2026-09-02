@@ -20,7 +20,6 @@ import 'package:school_pulse/features/super_admin/domain/entities/subscription_p
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
-import 'super_admin_notifications_screen.dart';
 
 /// Presentation-only, compact platform overview. It consumes the existing
 /// SuperAdminBloc state and existing payment service without changing owner
@@ -282,11 +281,11 @@ class _NotificationsButton extends StatelessWidget {
             ),
             child: IconButton(
               tooltip: 'Notifications',
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const SuperAdminNotificationsScreen(),
-                ),
-              ),
+              // Goes through the real owner route (not a bare push) so the
+              // persistent bottom navigation stays visible - Overview stays
+              // highlighted, matching every other entry point into Owner
+              // Notifications.
+              onPressed: () => context.go('/super-admin/notifications'),
               icon: Badge(
                 isLabelVisible: unread > 0,
                 smallSize: 8,

@@ -26,8 +26,7 @@ void main() {
       '/super-admin subtree', () {
     const ownerRoutes = [
       '/super-admin/notifications',
-      '/super-admin/settings/notifications',
-      '/super-admin/settings/notifications/history',
+      '/super-admin/notifications/history',
     ];
     for (final r in ownerRoutes) {
       expect(r.startsWith('/super-admin'), isTrue);
@@ -42,9 +41,8 @@ void main() {
       router.contains('authState.user.role != UserRole.superAdmin'),
       isTrue,
     );
-    // The owner notification routes are registered as children of
-    // /super-admin, not as standalone top-level routes.
-    expect(router.contains("path: 'settings/notifications'"), isTrue);
+    // The owner notification route is a real child of /super-admin.
+    expect(router.contains("path: 'notifications'"), isTrue);
   });
 
   test('the feed collection is the owner collection, not a role path', () {

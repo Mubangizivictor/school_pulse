@@ -3739,10 +3739,24 @@ final router = GoRouter(
           builder: (context, state) => const SuperAdminDashboard(),
         ),
         GoRoute(
+          // Owner Notifications is reached from the Overview bell, not
+          // nested under Settings - the bottom nav highlights Overview
+          // while it's open (see superAdminSectionForPath). Owner alerts
+          // always deliver everything by default - there is deliberately
+          // no notification-settings screen to opt out of any category,
+          // channel or quiet hours.
           path: 'notifications',
           builder: (context, state) => const SuperAdminMobileNavShell(
             child: SuperAdminNotificationsScreen(),
           ),
+          routes: [
+            GoRoute(
+              path: 'history',
+              builder: (context, state) => const SuperAdminMobileNavShell(
+                child: OwnerNotificationHistoryScreen(),
+              ),
+            ),
+          ],
         ),
         GoRoute(
           path: 'audit-logs',
@@ -3751,23 +3765,6 @@ final router = GoRouter(
         GoRoute(
           path: 'settings',
           builder: (context, state) => const SuperAdminDashboard(),
-        ),
-        GoRoute(
-          path: 'settings/notifications',
-          builder: (context, state) => const SuperAdminMobileNavShell(
-            child: SuperAdminNotificationsScreen(),
-          ),
-          routes: [
-            // Owner alerts always deliver everything by default - there is
-            // deliberately no notification-settings screen to opt out of
-            // any category, channel or quiet hours.
-            GoRoute(
-              path: 'history',
-              builder: (context, state) => const SuperAdminMobileNavShell(
-                child: OwnerNotificationHistoryScreen(),
-              ),
-            ),
-          ],
         ),
         GoRoute(
           path: 'settings/security',

@@ -59,13 +59,6 @@ class SuperAdminSettingsScreen extends StatelessWidget {
       ),
       PlatformSettingsRow(
         standalone: standalone,
-        icon: Icons.notifications_outlined,
-        title: 'Notification delivery',
-        subtitle: 'Configure how and when notifications are delivered',
-        onTap: () => context.push('/super-admin/settings/notifications'),
-      ),
-      PlatformSettingsRow(
-        standalone: standalone,
         icon: Icons.shield_outlined,
         title: 'Security & sessions',
         subtitle: 'Password, two-factor authentication and active sessions',

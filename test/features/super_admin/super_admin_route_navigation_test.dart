@@ -31,17 +31,12 @@ void main() {
           ),
           4,
         );
-        expect(superAdminSectionForPath('/super-admin/notifications'), 4);
-        // Redesigned owner notification nested routes keep Settings selected.
+        // Owner Notifications is reached from the Overview bell, not nested
+        // under Settings - Overview stays selected while it's open.
+        expect(superAdminSectionForPath('/super-admin/notifications'), 0);
         expect(
-          superAdminSectionForPath('/super-admin/settings/notifications'),
-          4,
-        );
-        expect(
-          superAdminSectionForPath(
-            '/super-admin/settings/notifications/history',
-          ),
-          4,
+          superAdminSectionForPath('/super-admin/notifications/history'),
+          0,
         );
         expect(
           superAdminSectionForPath('/super-admin/settings/support/ticket/1'),

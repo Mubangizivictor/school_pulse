@@ -18,12 +18,12 @@ int superAdminSectionForPath(String path) {
       path.startsWith('/super-admin/activity')) {
     return 3;
   }
-  // Notifications are owner preferences/supporting owner UI, rather than a
-  // sixth destination. Platform Health intentionally belongs to Overview.
-  if (path.startsWith('/super-admin/settings') ||
-      path.startsWith('/super-admin/notifications')) {
+  if (path.startsWith('/super-admin/settings')) {
     return 4;
   }
+  // Notifications is reached from the Overview bell, not nested under
+  // Settings, and is not a sixth destination - Overview stays highlighted
+  // while it's open. Platform Health intentionally belongs to Overview too.
   return 0;
 }
 
