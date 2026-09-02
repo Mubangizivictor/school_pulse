@@ -7,10 +7,8 @@ import 'package:school_pulse/design_system/theme/app_theme.dart';
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_service.dart';
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_store.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification.dart';
-import 'package:school_pulse/features/super_admin/domain/entities/owner_notification_preferences.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification_taxonomy.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_detail_screen.dart';
-import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_preferences_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_notifications_screen.dart';
 
 class _Svc extends OwnerNotificationService {
@@ -30,9 +28,6 @@ class _Svc extends OwnerNotificationService {
       const OwnerQueueSyncResult(synced: 0, dropped: 0, remaining: 0);
   @override
   Future<void> markRead(String id) async {}
-  @override
-  Future<OwnerNotificationPreferences> getPreferences(String o) async =>
-      OwnerNotificationPreferences.defaults(o);
 }
 
 OwnerNotification _n(String id, OwnerNotificationCategory c, {String? sev}) =>
@@ -109,14 +104,6 @@ void main() {
             sev: 'requires_review'),
         service: _Svc(const []),
       ),
-    );
-  });
-
-  testWidgets('Owner Notification Settings — no overflow, all themes/sizes',
-      (tester) async {
-    await _expectNoOverflow(
-      tester,
-      OwnerNotificationPreferencesScreen(service: _Svc(const [])),
     );
   });
 }

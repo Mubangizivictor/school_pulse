@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -83,9 +82,6 @@ class _SuperAdminNotificationsScreenState
         return n.category == OwnerNotificationCategory.security;
     }
   }
-
-  void _openSettings() =>
-      context.go('/super-admin/settings/notifications/preferences');
 
   Future<void> _openDetail(OwnerNotification n) async {
     if (n.isUnread) unawaited(_run(() => _notifications.markRead(n.id)));
@@ -219,13 +215,6 @@ class _SuperAdminNotificationsScreenState
         centerTitle: true,
         backgroundColor: AppColors.background(context),
         title: const Text('Notifications'),
-        actions: [
-          IconButton(
-            tooltip: 'Notification settings',
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: _openSettings,
-          ),
-        ],
       ),
       body: _ownerId == null
           ? const Center(child: Text('Sign in to manage notifications'))

@@ -289,7 +289,6 @@ import 'package:school_pulse/features/super_admin/domain/owner_security_session_
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_dashboard.dart';
 import 'package:school_pulse/features/super_admin/presentation/widgets/super_admin_mobile_nav_shell.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_notifications_screen.dart';
-import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_preferences_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_history_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/security_center_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/custom_domains_screen.dart';
@@ -3759,12 +3758,9 @@ final router = GoRouter(
             child: SuperAdminNotificationsScreen(),
           ),
           routes: [
-            GoRoute(
-              path: 'preferences',
-              builder: (context, state) => const SuperAdminMobileNavShell(
-                child: OwnerNotificationPreferencesScreen(),
-              ),
-            ),
+            // Owner alerts always deliver everything by default - there is
+            // deliberately no notification-settings screen to opt out of
+            // any category, channel or quiet hours.
             GoRoute(
               path: 'history',
               builder: (context, state) => const SuperAdminMobileNavShell(

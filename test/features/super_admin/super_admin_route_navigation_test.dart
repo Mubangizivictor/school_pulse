@@ -39,12 +39,6 @@ void main() {
         );
         expect(
           superAdminSectionForPath(
-            '/super-admin/settings/notifications/preferences',
-          ),
-          4,
-        );
-        expect(
-          superAdminSectionForPath(
             '/super-admin/settings/notifications/history',
           ),
           4,

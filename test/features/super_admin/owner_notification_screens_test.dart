@@ -9,7 +9,6 @@ import 'package:school_pulse/features/super_admin/domain/entities/owner_notifica
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification_preferences.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification_taxonomy.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_detail_screen.dart';
-import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_preferences_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_notifications_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/widgets/owner_notification_visuals.dart';
 
@@ -252,53 +251,18 @@ void main() {
     });
   });
 
-  group('Owner Notification Settings', () {
-    testWidgets('groups, privacy card, and pending-only Save button',
-        (tester) async {
-      final svc = _FakeService(const []);
+  testWidgets(
+    'there is no notification-settings entry point: owner alerts always '
+    'deliver everything by default',
+    (tester) async {
+      final svc = _FakeService([
+        _n('a', category: OwnerNotificationCategory.billing),
+      ]);
       await tester.pumpWidget(
-          _wrap(OwnerNotificationPreferencesScreen(service: svc)));
+          _wrap(SuperAdminNotificationsScreen(service: svc)));
       await tester.pumpAndSettle();
-
-      expect(find.text('Notification settings'), findsOneWidget);
-      expect(find.text('DELIVERY'), findsOneWidget);
-      expect(find.text('CATEGORIES'), findsOneWidget);
-      expect(find.text('In-app notifications'), findsOneWidget);
-      expect(find.text('Push notifications'), findsOneWidget);
-      for (final c in ['Payments', 'Platform health', 'Schools', 'Security',
-          'Weekly digest']) {
-        expect(find.text(c), findsOneWidget, reason: c);
-      }
-      // No pending change yet -> no Save button.
-      expect(find.text('Save preferences'), findsNothing);
-
-      await tester.dragUntilVisible(
-        find.text('Owner notifications are private to Super Admin devices.'),
-        find.byType(ListView),
-        const Offset(0, -120),
-      );
-      expect(
-        find.text('Owner notifications are private to Super Admin devices.'),
-        findsOneWidget,
-      );
-
-      // Toggle a category -> Save appears -> tap it -> callable hit.
-      final securityRow = find.ancestor(
-        of: find.text('Security'),
-        matching: find.byType(Row),
-      ).first;
-      await tester.ensureVisible(securityRow);
-      await tester.pumpAndSettle();
-      await tester.tap(find.descendant(
-        of: securityRow,
-        matching: find.byType(Switch),
-      ));
-      await tester.pumpAndSettle();
-      expect(find.text('Save preferences'), findsOneWidget);
-      await tester.tap(find.text('Save preferences'));
-      await tester.pumpAndSettle();
-      expect(svc.calls, contains('savePreferences'));
-      expect(find.text('Save preferences'), findsNothing); // cleared after save
-    });
-  });
+      expect(find.byIcon(Icons.settings_outlined), findsNothing);
+      expect(find.text('Notification settings'), findsNothing);
+    },
+  );
 }

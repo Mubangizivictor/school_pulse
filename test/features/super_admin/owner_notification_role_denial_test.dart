@@ -27,7 +27,6 @@ void main() {
     const ownerRoutes = [
       '/super-admin/notifications',
       '/super-admin/settings/notifications',
-      '/super-admin/settings/notifications/preferences',
       '/super-admin/settings/notifications/history',
     ];
     for (final r in ownerRoutes) {
