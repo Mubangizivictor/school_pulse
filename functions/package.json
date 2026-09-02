@@ -7,6 +7,7 @@
   "main": "index.js",
   "scripts": {
     "test:rules": "firebase emulators:exec --only firestore --project demo-school-pulse-rules-test \"node --test test/firestore.rules.test.cjs\"",
+    "test:rules:super-admin-console": "firebase emulators:exec --only firestore --project demo-school-pulse-superadmin-rules-test \"node --test test/super_admin_console.rules.test.cjs\"",
     "test:report-card-engine": "node report_card_engine.test.js",
     "test:report-card-engine:emulator": "firebase emulators:exec --only firestore --project demo-report-card-engine-test \"node --test test/report_card_engine.emulator.test.cjs\"",
     "test:report-card-workflow:emulator": "firebase emulators:exec --only firestore --project demo-report-card-workflow-test \"node --test test/report_card_approval_workflow.emulator.test.cjs\"",

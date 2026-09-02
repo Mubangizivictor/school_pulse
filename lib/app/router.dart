@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -529,6 +529,17 @@ final router = GoRouter(
       if (authState is AuthAuthenticated) {
         if (authState.user.role != UserRole.superAdmin) {
           return UserRoleRouting.dashboardPath(authState.user.role);
+        }
+        // DEV-ONLY local emulator bypass. The Firebase Auth Emulator cannot
+        // generate a TOTP secret, so the mandatory-MFA + owner-security-
+        // session gates below can never be satisfied against emulators.
+        // Triple-guarded: debug build + --dart-define=USE_FIREBASE_EMULATOR
+        // + --dart-define=SKIP_OWNER_MFA. Impossible to reach in a release
+        // build. Do not ship a build that sets these defines.
+        const _emulator = bool.fromEnvironment('USE_FIREBASE_EMULATOR');
+        const _skipOwnerMfa = bool.fromEnvironment('SKIP_OWNER_MFA');
+        if (kDebugMode && _emulator && _skipOwnerMfa) {
+          return null;
         }
         // Mandatory TOTP: Firebase only *enforces* an MFA challenge at
         // sign-in for a user who already has a factor enrolled

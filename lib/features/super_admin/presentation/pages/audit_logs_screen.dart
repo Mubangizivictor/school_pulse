@@ -158,13 +158,15 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     final buffer = StringBuffer('Event,Actor,Category,Timestamp,Reason\n');
     for (final log in logs) {
       String escape(String value) => '"${value.replaceAll('"', '""')}"';
-      buffer.writeln([
-        escape(log.action),
-        escape(log.ownerId),
-        escape(_categoryOf(log).label),
-        escape(log.timestamp.toIso8601String()),
-        escape(log.reason ?? ''),
-      ].join(','));
+      buffer.writeln(
+        [
+          escape(log.action),
+          escape(log.ownerId),
+          escape(_categoryOf(log).label),
+          escape(log.timestamp.toIso8601String()),
+          escape(log.reason ?? ''),
+        ].join(','),
+      );
     }
     final bytes = utf8.encode(buffer.toString());
     final name =
@@ -245,6 +247,14 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                     children: [
                       Text('Activity', style: _pageTitle(context)),
                       const Spacer(),
+                      if (logs.isNotEmpty) ...[
+                        _IconAction(
+                          icon: Icons.ios_share_rounded,
+                          tooltip: 'Export audit',
+                          onTap: () => _exportAudit(filtered),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       _IconAction(
                         icon: Icons.refresh_rounded,
                         tooltip: 'Refresh activity',
@@ -264,18 +274,6 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                           _page = 0;
                         }),
                       ),
-                      const Spacer(),
-                      if (logs.isNotEmpty)
-                        TextButton.icon(
-                          onPressed: () => _exportAudit(filtered),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          icon: const Icon(Icons.ios_share_rounded, size: 16),
-                          label: const Text('Export audit'),
-                        ),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -332,7 +330,10 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                           children: [
                             for (final (i, log) in group.logs.indexed) ...[
                               if (i > 0)
-                                Divider(height: 1, color: AppColors.border(context)),
+                                Divider(
+                                  height: 1,
+                                  color: AppColors.border(context),
+                                ),
                               AuditActivityRow(log: log),
                             ],
                           ],
@@ -363,12 +364,16 @@ List<_LogGroup> _groupByDay(List<AuditLog> logs) {
   final buckets = <String, List<AuditLog>>{};
   final order = <String>[];
   for (final log in logs) {
-    final day = DateTime(log.timestamp.year, log.timestamp.month, log.timestamp.day);
+    final day = DateTime(
+      log.timestamp.year,
+      log.timestamp.month,
+      log.timestamp.day,
+    );
     final key = day == today
         ? 'Today'
         : day == yesterday
-            ? 'Yesterday'
-            : DateFormat('MMMM d, y').format(day);
+        ? 'Yesterday'
+        : DateFormat('MMMM d, y').format(day);
     if (!buckets.containsKey(key)) order.add(key);
     buckets.putIfAbsent(key, () => []).add(log);
   }
@@ -409,7 +414,10 @@ class AuditActivityRow extends StatelessWidget {
             Container(
               width: 34,
               height: 34,
-              decoration: BoxDecoration(color: color.withValues(alpha: .14), shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: .14),
+                shape: BoxShape.circle,
+              ),
               child: Icon(icon, size: 17, color: color),
             ),
             const SizedBox(width: 10),
@@ -449,7 +457,11 @@ class AuditActivityRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 2),
-            Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textMuted(context)),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: AppColors.textMuted(context),
+            ),
           ],
         ),
       ),
@@ -473,11 +485,22 @@ class AuditActivityRow extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_titleCaseAction(log.action), style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w800)),
+            Text(
+              _titleCaseAction(log.action),
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
             const SizedBox(height: 6),
-            Text('By ${_actorLabel(log.ownerId)} • ${log.device}', style: AppTypography.bodySmall),
+            Text(
+              'By ${_actorLabel(log.ownerId)} • ${log.device}',
+              style: AppTypography.bodySmall,
+            ),
             const SizedBox(height: 6),
-            Text(DateFormat('MMM d, yyyy • h:mm a').format(log.timestamp), style: AppTypography.bodySmall),
+            Text(
+              DateFormat('MMM d, yyyy • h:mm a').format(log.timestamp),
+              style: AppTypography.bodySmall,
+            ),
             if (log.reason != null) ...[
               const SizedBox(height: 6),
               Text('Reason: ${log.reason}', style: AppTypography.bodySmall),
@@ -490,7 +513,11 @@ class AuditActivityRow extends StatelessWidget {
 }
 
 class _IconAction extends StatelessWidget {
-  const _IconAction({required this.icon, required this.tooltip, required this.onTap});
+  const _IconAction({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
@@ -539,7 +566,11 @@ class _PeriodPicker extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary(context)),
+          Icon(
+            Icons.calendar_today_outlined,
+            size: 16,
+            color: AppColors.textSecondary(context),
+          ),
           const SizedBox(width: 7),
           Text(
             period.label,
@@ -549,7 +580,11 @@ class _PeriodPicker extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textSecondary(context)),
+          Icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 18,
+            color: AppColors.textSecondary(context),
+          ),
         ],
       ),
     ),
@@ -557,18 +592,30 @@ class _PeriodPicker extends StatelessWidget {
 }
 
 class _CompactChip extends StatelessWidget {
-  const _CompactChip({required this.label, required this.isSelected, required this.onTap});
+  const _CompactChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? AppColors.information(context) : AppColors.textSecondary(context);
+    final color = isSelected
+        ? AppColors.information(context)
+        : AppColors.textSecondary(context);
     return Material(
-      color: isSelected ? AppColors.informationSurface(context) : AppColors.surfaceElevated(context),
+      color: isSelected
+          ? AppColors.informationSurface(context)
+          : AppColors.surfaceElevated(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: isSelected ? AppColors.information(context) : AppColors.border(context)),
+        side: BorderSide(
+          color: isSelected
+              ? AppColors.information(context)
+              : AppColors.border(context),
+        ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -578,7 +625,11 @@ class _CompactChip extends StatelessWidget {
           child: Center(
             child: Text(
               label,
-              style: AppTypography.labelMedium.copyWith(color: color, fontWeight: FontWeight.w700, fontSize: 12.5),
+              style: AppTypography.labelMedium.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 12.5,
+              ),
             ),
           ),
         ),
@@ -588,7 +639,11 @@ class _CompactChip extends StatelessWidget {
 }
 
 class _CompactState extends StatelessWidget {
-  const _CompactState({required this.icon, required this.title, required this.message});
+  const _CompactState({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
   final IconData icon;
   final String title, message;
   @override
@@ -600,11 +655,24 @@ class _CompactState extends StatelessWidget {
         children: [
           Icon(icon, size: 28, color: AppColors.textMuted(context)),
           const SizedBox(height: 8),
-          Text(title, style: AppTypography.titleMedium.copyWith(color: AppColors.textPrimary(context), fontSize: 15, fontWeight: FontWeight.w800)),
+          Text(
+            title,
+            style: AppTypography.titleMedium.copyWith(
+              color: AppColors.textPrimary(context),
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(message, textAlign: TextAlign.center, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary(context))),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textSecondary(context),
+              ),
+            ),
           ),
         ],
       ),

@@ -97,6 +97,195 @@ exports.updateSchoolSubscriptionPlan = onCall({ region: 'europe-west1' }, async 
   return { schoolId, planId, expiry };
 });
 exports.requestCustomPortalDomain = onCall({ region: 'europe-west1' }, async r => { const actor = await schoolAdmin(r), host = clean(r.data?.hostname); if (!validHost(host)) throw new HttpsError('invalid-argument', 'Enter a valid custom hostname.'); const ref = db.doc(`portal_domain_requests/${host}`); await db.runTransaction(async tx => { const old = await tx.get(ref); if (old.exists && old.data().schoolId !== actor.schoolId) throw new HttpsError('already-exists', 'This domain is already requested.'); tx.set(ref, { hostname: host, schoolId: actor.schoolId, status: 'pending', cnameTarget: TARGET, requestedBy: actor.uid, requestedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true }); }); return { hostname: host, cnameTarget: TARGET, status: 'pending' }; });
+// Owner-initiated support access session (School Details > School admins >
+// Open support session). There was previously no callable that could create
+// an institutions/{id}/support_access_requests doc as the platform owner -
+// decideSupportAccess (functions/support_audit.js) only approves/revokes an
+// existing one, and its actor check requires institution membership, which
+// an owner never has. This mirrors that collection's shape (status,
+// expiresAt, requestedByPlatformUser, durationMinutes) so decideSupportAccess
+// and expireSupportAccess keep working on rows created here, and writes via
+// Admin SDK since firestore.rules blocks client writes to this collection
+// entirely (write: if false).
+const SUPPORT_ACCESS_MAX_MINUTES = 30;
+// Owner-initiated School Admin lifecycle actions (School Details > School
+// admins > Manage admins). institution_memberships and the role-bearing
+// fields on users/{uid} both deny ALL client writes (firestore.rules:2455
+// `allow write: if false` on institution_memberships; the users/{uid}
+// update rule at firestore.rules:217-249 has no isSuperAdmin() branch and
+// explicitly never lets schoolAdmin be granted/altered client-side even by
+// another schoolAdmin) - every action here needs the Admin SDK.
+//
+// "Promote/demote" from the product spec has no literal target in this
+// app's role model: schoolAdmin is already the top school-scoped role (see
+// ADMIN_ROLES in functions/index.js), so there is nothing to promote a
+// schoolAdmin *to*. What the spec's promote/demote and primary-transfer
+// language maps onto concretely is: setPrimary (transfer primary-admin
+// standing) and disable/enable/remove (access lifecycle) - implemented
+// below as the 4 real actions this system supports, rather than inventing
+// a role tier that doesn't exist.
+const ADMIN_ACTIONS = new Set(['setPrimary', 'disable', 'enable', 'remove']);
+exports.manageSchoolAdmin = onCall({ region: 'europe-west1' }, async r => {
+  const actor = await owner(r), d = r.data || {};
+  const schoolId = String(d.schoolId || '').trim();
+  const targetUid = String(d.targetUid || '').trim();
+  const action = String(d.action || '').trim();
+  const reason = d.reason != null ? String(d.reason).trim().slice(0, 500) : null;
+  const replacementUid = d.replacementUid != null ? String(d.replacementUid).trim() : null;
+  if (!schoolId || !targetUid || !ADMIN_ACTIONS.has(action)) {
+    throw new HttpsError('invalid-argument', 'A school ID, target admin, and valid action are required.');
+  }
+  if ((action === 'disable' || action === 'remove') && (!reason || reason.length < 3)) {
+    throw new HttpsError('invalid-argument', 'A reason of at least 3 characters is required.');
+  }
+
+  const schoolSnap = await db.doc(`schools/${schoolId}`).get();
+  if (!schoolSnap.exists) throw new HttpsError('not-found', 'School not found.');
+  // Defense in depth: the client already hides these actions when the
+  // school isn't active, but a stale client screen must not be able to
+  // bypass that - re-check server-side before mutating anything.
+  if (schoolSnap.data().status !== 'active') {
+    throw new HttpsError('failed-precondition', 'This school is not active; admin access changes are unavailable.');
+  }
+
+  const membershipRef = db.doc(`institution_memberships/${targetUid}_${schoolId}`);
+  const userRef = db.doc(`users/${targetUid}`);
+
+  await db.runTransaction(async tx => {
+    const [membershipSnap, userSnap] = await Promise.all([tx.get(membershipRef), tx.get(userRef)]);
+    if (!membershipSnap.exists || !userSnap.exists) throw new HttpsError('not-found', 'This admin is not a member of this school.');
+    const membership = membershipSnap.data();
+    const user = userSnap.data();
+    if (user.schoolId !== schoolId && membership.institutionId !== schoolId) {
+      throw new HttpsError('permission-denied', 'This admin does not belong to the specified school.');
+    }
+    const roles = Array.isArray(user.roles) ? user.roles : [];
+    if (!roles.includes('schoolAdmin')) throw new HttpsError('failed-precondition', 'Target is not a School Admin.');
+
+    // Last-admin protection: disable/remove on the only remaining active
+    // schoolAdmin is rejected unless a replacementUid is supplied and is
+    // itself a currently-active admin of this same school - promoted to
+    // primary in the same transaction so the school is never left with
+    // zero admins between the two writes.
+    //
+    // remainingWithoutTarget must exclude the replacement candidate too,
+    // not just the target: a valid replacement is REQUIRED to already be
+    // an active schoolAdmin at this school (see the validation below), so
+    // without this exclusion the query would always count them as one of
+    // the "remaining" admins and remainingWithoutTarget.length would never
+    // reach 0 - making the replacement-promotion branch below unreachable
+    // even in the exact case it exists to handle. Caught by
+    // public_functions/test/school_workspace_callables.emulator.test.cjs's
+    // last-admin-with-replacement case.
+    if (action === 'disable' || action === 'remove') {
+      const activeAdmins = await tx.get(
+        db.collection('users')
+          .where('schoolId', '==', schoolId)
+          .where('roles', 'array-contains', 'schoolAdmin')
+          .where('isActive', '==', true)
+      );
+      const remainingWithoutTarget = activeAdmins.docs.filter(
+        doc => doc.id !== targetUid && doc.id !== replacementUid
+      );
+      if (remainingWithoutTarget.length === 0) {
+        if (!replacementUid) {
+          throw new HttpsError('failed-precondition', 'Cannot remove the last active School Admin without naming a replacement.');
+        }
+        const replacementRef = db.doc(`users/${replacementUid}`);
+        const replacementSnap = await tx.get(replacementRef);
+        const replacementUser = replacementSnap.exists ? replacementSnap.data() : null;
+        if (!replacementUser || replacementUser.schoolId !== schoolId || !(replacementUser.roles || []).includes('schoolAdmin') || replacementUser.isActive === false) {
+          throw new HttpsError('failed-precondition', 'The replacement must be an active School Admin at this school.');
+        }
+        tx.update(replacementRef, { isPrimaryAdmin: true });
+        tx.set(db.doc(`institution_memberships/${replacementUid}_${schoolId}`), { isPrimaryAdmin: true, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      }
+    }
+
+    if (action === 'setPrimary') {
+      tx.update(userRef, { isPrimaryAdmin: true });
+      tx.set(membershipRef, { isPrimaryAdmin: true, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    } else if (action === 'disable') {
+      tx.update(userRef, { isActive: false, deactivationReason: reason });
+      tx.set(membershipRef, { status: 'suspended', updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    } else if (action === 'enable') {
+      tx.update(userRef, { isActive: true, deactivationReason: admin.firestore.FieldValue.delete() });
+      tx.set(membershipRef, { status: 'active', updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    } else if (action === 'remove') {
+      tx.update(userRef, { isActive: false, deactivationReason: reason, isPrimaryAdmin: false });
+      tx.set(membershipRef, { status: 'removed', updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    }
+
+    tx.set(db.collection('super_admin_audit_logs').doc(), {
+      action: `SCHOOL_ADMIN_${action.toUpperCase()}`,
+      schoolId,
+      ownerId: actor.uid,
+      affectedUserId: targetUid,
+      reason,
+      metadata: { replacementUid: replacementUid || null },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  // Immediate access invalidation for disable/remove - revoking refresh
+  // tokens forces any live session for this account to re-authenticate
+  // (and fail, since isActive is now false and the app's own auth gate
+  // checks it), rather than staying signed in until the token naturally
+  // expires. No existing staff-session-revocation function covers this
+  // case, so it belongs here alongside the write that disables the account.
+  if (action === 'disable' || action === 'remove') {
+    try {
+      await admin.auth().revokeRefreshTokens(targetUid);
+    } catch (_) {
+      // Best-effort: the Firestore state change above is the actual
+      // authorization boundary (app-level auth gate reads isActive), so a
+      // revocation failure (e.g. already-deleted Auth user) must not roll
+      // back or fail the whole action.
+    }
+  }
+
+  return { schoolId, targetUid, action };
+});
+
+exports.requestSupportAccess = onCall({ region: 'europe-west1' }, async r => {
+  const actor = await owner(r), d = r.data || {};
+  const schoolId = String(d.schoolId || '').trim();
+  const reason = String(d.reason || '').trim();
+  if (!schoolId) throw new HttpsError('invalid-argument', 'A school ID is required.');
+  if (reason.length < 3) throw new HttpsError('invalid-argument', 'A reason of at least 3 characters is required.');
+  const school = await db.doc(`schools/${schoolId}`).get();
+  if (!school.exists) throw new HttpsError('not-found', 'School not found.');
+  const ref = db.collection(`institutions/${schoolId}/support_access_requests`).doc();
+  const expiresAt = admin.firestore.Timestamp.fromMillis(Date.now() + SUPPORT_ACCESS_MAX_MINUTES * 60000);
+  await ref.set({
+    id: ref.id,
+    institutionId: schoolId,
+    status: 'pending',
+    reason: reason.slice(0, 500),
+    requestedByPlatformUser: actor.uid,
+    requestedScope: ['support'],
+    durationMinutes: SUPPORT_ACCESS_MAX_MINUTES,
+    expiresAt,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  await db.collection(`institutions/${schoolId}/audit_events`).doc().create({
+    auditEventId: ref.id,
+    institutionId: schoolId,
+    status: 'success',
+    sensitivity: 'normal',
+    source: 'cloud_function',
+    moduleKey: 'support',
+    eventType: 'Support Access',
+    action: 'support_access_requested',
+    actorId: actor.uid,
+    targetType: 'support_access',
+    targetId: ref.id,
+    supportAccessSessionId: ref.id,
+    metadataSafe: { reason: reason.slice(0, 500) },
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return { supportAccessRequestId: ref.id, status: 'pending', expiresAt: expiresAt.toMillis() };
+});
 exports.verifyAndActivateCustomPortalDomain = onCall({ region: 'europe-west1' }, async r => { const actor = await owner(r), host = clean(r.data?.hostname); if (!validHost(host)) throw new HttpsError('invalid-argument', 'Invalid hostname.'); const ref = db.doc(`portal_domain_requests/${host}`), request = await ref.get(); if (!request.exists) throw new HttpsError('not-found', 'Domain request not found.'); let cnames = []; try { cnames = await dns.resolveCname(host); } catch (_) {} if (!cnames.some(v => v.toLowerCase().replace(/\.$/, '') === TARGET)) { await ref.set({ status: 'verification_failed', lastError: `CNAME must point to ${TARGET}`, checkedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true }); throw new HttpsError('failed-precondition', `CNAME must point to ${TARGET}.`); } const school = await db.doc(`schools/${request.data().schoolId}`).get(); if (!school.exists) throw new HttpsError('not-found', 'School not found.'); await db.runTransaction(async tx => { tx.set(db.doc(`portal_domains/${host}`), publicDomain(school.id, school.data(), host)); tx.update(ref, { status: 'active', approvedBy: actor.uid, approvedAt: admin.firestore.FieldValue.serverTimestamp(), lastError: null }); tx.update(school.ref, { customDomains: admin.firestore.FieldValue.arrayUnion(host) }); tx.set(db.collection('super_admin_audit_logs').doc(), { action: 'ACTIVATE_CUSTOM_PORTAL_DOMAIN', schoolId: school.id, hostname: host, ownerId: actor.uid, timestamp: admin.firestore.FieldValue.serverTimestamp() }); }); return { hostname: host, status: 'active' }; });
 // Owner re-runs the CNAME check for a request without activating it - used
 // by the "Recheck" action so a failed/pending request can be re-evaluated
@@ -167,4 +356,4 @@ exports.syncPortalDomainProjection = onDocumentWritten({ region: 'europe-west1',
   const hosts = [school.portalSubdomain, ...(Array.isArray(school.customDomains) ? school.customDomains : [])].filter(Boolean);
   await Promise.all(hosts.map(host => db.doc(`portal_domains/${clean(host)}`).set({ ...publicDomain(after.id, school, clean(host)), status: suspended ? 'suspended' : 'active' }, { merge: true })));
 });
-exports.__test__ = { validSlug, validHost, RESERVED, LIFECYCLE_STATUSES, TRIAL_DAYS };
+exports.__test__ = { validSlug, validHost, RESERVED, LIFECYCLE_STATUSES, TRIAL_DAYS, SUPPORT_ACCESS_MAX_MINUTES, ADMIN_ACTIONS };

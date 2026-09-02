@@ -24,3 +24,15 @@ test('lifecycle status set only accepts known statuses', () => {
   assert.equal(__test__.LIFECYCLE_STATUSES.has('deleted'), false);
   assert.equal(__test__.LIFECYCLE_STATUSES.has(''), false);
 });
+test('support access sessions are capped at 30 minutes', () => {
+  // requestSupportAccess (School Details > School admins > Open support
+  // session) always mints a fixed-length window - there is no caller-
+  // supplied duration, unlike decideSupportAccess's durationMinutes read.
+  assert.equal(__test__.SUPPORT_ACCESS_MAX_MINUTES, 30);
+});
+test('manageSchoolAdmin only accepts the 4 real lifecycle actions this app models', () => {
+  // "Promote" has no literal target (schoolAdmin is already the top
+  // school-scoped role) - setPrimary/disable/enable/remove are what the
+  // product spec's promote/demote/primary-transfer language maps onto.
+  assert.deepEqual([...__test__.ADMIN_ACTIONS].sort(), ['disable', 'enable', 'remove', 'setPrimary']);
+});

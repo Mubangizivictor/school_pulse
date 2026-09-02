@@ -175,4 +175,9 @@ class SuperAdminRepositoryImpl implements SuperAdminRepository {
       schoolId: schoolId,
     );
   }
+
+  @override
+  Future<List<SchoolAdminSummary>> getSchoolAdmins(String schoolId) {
+    return remoteDataSource.getSchoolAdmins(schoolId);
+  }
 }

@@ -6,7 +6,7 @@ import '../models/subscription_plan_model.dart';
 import '../models/audit_log_model.dart';
 import '../models/school_application_model.dart';
 import '../../domain/repositories/super_admin_repository.dart'
-    show SupportModeSession;
+    show SupportModeSession, SchoolAdminSummary;
 
 abstract class SuperAdminRemoteDataSource {
   Future<List<SchoolModel>> getAllSchools();
@@ -55,6 +55,10 @@ abstract class SuperAdminRemoteDataSource {
   /// Calls `exitSupportMode` while still signed in as the impersonated
   /// admin, tearing down the server-side session doc and logging the exit.
   Future<void> exitSupportMode({required String ownerId, String? schoolId});
+
+  /// Queries the flat `users` collection for schoolAdmin-role accounts
+  /// scoped to [schoolId]. There is no dedicated school-admins subcollection.
+  Future<List<SchoolAdminSummary>> getSchoolAdmins(String schoolId);
 }
 
 class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
@@ -334,5 +338,33 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
       'ownerId': ownerId,
       if (schoolId != null) 'schoolId': schoolId,
     });
+  }
+
+  @override
+  Future<List<SchoolAdminSummary>> getSchoolAdmins(String schoolId) async {
+    final snapshot = await firestore
+        .collection('users')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('roles', arrayContains: 'schoolAdmin')
+        .get();
+    final admins = snapshot.docs.map((doc) {
+      final data = doc.data();
+      final lastSignIn = data['lastSignInAt'] ?? data['lastSignIn'];
+      return SchoolAdminSummary(
+        uid: doc.id,
+        name: (data['name'] as String?)?.trim().isNotEmpty == true
+            ? data['name'] as String
+            : 'Unnamed admin',
+        email: data['email'] as String? ?? '',
+        isPrimary: data['isPrimaryAdmin'] == true,
+        mfaEnabled: data['mfaEnabled'] == true,
+        lastSignInAt: lastSignIn is Timestamp ? lastSignIn.toDate() : null,
+      );
+    }).toList();
+    admins.sort((a, b) {
+      if (a.isPrimary != b.isPrimary) return a.isPrimary ? -1 : 1;
+      return a.name.compareTo(b.name);
+    });
+    return admins;
   }
 }

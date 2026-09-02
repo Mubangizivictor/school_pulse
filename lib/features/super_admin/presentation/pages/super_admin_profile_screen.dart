@@ -107,37 +107,69 @@ class _SuperAdminProfileScreenState extends State<SuperAdminProfileScreen> {
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    CircleAvatar(
-                      radius: 64,
-                      backgroundColor: colors.onSurface,
-                      backgroundImage: _photoUrl?.isNotEmpty == true
-                          ? NetworkImage(_photoUrl!)
-                          : null,
-                      child: _photoUrl?.isNotEmpty == true
-                          ? null
-                          : Text(
-                              _initials(user.name),
-                              style: TextStyle(
-                                fontSize: 34,
-                                color: colors.surface,
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.information(context),
+                        shape: BoxShape.circle,
+                      ),
+                      child: CircleAvatar(
+                        radius: 60,
+                        backgroundColor: AppColors.informationSurface(context),
+                        backgroundImage: _photoUrl?.isNotEmpty == true
+                            ? NetworkImage(_photoUrl!)
+                            : null,
+                        child: _photoUrl?.isNotEmpty == true
+                            ? null
+                            : Text(
+                                _initials(user.name),
+                                style: TextStyle(
+                                  fontSize: 34,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.information(context),
+                                ),
                               ),
-                            ),
+                      ),
                     ),
                     Positioned(
-                      right: -4,
-                      bottom: -4,
-                      child: IconButton.filled(
-                        tooltip: 'Change profile picture',
-                        onPressed: _uploadingPhoto ? null : _choosePhoto,
-                        icon: _uploadingPhoto
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                      right: -2,
+                      bottom: -2,
+                      child: Material(
+                        color: AppColors.information(context),
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: _uploadingPhoto ? null : _choosePhoto,
+                          child: Tooltip(
+                            message: 'Change profile picture',
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: colors.surface,
+                                  width: 3,
                                 ),
-                              )
-                            : const Icon(Icons.camera_alt_outlined),
+                              ),
+                              alignment: Alignment.center,
+                              child: _uploadingPhoto
+                                  ? SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: colors.surface,
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.camera_alt_outlined,
+                                      color: colors.surface,
+                                      size: 20,
+                                    ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],

@@ -13,13 +13,24 @@ class ManualPaymentService {
 
   final FirebaseFunctions _functions;
 
+  /// [schoolId], when given, is enforced server-side by the callable (a
+  /// real `where('schoolId', ...)` clause, not a client-side filter of an
+  /// unscoped fetch) - see getManualPaymentsForOwner in
+  /// public_functions/payments.js.
   Future<List<ManualSubscriptionPayment>> getPayments({
     ManualPaymentStatus? status,
+    String? schoolId,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     final result = await _functions
         .httpsCallable('getManualPaymentsForOwner')
         .call<Map<String, dynamic>>({
           'status': status == null ? 'all' : _statusWire(status),
+          if (schoolId != null) 'schoolId': schoolId,
+          if (startDate != null)
+            'startDateMs': startDate.millisecondsSinceEpoch,
+          if (endDate != null) 'endDateMs': endDate.millisecondsSinceEpoch,
         });
     final raw = result.data['payments'] as List<dynamic>? ?? const [];
     return raw

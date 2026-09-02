@@ -1,3 +1,5 @@
+import 'package:equatable/equatable.dart';
+
 import '../entities/school.dart';
 import '../entities/subscription_plan.dart';
 import '../entities/audit_log.dart';
@@ -43,6 +45,42 @@ abstract class SuperAdminRepository {
     required String reason,
   });
   Future<void> exitSupportMode({required String ownerId, String? schoolId});
+
+  /// School-scoped admin users (role == schoolAdmin) for the School Admins
+  /// panel on School Details. Queries the flat `users` collection - there is
+  /// no dedicated school-admins subcollection.
+  Future<List<SchoolAdminSummary>> getSchoolAdmins(String schoolId);
+}
+
+/// Compact projection of a school admin user for the Super Admin console.
+/// Deliberately excludes anything beyond what School Details needs to show -
+/// this is not a general user profile.
+class SchoolAdminSummary extends Equatable {
+  final String uid;
+  final String name;
+  final String email;
+  final bool isPrimary;
+  final bool mfaEnabled;
+  final DateTime? lastSignInAt;
+
+  const SchoolAdminSummary({
+    required this.uid,
+    required this.name,
+    required this.email,
+    this.isPrimary = false,
+    this.mfaEnabled = false,
+    this.lastSignInAt,
+  });
+
+  @override
+  List<Object?> get props => [
+    uid,
+    name,
+    email,
+    isPrimary,
+    mfaEnabled,
+    lastSignInAt,
+  ];
 }
 
 class SupportModeSession {

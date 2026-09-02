@@ -3520,8 +3520,12 @@ service cloud.firestore {
         allow write: if false;
       }
     }
+    // Also owner-readable: Super Admin's "Open support session" (School
+    // Details > School admins) creates these via requestSupportAccess
+    // (public_functions/portal_domains.js) and needs to read the resulting
+    // status/expiry back client-side.
     match /institutions/{institutionId}/support_access_requests/{requestId} {
-      allow read: if isSameSchool(institutionId) && isInstitutionAdminReader();
+      allow read: if isSuperAdmin() || (isSameSchool(institutionId) && isInstitutionAdminReader());
       allow write: if false;
     }
     match /institutions/{institutionId}/audit_events/{eventId} {

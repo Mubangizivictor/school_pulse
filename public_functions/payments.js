@@ -853,10 +853,39 @@ function paymentForClient(doc) {
   return result;
 }
 
+// Pure helper (no Firestore call) so the filter-selection logic - which
+// where() clauses apply for a given request payload - is unit-testable
+// without mocking a live query builder. Returns the filters to apply, not
+// a built query; getManualPaymentsForOwner below applies them to `db`.
+function paymentsQueryFilters(data) {
+  const schoolId = text(data?.schoolId, 160);
+  const startDate = Number(data?.startDateMs);
+  const endDate = Number(data?.endDateMs);
+  return {
+    schoolId: schoolId || null,
+    startDateMs: Number.isFinite(startDate) ? startDate : null,
+    endDateMs: Number.isFinite(endDate) ? endDate : null,
+  };
+}
+
+// schoolId/startDate/endDate are applied as real Firestore `where` clauses,
+// not a client-side filter of an unscoped fetch - the callable itself is the
+// tenant boundary here (manual_subscription_payments has no firestore.rules
+// block of its own; it is Admin-SDK-only, so this check is the only gate).
 exports.getManualPaymentsForOwner = onCall({ region: 'europe-west1' }, async (request) => {
   await requireOwner(request);
   const status = text(request.data?.status, 40);
-  const snapshot = await db.collection('manual_subscription_payments').orderBy('submittedAt', 'desc').limit(250).get();
+  const filters = paymentsQueryFilters(request.data);
+
+  let query = db.collection('manual_subscription_payments');
+  if (filters.schoolId) query = query.where('schoolId', '==', filters.schoolId);
+  if (filters.startDateMs !== null) {
+    query = query.where('submittedAt', '>=', admin.firestore.Timestamp.fromMillis(filters.startDateMs));
+  }
+  if (filters.endDateMs !== null) {
+    query = query.where('submittedAt', '<=', admin.firestore.Timestamp.fromMillis(filters.endDateMs));
+  }
+  const snapshot = await query.orderBy('submittedAt', 'desc').limit(250).get();
   let docs = snapshot.docs;
   if (status && status !== 'all') docs = docs.filter((doc) => text(doc.data()?.status, 40) === status);
   return { payments: docs.map(paymentForClient) };
@@ -1414,4 +1443,5 @@ module.exports.__internal = {
   parseAndValidatePlanFields,
   PLAN_CODE_RE,
   ALLOWED_PLAN_MODULE_KEYS,
+  paymentsQueryFilters,
 };
