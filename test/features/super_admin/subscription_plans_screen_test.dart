@@ -1,9 +1,8 @@
-import 'dart:ui';
-
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:school_pulse/features/super_admin/domain/entities/school.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/subscription_plan.dart';
 import 'package:school_pulse/features/super_admin/presentation/bloc/super_admin_bloc.dart';
 import 'package:school_pulse/features/super_admin/presentation/bloc/super_admin_event.dart';
@@ -37,14 +36,41 @@ void main() {
     includedFeatures: ['Priority support'],
     displayOrder: 1,
   );
+  const archivedPlan = SubscriptionPlan(
+    id: 'legacy',
+    name: 'Legacy',
+    description: 'Retired plan.',
+    price: 100000,
+    billingCycle: BillingCycle.termly,
+    maxStudents: 100,
+    maxStaff: 10,
+    storageLimitGb: 5,
+    includedFeatures: [],
+    isArchived: true,
+    isActive: false,
+    displayOrder: 2,
+  );
+
+  final school = School(
+    id: 'school-1',
+    name: 'Test School',
+    tenantId: 'school-1',
+    address: '123 Main St',
+    contactEmail: 'admin@test.school',
+    contactPhone: '256700000000',
+    subscriptionPlanId: 'starter',
+    createdAt: DateTime(2025, 1, 1),
+    subscriptionExpiry: DateTime(2030, 1, 1),
+  );
 
   late MockSuperAdminBloc bloc;
 
   setUp(() {
     bloc = MockSuperAdminBloc();
-    const state = SuperAdminState(
+    final state = SuperAdminState(
       status: SuperAdminStatus.success,
-      plans: [starter, growth],
+      plans: const [starter, growth, archivedPlan],
+      schools: [school],
     );
     whenListen(bloc, Stream.value(state), initialState: state);
   });
@@ -56,33 +82,62 @@ void main() {
     ),
   );
 
-  testWidgets('selecting a segment shows its real plan data', (tester) async {
+  testWidgets('renders plan cards with name, price and school count', (
+    tester,
+  ) async {
     await tester.pumpWidget(subject());
     await tester.pumpAndSettle();
 
-    expect(find.text('Starter Plan'), findsOneWidget);
-    expect(find.text('UGX 350,000'), findsOneWidget);
-    expect(find.text('Up to 500 Students'), findsOneWidget);
-
-    await tester.tap(find.text('Growth').first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Growth Plan'), findsOneWidget);
-    expect(find.text('UGX 550,000'), findsOneWidget);
-    expect(find.text('Up to 1,500 Students'), findsOneWidget);
+    expect(find.text('Starter'), findsOneWidget);
+    expect(find.text('Growth'), findsOneWidget);
+    expect(find.textContaining('UGX 350,000'), findsOneWidget);
+    expect(find.text('1 school'), findsOneWidget);
+    expect(find.text('0 schools'), findsWidgets);
   });
 
-  testWidgets('swiping keeps the selected plan in sync', (tester) async {
+  testWidgets('search filters the visible plan list', (tester) async {
     await tester.pumpWidget(subject());
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(PageView), const Offset(-350, 0));
+    await tester.enterText(find.byType(TextField).first, 'growth');
     await tester.pumpAndSettle();
 
-    expect(find.text('Growth Plan'), findsOneWidget);
-    final selectedGrowth = tester.getSemantics(find.text('Growth').first);
-    expect(selectedGrowth.flagsCollection.isSelected, Tristate.isTrue);
+    expect(find.text('Growth'), findsOneWidget);
+    expect(find.text('Starter'), findsNothing);
+  });
 
-    expect(find.text('Edit Plan'), findsOneWidget);
+  testWidgets('filter menu narrows to archived plans only', (tester) async {
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Filter'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Archived').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Legacy'), findsOneWidget);
+    expect(find.text('Starter'), findsNothing);
+  });
+
+  testWidgets('shows the info banner about existing subscriptions', (
+    tester,
+  ) async {
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Existing schools keep their assigned plan'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('empty state renders when there are no plans', (tester) async {
+    final emptyState = const SuperAdminState(status: SuperAdminStatus.success);
+    whenListen(bloc, Stream.value(emptyState), initialState: emptyState);
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    expect(find.text('No plans yet'), findsOneWidget);
+    expect(find.text('Create first plan'), findsOneWidget);
   });
 }

@@ -8,17 +8,19 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/super_admin/domain/entities/school.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/subscription_plan.dart';
 
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
 import '../responsive.dart';
-import 'plan_edit_sheet.dart';
+import 'plan_editor_page.dart';
 
-/// Owner-facing plan management, backed by the same plans loaded for the
-/// dashboard. Selecting a plan is deliberately local; no additional
-/// Firestore reads occur while moving between plans.
+enum _PlanStatusFilter { all, active, archived }
+
+/// Owner-facing plan catalog management: searchable/filterable list of
+/// plans backed by the same plans/schools loaded for the dashboard.
 class SubscriptionPlansScreen extends StatefulWidget {
   const SubscriptionPlansScreen({super.key});
 
@@ -28,15 +30,9 @@ class SubscriptionPlansScreen extends StatefulWidget {
 }
 
 class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
-  final PageController _pageController = PageController();
-  String? _selectedPlanId;
   bool _isRefreshing = false;
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
+  String _query = '';
+  _PlanStatusFilter _filter = _PlanStatusFilter.all;
 
   void _refresh() {
     if (_isRefreshing) return;
@@ -44,42 +40,67 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
     context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
   }
 
-  void _selectPlan(List<SubscriptionPlan> plans, int index) {
-    if (index < 0 || index >= plans.length) return;
-    setState(() => _selectedPlanId = plans[index].id);
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOutCubic,
+  Future<void> _openCreate() async {
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const PlanEditorPage(plan: null)),
     );
+    if (created == true && mounted) {
+      context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
+    }
+  }
+
+  Future<void> _openEdit(SubscriptionPlan plan) async {
+    final updated = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => PlanEditorPage(plan: plan)),
+    );
+    if (updated == true && mounted) {
+      context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
+    }
+  }
+
+  List<SubscriptionPlan> _filtered(List<SubscriptionPlan> plans) {
+    final query = _query.trim().toLowerCase();
+    return plans.where((plan) {
+      final matchesQuery =
+          query.isEmpty ||
+          plan.name.toLowerCase().contains(query) ||
+          plan.id.toLowerCase().contains(query);
+      final matchesFilter = switch (_filter) {
+        _PlanStatusFilter.all => true,
+        _PlanStatusFilter.active => !plan.isArchived,
+        _PlanStatusFilter.archived => plan.isArchived,
+      };
+      return matchesQuery && matchesFilter;
+    }).toList()..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
   }
 
   @override
   Widget build(BuildContext context) {
     final isWide = isSuperAdminWide(context);
     return Scaffold(
-      appBar: isWide
-          ? null
-          : AppBar(
-              title: const PulseLogo(
+      appBar: AppBar(
+        leadingWidth: isWide ? null : 44,
+        title: isWide
+            ? const Text('Manage plans')
+            : const PulseLogo(
                 variant: PulseLogoVariant.header,
                 width: 132,
                 height: 32,
               ),
-              actions: [
-                IconButton(
-                  tooltip: 'Refresh plans',
-                  onPressed: _isRefreshing ? null : _refresh,
-                  icon: _isRefreshing
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.refresh_rounded),
-                ),
-              ],
-            ),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh plans',
+            onPressed: _isRefreshing ? null : _refresh,
+            icon: _isRefreshing
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
       body: BlocConsumer<SuperAdminBloc, SuperAdminState>(
         listenWhen: (previous, current) => previous.status != current.status,
         listener: (context, state) {
@@ -95,111 +116,152 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
             return _PlansErrorView(onRetry: _refresh);
           }
 
-          final plans = state.plans.where(_isVisiblePlan).toList()
+          final allPlans = List<SubscriptionPlan>.of(state.plans)
             ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-          if (plans.isEmpty) return const _PlansEmptyView();
+          final visible = _filtered(allPlans);
 
-          final selectedIndex = _selectedIndexFor(plans);
-          _selectedPlanId ??= plans[selectedIndex].id;
           return _PlansContent(
-            plans: plans,
-            selectedIndex: selectedIndex,
-            isWide: isWide,
+            allPlans: allPlans,
+            visiblePlans: visible,
+            schools: state.schools,
+            query: _query,
+            filter: _filter,
             isRefreshing: _isRefreshing,
-            pageController: _pageController,
             onRefresh: _refresh,
-            onPlanSelected: (index) => _selectPlan(plans, index),
-            onPageChanged: (index) {
-              if (_selectedPlanId != plans[index].id) {
-                setState(() => _selectedPlanId = plans[index].id);
-              }
-            },
+            onQueryChanged: (value) => setState(() => _query = value),
+            onFilterChanged: (value) => setState(() => _filter = value),
+            onCreate: _openCreate,
+            onEditPlan: _openEdit,
           );
         },
       ),
     );
   }
-
-  int _selectedIndexFor(List<SubscriptionPlan> plans) {
-    final selectedIndex = plans.indexWhere(
-      (plan) => plan.id == _selectedPlanId,
-    );
-    return selectedIndex < 0 ? 0 : selectedIndex;
-  }
-
-  static bool _isVisiblePlan(SubscriptionPlan plan) {
-    final id = plan.id.toLowerCase();
-    final name = plan.name.toLowerCase();
-    return !plan.customPricing &&
-        !id.contains('enterprise') &&
-        !name.contains('enterprise');
-  }
 }
 
 class _PlansContent extends StatelessWidget {
   const _PlansContent({
-    required this.plans,
-    required this.selectedIndex,
-    required this.isWide,
+    required this.allPlans,
+    required this.visiblePlans,
+    required this.schools,
+    required this.query,
+    required this.filter,
     required this.isRefreshing,
-    required this.pageController,
     required this.onRefresh,
-    required this.onPlanSelected,
-    required this.onPageChanged,
+    required this.onQueryChanged,
+    required this.onFilterChanged,
+    required this.onCreate,
+    required this.onEditPlan,
   });
 
-  final List<SubscriptionPlan> plans;
-  final int selectedIndex;
-  final bool isWide;
+  final List<SubscriptionPlan> allPlans;
+  final List<SubscriptionPlan> visiblePlans;
+  final List<School> schools;
+  final String query;
+  final _PlanStatusFilter filter;
   final bool isRefreshing;
-  final PageController pageController;
   final VoidCallback onRefresh;
-  final ValueChanged<int> onPlanSelected;
-  final ValueChanged<int> onPageChanged;
+  final ValueChanged<String> onQueryChanged;
+  final ValueChanged<_PlanStatusFilter> onFilterChanged;
+  final VoidCallback onCreate;
+  final ValueChanged<SubscriptionPlan> onEditPlan;
+
+  int _schoolCountFor(String planId) =>
+      schools.where((school) => school.subscriptionPlanId == planId).length;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final horizontalPadding = constraints.maxWidth < 400
-            ? AppSpacing.xl
+            ? AppSpacing.l
             : AppSpacing.x2l;
         return Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 620),
+            constraints: const BoxConstraints(maxWidth: 760),
             child: Column(
               children: [
                 Padding(
                   padding: EdgeInsets.fromLTRB(
                     horizontalPadding,
-                    isWide ? AppSpacing.x3l : AppSpacing.xl,
-                    horizontalPadding,
                     AppSpacing.l,
+                    horizontalPadding,
+                    AppSpacing.m,
                   ),
-                  child: _PlansHeader(
-                    isWide: isWide,
-                    isRefreshing: isRefreshing,
-                    onRefresh: onRefresh,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Plans',
+                          style: AppTypography.headlineSmall.copyWith(
+                            color: AppColors.textPrimary(context),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      FilledButton.icon(
+                        onPressed: onCreate,
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: const Text('New plan'),
+                      ),
+                    ],
                   ),
                 ),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                  child: _PlanSelector(
-                    plans: plans,
-                    selectedIndex: selectedIndex,
-                    onSelected: onPlanSelected,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: AppSearchField(
+                          hintText: 'Search plans...',
+                          onChanged: onQueryChanged,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.s),
+                      _FilterMenu(value: filter, onChanged: onFilterChanged),
+                    ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.m),
                 Expanded(
-                  child: PageView.builder(
-                    controller: pageController,
-                    onPageChanged: onPageChanged,
-                    itemCount: plans.length,
-                    itemBuilder: (context, index) => _PlanCardPage(
-                      key: ValueKey(plans[index].id),
-                      plan: plans[index],
-                    ),
+                  child: visiblePlans.isEmpty
+                      ? _PlansEmptyView(
+                          hasAnyPlans: allPlans.isNotEmpty,
+                          onCreate: onCreate,
+                        )
+                      : ListView.separated(
+                          padding: EdgeInsets.fromLTRB(
+                            horizontalPadding,
+                            0,
+                            horizontalPadding,
+                            AppSpacing.m,
+                          ),
+                          itemCount: visiblePlans.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: AppSpacing.m),
+                          itemBuilder: (context, index) {
+                            final plan = visiblePlans[index];
+                            return _PlanCard(
+                              plan: plan,
+                              schoolCount: _schoolCountFor(plan.id),
+                              onEdit: () => onEditPlan(plan),
+                            );
+                          },
+                        ),
+                ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    0,
+                    horizontalPadding,
+                    AppSpacing.m,
+                  ),
+                  child: const AlertBanner(
+                    title: 'Heads up',
+                    message:
+                        'Changes apply to new subscriptions. Existing schools keep their assigned plan until updated.',
+                    color: Colors.amber,
+                    icon: Icons.info_outline_rounded,
                   ),
                 ),
               ],
@@ -211,134 +273,53 @@ class _PlansContent extends StatelessWidget {
   }
 }
 
-class _PlansHeader extends StatelessWidget {
-  const _PlansHeader({
-    required this.isWide,
-    required this.isRefreshing,
-    required this.onRefresh,
-  });
+class _FilterMenu extends StatelessWidget {
+  const _FilterMenu({required this.value, required this.onChanged});
 
-  final bool isWide;
-  final bool isRefreshing;
-  final VoidCallback onRefresh;
+  final _PlanStatusFilter value;
+  final ValueChanged<_PlanStatusFilter> onChanged;
 
-  @override
-  Widget build(BuildContext context) {
-    final title = Column(
-      crossAxisAlignment: isWide
-          ? CrossAxisAlignment.start
-          : CrossAxisAlignment.center,
-      children: [
-        Text(
-          'Subscription Plans',
-          textAlign: isWide ? TextAlign.start : TextAlign.center,
-          style: AppTypography.headlineMedium.copyWith(
-            color: AppColors.textPrimary(context),
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.s),
-        Text(
-          'Powerful tools for every school.',
-          textAlign: isWide ? TextAlign.start : TextAlign.center,
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondary(context),
-          ),
-        ),
-      ],
-    );
-    if (!isWide) return title;
-    return Row(
-      children: [
-        Expanded(child: title),
-        OutlinedButton.icon(
-          onPressed: isRefreshing ? null : onRefresh,
-          icon: isRefreshing
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.refresh_rounded, size: 18),
-          label: const Text('Refresh'),
-        ),
-      ],
-    );
-  }
-}
-
-class _PlanSelector extends StatelessWidget {
-  const _PlanSelector({
-    required this.plans,
-    required this.selectedIndex,
-    required this.onSelected,
-  });
-
-  final List<SubscriptionPlan> plans;
-  final int selectedIndex;
-  final ValueChanged<int> onSelected;
+  static String _label(_PlanStatusFilter filter) => switch (filter) {
+    _PlanStatusFilter.all => 'All',
+    _PlanStatusFilter.active => 'Active',
+    _PlanStatusFilter.archived => 'Archived',
+  };
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Semantics(
-      label: 'Subscription plan selector',
+    return PopupMenuButton<_PlanStatusFilter>(
+      initialValue: value,
+      onSelected: onChanged,
+      itemBuilder: (context) => _PlanStatusFilter.values
+          .map(
+            (filter) => PopupMenuItem(value: filter, child: Text(_label(filter))),
+          )
+          .toList(),
       child: Container(
-        padding: const EdgeInsets.all(3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.m,
+          vertical: AppSpacing.s,
+        ),
         decoration: BoxDecoration(
           color: AppColors.surfaceContainer(context),
           borderRadius: AppRadius.medium,
           border: Border.all(color: AppColors.border(context)),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            for (var index = 0; index < plans.length; index++)
-              Expanded(
-                child: Semantics(
-                  button: true,
-                  selected: index == selectedIndex,
-                  label: '${plans[index].name} plan',
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 1),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(AppRadius.s),
-                      onTap: () => onSelected(index),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
-                        curve: Curves.easeOutCubic,
-                        height: 44,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: index == selectedIndex
-                              ? scheme.primary
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(AppRadius.s),
-                          boxShadow: index == selectedIndex
-                              ? [
-                                  BoxShadow(
-                                    color: scheme.primary,
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: Text(
-                          plans[index].name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.labelLarge.copyWith(
-                            color: index == selectedIndex
-                                ? scheme.onPrimary
-                                : AppColors.textSecondary(context),
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+            Icon(
+              Icons.filter_list_rounded,
+              size: 18,
+              color: AppColors.textSecondary(context),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Text(
+              'Filter',
+              style: AppTypography.labelLarge.copyWith(
+                color: AppColors.textSecondary(context),
               ),
+            ),
           ],
         ),
       ),
@@ -346,174 +327,143 @@ class _PlanSelector extends StatelessWidget {
   }
 }
 
-class _PlanCardPage extends StatelessWidget {
-  const _PlanCardPage({super.key, required this.plan});
+class _PlanCard extends StatelessWidget {
+  const _PlanCard({
+    required this.plan,
+    required this.schoolCount,
+    required this.onEdit,
+  });
+
   final SubscriptionPlan plan;
+  final int schoolCount;
+  final VoidCallback onEdit;
+
+  IconData get _icon => switch (plan.id) {
+    'starter' => Icons.rocket_launch_outlined,
+    'growth' => Icons.trending_up_rounded,
+    'pro' => Icons.bar_chart_rounded,
+    'enterprise' => Icons.workspace_premium_outlined,
+    _ => Icons.subscriptions_outlined,
+  };
+
+  static String _cycleLabel(BillingCycle cycle) => switch (cycle) {
+    BillingCycle.monthly => 'month',
+    BillingCycle.termly => 'term',
+    BillingCycle.yearly => 'year',
+  };
 
   @override
   Widget build(BuildContext context) {
     final money = NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0);
-    final wholeNumber = NumberFormat.decimalPattern();
-    final storage = plan.storageLimitGb % 1 == 0
-        ? plan.storageLimitGb.toStringAsFixed(0)
-        : plan.storageLimitGb.toStringAsFixed(1);
-    final features = <String>[
-      if (plan.maxStudents > 0)
-        'Up to ${wholeNumber.format(plan.maxStudents)} Students',
-      if (plan.maxStaff > 0) 'Up to ${wholeNumber.format(plan.maxStaff)} Staff',
-      if (plan.storageLimitGb > 0) '$storage GB Storage',
-      ...plan.includedFeatures,
-    ];
     final primary = AppColors.primary(context);
+    final features = <String>[
+      if (plan.maxStudents > 0) 'Up to ${plan.maxStudents} students',
+      ...plan.includedFeatures,
+    ].take(3).toList();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.x2l,
-        0,
-        AppSpacing.x2l,
-        AppSpacing.x2l,
-      ),
-      child: AppCard(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.x3l,
-          AppSpacing.x3l,
-          AppSpacing.x3l,
-          AppSpacing.x2l,
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 62,
-              height: 62,
-              decoration: BoxDecoration(
-                color: primary,
-                borderRadius: AppRadius.large,
+    return AppCard(
+      onTap: onEdit,
+      padding: const EdgeInsets.all(AppSpacing.l),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.12),
+                  borderRadius: AppRadius.medium,
+                ),
+                child: Icon(_icon, color: primary, size: 22),
               ),
-              child: Icon(Icons.auto_awesome_rounded, color: primary, size: 31),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Text(
-              '${_titleCase(plan.name)} Plan',
-              textAlign: TextAlign.center,
-              style: AppTypography.headlineSmall.copyWith(
-                color: AppColors.textPrimary(context),
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            if (plan.description.trim().isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.s),
-              Text(
-                plan.description,
-                textAlign: TextAlign.center,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary(context),
+              const SizedBox(width: AppSpacing.m),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      plan.name,
+                      style: AppTypography.titleMedium.copyWith(
+                        color: AppColors.textPrimary(context),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      plan.customPricing && plan.price <= 0
+                          ? 'Custom price'
+                          : '${money.format(plan.price)} / ${_cycleLabel(plan.billingCycle)}',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                    Text(
+                      '$schoolCount ${schoolCount == 1 ? 'school' : 'schools'}',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              StatusBadge(
+                label: plan.isArchived ? 'Archived' : 'Active',
+                color: plan.isArchived
+                    ? AppColors.textSecondary(context)
+                    : AppColors.success(context),
+              ),
             ],
-            const SizedBox(height: AppSpacing.xl),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                vertical: AppSpacing.xl,
-                horizontal: AppSpacing.l,
-              ),
-              decoration: BoxDecoration(
-                color: primary,
-                borderRadius: AppRadius.medium,
-                border: Border.all(color: primary),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    plan.customPricing && plan.price <= 0
-                        ? 'Custom price'
-                        : money.format(plan.price),
-                    textAlign: TextAlign.center,
-                    style: AppTypography.headlineSmall.copyWith(
-                      color: primary,
-                      fontWeight: FontWeight.w800,
+          ),
+          if (features.isNotEmpty) ...[
+            const Divider(height: AppSpacing.xl),
+            Wrap(
+              spacing: AppSpacing.m,
+              runSpacing: AppSpacing.xs,
+              children: features
+                  .map(
+                    (feature) => Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_circle_rounded,
+                          size: 14,
+                          color: AppColors.success(context),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(
+                          feature,
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    '${_cycleLabel(plan.billingCycle)} • ${plan.termLengthDays} days',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textSecondary(context),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (features.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.xl),
-              for (final feature in features) _PlanFeature(label: feature),
-            ],
-            const SizedBox(height: AppSpacing.xl),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: FilledButton.icon(
-                onPressed: () async {
-                  final updated = await showPlanEditSheet(context, plan);
-                  if (updated == true && context.mounted) {
-                    context.read<SuperAdminBloc>().add(
-                      LoadSuperAdminDashboard(),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.edit_outlined, size: 19),
-                label: const Text('Edit Plan'),
-              ),
+                  )
+                  .toList(),
             ),
           ],
-        ),
+          const SizedBox(height: AppSpacing.m),
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                label: const Text('Edit'),
+              ),
+              const Spacer(),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textSecondary(context),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
-
-  static String _titleCase(String value) => value
-      .split(' ')
-      .map(
-        (word) => word.isEmpty
-            ? word
-            : '${word[0].toUpperCase()}${word.substring(1)}',
-      )
-      .join(' ');
-
-  static String _cycleLabel(BillingCycle cycle) => switch (cycle) {
-    BillingCycle.monthly => 'Monthly',
-    BillingCycle.termly => 'Per term',
-    BillingCycle.yearly => 'Yearly',
-  };
-}
-
-class _PlanFeature extends StatelessWidget {
-  const _PlanFeature({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 5),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          Icons.check_circle_rounded,
-          size: 18,
-          color: AppColors.success(context),
-        ),
-        const SizedBox(width: AppSpacing.l),
-        Expanded(
-          child: Text(
-            label,
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textPrimary(context),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
 }
 
 class _PlansLoadingView extends StatelessWidget {
@@ -521,16 +471,14 @@ class _PlansLoadingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 620),
+      constraints: const BoxConstraints(maxWidth: 760),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x2l),
         child: Column(
           children: const [
             Skeleton(width: 230, height: 28),
             SizedBox(height: AppSpacing.m),
-            Skeleton(width: 190, height: 16),
-            SizedBox(height: AppSpacing.x3l),
-            Skeleton(height: 50, borderRadius: 12),
+            Skeleton(height: 44, borderRadius: 12),
             SizedBox(height: AppSpacing.xl),
             Expanded(child: Skeleton(borderRadius: 16)),
           ],
@@ -575,11 +523,19 @@ class _PlansErrorView extends StatelessWidget {
 }
 
 class _PlansEmptyView extends StatelessWidget {
-  const _PlansEmptyView();
+  const _PlansEmptyView({required this.hasAnyPlans, required this.onCreate});
+
+  final bool hasAnyPlans;
+  final VoidCallback onCreate;
+
   @override
-  Widget build(BuildContext context) => const EmptyState(
+  Widget build(BuildContext context) => EmptyState(
     icon: Icons.subscriptions_outlined,
-    title: 'No subscription plans yet.',
-    message: 'Plans will appear here once they have been configured.',
+    title: hasAnyPlans ? 'No plans match your filters' : 'No plans yet',
+    message: hasAnyPlans
+        ? 'Try a different search term or filter.'
+        : 'Create your first plan to start offering subscriptions.',
+    ctaLabel: hasAnyPlans ? null : 'Create first plan',
+    onCtaPressed: hasAnyPlans ? null : onCreate,
   );
 }

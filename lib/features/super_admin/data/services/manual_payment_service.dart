@@ -81,10 +81,13 @@ class ManualPaymentService {
     required int priceUgx,
     required BillingCycle billingCycle,
     required int termLengthDays,
+    int trialDays = 0,
     required int maxStudents,
     required int maxStaff,
     required double storageLimitGb,
+    int smsLimitPerMonth = 0,
     required List<String> includedFeatures,
+    List<String> includedModules = const [],
     required bool isPublic,
     required bool isActive,
     required bool isPopular,
@@ -99,15 +102,72 @@ class ManualPaymentService {
           'price': priceUgx,
           'billingCycle': billingCycle.name,
           'termLengthDays': termLengthDays,
+          'trialDays': trialDays,
           'maxStudents': maxStudents,
           'maxStaff': maxStaff,
           'storageLimitGb': storageLimitGb,
+          'smsLimitPerMonth': smsLimitPerMonth,
           'includedFeatures': includedFeatures,
+          'includedModules': includedModules,
           'isPublic': isPublic,
           'isActive': isActive,
           'isPopular': isPopular,
           'displayOrder': displayOrder,
         });
+  }
+
+  Future<void> createPlan({
+    required String planId,
+    required String name,
+    required String description,
+    required int priceUgx,
+    required BillingCycle billingCycle,
+    required int termLengthDays,
+    int trialDays = 0,
+    required int maxStudents,
+    required int maxStaff,
+    required double storageLimitGb,
+    int smsLimitPerMonth = 0,
+    required List<String> includedFeatures,
+    List<String> includedModules = const [],
+    required bool isPublic,
+    required bool isActive,
+    required bool isPopular,
+    required int displayOrder,
+  }) async {
+    await _functions
+        .httpsCallable('createSubscriptionPlan')
+        .call<Map<String, dynamic>>({
+          'planId': planId,
+          'name': name,
+          'description': description,
+          'price': priceUgx,
+          'billingCycle': billingCycle.name,
+          'termLengthDays': termLengthDays,
+          'trialDays': trialDays,
+          'maxStudents': maxStudents,
+          'maxStaff': maxStaff,
+          'storageLimitGb': storageLimitGb,
+          'smsLimitPerMonth': smsLimitPerMonth,
+          'includedFeatures': includedFeatures,
+          'includedModules': includedModules,
+          'isPublic': isPublic,
+          'isActive': isActive,
+          'isPopular': isPopular,
+          'displayOrder': displayOrder,
+        });
+  }
+
+  Future<void> archivePlan(String planId) async {
+    await _functions
+        .httpsCallable('archiveSubscriptionPlan')
+        .call<Map<String, dynamic>>({'planId': planId});
+  }
+
+  Future<void> reactivatePlan(String planId) async {
+    await _functions
+        .httpsCallable('reactivateSubscriptionPlan')
+        .call<Map<String, dynamic>>({'planId': planId});
   }
 
   static String _statusWire(ManualPaymentStatus status) => switch (status) {

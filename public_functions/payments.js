@@ -101,6 +101,96 @@ function normalizedPlanId(value) {
   return raw;
 }
 
+const ALLOWED_PLAN_MODULE_KEYS = [
+  'attendance',
+  'reports',
+  'finance',
+  'messaging',
+  'health',
+  'transport',
+  'library',
+  'boarding',
+];
+const PLAN_CODE_RE = /^[a-z][a-z0-9_]{1,39}$/;
+
+function normalizedModuleList(value) {
+  const list = Array.isArray(value) ? value : [];
+  const set = new Set(
+    list
+      .map((item) => text(item, 30).toLowerCase())
+      .filter((item) => ALLOWED_PLAN_MODULE_KEYS.includes(item)),
+  );
+  return [...set].slice(0, 8);
+}
+
+// Shared field parsing/validation for createSubscriptionPlan and
+// updateSubscriptionPlan - keeps the two callables' payloads in lockstep
+// instead of duplicating this block. `isArchived` is intentionally excluded:
+// only archiveSubscriptionPlan/reactivateSubscriptionPlan may flip it.
+function parseAndValidatePlanFields(data, planId) {
+  const name = text(data?.name, 60);
+  const description = text(data?.description, 220);
+  const price = Math.round(Number(data?.price));
+  const billingCycle = text(data?.billingCycle || 'termly', 20).toLowerCase();
+  const termLengthDays = Math.round(Number(data?.termLengthDays || 120));
+  const trialDays = Math.round(Number(data?.trialDays || 0));
+  const maxStudents = Math.round(Number(data?.maxStudents || 0));
+  const maxStaff = Math.round(Number(data?.maxStaff || 0));
+  const storageLimitGb = Number(data?.storageLimitGb || 0);
+  const smsLimitPerMonth = Math.round(Number(data?.smsLimitPerMonth || 0));
+  const includedFeatures = Array.isArray(data?.includedFeatures)
+    ? data.includedFeatures.map((item) => text(item, 80)).filter(Boolean).slice(0, 20)
+    : [];
+  const includedModules = normalizedModuleList(data?.includedModules);
+  const isPublic = data?.isPublic !== false;
+  const isActive = data?.isActive !== false;
+  const isPopular = data?.isPopular === true;
+  const displayOrder = Math.round(Number(data?.displayOrder || 0));
+
+  if (!name) throw new HttpsError('invalid-argument', 'Plan name is required.');
+  if (!['monthly', 'termly', 'yearly'].includes(billingCycle)) {
+    throw new HttpsError('invalid-argument', 'Invalid billing cycle.');
+  }
+  if (termLengthDays < 1 || termLengthDays > 730) {
+    throw new HttpsError('invalid-argument', 'Billing period length must be between 1 and 730 days.');
+  }
+  if (trialDays < 0 || trialDays > 90) {
+    throw new HttpsError('invalid-argument', 'Trial days must be between 0 and 90.');
+  }
+  if (planId !== 'enterprise' && (!Number.isFinite(price) || price <= 0)) {
+    throw new HttpsError('invalid-argument', 'Plan price must be greater than zero.');
+  }
+  if (planId === 'enterprise' && (!Number.isFinite(price) || price < 0)) {
+    throw new HttpsError('invalid-argument', 'Enterprise price cannot be negative.');
+  }
+  if (maxStudents < 0 || maxStaff < 0 || storageLimitGb < 0) {
+    throw new HttpsError('invalid-argument', 'Limits cannot be negative.');
+  }
+  if (smsLimitPerMonth < 0 || smsLimitPerMonth > 1000000) {
+    throw new HttpsError('invalid-argument', 'SMS limit is out of range.');
+  }
+
+  return {
+    name,
+    description,
+    price,
+    billingCycle,
+    termLengthDays,
+    trialDays,
+    maxStudents,
+    maxStaff,
+    storageLimitGb,
+    smsLimitPerMonth,
+    includedFeatures,
+    includedModules,
+    customPricing: planId === 'enterprise' && price === 0,
+    isPublic,
+    isActive,
+    isPopular,
+    displayOrder,
+  };
+}
+
 function schoolClassification(category) {
   const value = text(category, 80).toLowerCase();
   if (value.includes('kindergarten') || value.includes('nursery')) return 'kindergarten';
@@ -1008,50 +1098,21 @@ exports.updateSubscriptionPlan = onCall({ region: 'europe-west1' }, async (reque
   const planId = normalizedPlanId(request.data?.planId);
   if (!planId) throw new HttpsError('invalid-argument', 'planId is required.');
 
-  const name = text(request.data?.name, 60);
-  const description = text(request.data?.description, 220);
-  const price = Math.round(Number(request.data?.price));
-  const billingCycle = text(request.data?.billingCycle || 'termly', 20).toLowerCase();
-  const termLengthDays = Math.round(Number(request.data?.termLengthDays || 120));
-  const maxStudents = Math.round(Number(request.data?.maxStudents || 0));
-  const maxStaff = Math.round(Number(request.data?.maxStaff || 0));
-  const storageLimitGb = Number(request.data?.storageLimitGb || 0);
-  const includedFeatures = Array.isArray(request.data?.includedFeatures)
-    ? request.data.includedFeatures.map((item) => text(item, 80)).filter(Boolean).slice(0, 20)
-    : [];
-  const isPublic = request.data?.isPublic !== false;
-  const isActive = request.data?.isActive !== false;
-  const isPopular = request.data?.isPopular === true;
-  const displayOrder = Math.round(Number(request.data?.displayOrder || 0));
-
-  if (!name) throw new HttpsError('invalid-argument', 'Plan name is required.');
-  if (!['monthly', 'termly', 'yearly'].includes(billingCycle)) throw new HttpsError('invalid-argument', 'Invalid billing cycle.');
-  if (termLengthDays < 1 || termLengthDays > 730) throw new HttpsError('invalid-argument', 'Billing period length must be between 1 and 730 days.');
-  if (planId !== 'enterprise' && (!Number.isFinite(price) || price <= 0)) throw new HttpsError('invalid-argument', 'Plan price must be greater than zero.');
-  if (planId === 'enterprise' && (!Number.isFinite(price) || price < 0)) throw new HttpsError('invalid-argument', 'Enterprise price cannot be negative.');
-  if (maxStudents < 0 || maxStaff < 0 || storageLimitGb < 0) throw new HttpsError('invalid-argument', 'Limits cannot be negative.');
-
   const planRef = db.collection('subscription_plans').doc(planId);
   const snap = await planRef.get();
   if (!snap.exists) throw new HttpsError('not-found', 'Subscription plan not found.');
+
+  const fields = parseAndValidatePlanFields(request.data, planId);
+  // An archived plan can only be reactivated via reactivateSubscriptionPlan -
+  // the generic editor can't silently un-archive it by passing isActive:true.
+  const wasArchived = snap.data()?.isArchived === true;
+  if (wasArchived) fields.isActive = false;
+
   const serverTime = admin.firestore.FieldValue.serverTimestamp();
   const auditRef = db.collection('super_admin_audit_logs').doc();
   const batch = db.batch();
   batch.set(planRef, {
-    name,
-    description,
-    price,
-    billingCycle,
-    termLengthDays,
-    maxStudents,
-    maxStaff,
-    storageLimitGb,
-    includedFeatures,
-    customPricing: planId === 'enterprise' && price === 0,
-    isPublic,
-    isActive,
-    isPopular,
-    displayOrder,
+    ...fields,
     billingModel: 'manual_v1',
     updatedAt: serverTime,
     updatedBy: owner.uid,
@@ -1063,7 +1124,128 @@ exports.updateSubscriptionPlan = onCall({ region: 'europe-west1' }, async (reque
     schoolId: null,
     timestamp: serverTime,
     device: 'Platform Dashboard',
-    metadata: { planId, price, billingCycle, termLengthDays, isPublic, isActive, isPopular, displayOrder },
+    metadata: {
+      planId,
+      price: fields.price,
+      billingCycle: fields.billingCycle,
+      termLengthDays: fields.termLengthDays,
+      isPublic: fields.isPublic,
+      isActive: fields.isActive,
+      isPopular: fields.isPopular,
+      displayOrder: fields.displayOrder,
+    },
+  });
+  await batch.commit();
+  return { ok: true, planId };
+});
+
+// Creates a new catalog plan. Plan code (the Firestore doc id) is chosen by
+// the caller at creation time and is immutable afterwards - there is no
+// rename path, matching updateSubscriptionPlan which never touches the id.
+exports.createSubscriptionPlan = onCall({ region: 'europe-west1' }, async (request) => {
+  const owner = await requireOwner(request);
+  await ensureBillingDefaults();
+
+  const planId = text(request.data?.planId, 40).toLowerCase();
+  if (!PLAN_CODE_RE.test(planId)) {
+    throw new HttpsError(
+      'invalid-argument',
+      'Plan code must be lowercase letters, numbers, and underscores, 2-40 characters, starting with a letter.',
+    );
+  }
+
+  const planRef = db.collection('subscription_plans').doc(planId);
+  const existing = await planRef.get();
+  if (existing.exists) throw new HttpsError('already-exists', 'A plan with this code already exists.');
+
+  const fields = parseAndValidatePlanFields(request.data, planId);
+  const serverTime = admin.firestore.FieldValue.serverTimestamp();
+  const auditRef = db.collection('super_admin_audit_logs').doc();
+  const batch = db.batch();
+  batch.set(planRef, {
+    ...fields,
+    isArchived: false,
+    isDefault: false,
+    billingModel: 'manual_v1',
+    createdAt: serverTime,
+    createdBy: owner.uid,
+    updatedAt: serverTime,
+    updatedBy: owner.uid,
+  });
+  batch.set(auditRef, {
+    id: auditRef.id,
+    ownerId: owner.uid,
+    action: 'CREATE_SUBSCRIPTION_PLAN',
+    schoolId: null,
+    timestamp: serverTime,
+    device: 'Platform Dashboard',
+    metadata: { planId, name: fields.name, price: fields.price },
+  });
+  await batch.commit();
+  return { ok: true, planId };
+});
+
+// Archiving is a boolean flip, never a delete: existing school subscriptions
+// reference the plan by id/price snapshot independently of the catalog doc
+// (see getPlan()'s payment-time snapshot below), so nothing about an already
+// subscribed school changes. isActive=false piggybacks on the existing
+// isPublic && isActive gate in getPublicSubscriptionPlans, which is the only
+// place new-subscription eligibility is enforced today.
+exports.archiveSubscriptionPlan = onCall({ region: 'europe-west1' }, async (request) => {
+  const owner = await requireOwner(request);
+  const planId = normalizedPlanId(request.data?.planId);
+  if (!planId) throw new HttpsError('invalid-argument', 'planId is required.');
+  const planRef = db.collection('subscription_plans').doc(planId);
+  const snap = await planRef.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'Subscription plan not found.');
+
+  const serverTime = admin.firestore.FieldValue.serverTimestamp();
+  const auditRef = db.collection('super_admin_audit_logs').doc();
+  const batch = db.batch();
+  batch.set(planRef, {
+    isArchived: true,
+    isActive: false,
+    updatedAt: serverTime,
+    updatedBy: owner.uid,
+  }, { merge: true });
+  batch.set(auditRef, {
+    id: auditRef.id,
+    ownerId: owner.uid,
+    action: 'ARCHIVE_SUBSCRIPTION_PLAN',
+    schoolId: null,
+    timestamp: serverTime,
+    device: 'Platform Dashboard',
+    metadata: { planId },
+  });
+  await batch.commit();
+  return { ok: true, planId };
+});
+
+exports.reactivateSubscriptionPlan = onCall({ region: 'europe-west1' }, async (request) => {
+  const owner = await requireOwner(request);
+  const planId = normalizedPlanId(request.data?.planId);
+  if (!planId) throw new HttpsError('invalid-argument', 'planId is required.');
+  const planRef = db.collection('subscription_plans').doc(planId);
+  const snap = await planRef.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'Subscription plan not found.');
+
+  const serverTime = admin.firestore.FieldValue.serverTimestamp();
+  const auditRef = db.collection('super_admin_audit_logs').doc();
+  const batch = db.batch();
+  batch.set(planRef, {
+    isArchived: false,
+    isActive: true,
+    updatedAt: serverTime,
+    updatedBy: owner.uid,
+  }, { merge: true });
+  batch.set(auditRef, {
+    id: auditRef.id,
+    ownerId: owner.uid,
+    action: 'REACTIVATE_SUBSCRIPTION_PLAN',
+    schoolId: null,
+    timestamp: serverTime,
+    device: 'Platform Dashboard',
+    metadata: { planId },
   });
   await batch.commit();
   return { ok: true, planId };
