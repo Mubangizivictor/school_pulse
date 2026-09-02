@@ -83,7 +83,8 @@ class _FoldersScreenState extends State<FoldersScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/staff/resources/create-folder'),
-        child: const Icon(Icons.add),
+        tooltip: 'Create folder',
+        child: const Icon(Icons.add, semanticLabel: 'Create folder'),
       ),
     );
   }

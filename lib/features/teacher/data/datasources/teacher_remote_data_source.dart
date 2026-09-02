@@ -306,38 +306,13 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
   Future<TeacherDashboardStats> getTeacherDashboardStats(
     String teacherId,
   ) async {
-    // In a real app, this would be fetched from a teacher-specific stats doc
-    // For now, let's provide some realistic default data or fetch from school_stats
-    final statsDoc = await firestore
-        .collection('school_stats')
-        .doc('teacher_$teacherId')
-        .get();
-
-    if (statsDoc.exists) {
-      final data = statsDoc.data()!;
-      return TeacherDashboardStats(
-        studentsToday: data['studentsToday'] ?? 0,
-        totalStudents: data['totalStudents'] ?? 0,
-        submissionsDue: data['submissionsDue'] ?? 0,
-        classesToday: data['classesToday'] ?? 0,
-        activeNotifications: data['activeNotifications'] ?? 0,
-        attendanceTaken: data['attendanceTaken'] ?? 0,
-        marksEntered: data['marksEntered'] ?? 0,
-        reportsGenerated: data['reportsGenerated'] ?? 0,
-        classProgress: (data['classProgress'] as List? ?? [])
-            .map(
-              (cp) => ClassProgress(
-                title: cp['title'] ?? '',
-                progress: (cp['progress'] ?? 0.0).toDouble(),
-                subtitle: cp['subtitle'] ?? '',
-                className: cp['className'] ?? '',
-              ),
-            )
-            .toList(),
-      );
-    }
-
-    // Default mock-like data but from "real" source
+    // Nothing in this app writes to a per-teacher stats doc - the previous
+    // school_stats/teacher_{id} read here was always a permission-denied
+    // trap (its rule needs resource.data.schoolId, which a document that
+    // will never exist can never satisfy) that surfaced as a raw Firestore
+    // error on the Class Analytics screen. Class-scoped analytics live in
+    // ClassTeacherDashboardBloc's real queries; this stays a safe, static
+    // default until this class actually gets a maintained aggregate.
     return const TeacherDashboardStats(
       studentsToday: 0,
       totalStudents: 0,

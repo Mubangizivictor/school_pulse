@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/app_components.dart';
@@ -8,6 +10,7 @@ import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
@@ -16,47 +19,50 @@ import '../../domain/entities/audit_log.dart';
 
 /// Client-side categories bucketed heuristically from [AuditLog.action]
 /// strings. No new backend calls — this only filters the already-fetched
-/// `state.auditLogs` list.
-enum _AuditCategory {
-  all,
-  schools,
-  applications,
-  payments,
-  subscriptions,
-  security,
-}
+/// `state.auditLogs` list. Applications/Subscriptions fold into Billing and
+/// System covers everything left over (data imports, plan creation, etc.)
+/// to match the compact All/Schools/Billing/Security/System chip row.
+enum _AuditCategory { all, schools, billing, security, system }
 
 extension on _AuditCategory {
   String get label => switch (this) {
     _AuditCategory.all => 'All',
     _AuditCategory.schools => 'Schools',
-    _AuditCategory.applications => 'Applications',
-    _AuditCategory.payments => 'Payments',
-    _AuditCategory.subscriptions => 'Subscriptions',
+    _AuditCategory.billing => 'Billing',
     _AuditCategory.security => 'Security',
+    _AuditCategory.system => 'System',
   };
 
   IconData get icon => switch (this) {
     _AuditCategory.all => Icons.grid_view_rounded,
-    _AuditCategory.schools => Icons.account_balance_outlined,
-    _AuditCategory.applications => Icons.description_outlined,
-    _AuditCategory.payments => Icons.payments_outlined,
-    _AuditCategory.subscriptions => Icons.subscriptions_outlined,
+    _AuditCategory.schools => Icons.school_outlined,
+    _AuditCategory.billing => Icons.credit_card_outlined,
     _AuditCategory.security => Icons.shield_outlined,
+    _AuditCategory.system => Icons.settings_outlined,
   };
 }
 
 _AuditCategory _categoryOf(AuditLog log) {
   final action = log.action.toUpperCase();
-  if (action.contains('PAYMENT')) return _AuditCategory.payments;
-  if (action.contains('APPLICATION')) return _AuditCategory.applications;
-  if (action.contains('PLAN')) return _AuditCategory.subscriptions;
+  if (action.contains('PAYMENT') ||
+      action.contains('PLAN') ||
+      action.contains('SUBSCRIPTION')) {
+    return _AuditCategory.billing;
+  }
+  if (action.contains('SIGN_IN') ||
+      action.contains('SIGNIN') ||
+      action.contains('BLOCK') ||
+      action.contains('SECURITY')) {
+    return _AuditCategory.security;
+  }
   if (action.contains('SCHOOL') ||
+      action.contains('APPLICATION') ||
       action.contains('SUSPEND') ||
-      action.contains('REACTIVATE')) {
+      action.contains('REACTIVATE') ||
+      action.contains('ADMIN')) {
     return _AuditCategory.schools;
   }
-  return _AuditCategory.security;
+  return _AuditCategory.system;
 }
 
 /// Turns a machine event id like `APPROVE_INITIAL_SUBSCRIPTION_PAYMENT`
@@ -69,6 +75,22 @@ String _titleCaseAction(String action) => action
     .map((w) => '${w[0]}${w.substring(1).toLowerCase()}')
     .join(' ');
 
+/// Some audit entries were written with a raw FCM/device token in
+/// [AuditLog.ownerId] instead of a user id or email (an upstream data
+/// issue, not something this screen can correct at the source). Rather
+/// than show that token verbatim, fall back to the signed-in owner's real
+/// name/email — the same fallback the desktop table already uses.
+String _actorLabel(String ownerId) {
+  final looksLikeToken = ownerId.length > 40 && !ownerId.contains('@');
+  if (!looksLikeToken) return ownerId;
+  final user = FirebaseAuth.instance.currentUser;
+  final name = user?.displayName?.trim();
+  if (name?.isNotEmpty ?? false) return name!;
+  final email = user?.email?.trim();
+  if (email?.isNotEmpty ?? false) return email!;
+  return 'SaaS Owner';
+}
+
 class AuditLogsScreen extends StatefulWidget {
   const AuditLogsScreen({super.key});
 
@@ -76,8 +98,41 @@ class AuditLogsScreen extends StatefulWidget {
   State<AuditLogsScreen> createState() => _AuditLogsScreenState();
 }
 
+enum _Period { today, thisWeek, thisMonth, all }
+
+extension on _Period {
+  String get label => switch (this) {
+    _Period.today => 'Today',
+    _Period.thisWeek => 'This week',
+    _Period.thisMonth => 'This month',
+    _Period.all => 'All time',
+  };
+
+  bool includes(DateTime date) {
+    final now = DateTime.now();
+    switch (this) {
+      case _Period.today:
+        return date.year == now.year &&
+            date.month == now.month &&
+            date.day == now.day;
+      case _Period.thisWeek:
+        final startOfWeek = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(Duration(days: now.weekday - 1));
+        return !date.isBefore(startOfWeek);
+      case _Period.thisMonth:
+        return date.year == now.year && date.month == now.month;
+      case _Period.all:
+        return true;
+    }
+  }
+}
+
 class _AuditLogsScreenState extends State<AuditLogsScreen> {
   _AuditCategory _selected = _AuditCategory.all;
+  _Period _period = _Period.today;
   DateTimeRange? _dateRange;
   int _page = 0;
   int _rowsPerPage = 10;
@@ -86,6 +141,7 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     var result = _selected == _AuditCategory.all
         ? logs
         : logs.where((l) => _categoryOf(l) == _selected).toList();
+    result = result.where((l) => _period.includes(l.timestamp)).toList();
 
     if (_dateRange != null) {
       final start = _dateRange!.start;
@@ -96,6 +152,26 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     }
 
     return result;
+  }
+
+  Future<void> _exportAudit(List<AuditLog> logs) async {
+    final buffer = StringBuffer('Event,Actor,Category,Timestamp,Reason\n');
+    for (final log in logs) {
+      String escape(String value) => '"${value.replaceAll('"', '""')}"';
+      buffer.writeln([
+        escape(log.action),
+        escape(log.ownerId),
+        escape(_categoryOf(log).label),
+        escape(log.timestamp.toIso8601String()),
+        escape(log.reason ?? ''),
+      ].join(','));
+    }
+    final bytes = utf8.encode(buffer.toString());
+    final name =
+        'audit_log_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.csv';
+    await Share.shareXFiles([
+      XFile.fromData(bytes, name: name, mimeType: 'text/csv'),
+    ], subject: 'School Pulse audit log export');
   }
 
   Future<void> _pickDateRange(BuildContext context) async {
@@ -116,21 +192,7 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
   Widget build(BuildContext context) {
     final wide = isSuperAdminWide(context);
     return Scaffold(
-      appBar: wide
-          ? null
-          : AppBar(
-              title: const Text('Audit Logs'),
-              actions: [
-                IconButton(
-                  tooltip: 'Refresh',
-                  icon: const Icon(Icons.refresh_rounded),
-                  onPressed: () => context.read<SuperAdminBloc>().add(
-                    const LoadAuditLogsEvent(),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.m),
-              ],
-            ),
+      backgroundColor: wide ? null : AppColors.background(context),
       body: BlocBuilder<SuperAdminBloc, SuperAdminState>(
         builder: (context, state) {
           if (state.status == SuperAdminStatus.loading &&
@@ -170,84 +232,117 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
             );
           }
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.x2l,
-                  AppSpacing.xl,
-                  AppSpacing.x2l,
-                  AppSpacing.l,
-                ),
-                child: Text(
-                  'Review platform activity and owner actions.',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondary(context),
-                  ),
-                ),
-              ),
-              if (logs.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(
-                    left: AppSpacing.x2l,
-                    right: AppSpacing.x2l,
-                    bottom: AppSpacing.l,
-                  ),
-                  child: SizedBox(
-                    height: 36,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _AuditCategory.values.length,
-                      separatorBuilder: (_, _) =>
-                          const SizedBox(width: AppSpacing.s),
-                      itemBuilder: (context, index) {
-                        final category = _AuditCategory.values[index];
-                        final isSelected = category == _selected;
-                        return FilterChip(
-                          label: Text(category.label),
-                          selected: isSelected,
-                          onSelected: (_) => setState(() {
-                            _selected = category;
-                            _page = 0;
-                          }),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              Expanded(
-                child: logs.isEmpty
-                    ? const EmptyState(
-                        icon: Icons.history_outlined,
-                        title: 'No audit logs found',
-                        message:
-                            'Owner actions on the platform will appear here as they happen.',
-                      )
-                    : filtered.isEmpty
-                    ? EmptyState(
-                        icon: Icons.filter_list_off_rounded,
-                        title: 'No matching logs',
-                        message:
-                            'No audit logs match the "${_selected.label}" filter.',
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.x2l,
-                          0,
-                          AppSpacing.x2l,
-                          AppSpacing.x2l,
+          final grouped = _groupByDay(filtered);
+
+          return SafeArea(
+            bottom: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text('Activity', style: _pageTitle(context)),
+                      const Spacer(),
+                      _IconAction(
+                        icon: Icons.refresh_rounded,
+                        tooltip: 'Refresh activity',
+                        onTap: () => context.read<SuperAdminBloc>().add(
+                          const LoadAuditLogsEvent(),
                         ),
-                        itemCount: filtered.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: AppSpacing.m),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _PeriodPicker(
+                        period: _period,
+                        onChanged: (value) => setState(() {
+                          _period = value;
+                          _page = 0;
+                        }),
+                      ),
+                      const Spacer(),
+                      if (logs.isNotEmpty)
+                        TextButton.icon(
+                          onPressed: () => _exportAudit(filtered),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          icon: const Icon(Icons.ios_share_rounded, size: 16),
+                          label: const Text('Export audit'),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  if (logs.isNotEmpty)
+                    SizedBox(
+                      height: 34,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _AuditCategory.values.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 8),
                         itemBuilder: (context, index) {
-                          final log = filtered[index];
-                          return _AuditLogTile(log: log);
+                          final category = _AuditCategory.values[index];
+                          final isSelected = category == _selected;
+                          return _CompactChip(
+                            label: category.label,
+                            isSelected: isSelected,
+                            onTap: () => setState(() {
+                              _selected = category;
+                              _page = 0;
+                            }),
+                          );
                         },
                       ),
+                    ),
+                  const SizedBox(height: 12),
+                  if (logs.isEmpty)
+                    const _CompactState(
+                      icon: Icons.history_outlined,
+                      title: 'No audit logs found',
+                      message:
+                          'Owner actions on the platform will appear here as they happen.',
+                    )
+                  else if (filtered.isEmpty)
+                    _CompactState(
+                      icon: Icons.filter_list_off_rounded,
+                      title: 'No matching logs',
+                      message:
+                          'No audit logs match the "${_selected.label}" filter for ${_period.label.toLowerCase()}.',
+                    )
+                  else
+                    for (final group in grouped) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6, top: 4),
+                        child: Text(group.label, style: _groupLabel(context)),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceElevated(context),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.border(context)),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Column(
+                          children: [
+                            for (final (i, log) in group.logs.indexed) ...[
+                              if (i > 0)
+                                Divider(height: 1, color: AppColors.border(context)),
+                              AuditActivityRow(log: log),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+                ],
               ),
-            ],
+            ),
           );
         },
       ),
@@ -255,72 +350,278 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
   }
 }
 
-class _AuditLogTile extends StatelessWidget {
-  const _AuditLogTile({required this.log});
+class _LogGroup {
+  const _LogGroup(this.label, this.logs);
+  final String label;
+  final List<AuditLog> logs;
+}
+
+List<_LogGroup> _groupByDay(List<AuditLog> logs) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final yesterday = today.subtract(const Duration(days: 1));
+  final buckets = <String, List<AuditLog>>{};
+  final order = <String>[];
+  for (final log in logs) {
+    final day = DateTime(log.timestamp.year, log.timestamp.month, log.timestamp.day);
+    final key = day == today
+        ? 'Today'
+        : day == yesterday
+            ? 'Yesterday'
+            : DateFormat('MMMM d, y').format(day);
+    if (!buckets.containsKey(key)) order.add(key);
+    buckets.putIfAbsent(key, () => []).add(log);
+  }
+  return [for (final key in order) _LogGroup(key, buckets[key]!)];
+}
+
+/// Compact single-row rendering of one audit event: icon/status colour by
+/// category, an event sentence, actor/target, and relative time. Reused by
+/// the mobile Today/Yesterday grouped list.
+class AuditActivityRow extends StatelessWidget {
+  const AuditActivityRow({super.key, required this.log});
   final AuditLog log;
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      showShadow: false,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.m),
-            decoration: BoxDecoration(
-              color: AppColors.primary(context),
-              borderRadius: BorderRadius.circular(12),
+    final category = _categoryOf(log);
+    final color = switch (category) {
+      _AuditCategory.billing => AppColors.information(context),
+      _AuditCategory.schools => AppColors.success(context),
+      _AuditCategory.security => AppColors.danger(context),
+      _AuditCategory.system => AppColors.warning(context),
+      _AuditCategory.all => AppColors.textSecondary(context),
+    };
+    final icon = switch (category) {
+      _AuditCategory.billing => Icons.credit_card_rounded,
+      _AuditCategory.schools => Icons.school_rounded,
+      _AuditCategory.security => Icons.shield_rounded,
+      _AuditCategory.system => Icons.settings_rounded,
+      _AuditCategory.all => Icons.circle_notifications_rounded,
+    };
+    return InkWell(
+      onTap: () => _showLogDetail(context, log),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(color: color.withValues(alpha: .14), shape: BoxShape.circle),
+              child: Icon(icon, size: 17, color: color),
             ),
-            child: Icon(
-              Icons.history_rounded,
-              color: AppColors.primary(context),
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.m),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  log.action,
-                  style: AppTypography.labelLarge.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary(context),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'By ${log.ownerId} • ${log.device}',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary(context),
-                  ),
-                ),
-                if (log.reason != null) ...[
-                  const SizedBox(height: 4),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    'Reason: ${log.reason}',
+                    _titleCaseAction(log.action),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.labelLarge.copyWith(
+                      color: AppColors.textPrimary(context),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'by ${_actorLabel(log.ownerId)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTypography.bodySmall.copyWith(
-                      color: Theme.of(context).colorScheme.error,
+                      color: AppColors.textSecondary(context),
+                      fontSize: 12,
                     ),
                   ),
                 ],
-              ],
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.m),
-          Text(
-            DateFormat('MMM dd, HH:mm').format(log.timestamp),
-            style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary(context),
+            const SizedBox(width: 8),
+            Text(
+              _relativeTime(log.timestamp),
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textMuted(context),
+                fontSize: 11.5,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 2),
+            Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textMuted(context)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _relativeTime(DateTime timestamp) {
+    final diff = DateTime.now().difference(timestamp);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  void _showLogDetail(BuildContext context, AuditLog log) {
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(_titleCaseAction(log.action), style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 6),
+            Text('By ${_actorLabel(log.ownerId)} • ${log.device}', style: AppTypography.bodySmall),
+            const SizedBox(height: 6),
+            Text(DateFormat('MMM d, yyyy • h:mm a').format(log.timestamp), style: AppTypography.bodySmall),
+            if (log.reason != null) ...[
+              const SizedBox(height: 6),
+              Text('Reason: ${log.reason}', style: AppTypography.bodySmall),
+            ],
+          ],
+        ),
       ),
     );
   }
 }
+
+class _IconAction extends StatelessWidget {
+  const _IconAction({required this.icon, required this.tooltip, required this.onTap});
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceElevated(context),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border(context)),
+          ),
+          child: Icon(icon, size: 20, color: AppColors.textPrimary(context)),
+        ),
+      ),
+    ),
+  );
+}
+
+class _PeriodPicker extends StatelessWidget {
+  const _PeriodPicker({required this.period, required this.onChanged});
+  final _Period period;
+  final ValueChanged<_Period> onChanged;
+  @override
+  Widget build(BuildContext context) => PopupMenuButton<_Period>(
+    tooltip: 'Select period',
+    onSelected: onChanged,
+    itemBuilder: (_) => [
+      for (final option in _Period.values)
+        PopupMenuItem(value: option, child: Text(option.label)),
+    ],
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated(context),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary(context)),
+          const SizedBox(width: 7),
+          Text(
+            period.label,
+            style: AppTypography.labelMedium.copyWith(
+              color: AppColors.textPrimary(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textSecondary(context)),
+        ],
+      ),
+    ),
+  );
+}
+
+class _CompactChip extends StatelessWidget {
+  const _CompactChip({required this.label, required this.isSelected, required this.onTap});
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final color = isSelected ? AppColors.information(context) : AppColors.textSecondary(context);
+    return Material(
+      color: isSelected ? AppColors.informationSurface(context) : AppColors.surfaceElevated(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: isSelected ? AppColors.information(context) : AppColors.border(context)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Center(
+            child: Text(
+              label,
+              style: AppTypography.labelMedium.copyWith(color: color, fontWeight: FontWeight.w700, fontSize: 12.5),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactState extends StatelessWidget {
+  const _CompactState({required this.icon, required this.title, required this.message});
+  final IconData icon;
+  final String title, message;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 40),
+    child: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 28, color: AppColors.textMuted(context)),
+          const SizedBox(height: 8),
+          Text(title, style: AppTypography.titleMedium.copyWith(color: AppColors.textPrimary(context), fontSize: 15, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(message, textAlign: TextAlign.center, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary(context))),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+TextStyle _pageTitle(BuildContext c) => AppTypography.headlineMedium.copyWith(
+  color: AppColors.textPrimary(c),
+  fontSize: 24,
+  fontWeight: FontWeight.w800,
+);
+TextStyle _groupLabel(BuildContext c) => AppTypography.titleMedium.copyWith(
+  color: AppColors.textPrimary(c),
+  fontSize: 15,
+  fontWeight: FontWeight.w800,
+);
 
 /// Desktop table layout matching the reference: flat header with Refresh /
 /// Filters, category pill row, search + date range, an EVENT/ACTOR/
@@ -807,11 +1108,10 @@ class _AuditTableRow extends StatelessWidget {
 
   Color _categoryColor(BuildContext context, _AuditCategory category) =>
       switch (category) {
-        _AuditCategory.payments => AppColors.success(context),
-        _AuditCategory.applications => AppColors.information(context),
-        _AuditCategory.subscriptions => AppColors.royalBlue,
-        _AuditCategory.schools => AppColors.warning(context),
+        _AuditCategory.billing => AppColors.information(context),
+        _AuditCategory.schools => AppColors.success(context),
         _AuditCategory.security => AppColors.danger(context),
+        _AuditCategory.system => AppColors.warning(context),
         _AuditCategory.all => AppColors.textSecondary(context),
       };
 

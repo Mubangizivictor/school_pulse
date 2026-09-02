@@ -16,9 +16,8 @@ import 'package:school_pulse/core/user_roles.dart';
 /// long-press on the welcome screen logo - never linked from any visible
 /// UI, and never routed through the ordinary Staff Gateway.
 ///
-/// Always renders in the dark premium treatment regardless of the device
-/// theme, per spec: this is a deliberately distinct, restricted surface,
-/// not one of the three portal cards.
+/// Uses the active application appearance, so it remains a distinct,
+/// restricted surface without creating a mismatched dark shell in light mode.
 ///
 /// Security note: a successful Google or email/password sign-in here is
 /// only the first factor. `AuthBloc` calls the server-side
@@ -85,25 +84,26 @@ class _PlatformOwnerAccessScreenState extends State<PlatformOwnerAccessScreen> {
       },
       builder: (context, state) {
         final isLoading = state is AuthLoading;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final foreground = AppColors.textPrimary(context);
+        final secondary = AppColors.textSecondary(context);
+        final muted = AppColors.textMuted(context);
 
         return Scaffold(
-          backgroundColor: AppColors.bgDark,
+          backgroundColor: isDark ? AppColors.bgDark : AppColors.white,
           extendBodyBehindAppBar: true,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: AppColors.textPrimaryDark,
-              ),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
               onPressed: () =>
                   context.canPop() ? context.pop() : context.go('/welcome'),
             ),
           ),
           body: Stack(
             children: [
-              const Positioned.fill(child: _OwnerBackdrop()),
+              if (isDark) const Positioned.fill(child: _OwnerBackdrop()),
               SafeArea(
                 child: LayoutBuilder(
                   builder: (context, viewport) {
@@ -142,7 +142,7 @@ class _PlatformOwnerAccessScreenState extends State<PlatformOwnerAccessScreen> {
                                   'School Pulse',
                                   textAlign: TextAlign.center,
                                   style: AppTypography.labelLarge.copyWith(
-                                    color: AppColors.textSecondaryDark,
+                                    color: secondary,
                                     letterSpacing: 2.2,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -152,7 +152,7 @@ class _PlatformOwnerAccessScreenState extends State<PlatformOwnerAccessScreen> {
                                   'Platform Owner Access',
                                   textAlign: TextAlign.center,
                                   style: AppTypography.headlineMedium.copyWith(
-                                    color: AppColors.textPrimaryDark,
+                                    color: foreground,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
@@ -161,7 +161,7 @@ class _PlatformOwnerAccessScreenState extends State<PlatformOwnerAccessScreen> {
                                   'Restricted platform administration',
                                   textAlign: TextAlign.center,
                                   style: AppTypography.bodyMedium.copyWith(
-                                    color: AppColors.textSecondaryDark,
+                                    color: secondary,
                                   ),
                                 ),
                                 const SizedBox(height: AppSpacing.x3l),
@@ -197,7 +197,7 @@ class _PlatformOwnerAccessScreenState extends State<PlatformOwnerAccessScreen> {
                                   label: 'Email Address',
                                   hint: 'Enter email',
                                   icon: Icons.mail_outline_rounded,
-                                  foreground: AppColors.textPrimaryDark,
+                                  foreground: foreground,
                                   controller: _emailController,
                                   keyboardType: TextInputType.emailAddress,
                                 ),
@@ -206,7 +206,7 @@ class _PlatformOwnerAccessScreenState extends State<PlatformOwnerAccessScreen> {
                                   label: 'Password',
                                   hint: '••••••••',
                                   icon: Icons.lock_outline_rounded,
-                                  foreground: AppColors.textPrimaryDark,
+                                  foreground: foreground,
                                   controller: _passwordController,
                                   isPassword: _obscure,
                                   suffix: IconButton(
@@ -214,7 +214,7 @@ class _PlatformOwnerAccessScreenState extends State<PlatformOwnerAccessScreen> {
                                       _obscure
                                           ? Icons.visibility_outlined
                                           : Icons.visibility_off_outlined,
-                                      color: AppColors.textSecondaryDark,
+                                      color: secondary,
                                     ),
                                     onPressed: () =>
                                         setState(() => _obscure = !_obscure),
@@ -227,6 +227,7 @@ class _PlatformOwnerAccessScreenState extends State<PlatformOwnerAccessScreen> {
                                     Colors.black,
                                     AppColors.brightCyan,
                                   ],
+                                  filled: !isDark,
                                   isLoading: isLoading,
                                   onPressed: isLoading
                                       ? null
@@ -236,10 +237,10 @@ class _PlatformOwnerAccessScreenState extends State<PlatformOwnerAccessScreen> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.verified_user_outlined,
                                       size: 16,
-                                      color: AppColors.textMutedDark,
+                                      color: muted,
                                     ),
                                     const SizedBox(width: AppSpacing.s),
                                     Flexible(
@@ -247,9 +248,7 @@ class _PlatformOwnerAccessScreenState extends State<PlatformOwnerAccessScreen> {
                                         'Secure access protected by additional verification.',
                                         textAlign: TextAlign.center,
                                         style: AppTypography.labelSmall
-                                            .copyWith(
-                                              color: AppColors.textMutedDark,
-                                            ),
+                                            .copyWith(color: muted),
                                       ),
                                     ),
                                   ],
@@ -276,27 +275,25 @@ class _OwnerBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final foreground = AppColors.textPrimary(context);
     return Center(
       child: Container(
         width: 84,
         height: 84,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: AppColors.surfaceDark,
-          border: Border.all(color: AppColors.textPrimaryDark, width: 1.6),
+          color: isDark ? AppColors.surfaceDark : AppColors.grey50,
+          border: Border.all(color: foreground, width: 1.6),
           boxShadow: [
             BoxShadow(
-              color: AppColors.textPrimaryDark,
-              blurRadius: 28,
-              spreadRadius: 2,
+              color: foreground.withValues(alpha: isDark ? 0.85 : 0.18),
+              blurRadius: isDark ? 28 : 18,
+              spreadRadius: isDark ? 2 : 0,
             ),
           ],
         ),
-        child: const Icon(
-          Icons.shield_moon_outlined,
-          color: AppColors.textPrimaryDark,
-          size: 36,
-        ),
+        child: Icon(Icons.shield_moon_outlined, color: foreground, size: 36),
       ),
     );
   }
@@ -318,10 +315,13 @@ class _SocialSignInButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final foreground = AppColors.textPrimary(context);
+    final surface = isDark ? AppColors.surfaceDark : AppColors.white;
     return Opacity(
       opacity: dimWhenDisabled && !enabled ? 0.5 : 1,
       child: Material(
-        color: AppColors.surfaceDark,
+        color: surface,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
@@ -330,20 +330,20 @@ class _SocialSignInButton extends StatelessWidget {
             height: 56,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.borderDark),
+              border: Border.all(color: AppColors.border(context)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 IconTheme(
-                  data: const IconThemeData(color: AppColors.textPrimaryDark),
+                  data: IconThemeData(color: foreground),
                   child: icon,
                 ),
                 const SizedBox(width: AppSpacing.s),
                 Text(
                   label,
                   style: AppTypography.titleMedium.copyWith(
-                    color: AppColors.textPrimaryDark,
+                    color: foreground,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -359,20 +359,22 @@ class _SocialSignInButton extends StatelessWidget {
 class _OrDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final border = AppColors.border(context);
+    final muted = AppColors.textMuted(context);
     return Row(
       children: [
-        Expanded(child: Container(height: 1, color: AppColors.borderDark)),
+        Expanded(child: Container(height: 1, color: border)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
           child: Text(
             'OR',
             style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textMutedDark,
+              color: muted,
               letterSpacing: 1.2,
             ),
           ),
         ),
-        Expanded(child: Container(height: 1, color: AppColors.borderDark)),
+        Expanded(child: Container(height: 1, color: border)),
       ],
     );
   }

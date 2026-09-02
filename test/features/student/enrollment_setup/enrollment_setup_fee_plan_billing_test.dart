@@ -5,11 +5,8 @@
 // fee-plan backend using a stable idempotency key.
 //
 // Deliberately a separate file rather than an addition to
-// enrollment_setup_wizard_bloc_test.dart: that file currently fails to
-// compile for unrelated, pre-existing reasons (references to a
-// `parentLinkSkippedFlag` state field and a `ParentLinkRequested` event that
-// don't exist on this branch) predating this change - see the task's
-// verification notes.
+// enrollment_setup_wizard_bloc_test.dart: keeping fee-plan/billing coverage
+// isolated from the wizard's broader step-by-step bloc tests.
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';

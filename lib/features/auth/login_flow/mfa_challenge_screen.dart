@@ -86,10 +86,17 @@ class _MfaChallengeScreenState extends State<MfaChallengeScreen> {
         _codeController.text.trim(),
       );
       await widget.resolver.resolveSignIn(assertion);
-      await _establishOwnerSecuritySessionIfOwner();
+      // The callable below is owner-gated from Firebase's ID token.  On a
+      // just-resolved MFA sign-in the SDK can still have the first-factor
+      // token in its cache for one turn; make the completed sign-in token
+      // available before asking the server to establish the owner session.
+      // Otherwise a genuine owner is rejected as unauthenticated and the
+      // following auth check signs them back out to the access screen.
+      await FirebaseAuth.instance.currentUser?.getIdToken(true);
+      final isOwner = await _establishOwnerSecuritySessionIfOwner();
       if (!mounted) return;
       context.read<AuthBloc>().add(AuthCheckRequested());
-      context.go('/staff/login');
+      context.go(isOwner ? '/school-splash' : '/staff/login');
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         setState(
@@ -109,7 +116,7 @@ class _MfaChallengeScreenState extends State<MfaChallengeScreen> {
   /// non-owner caller, `establishOwnerSecuritySession`'s own server-side
   /// `requireOwner()` check simply denies it, which `establish()` already
   /// treats as a harmless no-op (see OwnerSecuritySessionService).
-  Future<void> _establishOwnerSecuritySessionIfOwner() async {
+  Future<bool> _establishOwnerSecuritySessionIfOwner() async {
     final providerIds =
         FirebaseAuth.instance.currentUser?.providerData
             .map((p) => p.providerId)
@@ -120,7 +127,7 @@ class _MfaChallengeScreenState extends State<MfaChallengeScreen> {
         : providerIds.contains('apple.com')
         ? 'apple_totp'
         : 'password_totp';
-    await OwnerSecuritySessionService.instance.establish(
+    return OwnerSecuritySessionService.instance.establish(
       authenticationMethod: method,
     );
   }
@@ -223,12 +230,12 @@ class _MfaChallengeScreenState extends State<MfaChallengeScreen> {
       // runs here too (inside establishOwnerSecuritySession's own
       // requireOwner() call) before the app is allowed to treat this as an
       // authenticated owner session.
-      await OwnerSecuritySessionService.instance.establish(
+      final isOwner = await OwnerSecuritySessionService.instance.establish(
         authenticationMethod: 'recovery_code',
       );
       if (!mounted) return;
       context.read<AuthBloc>().add(AuthCheckRequested());
-      context.go('/staff/login');
+      context.go(isOwner ? '/school-splash' : '/staff/login');
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
         setState(

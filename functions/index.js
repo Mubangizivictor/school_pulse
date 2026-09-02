@@ -23,6 +23,9 @@ Object.assign(exports, require("./finance_operations")({ admin, onCall, HttpsErr
 Object.assign(exports, require("./finance_reconciliation")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./health_clinic")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./financial_entitlements")({ admin, onCall, HttpsError }));
+Object.assign(exports, require("./exam_factory")({ admin, onCall, HttpsError }));
+Object.assign(exports, require("./exam_factory_operations")({ admin, onCall, HttpsError }));
+Object.assign(exports, require("./exam_factory_reminders")({ admin, onSchedule }));
 
 /**
  * Enqueue a templated transactional email for the `public_functions`
@@ -2276,7 +2279,17 @@ async function parentInviteAdmin(request) {
 }
 
 /** Admin-only: links one parent to up to two-parent learners and returns the
- * raw, one-time code exactly once. */
+ * raw, one-time code exactly once.
+ *
+ * INITIAL-LINK ONLY. This callable only ever adds a new `parent_learner_links`
+ * doc for a learner that still has room (fewer than two active links) - it
+ * never revokes or mutates an existing active link, so all six
+ * PARENT_INVITE_ADMIN_ROLES (director, headTeacher, deputyHead, schoolAdmin,
+ * admissions, registrar) can safely use it to onboard a learner's first or
+ * second parent. Reassigning/replacing/removing an EXISTING active link is a
+ * distinct, more sensitive operation restricted to schoolAdmin only - see
+ * reallocateParentLink below. Each written link is tagged linkType: "initial"
+ * so the two paths stay auditable and distinguishable in the data itself. */
 exports.createParentAccessCode = onCall({ secrets: ["PARENT_ACCESS_CODE_PEPPER"] }, async (request) => {
   const actor = await parentInviteAdmin(request);
   const { parentName, phoneNumber, learners } = request.data || {};
@@ -2325,11 +2338,138 @@ exports.createParentAccessCode = onCall({ secrets: ["PARENT_ACCESS_CODE_PEPPER"]
     });
     for (const learner of learners) transaction.set(db.collection("parent_learner_links").doc(), {
       schoolId, studentId: String(learner.studentId), parentInviteId: inviteRef.id, phoneNumber: normalizedPhone,
-      relationship: String(learner.relationship || "Guardian"), status: "pending", createdBy: request.auth.uid, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      relationship: String(learner.relationship || "Guardian"), status: "pending", linkType: "initial", createdBy: request.auth.uid, createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
   });
   await db.collection("audit_logs").add({ schoolId, actorId: request.auth.uid, module: "parent_access", action: "code_generated", targetType: "parent_access_invite", targetId: inviteRef.id, createdAt: admin.firestore.FieldValue.serverTimestamp() });
   return { inviteId: inviteRef.id, code, expiresAt: now + PARENT_INVITE_TTL_MS };
+});
+
+/** schoolAdmin-only: reassigns/replaces/removes an EXISTING active (or
+ * pending) parent_learner_links doc for a learner, atomically revoking the
+ * old link and - unless the caller is only removing a slot - issuing a fresh
+ * invite/link for the replacement parent. Distinct from createParentAccessCode
+ * (initial-link, six roles) per the Day 3 policy: only schoolAdmin may
+ * reallocate an existing link, and the acting user's schoolId is validated
+ * against both the learner and the link being replaced (not just their
+ * role), so a schoolAdmin from another school can never touch this school's
+ * links. Every successful reallocation writes one immutable
+ * parent_link_audit_log doc (actor uid+role, schoolId, learner id, the old
+ * link snapshot, the new link snapshot, a server timestamp, and the reason)
+ * before returning - the log is never updated after creation. */
+exports.reallocateParentLink = onCall({ secrets: ["PARENT_ACCESS_CODE_PEPPER"] }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in to manage parent access codes.");
+  const actorSnap = await admin.firestore().collection("users").doc(request.auth.uid).get();
+  const actor = actorSnap.data() || {};
+  const actorRoles = Array.isArray(actor.roles) ? actor.roles : [actor.role];
+  if (!actorRoles.includes("schoolAdmin")) {
+    throw new HttpsError("permission-denied", "Only a school admin may reallocate an existing parent link.");
+  }
+  const actorSchoolId = String(actor.schoolId || "");
+  if (!actorSchoolId) throw new HttpsError("failed-precondition", "Your account is not assigned to a school.");
+
+  const { linkId, parentName, phoneNumber, reason } = request.data || {};
+  if (!String(linkId || "").trim()) {
+    throw new HttpsError("invalid-argument", "The existing parent link to reallocate is required.");
+  }
+  const normalizedPhone = String(phoneNumber || "").replace(/\s/g, "");
+  const isRemoval = !parentName && !phoneNumber;
+  if (!isRemoval && (!String(parentName || "").trim() || !/^\+\d{8,15}$/.test(normalizedPhone))) {
+    throw new HttpsError("invalid-argument", "A replacement parent needs a name and a valid phone number, or omit both to just remove the existing link.");
+  }
+
+  const db = admin.firestore();
+  const oldLinkRef = db.collection("parent_learner_links").doc(String(linkId));
+
+  const result = await db.runTransaction(async (transaction) => {
+    const oldLinkSnap = await transaction.get(oldLinkRef);
+    if (!oldLinkSnap.exists) throw new HttpsError("not-found", "That parent link no longer exists.");
+    const oldLink = oldLinkSnap.data();
+    // Cross-school denial: the link's own schoolId is the source of truth,
+    // not any schoolId the client might pass - a schoolAdmin's session
+    // cannot be tricked into touching another tenant's link.
+    if (oldLink.schoolId !== actorSchoolId) {
+      throw new HttpsError("permission-denied", "This parent link belongs to a different school.");
+    }
+    if (oldLink.status === "revoked") {
+      throw new HttpsError("failed-precondition", "This parent link has already been revoked.");
+    }
+    const studentId = String(oldLink.studentId || "");
+    const studentSnap = await transaction.get(db.collection("students").doc(studentId));
+    if (!studentSnap.exists || studentSnap.data().schoolId !== actorSchoolId) {
+      throw new HttpsError("permission-denied", "This learner is unavailable.");
+    }
+
+    // All transaction reads happen before any write - Firestore transactions
+    // require reads to be executed before writes, so the two-parent-cap
+    // lookup and the school-prefix lookup both happen here, ahead of the
+    // revoke/create writes below.
+    let otherLinksSnap = null;
+    let schoolSnap = null;
+    if (!isRemoval) {
+      otherLinksSnap = await transaction.get(
+        db.collection("parent_learner_links").where("schoolId", "==", actorSchoolId).where("studentId", "==", studentId)
+      );
+      const stillActive = otherLinksSnap.docs.filter((doc) => doc.id !== oldLinkRef.id && doc.data().status !== "revoked");
+      if (stillActive.length >= 2) throw new HttpsError("failed-precondition", "A learner can have a maximum of two parents.");
+      if (stillActive.some((doc) => doc.data().phoneNumber === normalizedPhone)) {
+        throw new HttpsError("already-exists", "This parent is already linked to the learner.");
+      }
+      schoolSnap = await transaction.get(db.collection("schools").doc(actorSchoolId));
+    }
+
+    // Revoke the old link first so any code reading it after this point
+    // within the same transaction sees the intended end state.
+    transaction.update(oldLinkRef, {
+      status: "revoked",
+      revokedAt: admin.firestore.FieldValue.serverTimestamp(),
+      revokedBy: request.auth.uid,
+      revokedReason: String(reason || "reallocated"),
+    });
+
+    if (isRemoval) {
+      return { studentId, oldLink, newLink: null, code: null, inviteId: null };
+    }
+
+    const schoolPrefix = schoolPrefixFrom(schoolSnap.exists ? schoolSnap.data().name : actor.schoolName);
+    const code = newParentInviteCode(schoolPrefix);
+    const codeHash = parentInviteHash(code);
+    const inviteRef = db.collection("parent_access_code_invites").doc(randomUUID());
+    const now = Date.now();
+    transaction.set(inviteRef, {
+      schoolId: actorSchoolId, codeHash, parentName: String(parentName).trim(), phoneNumber: normalizedPhone,
+      learnerIds: [studentId], learnerRelationships: [{ studentId, relationship: String(oldLink.relationship || "Guardian") }],
+      status: "active", createdBy: request.auth.uid, createdAt: admin.firestore.FieldValue.serverTimestamp(), expiresAt: admin.firestore.Timestamp.fromMillis(now + PARENT_INVITE_TTL_MS),
+    });
+    const newLinkRef = db.collection("parent_learner_links").doc();
+    const newLink = {
+      schoolId: actorSchoolId, studentId, parentInviteId: inviteRef.id, phoneNumber: normalizedPhone,
+      relationship: String(oldLink.relationship || "Guardian"), status: "pending", linkType: "reallocation",
+      previousLinkId: oldLinkRef.id, createdBy: request.auth.uid, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    transaction.set(newLinkRef, newLink);
+
+    return { studentId, oldLink, newLink: { ...newLink, id: newLinkRef.id }, code, inviteId: inviteRef.id, expiresAt: now + PARENT_INVITE_TTL_MS };
+  });
+
+  // Immutable audit record, written after the transaction commits so it
+  // only exists for reallocations that actually succeeded. Never updated
+  // after creation - parent_link_audit_log is `allow read, write: if false`
+  // in firestore.rules, so only this Admin-SDK write path can create it.
+  await db.collection("parent_link_audit_log").add({
+    actorUid: request.auth.uid,
+    actorRole: "schoolAdmin",
+    schoolId: actorSchoolId,
+    studentId: result.studentId,
+    oldLink: { id: oldLinkRef.id, phoneNumber: result.oldLink.phoneNumber || null, relationship: result.oldLink.relationship || null, status: result.oldLink.status || null },
+    newLink: result.newLink ? { id: result.newLink.id, phoneNumber: result.newLink.phoneNumber, relationship: result.newLink.relationship, status: result.newLink.status } : null,
+    action: isRemoval ? "removed" : "reallocated",
+    reason: String(reason || ""),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  if (isRemoval) return { success: true, removed: true };
+  return { success: true, inviteId: result.inviteId, code: result.code, expiresAt: result.expiresAt };
 });
 
 exports.revokeParentAccessCode = onCall(async (request) => {

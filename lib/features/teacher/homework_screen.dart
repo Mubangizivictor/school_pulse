@@ -37,7 +37,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
         title: Text(
-          'Homework & Assignments',
+          'Classwork',
           style: AppTypography.headlineSmall.copyWith(
             color: AppColors.textPrimary(context),
             fontWeight: FontWeight.bold,
@@ -88,10 +88,14 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
               if (state.homework.isEmpty) {
                 return EmptyState(
                   icon: Icons.assignment_outlined,
-                  title: 'No assignments yet',
-                  message: 'Manage and track homework for your class here.',
-                  ctaLabel: 'Add Assignment',
-                  onCtaPressed: () => _showHomeworkSheet(context, state),
+                  title: 'No classwork yet',
+                  message: state.canCreate
+                      ? 'Create homework or a class resource for this class.'
+                      : 'There is no classwork for this class yet.',
+                  ctaLabel: state.canCreate ? 'Create classwork' : null,
+                  onCtaPressed: state.canCreate
+                      ? () => _showHomeworkSheet(context, state)
+                      : null,
                 );
               }
 
@@ -123,11 +127,16 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
       ),
       floatingActionButton: BlocBuilder<ClassWorkBloc, ClassWorkState>(
         builder: (context, state) {
-          if (state.context == null) return const SizedBox.shrink();
+          if (!state.canCreate) return const SizedBox.shrink();
           return FloatingActionButton(
             onPressed: () => _showHomeworkSheet(context, state),
             backgroundColor: AppColors.primary(context),
-            child: const Icon(Icons.add, color: Colors.white),
+            tooltip: 'Create classwork',
+            child: const Icon(
+              Icons.add,
+              color: Colors.white,
+              semanticLabel: 'Create classwork',
+            ),
           );
         },
       ),
@@ -214,7 +223,7 @@ class _HomeworkSheetState extends State<_HomeworkSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                isEditing ? 'Edit Assignment' : 'New Assignment',
+                isEditing ? 'Edit classwork' : 'New classwork',
                 style: AppTypography.headlineSmall.copyWith(
                   color: AppColors.textPrimary(context),
                   fontWeight: FontWeight.bold,
@@ -328,7 +337,7 @@ class _HomeworkSheetState extends State<_HomeworkSheet> {
               const SizedBox(height: AppSpacing.xl),
               if (widget.canPublish) ...[
                 PrimaryButton(
-                  label: isEditing ? 'Save & Publish' : 'Create & Publish',
+                  label: isEditing ? 'Save & publish' : 'Create & publish',
                   onPressed: () => _submit(publish: true),
                 ),
                 const SizedBox(height: AppSpacing.m),

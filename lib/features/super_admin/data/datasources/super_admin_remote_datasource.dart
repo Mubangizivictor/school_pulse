@@ -17,6 +17,25 @@ abstract class SuperAdminRemoteDataSource {
     String adminPassword,
   );
   Future<void> updateSchool(SchoolModel school);
+
+  /// Calls the `setSchoolLifecycleStatus` Cloud Function, which changes a
+  /// school's status and writes the platform audit entry in one Admin-SDK
+  /// transaction. Use this instead of [updateSchool] for suspend/activate/
+  /// archive so the status change and its audit record can't drift apart.
+  Future<void> setSchoolLifecycleStatus({
+    required String schoolId,
+    required String status,
+    String? reason,
+  });
+
+  /// Calls the `updateSchoolSubscriptionPlan` Cloud Function, which changes
+  /// a school's plan/expiry and writes the platform audit entry atomically.
+  Future<void> updateSchoolSubscriptionPlan({
+    required String schoolId,
+    required String planId,
+    required DateTime expiry,
+  });
+
   Future<List<SchoolApplicationModel>> getSchoolApplications();
   Future<String> approveSchoolApplication(String applicationId);
   Future<void> rejectSchoolApplication(String applicationId, String reason);
@@ -136,6 +155,42 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
         .collection('schools')
         .doc(school.id)
         .update(school.toJson());
+  }
+
+  @override
+  Future<void> setSchoolLifecycleStatus({
+    required String schoolId,
+    required String status,
+    String? reason,
+  }) async {
+    try {
+      await _ownerFunctions.httpsCallable('setSchoolLifecycleStatus').call({
+        'schoolId': schoolId,
+        'status': status,
+        if (reason != null) 'reason': reason,
+      });
+    } on FirebaseFunctionsException catch (e) {
+      throw StateError(e.message ?? 'Unable to update the school status.');
+    }
+  }
+
+  @override
+  Future<void> updateSchoolSubscriptionPlan({
+    required String schoolId,
+    required String planId,
+    required DateTime expiry,
+  }) async {
+    try {
+      await _ownerFunctions.httpsCallable('updateSchoolSubscriptionPlan').call(
+        {
+          'schoolId': schoolId,
+          'planId': planId,
+          'expiry': expiry.millisecondsSinceEpoch,
+        },
+      );
+    } on FirebaseFunctionsException catch (e) {
+      throw StateError(e.message ?? 'Unable to update the subscription.');
+    }
   }
 
   @override

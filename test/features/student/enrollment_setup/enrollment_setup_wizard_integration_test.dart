@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/relationships/domain/entities/parent_student_relationship.dart';
 import 'package:school_pulse/features/relationships/domain/entities/relationship_enums.dart';
@@ -99,6 +100,13 @@ void main() {
     when(
       () => studentRepository.updateStudentStatus(any(), any()),
     ).thenAnswer((_) async => const Right(null));
+
+    // WizardStarted's _loadCurrentStudent fold()s a Left into null and
+    // proceeds, so a Left is a safe, permissive default for these
+    // front-loaded-step-free flows.
+    when(
+      () => studentRepository.getStudentById(any()),
+    ).thenAnswer((_) async => Left(ServerFailure('not stubbed in this test')));
 
     when(
       () => parentLinkingService.linkStudentToParent(
@@ -258,13 +266,17 @@ void main() {
 
     // Step 6: Parent/Guardian
     bloc.add(
-      ParentLinkRequested(
-        operatorUser: operatorUser,
-        phoneNumber: '+256700000000',
-        parentName: 'Jane Parent',
-        isPrimaryGuardian: true,
-      ),
+      const GuardiansListUpdated([
+        GuardianDraft(
+          name: 'Jane Parent',
+          phoneNumber: '+256700000000',
+          type: RelationshipType.parent,
+          relationshipLabel: 'Mother',
+          isPrimaryGuardian: true,
+        ),
+      ]),
     );
+    bloc.add(GuardiansLinkRequested(operatorUser));
     await Future<void>.delayed(const Duration(milliseconds: 5));
     bloc.add(const WizardNextStep());
 

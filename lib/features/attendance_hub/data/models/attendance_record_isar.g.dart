@@ -18,98 +18,118 @@ const AttendanceRecordIsarSchema = CollectionSchema(
   name: r'AttendanceRecordIsar',
   id: -4831990265321389418,
   properties: {
-    r'category': PropertySchema(
+    r'blockedReason': PropertySchema(
       id: 0,
+      name: r'blockedReason',
+      type: IsarType.string,
+    ),
+    r'category': PropertySchema(
+      id: 1,
       name: r'category',
       type: IsarType.string,
     ),
     r'correctedAt': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'correctedAt',
       type: IsarType.dateTime,
     ),
     r'correctionOf': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'correctionOf',
       type: IsarType.string,
     ),
     r'createdAt': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
     r'date': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'date',
       type: IsarType.dateTime,
     ),
     r'deviceId': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'deviceId',
       type: IsarType.string,
     ),
+    r'lastError': PropertySchema(
+      id: 7,
+      name: r'lastError',
+      type: IsarType.string,
+    ),
     r'markedBy': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'markedBy',
       type: IsarType.string,
     ),
     r'method': PropertySchema(
-      id: 7,
+      id: 9,
       name: r'method',
       type: IsarType.string,
     ),
+    r'nextRetryAt': PropertySchema(
+      id: 10,
+      name: r'nextRetryAt',
+      type: IsarType.dateTime,
+    ),
     r'operatorId': PropertySchema(
-      id: 8,
+      id: 11,
       name: r'operatorId',
       type: IsarType.string,
     ),
     r'personId': PropertySchema(
-      id: 9,
+      id: 12,
       name: r'personId',
       type: IsarType.string,
     ),
     r'personName': PropertySchema(
-      id: 10,
+      id: 13,
       name: r'personName',
       type: IsarType.string,
     ),
     r'recordId': PropertySchema(
-      id: 11,
+      id: 14,
       name: r'recordId',
       type: IsarType.string,
     ),
+    r'retryCount': PropertySchema(
+      id: 15,
+      name: r'retryCount',
+      type: IsarType.long,
+    ),
     r'roleAssignmentId': PropertySchema(
-      id: 12,
+      id: 16,
       name: r'roleAssignmentId',
       type: IsarType.string,
     ),
     r'schoolId': PropertySchema(
-      id: 13,
+      id: 17,
       name: r'schoolId',
       type: IsarType.string,
     ),
     r'scopeId': PropertySchema(
-      id: 14,
+      id: 18,
       name: r'scopeId',
       type: IsarType.string,
     ),
     r'scopeName': PropertySchema(
-      id: 15,
+      id: 19,
       name: r'scopeName',
       type: IsarType.string,
     ),
     r'sessionType': PropertySchema(
-      id: 16,
+      id: 20,
       name: r'sessionType',
       type: IsarType.string,
     ),
     r'status': PropertySchema(
-      id: 17,
+      id: 21,
       name: r'status',
       type: IsarType.string,
     ),
     r'syncStatus': PropertySchema(
-      id: 18,
+      id: 22,
       name: r'syncStatus',
       type: IsarType.string,
     )
@@ -213,6 +233,12 @@ int _attendanceRecordIsarEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  {
+    final value = object.blockedReason;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.category.length * 3;
   {
     final value = object.correctionOf;
@@ -221,6 +247,12 @@ int _attendanceRecordIsarEstimateSize(
     }
   }
   bytesCount += 3 + object.deviceId.length * 3;
+  {
+    final value = object.lastError;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.markedBy.length * 3;
   bytesCount += 3 + object.method.length * 3;
   bytesCount += 3 + object.operatorId.length * 3;
@@ -248,25 +280,29 @@ void _attendanceRecordIsarSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.category);
-  writer.writeDateTime(offsets[1], object.correctedAt);
-  writer.writeString(offsets[2], object.correctionOf);
-  writer.writeDateTime(offsets[3], object.createdAt);
-  writer.writeDateTime(offsets[4], object.date);
-  writer.writeString(offsets[5], object.deviceId);
-  writer.writeString(offsets[6], object.markedBy);
-  writer.writeString(offsets[7], object.method);
-  writer.writeString(offsets[8], object.operatorId);
-  writer.writeString(offsets[9], object.personId);
-  writer.writeString(offsets[10], object.personName);
-  writer.writeString(offsets[11], object.recordId);
-  writer.writeString(offsets[12], object.roleAssignmentId);
-  writer.writeString(offsets[13], object.schoolId);
-  writer.writeString(offsets[14], object.scopeId);
-  writer.writeString(offsets[15], object.scopeName);
-  writer.writeString(offsets[16], object.sessionType);
-  writer.writeString(offsets[17], object.status);
-  writer.writeString(offsets[18], object.syncStatus);
+  writer.writeString(offsets[0], object.blockedReason);
+  writer.writeString(offsets[1], object.category);
+  writer.writeDateTime(offsets[2], object.correctedAt);
+  writer.writeString(offsets[3], object.correctionOf);
+  writer.writeDateTime(offsets[4], object.createdAt);
+  writer.writeDateTime(offsets[5], object.date);
+  writer.writeString(offsets[6], object.deviceId);
+  writer.writeString(offsets[7], object.lastError);
+  writer.writeString(offsets[8], object.markedBy);
+  writer.writeString(offsets[9], object.method);
+  writer.writeDateTime(offsets[10], object.nextRetryAt);
+  writer.writeString(offsets[11], object.operatorId);
+  writer.writeString(offsets[12], object.personId);
+  writer.writeString(offsets[13], object.personName);
+  writer.writeString(offsets[14], object.recordId);
+  writer.writeLong(offsets[15], object.retryCount);
+  writer.writeString(offsets[16], object.roleAssignmentId);
+  writer.writeString(offsets[17], object.schoolId);
+  writer.writeString(offsets[18], object.scopeId);
+  writer.writeString(offsets[19], object.scopeName);
+  writer.writeString(offsets[20], object.sessionType);
+  writer.writeString(offsets[21], object.status);
+  writer.writeString(offsets[22], object.syncStatus);
 }
 
 AttendanceRecordIsar _attendanceRecordIsarDeserialize(
@@ -276,26 +312,30 @@ AttendanceRecordIsar _attendanceRecordIsarDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = AttendanceRecordIsar();
-  object.category = reader.readString(offsets[0]);
-  object.correctedAt = reader.readDateTimeOrNull(offsets[1]);
-  object.correctionOf = reader.readStringOrNull(offsets[2]);
-  object.createdAt = reader.readDateTime(offsets[3]);
-  object.date = reader.readDateTime(offsets[4]);
-  object.deviceId = reader.readString(offsets[5]);
+  object.blockedReason = reader.readStringOrNull(offsets[0]);
+  object.category = reader.readString(offsets[1]);
+  object.correctedAt = reader.readDateTimeOrNull(offsets[2]);
+  object.correctionOf = reader.readStringOrNull(offsets[3]);
+  object.createdAt = reader.readDateTime(offsets[4]);
+  object.date = reader.readDateTime(offsets[5]);
+  object.deviceId = reader.readString(offsets[6]);
   object.id = id;
-  object.markedBy = reader.readString(offsets[6]);
-  object.method = reader.readString(offsets[7]);
-  object.operatorId = reader.readString(offsets[8]);
-  object.personId = reader.readString(offsets[9]);
-  object.personName = reader.readString(offsets[10]);
-  object.recordId = reader.readString(offsets[11]);
-  object.roleAssignmentId = reader.readStringOrNull(offsets[12]);
-  object.schoolId = reader.readString(offsets[13]);
-  object.scopeId = reader.readString(offsets[14]);
-  object.scopeName = reader.readString(offsets[15]);
-  object.sessionType = reader.readString(offsets[16]);
-  object.status = reader.readString(offsets[17]);
-  object.syncStatus = reader.readString(offsets[18]);
+  object.lastError = reader.readStringOrNull(offsets[7]);
+  object.markedBy = reader.readString(offsets[8]);
+  object.method = reader.readString(offsets[9]);
+  object.nextRetryAt = reader.readDateTimeOrNull(offsets[10]);
+  object.operatorId = reader.readString(offsets[11]);
+  object.personId = reader.readString(offsets[12]);
+  object.personName = reader.readString(offsets[13]);
+  object.recordId = reader.readString(offsets[14]);
+  object.retryCount = reader.readLong(offsets[15]);
+  object.roleAssignmentId = reader.readStringOrNull(offsets[16]);
+  object.schoolId = reader.readString(offsets[17]);
+  object.scopeId = reader.readString(offsets[18]);
+  object.scopeName = reader.readString(offsets[19]);
+  object.sessionType = reader.readString(offsets[20]);
+  object.status = reader.readString(offsets[21]);
+  object.syncStatus = reader.readString(offsets[22]);
   return object;
 }
 
@@ -307,42 +347,50 @@ P _attendanceRecordIsarDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readString(offset)) as P;
-    case 1:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 2:
       return (reader.readStringOrNull(offset)) as P;
+    case 1:
+      return (reader.readString(offset)) as P;
+    case 2:
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 3:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 4:
       return (reader.readDateTime(offset)) as P;
     case 5:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 8:
       return (reader.readString(offset)) as P;
     case 9:
       return (reader.readString(offset)) as P;
     case 10:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 11:
       return (reader.readString(offset)) as P;
     case 12:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 13:
       return (reader.readString(offset)) as P;
     case 14:
       return (reader.readString(offset)) as P;
     case 15:
-      return (reader.readString(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 16:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 17:
       return (reader.readString(offset)) as P;
     case 18:
+      return (reader.readString(offset)) as P;
+    case 19:
+      return (reader.readString(offset)) as P;
+    case 20:
+      return (reader.readString(offset)) as P;
+    case 21:
+      return (reader.readString(offset)) as P;
+    case 22:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -830,6 +878,162 @@ extension AttendanceRecordIsarQueryWhere
 
 extension AttendanceRecordIsarQueryFilter on QueryBuilder<AttendanceRecordIsar,
     AttendanceRecordIsar, QFilterCondition> {
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> blockedReasonIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'blockedReason',
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> blockedReasonIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'blockedReason',
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> blockedReasonEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'blockedReason',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> blockedReasonGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'blockedReason',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> blockedReasonLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'blockedReason',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> blockedReasonBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'blockedReason',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> blockedReasonStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'blockedReason',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> blockedReasonEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'blockedReason',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+          QAfterFilterCondition>
+      blockedReasonContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'blockedReason',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+          QAfterFilterCondition>
+      blockedReasonMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'blockedReason',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> blockedReasonIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'blockedReason',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> blockedReasonIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'blockedReason',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
       QAfterFilterCondition> categoryEqualTo(
     String value, {
@@ -1505,6 +1709,162 @@ extension AttendanceRecordIsarQueryFilter on QueryBuilder<AttendanceRecordIsar,
   }
 
   QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> lastErrorIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'lastError',
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> lastErrorIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'lastError',
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> lastErrorEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastError',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> lastErrorGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'lastError',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> lastErrorLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'lastError',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> lastErrorBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'lastError',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> lastErrorStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'lastError',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> lastErrorEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'lastError',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+          QAfterFilterCondition>
+      lastErrorContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'lastError',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+          QAfterFilterCondition>
+      lastErrorMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'lastError',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> lastErrorIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastError',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> lastErrorIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'lastError',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
       QAfterFilterCondition> markedByEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1776,6 +2136,80 @@ extension AttendanceRecordIsarQueryFilter on QueryBuilder<AttendanceRecordIsar,
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'method',
         value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> nextRetryAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'nextRetryAt',
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> nextRetryAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'nextRetryAt',
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> nextRetryAtEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'nextRetryAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> nextRetryAtGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'nextRetryAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> nextRetryAtLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'nextRetryAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> nextRetryAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'nextRetryAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
       ));
     });
   }
@@ -2328,6 +2762,62 @@ extension AttendanceRecordIsarQueryFilter on QueryBuilder<AttendanceRecordIsar,
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'recordId',
         value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> retryCountEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'retryCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> retryCountGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'retryCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> retryCountLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'retryCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar,
+      QAfterFilterCondition> retryCountBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'retryCount',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
       ));
     });
   }
@@ -3326,6 +3816,20 @@ extension AttendanceRecordIsarQueryLinks on QueryBuilder<AttendanceRecordIsar,
 extension AttendanceRecordIsarQuerySortBy
     on QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QSortBy> {
   QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      sortByBlockedReason() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'blockedReason', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      sortByBlockedReasonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'blockedReason', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
       sortByCategory() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'category', Sort.asc);
@@ -3410,6 +3914,20 @@ extension AttendanceRecordIsarQuerySortBy
   }
 
   QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      sortByLastError() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastError', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      sortByLastErrorDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastError', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
       sortByMarkedBy() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'markedBy', Sort.asc);
@@ -3434,6 +3952,20 @@ extension AttendanceRecordIsarQuerySortBy
       sortByMethodDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'method', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      sortByNextRetryAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'nextRetryAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      sortByNextRetryAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'nextRetryAt', Sort.desc);
     });
   }
 
@@ -3490,6 +4022,20 @@ extension AttendanceRecordIsarQuerySortBy
       sortByRecordIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'recordId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      sortByRetryCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'retryCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      sortByRetryCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'retryCount', Sort.desc);
     });
   }
 
@@ -3595,6 +4141,20 @@ extension AttendanceRecordIsarQuerySortBy
 extension AttendanceRecordIsarQuerySortThenBy
     on QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QSortThenBy> {
   QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      thenByBlockedReason() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'blockedReason', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      thenByBlockedReasonDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'blockedReason', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
       thenByCategory() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'category', Sort.asc);
@@ -3693,6 +4253,20 @@ extension AttendanceRecordIsarQuerySortThenBy
   }
 
   QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      thenByLastError() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastError', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      thenByLastErrorDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastError', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
       thenByMarkedBy() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'markedBy', Sort.asc);
@@ -3717,6 +4291,20 @@ extension AttendanceRecordIsarQuerySortThenBy
       thenByMethodDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'method', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      thenByNextRetryAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'nextRetryAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      thenByNextRetryAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'nextRetryAt', Sort.desc);
     });
   }
 
@@ -3773,6 +4361,20 @@ extension AttendanceRecordIsarQuerySortThenBy
       thenByRecordIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'recordId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      thenByRetryCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'retryCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QAfterSortBy>
+      thenByRetryCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'retryCount', Sort.desc);
     });
   }
 
@@ -3878,6 +4480,14 @@ extension AttendanceRecordIsarQuerySortThenBy
 extension AttendanceRecordIsarQueryWhereDistinct
     on QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QDistinct> {
   QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QDistinct>
+      distinctByBlockedReason({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'blockedReason',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QDistinct>
       distinctByCategory({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'category', caseSensitive: caseSensitive);
@@ -3920,6 +4530,13 @@ extension AttendanceRecordIsarQueryWhereDistinct
   }
 
   QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QDistinct>
+      distinctByLastError({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'lastError', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QDistinct>
       distinctByMarkedBy({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'markedBy', caseSensitive: caseSensitive);
@@ -3930,6 +4547,13 @@ extension AttendanceRecordIsarQueryWhereDistinct
       distinctByMethod({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'method', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QDistinct>
+      distinctByNextRetryAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'nextRetryAt');
     });
   }
 
@@ -3958,6 +4582,13 @@ extension AttendanceRecordIsarQueryWhereDistinct
       distinctByRecordId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'recordId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, AttendanceRecordIsar, QDistinct>
+      distinctByRetryCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'retryCount');
     });
   }
 
@@ -4020,6 +4651,13 @@ extension AttendanceRecordIsarQueryProperty on QueryBuilder<
     });
   }
 
+  QueryBuilder<AttendanceRecordIsar, String?, QQueryOperations>
+      blockedReasonProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'blockedReason');
+    });
+  }
+
   QueryBuilder<AttendanceRecordIsar, String, QQueryOperations>
       categoryProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -4062,6 +4700,13 @@ extension AttendanceRecordIsarQueryProperty on QueryBuilder<
     });
   }
 
+  QueryBuilder<AttendanceRecordIsar, String?, QQueryOperations>
+      lastErrorProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'lastError');
+    });
+  }
+
   QueryBuilder<AttendanceRecordIsar, String, QQueryOperations>
       markedByProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -4073,6 +4718,13 @@ extension AttendanceRecordIsarQueryProperty on QueryBuilder<
       methodProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'method');
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, DateTime?, QQueryOperations>
+      nextRetryAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'nextRetryAt');
     });
   }
 
@@ -4101,6 +4753,13 @@ extension AttendanceRecordIsarQueryProperty on QueryBuilder<
       recordIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'recordId');
+    });
+  }
+
+  QueryBuilder<AttendanceRecordIsar, int, QQueryOperations>
+      retryCountProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'retryCount');
     });
   }
 

@@ -98,6 +98,14 @@ class ClassTimetableBloc
   TimetableConfig? _config;
   List<TimetableLesson> _lessons = const [];
 
+  // See TeacherTimetableBloc for why this exists: the subscriptions set up
+  // below outlive a single dispatch of _onRequested, so the handler must
+  // stay open on this Completer (resolved by close() or a superseding
+  // ClassTimetableRequested) for as long as they can still call `emit` -
+  // otherwise every listener callback below throws once the handler's
+  // Future would otherwise have completed.
+  Completer<void>? _requestLifetime;
+
   ClassTimetableBloc({
     required this.timetableRepository,
     required this.structureRepository,
@@ -123,6 +131,9 @@ class ClassTimetableBloc
     await _timetableSub?.cancel();
     await _lessonsSub?.cancel();
     await _configSub?.cancel();
+    _requestLifetime?.complete();
+    final lifetime = Completer<void>();
+    _requestLifetime = lifetime;
 
     // Start clean rather than copyWith: switching classes must not show the
     // previous class's grid while the new one loads.
@@ -154,7 +165,8 @@ class ClassTimetableBloc
         )
         .listen(
           (timetables) {
-            if (state.roleAssignmentId != event.context.roleAssignmentId) {
+            if (emit.isDone ||
+                state.roleAssignmentId != event.context.roleAssignmentId) {
               return;
             }
 
@@ -188,22 +200,36 @@ class ClassTimetableBloc
                     _lessons = lessons;
                     _emitEntries(emit, event.context.roleAssignmentId);
                   },
-                  onError: (_) => emit(
-                    state.copyWith(
-                      isLoading: false,
-                      errorMessage:
-                          'Could not load this timetable. Pull down to retry.',
-                    ),
-                  ),
+                  onError: (_) {
+                    if (!emit.isDone) {
+                      emit(
+                        state.copyWith(
+                          isLoading: false,
+                          errorMessage:
+                              'Could not load this timetable. Pull down to retry.',
+                        ),
+                      );
+                    }
+                  },
                 );
           },
-          onError: (_) => emit(
-            state.copyWith(
-              isLoading: false,
-              errorMessage: 'Could not load the timetable. Pull down to retry.',
-            ),
-          ),
+          onError: (_) {
+            if (!emit.isDone) {
+              emit(
+                state.copyWith(
+                  isLoading: false,
+                  errorMessage:
+                      'Could not load the timetable. Pull down to retry.',
+                ),
+              );
+            }
+          },
         );
+
+    // Held open for the lifetime of this request so `emit` above stays
+    // valid for the stream listeners; released by close() or a superseding
+    // ClassTimetableRequested.
+    await lifetime.future;
   }
 
   /// The single active timetable for this class/stream target. Draft and
@@ -229,7 +255,7 @@ class ClassTimetableBloc
     Emitter<ClassTimetableState> emit,
     String roleAssignmentId,
   ) {
-    if (state.roleAssignmentId != roleAssignmentId) return;
+    if (emit.isDone || state.roleAssignmentId != roleAssignmentId) return;
 
     final config = _config;
     if (config == null) return;
@@ -247,6 +273,7 @@ class ClassTimetableBloc
     await _timetableSub?.cancel();
     await _lessonsSub?.cancel();
     await _configSub?.cancel();
+    _requestLifetime?.complete();
     return super.close();
   }
 }

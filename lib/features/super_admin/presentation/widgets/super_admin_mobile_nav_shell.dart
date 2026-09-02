@@ -16,7 +16,7 @@ class SuperAdminMobileNavShell extends StatelessWidget {
     final path = GoRouterState.of(context).uri.path;
     if (path.startsWith('/super-admin/schools')) return 1;
     if (path.startsWith('/super-admin/payments')) return 2;
-    if (path.startsWith('/super-admin/plans')) return 3;
+    if (path.startsWith('/super-admin/audit-logs')) return 3;
     if (path.startsWith('/super-admin/settings')) return 4;
     return 0;
   }
@@ -24,6 +24,7 @@ class SuperAdminMobileNavShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isSuperAdminWide(context)) return child;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       // Some owner settings screens use Navigator.push for their follow-up
@@ -37,68 +38,81 @@ class SuperAdminMobileNavShell extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surfaceElevated(context),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border(top: BorderSide(color: AppColors.border(context))),
           boxShadow: [
-            BoxShadow(
-              color: AppColors.shadow(context),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
-            ),
+            if (!isDark)
+              BoxShadow(
+                color: Colors.black.withValues(alpha: .10),
+                blurRadius: 18,
+                offset: const Offset(0, -5),
+              ),
           ],
         ),
-        child: NavigationBar(
-          height: 88,
-          backgroundColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-          indicatorColor: AppColors.primary(context),
-          labelTextStyle: WidgetStateProperty.resolveWith(
-            (states) => TextStyle(
-              color: states.contains(WidgetState.selected)
-                  ? AppColors.primary(context)
-                  : AppColors.textMuted(context),
-              fontSize: 12.5,
-              fontWeight: states.contains(WidgetState.selected)
-                  ? FontWeight.w700
-                  : FontWeight.w500,
+        child: NavigationBarTheme(
+          data: NavigationBarTheme.of(context).copyWith(
+            iconTheme: WidgetStateProperty.resolveWith(
+              (states) => IconThemeData(
+                color: states.contains(WidgetState.selected)
+                    ? (isDark ? AppColors.bgDark : AppColors.surfaceLight)
+                    : AppColors.textMuted(context),
+              ),
             ),
           ),
-          selectedIndex: _selectedIndex(context),
-          onDestinationSelected: (index) {
-            const paths = [
-              '/super-admin',
-              '/super-admin/schools',
-              '/super-admin/payments',
-              '/super-admin/plans',
-              '/super-admin/settings',
-            ];
-            context.go(paths[index]);
-          },
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Home',
+          child: NavigationBar(
+            height: 88,
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            indicatorColor: AppColors.information(context),
+            labelTextStyle: WidgetStateProperty.resolveWith(
+              (states) => TextStyle(
+                color: states.contains(WidgetState.selected)
+                    ? AppColors.information(context)
+                    : AppColors.textMuted(context),
+                fontSize: 12.5,
+                fontWeight: states.contains(WidgetState.selected)
+                    ? FontWeight.w700
+                    : FontWeight.w500,
+              ),
             ),
-            NavigationDestination(
-              icon: Icon(Icons.school_outlined),
-              selectedIcon: Icon(Icons.school),
-              label: 'Schools',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.receipt_long_outlined),
-              selectedIcon: Icon(Icons.receipt_long),
-              label: 'Payments',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.subscriptions_outlined),
-              selectedIcon: Icon(Icons.subscriptions),
-              label: 'Plans',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings),
-              label: 'Settings',
-            ),
-          ],
+            selectedIndex: _selectedIndex(context),
+            onDestinationSelected: (index) {
+              const paths = [
+                '/super-admin',
+                '/super-admin/schools',
+                '/super-admin/payments',
+                '/super-admin/audit-logs',
+                '/super-admin/settings',
+              ];
+              context.go(paths[index]);
+            },
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Overview',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.school_outlined),
+                selectedIcon: Icon(Icons.school),
+                label: 'Schools',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.receipt_long_outlined),
+                selectedIcon: Icon(Icons.receipt_long),
+                label: 'Billing',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.history_outlined),
+                selectedIcon: Icon(Icons.history),
+                label: 'Activity',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: 'Settings',
+              ),
+            ],
+          ),
         ),
       ),
     );

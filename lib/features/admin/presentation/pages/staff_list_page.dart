@@ -10,6 +10,8 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -90,6 +92,16 @@ class _StaffListPageState extends State<StaffListPage> {
 
   @override
   Widget build(BuildContext context) {
+    // "Add Staff" is server-verified against UserRoleDisplay.adminRoles
+    // (director/headTeacher/schoolAdmin), a narrower set than the
+    // adminConsoleRoles that share this /staff/admin console UI (Deputy
+    // Head included). Hide the entry point entirely for a role the Cloud
+    // Function will always reject rather than let it fail at the end of
+    // the wizard.
+    final authState = context.watch<AuthBloc>().state;
+    final canInviteStaff =
+        authState is AuthAuthenticated &&
+        authState.user.roles.any(UserRoleDisplay.adminRoles.contains);
     return BlocProvider(
       create: (_) => di.sl<StructureBloc>(),
       child: Scaffold(
@@ -206,16 +218,18 @@ class _StaffListPageState extends State<StaffListPage> {
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => context.push('/staff/admin/users/add-staff'),
-          icon: const Icon(Icons.add),
-          label: const Text('Add Staff'),
-          backgroundColor: AppColors.primary(context),
-          // Primary reverses between black and white by theme. Its matching
-          // background is therefore the only colour that stays legible in
-          // both appearances.
-          foregroundColor: AppColors.background(context),
-        ),
+        floatingActionButton: canInviteStaff
+            ? FloatingActionButton.extended(
+                onPressed: () => context.push('/staff/admin/users/add-staff'),
+                icon: const Icon(Icons.add),
+                label: const Text('Add Staff'),
+                backgroundColor: AppColors.primary(context),
+                // Primary reverses between black and white by theme. Its
+                // matching background is therefore the only colour that
+                // stays legible in both appearances.
+                foregroundColor: AppColors.background(context),
+              )
+            : null,
       ),
     );
   }
@@ -232,6 +246,11 @@ class _StaffListPageState extends State<StaffListPage> {
     required String message,
     required bool showAddAction,
   }) {
+    final authState = context.read<AuthBloc>().state;
+    final canInviteStaff =
+        authState is AuthAuthenticated &&
+        authState.user.roles.any(UserRoleDisplay.adminRoles.contains);
+    final showCta = showAddAction && canInviteStaff;
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       children: [
@@ -240,8 +259,8 @@ class _StaffListPageState extends State<StaffListPage> {
           icon: Icons.people_outline,
           title: title,
           message: message,
-          ctaLabel: showAddAction ? 'Add Staff' : null,
-          onCtaPressed: showAddAction
+          ctaLabel: showCta ? 'Add Staff' : null,
+          onCtaPressed: showCta
               ? () => context.push('/staff/admin/users/add-staff')
               : null,
         ),

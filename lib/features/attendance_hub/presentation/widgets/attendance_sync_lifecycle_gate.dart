@@ -7,6 +7,9 @@ import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/attendance_hub/domain/repositories/attendance_repository.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/exam_factory/domain/repositories/exam_factory_repository.dart';
+import 'package:school_pulse/features/exam_factory/domain/services/exam_factory_offline_queue_service.dart';
+import 'package:school_pulse/features/exam_factory/domain/services/exam_factory_queue_replay.dart';
 import 'package:school_pulse/features/matron/domain/repositories/matron_repository.dart';
 import 'package:school_pulse/features/patron/domain/repositories/patron_repository.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -112,6 +115,27 @@ class _AttendanceSyncLifecycleGateState
         ),
       );
     }
+
+    // Exam Factory's offline queue (question drafts, moderation comments,
+    // mark entry, attendance, incidents) shares these same lifecycle
+    // triggers rather than adding its own observer/poll - see
+    // ExamFactoryOfflineQueueService doc for what is and is not safe to
+    // queue. Guarded by isRegistered so test setups that stub only the
+    // attendance/boarding DI surface (this gate predates Exam Factory)
+    // are not forced to also register it.
+    if (!di.sl.isRegistered<ExamFactoryOfflineQueueService>() ||
+        !di.sl.isRegistered<ExamFactoryRepository>()) {
+      return;
+    }
+    unawaited(
+      di.sl<ExamFactoryOfflineQueueService>().syncPending(
+        institutionId: authState.user.schoolId,
+        actorId: authState.user.id,
+        send: ExamFactoryQueueReplay(
+          repository: di.sl<ExamFactoryRepository>(),
+        ).replay,
+      ),
+    );
   }
 
   @override

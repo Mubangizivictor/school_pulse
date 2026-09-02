@@ -89,19 +89,30 @@ class ResponsibilitySwitcherSheet extends StatelessWidget {
                 ),
               ),
               Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.only(bottom: 20),
-                  children: [
-                    if (subjectAssignments.isNotEmpty)
-                      _sectionLabel(context, 'My subjects'),
-                    ...subjectAssignments.map((a) => _tile(context, a)),
-                    if (otherResponsibilities.isNotEmpty) ...[
-                      _sectionLabel(context, 'Other responsibilities'),
-                      ...otherResponsibilities.map((a) => _tile(context, a)),
-                    ],
-                  ],
-                ),
+                child: subjectAssignments.isEmpty && otherResponsibilities.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                        child: Text(
+                          'No other roles are assigned to your account.',
+                          style: TextStyle(
+                            color: AppColors.textSecondary(context),
+                            fontSize: 13,
+                          ),
+                        ),
+                      )
+                    : ListView(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.only(bottom: 20),
+                        children: [
+                          if (subjectAssignments.isNotEmpty)
+                            _sectionLabel(context, 'My subjects'),
+                          ...subjectAssignments.map((a) => _tile(context, a)),
+                          if (otherResponsibilities.isNotEmpty) ...[
+                            _sectionLabel(context, 'Other responsibilities'),
+                            ...otherResponsibilities.map((a) => _tile(context, a)),
+                          ],
+                        ],
+                      ),
               ),
             ],
           ),

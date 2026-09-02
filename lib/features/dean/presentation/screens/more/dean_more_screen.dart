@@ -84,8 +84,8 @@ class DeanMoreScreen extends StatelessWidget {
     ),
     _MoreItem(
       icon: Icons.bar_chart_rounded,
-      label: 'UNEB & Reports Readiness',
-      description: 'Monitor UNEB readiness and report status',
+      label: 'Performance & Reports',
+      description: 'Monitor performance, reports and readiness',
       color: Colors.black,
       builder: (_) => const PerformanceAnalyticsScreen(),
     ),

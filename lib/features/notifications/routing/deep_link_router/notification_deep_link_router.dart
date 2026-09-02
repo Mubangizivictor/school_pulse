@@ -185,6 +185,10 @@ class NotificationDeepLinkRouter {
       case NotificationType.timetableUpdated:
         return NotificationDestinationKind.examTimetable;
 
+      case NotificationType.examQuestionModeration:
+      case NotificationType.examPaperWorkflow:
+        return NotificationDestinationKind.examWorkspace;
+
       case NotificationType.bookOverdue:
       case NotificationType.bookDueSoon:
         return NotificationDestinationKind.libraryLoan;
@@ -294,6 +298,22 @@ class NotificationDeepLinkRouter {
 
       case NotificationDestinationKind.examTimetable:
         route = parentSide ? '/parent/calendar' : '/staff/calendar';
+        break;
+
+      case NotificationDestinationKind.examWorkspace:
+        if (parentSide || entityId == null) return null;
+        // metadata carries which kind of Exam Factory record this is, since
+        // one destination kind serves both the question-review and
+        // paper-workflow routes - see NotificationDestinationKind.examWorkspace.
+        final examEntityType = notification.metadata['examEntityType'];
+        route = switch (examEntityType) {
+          'question' =>
+            '/staff/dean/exam-factory/review-question?questionId=$entityId',
+          'paper' => '/staff/dean/exam-factory/paper-builder?paperId=$entityId',
+          'sitting' => '/staff/dean/exam-factory/exam-day?sittingId=$entityId',
+          _ => null,
+        };
+        if (route == null) return null;
         break;
 
       case NotificationDestinationKind.medicalAlert:

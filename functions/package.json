@@ -20,6 +20,7 @@
     "test:health-clinic:emulator": "firebase emulators:exec --only firestore --project demo-health-clinic-test \"node --test test/health_clinic.emulator.test.cjs\"",
     "test:financial-entitlements:emulator": "firebase emulators:exec --only firestore --project demo-financial-entitlements-test \"node --test test/financial_entitlements.emulator.test.cjs\"",
     "test:create-staff-account:emulator": "firebase emulators:exec --only firestore,auth --project demo-create-staff-account-test \"node --test test/create_staff_account.emulator.test.cjs\"",
+    "test:create-parent-access-code:emulator": "firebase emulators:exec --only firestore,auth --project demo-create-parent-access-code-test \"node --test test/create_parent_access_code.emulator.test.cjs\"",
     "test:storage-rules": "firebase emulators:exec --only firestore,storage --project demo-school-pulse-storage-rules-test \"node --test test/storage.rules.test.cjs\"",
     "logs": "firebase functions:log",
     "deploy": "firebase deploy --only functions"

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/dean/presentation/screens/alerts/academic_alerts_screen.dart';
-import 'package:school_pulse/features/dean/presentation/screens/analytics/performance_analytics_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/assessments/assessments_overview_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/curriculum/curriculum_coverage_list_screen.dart';
-import 'package:school_pulse/features/dean/presentation/screens/dean_dashboard_screen.dart';
-import 'package:school_pulse/features/dean/presentation/screens/exams/exams_overview_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/exam_factory_screens.dart';
+import 'package:school_pulse/features/exam_factory/presentation/widgets/exam_factory_scope.dart';
 import 'package:school_pulse/features/dean/presentation/screens/interventions/academic_interventions_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/monitoring/lesson_monitoring_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/monitoring/missed_lessons_screen.dart';
@@ -18,8 +18,8 @@ import 'package:school_pulse/features/dean/presentation/screens/workload/teacher
 
 /// Bottom-navigation shell for the Dean of Studies (DOS) module.
 ///
-/// 5 tabs mirror the compact DOS mobile workflow: Home / Timetable /
-/// Assessments / Performance / More.
+/// 5 tabs mirror the live DOS workflow: Today / Teaching / Assessments /
+/// Exams / More.
 /// Each tab owns a nested [Navigator] so that screens pushed on top of a
 /// tab's root keep the [DeanShell]'s bottom nav visible (push-on-top-of-tab
 /// pattern). Pushed screens are reached via named routes registered on each
@@ -40,31 +40,31 @@ class _DeanShellState extends State<DeanShell> {
   );
 
   List<NavigationDestination> _destinations(BuildContext context) {
-    final primary = AppColors.primary(context);
+    final active = AppColors.information(context);
     return [
       NavigationDestination(
         icon: const Icon(Icons.dashboard_outlined, size: 24),
-        selectedIcon: Icon(Icons.dashboard_rounded, size: 24, color: primary),
-        label: 'Home',
+        selectedIcon: Icon(Icons.dashboard_rounded, size: 24, color: active),
+        label: 'Today',
       ),
       NavigationDestination(
         icon: const Icon(Icons.school_outlined, size: 24),
-        selectedIcon: Icon(Icons.school_rounded, size: 24, color: primary),
-        label: 'Timetable',
+        selectedIcon: Icon(Icons.school_rounded, size: 24, color: active),
+        label: 'Teaching',
       ),
       NavigationDestination(
         icon: const Icon(Icons.fact_check_outlined, size: 24),
-        selectedIcon: Icon(Icons.fact_check_rounded, size: 24, color: primary),
+        selectedIcon: Icon(Icons.fact_check_rounded, size: 24, color: active),
         label: 'Assessments',
       ),
       NavigationDestination(
-        icon: const Icon(Icons.bar_chart_outlined, size: 24),
-        selectedIcon: Icon(Icons.bar_chart_rounded, size: 24, color: primary),
-        label: 'Performance',
+        icon: const Icon(Icons.assignment_outlined, size: 24),
+        selectedIcon: Icon(Icons.assignment_rounded, size: 24, color: active),
+        label: 'Exams',
       ),
       NavigationDestination(
         icon: const Icon(Icons.grid_view_outlined, size: 24),
-        selectedIcon: Icon(Icons.grid_view_rounded, size: 24, color: primary),
+        selectedIcon: Icon(Icons.grid_view_rounded, size: 24, color: active),
         label: 'More',
       ),
     ];
@@ -74,7 +74,7 @@ class _DeanShellState extends State<DeanShell> {
   /// pushed on top of that tab per the plan's tab-mapping table.
   Widget Function(BuildContext) _routeBuilder(int tabIndex, String routeName) {
     switch (tabIndex) {
-      case 0: // Overview
+      case 0: // Today
         switch (routeName) {
           case 'today':
             return (_) => const TodaysOperationsScreen();
@@ -87,7 +87,7 @@ class _DeanShellState extends State<DeanShell> {
               return StudentAcademicProfileScreen(studentId: studentId);
             };
           default:
-            return (_) => const DeanDashboardScreen();
+            return (_) => const TodaysOperationsScreen();
         }
       case 1: // Teaching
         switch (routeName) {
@@ -111,12 +111,13 @@ class _DeanShellState extends State<DeanShell> {
           default:
             return (_) => const AssessmentsOverviewScreen();
         }
-      case 3: // Reports
+      case 3: // Exams
         switch (routeName) {
-          case 'readiness':
-            return (_) => const PerformanceAnalyticsScreen();
           default:
-            return (_) => const ExamsOverviewScreen();
+            return (context) => examFactoryScoped(
+              context,
+              const ExamFactoryDashboardScreen(),
+            );
         }
       case 4: // More
       default:
@@ -176,7 +177,18 @@ class _DeanShellState extends State<DeanShell> {
         bottomNavigationBar: NavigationBar(
           height: 68,
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          indicatorColor: Colors.transparent,
+          indicatorColor: AppColors.informationSurface(context),
+          labelTextStyle: WidgetStateProperty.resolveWith(
+            (states) => AppTypography.labelLarge.copyWith(
+              fontSize: 13,
+              color: states.contains(WidgetState.selected)
+                  ? AppColors.information(context)
+                  : AppColors.textSecondary(context),
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.w700
+                  : FontWeight.w500,
+            ),
+          ),
           selectedIndex: _selectedIndex,
           onDestinationSelected: _onDestinationSelected,
           destinations: _destinations(context),

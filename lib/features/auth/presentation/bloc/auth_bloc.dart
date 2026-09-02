@@ -18,6 +18,7 @@ import 'package:school_pulse/features/auth/data/datasources/remembered_login_sto
 import 'package:school_pulse/features/auth/domain/usecases/logout.dart';
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
+import 'package:school_pulse/features/attendance_hub/domain/repositories/attendance_repository.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_local_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_local_data_source.dart';
 import 'package:school_pulse/features/teacher/domain/services/active_responsibility_service.dart';
@@ -278,6 +279,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (_) {}
     try {
       await activeResponsibilityService.clear();
+    } catch (_) {}
+    // Attendance's own local queue (student/staff/gate/hostel marks awaiting
+    // sync) is keyed to the device, not the session, same reasoning as the
+    // class/subject teacher caches above - left uncleared it would let the
+    // next person to sign in on this device see or resume the previous
+    // operator's queued marks.
+    try {
+      await di.sl<AttendanceRepository>().clearLocalQueue();
     } catch (_) {}
     try {
       await NotificationService().unsubscribeAllTopics();

@@ -8,6 +8,7 @@ import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/app_role_session_cubit.dart';
 import 'package:school_pulse/features/auth/presentation/widgets/role_switcher_sheet.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
@@ -21,11 +22,8 @@ class StaffShell extends StatelessWidget {
   const StaffShell({super.key, required this.child});
 
   bool _isAdmin(BuildContext context) {
-    final state = context.read<AuthBloc>().state;
-    if (state is AuthAuthenticated) {
-      return state.user.roles.any(UserRoleDisplay.adminConsoleRoles.contains);
-    }
-    return false;
+    final active = context.read<AppRoleSessionCubit>().state;
+    return active != null && UserRoleDisplay.adminConsoleRoles.contains(active);
   }
 
   static const List<UserRole> _teacherRoles = [
@@ -34,11 +32,8 @@ class StaffShell extends StatelessWidget {
   ];
 
   bool _isTeacher(BuildContext context) {
-    final state = context.read<AuthBloc>().state;
-    if (state is AuthAuthenticated) {
-      return state.user.roles.any(_teacherRoles.contains);
-    }
-    return false;
+    final active = context.read<AppRoleSessionCubit>().state;
+    return active != null && _teacherRoles.contains(active);
   }
 
   /// Class Teacher and Subject Teacher share one account but show different
@@ -62,11 +57,8 @@ class StaffShell extends StatelessWidget {
   ];
 
   bool _isBoarding(BuildContext context) {
-    final state = context.read<AuthBloc>().state;
-    if (state is AuthAuthenticated) {
-      return state.user.roles.any(_boardingRoles.contains);
-    }
-    return false;
+    final active = context.read<AppRoleSessionCubit>().state;
+    return active != null && _boardingRoles.contains(active);
   }
 
   /// Matron and Patron run the same boarding workflow against different
@@ -90,11 +82,7 @@ class StaffShell extends StatelessWidget {
   }
 
   bool _isDirector(BuildContext context) {
-    final state = context.read<AuthBloc>().state;
-    if (state is AuthAuthenticated) {
-      return state.user.roles.contains(UserRole.director);
-    }
-    return false;
+    return context.read<AppRoleSessionCubit>().state == UserRole.director;
   }
 
   int _calculateSelectedIndex(BuildContext context) {
@@ -134,8 +122,12 @@ class StaffShell extends StatelessWidget {
         if (location.startsWith('/staff/lessons')) return 2;
         if (location.startsWith('/staff/marks')) return 3;
       } else {
-        if (location.startsWith('/staff/reports')) return 2;
-        if (location.startsWith('/staff/class-tasks')) return 3;
+        if (location.startsWith('/staff/classwork') ||
+            location.startsWith('/staff/homework') ||
+            location.startsWith('/staff/class-tasks')) {
+          return 2;
+        }
+        if (location.startsWith('/staff/reports')) return 3;
       }
       if (isMoreSubRoute(location)) return 4;
       return 0;
@@ -160,7 +152,10 @@ class StaffShell extends StatelessWidget {
   String _homePath(BuildContext context) {
     final state = context.read<AuthBloc>().state;
     if (state is AuthAuthenticated) {
-      if (state.user.roles.length > 1) return '/staff/hub';
+      final active = context.read<AppRoleSessionCubit>().state;
+      if (active != null && state.user.roles.contains(active)) {
+        return UserRoleRouting.dashboardPath(active);
+      }
       return UserRoleRouting.dashboardPath(state.user.role);
     }
     return '/staff/dashboard';
@@ -219,10 +214,10 @@ class StaffShell extends StatelessWidget {
           context.go('/staff/students');
           break;
         case 2:
-          context.go(subjectActive ? '/staff/lessons' : '/staff/reports');
+          context.go(subjectActive ? '/staff/lessons' : '/staff/classwork');
           break;
         case 3:
-          context.go(subjectActive ? '/staff/marks' : '/staff/class-tasks');
+          context.go(subjectActive ? '/staff/marks' : '/staff/reports');
           break;
         case 4:
           context.go('/staff/more');
@@ -301,6 +296,10 @@ class StaffShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Rebuild the shell when the validated active role changes. The helper
+    // methods below deliberately use `read`: they are also called from the
+    // navigation tap callback, where Provider/Bloc `watch` is invalid.
+    context.watch<AppRoleSessionCubit>();
     final isMobile = MediaQuery.of(context).size.width < 600;
     final isAdmin = _isAdmin(context);
     final isTeacher = _isTeacher(context);
@@ -384,14 +383,14 @@ class StaffShell extends StatelessWidget {
         label: 'Students',
       ),
       const NavigationDestination(
-        icon: Icon(Icons.insights_outlined, size: 24),
-        selectedIcon: Icon(Icons.insights_rounded, size: 24),
-        label: 'Report Cards',
-      ),
-      const NavigationDestination(
         icon: Icon(Icons.assignment_outlined, size: 24),
         selectedIcon: Icon(Icons.assignment_rounded, size: 24),
-        label: 'Tasks',
+        label: 'Classwork',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.insights_outlined, size: 24),
+        selectedIcon: Icon(Icons.insights_rounded, size: 24),
+        label: 'Reports',
       ),
       const NavigationDestination(
         icon: Icon(Icons.grid_view_outlined, size: 24),

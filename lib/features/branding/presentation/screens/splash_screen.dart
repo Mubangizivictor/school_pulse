@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -33,12 +34,14 @@ class _SplashScreenState extends State<SplashScreen> {
     // frame; the async branch below is already post-frame by construction.
     if (authState is AuthAuthenticated) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        FlutterNativeSplash.remove();
         if (mounted) _navigate(authState);
       });
       return;
     }
     if (authState is AuthUnauthenticated) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        FlutterNativeSplash.remove();
         if (mounted) context.go('/welcome');
       });
       return;
@@ -55,9 +58,10 @@ class _SplashScreenState extends State<SplashScreen> {
           (state) => state is AuthAuthenticated || state is AuthUnauthenticated,
         )
         .timeout(
-          const Duration(seconds: 2),
+          const Duration(milliseconds: 800),
           onTimeout: () => AuthUnauthenticated(),
         );
+    FlutterNativeSplash.remove();
     if (!mounted) return;
     if (resolvedState is AuthAuthenticated) {
       _navigate(resolvedState);

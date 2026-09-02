@@ -179,7 +179,7 @@ class _BillingPageState extends State<BillingPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Payments & Billing'),
+        title: const Text('Billing'),
         actions: [
           IconButton(
             tooltip: 'Refresh payments',

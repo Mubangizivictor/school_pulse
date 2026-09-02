@@ -82,7 +82,13 @@ void main() {
 
         await pumpSetup(tester, theme: entry.theme);
         expect(tester.takeException(), isNull, reason: 'initial step');
-        expect(find.text('Institution Settings'), findsAtLeastNWidgets(1));
+        // Step 0 embeds InstitutionSettingsScreen with showAppBar: false
+        // (see _InstitutionProfileStep in structure_screen.dart) - the
+        // wizard supplies its own step chrome instead of that screen's
+        // AdminAppBar, so "Institution Settings" (the standalone editor's
+        // app-bar title) never renders here. "Institution profile" is the
+        // wizard step's own heading and the correct text to assert.
+        expect(find.text('Institution profile'), findsAtLeastNWidgets(1));
 
         // Step through every wizard step backed purely by StructureBloc
         // state (Institution through Subjects) via Save & Continue,
@@ -94,11 +100,11 @@ void main() {
         const stepsBackedByStructureBloc = 6;
         for (var guard = 0; guard < stepsBackedByStructureBloc; guard++) {
           expect(
-            find.text('Save & Continue'),
+            find.text('Save & continue'),
             findsOneWidget,
             reason: 'step index $guard',
           );
-          await tester.tap(find.text('Save & Continue'));
+          await tester.tap(find.text('Save & continue'));
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull, reason: 'step index $guard');
         }

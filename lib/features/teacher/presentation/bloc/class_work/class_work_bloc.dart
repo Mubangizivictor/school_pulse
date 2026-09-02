@@ -110,6 +110,8 @@ class ClassWorkState extends Equatable {
 
   const ClassWorkState.initial() : this(isLoading: true);
 
+  bool get canCreate => context?.can(Permission.classHomeworkCreate) ?? false;
+
   bool get canPublish => context?.can(Permission.classHomeworkPublish) ?? false;
 
   /// Work still open, with the due date applied - what the list leads with.
@@ -427,6 +429,7 @@ class ClassWorkBloc extends Bloc<ClassWorkEvent, ClassWorkState> {
     ValidationFailure() => failure.message,
     OfflineNotAllowedFailure() => failure.message,
     NetworkFailure() => failure.message,
+    ServerFailure() => failure.message,
     _ => 'Something went wrong. Try again.',
   };
 }

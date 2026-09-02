@@ -40,9 +40,11 @@ class ClassWorkRepositoryImpl implements ClassWorkRepository {
   Future<Either<Failure, List<ClassHomework>>> getHomework({
     required ActiveResponsibilityContext context,
   }) async {
+    // Reading the classwork feed is part of viewing a teacher's assigned
+    // class. Creating work is intentionally a separate, stricter right.
     final guard = assignmentService.authorize(
       context,
-      permission: Permission.classHomeworkCreate,
+      permission: Permission.classStudentsView,
     );
     if (guard.isLeft()) return guard.fold(Left.new, (_) => const Right([]));
 

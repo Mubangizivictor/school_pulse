@@ -295,7 +295,7 @@ class _Header extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'REPORTS DASHBOARD',
+          'CLASS TEACHER',
           style: AppTypography.labelMedium.copyWith(
             color: AppColors.textMuted(context),
             fontWeight: FontWeight.w800,
@@ -304,7 +304,7 @@ class _Header extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Manage Class Reports',
+          'Reports',
           style: AppTypography.headlineSmall.copyWith(
             fontWeight: FontWeight.w800,
           ),
@@ -776,7 +776,7 @@ class _CreateButton extends StatelessWidget {
     child: FilledButton.icon(
       onPressed: enabled ? onPressed : null,
       icon: const Icon(Icons.add, size: 27),
-      label: const Text('Create New Report for Class'),
+      label: const Text('Refresh report readiness'),
     ),
   );
 }

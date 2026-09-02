@@ -29,6 +29,13 @@ enum NotificationDestinationKind {
   homework,
   assignment,
   examTimetable,
+
+  /// Exam Factory question moderation or paper workflow. Which concrete
+  /// screen (question review vs. paper detail) is decided from the
+  /// notification's `metadata.examEntityType` at build time, not from a
+  /// separate destination kind, since both need identical tenancy/role
+  /// gating and only differ by route suffix.
+  examWorkspace,
   medicalAlert,
   disciplineCase,
   event,

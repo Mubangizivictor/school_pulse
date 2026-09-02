@@ -210,6 +210,10 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
     Emitter<SuperAdminState> emit,
   ) async {
     try {
+      // The setSchoolLifecycleStatus Cloud Function writes the platform
+      // audit entry itself, atomically with the status change - no separate
+      // client-side logAction call here, to avoid a duplicate/missing audit
+      // entry if the two writes ever raced or one failed independently.
       if (event.status == SchoolStatus.suspended) {
         await repository.suspendSchool(
           event.schoolId,
@@ -223,19 +227,6 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
           event.reason ?? 'No reason provided',
         );
       }
-
-      await repository.logAction(
-        AuditLog(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          ownerId: _ownerId,
-          action: 'UPDATE_SCHOOL_STATUS',
-          schoolId: event.schoolId,
-          timestamp: DateTime.now(),
-          device: 'Platform Dashboard',
-          reason: event.reason,
-          metadata: {'newStatus': event.status.name},
-        ),
-      );
 
       add(LoadSuperAdminDashboard());
     } catch (e) {
@@ -272,25 +263,12 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
     Emitter<SuperAdminState> emit,
   ) async {
     try {
+      // updateSchoolSubscriptionPlan writes the platform audit entry
+      // server-side, atomically with the plan/expiry change.
       await repository.updateSchoolSubscription(
         event.schoolId,
         event.planId,
         event.expiry,
-      );
-
-      await repository.logAction(
-        AuditLog(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          ownerId: _ownerId,
-          action: 'UPDATE_SUBSCRIPTION',
-          schoolId: event.schoolId,
-          timestamp: DateTime.now(),
-          device: 'Platform Dashboard',
-          metadata: {
-            'planId': event.planId,
-            'expiry': event.expiry.toIso8601String(),
-          },
-        ),
       );
 
       add(LoadSuperAdminDashboard());

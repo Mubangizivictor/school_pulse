@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/network/network_info.dart';
@@ -246,10 +247,21 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
     }
   }
 
+  /// Same retention/staleness window `NotificationImageCache.maxAge` already
+  /// uses for its on-device cache - reused here rather than inventing a new
+  /// number, per the offline-queue lifecycle policy.
+  static const _retention = Duration(days: 30);
+
   @override
   Future<void> syncPendingAttendance(String schoolId) async {
+    // Evict on every sweep (cheap no-op when nothing qualifies) so
+    // `permanentlyBlocked`/old `completed` rows don't accumulate forever on
+    // a device that is opened regularly but rarely fully restarted.
+    await localDataSource.evictStale(retention: _retention);
+
     if (!await networkInfo.isConnected) return;
     final pending = await localDataSource.getPending(schoolId);
+    final now = DateTime.now();
     for (final record in pending) {
       final recordId = buildAttendanceRecordId(
         category: record.category,
@@ -258,6 +270,19 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
         date: record.date,
         personId: record.personId,
       );
+
+      // Stale: queued for longer than the retention window without ever
+      // reaching the server. Retrying it further would risk writing a very
+      // old mark as if it just happened - block it instead.
+      if (now.difference(record.createdAt) > _retention) {
+        await localDataSource.markPermanentlyBlocked(
+          recordId,
+          reason: 'This attendance mark is too old to sync automatically.',
+        );
+        continue;
+      }
+
+      await localDataSource.markSyncing(recordId);
       try {
         await remoteDataSource.pushRecord(
           schoolId,
@@ -265,9 +290,36 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
           AttendanceRecordModel.fromEntity(record).toFirestore(),
         );
         await localDataSource.markSynced(recordId);
-      } catch (_) {}
+      } on FirebaseException catch (e) {
+        // Firestore rules deny (permission-denied) or the target doc's path
+        // no longer resolves (not-found) are permanent, 403-equivalent
+        // rejections - the writer's access was revoked, the learner/class
+        // was removed, or the school changed underneath them. Anything else
+        // (unavailable, deadline-exceeded, aborted, etc.) is transient and
+        // gets the normal backoff retry.
+        if (e.code == 'permission-denied' || e.code == 'not-found') {
+          await localDataSource.markPermanentlyBlocked(
+            recordId,
+            reason:
+                'You no longer have permission to sync this attendance mark.',
+          );
+        } else {
+          await localDataSource.markRetryableFailure(
+            recordId,
+            error: e.message ?? e.code,
+          );
+        }
+      } catch (e) {
+        await localDataSource.markRetryableFailure(
+          recordId,
+          error: e.toString(),
+        );
+      }
     }
   }
+
+  @override
+  Future<void> clearLocalQueue() => localDataSource.clearAll();
 
   @override
   Future<Either<Failure, List<AttendanceRecord>>> markBatch(

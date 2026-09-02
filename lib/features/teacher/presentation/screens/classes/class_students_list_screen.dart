@@ -189,11 +189,7 @@ class _ClassStudentsListScreenState extends State<ClassStudentsListScreen> {
         horizontal: AppSpacing.m,
       ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.primary(context), AppColors.primary(context)],
-        ),
+        color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(AppSpacing.xl),
         border: Border.all(color: AppColors.border(context)),
       ),
@@ -259,7 +255,7 @@ class _ClassStudentsListScreenState extends State<ClassStudentsListScreen> {
         Container(
           padding: const EdgeInsets.all(AppSpacing.s),
           decoration: BoxDecoration(
-            color: iconColor,
+            color: iconColor.withValues(alpha: .16),
             borderRadius: BorderRadius.circular(AppSpacing.m),
           ),
           child: Icon(icon, color: iconColor, size: 20),
@@ -421,7 +417,7 @@ class _ClassStudentsListScreenState extends State<ClassStudentsListScreen> {
               vertical: 2,
             ),
             decoration: BoxDecoration(
-              color: statusColor,
+              color: statusColor.withValues(alpha: 0.16),
               borderRadius: BorderRadius.circular(AppSpacing.s),
             ),
             child: Text(

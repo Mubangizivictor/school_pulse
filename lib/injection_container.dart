@@ -129,6 +129,11 @@ import 'package:school_pulse/features/exams/domain/repositories/exams_repository
 import 'package:school_pulse/features/exams/data/repositories/exams_repository_impl.dart';
 import 'package:school_pulse/features/exams/data/datasources/exams_remote_data_source.dart';
 import 'package:school_pulse/features/exams/presentation/bloc/exams_bloc.dart';
+import 'package:school_pulse/features/exam_factory/domain/repositories/exam_factory_repository.dart';
+import 'package:school_pulse/features/exam_factory/data/repositories/exam_factory_repository_impl.dart';
+import 'package:school_pulse/features/exam_factory/data/datasources/exam_factory_queue_data_source.dart';
+import 'package:school_pulse/features/exam_factory/data/datasources/exam_factory_queue_data_source_factory.dart';
+import 'package:school_pulse/features/exam_factory/domain/services/exam_factory_offline_queue_service.dart';
 
 // Academic
 import 'package:school_pulse/features/academic/domain/repositories/academic_repository.dart';
@@ -388,7 +393,6 @@ import 'package:school_pulse/features/teacher/data/repositories/class_performanc
 import 'package:school_pulse/features/teacher/data/repositories/class_report_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_resource_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/subject_resource_repository_impl.dart';
-import 'package:school_pulse/features/teacher/data/repositories/class_task_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_work_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_dashboard_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_student_repository_impl.dart';
@@ -411,7 +415,6 @@ import 'package:school_pulse/features/teacher/domain/repositories/class_performa
 import 'package:school_pulse/features/teacher/domain/repositories/class_report_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_resource_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/subject_resource_repository.dart';
-import 'package:school_pulse/features/teacher/domain/repositories/class_task_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_work_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_dashboard_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_student_repository.dart';
@@ -439,7 +442,6 @@ import 'package:school_pulse/features/teacher/presentation/bloc/class_performanc
 import 'package:school_pulse/features/teacher/presentation/bloc/class_performance/student_assessment_results_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_reports/class_reports_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/report_card_preview/report_card_preview_bloc.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/class_tasks/class_tasks_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_work/class_work_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_resources/class_resource_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
@@ -584,6 +586,22 @@ Future<void> init() async {
 
   sl.registerLazySingleton<AssessmentRemoteDataSource>(
     () => AssessmentRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  // Exam Factory: confidential writes go through Cloud Functions; the
+  // repository is still injectable so presentation never talks to Firebase.
+  sl.registerLazySingleton<ExamFactoryRepository>(
+    () => ExamFactoryRepositoryImpl(firestore: sl(), functions: sl()),
+  );
+
+  // Offline queue for the spec's safe-to-queue Exam Factory actions only
+  // (question drafts, moderation comments, mark entry, attendance,
+  // incidents) - mirrors ParentOfflineQueueService's registration.
+  sl.registerLazySingleton<ExamFactoryQueueDataSource>(
+    () => createExamFactoryQueueDataSource(isar: kIsWeb ? null : sl<Isar>()),
+  );
+  sl.registerLazySingleton(
+    () => ExamFactoryOfflineQueueService(dataSource: sl()),
   );
 
   // AssessmentLocalDataSource: confirmed unused anywhere in the codebase
@@ -1826,18 +1844,6 @@ Future<void> init() async {
 
   sl.registerLazySingleton(
     () => ReportCardsRemoteDataSource(firestore: sl(), functions: sl()),
-  );
-
-  sl.registerLazySingleton(() => ClassTasksBloc(taskRepository: sl()));
-
-  sl.registerLazySingleton<ClassTaskRepository>(
-    () => ClassTaskRepositoryImpl(
-      remoteDataSource: sl(),
-      localDataSource: sl(),
-      queueDataSource: sl(),
-      auditService: sl(),
-      networkInfo: sl(),
-    ),
   );
 
   sl.registerLazySingleton<ClassResourceLocalDataSource>(

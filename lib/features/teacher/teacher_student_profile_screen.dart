@@ -209,7 +209,7 @@ class _TeacherStudentProfileScreenState
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: _statusColor(context, status),
+                  color: _statusColor(context, status).withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(AppSpacing.s),
                 ),
                 child: Row(
@@ -397,17 +397,26 @@ class _TeacherStudentProfileScreenState
         onPressed: isLoading || !canMessage
             ? null
             : () => _messageGuardian(context, guardian!),
-        icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+        icon: Icon(
+          Icons.chat_bubble_outline,
+          color: canMessage || isLoading
+              ? Colors.white
+              : AppColors.textMuted(context),
+        ),
         label: Text(
           canMessage || isLoading
               ? 'Message Parent'
               : 'Parent has no messaging account yet',
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(
+            color: canMessage || isLoading
+                ? Colors.white
+                : AppColors.textMuted(context),
+          ),
           textAlign: TextAlign.center,
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary(context),
-          disabledBackgroundColor: AppColors.primary(context),
+          disabledBackgroundColor: AppColors.surfaceElevated(context),
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.m),

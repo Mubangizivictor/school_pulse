@@ -89,79 +89,27 @@ class SuperAdminRepositoryImpl implements SuperAdminRepository {
 
   @override
   Future<void> suspendSchool(String schoolId, String reason) async {
-    final schools = await remoteDataSource.getAllSchools();
-    final school = schools.firstWhere((s) => s.id == schoolId);
-    await remoteDataSource.updateSchool(
-      SchoolModel(
-        id: school.id,
-        name: school.name,
-        tenantId: school.tenantId,
-        address: school.address,
-        contactEmail: school.contactEmail,
-        contactPhone: school.contactPhone,
-        status: SchoolStatus.suspended,
-        subscriptionPlanId: school.subscriptionPlanId,
-        createdAt: school.createdAt,
-        subscriptionExpiry: school.subscriptionExpiry,
-        enabledFeatures: school.enabledFeatures,
-        metadata: {...school.metadata, 'suspensionReason': reason},
-        classification: school.classification,
-        classificationOther: school.classificationOther,
-        divisions: school.divisions,
-        displayLabel: school.displayLabel,
-      ),
+    await remoteDataSource.setSchoolLifecycleStatus(
+      schoolId: schoolId,
+      status: 'suspended',
+      reason: reason,
     );
   }
 
   @override
   Future<void> archiveSchool(String schoolId, String reason) async {
-    final schools = await remoteDataSource.getAllSchools();
-    final school = schools.firstWhere((s) => s.id == schoolId);
-    await remoteDataSource.updateSchool(
-      SchoolModel(
-        id: school.id,
-        name: school.name,
-        tenantId: school.tenantId,
-        address: school.address,
-        contactEmail: school.contactEmail,
-        contactPhone: school.contactPhone,
-        status: SchoolStatus.archived,
-        subscriptionPlanId: school.subscriptionPlanId,
-        createdAt: school.createdAt,
-        subscriptionExpiry: school.subscriptionExpiry,
-        enabledFeatures: school.enabledFeatures,
-        metadata: {...school.metadata, 'archivedReason': reason},
-        classification: school.classification,
-        classificationOther: school.classificationOther,
-        divisions: school.divisions,
-        displayLabel: school.displayLabel,
-      ),
+    await remoteDataSource.setSchoolLifecycleStatus(
+      schoolId: schoolId,
+      status: 'archived',
+      reason: reason,
     );
   }
 
   @override
   Future<void> activateSchool(String schoolId) async {
-    final schools = await remoteDataSource.getAllSchools();
-    final school = schools.firstWhere((s) => s.id == schoolId);
-    await remoteDataSource.updateSchool(
-      SchoolModel(
-        id: school.id,
-        name: school.name,
-        tenantId: school.tenantId,
-        address: school.address,
-        contactEmail: school.contactEmail,
-        contactPhone: school.contactPhone,
-        status: SchoolStatus.active,
-        subscriptionPlanId: school.subscriptionPlanId,
-        createdAt: school.createdAt,
-        subscriptionExpiry: school.subscriptionExpiry,
-        enabledFeatures: school.enabledFeatures,
-        metadata: school.metadata,
-        classification: school.classification,
-        classificationOther: school.classificationOther,
-        divisions: school.divisions,
-        displayLabel: school.displayLabel,
-      ),
+    await remoteDataSource.setSchoolLifecycleStatus(
+      schoolId: schoolId,
+      status: 'active',
     );
   }
 
@@ -176,27 +124,10 @@ class SuperAdminRepositoryImpl implements SuperAdminRepository {
     String planId,
     DateTime expiry,
   ) async {
-    final schools = await remoteDataSource.getAllSchools();
-    final school = schools.firstWhere((s) => s.id == schoolId);
-    await remoteDataSource.updateSchool(
-      SchoolModel(
-        id: school.id,
-        name: school.name,
-        tenantId: school.tenantId,
-        address: school.address,
-        contactEmail: school.contactEmail,
-        contactPhone: school.contactPhone,
-        status: school.status,
-        subscriptionPlanId: planId,
-        createdAt: school.createdAt,
-        subscriptionExpiry: expiry,
-        enabledFeatures: school.enabledFeatures,
-        metadata: school.metadata,
-        classification: school.classification,
-        classificationOther: school.classificationOther,
-        divisions: school.divisions,
-        displayLabel: school.displayLabel,
-      ),
+    await remoteDataSource.updateSchoolSubscriptionPlan(
+      schoolId: schoolId,
+      planId: planId,
+      expiry: expiry,
     );
   }
 

@@ -7,6 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:school_pulse/features/notifications/notification_coordinator.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
@@ -48,7 +49,6 @@ import 'package:school_pulse/features/teacher/presentation/bloc/subject_students
 import 'package:school_pulse/features/teacher/presentation/bloc/class_announcements/class_announcements_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_performance/class_performance_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_reports/class_reports_bloc.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/class_tasks/class_tasks_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_work/class_work_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_resources/class_resource_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
@@ -86,7 +86,8 @@ import 'package:school_pulse/features/portal/domain/portal_runtime.dart';
 import 'package:school_pulse/features/portal/presentation/portal_not_found_screen.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   try {
     await Firebase.initializeApp(
@@ -160,7 +161,7 @@ void main() async {
     // it does is not load-bearing for the first frame, so cap the wait and
     // let the rest finish in the background.
     await NotificationService().initialize().timeout(
-      const Duration(seconds: 8),
+      const Duration(seconds: 2),
       onTimeout: () {
         if (kDebugMode) {
           debugPrint('NotificationService.initialize timed out; continuing startup');
@@ -263,7 +264,6 @@ class SchoolPulseApp extends StatelessWidget {
         BlocProvider(create: (_) => di.sl<ClassAnnouncementsBloc>()),
         BlocProvider(create: (_) => di.sl<ClassPerformanceBloc>()),
         BlocProvider(create: (_) => di.sl<ClassReportsBloc>()),
-        BlocProvider(create: (_) => di.sl<ClassTasksBloc>()),
         BlocProvider(create: (_) => di.sl<DirectorBloc>()),
         BlocProvider(
           create: (_) => di.sl<InventoryBloc>()..add(LoadInventory()),
@@ -345,10 +345,14 @@ class SchoolPulseAppView extends StatelessWidget {
                 unawaited(di.sl<MessageOutboxService>().drain());
               }
 
-              // Load structure data once authenticated.
-              context.read<StructureBloc>().add(
-                LoadStructureData(state.user.schoolId),
-              );
+              // Load structure data once authenticated. superAdmin has no
+              // tenant to scope to - it operates platform-wide, same
+              // reasoning as the InstitutionContextCubit skip just below.
+              if (state.user.role != UserRole.superAdmin) {
+                context.read<StructureBloc>().add(
+                  LoadStructureData(state.user.schoolId),
+                );
+              }
 
               // Institution Context Engine: restore the last-active tenant
               // (for multi-institution users) or fall back to home schoolId.

@@ -100,12 +100,26 @@ class TeacherTimetableBloc
     on<TeacherTimetableRequested>(_onRequested);
   }
 
+  // The two subscriptions below outlive a single dispatch of this handler,
+  // so the handler must not return while they can still fire - an Emitter
+  // captured past the point its owning handler's Future completes throws
+  // 'Bad state: Cannot emit after calling close' (previously seen live as
+  // "Failed assertion: '!_isCompleted'"). Keeping the handler alive on a
+  // Completer that only resolves in close() (or when a newer request
+  // supersedes this one) keeps `emit` valid for as long as these listeners
+  // can use it, and `emit.isDone` still guards against the bloc closing
+  // mid-flight.
+  Completer<void>? _requestLifetime;
+
   Future<void> _onRequested(
     TeacherTimetableRequested event,
     Emitter<TeacherTimetableState> emit,
   ) async {
     await _yearsSub?.cancel();
     await _configSub?.cancel();
+    _requestLifetime?.complete();
+    final lifetime = Completer<void>();
+    _requestLifetime = lifetime;
 
     emit(TeacherTimetableState(isLoading: true, teacherId: event.teacherId));
 
@@ -120,12 +134,15 @@ class TeacherTimetableBloc
       (years) async {
         final current = years.where((y) => y.isCurrent).firstOrNull;
         if (current == null) {
-          emit(
-            state.copyWith(
-              isLoading: false,
-              errorMessage: 'No active academic year is set for this school.',
-            ),
-          );
+          if (!emit.isDone) {
+            emit(
+              state.copyWith(
+                isLoading: false,
+                errorMessage:
+                    'No active academic year is set for this school.',
+              ),
+            );
+          }
           return;
         }
 
@@ -136,6 +153,19 @@ class TeacherTimetableBloc
           );
           _emitEntries(emit);
         } catch (_) {
+          if (!emit.isDone) {
+            emit(
+              state.copyWith(
+                isLoading: false,
+                errorMessage:
+                    'Could not load the timetable. Pull down to retry.',
+              ),
+            );
+          }
+        }
+      },
+      onError: (_) {
+        if (!emit.isDone) {
           emit(
             state.copyWith(
               isLoading: false,
@@ -144,16 +174,16 @@ class TeacherTimetableBloc
           );
         }
       },
-      onError: (_) => emit(
-        state.copyWith(
-          isLoading: false,
-          errorMessage: 'Could not load the timetable. Pull down to retry.',
-        ),
-      ),
     );
+
+    // Held open for the lifetime of this request so `emit` above stays
+    // valid for the stream listeners; released by close() or a superseding
+    // TeacherTimetableRequested.
+    await lifetime.future;
   }
 
   void _emitEntries(Emitter<TeacherTimetableState> emit) {
+    if (emit.isDone) return;
     final config = _config;
     if (config == null) return;
 
@@ -171,6 +201,7 @@ class TeacherTimetableBloc
   Future<void> close() async {
     await _yearsSub?.cancel();
     await _configSub?.cancel();
+    _requestLifetime?.complete();
     return super.close();
   }
 }

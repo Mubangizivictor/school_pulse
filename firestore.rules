@@ -428,6 +428,13 @@ service cloud.firestore {
     match /parent_access_code_attempts/{attemptId} { allow read, write: if false; }
     match /parent_learner_links/{linkId} { allow read, write: if false; }
 
+    // Immutable audit trail for parent-learner link reallocations
+    // (reallocateParentLink in functions/index.js). Server-only: written
+    // exclusively via the Admin SDK, never mutated after creation, and not
+    // readable by clients - operational visibility into it is expected to
+    // go through an admin tool/export, not a client Firestore read.
+    match /parent_link_audit_log/{entryId} { allow read, write: if false; }
+
     // Pre-login students look themselves up by code before they have a
     // session, same as parent_access_codes. All mutations (provision, PIN
     // reset, enable/disable) now go exclusively through
@@ -1170,6 +1177,13 @@ service cloud.firestore {
     }
     match /schools/{schoolId}/commentBank/{id} {
       allow read, write: if isStaff() && isSameSchool(schoolId);
+    }
+    match /schools/{schoolId}/configs/storage {
+      // Class Resources' quota display (used/quota bytes) - any staff
+      // member with resource upload access needs to read this to show
+      // remaining space. Only admin roles may change the quota itself.
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow write: if isSameSchool(schoolId) && schoolAcademicAdmin();
     }
     match /schools/{schoolId}/configs/reportReleasePolicy {
       // Any same-school signed-in user may read the policy (a parent needs

@@ -71,11 +71,11 @@ void main() {
             'the /staff guard must specifically target superAdmin (the seeded owner role)',
       );
       expect(
-        window.contains("return '/school-bootstrap'"),
+        window.contains("return '/school-splash'"),
         isTrue,
         reason:
             'must redirect a superAdmin found on /staff/* through '
-            '/school-bootstrap, which already forwards superAdmin to '
+            '/school-splash, which already forwards superAdmin to '
             '/super-admin',
       );
     },

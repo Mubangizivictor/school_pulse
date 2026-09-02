@@ -385,6 +385,8 @@ class NotificationCategoryCatalog {
       case NotificationType.assignmentDue:
         return NotificationCategory.homework;
       case NotificationType.examScheduled:
+      case NotificationType.examQuestionModeration:
+      case NotificationType.examPaperWorkflow:
         return NotificationCategory.examinations;
       case NotificationType.timetableUpdated:
         return NotificationCategory.timetable;

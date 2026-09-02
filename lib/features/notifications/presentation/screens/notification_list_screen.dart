@@ -806,7 +806,8 @@ class _NotificationSettingsPanel extends StatelessWidget {
           _SettingsRow(
             icon: Icons.notifications_none,
             title: 'Preferences',
-            subtitle: 'Manage how and when you get notified, including quiet hours.',
+            subtitle:
+                'Manage how and when you get notified, including quiet hours.',
             onTap: () => context.push('/staff/more/notification-preferences'),
           ),
         ],

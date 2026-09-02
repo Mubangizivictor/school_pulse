@@ -22,6 +22,16 @@ class AssessmentModeration extends Equatable {
   final String teacherStaffId;
   final String academicYearId;
   final String termId;
+  final String type;
+  final String rawStatus;
+  final String? streamId;
+  final String? description;
+  final DateTime? dueDate;
+  final DateTime? publishedAt;
+  final DateTime? updatedAt;
+  final int markedCount;
+  final int missingMarksCount;
+  final List<String> attachments;
 
   const AssessmentModeration({
     required this.id,
@@ -41,6 +51,16 @@ class AssessmentModeration extends Equatable {
     this.teacherStaffId = '',
     this.academicYearId = '',
     this.termId = '',
+    this.type = 'Other',
+    this.rawStatus = 'draft',
+    this.streamId,
+    this.description,
+    this.dueDate,
+    this.publishedAt,
+    this.updatedAt,
+    this.markedCount = 0,
+    this.missingMarksCount = 0,
+    this.attachments = const [],
   });
 
   @override
@@ -62,6 +82,16 @@ class AssessmentModeration extends Equatable {
     teacherStaffId,
     academicYearId,
     termId,
+    type,
+    rawStatus,
+    streamId,
+    description,
+    dueDate,
+    publishedAt,
+    updatedAt,
+    markedCount,
+    missingMarksCount,
+    attachments,
   ];
 
   AssessmentModeration copyWith({
@@ -86,6 +116,16 @@ class AssessmentModeration extends Equatable {
       teacherStaffId: teacherStaffId,
       academicYearId: academicYearId,
       termId: termId,
+      type: type,
+      rawStatus: rawStatus,
+      streamId: streamId,
+      description: description,
+      dueDate: dueDate,
+      publishedAt: publishedAt,
+      updatedAt: updatedAt,
+      markedCount: markedCount,
+      missingMarksCount: missingMarksCount,
+      attachments: attachments,
     );
   }
 }

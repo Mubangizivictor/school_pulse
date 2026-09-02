@@ -2,8 +2,11 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/relationships/domain/entities/parent_student_relationship.dart';
+import 'package:school_pulse/features/relationships/domain/entities/relationship_enums.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/create_relationship.dart';
 import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft.dart';
 import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft_local_data_source.dart';
@@ -168,6 +171,14 @@ void main() {
     when(
       () => studentRepository.updateStudentStatus(any(), any()),
     ).thenAnswer((_) async => const Right(null));
+
+    // WizardStarted's _loadCurrentStudent fold()s a Left into null and
+    // proceeds, so a Left is a safe, permissive default here - individual
+    // groups below override with a real Student where the front-loaded
+    // steps (Basic Info/Class & Stream/Health/Transport) actually need one.
+    when(
+      () => studentRepository.getStudentById(any()),
+    ).thenAnswer((_) async => Left(ServerFailure('not stubbed in this test')));
   });
 
   tearDown(() => bloc.close());
@@ -204,7 +215,15 @@ void main() {
         admissionNumber: 'ADM-0001',
         academicYearId: 'year-1',
         classId: 'class-1',
-        parentLinkSkippedFlag: true,
+        guardians: [
+          GuardianDraft(
+            name: 'Jane Doe',
+            phoneNumber: '+256700000000',
+            type: RelationshipType.parent,
+            relationshipLabel: 'Mother',
+          ),
+        ],
+        guardiansLinked: true,
       ),
       act: (bloc) async {
         bloc.add(ActivationRequested(operatorUser));
@@ -241,7 +260,15 @@ void main() {
         admissionNumber: 'ADM-0001',
         academicYearId: 'year-1',
         classId: 'class-1',
-        parentLinkSkippedFlag: true,
+        guardians: [
+          GuardianDraft(
+            name: 'Jane Doe',
+            phoneNumber: '+256700000000',
+            type: RelationshipType.parent,
+            relationshipLabel: 'Mother',
+          ),
+        ],
+        guardiansLinked: true,
         activated: true,
       ),
       act: (bloc) => bloc.add(ActivationRequested(operatorUser)),
@@ -393,7 +420,7 @@ void main() {
     );
 
     blocTest<EnrollmentSetupWizardBloc, EnrollmentSetupWizardState>(
-      'ParentLinkRequested is denied for an operator lacking '
+      'GuardiansLinkRequested is denied for an operator lacking '
       'Permission.enrollmentParentLink - linking service is never called',
       build: () {
         when(
@@ -401,14 +428,19 @@ void main() {
         ).thenAnswer((_) async => const Right(false));
         return bloc;
       },
-      seed: () =>
-          const EnrollmentSetupWizardState(studentId: 's1', schoolId: 'sc1'),
-      act: (bloc) => bloc.add(
-        ParentLinkRequested(
-          operatorUser: classTeacher,
-          phoneNumber: '+256700000000',
-        ),
+      seed: () => const EnrollmentSetupWizardState(
+        studentId: 's1',
+        schoolId: 'sc1',
+        guardians: [
+          GuardianDraft(
+            name: 'Jane Doe',
+            phoneNumber: '+256700000000',
+            type: RelationshipType.parent,
+            relationshipLabel: 'Mother',
+          ),
+        ],
       ),
+      act: (bloc) => bloc.add(GuardiansLinkRequested(classTeacher)),
       expect: () => [
         isA<EnrollmentSetupWizardState>().having(
           (s) => s.error,
@@ -445,7 +477,6 @@ void main() {
         academicYearId: 'y1',
         classId: 'c1',
         studentCode: 'SCH0001',
-        parentLinkSkippedFlag: true,
       ),
       act: (bloc) => bloc.add(ActivationRequested(classTeacher)),
       expect: () => [
@@ -521,13 +552,12 @@ void main() {
     );
   });
 
-  group('ParentLinkRequested - already-linked parent is idempotent', () {
+  group('GuardiansLinkRequested - already-linked parent is idempotent', () {
     blocTest<EnrollmentSetupWizardBloc, EnrollmentSetupWizardState>(
-      'calling ParentLinkRequested twice for the same student+phone only '
+      'calling GuardiansLinkRequested once for a single guardian only '
       'creates one relationship - linkStudentToParent itself owns '
       'idempotency (verified in parent_linking_service_test.dart); this '
-      'proves the bloc calls it exactly once per dispatch, never twice '
-      'for one dispatch',
+      'proves the bloc calls it exactly once per guardian for one dispatch',
       build: () {
         when(
           () => permissionEvaluator.can(Permission.enrollmentParentLink, any()),
@@ -542,16 +572,37 @@ void main() {
             createdBy: any(named: 'createdBy'),
           ),
         ).thenAnswer((_) async => const Right('PAR001'));
+        when(() => createRelationship(any())).thenAnswer(
+          (_) async => Right(
+            ParentStudentRelationship(
+              id: 'rel-1',
+              schoolId: 'sc1',
+              studentId: 's1',
+              userId: 'PAR001',
+              type: RelationshipType.parent,
+              status: RelationshipStatus.active,
+              isLegalGuardian: false,
+              isPrimaryGuardian: false,
+              createdBy: operatorUser.id,
+              createdAt: DateTime(2026),
+            ),
+          ),
+        );
         return bloc;
       },
-      seed: () =>
-          const EnrollmentSetupWizardState(studentId: 's1', schoolId: 'sc1'),
-      act: (bloc) => bloc.add(
-        ParentLinkRequested(
-          operatorUser: operatorUser,
-          phoneNumber: '+256700000000',
-        ),
+      seed: () => const EnrollmentSetupWizardState(
+        studentId: 's1',
+        schoolId: 'sc1',
+        guardians: [
+          GuardianDraft(
+            name: 'Jane Doe',
+            phoneNumber: '+256700000000',
+            type: RelationshipType.parent,
+            relationshipLabel: 'Mother',
+          ),
+        ],
       ),
+      act: (bloc) => bloc.add(GuardiansLinkRequested(operatorUser)),
       verify: (_) {
         verify(
           () => parentLinkingService.linkStudentToParent(
@@ -697,7 +748,15 @@ void main() {
         academicYearId: 'y1',
         classId: 'c1',
         studentCode: 'SCH0001',
-        parentLinkSkippedFlag: true,
+        guardians: [
+          GuardianDraft(
+            name: 'Jane Doe',
+            phoneNumber: '+256700000000',
+            type: RelationshipType.parent,
+            relationshipLabel: 'Mother',
+          ),
+        ],
+        guardiansLinked: true,
       ),
       act: (bloc) async {
         await draftDataSource.saveDraft(

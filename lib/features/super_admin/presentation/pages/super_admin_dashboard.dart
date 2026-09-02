@@ -15,30 +15,33 @@ import '../responsive.dart';
 import '../widgets/super_admin_logout_button.dart';
 import '../widgets/super_admin_tab_navigator.dart';
 import 'audit_logs_screen.dart';
-import 'billing_page.dart';
+import 'billing_home_screen.dart';
 import 'school_management_screen.dart';
-import 'subscription_plans_screen.dart';
-import 'super_admin_notifications_screen.dart';
 import 'super_admin_overview_screen.dart';
 import 'super_admin_settings_screen.dart';
 
-/// Section paths, in the same order as `_kSections` / the mobile bottom
-/// nav — index N here is index N there. Each is a real child GoRoute of
-/// `/super-admin` so the URL, browser refresh, and Back/Forward reflect
-/// the active section instead of only living in local widget state.
+/// Section paths, in the same order as `_kSections` — index N here is
+/// index N there, and both match the approved five-item navigation
+/// exactly: Overview | Schools | Billing | Activity | Settings. Each is a
+/// real child GoRoute of `/super-admin` so the URL, browser refresh, and
+/// Back/Forward reflect the active section instead of only living in
+/// local widget state. Plans and Payment Methods are tabs inside Billing
+/// (BillingHomeScreen), not separate destinations; Notifications is
+/// reached from the top bar's bell icon, not a persistent nav item.
 const _kSectionPaths = [
-  '', // Dashboard (the /super-admin index route itself)
+  '', // Overview (the /super-admin index route itself)
   'schools',
-  'payments',
-  'plans',
-  'notifications',
-  'audit-logs',
+  'payments', // Billing - kept as the existing route segment
+  'audit-logs', // Activity
   'settings',
 ];
 
 /// Reads the active section index from the current route location, so a
 /// direct/refreshed URL like `/super-admin/payments` opens on the right
-/// section instead of always resetting to Dashboard (index 0).
+/// section instead of always resetting to Overview (index 0). Legacy
+/// `/super-admin/plans` and `/super-admin/notifications` deep links still
+/// resolve to Billing and Overview respectively (see the fallback below)
+/// so existing bookmarks/pushes keep working under the collapsed nav.
 int _sectionIndexForLocation(String location) {
   final path = location.startsWith('/super-admin')
       ? location.substring('/super-admin'.length)
@@ -46,41 +49,29 @@ int _sectionIndexForLocation(String location) {
   final segment = path.startsWith('/') ? path.substring(1) : path;
   final top = segment.split('/').first;
   if (top.isEmpty) return 0;
+  if (top == 'plans') return 2; // Billing hosts Plans as a tab now.
   final index = _kSectionPaths.indexOf(top);
   return index == -1 ? 0 : index;
 }
 
-/// Top-level sections shown in the desktop sidebar. Schools also hosts
-/// Applications internally (`SchoolManagementScreen`'s `_ApplicationList`),
-/// so Applications is not broken out as its own top-level tab this phase —
-/// it stays reachable via Schools, which keeps the sidebar from growing an
-/// item that would just be a thin proxy to the same screen.
+/// Top-level sections, shown identically in the desktop sidebar and the
+/// mobile bottom nav: Overview | Schools | Billing | Activity | Settings.
+/// Schools also hosts Applications internally
+/// (`SchoolManagementScreen`'s Active/Applications/Suspended tabs), and
+/// Billing hosts Payments/Plans/Payment Methods internally
+/// (`BillingHomeScreen`), so neither grows the top-level nav.
 const _kSections = [
-  (
-    icon: Icons.dashboard_outlined,
-    selectedIcon: Icons.dashboard,
-    label: 'Dashboard',
-  ),
+  (icon: Icons.home_outlined, selectedIcon: Icons.home, label: 'Overview'),
   (icon: Icons.school_outlined, selectedIcon: Icons.school, label: 'Schools'),
   (
     icon: Icons.receipt_long_outlined,
     selectedIcon: Icons.receipt_long,
-    label: 'Payments & Billing',
-  ),
-  (
-    icon: Icons.subscriptions_outlined,
-    selectedIcon: Icons.subscriptions,
-    label: 'Subscription Plans',
-  ),
-  (
-    icon: Icons.notifications_outlined,
-    selectedIcon: Icons.notifications,
-    label: 'Notifications',
+    label: 'Billing',
   ),
   (
     icon: Icons.history_outlined,
     selectedIcon: Icons.history,
-    label: 'Audit Logs',
+    label: 'Activity',
   ),
   (
     icon: Icons.settings_outlined,
@@ -97,18 +88,15 @@ class SuperAdminDashboard extends StatefulWidget {
 }
 
 class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
-  // Index into `_kSections` — drives the desktop sidebar / IndexedStack.
-  // Kept in sync with the route (see `didChangeDependencies`) so a direct
-  // URL or a browser refresh (e.g. `/super-admin/payments`) opens on the
-  // matching section instead of always resetting to Dashboard.
+  // Index into `_kSections` — the same five destinations drive both the
+  // desktop sidebar and the mobile bottom nav, so one index now serves
+  // both (no separate mobile-index remapping needed since the nav
+  // collapsed from seven sections to exactly five: Overview | Schools |
+  // Billing | Activity | Settings).
   int _selectedIndex = 0;
 
-  // Index into the 4-item mobile bottom nav (Home, Schools, Payments, More).
-  // Settings (desktop section index 6) has no dedicated mobile tab, so it
-  // clamps to the last one instead of pointing past the mobile array.
-  int _mobileNavIndex = 0;
-
   String? _lastSyncedLocation;
+  int _billingInitialTab = 0;
 
   @override
   void didChangeDependencies() {
@@ -122,18 +110,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     _lastSyncedLocation = location;
     final index = _sectionIndexForLocation(location);
     if (index != _selectedIndex) {
-      setState(() {
-        _selectedIndex = index;
-        // Mobile nav only has 5 destinations (Home, Schools, Payments,
-        // Plans, Settings); Notifications/Audit Logs (desktop indices 4-5)
-        // have no dedicated mobile tab, so land on the nearest one rather
-        // than pointing the bottom nav's `selectedIndex` out of range.
-        _mobileNavIndex = index == 6
-            ? 4
-            : index > 3
-            ? 3
-            : index;
-      });
+      setState(() => _selectedIndex = index);
     }
   }
 
@@ -149,25 +126,18 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     context.go(target);
   }
 
-  // Bumping this key forces BillingPage to rebuild with a fresh
-  // `initialFilter` when navigated to from the Dashboard's
+  // Bumping this key forces BillingHomeScreen to rebuild with a fresh
+  // `initialFilter`/`initialTab` when navigated to from the Overview's
   // "Payments to Verify" shortcut.
   ManualPaymentStatus? _billingInitialFilter;
   int _billingPageKey = 0;
 
-  // One nested Navigator per desktop sidebar section, so pushed screens
-  // (School Details, Payment Review, Application Review, …) stay inside
-  // that section instead of covering the sidebar.
-  final List<GlobalKey<NavigatorState>> _desktopNavigatorKeys = List.generate(
+  // One nested Navigator per section, shared by the desktop sidebar and
+  // mobile bottom nav (both render the same five branches), so pushed
+  // screens (School Details, Payment Review, Application Review, …) stay
+  // inside that section instead of covering the nav.
+  final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate(
     _kSections.length,
-    (_) => GlobalKey<NavigatorState>(),
-  );
-
-  // One nested Navigator per mobile bottom-nav destination (Home, Schools,
-  // Payments, Plans, More), so the bottom bar stays visible on pushed
-  // screens.
-  final List<GlobalKey<NavigatorState>> _mobileNavigatorKeys = List.generate(
-    5,
     (_) => GlobalKey<NavigatorState>(),
   );
 
@@ -175,33 +145,32 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   void initState() {
     super.initState();
     context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
+    // The overview timeline consumes this already-supported dashboard state.
+    context.read<SuperAdminBloc>().add(const LoadAuditLogsEvent());
   }
 
   void _popToRoot(GlobalKey<NavigatorState> key) {
     key.currentState?.popUntil((route) => route.isFirst);
   }
 
-  void _goToBilling({ManualPaymentStatus? filter}) {
+  void _goToBilling({ManualPaymentStatus? filter, int tab = 0}) {
     setState(() {
       _billingInitialFilter = filter;
+      _billingInitialTab = tab;
       _billingPageKey++;
       _selectedIndex = 2;
-      _mobileNavIndex = 2;
     });
     _syncRouteToSection(_kSectionPaths[2]);
-    _popToRoot(_desktopNavigatorKeys[2]);
-    _popToRoot(_mobileNavigatorKeys[2]);
+    _popToRoot(_navigatorKeys[2]);
   }
 
   void _goToSchools({String? query}) {
     setState(() {
       _selectedIndex = 1;
-      _mobileNavIndex = 1;
       if (query != null) _schoolsSearchQuery = query;
     });
     _syncRouteToSection(_kSectionPaths[1]);
-    _popToRoot(_desktopNavigatorKeys[1]);
-    _popToRoot(_mobileNavigatorKeys[1]);
+    _popToRoot(_navigatorKeys[1]);
   }
 
   // Backs the top bar's global search: since Schools/Applications are the
@@ -211,7 +180,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final desktopBranches = [
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final branches = [
       SuperAdminOverviewScreen(
         onOpenBilling: () =>
             _goToBilling(filter: ManualPaymentStatus.pendingVerification),
@@ -219,12 +189,11 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         onSearchSchools: (query) => _goToSchools(query: query),
       ),
       SchoolManagementScreen(initialQuery: _schoolsSearchQuery),
-      BillingPage(
+      BillingHomeScreen(
         key: ValueKey(_billingPageKey),
         initialFilter: _billingInitialFilter,
+        initialTab: _billingInitialTab,
       ),
-      const SubscriptionPlansScreen(),
-      const SuperAdminNotificationsScreen(),
       const AuditLogsScreen(),
       const SuperAdminSettingsScreen(),
     ];
@@ -232,9 +201,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     final content = IndexedStack(
       index: _selectedIndex,
       children: [
-        for (final (index, branch) in desktopBranches.indexed)
+        for (final (index, branch) in branches.indexed)
           SuperAdminTabNavigator(
-            navigatorKey: _desktopNavigatorKeys[index],
+            navigatorKey: _navigatorKeys[index],
             child: branch,
           ),
       ],
@@ -251,106 +220,88 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       );
     }
 
-    final mobileBranches = [
-      SuperAdminOverviewScreen(
-        onOpenBilling: () =>
-            _goToBilling(filter: ManualPaymentStatus.pendingVerification),
-        onOpenSchools: _goToSchools,
-      ),
-      const SchoolManagementScreen(),
-      BillingPage(
-        key: ValueKey('mobile-$_billingPageKey'),
-        initialFilter: _billingInitialFilter,
-      ),
-      const SubscriptionPlansScreen(),
-      const SuperAdminSettingsScreen(),
-    ];
-
     return Scaffold(
-      body: IndexedStack(
-        index: _mobileNavIndex,
-        children: [
-          for (final (index, branch) in mobileBranches.indexed)
-            SuperAdminTabNavigator(
-              navigatorKey: _mobileNavigatorKeys[index],
-              child: branch,
-            ),
-        ],
-      ),
+      body: content,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppColors.surfaceElevated(context),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border(top: BorderSide(color: AppColors.border(context))),
           boxShadow: [
-            BoxShadow(
-              color: AppColors.shadow(context),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
-            ),
+            if (!isDark)
+              BoxShadow(
+                color: Colors.black.withValues(alpha: .10),
+                blurRadius: 18,
+                offset: const Offset(0, -5),
+              ),
           ],
         ),
-        child: NavigationBar(
-          height: 88,
-          backgroundColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-          indicatorColor: AppColors.primary(context),
-          labelTextStyle: WidgetStateProperty.resolveWith(
-            (states) => TextStyle(
-              color: states.contains(WidgetState.selected)
-                  ? AppColors.primary(context)
-                  : AppColors.textMuted(context),
-              fontSize: 12.5,
-              fontWeight: states.contains(WidgetState.selected)
-                  ? FontWeight.w700
-                  : FontWeight.w500,
+        child: NavigationBarTheme(
+          data: NavigationBarTheme.of(context).copyWith(
+            iconTheme: WidgetStateProperty.resolveWith(
+              (states) => IconThemeData(
+                color: states.contains(WidgetState.selected)
+                    ? Colors.white
+                    : AppColors.textMuted(context),
+              ),
             ),
           ),
-          selectedIndex: _mobileNavIndex,
-          onDestinationSelected: (index) {
-            if (index == _mobileNavIndex) {
-              // Re-tapping the active tab returns it to its root screen,
-              // matching standard tab-bar behavior.
-              _popToRoot(_mobileNavigatorKeys[index]);
-              return;
-            }
-            // Mobile nav index 4 is Settings, which is desktop section
-            // index 6 (Notifications and Audit Logs have no mobile tab of
-            // their own) — every other index lines up 1:1 with a desktop
-            // section and a `_kSectionPaths` entry.
-            final sectionIndex = index == 4 ? 6 : index;
-            setState(() {
-              _mobileNavIndex = index;
-              _selectedIndex = sectionIndex;
-            });
-            _syncRouteToSection(_kSectionPaths[sectionIndex]);
-          },
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Home',
+          child: NavigationBar(
+            height: 88,
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            indicatorShape: const StadiumBorder(),
+            indicatorColor: AppColors.information(context),
+            labelTextStyle: WidgetStateProperty.resolveWith(
+              (states) => TextStyle(
+                color: states.contains(WidgetState.selected)
+                    ? AppColors.information(context)
+                    : AppColors.textMuted(context),
+                fontSize: 12.5,
+                fontWeight: states.contains(WidgetState.selected)
+                    ? FontWeight.w700
+                    : FontWeight.w500,
+              ),
             ),
-            NavigationDestination(
-              icon: Icon(Icons.school_outlined),
-              selectedIcon: Icon(Icons.school),
-              label: 'Schools',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.receipt_long_outlined),
-              selectedIcon: Icon(Icons.receipt_long),
-              label: 'Payments',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.subscriptions_outlined),
-              selectedIcon: Icon(Icons.subscriptions),
-              label: 'Plans',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings),
-              label: 'Settings',
-            ),
-          ],
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (index) {
+              if (index == _selectedIndex) {
+                // Re-tapping the active tab returns it to its root screen,
+                // matching standard tab-bar behavior.
+                _popToRoot(_navigatorKeys[index]);
+                return;
+              }
+              setState(() => _selectedIndex = index);
+              _syncRouteToSection(_kSectionPaths[index]);
+            },
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Overview',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.school_outlined),
+                selectedIcon: Icon(Icons.school),
+                label: 'Schools',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.receipt_long_outlined),
+                selectedIcon: Icon(Icons.receipt_long),
+                label: 'Billing',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.history_outlined),
+                selectedIcon: Icon(Icons.history),
+                label: 'Activity',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: 'Settings',
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -401,17 +352,10 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                       if (index == _selectedIndex) {
                         // Re-selecting the active section returns it to
                         // its root screen, matching the mobile tab bar.
-                        _popToRoot(_desktopNavigatorKeys[index]);
+                        _popToRoot(_navigatorKeys[index]);
                         return;
                       }
-                      setState(() {
-                        _selectedIndex = index;
-                        _mobileNavIndex = index == 6
-                            ? 4
-                            : index > 3
-                            ? 3
-                            : index;
-                      });
+                      setState(() => _selectedIndex = index);
                       _syncRouteToSection(_kSectionPaths[index]);
                     },
                   ),

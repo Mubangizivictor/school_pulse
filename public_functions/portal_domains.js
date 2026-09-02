@@ -6,6 +6,8 @@ const { requirePlatformOwner, OwnerAuthorizationError } = require('./vendor/owne
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 const ROOT = 'schoolpulse.ug', TARGET = 'ghs.googlehosted.com';
+const TRIAL_DAYS = 14;
+const LIFECYCLE_STATUSES = new Set(['active', 'suspended', 'archived', 'trial']);
 const RESERVED = new Set(['admin', 'api', 'www', 'support', 'schoolpulse', 'app', 'mail', 'status', 'portal']);
 const clean = v => String(v || '').trim().toLowerCase();
 const validSlug = v => /^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/.test(v) && !RESERVED.has(v);
@@ -19,8 +21,80 @@ exports.createSchoolPortal = onCall({ region: 'europe-west1' }, async r => {
   if (!validSlug(slug) || name.length < 3 || !/^\S+@\S+\.\S+$/.test(email)) throw new HttpsError('invalid-argument', 'A valid name, slug, and administrator email are required.');
   let account; try { account = await admin.auth().getUserByEmail(email); } catch (_) { account = await admin.auth().createUser({ email, displayName: String(d.adminName || '').trim() }); }
   const school = db.collection('schools').doc(), host = `${slug}.${ROOT}`, reserve = db.doc(`portal_slug_reservations/${slug}`), branding = d.branding && typeof d.branding === 'object' ? d.branding : {};
-  await db.runTransaction(async tx => { if ((await tx.get(reserve)).exists) throw new HttpsError('already-exists', 'That portal slug is already in use.'); const now = admin.firestore.FieldValue.serverTimestamp(); const data = { id: school.id, name, tenantId: slug.toUpperCase(), slug, portalSubdomain: host, customDomains: [], branding: { schoolName: name, logoUrl: branding.logoUrl || null, primaryColor: branding.primaryColor || null, secondaryColor: branding.secondaryColor || null, address: branding.address || '', phone: branding.phone || '', email: branding.email || email }, domainStatus: 'active', status: 'trial', subscriptionPlanId: String(d.planId || 'starter'), createdAt: Date.now(), subscriptionExpiry: Date.now(), enabledFeatures: [], metadata: { source: 'platform_onboarding', createdBy: actor.uid } }; tx.set(reserve, { schoolId: school.id, slug, createdAt: now }); tx.set(school, data); tx.set(db.doc(`portal_domains/${host}`), publicDomain(school.id, data, host)); tx.set(db.doc(`users/${account.uid}`), { uid: account.uid, name: String(d.adminName || '').trim(), email, phoneNumber: String(d.adminPhone || '').trim(), role: 'schoolAdmin', roles: ['schoolAdmin'], schoolId: school.id, mustChangePassword: true, isActive: true }, { merge: true }); tx.set(db.doc(`institution_memberships/${account.uid}_${school.id}`), { userId: account.uid, institutionId: school.id, status: 'active', role: 'schoolAdmin', createdAt: now }); tx.set(db.collection('super_admin_audit_logs').doc(), { action: 'CREATE_SCHOOL_PORTAL', schoolId: school.id, ownerId: actor.uid, slug, timestamp: now }); });
+  await db.runTransaction(async tx => { if ((await tx.get(reserve)).exists) throw new HttpsError('already-exists', 'That portal slug is already in use.'); const now = admin.firestore.FieldValue.serverTimestamp(); const data = { id: school.id, name, tenantId: slug.toUpperCase(), slug, portalSubdomain: host, customDomains: [], branding: { schoolName: name, logoUrl: branding.logoUrl || null, primaryColor: branding.primaryColor || null, secondaryColor: branding.secondaryColor || null, address: branding.address || '', phone: branding.phone || '', email: branding.email || email }, domainStatus: 'active', status: 'trial', subscriptionPlanId: String(d.planId || 'starter'), createdAt: Date.now(), subscriptionExpiry: Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000, enabledFeatures: [], metadata: { source: 'platform_onboarding', createdBy: actor.uid } }; tx.set(reserve, { schoolId: school.id, slug, createdAt: now }); tx.set(school, data); tx.set(db.doc(`portal_domains/${host}`), publicDomain(school.id, data, host)); tx.set(db.doc(`users/${account.uid}`), { uid: account.uid, name: String(d.adminName || '').trim(), email, phoneNumber: String(d.adminPhone || '').trim(), role: 'schoolAdmin', roles: ['schoolAdmin'], schoolId: school.id, mustChangePassword: true, isActive: true }, { merge: true }); tx.set(db.doc(`institution_memberships/${account.uid}_${school.id}`), { userId: account.uid, institutionId: school.id, status: 'active', role: 'schoolAdmin', createdAt: now }); tx.set(db.collection('super_admin_audit_logs').doc(), { action: 'CREATE_SCHOOL_PORTAL', schoolId: school.id, ownerId: actor.uid, slug, timestamp: now }); });
   return { schoolId: school.id, portalUrl: `https://${host}` };
+});
+// Suspend/reactivate/archive a tenant, or change its subscription plan and
+// expiry. Previously the owner console did a client-side read-then-write of
+// schools/{id} (SuperAdminRemoteDataSource.updateSchool) - rules-enforced
+// (isSuperAdmin() only) but not atomic and not guaranteed to be audited if
+// the client crashed between the write and the separate audit-log write.
+// This callable makes the status/subscription change and its audit entry
+// one Admin-SDK transaction, matching createSchoolPortal's pattern.
+exports.setSchoolLifecycleStatus = onCall({ region: 'europe-west1' }, async r => {
+  const actor = await owner(r), d = r.data || {};
+  const schoolId = String(d.schoolId || '').trim();
+  const status = String(d.status || '').trim();
+  const reason = d.reason != null ? String(d.reason).trim() : null;
+  if (!schoolId || !LIFECYCLE_STATUSES.has(status)) {
+    throw new HttpsError('invalid-argument', 'A school ID and a valid status are required.');
+  }
+  const ref = db.doc(`schools/${schoolId}`);
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError('not-found', 'School not found.');
+    const before = snap.data();
+    if (before.status === status) return;
+    const metadataPatch = {};
+    if (status === 'suspended') metadataPatch.suspensionReason = reason || 'No reason provided';
+    if (status === 'archived') metadataPatch.archivedReason = reason || 'No reason provided';
+    tx.update(ref, {
+      status,
+      metadata: { ...(before.metadata || {}), ...metadataPatch },
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    tx.set(db.collection('super_admin_audit_logs').doc(), {
+      action: 'UPDATE_SCHOOL_STATUS',
+      schoolId,
+      ownerId: actor.uid,
+      reason,
+      metadata: { previousStatus: before.status, newStatus: status },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+  return { schoolId, status };
+});
+exports.updateSchoolSubscriptionPlan = onCall({ region: 'europe-west1' }, async r => {
+  const actor = await owner(r), d = r.data || {};
+  const schoolId = String(d.schoolId || '').trim();
+  const planId = String(d.planId || '').trim();
+  const expiry = Number(d.expiry);
+  if (!schoolId || !planId || !Number.isFinite(expiry)) {
+    throw new HttpsError('invalid-argument', 'A school ID, plan ID, and expiry are required.');
+  }
+  const ref = db.doc(`schools/${schoolId}`);
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError('not-found', 'School not found.');
+    const before = snap.data();
+    tx.update(ref, {
+      subscriptionPlanId: planId,
+      subscriptionExpiry: expiry,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    tx.set(db.collection('super_admin_audit_logs').doc(), {
+      action: 'UPDATE_SUBSCRIPTION',
+      schoolId,
+      ownerId: actor.uid,
+      metadata: {
+        previousPlanId: before.subscriptionPlanId || null,
+        planId,
+        expiry,
+      },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+  return { schoolId, planId, expiry };
 });
 exports.requestCustomPortalDomain = onCall({ region: 'europe-west1' }, async r => { const actor = await schoolAdmin(r), host = clean(r.data?.hostname); if (!validHost(host)) throw new HttpsError('invalid-argument', 'Enter a valid custom hostname.'); const ref = db.doc(`portal_domain_requests/${host}`); await db.runTransaction(async tx => { const old = await tx.get(ref); if (old.exists && old.data().schoolId !== actor.schoolId) throw new HttpsError('already-exists', 'This domain is already requested.'); tx.set(ref, { hostname: host, schoolId: actor.schoolId, status: 'pending', cnameTarget: TARGET, requestedBy: actor.uid, requestedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true }); }); return { hostname: host, cnameTarget: TARGET, status: 'pending' }; });
 exports.verifyAndActivateCustomPortalDomain = onCall({ region: 'europe-west1' }, async r => { const actor = await owner(r), host = clean(r.data?.hostname); if (!validHost(host)) throw new HttpsError('invalid-argument', 'Invalid hostname.'); const ref = db.doc(`portal_domain_requests/${host}`), request = await ref.get(); if (!request.exists) throw new HttpsError('not-found', 'Domain request not found.'); let cnames = []; try { cnames = await dns.resolveCname(host); } catch (_) {} if (!cnames.some(v => v.toLowerCase().replace(/\.$/, '') === TARGET)) { await ref.set({ status: 'verification_failed', lastError: `CNAME must point to ${TARGET}`, checkedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true }); throw new HttpsError('failed-precondition', `CNAME must point to ${TARGET}.`); } const school = await db.doc(`schools/${request.data().schoolId}`).get(); if (!school.exists) throw new HttpsError('not-found', 'School not found.'); await db.runTransaction(async tx => { tx.set(db.doc(`portal_domains/${host}`), publicDomain(school.id, school.data(), host)); tx.update(ref, { status: 'active', approvedBy: actor.uid, approvedAt: admin.firestore.FieldValue.serverTimestamp(), lastError: null }); tx.update(school.ref, { customDomains: admin.firestore.FieldValue.arrayUnion(host) }); tx.set(db.collection('super_admin_audit_logs').doc(), { action: 'ACTIVATE_CUSTOM_PORTAL_DOMAIN', schoolId: school.id, hostname: host, ownerId: actor.uid, timestamp: admin.firestore.FieldValue.serverTimestamp() }); }); return { hostname: host, status: 'active' }; });
@@ -34,4 +108,4 @@ exports.syncPortalDomainProjection = onDocumentWritten({ region: 'europe-west1',
   const hosts = [school.portalSubdomain, ...(Array.isArray(school.customDomains) ? school.customDomains : [])].filter(Boolean);
   await Promise.all(hosts.map(host => db.doc(`portal_domains/${clean(host)}`).set({ ...publicDomain(after.id, school, clean(host)), status: suspended ? 'suspended' : 'active' }, { merge: true })));
 });
-exports.__test__ = { validSlug, validHost, RESERVED };
+exports.__test__ = { validSlug, validHost, RESERVED, LIFECYCLE_STATUSES, TRIAL_DAYS };

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/features/admin/presentation/screens/access_codes_screen.dart';
@@ -27,11 +28,21 @@ class _QuickAddAction {
   final Color color;
   final void Function(BuildContext context) onTap;
 
+  /// True when this action should be omitted entirely for the given roles -
+  /// used for "Add Staff", which is server-verified against
+  /// [UserRoleDisplay.adminRoles] (director/headTeacher/schoolAdmin), a
+  /// narrower set than the [UserRoleDisplay.adminConsoleRoles] that share
+  /// this admin console UI (Deputy Head included). Without this, Deputy
+  /// Head sees a working-looking shortcut into a wizard whose Confirm step
+  /// the Cloud Function always rejects.
+  final bool Function(List<UserRole> roles)? hiddenFor;
+
   const _QuickAddAction({
     required this.label,
     required this.icon,
     required this.color,
     required this.onTap,
+    this.hiddenFor,
   });
 }
 
@@ -41,6 +52,7 @@ final _actions = [
     icon: Icons.person_add_alt_1_rounded,
     color: Colors.black,
     onTap: (context) => context.push('/staff/admin/users/add-staff'),
+    hiddenFor: (roles) => !roles.any(UserRoleDisplay.adminRoles.contains),
   ),
   _QuickAddAction(
     label: 'Add Student',
@@ -80,6 +92,13 @@ class _AdminQuickAddSheetContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final roles = authState is AuthAuthenticated
+        ? authState.user.roles
+        : const <UserRole>[];
+    final visibleActions = _actions
+        .where((action) => !(action.hiddenFor?.call(roles) ?? false))
+        .toList();
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.all(AppSpacing.l),
@@ -99,7 +118,7 @@ class _AdminQuickAddSheetContent extends StatelessWidget {
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: AppSpacing.l),
-            for (final action in _actions)
+            for (final action in visibleActions)
               Material(
                 color: Colors.transparent,
                 child: ListTile(

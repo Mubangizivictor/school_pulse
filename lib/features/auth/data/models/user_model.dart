@@ -57,7 +57,10 @@ class UserModel extends UserEntity {
     return UserModel(
       id: json['id'] ?? '',
       staffCode: json['staffCode'],
-      name: json['name'] ?? '',
+      // Profiles created by different onboarding versions may hold a display
+      // name, split names, or the legacy `name` field. Resolve them once at
+      // the data boundary so a UI never has to guess or duplicate a token.
+      name: _resolvedName(json),
       email: json['email'] ?? '',
       schoolId: json['schoolId'] ?? '',
       schoolName: json['schoolName'],
@@ -98,6 +101,31 @@ class UserModel extends UserEntity {
                 .toList()
           : const [],
     );
+  }
+
+  static String _resolvedName(Map<String, dynamic> json) {
+    String value(dynamic raw) => raw is String ? raw.trim() : '';
+    final displayName = value(json['displayName']);
+    if (displayName.isNotEmpty) return displayName;
+    final firstName = value(json['firstName']);
+    final lastName = value(json['lastName']);
+    final split = [
+      firstName,
+      lastName,
+    ].where((part) => part.isNotEmpty).toList();
+    if (split.isNotEmpty) return split.join(' ');
+    final legacy = value(json['name']);
+    final words = legacy
+        .split(RegExp(r'\\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    // A legacy mapper once produced `Dos Dos` for profiles whose only known
+    // token was copied into first and last name. Preserve legitimate names,
+    // but collapse adjacent accidental duplicates.
+    return words.length == 2 &&
+            words.first.toLowerCase() == words.last.toLowerCase()
+        ? words.first
+        : words.join(' ');
   }
 
   static DateTime? _parseDate(dynamic value) {

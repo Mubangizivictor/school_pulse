@@ -103,6 +103,12 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   CollectionReference<Map<String, dynamic>> _marks(String schoolId) =>
       firestore.collection('schools').doc(schoolId).collection('student_marks');
 
+  CollectionReference<Map<String, dynamic>> _classHomework(String schoolId) =>
+      firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('class_homework');
+
   static const _visibleStatuses = [
     'submitted',
     'approved',
@@ -565,13 +571,13 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
       if (offset == 0) {
         batch.update(assessmentRef, {
           'status': assessmentStatus,
-          if (rejectionReason != null) 'rejectionReason': rejectionReason,
+          'rejectionReason': ?rejectionReason,
         });
       }
       for (final doc in markDocs.skip(offset).take(chunkSize)) {
         batch.update(doc.reference, {
           'markStatus': markStatus,
-          if (rejectionReason != null) 'returnReason': rejectionReason,
+          'returnReason': ?rejectionReason,
         });
       }
       await batch.commit();
@@ -582,7 +588,7 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
       // itself (e.g. rejecting before any submissions exist).
       await assessmentRef.update({
         'status': assessmentStatus,
-        if (rejectionReason != null) 'rejectionReason': rejectionReason,
+        'rejectionReason': ?rejectionReason,
       });
     }
   }
@@ -823,6 +829,13 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
     }
 
     final snapshot = await query.get();
+    Query<Map<String, dynamic>> homeworkQuery = _classHomework(
+      schoolId,
+    ).where('academicYearId', isEqualTo: year.id);
+    if (term != null) {
+      homeworkQuery = homeworkQuery.where('termId', isEqualTo: term.id);
+    }
+    final homeworkSnapshot = await homeworkQuery.get();
     final results = <AssessmentModeration>[];
 
     for (final doc in snapshot.docs) {
@@ -853,6 +866,21 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
           ? ''
           : await _lookupUserName(teacherStaffId);
 
+      final totalStudents = await _eligibleStudentCount(
+        schoolId: schoolId,
+        classId: classId,
+        academicYearId: year.id,
+        streamId: data['streamId'] as String?,
+      );
+      final type =
+          (data['assessmentTypeName'] as String? ??
+                  data['assessmentTypeId'] as String? ??
+                  'Other')
+              .trim();
+      // Formal examinations have a dedicated workflow and never appear in
+      // continuous-assessment oversight.
+      if (type.toLowerCase().contains('exam')) continue;
+      final rawStatus = data['status'] as String? ?? 'draft';
       results.add(
         AssessmentModeration(
           id: assessmentId,
@@ -862,23 +890,125 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
           subjectName: subjectName,
           teacherName: teacherName,
           submissionCount: submissionCount,
-          totalStudents: submissionCount,
+          totalStudents: totalStudents,
           averageScore: averageScore,
           status: _moderationStatusFor(data['status'] as String? ?? ''),
           rejectionReason: data['rejectionReason'] as String?,
           createdAt:
-              (data['assessmentDate'] as Timestamp?)?.toDate() ??
+              _date(data['createdAt']) ??
+              _date(data['assessmentDate']) ??
               DateTime.now(),
           subjectId: subjectId,
           classId: classId,
           teacherStaffId: teacherStaffId,
           academicYearId: data['academicYearId'] as String? ?? '',
           termId: data['termId'] as String? ?? '',
+          type: type,
+          rawStatus: rawStatus,
+          streamId: data['streamId'] as String?,
+          description:
+              data['instructions'] as String? ?? data['description'] as String?,
+          dueDate: _date(data['dueDate']),
+          publishedAt: _date(data['publishedAt']),
+          updatedAt: _date(data['updatedAt']),
+          markedCount: submissionCount,
+          missingMarksCount: (totalStudents - submissionCount).clamp(
+            0,
+            totalStudents,
+          ),
+          attachments: List<String>.from(
+            data['attachments'] as List? ?? const [],
+          ),
         ),
       );
     }
 
+    // Class teachers already write canonical homework records.  Read the
+    // same tenant-scoped documents here; no DOS copy is created or edited.
+    for (final doc in homeworkSnapshot.docs) {
+      final data = doc.data();
+      final rawStatus = data['status'] as String? ?? 'draft';
+      if (rawStatus == 'draft' ||
+          rawStatus == 'archived' ||
+          rawStatus == 'cancelled') {
+        continue;
+      }
+      final classId = data['classId'] as String? ?? '';
+      final streamId = data['streamId'] as String?;
+      final totalStudents = await _eligibleStudentCount(
+        schoolId: schoolId,
+        classId: classId,
+        academicYearId: year.id,
+        streamId: streamId,
+      );
+      final teacherId = data['createdBy'] as String? ?? '';
+      results.add(
+        AssessmentModeration(
+          id: 'homework-${doc.id}',
+          assessmentId: doc.id,
+          title: data['title'] as String? ?? '',
+          className: (data['className'] as String?)?.trim().isNotEmpty == true
+              ? data['className'] as String
+              : await _lookupName(collection: 'classes', id: classId),
+          subjectName: data['subjectName'] as String? ?? '',
+          teacherName: teacherId.isEmpty
+              ? ''
+              : await _lookupUserName(teacherId),
+          submissionCount: 0,
+          totalStudents: totalStudents,
+          averageScore: 0,
+          status: ModerationStatus.approved,
+          createdAt: _date(data['createdAt']) ?? DateTime.now(),
+          classId: classId,
+          teacherStaffId: teacherId,
+          academicYearId: data['academicYearId'] as String? ?? '',
+          termId: data['termId'] as String? ?? '',
+          type: 'Homework',
+          rawStatus: rawStatus,
+          streamId: streamId,
+          description:
+              data['instructions'] as String? ?? data['description'] as String?,
+          dueDate: _date(data['dueDate']),
+          publishedAt: _date(data['publishedAt']),
+          updatedAt: _date(data['updatedAt']),
+          attachments: List<String>.from(
+            data['attachments'] as List? ?? const [],
+          ),
+        ),
+      );
+    }
+
+    results.sort((a, b) => _activityDate(b).compareTo(_activityDate(a)));
+
     return results;
+  }
+
+  DateTime _activityDate(AssessmentModeration assessment) =>
+      assessment.updatedAt ?? assessment.publishedAt ?? assessment.createdAt;
+
+  DateTime? _date(Object? value) => value is Timestamp
+      ? value.toDate()
+      : value is DateTime
+      ? value
+      : null;
+
+  Future<int> _eligibleStudentCount({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    String? streamId,
+  }) async {
+    if (classId.isEmpty || academicYearId.isEmpty) return 0;
+    Query<Map<String, dynamic>> query = firestore
+        .collection('students')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('classId', isEqualTo: classId)
+        .where('academicYearId', isEqualTo: academicYearId)
+        .where('status', isEqualTo: 'active');
+    if (streamId != null && streamId.isNotEmpty) {
+      query = query.where('streamId', isEqualTo: streamId);
+    }
+    return (await query.count().get()).count ?? 0;
   }
 
   Future<String> _lookupName({

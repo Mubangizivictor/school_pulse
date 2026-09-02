@@ -25,6 +25,7 @@ module.exports = ({ admin, onCall, HttpsError, onSchedule }) => {
   const db = admin.firestore();
   const FieldValue = admin.firestore.FieldValue;
   const Timestamp = admin.firestore.Timestamp;
+  const { enqueueNotification: sharedEnqueueNotification } = require("./notification_helpers")({ admin });
 
   const BURSAR_ROLES = ["bursar", "director", "schoolAdmin"];
   const DEFAULT_APPROVER_ROLES = ["headTeacher", "director"];
@@ -340,7 +341,9 @@ module.exports = ({ admin, onCall, HttpsError, onSchedule }) => {
   /**
    * Fan-out notification via the notification_requests → notifications
    * pipeline (functions/notifications.js). Never writes `notifications`
-   * directly. idempotencyKey dedupes retries downstream.
+   * directly. idempotencyKey dedupes retries downstream. Delegates to the
+   * shared helper (functions/notification_helpers.js) with this module's
+   * sender/category defaults.
    */
   async function enqueueNotification({
     schoolId,
@@ -353,29 +356,18 @@ module.exports = ({ admin, onCall, HttpsError, onSchedule }) => {
     sourceEntityId = null,
     metadata = {},
   }) {
-    const audience = recipientUid
-      ? { kind: "users", userIds: [recipientUid] }
-      : recipientRoles && recipientRoles.length
-        ? { kind: "roles", roles: recipientRoles }
-        : null;
-    if (!audience) return;
-    await db.collection("notification_requests").add({
+    await sharedEnqueueNotification({
       schoolId,
-      category: "academics",
+      recipientUid,
+      recipientRoles,
       type,
       title,
       shortBody,
-      priority: "medium",
-      senderNameSnapshot: "School Pulse",
-      senderRoleSnapshot: "Report Card Engine",
-      senderKind: "automated",
-      sourceModule: "reportCards",
-      ...(sourceEntityId ? { sourceEntityId } : {}),
-      audience,
-      status: "pending",
       idempotencyKey,
+      sourceEntityId,
       metadata,
-      createdAt: FieldValue.serverTimestamp(),
+      senderRoleSnapshot: "Report Card Engine",
+      sourceModule: "reportCards",
     });
   }
 

@@ -36,13 +36,37 @@ class _GoogleGlyphPainter extends CustomPainter {
     // Google "G" color split (blue/green/yellow/red going clockwise from
     // the top-right gap).
     const sweep = 1.5533; // ~89deg, leaving a hairline seam between arcs
-    canvas.drawArc(rect, -1.5708, sweep, false, arcPaint..color = Colors.black);
-    canvas.drawArc(rect, -0.0175, sweep, false, arcPaint..color = Colors.black);
-    canvas.drawArc(rect, 1.5358, sweep, false, arcPaint..color = Colors.black);
-    canvas.drawArc(rect, 3.0891, sweep, false, arcPaint..color = Colors.black);
+    canvas.drawArc(
+      rect,
+      -1.5708,
+      sweep,
+      false,
+      arcPaint..color = const Color(0xFF4285F4),
+    );
+    canvas.drawArc(
+      rect,
+      -0.0175,
+      sweep,
+      false,
+      arcPaint..color = const Color(0xFF34A853),
+    );
+    canvas.drawArc(
+      rect,
+      1.5358,
+      sweep,
+      false,
+      arcPaint..color = const Color(0xFFFBBC05),
+    );
+    canvas.drawArc(
+      rect,
+      3.0891,
+      sweep,
+      false,
+      arcPaint..color = const Color(0xFFEA4335),
+    );
 
     // Horizontal crossbar, the "G"'s distinguishing feature vs. a plain "O".
-    final barPaint = Paint()..color = Colors.black;
+    final barPaint = Paint()..color = const Color(0xFF4285F4);
     canvas.drawRect(
       Rect.fromLTWH(
         center.dx,

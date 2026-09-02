@@ -9,7 +9,7 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/login_flow/welcome_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/parent_login_screens.dart';
 import 'package:school_pulse/features/auth/login_flow/staff_login_screens.dart';
-import 'package:school_pulse/features/auth/login_flow/platform_owner_access_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/login_flow/platform_owner_access_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/mfa_challenge_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:school_pulse/features/auth/login_flow/student_login_screen.dart';
@@ -42,8 +42,8 @@ import 'package:school_pulse/features/student/presentation/bloc/selected_student
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/staff_panel_host.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/class_teacher_more_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/class_activities_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/class_teacher_tasks_screen.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/presentation/pages/user_management_page.dart';
 import 'package:school_pulse/features/admin/presentation/screens/access_codes_screen.dart';
@@ -145,7 +145,6 @@ import 'package:school_pulse/features/student/presentation/screens/student_porta
 import 'package:school_pulse/features/student_identity/presentation/screens/identity_and_cards_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/new_application_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/direct_student_registration_screen.dart';
-import 'package:school_pulse/features/profile/presentation/screens/profile_more_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/personal_information_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/security_privacy_screen.dart';
@@ -235,7 +234,28 @@ import 'package:school_pulse/features/dean/presentation/screens/qa/marks_qa_scre
 import 'package:school_pulse/features/dean/presentation/screens/observations/class_observations_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/operations/todays_operations_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/alerts/academic_alerts_screen.dart';
-import 'package:school_pulse/features/dean/presentation/screens/exams/exams_overview_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/exam_factory_screens.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/series/exam_series_screens.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/questions/exam_question_form_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/questions/exam_question_list_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/questions/exam_question_review_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/papers/exam_paper_builder_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/print/exam_print_room_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/operations/exam_timetable_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/operations/exam_day_dashboard_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/operations/exam_invigilator_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/operations/exam_attendance_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/operations/exam_incident_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/marking/exam_marking_screens.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/marking/exam_result_approval_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/papers/exam_paper_review_screens.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/operations/exam_seating_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/operations/exam_script_collection_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/exam_reports_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/exam_settings_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/questions/exam_teacher_status_screens.dart';
+import 'package:school_pulse/features/structure/presentation/screens/spaces_rooms_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/widgets/exam_factory_scope.dart';
 import 'package:school_pulse/features/dean/presentation/screens/monitoring/missed_lessons_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/assessments/assessments_overview_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/students/student_academic_profile_screen.dart';
@@ -317,7 +337,6 @@ import 'package:school_pulse/features/student/presentation/screens/student_more_
 import 'package:school_pulse/features/student/presentation/screens/student_profile_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/student_fees_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/student_timetable_screen.dart';
-import 'package:school_pulse/features/teacher/teacher_student_list_screen.dart';
 import 'package:school_pulse/features/teacher/teacher_student_profile_screen.dart';
 import 'package:school_pulse/features/teacher/teacher_student_attendance_screen.dart';
 import 'package:school_pulse/features/teacher/teacher_student_performance_screen.dart';
@@ -617,6 +636,14 @@ final router = GoRouter(
       path: '/school-splash',
       redirect: (context, state) {
         final authState = context.read<AuthBloc>().state;
+        // MFA completion starts AuthCheckRequested and then navigates here.
+        // During that short check the state is AuthLoading, not an absent
+        // user. Treating it as absent used to redirect to /welcome before
+        // the verified superAdmin state arrived, which looked like a
+        // successful 2FA sign-in had been thrown back to authentication.
+        if (authState is AuthLoading || authState is AuthInitial) {
+          return null;
+        }
         // superAdmin is the SaaS platform owner, not a school tenant - they
         // have no schoolId to resolve and every other route in this file
         // already exempts them from the tenant pipeline (see the top-level
@@ -635,7 +662,12 @@ final router = GoRouter(
         final user = resolveSchoolSplashUser(
           state.extra,
           context.read<AuthBloc>().state,
-        )!;
+        );
+        if (user == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
         return SchoolSplashScreen(user: user);
       },
     ),
@@ -1018,7 +1050,10 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/students',
-          builder: (context, state) => const TeacherStudentListScreen(),
+          // Class Teacher roster is scoped by the active responsibility,
+          // rather than the broad teacher directory used by Subject Teachers.
+          builder: (context, state) =>
+              const ClassStudentsListScreen(classId: ''),
           routes: [
             GoRoute(
               path: ':id',
@@ -1732,6 +1767,87 @@ final router = GoRouter(
           builder: (context, state) => const DisciplineDashboardScreen(),
         ),
         GoRoute(
+          path: '/staff/exam-factory',
+          builder: (context, state) => _examFactoryScoped(
+            context,
+            const ExamQuestionListScreen(
+              mode: ExamQuestionListMode.myQuestions,
+            ),
+          ),
+          routes: [
+            GoRoute(
+              path: 'my-questions',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                const ExamQuestionListScreen(
+                  mode: ExamQuestionListMode.myQuestions,
+                ),
+              ),
+            ),
+            GoRoute(
+              path: 'submit-question',
+              builder: (context, state) =>
+                  _examFactoryScoped(context, const ExamQuestionFormScreen()),
+            ),
+            GoRoute(
+              path: 'edit-question',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                ExamQuestionFormScreen(
+                  questionId: state.uri.queryParameters['questionId'],
+                ),
+              ),
+            ),
+            GoRoute(
+              path: 'question-details',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                ExamQuestionReviewScreen(
+                  questionId: state.uri.queryParameters['questionId'] ?? '',
+                  readOnly: true,
+                ),
+              ),
+            ),
+            GoRoute(
+              path: 'changes-requested',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                const ExamChangesRequestedScreen(),
+              ),
+            ),
+            GoRoute(
+              path: 'submission-history',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                const ExamSubmissionHistoryScreen(),
+              ),
+            ),
+            GoRoute(
+              path: 'assigned-marking',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                const ExamAssignedMarkingScreen(),
+              ),
+            ),
+            GoRoute(
+              path: 'mark-entry',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                ExamMarkEntryScreen(
+                  paperId: state.uri.queryParameters['paperId'] ?? '',
+                ),
+              ),
+            ),
+            GoRoute(
+              path: 'marking-progress',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                const ExamMarkingProgressScreen(),
+              ),
+            ),
+          ],
+        ),
+        GoRoute(
           path: '/staff/dean',
           builder: (context, state) => const DeanShell(),
           routes: [
@@ -1786,7 +1902,283 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'exams',
-              builder: (context, state) => const ExamsOverviewScreen(),
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                const ExamFactoryDashboardScreen(),
+              ),
+            ),
+            GoRoute(
+              path: 'exam-factory',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                const ExamFactoryDashboardScreen(),
+              ),
+              routes: [
+                GoRoute(
+                  path: 'series',
+                  builder: (context, state) =>
+                      _examFactoryScoped(context, const ExamSeriesListScreen()),
+                ),
+                GoRoute(
+                  path: 'series-editor',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamSeriesEditorScreen(
+                      seriesId: state.uri.queryParameters['seriesId'],
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'question-bank',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamQuestionListScreen(
+                      mode: ExamQuestionListMode.questionBank,
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'question-details',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamQuestionReviewScreen(
+                      questionId: state.uri.queryParameters['questionId'] ?? '',
+                      readOnly: true,
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'moderation',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamQuestionListScreen(
+                      mode: ExamQuestionListMode.moderationQueue,
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'review-question',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamQuestionReviewScreen(
+                      questionId: state.uri.queryParameters['questionId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'papers',
+                  builder: (context, state) =>
+                      _examFactoryScoped(context, const ExamPaperListScreen()),
+                ),
+                GoRoute(
+                  path: 'create-paper',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamPaperBuilderScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'paper-builder',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamPaperBuilderScreen(
+                      paperId: state.uri.queryParameters['paperId'],
+                      initialQuestionIds:
+                          state.uri.queryParameters['questionIds']?.split(
+                            ',',
+                          ) ??
+                          const [],
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'print-room',
+                  builder: (context, state) =>
+                      _examFactoryScoped(context, const ExamPrintRoomScreen()),
+                ),
+                GoRoute(
+                  path: 'print-job',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamPrintJobScreen(
+                      paperId: state.uri.queryParameters['paperId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'timetable',
+                  builder: (context, state) =>
+                      _examFactoryScoped(context, const ExamTimetableScreen()),
+                ),
+                GoRoute(
+                  path: 'schedule-editor',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamScheduleEditorScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'exam-day',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamDayDashboardScreen(
+                      sittingId: state.uri.queryParameters['sittingId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'invigilators',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamInvigilatorScreen(
+                      sittingId: state.uri.queryParameters['sittingId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'attendance',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamAttendanceScreen(
+                      sittingId: state.uri.queryParameters['sittingId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'incidents',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamIncidentScreen(
+                      sittingId: state.uri.queryParameters['sittingId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'marking',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamMarkingDashboardScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'mark-entry',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamMarkEntryScreen(
+                      paperId: state.uri.queryParameters['paperId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'missing-marks',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamMissingMarksScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'result-verification',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamResultVerificationScreen(
+                      paperId: state.uri.queryParameters['paperId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'question-search',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamQuestionListScreen(
+                      mode: ExamQuestionListMode.questionBank,
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'moderation-history',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamApprovalHistoryScreen(
+                      questionId: state.uri.queryParameters['questionId'],
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'paper-settings',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamPaperBuilderScreen(
+                      paperId: state.uri.queryParameters['paperId'],
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'paper-preview',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamPaperPreviewScreen(
+                      paperId: state.uri.queryParameters['paperId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'final-review',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamFinalPaperReviewScreen(
+                      paperId: state.uri.queryParameters['paperId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'approval-history',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamApprovalHistoryScreen(
+                      paperId: state.uri.queryParameters['paperId'],
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'rooms',
+                  builder: (context, state) => const SpacesRoomsScreen(),
+                ),
+                GoRoute(
+                  path: 'seating',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamSeatingScreen(
+                      sittingId: state.uri.queryParameters['sittingId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'scripts',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamScriptCollectionScreen(
+                      sittingId: state.uri.queryParameters['sittingId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'result-approval',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamResultApprovalScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'reports',
+                  builder: (context, state) =>
+                      _examFactoryScoped(context, const ExamReportsScreen()),
+                ),
+                GoRoute(
+                  path: 'settings',
+                  builder: (context, state) =>
+                      _examFactoryScoped(context, const ExamSettingsScreen()),
+                ),
+              ],
             ),
             GoRoute(
               path: 'missed-lessons',
@@ -2930,7 +3322,7 @@ final router = GoRouter(
             }
             return null;
           },
-          builder: (context, state) => const ProfileMoreScreen(),
+          builder: (context, state) => const ClassTeacherMoreScreen(),
           routes: [
             GoRoute(
               path: 'subjects',
@@ -3038,8 +3430,15 @@ final router = GoRouter(
           ],
         ),
         GoRoute(
-          path: '/staff/homework',
+          path: '/staff/classwork',
           builder: (context, state) => const HomeworkScreen(),
+        ),
+        // Kept for bookmarked links. The former task manager is no longer a
+        // primary Class Teacher destination; classwork uses the canonical
+        // homework/assessment repository instead.
+        GoRoute(
+          path: '/staff/homework',
+          redirect: (context, state) => '/staff/classwork',
         ),
         // The Class Teacher's own daily register - distinct from the shared
         // /staff/attendance method-chooser above, which every staff role
@@ -3073,7 +3472,7 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/class-tasks',
-          builder: (context, state) => const ClassTeacherTasksScreen(),
+          redirect: (context, state) => '/staff/classwork',
         ),
         GoRoute(
           path: '/staff/tasks',
@@ -3427,6 +3826,12 @@ final router = GoRouter(
     ),
   ],
 );
+
+/// Wraps an Exam Factory screen with a cubit scoped to the signed-in user's
+/// institution. Built per navigation rather than as a DI singleton because
+/// institutionId/uid are only known once authenticated.
+Widget _examFactoryScoped(BuildContext context, Widget child) =>
+    examFactoryScoped(context, child);
 
 Widget _messagingShell(BuildContext context, Widget child) {
   final authState = context.read<AuthBloc>().state;
