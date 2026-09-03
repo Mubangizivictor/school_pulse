@@ -1,5 +1,6 @@
 const { onRequest } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
+const { isAllowedOrigin } = require('./allowed_origins');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
@@ -8,7 +9,7 @@ const ACTIVE_APPLICATION_STATUSES = new Set(['pending_review', 'approved']);
 
 function cors(req, res) {
   const origin = req.get('origin');
-  if (origin === WEBSITE_ORIGIN || origin === 'http://localhost:4321') {
+  if (isAllowedOrigin(origin)) {
     res.set('Access-Control-Allow-Origin', origin);
   }
   res.set('Vary', 'Origin');

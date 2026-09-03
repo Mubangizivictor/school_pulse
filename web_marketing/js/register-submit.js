@@ -158,9 +158,19 @@
             markVerified(user.email);
             return;
           }
+          // The account itself now exists (created or signed into above) —
+          // a failure past this point is only about sending the
+          // verification email, not account creation, so it gets its own
+          // message and still lands on the verify panel (where "Resend
+          // verification email" can retry) rather than the generic
+          // account-creation failure below.
           return SPAuth.callFunction('requestEmailVerification', { method: 'POST' }).then(function () {
             document.getElementById('accountVerifyMsg').innerHTML =
               'We sent a verification link to <strong>' + email + '</strong>. Open it, then come back and click below.';
+            showPanel('verify');
+          }).catch(function () {
+            document.getElementById('accountVerifyMsg').innerHTML =
+              'Your account was created, but we couldn\'t send the verification email to <strong>' + email + '</strong>. Use the button below to try again.';
             showPanel('verify');
           });
         });

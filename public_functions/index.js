@@ -1,5 +1,6 @@
 const { onRequest } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
+const { isAllowedOrigin } = require("./allowed_origins");
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
@@ -19,7 +20,7 @@ const { validSlug } = require("./portal_slug");
 
 function cors(req, res) {
   const origin = req.get("origin");
-  if (origin === WEBSITE_ORIGIN || origin === "http://localhost:4321") res.set("Access-Control-Allow-Origin", origin);
+  if (isAllowedOrigin(origin)) res.set("Access-Control-Allow-Origin", origin);
   res.set("Vary", "Origin");
   res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Firebase-AppCheck");

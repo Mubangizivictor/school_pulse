@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { requirePlatformOwner, OwnerAuthorizationError } = require('./vendor/owner-auth');
 const { ROOT: PORTAL_ROOT, validSlug: validPortalSlug } = require('./portal_slug');
 const { publicDomain: portalPublicDomain } = require('./portal_domains');
+const { isAllowedOrigin } = require('./allowed_origins');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
@@ -70,7 +71,7 @@ function text(value, max = 200) {
 
 function cors(req, res) {
   const origin = req.get('origin');
-  if (origin === WEBSITE_ORIGIN || origin === 'http://localhost:4321') {
+  if (isAllowedOrigin(origin)) {
     res.set('Access-Control-Allow-Origin', origin);
   }
   res.set('Vary', 'Origin');
