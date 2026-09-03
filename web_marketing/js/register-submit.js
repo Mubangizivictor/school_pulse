@@ -125,7 +125,7 @@
             markVerified(user.email);
             return;
           }
-          return user.sendEmailVerification().then(function () {
+          return SPAuth.callFunction('requestEmailVerification', { method: 'POST' }).then(function () {
             document.getElementById('accountVerifyMsg').innerHTML =
               'We sent a verification link to <strong>' + email + '</strong>. Open it, then come back and click below.';
             showPanel('verify');
@@ -147,12 +147,8 @@
     resendBtn.addEventListener('click', function () {
       resendBtn.disabled = true;
       resendBtn.textContent = 'Sending…';
-      SPAuth.ensureFirebase().then(function (firebase) {
-        var user = firebase.auth().currentUser;
-        if (!user) return Promise.reject(new Error('not_signed_in'));
-        return user.sendEmailVerification();
-      }).catch(function () {
-        // Best-effort — Firebase rate-limits repeated sends; not worth a
+      SPAuth.callFunction('requestEmailVerification', { method: 'POST' }).catch(function () {
+        // Best-effort — the endpoint rate-limits repeated sends; not worth a
         // hard error state here, the visitor can just try again shortly.
       }).finally(function () {
         resendBtn.disabled = false;
