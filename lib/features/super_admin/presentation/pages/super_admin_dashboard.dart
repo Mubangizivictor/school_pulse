@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
-import 'package:school_pulse/design_system/components/pulse_logo.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/manual_subscription_payment.dart';
 
 import 'package:school_pulse/features/super_admin/data/services/owner_push_token_service.dart';
@@ -254,7 +253,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           const SizedBox(height: AppSpacing.x4l),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-            child: PulseLogo(variant: PulseLogoVariant.full, size: 40),
+            child: _SidebarBrand(),
           ),
           const SizedBox(height: AppSpacing.x4l),
           Expanded(
@@ -354,6 +353,39 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           .toUpperCase();
     }
     return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+}
+
+/// Sidebar brand lockup: the wordless School Pulse icon (theme-aware PNG)
+/// followed by the "School Pulse" wordmark. Replaces the packaged
+/// `PulseLogo` so the console header uses the supplied brand icons.
+class _SidebarBrand extends StatelessWidget {
+  const _SidebarBrand();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final asset = isDark
+        ? 'assets/logos/icon_dark_mode.png'
+        : 'assets/logos/icon_light_Mode.png';
+    return Row(
+      children: [
+        Image.asset(asset, width: 36, height: 36, filterQuality: FilterQuality.medium),
+        const SizedBox(width: AppSpacing.l),
+        Flexible(
+          child: Text(
+            'School Pulse',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.titleLarge.copyWith(
+              color: AppColors.textPrimary(context),
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
