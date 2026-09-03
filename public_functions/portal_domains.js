@@ -14,8 +14,46 @@ const validSlug = v => /^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/.test(v) && !RESE
 const validHost = v => /^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$/.test(v) && v.includes('.') && !v.endsWith(`.${ROOT}`);
 async function owner(request) { try { return await requirePlatformOwner(request, { db }); } catch (e) { if (e instanceof OwnerAuthorizationError) throw new HttpsError(e.code, e.message); throw e; } }
 async function schoolAdmin(request) { if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in required.'); const u = (await db.doc(`users/${request.auth.uid}`).get()).data(); if (!u || u.role !== 'schoolAdmin' || !u.schoolId) throw new HttpsError('permission-denied', 'School administrator access required.'); return { uid: request.auth.uid, schoolId: u.schoolId }; }
-function publicDomain(schoolId, school, host) { const b = school.branding || {}; return { schoolId, slug: school.slug, hostname: host, status: 'active', schoolName: b.schoolName || school.name, logoUrl: b.logoUrl || null, primaryColor: b.primaryColor || null, secondaryColor: b.secondaryColor || null, updatedAt: admin.firestore.FieldValue.serverTimestamp() }; }
+// address/phone/email were added alongside getPublicSchoolProfile below —
+// school.branding already carried them (see createSchoolPortal), but this
+// projection previously dropped them, so the public school page had no
+// contact block to show. Still nothing beyond branding-level contact info:
+// no student/staff/financial data ever flows into this public doc.
+function publicDomain(schoolId, school, host) { const b = school.branding || {}; return { schoolId, slug: school.slug, hostname: host, status: 'active', schoolName: b.schoolName || school.name, logoUrl: b.logoUrl || null, primaryColor: b.primaryColor || null, secondaryColor: b.secondaryColor || null, address: b.address || null, phone: b.phone || null, email: b.email || null, updatedAt: admin.firestore.FieldValue.serverTimestamp() }; }
 exports.checkPortalSlug = onCall({ region: 'europe-west1' }, async r => { const slug = clean(r.data?.slug); if (!validSlug(slug)) return { available: false, reason: 'invalid_or_reserved' }; return { available: !(await db.doc(`portal_slug_reservations/${slug}`).get()).exists, slug, url: `https://${slug}.${ROOT}` }; });
+// Public, unauthenticated read of a school's brandable public-facing
+// fields only — for the v1 branded school page (web_marketing/school.html).
+// Deliberately projects a smaller field set than publicDomain()/
+// portal_domains/{host} itself: address/phone/email are exposed here (a
+// prospective parent visiting the school's own page reasonably expects a
+// contact block) but nothing else on the school doc — no student/staff/
+// financial data, no internal ids beyond the slug needed to look the page
+// up again, no domainStatus/customDomains/subscription info. Looked up by
+// slug (matches checkPortalSlug's input shape) or by hostname, since the
+// caller may only know one or the other. A suspended/archived/unknown
+// school returns { found: false } rather than leaking status detail.
+exports.getPublicSchoolProfile = onCall({ region: 'europe-west1' }, async r => {
+  const slug = clean(r.data?.slug);
+  const hostInput = clean(r.data?.hostname);
+  if (!slug && !hostInput) return { found: false };
+  const host = hostInput || `${slug}.${ROOT}`;
+  if (!validHost(host) && !validSlug(slug)) return { found: false };
+  const snap = await db.doc(`portal_domains/${host}`).get();
+  if (!snap.exists) return { found: false };
+  const d = snap.data() || {};
+  if (d.status !== 'active') return { found: false };
+  return {
+    found: true,
+    slug: d.slug || null,
+    schoolName: d.schoolName || null,
+    logoUrl: d.logoUrl || null,
+    primaryColor: d.primaryColor || null,
+    secondaryColor: d.secondaryColor || null,
+    address: d.address || null,
+    phone: d.phone || null,
+    email: d.email || null,
+  };
+});
 exports.createSchoolPortal = onCall({ region: 'europe-west1' }, async r => {
   const actor = await owner(r), d = r.data || {}, slug = clean(d.slug), name = String(d.schoolName || '').trim(), email = clean(d.adminEmail);
   if (!validSlug(slug) || name.length < 3 || !/^\S+@\S+\.\S+$/.test(email)) throw new HttpsError('invalid-argument', 'A valid name, slug, and administrator email are required.');

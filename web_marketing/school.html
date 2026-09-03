@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School Page — School Pulse</title>
+<meta name="description" content="A school's public School Pulse page — branding and contact details.">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  /* This page is themed with the school's own primary/secondary color as
+     accents (hero background, contact icons) — the rest of the page still
+     uses the site's normal design tokens, so it reads as "School Pulse
+     infrastructure, this school's colors" rather than a fully repainted
+     template. --school-primary/--school-secondary fall back to the site's
+     own cobalt if a school hasn't set colors yet. */
+  :root { --school-primary: var(--color-primary); --school-secondary: var(--color-primary-dark); }
+  .school-hero {
+    padding: 64px 0 48px;
+    text-align: center;
+    background: linear-gradient(135deg, var(--school-primary), var(--school-secondary));
+    color: #fff;
+  }
+  .school-hero .logo {
+    width: 84px; height: 84px; border-radius: 20px; object-fit: cover;
+    background: rgba(255,255,255,.15); margin: 0 auto 18px; display: block;
+  }
+  .school-hero h1 { color: #fff; margin-bottom: 6px; }
+  .school-hero .powered { opacity: .85; font-size: 13.5px; margin-top: 10px; }
+  .contact-block {
+    display: grid; gap: 14px; max-width: 480px; margin: 0 auto;
+  }
+  .contact-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); background: var(--color-card);
+  }
+  .contact-row .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--school-primary); flex: none;
+  }
+  .contact-row .label { font-size: 12.5px; color: var(--color-muted); }
+  .contact-row .value { font-size: 15px; font-weight: 600; color: var(--color-ink); }
+  #stateLoading, #stateNotFound { text-align: center; padding: 80px 0; }
+</style>
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<main>
+  <div id="stateLoading">
+    <p class="muted">Loading school…</p>
+  </div>
+
+  <div id="stateNotFound" style="display:none;">
+    <span class="badge badge-gray" style="margin-bottom:14px; display:inline-block;">School not found</span>
+    <p class="muted">We couldn't find a School Pulse page for this school. Check the link, or the school may not have a public page configured yet.</p>
+    <a href="index.html" class="btn btn-primary" style="margin-top:14px;">Go to School Pulse</a>
+  </div>
+
+  <div id="stateSchool" style="display:none;">
+    <section class="school-hero">
+      <div class="container">
+        <img class="logo" id="schoolLogo" alt="" style="display:none;">
+        <h1 id="schoolName">—</h1>
+        <p class="powered">Powered by School Pulse</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head" style="max-width:480px; margin: 0 auto 28px;">
+          <span class="eyebrow">Contact</span>
+        </div>
+        <div class="contact-block" id="contactBlock"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/footer.js"></script>
+<script>
+(function () {
+  // Minimal standalone Firebase Auth-free caller for the public
+  // getPublicSchoolProfile onCall — no sign-in needed, so this doesn't
+  // reuse js/registration-auth.js's SPAuth (which requires a signed-in
+  // user for every call). Same SDK version / config as registration-auth.js
+  // for consistency, but only the callable wire protocol is needed here,
+  // not the Auth SDK itself.
+  var FUNCTIONS_BASE = 'https://europe-west1-school-pulse-3d95b.cloudfunctions.net';
+
+  function getPublicSchoolProfile(params) {
+    return fetch(FUNCTIONS_BASE + '/getPublicSchoolProfile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: params }),
+    }).then(function (res) {
+      return res.json().then(function (body) {
+        if (!res.ok) return Promise.reject(body);
+        return body.result || body;
+      });
+    });
+  }
+
+  function show(id) {
+    ['stateLoading', 'stateNotFound', 'stateSchool'].forEach(function (s) {
+      document.getElementById(s).style.display = s === id ? 'block' : 'none';
+    });
+  }
+
+  function render(profile) {
+    document.title = profile.schoolName + ' — School Pulse';
+    document.getElementById('schoolName').textContent = profile.schoolName || 'School';
+    if (profile.logoUrl) {
+      var img = document.getElementById('schoolLogo');
+      img.src = profile.logoUrl;
+      img.style.display = 'block';
+    }
+    if (profile.primaryColor) document.documentElement.style.setProperty('--school-primary', profile.primaryColor);
+    if (profile.secondaryColor) document.documentElement.style.setProperty('--school-secondary', profile.secondaryColor);
+
+    var rows = [];
+    if (profile.address) rows.push(['Address', profile.address]);
+    if (profile.phone) rows.push(['Phone', profile.phone]);
+    if (profile.email) rows.push(['Email', profile.email]);
+
+    var block = document.getElementById('contactBlock');
+    if (!rows.length) {
+      block.innerHTML = '<p class="muted" style="text-align:center;">This school hasn\'t added contact details yet.</p>';
+    } else {
+      block.innerHTML = rows.map(function (r) {
+        return '<div class="contact-row"><span class="dot"></span><div><div class="label">' + r[0] + '</div><div class="value">' + escapeHtml(r[1]) + '</div></div></div>';
+      }).join('');
+    }
+    show('stateSchool');
+  }
+
+  function escapeHtml(s) {
+    var div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  var params = new URLSearchParams(window.location.search);
+  var slug = (params.get('slug') || '').trim();
+  var hostname = (params.get('hostname') || '').trim();
+
+  if (!slug && !hostname) {
+    show('stateNotFound');
+  } else {
+    getPublicSchoolProfile({ slug: slug, hostname: hostname }).then(function (result) {
+      if (!result || !result.found) { show('stateNotFound'); return; }
+      render(result);
+    }).catch(function () {
+      show('stateNotFound');
+    });
+  }
+})();
+</script>
+</body>
+</html>

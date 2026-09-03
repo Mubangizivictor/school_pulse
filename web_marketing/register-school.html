@@ -36,10 +36,18 @@
               <!-- Step 1: School details -->
               <div class="wizard-panel" data-step="1">
                 <h3>School details</h3>
-                <div class="form-field">
-                  <label for="schoolName">School name</label>
-                  <input type="text" id="schoolName" name="schoolName" required>
-                  <span class="error-text">Please enter your school's name.</span>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="schoolName">School name</label>
+                    <input type="text" id="schoolName" name="schoolName" required>
+                    <span class="error-text">Please enter your school's name.</span>
+                  </div>
+                  <div class="form-field">
+                    <label for="schoolPrefix">School initials <span class="muted">(short code)</span></label>
+                    <input type="text" id="schoolPrefix" name="schoolPrefix" maxlength="12" placeholder="e.g. SHS" required>
+                    <div class="hint">A short code used across School Pulse, e.g. student IDs. At least 2 letters/digits.</div>
+                    <span class="error-text">Please enter at least 2 letters or digits.</span>
+                  </div>
                 </div>
                 <div class="form-row">
                   <div class="form-field">
@@ -100,6 +108,7 @@
                   <div class="form-field">
                     <label for="adminEmail">Administrator email</label>
                     <input type="email" id="adminEmail" name="adminEmail" required>
+                    <div class="hint">You'll create your School Pulse sign-in with this email below.</div>
                     <span class="error-text">Please enter a valid email address.</span>
                   </div>
                   <div class="form-field">
@@ -120,6 +129,35 @@
                   </select>
                   <span class="error-text">Please select a role.</span>
                 </div>
+
+                <hr style="border:none; border-top:1px solid var(--color-border); margin:24px 0;">
+                <h4 style="margin-bottom:8px;">Create your account</h4>
+                <p class="muted" style="margin-bottom:16px;">Your application must be submitted from a verified email account. Create a password and verify your email — the address must match the administrator email above.</p>
+
+                <div id="accountCreatePanel">
+                  <div class="form-field" id="fieldAccountPassword">
+                    <label for="accountPassword">Choose a password</label>
+                    <input type="password" id="accountPassword" autocomplete="new-password" minlength="8">
+                    <div class="hint">At least 8 characters.</div>
+                    <span class="error-text">Please choose a password of at least 8 characters.</span>
+                  </div>
+                  <div class="form-field" id="accountError" style="display:none; color: var(--color-error); font-size: 13.5px;"></div>
+                  <button type="button" class="btn btn-outline" id="createAccountBtn">Create account &amp; send verification email</button>
+                </div>
+
+                <div id="accountVerifyPanel" style="display:none;">
+                  <div class="form-field" id="accountVerifyMsg" style="font-size:13.5px;"></div>
+                  <div class="btn-row" style="gap:10px;">
+                    <button type="button" class="btn btn-outline" id="resendVerificationBtn">Resend verification email</button>
+                    <button type="button" class="btn btn-primary" id="checkVerifiedBtn">I've verified — continue</button>
+                  </div>
+                </div>
+
+                <div id="accountVerifiedPanel" style="display:none;">
+                  <span class="badge badge-green">Email verified</span>
+                  <span class="hint" id="accountVerifiedEmail" style="margin-left:8px;"></span>
+                </div>
+
                 <div class="wizard-nav">
                   <button type="button" class="btn btn-outline" data-wizard-back>Back</button>
                   <button type="button" class="btn btn-primary" data-wizard-next>Next</button>
@@ -200,11 +238,22 @@
                     </select>
                     <span class="error-text">Please select a district.</span>
                   </div>
-                  <div class="form-field">
-                    <label for="address">Address</label>
-                    <input type="text" id="address" name="address" required>
-                    <span class="error-text">Please enter your school's address.</span>
+                  <div class="form-field" id="fieldRegion">
+                    <label for="region">Region</label>
+                    <select id="region" name="region" required>
+                      <option value="">Select region</option>
+                      <option value="Central">Central</option>
+                      <option value="Eastern">Eastern</option>
+                      <option value="Northern">Northern</option>
+                      <option value="Western">Western</option>
+                    </select>
+                    <span class="error-text">Please select a region.</span>
                   </div>
+                </div>
+                <div class="form-field">
+                  <label for="address">Address</label>
+                  <input type="text" id="address" name="address" required>
+                  <span class="error-text">Please enter your school's address.</span>
                 </div>
                 <div class="form-field">
                   <label for="subdomain">Desired subdomain</label>
@@ -224,6 +273,21 @@
                 <h3>Review</h3>
                 <p class="muted">Please check your details before submitting.</p>
                 <div id="wizardReview"></div>
+
+                <div id="customTierNotice" class="form-field" style="display:none; padding:14px; border:1px solid var(--color-warning-bg); border-radius:var(--radius-sm); background:var(--color-warning-bg);">
+                  <p style="margin:0 0 10px; font-size:13.5px;">Your student count is large enough that it needs a custom plan — this can't be submitted online yet. Please talk to our team and we'll set it up with you directly.</p>
+                  <div class="btn-row" style="gap:10px;">
+                    <a href="contact.html" class="btn btn-outline">Contact us</a>
+                    <a href="request-demo.html" class="btn btn-primary">Request a demo</a>
+                  </div>
+                </div>
+
+                <div id="verificationNotice" class="form-field" style="display:none; padding:14px; border:1px solid var(--color-border); border-radius:var(--radius-sm);">
+                  <p class="hint" style="margin:0;">Please verify your email in Step 2 (Administrator) before submitting.</p>
+                </div>
+
+                <div id="submitError" class="form-field" style="display:none; color: var(--color-error); font-size: 13.5px;"></div>
+
                 <div class="wizard-nav">
                   <button type="button" class="btn btn-outline" data-wizard-back>Back</button>
                   <button type="button" class="btn btn-primary" id="wizardSubmit">Submit registration</button>
@@ -244,6 +308,10 @@
           <div class="icon-circle" id="wizardSuccessIcon"></div>
           <h3>Registration received</h3>
           <p class="muted">Our team will set up your account and contact you shortly.</p>
+          <p class="hint" id="wizardSuccessId" style="margin-top:10px;"></p>
+          <div class="btn-row" style="justify-content:center; margin-top:20px;">
+            <a href="application-status.html" class="btn btn-primary">Check application status</a>
+          </div>
         </div>
       </div>
     </div>
@@ -256,8 +324,10 @@
 <script src="js/pricing-config.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/footer.js"></script>
+<script src="js/registration-auth.js"></script>
 <script src="js/wizard.js"></script>
 <script src="js/subdomain-check.js"></script>
+<script src="js/register-submit.js"></script>
 <script>
   document.getElementById('wizardSuccessIcon').innerHTML = window.ICONS.check;
 </script>

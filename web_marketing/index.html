@@ -26,7 +26,7 @@
       <div class="mockup">
         <div class="mockup-chrome">
           <span class="mockup-dot"></span><span class="mockup-dot"></span><span class="mockup-dot"></span>
-          <span class="mockup-url">app.schoolpulse.app/dashboard</span>
+          <span class="mockup-url">app.schoolpulseapp.com/dashboard</span>
         </div>
         <div class="mockup-body">
           <div class="grid grid-2" style="margin-bottom:16px;">
@@ -135,18 +135,37 @@
 
   var grid = document.getElementById('homePricingGrid');
   var popularLabel = 'Standard';
-  window.PRICING_TIERS.forEach(function (tier) {
-    var range = tier.max === null ? (tier.min + '+ learners') : (tier.min + '–' + tier.max + ' learners');
-    var isPopular = tier.label === popularLabel;
-    grid.innerHTML += '' +
-      '<div class="price-card' + (isPopular ? ' popular' : '') + '">' +
-        (isPopular ? '<span class="tag">Most Popular</span>' : '') +
-        '<h3>' + tier.label + '</h3>' +
-        '<div class="price-range">' + range + '</div>' +
-        '<div class="price-amount">' + window.formatUGX(tier.price) + (tier.price ? '<small> / term</small>' : '') + '</div>' +
-        '<a href="pricing.html" class="btn btn-outline btn-block">See details</a>' +
-      '</div>';
-  });
+
+  function renderHomePricing() {
+    var status = window.PRICING_TIERS_STATUS;
+    var tiers = window.PRICING_TIERS;
+
+    if (status === 'loading') {
+      grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:var(--color-muted, #666);">Loading pricing…</p>';
+      return;
+    }
+    if (!tiers.length) {
+      grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:var(--color-muted, #666);">Pricing is being updated — <a href="contact.html">contact us</a> for current rates.</p>';
+      return;
+    }
+
+    grid.innerHTML = '';
+    tiers.forEach(function (tier) {
+      var range = tier.max === null ? (tier.min + '+ learners') : (tier.min + '–' + tier.max + ' learners');
+      var isPopular = tier.label === popularLabel;
+      grid.innerHTML += '' +
+        '<div class="price-card' + (isPopular ? ' popular' : '') + '">' +
+          (isPopular ? '<span class="tag">Most Popular</span>' : '') +
+          '<h3>' + tier.label + '</h3>' +
+          '<div class="price-range">' + range + '</div>' +
+          '<div class="price-amount">' + window.formatUGX(tier.price) + (tier.price ? '<small> / term</small>' : '') + '</div>' +
+          '<a href="pricing.html" class="btn btn-outline btn-block">See details</a>' +
+        '</div>';
+    });
+  }
+
+  renderHomePricing();
+  window.addEventListener('pricingtiersready', renderHomePricing);
 </script>
 </body>
 </html>

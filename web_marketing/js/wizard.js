@@ -134,6 +134,7 @@
       if (!reviewEl) return;
       var rows = [
         ['School name', 'schoolName'],
+        ['School initials', 'schoolPrefix'],
         ['School type', 'schoolType'],
         ['Curriculum', 'curriculum'],
         ['School email', 'schoolEmail'],
@@ -148,6 +149,7 @@
         ['Term start date', 'termStart'],
         ['Term end date', 'termEnd'],
         ['Student count', 'studentCount'],
+        ['Region', 'region'],
         ['District', 'district'],
         ['Address', 'address'],
         ['Desired subdomain', 'subdomain']
@@ -169,19 +171,23 @@
       return div.innerHTML;
     }
 
-    // ---- Submit (no backend) ----
-    var submitBtn = document.getElementById('wizardSubmit');
-    if (submitBtn) {
-      submitBtn.addEventListener('click', function () {
-        document.getElementById('wizardForm').style.display = 'none';
-        document.getElementById('wizardSuccess').style.display = 'block';
-        try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-    }
+    // Real submit wiring (account creation, email verification, backend
+    // POST to submitSchoolApplication) now lives in js/register-submit.js —
+    // it owns the #wizardSubmit click handler entirely, since a fake local
+    // "success" here would let a user believe they'd registered when they
+    // hadn't. It also owns clearing STORAGE_KEY on real success.
 
     // Subdomain preview + real availability checking now lives in
     // js/subdomain-check.js (backed by the live checkPortalSlug callable).
+
+    // Expose small internals register-submit.js needs (current step,
+    // validation, draft clearing) without duplicating this closure's state.
+    window.SPWizard = {
+      getStorageKey: function () { return STORAGE_KEY; },
+      validateStep: validateStep,
+      goToStep: function (step) { currentStep = Math.min(Math.max(step, 1), TOTAL_STEPS); renderStep(); },
+      getCurrentStep: function () { return currentStep; },
+    };
 
     loadDraft();
     renderStep();
