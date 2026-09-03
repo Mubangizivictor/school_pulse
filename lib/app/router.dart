@@ -9,6 +9,7 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/login_flow/welcome_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/parent_login_screens.dart';
 import 'package:school_pulse/features/auth/login_flow/staff_login_screens.dart';
+import 'package:school_pulse/features/auth/login_flow/forgot_password_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/login_flow/platform_owner_access_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/mfa_challenge_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -852,6 +853,10 @@ final router = GoRouter(
       path: '/auth/mfa-challenge',
       builder: (context, state) =>
           MfaChallengeScreen(resolver: state.extra as MultiFactorResolver),
+    ),
+    GoRoute(
+      path: '/auth/forgot-password',
+      builder: (context, state) => const ForgotPasswordScreen(),
     ),
     GoRoute(
       path: '/student/login',

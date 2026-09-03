@@ -157,7 +157,7 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
                 ),
                 const Spacer(),
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () => context.push('/auth/forgot-password'),
                   child: Text(
                     'Forgot Password?',
                     style: AppTypography.bodyMedium.copyWith(

@@ -20,6 +20,7 @@ const subscriptionCycleBilling = require('./subscription_cycle_billing');
 const location = require('./location');
 const mtnMomo = require('./mtn_momo');
 const emailVerification = require('./email_verification');
+const passwordReset = require('./password_reset');
 const documentVerification = require('./documents/verification_endpoint');
 const studentCredentialVerification = require('./documents/student_verification_endpoint');
 const portalDomains = require('./portal_domains');
@@ -51,6 +52,7 @@ module.exports = {
   ...location,
   ...mtnMomo,
   ...emailVerification,
+  ...passwordReset,
   ...documentVerification,
   ...studentCredentialVerification,
   ...portalDomains,
