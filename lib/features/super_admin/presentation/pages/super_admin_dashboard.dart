@@ -92,13 +92,20 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   String? _lastSyncedLocation;
   int _billingInitialTab = 0;
 
+  // Rapid-tap guard shared with the mobile bottom nav (see
+  // ownerNavThrottled in super_admin_mobile_nav_shell.dart) so a
+  // double/triple tap - across either control - fires exactly one
+  // navigation instead of stacking section switches that read as a flash.
+  bool _navThrottled() => ownerNavThrottled();
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Only react to *external* location changes (deep link, browser
-    // refresh, Back/Forward) — sidebar/bottom-nav taps already update
-    // `_selectedIndex` locally and push the matching route themselves, so
-    // re-deriving it here too would just be redundant, not wrong.
+    // The URL is the single source of truth for which section is active.
+    // Nav taps only call `context.go` (see `_syncRouteToSection`); this
+    // callback is what actually moves `_selectedIndex`, for taps, deep
+    // links, browser refresh and Back/Forward alike. One code path, so the
+    // sidebar/bottom-nav highlight can never disagree with the route.
     final location = GoRouterState.of(context).uri.path;
     if (location == _lastSyncedLocation) return;
     _lastSyncedLocation = location;
@@ -110,12 +117,13 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
 
   /// Updates the URL to match `sectionPath` (a child of `/super-admin`,
   /// e.g. `'schools'`, or `''` for the Dashboard root) without disturbing
-  /// that section's own nested-Navigator stack.
+  /// that section's own nested-Navigator stack. Deliberately does NOT touch
+  /// `_selectedIndex` - `didChangeDependencies` does that once the route
+  /// actually changes.
   void _syncRouteToSection(String sectionPath) {
     final target = sectionPath.isEmpty
         ? '/super-admin'
         : '/super-admin/$sectionPath';
-    _lastSyncedLocation = target;
     if (GoRouterState.of(context).uri.path == target) return;
     context.go(target);
   }
@@ -151,21 +159,21 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   }
 
   void _goToBilling({ManualPaymentStatus? filter, int tab = 0}) {
+    if (_navThrottled()) return;
     setState(() {
       _billingInitialFilter = filter;
       _billingInitialTab = tab;
       _billingPageKey++;
-      _selectedIndex = 2;
     });
     _syncRouteToSection(_kSectionPaths[2]);
     _popToRoot(_navigatorKeys[2]);
   }
 
   void _goToSchools({String? query}) {
-    setState(() {
-      _selectedIndex = 1;
-      if (query != null) _schoolsSearchQuery = query;
-    });
+    if (_navThrottled()) return;
+    if (query != null) {
+      setState(() => _schoolsSearchQuery = query);
+    }
     _syncRouteToSection(_kSectionPaths[1]);
     _popToRoot(_navigatorKeys[1]);
   }
@@ -270,10 +278,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                       if (index == _selectedIndex) {
                         // Re-selecting the active section returns it to
                         // its root screen, matching the mobile tab bar.
+                        // No route change and no transition.
                         _popToRoot(_navigatorKeys[index]);
                         return;
                       }
-                      setState(() => _selectedIndex = index);
+                      if (_navThrottled()) return;
+                      // URL-only: didChangeDependencies moves _selectedIndex
+                      // once the route actually changes. One state update,
+                      // one navigation, highlight always matches the route.
                       _syncRouteToSection(_kSectionPaths[index]);
                     },
                   ),
@@ -369,18 +381,26 @@ class _SidebarBrand extends StatelessWidget {
         ? 'assets/logos/icon_dark_mode.png'
         : 'assets/logos/icon_light_Mode.png';
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Image.asset(asset, width: 36, height: 36, filterQuality: FilterQuality.medium),
+        Image.asset(
+          asset,
+          width: 40,
+          height: 40,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.medium,
+        ),
         const SizedBox(width: AppSpacing.l),
         Flexible(
           child: Text(
             'School Pulse',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTypography.titleLarge.copyWith(
+            style: AppTypography.headlineSmall.copyWith(
               color: AppColors.textPrimary(context),
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.w600,
+              height: 1.1,
             ),
           ),
         ),

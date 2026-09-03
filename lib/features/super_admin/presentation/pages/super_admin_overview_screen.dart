@@ -49,25 +49,30 @@ class _SuperAdminOverviewScreenState extends State<SuperAdminOverviewScreen> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background(context),
     body: BlocBuilder<SuperAdminBloc, SuperAdminState>(
-      builder: (context, state) => RefreshIndicator(
-        onRefresh: _refresh,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1240),
-              child: _OverviewBody(
-                state: state,
-                onRefresh: _refresh,
-                onOpenSchools: widget.onOpenSchools,
-                onOpenBilling: widget.onOpenBilling,
-                onSearchSchools: widget.onSearchSchools,
+      builder: (context, state) {
+        // Tighter gutters on phones, roomier on desktop.
+        final width = MediaQuery.sizeOf(context).width;
+        final hPad = width < 600 ? 16.0 : 24.0;
+        return RefreshIndicator(
+          onRefresh: _refresh,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 24),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1240),
+                child: _OverviewBody(
+                  state: state,
+                  onRefresh: _refresh,
+                  onOpenSchools: widget.onOpenSchools,
+                  onOpenBilling: widget.onOpenBilling,
+                  onSearchSchools: widget.onSearchSchools,
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     ),
   );
 }
