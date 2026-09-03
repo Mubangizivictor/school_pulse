@@ -108,6 +108,7 @@ class AcademicTermIsar {
   late bool isCurrent;
   late String periodType;
   late bool isArchived;
+  bool isConfirmed = false;
 
   AcademicTermIsar();
 
@@ -122,7 +123,8 @@ class AcademicTermIsar {
       ..endDate = e.endDate
       ..isCurrent = e.isCurrent
       ..periodType = e.periodType.name
-      ..isArchived = e.isArchived;
+      ..isArchived = e.isArchived
+      ..isConfirmed = e.isConfirmed;
   }
 
   AcademicTerm toEntity() {
@@ -140,6 +142,7 @@ class AcademicTermIsar {
         orElse: () => AcademicPeriodType.term,
       ),
       isArchived: isArchived,
+      isConfirmed: isConfirmed,
     );
   }
 }

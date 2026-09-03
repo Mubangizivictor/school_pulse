@@ -60,6 +60,7 @@ import 'package:school_pulse/features/integrations/presentation/integration_webh
 import 'package:school_pulse/features/structure/presentation/screens/structure_wizard_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/levels_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/years_terms_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/billing/academic_calendar_confirmation_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/classes_streams_screen.dart';
 import 'package:school_pulse/features/finance/presentation/screens/fee_plan_builder/fee_plan_builder_screen.dart';
 import 'package:school_pulse/features/hr/presentation/screens/salary_structure_builder/salary_structure_builder_screen.dart';
@@ -2551,6 +2552,11 @@ final router = GoRouter(
                       ),
                     ),
                     GoRoute(
+                      path: 'calendar-confirmation',
+                      builder: (context, state) =>
+                          const AcademicCalendarConfirmationScreen(),
+                    ),
+                    GoRoute(
                       path: 'classes-streams',
                       builder: (context, state) => ClassesStreamsScreen(
                         wizardStep: int.tryParse(
@@ -3728,6 +3734,28 @@ final router = GoRouter(
             GoRoute(
               path: ':schoolId',
               builder: (context, state) => const SuperAdminDashboard(),
+              routes: [
+                // School Details' Screen B/C/D sub-pushes (Subscription,
+                // Modules, School Admins & Actions) each sync the URL via
+                // pushSuperAdminDetail before pushing onto the nested
+                // Navigator - same cosmetic-URL-only pattern as
+                // schools/:schoolId itself. Missing entries here throw a
+                // GoException (no matching route) that replaces the whole
+                // app with GoRouter's error page, since context.go() is
+                // called unconditionally on every push.
+                GoRoute(
+                  path: 'subscription',
+                  builder: (context, state) => const SuperAdminDashboard(),
+                ),
+                GoRoute(
+                  path: 'modules',
+                  builder: (context, state) => const SuperAdminDashboard(),
+                ),
+                GoRoute(
+                  path: 'admins',
+                  builder: (context, state) => const SuperAdminDashboard(),
+                ),
+              ],
             ),
             GoRoute(
               path: 'applications/:applicationId',

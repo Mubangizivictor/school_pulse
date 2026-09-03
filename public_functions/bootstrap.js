@@ -16,6 +16,7 @@ const availability = require('./availability');
 const ownerSignInEvents = require('./owner_sign_in_events');
 const transactionalEmailQueue = require('./email/transactional_queue');
 const subscriptionLifecycle = require('./subscription_lifecycle');
+const subscriptionCycleBilling = require('./subscription_cycle_billing');
 const location = require('./location');
 const mtnMomo = require('./mtn_momo');
 const emailVerification = require('./email_verification');
@@ -46,6 +47,7 @@ module.exports = {
   ...ownerSignInEvents,
   ...transactionalEmailQueue,
   ...subscriptionLifecycle,
+  ...subscriptionCycleBilling,
   ...location,
   ...mtnMomo,
   ...emailVerification,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import 'package:school_pulse/core/error/friendly_error_message.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -66,7 +67,7 @@ class _SchoolPaymentsScreenState extends State<SchoolPaymentsScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = error.toString().replaceFirst(RegExp(r'^\w+Error:\s*'), '');
+        _error = friendlyErrorMessage(error);
       });
     }
   }

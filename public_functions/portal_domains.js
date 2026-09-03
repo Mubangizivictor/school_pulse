@@ -31,6 +31,73 @@ exports.createSchoolPortal = onCall({ region: 'europe-west1' }, async r => {
 // the client crashed between the write and the separate audit-log write.
 // This callable makes the status/subscription change and its audit entry
 // one Admin-SDK transaction, matching createSchoolPortal's pattern.
+// Suspend/archive must have real impact, not just a UI redirect: they now
+// also set accessMode ('blocked'), the field firestore.rules'
+// schoolCanWrite()/schoolAccessMode() actually check server-side (previously
+// only payment approval/rejection and the hourly lifecycle sweep wrote this
+// field - a suspended-by-owner school's writes were never rules-denied).
+// Reactivating restores accessMode:'full'. Never touches students/users/
+// payments/any other collection - suspension is reversible and data-safe by
+// design, matching deleteSchoolDialog's comment in the Flutter client.
+const ACCESS_MODE_FOR_STATUS = { suspended: 'blocked', archived: 'blocked', active: 'full', trial: 'full' };
+
+// Shared suspend transaction body, extracted so both the owner-invoked
+// setSchoolLifecycleStatus callable below and the Phase 2A hourly
+// subscription_cycle_billing sweep (public_functions/subscription_cycle_billing.js)
+// suspend a school through exactly one code path - never two independent
+// writers of schools/{id}.status='suspended' that could drift apart.
+//
+// `actionTag` lets the caller distinguish an owner-initiated suspension
+// ('UPDATE_SCHOOL_STATUS', the pre-existing audit action name kept as-is for
+// setSchoolLifecycleStatus below) from the scheduled job's automatic one
+// ('AUTO_SUSPEND_UNPAID_CYCLE') in super_admin_audit_logs, without adding a
+// second collection or changing the existing action string for the owner
+// path. `actorId` is the owner's uid for the manual path, or a fixed
+// system-actor id (e.g. 'system:subscription_cycle_billing') for the
+// scheduled job - never a real end-user uid for an automated action.
+//
+// Idempotent: if the school is already 'suspended', this is a no-op (no
+// duplicate write, no duplicate audit log, no re-revocation of refresh
+// tokens) - callers can call it unconditionally without their own
+// already-suspended guard.
+exports.suspendSchoolCore = async (db, schoolId, reason, actorId, actionTag = 'UPDATE_SCHOOL_STATUS') => {
+  const ref = db.doc(`schools/${schoolId}`);
+  const previousStatus = await db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new HttpsError('not-found', 'School not found.');
+    const before = snap.data();
+    if (before.status === 'suspended') return before.status;
+    tx.update(ref, {
+      status: 'suspended',
+      accessMode: ACCESS_MODE_FOR_STATUS.suspended,
+      metadata: { ...(before.metadata || {}), suspensionReason: reason || 'No reason provided' },
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    tx.set(db.collection('super_admin_audit_logs').doc(), {
+      action: actionTag,
+      schoolId,
+      ownerId: actorId,
+      reason,
+      metadata: { previousStatus: before.status, newStatus: 'suspended' },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return before.status;
+  });
+
+  // Immediate session invalidation on suspend - see setSchoolLifecycleStatus's
+  // original comment: revoking refresh tokens forces every active session at
+  // this school to re-authenticate, at which point the router guard and the
+  // rules write-lock (accessMode) apply. Skipped when already suspended.
+  if (previousStatus !== 'suspended') {
+    const staffSnap = await db.collection('users').where('schoolId', '==', schoolId).get();
+    await Promise.allSettled(
+      staffSnap.docs.map(doc => admin.auth().revokeRefreshTokens(doc.id).catch(() => {}))
+    );
+  }
+
+  return { schoolId, status: 'suspended', alreadySuspended: previousStatus === 'suspended' };
+};
+
 exports.setSchoolLifecycleStatus = onCall({ region: 'europe-west1' }, async r => {
   const actor = await owner(r), d = r.data || {};
   const schoolId = String(d.schoolId || '').trim();
@@ -39,17 +106,27 @@ exports.setSchoolLifecycleStatus = onCall({ region: 'europe-west1' }, async r =>
   if (!schoolId || !LIFECYCLE_STATUSES.has(status)) {
     throw new HttpsError('invalid-argument', 'A school ID and a valid status are required.');
   }
+
+  // Suspension now routes through the shared suspendSchoolCore so the owner
+  // path and the automated Phase 2A billing sweep can never diverge in
+  // behavior. Every other status transition (active/trial/archived) keeps
+  // its original inline transaction below, unchanged.
+  if (status === 'suspended') {
+    const result = await exports.suspendSchoolCore(db, schoolId, reason, actor.uid, 'UPDATE_SCHOOL_STATUS');
+    return { schoolId, status: result.status };
+  }
+
   const ref = db.doc(`schools/${schoolId}`);
-  await db.runTransaction(async tx => {
+  const previousStatus = await db.runTransaction(async tx => {
     const snap = await tx.get(ref);
     if (!snap.exists) throw new HttpsError('not-found', 'School not found.');
     const before = snap.data();
-    if (before.status === status) return;
+    if (before.status === status) return before.status;
     const metadataPatch = {};
-    if (status === 'suspended') metadataPatch.suspensionReason = reason || 'No reason provided';
     if (status === 'archived') metadataPatch.archivedReason = reason || 'No reason provided';
     tx.update(ref, {
       status,
+      accessMode: ACCESS_MODE_FOR_STATUS[status] || 'full',
       metadata: { ...(before.metadata || {}), ...metadataPatch },
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
@@ -61,7 +138,19 @@ exports.setSchoolLifecycleStatus = onCall({ region: 'europe-west1' }, async r =>
       metadata: { previousStatus: before.status, newStatus: status },
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
+    return before.status;
   });
+
+  // Immediate session invalidation on archive - see suspendSchoolCore's
+  // comment above for the suspend case, now handled there. Archive keeps its
+  // own copy here since it's not part of the shared helper.
+  if (status === 'archived' && previousStatus !== status) {
+    const staffSnap = await db.collection('users').where('schoolId', '==', schoolId).get();
+    await Promise.allSettled(
+      staffSnap.docs.map(doc => admin.auth().revokeRefreshTokens(doc.id).catch(() => {}))
+    );
+  }
+
   return { schoolId, status };
 });
 exports.updateSchoolSubscriptionPlan = onCall({ region: 'europe-west1' }, async r => {
@@ -356,4 +445,4 @@ exports.syncPortalDomainProjection = onDocumentWritten({ region: 'europe-west1',
   const hosts = [school.portalSubdomain, ...(Array.isArray(school.customDomains) ? school.customDomains : [])].filter(Boolean);
   await Promise.all(hosts.map(host => db.doc(`portal_domains/${clean(host)}`).set({ ...publicDomain(after.id, school, clean(host)), status: suspended ? 'suspended' : 'active' }, { merge: true })));
 });
-exports.__test__ = { validSlug, validHost, RESERVED, LIFECYCLE_STATUSES, TRIAL_DAYS, SUPPORT_ACCESS_MAX_MINUTES, ADMIN_ACTIONS };
+exports.__test__ = { validSlug, validHost, RESERVED, LIFECYCLE_STATUSES, TRIAL_DAYS, SUPPORT_ACCESS_MAX_MINUTES, ADMIN_ACTIONS, ACCESS_MODE_FOR_STATUS };

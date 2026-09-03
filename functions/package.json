@@ -24,6 +24,8 @@
     "test:create-parent-access-code:emulator": "firebase emulators:exec --only firestore,auth --project demo-create-parent-access-code-test \"node --test test/create_parent_access_code.emulator.test.cjs\"",
     "test:storage-rules": "firebase emulators:exec --only firestore,storage --project demo-school-pulse-storage-rules-test \"node --test test/storage.rules.test.cjs\"",
     "test:platform-health:emulator": "firebase emulators:exec --only firestore,auth --project demo-platform-health-test \"node --test test/platform_health.emulator.test.cjs\"",
+    "test:academic-calendar-billing": "node academic_calendar_billing.test.js",
+    "test:academic-calendar-billing:emulator": "firebase emulators:exec --only firestore --project demo-academic-calendar-billing-test \"node --test test/academic_calendar_billing.emulator.test.cjs\"",
     "logs": "firebase functions:log",
     "deploy": "firebase deploy --only functions"
   },

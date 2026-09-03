@@ -3183,3 +3183,110 @@ describe('Financial Entitlements (functions/financial_entitlements.js): '
   });
 });
 
+// Term-based SaaS billing Phase 1 (functions/academic_calendar_billing.js).
+// subscription_cycles mirrors payment_transactions: tenant-scoped read,
+// Cloud-Functions-only write. academic_terms gets defense-in-depth so a
+// client can never set isConfirmed: true directly (confirmation only
+// happens through the confirmAcademicCalendar callable, which uses the
+// Admin SDK and bypasses these rules entirely).
+describe('Term billing Phase 1: subscription_cycles + academic_terms.isConfirmed', () => {
+  async function seedCycles() {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await Promise.all([
+        setDoc(doc(db, 'subscription_cycles', 'schoolA_term1'), {
+          schoolId: 'schoolA', subscriptionId: 'schoolA', academicYearId: 'yearA',
+          termId: 'term1', termNumber: 1, paymentStatus: 'unpaid', cycleStatus: 'upcoming',
+        }),
+        setDoc(doc(db, 'subscription_cycles', 'schoolB_term1'), {
+          schoolId: 'schoolB', subscriptionId: 'schoolB', academicYearId: 'yearB',
+          termId: 'term1', termNumber: 1, paymentStatus: 'unpaid', cycleStatus: 'upcoming',
+        }),
+      ]);
+    });
+  }
+
+  test('subscription_cycles: same-school staff can read, other-school staff cannot', async () => {
+    await seedCycles();
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'subscription_cycles', 'schoolA_term1')));
+    await assertSucceeds(getDoc(doc(dbFor('bursarA'), 'subscription_cycles', 'schoolA_term1')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'subscription_cycles', 'schoolA_term1')));
+    await assertFails(getDoc(doc(dbFor('adminA'), 'subscription_cycles', 'schoolB_term1')));
+  });
+
+  test('subscription_cycles: SaaS owner can read across schools, unauthenticated cannot read', async () => {
+    await seedCycles();
+    await assertSucceeds(getDoc(doc(dbFor('ownerA'), 'subscription_cycles', 'schoolA_term1')));
+    await assertSucceeds(getDoc(doc(dbFor('ownerA'), 'subscription_cycles', 'schoolB_term1')));
+    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'subscription_cycles', 'schoolA_term1')));
+  });
+
+  test('subscription_cycles: no client write is ever permitted, including by the owning school or the owner', async () => {
+    await assertFails(setDoc(doc(dbFor('adminA'), 'subscription_cycles', 'forged'), {
+      schoolId: 'schoolA', cycleStatus: 'paid',
+    }));
+    await assertFails(setDoc(doc(dbFor('ownerA'), 'subscription_cycles', 'forged2'), {
+      schoolId: 'schoolA', cycleStatus: 'paid',
+    }));
+  });
+
+  test('academic_terms: client create cannot set isConfirmed: true', async () => {
+    await assertFails(setDoc(doc(dbFor('adminA'), 'academic_terms', 'newTerm'), {
+      schoolId: 'schoolA', academicYearId: 'yearA', name: 'Term 1', order: 1,
+      isConfirmed: true,
+    }));
+    await assertSucceeds(setDoc(doc(dbFor('adminA'), 'academic_terms', 'newTerm2'), {
+      schoolId: 'schoolA', academicYearId: 'yearA', name: 'Term 1', order: 1,
+      isConfirmed: false,
+    }));
+  });
+
+  test('academic_terms: client cannot flip isConfirmed to true via update, and cannot modify an already-confirmed term at all', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'academic_terms', 'draftTerm'), {
+        schoolId: 'schoolA', academicYearId: 'yearA', name: 'Term 1', order: 1, isConfirmed: false,
+      });
+      await setDoc(doc(context.firestore(), 'academic_terms', 'confirmedTerm'), {
+        schoolId: 'schoolA', academicYearId: 'yearA', name: 'Term 2', order: 2, isConfirmed: true,
+      });
+    });
+    // Draft term: client can update it as long as isConfirmed stays false.
+    await assertSucceeds(updateDoc(doc(dbFor('adminA'), 'academic_terms', 'draftTerm'), { name: 'Term 1 (renamed)' }));
+    // Draft term: client cannot flip isConfirmed to true via update.
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'academic_terms', 'draftTerm'), { isConfirmed: true }));
+    // Already-confirmed term: no client update at all, even one that leaves isConfirmed alone.
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'academic_terms', 'confirmedTerm'), { name: 'Renamed' }));
+  });
+});
+
+describe('Term billing Phase 3A: student_pricing_bands', () => {
+  async function seedBand() {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'student_pricing_bands', 'band1'), {
+        minStudents: 1, maxStudents: 300, amountUgx: 350000, isActive: true,
+      });
+    });
+  }
+
+  test('student_pricing_bands: any authenticated staff can read, unauthenticated cannot', async () => {
+    await seedBand();
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'student_pricing_bands', 'band1')));
+    await assertSucceeds(getDoc(doc(dbFor('teacherB'), 'student_pricing_bands', 'band1')));
+    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'student_pricing_bands', 'band1')));
+  });
+
+  test('student_pricing_bands: only the SaaS owner may write directly; school admin/staff cannot', async () => {
+    // The rule is a defense-in-depth outer boundary (isSuperAdmin()) - real
+    // overlap/immutability validation happens in the createPricingBand/
+    // updatePricingBand/deactivatePricingBand callables, not here.
+    await assertFails(setDoc(doc(dbFor('adminA'), 'student_pricing_bands', 'forged'), {
+      minStudents: 1, maxStudents: 300, amountUgx: 1, isActive: true,
+    }));
+    await assertSucceeds(setDoc(doc(dbFor('ownerA'), 'student_pricing_bands', 'forged2'), {
+      minStudents: 1, maxStudents: 300, amountUgx: 1, isActive: true,
+    }));
+    await seedBand();
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'student_pricing_bands', 'band1'), { amountUgx: 1 }));
+  });
+});
+

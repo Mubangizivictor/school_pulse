@@ -372,6 +372,19 @@ class ArchiveAcademicTermRequested extends StructureEvent {
   List<Object?> get props => [termId];
 }
 
+/// Calls the confirmAcademicCalendar Cloud Function callable
+/// (functions/academic_calendar_billing.js) to server-side validate and
+/// confirm this school's academic terms, generating one subscription_cycles
+/// doc per confirmed term. [termIds] null confirms every non-archived term
+/// for the school; a non-null list confirms only those terms.
+class ConfirmAcademicCalendarRequested extends StructureEvent {
+  final String schoolId;
+  final List<String>? termIds;
+  const ConfirmAcademicCalendarRequested(this.schoolId, {this.termIds});
+  @override
+  List<Object?> get props => [schoolId, termIds];
+}
+
 class SaveClassRequested extends StructureEvent {
   final SchoolClass schoolClass;
   const SaveClassRequested(this.schoolClass);

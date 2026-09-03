@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/components/pulse_card.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/billing/data/datasources/subscription_cycle_remote_data_source.dart';
+import 'package:school_pulse/features/billing/domain/entities/subscription_cycle.dart';
+import 'package:school_pulse/features/billing/presentation/utils/subscription_cycle_status_ui.dart';
 import 'package:school_pulse/features/super_admin/data/services/manual_payment_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/manual_subscription_payment.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/school.dart';
-import 'package:school_pulse/features/super_admin/domain/entities/subscription_plan.dart';
 
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
@@ -18,7 +21,7 @@ import '../responsive.dart';
 import 'billing_page.dart';
 import 'manual_payment_config_screen.dart';
 import 'payment_review_screen.dart';
-import 'subscription_plans_screen.dart';
+import 'student_pricing_screen.dart';
 import 'subscriptions_overview_screen.dart';
 
 enum _Period { today, thisWeek, thisMonth, thisYear, all }
@@ -77,12 +80,15 @@ class BillingHomeScreen extends StatefulWidget {
 
 class _BillingHomeScreenState extends State<BillingHomeScreen> {
   final ManualPaymentService _payments = ManualPaymentService();
+  final SubscriptionCycleRemoteDataSource _cycles =
+      SubscriptionCycleRemoteDataSource();
   final NumberFormat _ugx = NumberFormat.currency(
     symbol: 'UGX ',
     decimalDigits: 0,
   );
 
   List<ManualSubscriptionPayment>? _items;
+  List<SubscriptionCycle>? _upcomingCycles;
   bool _loading = true;
   String? _error;
   _Period _period = _Period.thisMonth;
@@ -105,9 +111,18 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
     });
     try {
       final items = await _payments.getPayments();
+      // Upcoming renewals is best-effort: a failure here shouldn't block
+      // the rest of the billing dashboard from loading.
+      List<SubscriptionCycle> cycles = const [];
+      try {
+        cycles = await _cycles.getAllUpcomingSubscriptionCycles();
+      } catch (_) {
+        cycles = const [];
+      }
       if (!mounted) return;
       setState(() {
         _items = items;
+        _upcomingCycles = cycles;
         _loading = false;
       });
     } catch (_) {
@@ -181,7 +196,9 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
           const SizedBox(height: 14),
           _needsReviewSection(context),
           const SizedBox(height: 14),
-          _planPerformanceSection(context, state),
+          _pricingBandsSection(context, state),
+          const SizedBox(height: 14),
+          _upcomingRenewalsSection(context, state),
           const SizedBox(height: 14),
           _actionsRow(context, wide),
         ],
@@ -204,15 +221,15 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
           s.status == SchoolStatus.active &&
           s.subscriptionExpiry.isBefore(DateTime.now()),
     ).length;
-    final mrr = _estimatedMonthlyRevenue(state.schools, state.plans);
+    final termlyRevenue = _termlyPricedRevenue(_upcomingCycles ?? const []);
 
     final cards = [
       PlatformMetricCard(
         icon: Icons.show_chart_rounded,
         color: AppColors.information(context),
-        label: 'MRR (UGX)',
-        value: _formatCompact(mrr),
-        detail: 'Recurring monthly',
+        label: 'Termly revenue (UGX)',
+        value: _formatCompact(termlyRevenue),
+        detail: 'Priced upcoming cycles',
       ),
       PlatformMetricCard(
         icon: Icons.check_circle_outline_rounded,
@@ -285,32 +302,50 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
     );
   }
 
-  Widget _planPerformanceSection(BuildContext context, SuperAdminState state) {
-    final plans = [...state.plans]
-      ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-    final schoolsByPlan = <String, List<School>>{};
-    for (final school in state.schools) {
-      schoolsByPlan.putIfAbsent(school.subscriptionPlanId, () => []).add(school);
+  /// Replaces the old plan-performance rollup: groups the upcoming-cycles
+  /// preview (already loaded for [_upcomingRenewalsSection]) by
+  /// `pricingSnapshot.bandId` and shows how many schools currently fall in
+  /// each band plus the termly revenue that band represents. This is a
+  /// preview derived from the same bounded (50-cycle) cross-school feed as
+  /// "Upcoming renewals", not a full report - [StudentPricingScreen] is the
+  /// source of truth for the band catalog itself.
+  Widget _pricingBandsSection(BuildContext context, SuperAdminState state) {
+    final cycles = (_upcomingCycles ?? const [])
+        .where((c) => c.pricingSnapshot != null)
+        .toList();
+    final schoolsByBand = <String, Set<String>>{};
+    final revenueByBand = <String, int>{};
+    final rangeByBand = <String, (int, int?)>{};
+    for (final cycle in cycles) {
+      final pricing = cycle.pricingSnapshot!;
+      schoolsByBand.putIfAbsent(pricing.bandId, () => {}).add(cycle.schoolId);
+      revenueByBand.update(
+        pricing.bandId,
+        (value) => value + pricing.amountUgx,
+        ifAbsent: () => pricing.amountUgx,
+      );
+      rangeByBand[pricing.bandId] = (pricing.minStudents, pricing.maxStudents);
     }
+    final bandIds = schoolsByBand.keys.toList()
+      ..sort((a, b) => (rangeByBand[a]?.$1 ?? 0).compareTo(rangeByBand[b]?.$1 ?? 0));
+
     return _SectionCard(
-      title: 'Plan performance',
-      actionLabel: plans.isEmpty ? null : 'View all',
-      onAction: plans.isEmpty ? null : () => _openPlans(context),
-      child: plans.isEmpty
+      title: 'Pricing bands',
+      actionLabel: 'Manage',
+      onAction: () => _openPlans(context),
+      child: bandIds.isEmpty
           ? const _CompactEmpty(
-              'No subscription plans configured yet.',
-              title: 'No plans yet',
+              'No priced upcoming cycles yet.',
+              title: 'No pricing data',
             )
           : Column(
               children: [
-                for (final (i, plan) in plans.indexed) ...[
+                for (final (i, bandId) in bandIds.indexed) ...[
                   if (i > 0) Divider(height: 1, color: AppColors.border(context)),
-                  PlanPerformanceRow(
-                    plan: plan,
-                    schoolCount: schoolsByPlan[plan.id]?.length ?? 0,
-                    monthlyRevenue: _formatCompact(
-                      _planMonthlyRevenue(plan, schoolsByPlan[plan.id] ?? const []),
-                    ),
+                  _PricingBandRow(
+                    rangeLabel: _bandRangeLabel(rangeByBand[bandId]),
+                    schoolCount: schoolsByBand[bandId]!.length,
+                    termlyRevenue: _formatCompact(revenueByBand[bandId] ?? 0),
                     onTap: () => _openPlans(context),
                   ),
                 ],
@@ -319,12 +354,59 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
     );
   }
 
+  static String _bandRangeLabel((int, int?)? range) {
+    if (range == null) return 'Unknown band';
+    final formatter = NumberFormat('#,##0', 'en_UG');
+    final (min, max) = range;
+    if (max == null) return '${formatter.format(min)}+ learners';
+    return '${formatter.format(min)}–${formatter.format(max)} learners';
+  }
+
+  /// Cross-school preview of upcoming/at-risk term cycles, sourced from
+  /// `subscription_cycles` (Phase 1/2A backend). Schools without a school
+  /// name in [SuperAdminState.schools] are skipped rather than shown with a
+  /// raw schoolId - this is a preview list, not a debug view.
+  Widget _upcomingRenewalsSection(BuildContext context, SuperAdminState state) {
+    final schoolNames = {for (final s in state.schools) s.id: s.name};
+    final cycles = (_upcomingCycles ?? const [])
+        .where((c) => schoolNames.containsKey(c.schoolId))
+        .toList()
+      ..sort((a, b) => a.paymentDueAt.compareTo(b.paymentDueAt));
+
+    return _SectionCard(
+      title: 'Upcoming renewals',
+      actionLabel: cycles.isEmpty ? null : 'View all',
+      onAction: cycles.isEmpty ? null : () => _openSubscriptions(context),
+      child: _loading && _upcomingCycles == null
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(child: SchoolPulseLoader()),
+            )
+          : cycles.isEmpty
+              ? const _CompactEmpty(
+                  'No term cycles are due for renewal soon.',
+                  title: 'Nothing upcoming',
+                )
+              : Column(
+                  children: [
+                    for (final (i, cycle) in cycles.take(5).indexed) ...[
+                      if (i > 0) Divider(height: 1, color: AppColors.border(context)),
+                      _UpcomingRenewalRow(
+                        schoolName: schoolNames[cycle.schoolId] ?? '—',
+                        cycle: cycle,
+                      ),
+                    ],
+                  ],
+                ),
+    );
+  }
+
   Widget _actionsRow(BuildContext context, bool wide) {
     final actions = [
       _ActionCard(
         icon: Icons.sell_outlined,
-        title: 'Manage plans',
-        subtitle: 'Create and manage plans',
+        title: 'Student pricing',
+        subtitle: 'Manage pricing bands',
         onTap: () => _openPlans(context),
       ),
       _ActionCard(
@@ -374,7 +456,7 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
 
   void _openPlans(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SubscriptionPlansScreen()),
+      MaterialPageRoute(builder: (_) => const StudentPricingScreen()),
     );
   }
 
@@ -708,17 +790,59 @@ class PaymentReviewRow extends StatelessWidget {
   );
 }
 
-class PlanPerformanceRow extends StatelessWidget {
-  const PlanPerformanceRow({
-    super.key,
-    required this.plan,
+class _UpcomingRenewalRow extends StatelessWidget {
+  const _UpcomingRenewalRow({required this.schoolName, required this.cycle});
+  final String schoolName;
+  final SubscriptionCycle cycle;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 10),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                schoolName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _rowTitle(context),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Term ${cycle.termNumber} · Due ${DateFormat('MMM d, yyyy').format(cycle.paymentDueAt)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _rowBody(context),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        StatusBadge(
+          label: cycleStatusLabel(cycle.cycleStatus),
+          color: cycleStatusColor(context, cycle.cycleStatus),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Replaces the old PlanPerformanceRow: one pricing band's school count and
+/// termly revenue, derived from `subscription_cycles.pricingSnapshot` rather
+/// than a plan.
+class _PricingBandRow extends StatelessWidget {
+  const _PricingBandRow({
+    required this.rangeLabel,
     required this.schoolCount,
-    required this.monthlyRevenue,
+    required this.termlyRevenue,
     required this.onTap,
   });
-  final SubscriptionPlan plan;
+  final String rangeLabel;
   final int schoolCount;
-  final String monthlyRevenue;
+  final String termlyRevenue;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => InkWell(
@@ -735,7 +859,7 @@ class PlanPerformanceRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              plan.isPopular ? Icons.workspace_premium_outlined : Icons.sell_outlined,
+              Icons.groups_outlined,
               size: 17,
               color: AppColors.information(context),
             ),
@@ -745,7 +869,12 @@ class PlanPerformanceRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(plan.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: _rowTitle(context)),
+                Text(
+                  rangeLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: _rowTitle(context),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   '$schoolCount ${schoolCount == 1 ? 'school' : 'schools'}',
@@ -755,7 +884,7 @@ class PlanPerformanceRow extends StatelessWidget {
             ),
           ),
           Text(
-            monthlyRevenue,
+            termlyRevenue,
             style: AppTypography.labelLarge.copyWith(
               color: AppColors.textPrimary(context),
               fontWeight: FontWeight.w700,
@@ -930,33 +1059,15 @@ class _ErrorCard extends StatelessWidget {
   );
 }
 
-int _estimatedMonthlyRevenue(List<School> schools, List<SubscriptionPlan> plans) {
-  final plansById = {for (final plan in plans) plan.id: plan};
-  return schools
-      .where((school) => school.status == SchoolStatus.active)
-      .fold<double>(0, (total, school) {
-        final plan = plansById[school.subscriptionPlanId];
-        if (plan == null || plan.customPricing) return total;
-        final monthlyPrice = switch (plan.billingCycle) {
-          BillingCycle.monthly => plan.price,
-          BillingCycle.termly => plan.price * 30 / plan.termLengthDays,
-          BillingCycle.yearly => plan.price / 12,
-        };
-        return total + monthlyPrice;
-      })
-      .round();
-}
-
-double _planMonthlyRevenue(SubscriptionPlan plan, List<School> schools) {
-  if (plan.customPricing) return 0;
-  final active = schools.where((s) => s.status == SchoolStatus.active).length;
-  final monthlyPrice = switch (plan.billingCycle) {
-    BillingCycle.monthly => plan.price,
-    BillingCycle.termly => plan.price * 30 / plan.termLengthDays,
-    BillingCycle.yearly => plan.price / 12,
-  };
-  return monthlyPrice * active;
-}
+/// Sum of `pricingSnapshot.amountUgx` across the (bounded, 50-cycle)
+/// upcoming-cycles preview. Replaces the old plan-based MRR estimate - there
+/// is no monthly/annual billing any more, only termly pricing-band amounts,
+/// so this reports termly (not monthly) revenue and is explicitly scoped to
+/// "priced upcoming cycles" rather than claiming to be a full recurring-
+/// revenue figure.
+int _termlyPricedRevenue(List<SubscriptionCycle> cycles) => cycles
+    .map((c) => c.pricingSnapshot?.amountUgx ?? 0)
+    .fold<int>(0, (a, b) => a + b);
 
 String _formatCompact(num value) =>
     NumberFormat.compactCurrency(symbol: 'UGX ', decimalDigits: 0).format(value);

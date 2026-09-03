@@ -558,7 +558,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     if (term == null) {
       transaction.update(target, {'isCurrent': true, 'isArchived': false});
     } else {
-      transaction.set(target, _termToMap(term));
+      // merge:true - _termToMap deliberately omits isConfirmed (server-only
+      // field); a non-merge set here would otherwise silently reset an
+      // already-confirmed term back to unconfirmed every time it's made
+      // current via a full-entity save.
+      transaction.set(target, _termToMap(term), SetOptions(merge: true));
     }
   });
 
@@ -585,9 +589,16 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         orElse: () => AcademicPeriodType.term,
       ),
       isArchived: map['isArchived'] ?? false,
+      isConfirmed: map['isConfirmed'] ?? false,
     );
   }
 
+  // Deliberately omits `isConfirmed` - confirmation is server-side only via
+  // the confirmAcademicCalendar callable (functions/academic_calendar_billing.js).
+  // firestore.rules blocks any client write that touches isConfirmed as
+  // defense-in-depth; this map simply never offers the field so a plain
+  // merge-write from this datasource can never accidentally trip that rule
+  // or silently flip a term to confirmed.
   Map<String, dynamic> _termToMap(AcademicTerm e) => {
     'schoolId': e.schoolId,
     'academicYearId': e.academicYearId,

@@ -1605,9 +1605,18 @@ service cloud.firestore {
     }
     match /academic_terms/{id} {
       allow read: if isSignedIn() && (resource == null || isSameSchool(resource.data.schoolId));
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
+      // isConfirmed defense-in-depth: confirmation (and the
+      // subscription_cycles it generates) must go through the
+      // confirmAcademicCalendar callable only (Admin SDK, bypasses rules).
+      // A client create can never set isConfirmed: true; once a term is
+      // confirmed, clients cannot touch that field at all (no flipping it
+      // back to false, no re-confirming client-side).
+      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
+        request.resource.data.get('isConfirmed', false) == false;
       allow update: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
-        schoolIdUnchanged();
+        schoolIdUnchanged() &&
+        (resource.data.get('isConfirmed', false) == false) &&
+        request.resource.data.get('isConfirmed', false) == false;
       allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
     match /classes/{id} {
@@ -2079,6 +2088,14 @@ service cloud.firestore {
       allow read: if isSuperAdmin() || isSameSchool(resource.data.schoolId);
       allow write: if false;
     }
+    // Term-based SaaS billing Phase 1 (functions/academic_calendar_billing.js:
+    // confirmAcademicCalendar). Same shape as payment_transactions above -
+    // tenant-scoped read only, Cloud-Functions-only write. Never written by
+    // any client, including the school that owns the cycle.
+    match /subscription_cycles/{id} {
+      allow read: if isSuperAdmin() || isSameSchool(resource.data.schoolId);
+      allow write: if false;
+    }
     // MTN Mobile Money Collections payment attempts. Named mtn_payments
     // (not payments) deliberately - a top-level payments/{docId} collection
     // already exists above (line ~369) for the unrelated Finance/Bursar
@@ -2481,6 +2498,33 @@ service cloud.firestore {
     match /subscription_addons/{id} {
       // Same shared-catalog shape as subscription_plans above.
       allow read: if isStaff();
+      allow write: if isSuperAdmin();
+    }
+    match /student_pricing_bands/{id} {
+      // Phase 3A: platform-wide, non-tenant-scoped pricing table that
+      // replaces plan-based pricing (subscription_plans stays untouched for
+      // history). Same shared-catalog shape as subscription_plans/
+      // subscription_addons directly above: bands carry no sensitive data
+      // (a price list, not a student or financial record), and Phase 3C's
+      // School Admin UI needs to read "which band applies to us" without a
+      // callable round-trip, so the narrowest reasonable read scope is
+      // isStaff() - any signed-in non-parent/non-student user, mirroring
+      // the two collections above rather than inventing a narrower rule.
+      //
+      // Also publicly readable when isActive == true: the marketing site's
+      // pricing page (web_marketing/pricing.html, unauthenticated visitors)
+      // renders live termly pricing from this collection instead of a
+      // hardcoded table, and this pricing is meant to be public information
+      // regardless of the viewer's auth state. Inactive/future-effective/
+      // superseded bands (and their createdBy/updatedBy/audit history) stay
+      // staff-only - only a currently-active band's price is public.
+      //
+      // Only the platform owner (isSuperAdmin()) may write; all mutations
+      // additionally go through createPricingBand/updatePricingBand/
+      // deactivatePricingBand (functions/student_pricing_bands.js) for
+      // overlap/immutability validation - this rule is the outer boundary,
+      // not the validator.
+      allow read: if isStaff() || resource.data.isActive == true;
       allow write: if isSuperAdmin();
     }
     match /school_admin_invitations/{id} {

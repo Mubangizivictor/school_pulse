@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/error/friendly_error_message.dart';
 import '../../domain/repositories/super_admin_repository.dart';
 import '../../domain/entities/audit_log.dart';
 import '../../domain/entities/school.dart';
@@ -34,7 +35,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       final logs = await repository.getAuditLogs(schoolId: event.schoolId);
       emit(state.copyWith(auditLogs: logs, clearErrorMessage: true));
     } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(errorMessage: friendlyErrorMessage(e)));
     }
   }
 
@@ -56,7 +57,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       );
       emit(state.copyWith(supportModeSchoolId: event.schoolId));
     } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(errorMessage: friendlyErrorMessage(e)));
     }
   }
 
@@ -116,7 +117,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       emit(
         state.copyWith(
           status: SuperAdminStatus.failure,
-          errorMessage: e.toString(),
+          errorMessage: friendlyErrorMessage(e),
         ),
       );
     }
@@ -159,7 +160,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       emit(
         state.copyWith(
           clearReviewingApplicationId: true,
-          errorMessage: e.toString(),
+          errorMessage: friendlyErrorMessage(e),
         ),
       );
     }
@@ -199,7 +200,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       emit(
         state.copyWith(
           clearReviewingApplicationId: true,
-          errorMessage: e.toString(),
+          errorMessage: friendlyErrorMessage(e),
         ),
       );
     }
@@ -230,7 +231,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
 
       add(LoadSuperAdminDashboard());
     } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(errorMessage: friendlyErrorMessage(e)));
     }
   }
 
@@ -254,7 +255,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
 
       add(LoadSuperAdminDashboard());
     } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(errorMessage: friendlyErrorMessage(e)));
     }
   }
 
@@ -273,7 +274,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
 
       add(LoadSuperAdminDashboard());
     } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(errorMessage: friendlyErrorMessage(e)));
     }
   }
 
@@ -310,7 +311,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
 
       add(LoadSuperAdminDashboard());
     } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(errorMessage: friendlyErrorMessage(e)));
     }
   }
 }

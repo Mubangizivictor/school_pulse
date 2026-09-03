@@ -8,6 +8,8 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 
+import 'package:school_pulse/core/error/friendly_error_message.dart';
+
 import '../../data/services/school_admin_management_service.dart';
 import '../../domain/entities/school.dart';
 import '../../domain/repositories/super_admin_repository.dart';
@@ -66,7 +68,7 @@ class _SchoolAdminManagementScreenState
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = error.toString().replaceFirst(RegExp(r'^\w+Error:\s*'), '');
+        _error = friendlyErrorMessage(error);
       });
     }
   }
@@ -290,7 +292,7 @@ class _SchoolAdminManagementScreenState
                                     ScaffoldMessenger.of(sheetContext).showSnackBar(
                                       SnackBar(
                                         content: Text(
-                                          e.toString().replaceFirst(RegExp(r'^\w+Error:\s*'), ''),
+                                          friendlyErrorMessage(e),
                                         ),
                                       ),
                                     );
@@ -375,7 +377,7 @@ class _SchoolAdminManagementScreenState
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        e.toString().replaceFirst(RegExp(r'^\w+Error:\s*'), ''),
+                        friendlyErrorMessage(e),
                       ),
                     ),
                   );

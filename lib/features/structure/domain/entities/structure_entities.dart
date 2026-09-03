@@ -140,6 +140,15 @@ class AcademicTerm extends Equatable {
   final AcademicPeriodType periodType;
   final bool isArchived;
 
+  /// True once this term's calendar has been confirmed via the
+  /// `confirmAcademicCalendar` Cloud Function callable (billing/
+  /// subscription_cycles generation keys off this, at the term level, not
+  /// the year level - each term gets its own renewal cycle). Clients cannot
+  /// set this directly; firestore.rules blocks it and the callable
+  /// re-validates and writes it server-side. Defaults to false so existing
+  /// and newly-drafted terms are never silently treated as confirmed.
+  final bool isConfirmed;
+
   const AcademicTerm({
     required this.id,
     required this.schoolId,
@@ -151,6 +160,7 @@ class AcademicTerm extends Equatable {
     this.isCurrent = false,
     this.periodType = AcademicPeriodType.term,
     this.isArchived = false,
+    this.isConfirmed = false,
   });
 
   AcademicTerm copyWith({
@@ -164,6 +174,7 @@ class AcademicTerm extends Equatable {
     bool? isCurrent,
     AcademicPeriodType? periodType,
     bool? isArchived,
+    bool? isConfirmed,
   }) {
     return AcademicTerm(
       id: id ?? this.id,
@@ -176,6 +187,7 @@ class AcademicTerm extends Equatable {
       isCurrent: isCurrent ?? this.isCurrent,
       periodType: periodType ?? this.periodType,
       isArchived: isArchived ?? this.isArchived,
+      isConfirmed: isConfirmed ?? this.isConfirmed,
     );
   }
 
@@ -191,6 +203,7 @@ class AcademicTerm extends Equatable {
     isCurrent,
     periodType,
     isArchived,
+    isConfirmed,
   ];
 }
 

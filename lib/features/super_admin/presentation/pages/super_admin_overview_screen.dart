@@ -247,6 +247,7 @@ class _CompactTopBar extends StatelessWidget {
               'School Pulse Admin',
               style: AppTypography.titleMedium.copyWith(
                 color: AppColors.textPrimary(context),
+                fontSize: 24,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -453,7 +454,7 @@ class _QuickActions extends StatelessWidget {
     final actions = [
       (Icons.add_business_outlined, 'Create', onCreateSchool),
       (Icons.assignment_outlined, 'Review', onApplications),
-      (Icons.sell_outlined, 'Plans', onPlans),
+      (Icons.sell_outlined, 'Student pricing', onPlans),
       (Icons.shield_outlined, 'Audit', onAudit),
     ];
     return LayoutBuilder(

@@ -19,11 +19,23 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('shows real plan, renewal and days-remaining state, not a black block', () {
-    expect(source.contains('school.subscriptionPlanId'), isTrue);
+  test('shows real renewal and days-remaining state, not a black block', () {
     expect(source.contains('school.subscriptionExpiry'), isTrue);
     expect(source.contains('daysRemaining'), isTrue);
     expect(source.contains('Colors.black'), isFalse);
+  });
+
+  test('shows verified-student-count pricing, not a plan name/price', () {
+    expect(source.contains('cycle.planSnapshot'), isFalse);
+    expect(source.contains('pricingSnapshot'), isTrue);
+    expect(source.contains('Pricing review needed'), isTrue);
+    expect(source.contains('Termly student pricing'), isTrue);
+    expect(
+      source.contains(
+        'All School Pulse features are included for this school.',
+      ),
+      isTrue,
+    );
   });
 
   test('recent payments are scoped to this school and show status chips', () {
@@ -44,5 +56,30 @@ void main() {
 
   test('Manage subscription is present and reaches subscription management', () {
     expect(source.contains('Manage subscription'), isTrue);
+  });
+
+  test('Term cycle history section is present, reads from subscription_cycles, and clones the payments-list shape', () {
+    expect(source.contains("'Term cycle history'"), isTrue);
+    expect(source.contains('_buildCyclesList'), isTrue);
+    expect(source.contains('getSubscriptionCyclesForSchool'), isTrue);
+    expect(source.contains('ListView.separated('), isTrue);
+    expect(source.contains('shrinkWrap: true'), isTrue);
+    expect(source.contains('NeverScrollableScrollPhysics()'), isTrue);
+  });
+
+  test('cycle rows show a status badge via the shared mapping, not raw Colors', () {
+    expect(source.contains('cycleStatusLabel(cycle.cycleStatus)'), isTrue);
+    expect(source.contains('cycleStatusColor(context, cycle.cycleStatus)'), isTrue);
+  });
+
+  test('compact current-cycle info block shows term price, band, verified learners, invoice/due/grace dates, no raw IDs', () {
+    expect(source.contains('_CurrentCycleInfoBlock'), isTrue);
+    expect(source.contains("'Term price'"), isTrue);
+    expect(source.contains("'Verified learners'"), isTrue);
+    expect(source.contains("'Band'"), isTrue);
+    expect(source.contains("'Amount due'"), isTrue);
+    expect(source.contains("'Payment due'"), isTrue);
+    expect(source.contains("'Grace ends'"), isTrue);
+    expect(source.contains('cycle.id'), isFalse);
   });
 }

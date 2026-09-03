@@ -2781,38 +2781,43 @@ const AcademicTermIsarSchema = CollectionSchema(
       name: r'isArchived',
       type: IsarType.bool,
     ),
-    r'isCurrent': PropertySchema(
+    r'isConfirmed': PropertySchema(
       id: 3,
+      name: r'isConfirmed',
+      type: IsarType.bool,
+    ),
+    r'isCurrent': PropertySchema(
+      id: 4,
       name: r'isCurrent',
       type: IsarType.bool,
     ),
     r'name': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'name',
       type: IsarType.string,
     ),
     r'order': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'order',
       type: IsarType.long,
     ),
     r'periodType': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'periodType',
       type: IsarType.string,
     ),
     r'schoolId': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'schoolId',
       type: IsarType.string,
     ),
     r'startDate': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'startDate',
       type: IsarType.dateTime,
     ),
     r'termId': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'termId',
       type: IsarType.string,
     )
@@ -2868,13 +2873,14 @@ void _academicTermIsarSerialize(
   writer.writeString(offsets[0], object.academicYearId);
   writer.writeDateTime(offsets[1], object.endDate);
   writer.writeBool(offsets[2], object.isArchived);
-  writer.writeBool(offsets[3], object.isCurrent);
-  writer.writeString(offsets[4], object.name);
-  writer.writeLong(offsets[5], object.order);
-  writer.writeString(offsets[6], object.periodType);
-  writer.writeString(offsets[7], object.schoolId);
-  writer.writeDateTime(offsets[8], object.startDate);
-  writer.writeString(offsets[9], object.termId);
+  writer.writeBool(offsets[3], object.isConfirmed);
+  writer.writeBool(offsets[4], object.isCurrent);
+  writer.writeString(offsets[5], object.name);
+  writer.writeLong(offsets[6], object.order);
+  writer.writeString(offsets[7], object.periodType);
+  writer.writeString(offsets[8], object.schoolId);
+  writer.writeDateTime(offsets[9], object.startDate);
+  writer.writeString(offsets[10], object.termId);
 }
 
 AcademicTermIsar _academicTermIsarDeserialize(
@@ -2888,13 +2894,14 @@ AcademicTermIsar _academicTermIsarDeserialize(
   object.endDate = reader.readDateTime(offsets[1]);
   object.id = id;
   object.isArchived = reader.readBool(offsets[2]);
-  object.isCurrent = reader.readBool(offsets[3]);
-  object.name = reader.readString(offsets[4]);
-  object.order = reader.readLong(offsets[5]);
-  object.periodType = reader.readString(offsets[6]);
-  object.schoolId = reader.readString(offsets[7]);
-  object.startDate = reader.readDateTime(offsets[8]);
-  object.termId = reader.readString(offsets[9]);
+  object.isConfirmed = reader.readBool(offsets[3]);
+  object.isCurrent = reader.readBool(offsets[4]);
+  object.name = reader.readString(offsets[5]);
+  object.order = reader.readLong(offsets[6]);
+  object.periodType = reader.readString(offsets[7]);
+  object.schoolId = reader.readString(offsets[8]);
+  object.startDate = reader.readDateTime(offsets[9]);
+  object.termId = reader.readString(offsets[10]);
   return object;
 }
 
@@ -2914,16 +2921,18 @@ P _academicTermIsarDeserializeProp<P>(
     case 3:
       return (reader.readBool(offset)) as P;
     case 4:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 5:
-      return (reader.readLong(offset)) as P;
-    case 6:
       return (reader.readString(offset)) as P;
+    case 6:
+      return (reader.readLong(offset)) as P;
     case 7:
       return (reader.readString(offset)) as P;
     case 8:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 9:
+      return (reader.readDateTime(offset)) as P;
+    case 10:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -3377,6 +3386,16 @@ extension AcademicTermIsarQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isArchived',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      isConfirmedEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isConfirmed',
         value: value,
       ));
     });
@@ -4100,6 +4119,20 @@ extension AcademicTermIsarQuerySortBy
   }
 
   QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      sortByIsConfirmed() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isConfirmed', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      sortByIsConfirmedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isConfirmed', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
       sortByIsCurrent() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isCurrent', Sort.asc);
@@ -4254,6 +4287,20 @@ extension AcademicTermIsarQuerySortThenBy
   }
 
   QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      thenByIsConfirmed() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isConfirmed', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      thenByIsConfirmedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isConfirmed', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
       thenByIsCurrent() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isCurrent', Sort.asc);
@@ -4375,6 +4422,13 @@ extension AcademicTermIsarQueryWhereDistinct
   }
 
   QueryBuilder<AcademicTermIsar, AcademicTermIsar, QDistinct>
+      distinctByIsConfirmed() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isConfirmed');
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QDistinct>
       distinctByIsCurrent() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isCurrent');
@@ -4448,6 +4502,12 @@ extension AcademicTermIsarQueryProperty
   QueryBuilder<AcademicTermIsar, bool, QQueryOperations> isArchivedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isArchived');
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, bool, QQueryOperations> isConfirmedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isConfirmed');
     });
   }
 

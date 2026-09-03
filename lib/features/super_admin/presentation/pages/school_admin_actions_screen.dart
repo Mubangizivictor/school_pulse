@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import 'package:school_pulse/core/error/friendly_error_message.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -64,9 +65,7 @@ class _SchoolAdminActionsScreenState extends State<SchoolAdminActionsScreen> {
       if (!mounted) return;
       setState(() {
         _loadingAdmins = false;
-        _adminsError = error
-            .toString()
-            .replaceFirst(RegExp(r'^\w+Error:\s*'), '');
+        _adminsError = friendlyErrorMessage(error);
       });
     }
   }
@@ -611,11 +610,7 @@ class _SupportSessionCardState extends State<_SupportSessionCard> {
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        e.toString().replaceFirst(RegExp(r'^\w+Error:\s*'), ''),
-                      ),
-                    ),
+                    SnackBar(content: Text(friendlyErrorMessage(e))),
                   );
                 }
               } finally {

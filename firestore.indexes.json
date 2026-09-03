@@ -713,6 +713,52 @@
       ]
     },
     {
+      "collectionGroup": "subscription_cycles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "schoolId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "termStart",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "subscription_cycles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "schoolId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "cycleStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "termStart",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "subscription_cycles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "pricingSnapshot.bandId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "invoiceIssuedAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "transport_stops",
       "queryScope": "COLLECTION",
       "fields": [

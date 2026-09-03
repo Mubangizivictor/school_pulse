@@ -7,6 +7,8 @@ import '../models/audit_log_model.dart';
 import '../models/school_application_model.dart';
 import '../../domain/repositories/super_admin_repository.dart'
     show SupportModeSession, SchoolAdminSummary;
+import 'package:school_pulse/features/billing/domain/entities/subscription_cycle.dart';
+import 'package:school_pulse/features/billing/data/datasources/subscription_cycle_remote_data_source.dart';
 
 abstract class SuperAdminRemoteDataSource {
   Future<List<SchoolModel>> getAllSchools();
@@ -59,6 +61,11 @@ abstract class SuperAdminRemoteDataSource {
   /// Queries the flat `users` collection for schoolAdmin-role accounts
   /// scoped to [schoolId]. There is no dedicated school-admins subcollection.
   Future<List<SchoolAdminSummary>> getSchoolAdmins(String schoolId);
+
+  Future<List<SubscriptionCycle>> getSubscriptionCyclesForSchool(
+    String schoolId,
+  );
+  Future<List<SubscriptionCycle>> getAllUpcomingSubscriptionCycles();
 }
 
 class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
@@ -66,6 +73,23 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
   final FirebaseAuth auth;
 
   SuperAdminRemoteDataSourceImpl({required this.firestore, required this.auth});
+
+  // Delegates to the shared cross-feature data source (see
+  // lib/features/billing/data/datasources/subscription_cycle_remote_data_source.dart)
+  // rather than duplicating the subscription_cycles query logic here - the
+  // School Admin calendar screen reads the same collection via that same
+  // shared class.
+  SubscriptionCycleRemoteDataSource get _cycles =>
+      SubscriptionCycleRemoteDataSource(firestore: firestore);
+
+  @override
+  Future<List<SubscriptionCycle>> getSubscriptionCyclesForSchool(
+    String schoolId,
+  ) => _cycles.getSubscriptionCyclesForSchool(schoolId);
+
+  @override
+  Future<List<SubscriptionCycle>> getAllUpcomingSubscriptionCycles() =>
+      _cycles.getAllUpcomingSubscriptionCycles();
 
   // public_functions/ (codebase "publicwebsite") - getSchoolApplicationsForOwner,
   // approveSchoolApplication, rejectSchoolApplication.

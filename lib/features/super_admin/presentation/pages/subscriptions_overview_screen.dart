@@ -7,12 +7,14 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/billing/data/datasources/subscription_cycle_remote_data_source.dart';
+import 'package:school_pulse/features/billing/domain/entities/subscription_cycle.dart';
+import 'package:school_pulse/features/billing/presentation/utils/subscription_cycle_status_ui.dart';
 import 'package:school_pulse/features/institution/domain/services/subscription_date_math.dart'
     as date_math;
 import 'package:school_pulse/features/super_admin/data/services/manual_payment_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/manual_subscription_payment.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/school.dart';
-import 'package:school_pulse/features/super_admin/domain/entities/subscription_plan.dart';
 
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
@@ -42,13 +44,19 @@ class SubscriptionsOverviewScreen extends StatefulWidget {
 class _SubscriptionsOverviewScreenState
     extends State<SubscriptionsOverviewScreen> {
   final ManualPaymentService _payments = ManualPaymentService();
+  final SubscriptionCycleRemoteDataSource _cycles =
+      SubscriptionCycleRemoteDataSource();
   final DateFormat _date = DateFormat('MMM dd, yyyy');
   final TextEditingController _searchController = TextEditingController();
 
   bool _loadingPending = true;
   int _pendingPaymentsCount = 0;
   String _search = '';
-  String _planFilter = 'all';
+
+  /// Most recent (by termStart) cycle per school, keyed by schoolId. Schools
+  /// with no confirmed calendar/cycles simply have no entry - the row shows
+  /// nothing extra for them rather than fabricating a status.
+  Map<String, SubscriptionCycle> _latestCycleBySchool = const {};
 
   @override
   void dispose() {
@@ -56,16 +64,10 @@ class _SubscriptionsOverviewScreenState
     super.dispose();
   }
 
-  bool _matchesSearch(School school, List<SubscriptionPlan> plans) {
+  bool _matchesSearch(School school) {
     if (_search.isEmpty) return true;
-    final q = _search.toLowerCase();
-    if (school.name.toLowerCase().contains(q)) return true;
-    final plan = _planName(plans, school.subscriptionPlanId).toLowerCase();
-    return plan.contains(q);
+    return school.name.toLowerCase().contains(_search.toLowerCase());
   }
-
-  bool _matchesPlan(School school) =>
-      _planFilter == 'all' || school.subscriptionPlanId == _planFilter;
 
   @override
   void initState() {
@@ -74,6 +76,25 @@ class _SubscriptionsOverviewScreenState
       context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
     }
     _loadPendingPayments();
+    _loadUpcomingCycles();
+  }
+
+  Future<void> _loadUpcomingCycles() async {
+    try {
+      final cycles = await _cycles.getAllUpcomingSubscriptionCycles();
+      if (!mounted) return;
+      final bySchool = <String, SubscriptionCycle>{};
+      for (final cycle in cycles) {
+        final existing = bySchool[cycle.schoolId];
+        if (existing == null || cycle.termStart.isBefore(existing.termStart)) {
+          bySchool[cycle.schoolId] = cycle;
+        }
+      }
+      setState(() => _latestCycleBySchool = bySchool);
+    } catch (_) {
+      // Best-effort: the rest of the subscriptions overview still works
+      // without cycle badges.
+    }
   }
 
   Future<void> _loadPendingPayments() async {
@@ -96,14 +117,7 @@ class _SubscriptionsOverviewScreenState
   Future<void> _refresh() async {
     context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
     await _loadPendingPayments();
-  }
-
-  String _planName(List<SubscriptionPlan> plans, String planId) {
-    if (planId.isEmpty) return '—';
-    for (final plan in plans) {
-      if (plan.id == planId) return plan.name;
-    }
-    return planId;
+    await _loadUpcomingCycles();
   }
 
   @override
@@ -143,7 +157,7 @@ class _SubscriptionsOverviewScreenState
           final cancelled = <School>[];
 
           final visibleSchools = state.schools
-              .where((s) => _matchesSearch(s, state.plans) && _matchesPlan(s))
+              .where(_matchesSearch)
               .toList();
 
           for (final school in visibleSchools) {
@@ -213,7 +227,7 @@ class _SubscriptionsOverviewScreenState
                   controller: _searchController,
                   onChanged: (value) => setState(() => _search = value.trim()),
                   decoration: InputDecoration(
-                    hintText: 'Search by school or plan',
+                    hintText: 'Search by school name',
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: _search.isEmpty
                         ? null
@@ -228,12 +242,6 @@ class _SubscriptionsOverviewScreenState
                     border: const OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.m),
-                _PlanFilterChips(
-                  plans: state.plans,
-                  selected: _planFilter,
-                  onSelected: (value) => setState(() => _planFilter = value),
-                ),
                 const SizedBox(height: AppSpacing.l),
                 _pendingPaymentsBanner(context),
                 const SizedBox(height: AppSpacing.xl),
@@ -242,7 +250,6 @@ class _SubscriptionsOverviewScreenState
                   title: 'Suspended',
                   subtitle: 'Access suspended by the platform owner',
                   schools: suspended,
-                  plans: state.plans,
                   now: now,
                   emptyLabel: 'No suspended schools.',
                   accentColor: AppColors.warning(context),
@@ -254,7 +261,6 @@ class _SubscriptionsOverviewScreenState
                   title: 'Cancelled',
                   subtitle: 'Archived / cancelled schools',
                   schools: cancelled,
-                  plans: state.plans,
                   now: now,
                   emptyLabel: 'No cancelled schools.',
                   accentColor: AppColors.textSecondary(context),
@@ -267,7 +273,6 @@ class _SubscriptionsOverviewScreenState
                   subtitle:
                       'Active, expiring within $kExpiringSoonWindowDays days',
                   schools: expiringSoon,
-                  plans: state.plans,
                   now: now,
                   emptyLabel: 'No subscriptions expiring soon.',
                   accentColor: AppColors.warning(context),
@@ -279,7 +284,6 @@ class _SubscriptionsOverviewScreenState
                   title: 'Expired',
                   subtitle: 'Past their subscription expiry date',
                   schools: expired,
-                  plans: state.plans,
                   now: now,
                   emptyLabel: 'No expired subscriptions.',
                   accentColor: AppColors.danger(context),
@@ -291,7 +295,6 @@ class _SubscriptionsOverviewScreenState
                   title: 'Trial',
                   subtitle: 'Schools currently on a trial',
                   schools: trial,
-                  plans: state.plans,
                   now: now,
                   emptyLabel: 'No schools on trial.',
                   accentColor: AppColors.information(context),
@@ -303,7 +306,6 @@ class _SubscriptionsOverviewScreenState
                   title: 'Active',
                   subtitle: 'Active with a healthy runway',
                   schools: active,
-                  plans: state.plans,
                   now: now,
                   emptyLabel: 'No active subscriptions with a healthy runway.',
                   accentColor: AppColors.success(context),
@@ -373,7 +375,6 @@ class _SubscriptionsOverviewScreenState
     required String title,
     required String subtitle,
     required List<School> schools,
-    required List<SubscriptionPlan> plans,
     required DateTime now,
     required String emptyLabel,
     required Color accentColor,
@@ -437,10 +438,10 @@ class _SubscriptionsOverviewScreenState
                 for (final school in schools)
                   _SubscriptionRow(
                     school: school,
-                    planName: _planName(plans, school.subscriptionPlanId),
                     dateFormat: _date,
                     now: now,
                     accentColor: accentColor,
+                    cycle: _latestCycleBySchool[school.id],
                   ),
               ],
             ),
@@ -450,57 +451,38 @@ class _SubscriptionsOverviewScreenState
   }
 }
 
-class _PlanFilterChips extends StatelessWidget {
-  const _PlanFilterChips({
-    required this.plans,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  final List<SubscriptionPlan> plans;
-  final String selected;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    if (plans.isEmpty) return const SizedBox.shrink();
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          ChoiceChip(
-            label: const Text('All plans'),
-            selected: selected == 'all',
-            onSelected: (_) => onSelected('all'),
-          ),
-          for (final plan in plans) ...[
-            const SizedBox(width: 8),
-            ChoiceChip(
-              label: Text(plan.name),
-              selected: selected == plan.id,
-              onSelected: (_) => onSelected(plan.id),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 class _SubscriptionRow extends StatelessWidget {
   const _SubscriptionRow({
     required this.school,
-    required this.planName,
     required this.dateFormat,
     required this.now,
     required this.accentColor,
+    this.cycle,
   });
 
   final School school;
-  final String planName;
   final DateFormat dateFormat;
   final DateTime now;
   final Color accentColor;
+
+  /// The school's most-recent term cycle, if `subscription_cycles` has one.
+  /// Null when the school hasn't confirmed an academic calendar yet - the
+  /// row shows nothing extra in that case rather than fabricating a status.
+  final SubscriptionCycle? cycle;
+
+  /// "1–300 learners" style label from the cycle's pricing snapshot, or
+  /// null when there is no cycle/snapshot yet - matches Phase 2B's existing
+  /// pattern of showing nothing extra rather than a placeholder.
+  String? get _pricingBandLabel {
+    final pricing = cycle?.pricingSnapshot;
+    if (pricing == null) return null;
+    final formatter = NumberFormat('#,##0', 'en_UG');
+    if (pricing.maxStudents == null) {
+      return '${formatter.format(pricing.minStudents)}+ learners';
+    }
+    return '${formatter.format(pricing.minStudents)}–'
+        '${formatter.format(pricing.maxStudents)} learners';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -536,15 +518,17 @@ class _SubscriptionRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    planName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  if (_pricingBandLabel != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      _pricingBandLabel!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -569,6 +553,13 @@ class _SubscriptionRow extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                  if (cycle != null) ...[
+                    const SizedBox(height: 4),
+                    StatusBadge(
+                      label: cycleStatusLabel(cycle!.cycleStatus),
+                      color: cycleStatusColor(context, cycle!.cycleStatus),
+                    ),
+                  ],
                 ],
               ),
             ),

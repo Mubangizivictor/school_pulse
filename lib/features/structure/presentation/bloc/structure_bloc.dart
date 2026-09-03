@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/assessment_grading_entities.dart';
 import '../../domain/entities/campus_entities.dart';
@@ -367,6 +368,39 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
         emit,
         () => repository.setCurrentAcademicTerm(event.termId, event.schoolId),
       );
+    });
+
+    on<ConfirmAcademicCalendarRequested>((event, emit) async {
+      emit(state.copyWith(isConfirmingCalendar: true, calendarConfirmed: false));
+      try {
+        final callable = FirebaseFunctions.instanceFor(
+          region: 'europe-west1',
+        ).httpsCallable('confirmAcademicCalendar');
+        await callable.call(<String, dynamic>{
+          'schoolId': event.schoolId,
+          if (event.termIds != null) 'termIds': event.termIds,
+        });
+        emit(
+          state.copyWith(
+            isConfirmingCalendar: false,
+            calendarConfirmed: true,
+          ),
+        );
+      } on FirebaseFunctionsException catch (error) {
+        emit(
+          state.copyWith(
+            isConfirmingCalendar: false,
+            errorMessage: error.message ?? 'Could not confirm the academic calendar.',
+          ),
+        );
+      } catch (error) {
+        emit(
+          state.copyWith(
+            isConfirmingCalendar: false,
+            errorMessage: error.toString(),
+          ),
+        );
+      }
     });
 
     on<SaveClassRequested>((event, emit) async {

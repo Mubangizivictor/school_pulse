@@ -6,6 +6,7 @@ import '../../domain/repositories/super_admin_repository.dart';
 import '../datasources/super_admin_remote_datasource.dart';
 import '../models/school_model.dart';
 import '../models/audit_log_model.dart';
+import 'package:school_pulse/features/billing/domain/entities/subscription_cycle.dart';
 
 class SuperAdminRepositoryImpl implements SuperAdminRepository {
   final SuperAdminRemoteDataSource remoteDataSource;
@@ -179,5 +180,17 @@ class SuperAdminRepositoryImpl implements SuperAdminRepository {
   @override
   Future<List<SchoolAdminSummary>> getSchoolAdmins(String schoolId) {
     return remoteDataSource.getSchoolAdmins(schoolId);
+  }
+
+  @override
+  Future<List<SubscriptionCycle>> getSubscriptionCyclesForSchool(
+    String schoolId,
+  ) {
+    return remoteDataSource.getSubscriptionCyclesForSchool(schoolId);
+  }
+
+  @override
+  Future<List<SubscriptionCycle>> getAllUpcomingSubscriptionCycles() {
+    return remoteDataSource.getAllUpcomingSubscriptionCycles();
   }
 }

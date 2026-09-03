@@ -33,6 +33,7 @@ class StructureValidationService {
     issues.addAll(_findClassesWithoutLevel(state));
     issues.addAll(_findOverlappingGradeBands(state));
     issues.addAll(_findTermsOutsideYearRange(state));
+    issues.addAll(_findInvalidTermDateRanges(state));
     issues.addAll(_findOverlappingTerms(state));
     issues.addAll(_findStreamCapacityViolations(state));
     return issues;
@@ -138,6 +139,27 @@ class StructureValidationService {
       }
     }
     return issues;
+  }
+
+  /// Catches an end date on/before its start date - added alongside
+  /// term-based SaaS billing (functions/academic_calendar_billing.js
+  /// re-runs the equivalent check server-side before confirming a
+  /// calendar), but is a general data-integrity check useful anywhere
+  /// terms are validated, not billing-specific.
+  List<StructureValidationIssue> _findInvalidTermDateRanges(
+    StructureState state,
+  ) {
+    return state.academicTerms
+        .where((term) => !term.isArchived && !term.endDate.isAfter(term.startDate))
+        .map(
+          (term) => StructureValidationIssue(
+            category: 'Terms',
+            message: '"${term.name}" end date must be after its start date.',
+            severity: ValidationSeverity.error,
+            fixRoute: '/staff/admin/structure/academics/years-terms?mode=terms',
+          ),
+        )
+        .toList();
   }
 
   List<StructureValidationIssue> _findOverlappingTerms(StructureState state) {

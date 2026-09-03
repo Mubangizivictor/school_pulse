@@ -3263,6 +3263,24 @@ exports.requestSubscriptionChange = subscriptionManagementFunctions.requestSubsc
 exports.requestSubscriptionUsageRefresh = subscriptionManagementFunctions.requestSubscriptionUsageRefresh;
 
 /**
+ * Term-based SaaS billing Phase 1: academic calendar confirmation +
+ * subscription_cycles generation. See academic_calendar_billing.js for the
+ * full scope note (Phase 1 only - no invoicing/reminders/suspension yet).
+ */
+const academicCalendarBillingFunctions = require("./academic_calendar_billing");
+exports.confirmAcademicCalendar = academicCalendarBillingFunctions.confirmAcademicCalendar;
+exports.getRenewalBillingConfig = academicCalendarBillingFunctions.getRenewalBillingConfig;
+exports.updateRenewalBillingConfig = academicCalendarBillingFunctions.updateRenewalBillingConfig;
+
+// Phase 3A: student-count-band pricing engine (replaces plan-based pricing
+// for cycle generation - see student_pricing_bands.js header).
+const studentPricingBandFunctions = require("./student_pricing_bands");
+exports.createPricingBand = studentPricingBandFunctions.createPricingBand;
+exports.updatePricingBand = studentPricingBandFunctions.updatePricingBand;
+exports.deactivatePricingBand = studentPricingBandFunctions.deactivatePricingBand;
+exports.getPricingBands = studentPricingBandFunctions.getPricingBands;
+
+/**
  * Student creation with transactional maxStudents cap enforcement. Kept in
  * its own file for the same reason as notifications.js/attendance_sheets.js
  * above - index.js is already large, and this is a self-contained concern.
