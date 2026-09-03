@@ -365,7 +365,7 @@ p { margin: 0 0 16px; color: var(--color-ink-soft); }
 .mobile-panel .m-actions { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
 
 @media (max-width: 900px) {
-  .nav-main, .nav-actions .btn-outline, .nav-actions .signin-link { display: none; }
+  .nav-main, .nav-actions .btn { display: none; }
   .hamburger { display: flex; }
 }
 @media (max-width: 400px) {
