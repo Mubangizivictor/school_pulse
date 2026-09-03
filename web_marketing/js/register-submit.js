@@ -98,7 +98,7 @@
       var password = document.getElementById('accountPassword').value;
       pwField.classList.remove('has-error');
 
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (!email || !window.SPForms.EMAIL_RE.test(email)) {
         setError('Enter a valid administrator email above first.');
         return;
       }
@@ -204,19 +204,27 @@
           prefix: val('schoolPrefix'),
           category: val('schoolType'),
           studentCapacity: studentCount,
-          slug: (val('subdomain') || '').toLowerCase().replace(/[^a-z0-9-]/g, ''),
+          slug: window.SPSlug.sanitize(val('subdomain')),
         },
         location: {
           region: val('region'),
           district: val('district'),
           address: val('address'),
         },
-        administrator: {
-          firstName: (val('adminName').split(' ')[0] || val('adminName')),
-          lastName: (val('adminName').split(' ').slice(1).join(' ') || val('adminName')),
-          phone: val('adminPhone'),
-          email: val('adminEmail'),
-        },
+        administrator: (function () {
+          // A single-word name (e.g. "Victor") must not duplicate into both
+          // firstName and lastName - split(' ').slice(1) already correctly
+          // returns '' for lastName in that case; the previous `|| fullName`
+          // fallback on lastName was wrong (it existed to guard firstName
+          // against an empty/whitespace-only name, not to backfill lastName).
+          var parts = val('adminName').trim().split(/\s+/);
+          return {
+            firstName: parts[0] || val('adminName'),
+            lastName: parts.slice(1).join(' '),
+            phone: val('adminPhone'),
+            email: val('adminEmail'),
+          };
+        })(),
         plan: plan,
         selectedModules: [],
         termsAccepted: true,
@@ -258,6 +266,17 @@
       customNotice.style.display = 'none';
       verifyNotice.style.display = 'none';
       setError('');
+
+      // The backend requires both first and last name; the wizard only
+      // collects one "Administrator name" field, so a single-word entry
+      // (e.g. "Victor") needs to be caught here with a clear message rather
+      // than reaching submitSchoolApplication and bouncing back as a
+      // generic "invalid_application".
+      if (val('adminName').trim().split(/\s+/).length < 2) {
+        setError('Please enter the administrator\'s full name (first and last) in Step 2.');
+        if (window.SPWizard) window.SPWizard.goToStep(2);
+        return;
+      }
 
       var built = buildBody();
 

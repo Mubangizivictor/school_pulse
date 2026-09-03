@@ -12,6 +12,18 @@
   var FUNCTIONS_BASE = 'https://europe-west1-school-pulse-3d95b.cloudfunctions.net';
   var DEBOUNCE_MS = 450;
 
+  // Sanitizes free-typed input down to the charset the backend accepts
+  // (public_functions/portal_slug.js's validSlug: lowercase letters,
+  // digits, hyphens). This is the one place that logic lives on this
+  // static site (no build step to share a Node module with the backend
+  // across the two runtimes) - register-submit.js reuses this exact
+  // function via window.SPSlug.sanitize rather than re-implementing it,
+  // so the live-checked slug and the submitted slug can never disagree.
+  function sanitize(raw) {
+    return (raw || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+  }
+  window.SPSlug = { sanitize: sanitize };
+
   function checkPortalSlug(slug) {
     return fetch(FUNCTIONS_BASE + '/checkPortalSlug', {
       method: 'POST',
@@ -44,10 +56,9 @@
     }
 
     function runCheck() {
-      var raw = (input.value || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+      var raw = sanitize(input.value);
       if (preview) preview.textContent = (raw || 'yourschool') + '.schoolpulseapp.com';
       if (!raw) { render('idle', ''); return; }
-      if (raw.length < 3) { render('unavailable', 'Web address must be at least 3 characters.'); return; }
 
       latestSlug = raw;
       render('checking', 'Checking availability…');

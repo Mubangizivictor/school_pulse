@@ -79,7 +79,7 @@
         if (!value) {
           fieldEl.classList.add('has-error');
           valid = false;
-        } else if (input.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        } else if (input.type === 'email' && !window.SPForms.EMAIL_RE.test(value)) {
           fieldEl.classList.add('has-error');
           valid = false;
         }

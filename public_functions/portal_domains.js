@@ -3,14 +3,13 @@ const { onDocumentWritten } = require('firebase-functions/v2/firestore');
 const admin = require('firebase-admin');
 const dns = require('node:dns').promises;
 const { requirePlatformOwner, OwnerAuthorizationError } = require('./vendor/owner-auth');
+const { ROOT, RESERVED, validSlug } = require('./portal_slug');
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
-const ROOT = 'schoolpulseapp.com', TARGET = 'ghs.googlehosted.com';
+const TARGET = 'ghs.googlehosted.com';
 const TRIAL_DAYS = 14;
 const LIFECYCLE_STATUSES = new Set(['active', 'suspended', 'archived', 'trial']);
-const RESERVED = new Set(['admin', 'api', 'www', 'support', 'schoolpulse', 'app', 'mail', 'status', 'portal']);
 const clean = v => String(v || '').trim().toLowerCase();
-const validSlug = v => /^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/.test(v) && !RESERVED.has(v);
 const validHost = v => /^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$/.test(v) && v.includes('.') && !v.endsWith(`.${ROOT}`);
 async function owner(request) { try { return await requirePlatformOwner(request, { db }); } catch (e) { if (e instanceof OwnerAuthorizationError) throw new HttpsError(e.code, e.message); throw e; } }
 async function schoolAdmin(request) { if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in required.'); const u = (await db.doc(`users/${request.auth.uid}`).get()).data(); if (!u || u.role !== 'schoolAdmin' || !u.schoolId) throw new HttpsError('permission-denied', 'School administrator access required.'); return { uid: request.auth.uid, schoolId: u.schoolId }; }
@@ -36,8 +35,25 @@ exports.getPublicSchoolProfile = onCall({ region: 'europe-west1' }, async r => {
   const slug = clean(r.data?.slug);
   const hostInput = clean(r.data?.hostname);
   if (!slug && !hostInput) return { found: false };
-  const host = hostInput || `${slug}.${ROOT}`;
-  if (!validHost(host) && !validSlug(slug)) return { found: false };
+  // validHost() deliberately excludes *.ROOT hosts (it's meant to gate
+  // genuine custom-domain requests elsewhere) - a bare platform subdomain
+  // passed as `hostname` (e.g. "greenhill.schoolpulseapp.com", the exact
+  // shape createSchoolPortal's own portalUrl returns) would otherwise fail
+  // both validHost() and validSlug(''), always resolving to not-found. So a
+  // *.ROOT hostname is reduced to its slug and validated as one; anything
+  // else is validated as a genuine external custom domain via validHost().
+  let host;
+  if (hostInput && hostInput.endsWith(`.${ROOT}`)) {
+    const derivedSlug = hostInput.slice(0, -1 - ROOT.length);
+    if (!validSlug(derivedSlug)) return { found: false };
+    host = hostInput;
+  } else if (hostInput) {
+    if (!validHost(hostInput)) return { found: false };
+    host = hostInput;
+  } else {
+    if (!validSlug(slug)) return { found: false };
+    host = `${slug}.${ROOT}`;
+  }
   const snap = await db.doc(`portal_domains/${host}`).get();
   if (!snap.exists) return { found: false };
   const d = snap.data() || {};
@@ -483,4 +499,10 @@ exports.syncPortalDomainProjection = onDocumentWritten({ region: 'europe-west1',
   const hosts = [school.portalSubdomain, ...(Array.isArray(school.customDomains) ? school.customDomains : [])].filter(Boolean);
   await Promise.all(hosts.map(host => db.doc(`portal_domains/${clean(host)}`).set({ ...publicDomain(after.id, school, clean(host)), status: suspended ? 'suspended' : 'active' }, { merge: true })));
 });
+// Exported for reuse by other onboarding paths that write a portal_domains
+// projection outside this file's own triggers/callables (currently
+// payments.js:approveSchoolApplication) - keeps the projected field set
+// (schoolName/logoUrl/colors/address/phone/email) defined in exactly one
+// place instead of hand-duplicated per caller.
+exports.publicDomain = publicDomain;
 exports.__test__ = { validSlug, validHost, RESERVED, LIFECYCLE_STATUSES, TRIAL_DAYS, SUPPORT_ACCESS_MAX_MINUTES, ADMIN_ACTIONS, ACCESS_MODE_FOR_STATUS };

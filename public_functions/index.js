@@ -10,11 +10,12 @@ const ALLOWED_PLANS = ["Starter", "Growth", "Pro", "Enterprise"];
 const ALLOWED_MODULES = ["Students","Attendance","Academics","Administration","Finance","Boarding","Health","Library","Transport","Messaging"];
 const CORE_MODULES = ["Students", "Attendance", "Academics", "Administration"];
 const RESERVED_STATUSES = new Set(["pending_review", "approved"]);
-// Mirrors portal_domains.js's validSlug/RESERVED exactly - the slug chosen
-// here is the same one approveSchoolApplication later reserves in
-// portal_slug_reservations, so the rules must never drift apart.
-const RESERVED_SLUGS = new Set(["admin", "api", "www", "support", "schoolpulse", "app", "mail", "status", "portal"]);
-const validSlug = (v) => /^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/.test(v) && !RESERVED_SLUGS.has(v);
+// The slug chosen here is the same one approveSchoolApplication later
+// reserves in portal_slug_reservations - shared with that file (and
+// portal_domains.js's checkPortalSlug/createSchoolPortal) via portal_slug.js
+// so the three onboarding paths can never independently drift on what
+// counts as a valid/available slug.
+const { validSlug } = require("./portal_slug");
 
 function cors(req, res) {
   const origin = req.get("origin");

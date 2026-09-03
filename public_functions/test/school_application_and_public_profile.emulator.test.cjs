@@ -310,4 +310,27 @@ describe('getPublicSchoolProfile (onCall)', () => {
     const result = await getPublicSchoolProfile.run({ auth: null, data: {} });
     assert.equal(result.found, false);
   });
+
+  // Regression coverage: validHost() deliberately excludes *.schoolpulseapp.com
+  // hosts (it's meant to gate genuine custom-domain requests elsewhere), so
+  // a caller passing the platform subdomain as `hostname` - the exact shape
+  // createSchoolPortal's own portalUrl returns - must still resolve, not
+  // silently fall through to found:false.
+  test('resolves a bare platform subdomain passed as hostname (not just slug)', async () => {
+    await db.doc('portal_domains/greenhill.schoolpulseapp.com').set({
+      schoolId: 'schoolY',
+      slug: 'greenhill',
+      hostname: 'greenhill.schoolpulseapp.com',
+      status: 'active',
+      schoolName: 'Greenhill Academy',
+    });
+    const result = await getPublicSchoolProfile.run({ auth: null, data: { hostname: 'greenhill.schoolpulseapp.com' } });
+    assert.equal(result.found, true);
+    assert.equal(result.schoolName, 'Greenhill Academy');
+  });
+
+  test('rejects a hostname whose slug portion is invalid/reserved', async () => {
+    const result = await getPublicSchoolProfile.run({ auth: null, data: { hostname: 'admin.schoolpulseapp.com' } });
+    assert.equal(result.found, false);
+  });
 });

@@ -2,18 +2,17 @@ const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 const { requirePlatformOwner, OwnerAuthorizationError } = require('./vendor/owner-auth');
+const { ROOT: PORTAL_ROOT, validSlug: validPortalSlug } = require('./portal_slug');
+const { publicDomain: portalPublicDomain } = require('./portal_domains');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
 const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
-const APP_URL = WEBSITE_ORIGIN;
-// Matches portal_domains.js's ROOT/validSlug/RESERVED exactly - this is the
-// same subdomain namespace createSchoolPortal reserves into, so an approval
-// here must use identical rules or the two paths could collide.
-const PORTAL_ROOT = 'schoolpulseapp.com';
-const PORTAL_RESERVED_SLUGS = new Set(['admin', 'api', 'www', 'support', 'schoolpulse', 'app', 'mail', 'status', 'portal']);
-const validPortalSlug = (v) => /^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/.test(v) && !PORTAL_RESERVED_SLUGS.has(v);
+// The Flutter app moved under /app/ (firebase.json's SPA rewrite now only
+// covers /app/**) - a bare WEBSITE_ORIGIN link now resolves to the static
+// marketing homepage, not the app, so this must include the prefix.
+const APP_URL = `${WEBSITE_ORIGIN}/app`;
 const CORE_MODULES = ['Students', 'Attendance', 'Academics', 'Administration'];
 const MODULE_MAP = {
   Students: 'students',
@@ -433,24 +432,19 @@ exports.approveSchoolApplication = onCall(
 
     const schoolId = deterministicSchoolId;
     // The applicant's chosen web address, captured at submission time
-    // (index.js:submitSchoolApplication) and re-validated here since this
-    // callable is the trust boundary that actually reserves it - a slug
-    // already taken by another portal (or newly reserved since submission)
-    // must not silently overwrite that reservation.
+    // (index.js:submitSchoolApplication, required there since this session)
+    // and re-validated here since this callable is the trust boundary that
+    // actually reserves it. A missing/invalid slug means a legacy
+    // application submitted before slug was required - that's rejected
+    // loudly (not silently approved without a portal) so it surfaces to the
+    // owner as something needing manual handling, rather than quietly
+    // producing a school with no reachable subdomain.
     const slug = text(school.slug, 63).toLowerCase();
-    const slugValid = validPortalSlug(slug);
-    const portalHost = slugValid ? `${slug}.${PORTAL_ROOT}` : null;
-    const slugReservationRef = slugValid ? db.doc(`portal_slug_reservations/${slug}`) : null;
-    let slugAlreadyReservedByThisSchool = false;
-    if (slugReservationRef) {
-      const slugReservationSnap = await slugReservationRef.get();
-      if (slugReservationSnap.exists) {
-        slugAlreadyReservedByThisSchool = slugReservationSnap.data()?.schoolId === schoolId;
-        if (!slugAlreadyReservedByThisSchool) {
-          throw new HttpsError('already-exists', 'That school web address is already in use. The applicant must choose another before this can be approved.');
-        }
-      }
+    if (!validPortalSlug(slug)) {
+      throw new HttpsError('failed-precondition', 'This application has no valid school web address on file (it may predate that requirement). Ask the applicant to resubmit with a web address before approving.');
     }
+    const portalHost = `${slug}.${PORTAL_ROOT}`;
+    const slugReservationRef = db.doc(`portal_slug_reservations/${slug}`);
     const enabledFeatures = normalizedModules(application.selectedModules);
     const nowMs = Date.now();
     const administratorName = `${text(administrator.firstName, 100)} ${text(administrator.lastName, 100)}`.trim() || authUser.displayName || 'School Administrator';
@@ -504,7 +498,8 @@ exports.approveSchoolApplication = onCall(
       // Mirrors portal_domains.js:createSchoolPortal's school doc shape so
       // both onboarding paths (owner-created portal vs. public application)
       // produce a tenant portal_tenant_resolver.dart can resolve the same way.
-      ...(portalHost ? { portalSubdomain: portalHost, customDomains: [] } : {}),
+      portalSubdomain: portalHost,
+      customDomains: [],
       branding: {
         schoolName,
         logoUrl: null,
@@ -516,90 +511,92 @@ exports.approveSchoolApplication = onCall(
       },
     };
 
-    const batch = db.batch();
-    batch.set(schoolRef, schoolData, { merge: false });
-    if (portalHost && !slugAlreadyReservedByThisSchool) {
-      batch.set(slugReservationRef, { schoolId, slug, createdAt: serverTime });
-    }
-    if (portalHost) {
-      batch.set(db.doc(`portal_domains/${portalHost}`), {
+    // The slug-reservation check-and-write happens inside this transaction
+    // (re-reading slugReservationRef here, not trusting any earlier read)
+    // alongside every other write this approval makes, so two concurrent
+    // approvals racing for the same slug can't both pass the availability
+    // check and silently overwrite each other's reservation/portal_domains
+    // docs - Firestore aborts and retries the loser instead.
+    await db.runTransaction(async (tx) => {
+      const slugReservationSnap = await tx.get(slugReservationRef);
+      if (slugReservationSnap.exists && slugReservationSnap.data()?.schoolId !== schoolId) {
+        throw new HttpsError('already-exists', 'That school web address is already in use. The applicant must choose another before this can be approved.');
+      }
+      tx.set(schoolRef, schoolData, { merge: false });
+      if (!slugReservationSnap.exists) {
+        tx.set(slugReservationRef, { schoolId, slug, createdAt: serverTime });
+      }
+      // Reuses portal_domains.js's own publicDomain() projection so this
+      // path produces the exact same document shape (including
+      // address/phone/email) as createSchoolPortal/syncPortalDomainProjection
+      // instead of a hand-duplicated, easy-to-drift object literal.
+      tx.set(db.doc(`portal_domains/${portalHost}`), portalPublicDomain(schoolId, schoolData, portalHost));
+      tx.set(userRef, {
+        id: applicantUid,
+        name: administratorName,
+        email: adminEmail,
+        phoneNumber: text(administrator.phone, 30),
+        role: 'schoolAdmin',
+        roles: ['schoolAdmin'],
         schoolId,
-        slug,
-        hostname: portalHost,
+        schoolName,
+        studentIds: [],
+        mustChangePassword: false,
+        mfaEnabled: false,
+        isActive: true,
+        source: 'public_website_application',
+        createdBy: owner.uid,
+        createdAt: serverTime,
+      }, { merge: true });
+      tx.set(contactRef, {
+        name: administratorName,
+        role: 'schoolAdmin',
+        roles: ['schoolAdmin'],
+        schoolId,
+        isActive: true,
+        phone: text(administrator.phone, 30),
+      }, { merge: true });
+      tx.set(membershipRef, {
+        id: `${applicantUid}_${schoolId}`,
+        userId: applicantUid,
+        institutionId: schoolId,
+        schoolId,
+        role: 'schoolAdmin',
+        roles: ['schoolAdmin'],
         status: 'active',
-        schoolName,
-        logoUrl: null,
-        primaryColor: null,
-        secondaryColor: null,
+        createdAt: serverTime,
+        createdBy: owner.uid,
+      }, { merge: true });
+      tx.set(applicationRef, {
+        status: 'approved',
+        schoolId,
+        paymentStatus: 'awaiting_payment',
+        appReady: false,
+        appUrl: APP_URL,
+        reviewedAt: serverTime,
+        reviewedBy: owner.uid,
+        rejectionReason: admin.firestore.FieldValue.delete(),
+        paymentRejectionReason: admin.firestore.FieldValue.delete(),
         updatedAt: serverTime,
+      }, { merge: true });
+      tx.set(auditRef, {
+        id: auditRef.id,
+        ownerId: owner.uid,
+        action: 'APPROVE_SCHOOL_APPLICATION_AWAITING_PAYMENT',
+        schoolId,
+        affectedUserId: applicantUid,
+        timestamp: serverTime,
+        device: 'Platform Dashboard',
+        metadata: {
+          applicationId,
+          schoolName,
+          planId: plan.id,
+          planPrice: Number(plan.price || 0),
+          billingCycle: text(plan.billingCycle, 20),
+          enabledFeatures,
+        },
       });
-    }
-    batch.set(userRef, {
-      id: applicantUid,
-      name: administratorName,
-      email: adminEmail,
-      phoneNumber: text(administrator.phone, 30),
-      role: 'schoolAdmin',
-      roles: ['schoolAdmin'],
-      schoolId,
-      schoolName,
-      studentIds: [],
-      mustChangePassword: false,
-      mfaEnabled: false,
-      isActive: true,
-      source: 'public_website_application',
-      createdBy: owner.uid,
-      createdAt: serverTime,
-    }, { merge: true });
-    batch.set(contactRef, {
-      name: administratorName,
-      role: 'schoolAdmin',
-      roles: ['schoolAdmin'],
-      schoolId,
-      isActive: true,
-      phone: text(administrator.phone, 30),
-    }, { merge: true });
-    batch.set(membershipRef, {
-      id: `${applicantUid}_${schoolId}`,
-      userId: applicantUid,
-      institutionId: schoolId,
-      schoolId,
-      role: 'schoolAdmin',
-      roles: ['schoolAdmin'],
-      status: 'active',
-      createdAt: serverTime,
-      createdBy: owner.uid,
-    }, { merge: true });
-    batch.set(applicationRef, {
-      status: 'approved',
-      schoolId,
-      paymentStatus: 'awaiting_payment',
-      appReady: false,
-      appUrl: APP_URL,
-      reviewedAt: serverTime,
-      reviewedBy: owner.uid,
-      rejectionReason: admin.firestore.FieldValue.delete(),
-      paymentRejectionReason: admin.firestore.FieldValue.delete(),
-      updatedAt: serverTime,
-    }, { merge: true });
-    batch.set(auditRef, {
-      id: auditRef.id,
-      ownerId: owner.uid,
-      action: 'APPROVE_SCHOOL_APPLICATION_AWAITING_PAYMENT',
-      schoolId,
-      affectedUserId: applicantUid,
-      timestamp: serverTime,
-      device: 'Platform Dashboard',
-      metadata: {
-        applicationId,
-        schoolName,
-        planId: plan.id,
-        planPrice: Number(plan.price || 0),
-        billingCycle: text(plan.billingCycle, 20),
-        enabledFeatures,
-      },
     });
-    await batch.commit();
 
     try {
       const existingClaims = authUser.customClaims || {};
@@ -613,7 +610,7 @@ exports.approveSchoolApplication = onCall(
       console.error('School approved but custom claims update failed', error);
     }
 
-    return { ok: true, schoolId, status: 'approved', paymentStatus: 'awaiting_payment', appReady: false, portalUrl: portalHost ? `https://${portalHost}` : null };
+    return { ok: true, schoolId, status: 'approved', paymentStatus: 'awaiting_payment', appReady: false, portalUrl: `https://${portalHost}` };
   },
 );
 
@@ -637,6 +634,11 @@ exports.getSchoolApplicationStatus = onRequest({ region: 'europe-west1' }, async
   let data = snap.data() || {};
   data = await migrateLegacyApprovedApplication(ref, data);
   await ref.set({ lastStatusCheckAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  // Lowercased to match submitSchoolApplication's own storage convention -
+  // every other slug read path in this codebase lowercases before using it,
+  // and a portalUrl built from a mixed-case slug would never resolve
+  // (portal_domains keys and DNS hostnames are lowercase-only).
+  const slug = text(data.school?.slug, 63).toLowerCase();
   res.status(200).json({
     status: text(data.status, 40),
     paymentStatus: text(data.paymentStatus, 40),
@@ -648,8 +650,8 @@ exports.getSchoolApplicationStatus = onRequest({ region: 'europe-west1' }, async
     appUrl: text(data.appUrl, 300) || APP_URL,
     paymentUrl: `${WEBSITE_ORIGIN}/payment`,
     rejectionReason: text(data.rejectionReason, 500),
-    slug: text(data.school?.slug, 63),
-    portalUrl: data.school?.slug && validPortalSlug(text(data.school.slug, 63)) ? `https://${text(data.school.slug, 63)}.${PORTAL_ROOT}` : null,
+    slug,
+    portalUrl: validPortalSlug(slug) ? `https://${slug}.${PORTAL_ROOT}` : null,
   });
 });
 
