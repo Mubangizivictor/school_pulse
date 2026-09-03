@@ -1001,10 +1001,22 @@ exports.approveManualPayment = onCall({ region: 'europe-west1' }, async (request
     // though the resulting write happens later in this same transaction.
     // Schools with no subscription_cycles docs (the flat-expiry-only flow)
     // simply get an empty snapshot here and nothing below changes for them.
+    //
+    // Status list mirrors subscription_cycle_billing.js's own
+    // ACTIVE_CYCLE_STATUSES exactly (must include 'upcoming'): a school can
+    // pay before its next cycle is even auto-invoiced (e.g. paying early,
+    // or approval landing between invoice-lead-day windows), and 'paid' is
+    // a terminal status the billing sweep always skips outright regardless
+    // of which status it transitioned from - decideCycleAction()'s very
+    // first check is `status === 'paid' -> return, no-op` - so marking an
+    // 'upcoming' cycle 'paid' directly is safe; omitting 'upcoming' here
+    // previously left such a cycle unmatched, so the payment never marked
+    // it paid and the sweep would later invoice/suspend a term that had
+    // already been paid for.
     const eligibleCycleSnap = await tx.get(
       db.collection('subscription_cycles')
         .where('schoolId', '==', schoolId)
-        .where('cycleStatus', 'in', ['invoiced', 'paymentPending', 'gracePeriod', 'overdue'])
+        .where('cycleStatus', 'in', ['upcoming', 'invoiced', 'paymentPending', 'gracePeriod', 'overdue'])
         .orderBy('termStart', 'asc')
         .limit(1)
     );

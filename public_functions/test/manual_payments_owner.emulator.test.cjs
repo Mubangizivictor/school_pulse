@@ -223,6 +223,27 @@ describe('Super Admin - Billing: manual subscription payments', () => {
     assert.ok((await auditActions()).includes('APPROVE_SUBSCRIPTION_RENEWAL_PAYMENT'));
   });
 
+  // Regression test: the eligible-cycle query used to omit cycleStatus
+  // 'upcoming' (unlike subscription_cycle_billing.js's own
+  // ACTIVE_CYCLE_STATUSES), so a payment approved before its Phase 2A term
+  // cycle was auto-invoiced never got matched - the cycle doc was left at
+  // 'upcoming' even though the school was actually paid, and the billing
+  // sweep would later invoice/suspend that already-paid term.
+  test('approve marks an "upcoming" (not-yet-invoiced) subscription_cycles doc paid', async () => {
+    await seedSchool();
+    await seedPayment('pEarly');
+    const cycleRef = db.collection('subscription_cycles').doc('schoolA_term1');
+    await cycleRef.set({
+      schoolId: SCHOOL_ID,
+      termStart: admin.firestore.Timestamp.fromMillis(Date.now() + 20 * 24 * 3600 * 1000),
+      cycleStatus: 'upcoming',
+    });
+    await approveManualPayment.run(request(OWNER_UID, { paymentId: 'pEarly' }));
+    const cycle = (await cycleRef.get()).data();
+    assert.equal(cycle.cycleStatus, 'paid');
+    assert.equal(cycle.paidPaymentId, 'pEarly');
+  });
+
   // --- rejectManualPayment -------------------------------------------
 
   test('reject marks rejected + reason, blocks an activation school, audits', async () => {
