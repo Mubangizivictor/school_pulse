@@ -1344,40 +1344,6 @@ class _StreamClassGroup extends StatelessWidget {
   }
 }
 
-class _ClassesEmptyState extends StatelessWidget {
-  final VoidCallback? onAdd;
-
-  const _ClassesEmptyState({required this.onAdd});
-
-  @override
-  Widget build(BuildContext context) {
-    return EmptyState(
-      icon: Icons.desktop_windows_outlined,
-      title: 'No classes added',
-      message: 'Add your first class to continue.',
-      ctaLabel: onAdd == null ? null : 'Add class',
-      onCtaPressed: onAdd,
-    );
-  }
-}
-
-class _SubjectsEmptyState extends StatelessWidget {
-  final VoidCallback onAdd;
-
-  const _SubjectsEmptyState({required this.onAdd});
-
-  @override
-  Widget build(BuildContext context) {
-    return EmptyState(
-      icon: Icons.menu_book_outlined,
-      title: 'No subjects added',
-      message: 'Add your first subject to continue.',
-      ctaLabel: 'Add subject',
-      onCtaPressed: onAdd,
-    );
-  }
-}
-
 /// Step 4, state 1: pick from the standard stages suggested for this
 /// school's declared type (Institution Profile), or add a custom one.
 /// Nothing is created until the admin taps a card - the school-type hint
