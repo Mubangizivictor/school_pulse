@@ -206,12 +206,17 @@
         var user = firebase.auth().currentUser;
         if (!user) return Promise.reject(new Error('not_signed_in'));
         return user.reload().then(function () {
-          if (user.emailVerified) {
-            markVerified(user.email);
-          } else {
+          if (!user.emailVerified) {
             document.getElementById('accountVerifyMsg').innerHTML =
               'Still not verified yet. Check your inbox (and spam folder), click the link, then try again.';
+            return;
           }
+          // See the matching comment in initSubmit() - force-refresh the ID
+          // token now so the claim it carries is fresh by the time
+          // submitSchoolApplication is called later, not just the
+          // client-side emailVerified flag this markVerified() call gates
+          // the UI on.
+          return user.getIdToken(true).then(function () { markVerified(user.email); });
         });
       }).catch(function () {}).finally(function () {
         checkBtn.disabled = false;
@@ -339,7 +344,17 @@
       SPAuth.ensureFirebase().then(function (firebase) {
         var user = firebase.auth().currentUser;
         if (!user) return false;
-        return user.reload().then(function () { return user.emailVerified; });
+        return user.reload().then(function () {
+          if (!user.emailVerified) return false;
+          // user.reload() refreshes the client-side emailVerified flag, but
+          // the cached ID token's own email_verified claim doesn't update
+          // until the token itself is force-refreshed - without this,
+          // submitSchoolApplication's verifiedIdentity() (index.js) decodes
+          // the stale token and 401s even though the UI now correctly shows
+          // "verified". getIdToken(true) forces that refresh so the token
+          // callFunction sends next actually carries the new claim.
+          return user.getIdToken(true).then(function () { return true; });
+        });
       }).catch(function () { return false; }).then(function (isVerified) {
         if (!isVerified) {
           submitting = false;
