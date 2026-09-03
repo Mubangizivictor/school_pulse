@@ -4,7 +4,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:school_pulse/features/super_admin/data/models/audit_log_model.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/audit_log.dart';
 
-import '../domain/platform_health_models.dart';
+import 'package:school_pulse/features/super_admin/domain/platform_health_models.dart';
 
 const kPlatformHealthIncidentActions = [
   'PLATFORM_HEALTH_INCIDENT_ACKNOWLEDGED',

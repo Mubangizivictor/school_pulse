@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/components/pulse_card.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
-import 'package:school_pulse/features/platform_health/data/platform_health_repository.dart';
-import 'package:school_pulse/features/platform_health/domain/platform_health_models.dart';
+import 'package:school_pulse/features/super_admin/data/platform_health_repository.dart';
+import 'package:school_pulse/features/super_admin/domain/platform_health_models.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/audit_log.dart';
 
 /// Real Super-Admin-only platform health screen: reads the cached
