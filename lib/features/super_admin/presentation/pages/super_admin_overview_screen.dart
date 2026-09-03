@@ -836,9 +836,11 @@ class _QuickActions extends StatelessWidget {
     ];
     return LayoutBuilder(
       builder: (context, constraints) {
+        // 2x2 on mobile (matching the metric row), 4 across on desktop,
+        // single column only on very small phones.
         final columns = constraints.maxWidth >= 820
             ? 4
-            : constraints.maxWidth >= 460
+            : constraints.maxWidth >= 340
             ? 2
             : 1;
         final width =
@@ -880,9 +882,9 @@ class PlatformQuickAction extends StatelessWidget {
   Widget build(BuildContext context) => PulseCard(
     onTap: onTap,
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-    child: Row(
-      children: [
-        Container(
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final iconChip = Container(
           width: 36,
           height: 36,
           decoration: BoxDecoration(
@@ -890,39 +892,66 @@ class PlatformQuickAction extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: AppColors.information(context), size: 18),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                maxLines: 1,
+        );
+        final labelText = Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTypography.labelLarge.copyWith(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.w800,
+          ),
+        );
+        final detailText = detail == null
+            ? null
+            : Text(
+                detail!,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: AppTypography.labelLarge.copyWith(
-                  color: AppColors.textPrimary(context),
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              if (detail != null) ...[
+                style: _body(context),
+              );
+
+        // Narrow (2-up on a phone): stack icon over label, drop the chevron
+        // so the text isn't crushed. Wide: the horizontal row + chevron.
+        if (constraints.maxWidth < 220) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              iconChip,
+              const SizedBox(height: 10),
+              labelText,
+              if (detailText != null) ...[
                 const SizedBox(height: 2),
-                Text(
-                  detail!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: _body(context),
-                ),
+                detailText,
               ],
             ],
-          ),
-        ),
-        Icon(
-          Icons.chevron_right_rounded,
-          size: 18,
-          color: AppColors.textMuted(context),
-        ),
-      ],
+          );
+        }
+        return Row(
+          children: [
+            iconChip,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  labelText,
+                  if (detailText != null) ...[
+                    const SizedBox(height: 2),
+                    detailText,
+                  ],
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: AppColors.textMuted(context),
+            ),
+          ],
+        );
+      },
     ),
   );
 }
