@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import 'package:school_pulse/core/error/friendly_error_message.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
@@ -53,9 +54,16 @@ class _SupportTicketConversationScreenState
       _messageController.clear();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not send message: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                e,
+                fallback: 'Could not send message. Please try again.',
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _sending = false);

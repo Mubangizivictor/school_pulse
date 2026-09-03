@@ -1,6 +1,7 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 
+import 'package:school_pulse/core/error/friendly_error_message.dart';
 import 'package:school_pulse/design_system/components/pulse_text_field.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -183,7 +184,7 @@ class _ManualPaymentConfigScreenState extends State<ManualPaymentConfigScreen> {
     if (text.contains('unauthenticated')) {
       return 'Your owner session expired. Sign in again.';
     }
-    return text.replaceFirst(RegExp(r'^Exception:\s*'), '');
+    return friendlyErrorMessage(error);
   }
 
   String _mask(String value) {

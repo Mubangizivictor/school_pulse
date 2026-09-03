@@ -180,6 +180,7 @@ class _SecurityOverviewBodyState extends State<_SecurityOverviewBody> {
                 : 'password_totp',
           );
         }
+        if (!mounted) return;
         await context.read<SecuritySettingsCubit>().logSecurityEvent(
           action: 'REVOKE_SESSION',
           reason: 'Owner-initiated sign-out of other devices from Security',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:school_pulse/core/error/friendly_error_message.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -79,7 +80,10 @@ class _SubmitSupportRequestScreenState
       context.pushReplacement('/super-admin/settings/support/ticket/$ticketId');
     } catch (e) {
       setState(() {
-        _error = 'Could not submit this ticket. Please try again.\n$e';
+        _error = friendlyErrorMessage(
+          e,
+          fallback: 'Could not submit this ticket. Please try again.',
+        );
         _submitting = false;
       });
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import 'package:school_pulse/core/error/friendly_error_message.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -80,7 +81,7 @@ class _CustomDomainsScreenState extends State<CustomDomainsScreen> {
     if (value.contains('not-found')) {
       return 'That domain request no longer exists.';
     }
-    return value.replaceFirst(RegExp(r'^\[.*?\]\s*'), '');
+    return friendlyErrorMessage(error);
   }
 
   Future<void> _reject(CustomDomainRequest request) async {

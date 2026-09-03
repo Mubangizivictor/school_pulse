@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:school_pulse/core/error/friendly_error_message.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification.dart';
@@ -204,7 +205,7 @@ class _SuperAdminNotificationsScreenState
     if (v.contains('unavailable') || v.contains('network')) {
       return 'You appear to be offline. This applies when you reconnect.';
     }
-    return v.replaceFirst(RegExp(r'^Exception:\s*'), '');
+    return friendlyErrorMessage(error);
   }
 
   Widget _backButton(BuildContext context) => IconButton(

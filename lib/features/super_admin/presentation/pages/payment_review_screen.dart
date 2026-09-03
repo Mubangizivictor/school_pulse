@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:school_pulse/core/error/friendly_error_message.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -506,7 +507,7 @@ class _PaymentReviewScreenState extends State<PaymentReviewScreen> {
     if (text.contains('unauthenticated')) {
       return 'Your owner session expired. Sign in again.';
     }
-    return text.replaceFirst(RegExp(r'^Exception:\s*'), '');
+    return friendlyErrorMessage(error);
   }
 
   String _statusLabel(ManualPaymentStatus status) => switch (status) {

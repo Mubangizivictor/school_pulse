@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import 'package:school_pulse/core/error/friendly_error_message.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -718,7 +719,7 @@ class _BillingPageState extends State<BillingPage> {
     if (text.contains('unauthenticated')) {
       return 'Your owner session expired. Sign in again.';
     }
-    return text.replaceFirst(RegExp(r'^Exception:\s*'), '');
+    return friendlyErrorMessage(error);
   }
 }
 
