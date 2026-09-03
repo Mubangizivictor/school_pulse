@@ -405,10 +405,18 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     });
   }
 
+  /// Width at or above which the desktop layout can afford the 380px
+  /// side-panel inspector next to the table. Below it — narrow desktop
+  /// windows and tablets — the inspector opens as a bottom sheet instead.
+  static const double _kSidePanelBreakpoint = 1080;
+
   void _openInspector(AuditLog log, {required bool wide}) {
-    if (wide) {
+    final canSidePanel =
+        wide && MediaQuery.sizeOf(context).width >= _kSidePanelBreakpoint;
+    if (canSidePanel) {
       setState(() => _selectedLog = log);
     } else {
+      _selectedLog = null;
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -1402,53 +1410,65 @@ class _DesktopAuditLogsBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Compact header ---------------------------------------------------
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            alignment: WrapAlignment.spaceBetween,
             children: [
-              Text(
-                'Audit logs',
-                style: AppTypography.headlineMedium.copyWith(
-                  color: AppColors.textPrimary(context),
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 9,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceElevated(context),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: AppColors.border(context)),
-                ),
-                child: Text(
-                  '${NumberFormat.decimalPattern().format(logs.length)} events',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.textSecondary(context),
-                    fontWeight: FontWeight.w700,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Audit logs',
+                    style: AppTypography.headlineMedium.copyWith(
+                      color: AppColors.textPrimary(context),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceElevated(context),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: AppColors.border(context)),
+                    ),
+                    child: Text(
+                      '${NumberFormat.decimalPattern().format(logs.length)} events',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textSecondary(context),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const Spacer(),
-              _HeaderButton(
-                icon: Icons.file_upload_outlined,
-                label: 'Export CSV',
-                onTap: onExport,
-              ),
-              const SizedBox(width: 8),
-              _HeaderButton(
-                icon: Icons.refresh_rounded,
-                label: 'Refresh',
-                onTap: onRefresh,
-              ),
-              const SizedBox(width: 8),
-              _HeaderButton(
-                icon: Icons.filter_alt_outlined,
-                label: 'Filters',
-                filled: activeFilterCount > 0,
-                badge: activeFilterCount,
-                onTap: onPickDateRange,
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _HeaderButton(
+                    icon: Icons.file_upload_outlined,
+                    label: 'Export CSV',
+                    onTap: onExport,
+                  ),
+                  _HeaderButton(
+                    icon: Icons.refresh_rounded,
+                    label: 'Refresh',
+                    onTap: onRefresh,
+                  ),
+                  _HeaderButton(
+                    icon: Icons.filter_alt_outlined,
+                    label: 'Filters',
+                    filled: activeFilterCount > 0,
+                    badge: activeFilterCount,
+                    onTap: onPickDateRange,
+                  ),
+                ],
               ),
             ],
           ),
@@ -1464,79 +1484,94 @@ class _DesktopAuditLogsBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: _SearchField(
-                        controller: searchController,
-                        onChanged: onSearch,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    _DateRangeButton(
-                      dateRange: dateRange,
-                      onPick: onPickDateRange,
-                      onClear: onClearDateRange,
-                    ),
-                    const SizedBox(width: 10),
-                    _FilterDropdown<_Period>(
-                      leading: Icons.calendar_today_outlined,
-                      value: period,
-                      onChanged: (p) => p == null ? null : onSelectPeriod(p),
-                      items: [
-                        for (final p in _Period.values)
-                          DropdownMenuItem(value: p, child: Text(p.label)),
-                      ],
-                    ),
-                    const SizedBox(width: 10),
-                    _FilterDropdown<String?>(
-                      leading: Icons.person_outline_rounded,
-                      value: actorFilter,
-                      onChanged: onSelectActor,
-                      items: [
-                        const DropdownMenuItem(
-                          value: null,
-                          child: Text('All actors'),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Below ~900px the six controls no longer fit on one
+                    // line — wrap them so nothing overflows on a narrow
+                    // desktop window or a tablet.
+                    final tight = constraints.maxWidth < 900;
+                    final search = SizedBox(
+                      width: tight ? constraints.maxWidth : null,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minWidth: tight ? 0 : 220,
+                          maxWidth: tight ? double.infinity : 360,
                         ),
-                        for (final a in actors)
-                          DropdownMenuItem(
-                            value: a,
-                            child: Text(
-                              _actorLabel(a),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(width: 10),
-                    _FilterDropdown<_AuditCategory>(
-                      leading: Icons.category_outlined,
-                      value: selected,
-                      onChanged: (c) =>
-                          c == null ? null : onSelectCategory(c),
-                      items: [
-                        for (final c in _AuditCategory.values)
-                          DropdownMenuItem(
-                            value: c,
-                            child: Text(
-                              c == _AuditCategory.all
-                                  ? 'All categories'
-                                  : c.label,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(width: 10),
-                    TextButton(
-                      onPressed: hasActiveFilters ? onClearFilters : null,
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.information(context),
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: _SearchField(
+                          controller: searchController,
+                          onChanged: onSearch,
+                        ),
                       ),
-                      child: const Text('Clear filters'),
-                    ),
-                  ],
+                    );
+                    final controls = <Widget>[
+                      _DateRangeButton(
+                        dateRange: dateRange,
+                        onPick: onPickDateRange,
+                        onClear: onClearDateRange,
+                      ),
+                      _FilterDropdown<_Period>(
+                        leading: Icons.calendar_today_outlined,
+                        value: period,
+                        onChanged: (p) =>
+                            p == null ? null : onSelectPeriod(p),
+                        items: [
+                          for (final p in _Period.values)
+                            DropdownMenuItem(value: p, child: Text(p.label)),
+                        ],
+                      ),
+                      _FilterDropdown<String?>(
+                        leading: Icons.person_outline_rounded,
+                        value: actorFilter,
+                        onChanged: onSelectActor,
+                        items: [
+                          const DropdownMenuItem(
+                            value: null,
+                            child: Text('All actors'),
+                          ),
+                          for (final a in actors)
+                            DropdownMenuItem(
+                              value: a,
+                              child: Text(
+                                _actorLabel(a),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                        ],
+                      ),
+                      _FilterDropdown<_AuditCategory>(
+                        leading: Icons.category_outlined,
+                        value: selected,
+                        onChanged: (c) =>
+                            c == null ? null : onSelectCategory(c),
+                        items: [
+                          for (final c in _AuditCategory.values)
+                            DropdownMenuItem(
+                              value: c,
+                              child: Text(
+                                c == _AuditCategory.all
+                                    ? 'All categories'
+                                    : c.label,
+                              ),
+                            ),
+                        ],
+                      ),
+                      TextButton(
+                        onPressed: hasActiveFilters ? onClearFilters : null,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.information(context),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        child: const Text('Clear filters'),
+                      ),
+                    ];
+                    return Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [search, ...controls],
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -1562,7 +1597,11 @@ class _DesktopAuditLogsBody extends StatelessWidget {
           const SizedBox(height: 16),
           // Table + inspector ------------------------------------------------
           Expanded(
-            child: Row(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final showSidePanel =
+                    selectedLog != null && constraints.maxWidth >= 1080;
+                return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
@@ -1629,7 +1668,7 @@ class _DesktopAuditLogsBody extends StatelessWidget {
                           ),
                         ),
                 ),
-                if (selectedLog != null) ...[
+                if (showSidePanel) ...[
                   const SizedBox(width: 16),
                   _AuditInspector(
                     log: selectedLog!,
@@ -1637,6 +1676,8 @@ class _DesktopAuditLogsBody extends StatelessWidget {
                   ),
                 ],
               ],
+                );
+              },
             ),
           ),
         ],
@@ -2178,16 +2219,16 @@ class _MobileAuditLogsBody extends StatelessWidget {
                     onChanged: onSearch,
                   ),
                   const SizedBox(height: 10),
-                  Row(
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Expanded(
-                        child: _DateRangeButton(
-                          dateRange: dateRange,
-                          onPick: onPickDateRange,
-                          onClear: onClearDateRange,
-                        ),
+                      _DateRangeButton(
+                        dateRange: dateRange,
+                        onPick: onPickDateRange,
+                        onClear: onClearDateRange,
                       ),
-                      const SizedBox(width: 10),
                       _FilterDropdown<_Period>(
                         leading: Icons.calendar_today_outlined,
                         value: period,
@@ -2363,14 +2404,29 @@ class _AuditCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          _titleCaseAction(log.action),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.bodyMedium.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary(context),
-                          ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _titleCaseAction(log.action),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textPrimary(context),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 92),
+                              child: StatusBadge(
+                                label: category.label,
+                                color: _categoryColor(context, category),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -2384,11 +2440,6 @@ class _AuditCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  StatusBadge(
-                    label: category.label,
-                    color: _categoryColor(context, category),
                   ),
                 ],
               ),
@@ -2462,6 +2513,7 @@ class _AuditCard extends StatelessWidget {
         Expanded(
           child: Text(
             value,
+            softWrap: true,
             style: AppTypography.bodySmall.copyWith(
               color: value == '—'
                   ? AppColors.textMuted(context)
