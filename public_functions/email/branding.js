@@ -3,50 +3,56 @@
 // sender identity, support address, and footer legal text never change —
 // every transactional email is sent and owned by School Pulse itself.
 
-const SENDER = 'School Pulse <notifications@schoolpulseapp.com>';
+// mail.schoolpulseapp.com is the domain actually added and verified in
+// Resend (resend.com/domains) - the bare schoolpulseapp.com apex was never
+// added there, so any sender using @schoolpulseapp.com directly is
+// rejected by Resend at send time ("domain is not verified"), regardless
+// of whether the underlying DNS is otherwise fine. Every sender below uses
+// the mail. subdomain to match what Resend has actually verified.
+const EMAIL_DOMAIN = 'mail.schoolpulseapp.com';
+const SENDER = `School Pulse <notifications@${EMAIL_DOMAIN}>`;
 const SUPPORT_EMAIL = 'support@schoolpulseapp.com';
 const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
 const STATUS_URL = `${WEBSITE_ORIGIN}/application-status`;
 
-// Per-category senders under the schoolpulseapp.com email domain
-// (requires Resend domain verification + SPF/DKIM for schoolpulseapp.com).
-// Falls back to the general
-// `notifications@` sender (SENDER) for any templateId not listed below.
+// Per-category senders under the verified mail.schoolpulseapp.com email
+// domain. Falls back to the general `notifications@` sender (SENDER) for
+// any templateId not listed below.
 const SENDER_BY_TEMPLATE = {
-  application_received: 'School Pulse <applications@schoolpulseapp.com>',
-  application_approved: 'School Pulse <applications@schoolpulseapp.com>',
-  application_rejected: 'School Pulse <applications@schoolpulseapp.com>',
+  application_received: `School Pulse <applications@${EMAIL_DOMAIN}>`,
+  application_approved: `School Pulse <applications@${EMAIL_DOMAIN}>`,
+  application_rejected: `School Pulse <applications@${EMAIL_DOMAIN}>`,
 
-  payment_proof_received: 'School Pulse <payments@schoolpulseapp.com>',
-  manual_payment_approved: 'School Pulse <payments@schoolpulseapp.com>',
-  manual_payment_rejected: 'School Pulse <payments@schoolpulseapp.com>',
-  mobile_money_payment_success: 'School Pulse <payments@schoolpulseapp.com>',
-  mobile_money_payment_failed: 'School Pulse <payments@schoolpulseapp.com>',
-  payment_receipt: 'School Pulse <payments@schoolpulseapp.com>',
-  payment_reversed: 'School Pulse <payments@schoolpulseapp.com>',
-  payment_overdue: 'School Pulse <payments@schoolpulseapp.com>',
-  subscription_activated: 'School Pulse <payments@schoolpulseapp.com>',
-  subscription_renewed: 'School Pulse <payments@schoolpulseapp.com>',
-  subscription_expiring: 'School Pulse <payments@schoolpulseapp.com>',
-  subscription_expired: 'School Pulse <payments@schoolpulseapp.com>',
-  subscription_suspended: 'School Pulse <payments@schoolpulseapp.com>',
-  subscription_reactivated: 'School Pulse <payments@schoolpulseapp.com>',
+  payment_proof_received: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  manual_payment_approved: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  manual_payment_rejected: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  mobile_money_payment_success: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  mobile_money_payment_failed: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  payment_receipt: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  payment_reversed: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  payment_overdue: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  subscription_activated: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  subscription_renewed: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  subscription_expiring: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  subscription_expired: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  subscription_suspended: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  subscription_reactivated: `School Pulse <payments@${EMAIL_DOMAIN}>`,
 
-  school_admin_account_created: 'School Pulse <accounts@schoolpulseapp.com>',
-  staff_account_created: 'School Pulse <accounts@schoolpulseapp.com>',
-  password_reset: 'School Pulse <accounts@schoolpulseapp.com>',
+  school_admin_account_created: `School Pulse <accounts@${EMAIL_DOMAIN}>`,
+  staff_account_created: `School Pulse <accounts@${EMAIL_DOMAIN}>`,
+  password_reset: `School Pulse <accounts@${EMAIL_DOMAIN}>`,
 
-  email_verification: 'School Pulse <security@schoolpulseapp.com>',
-  new_login_alert: 'School Pulse <security@schoolpulseapp.com>',
-  suspicious_login_alert: 'School Pulse <security@schoolpulseapp.com>',
-  sessions_revoked: 'School Pulse <security@schoolpulseapp.com>',
-  account_locked: 'School Pulse <security@schoolpulseapp.com>',
-  account_reactivated: 'School Pulse <security@schoolpulseapp.com>',
-  password_changed: 'School Pulse <security@schoolpulseapp.com>',
-  two_step_verification_enabled: 'School Pulse <security@schoolpulseapp.com>',
-  two_step_verification_disabled: 'School Pulse <security@schoolpulseapp.com>',
-  trusted_device_added: 'School Pulse <security@schoolpulseapp.com>',
-  trusted_device_removed: 'School Pulse <security@schoolpulseapp.com>',
+  email_verification: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  new_login_alert: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  suspicious_login_alert: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  sessions_revoked: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  account_locked: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  account_reactivated: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  password_changed: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  two_step_verification_enabled: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  two_step_verification_disabled: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  trusted_device_added: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  trusted_device_removed: `School Pulse <security@${EMAIL_DOMAIN}>`,
 };
 
 /**
