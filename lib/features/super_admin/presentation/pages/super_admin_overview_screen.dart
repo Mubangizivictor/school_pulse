@@ -673,43 +673,42 @@ class PlatformMetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PulseCard(
     onTap: onTap,
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.all(14),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: .12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 20),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            const Spacer(),
-          ],
+            child: Icon(icon, color: color, size: 18),
+          ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         Text(
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: _label(context),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Text(
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: AppTypography.headlineSmall.copyWith(
             color: AppColors.textPrimary(context),
-            fontSize: 22,
+            fontSize: 20,
             fontWeight: FontWeight.w800,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(
           detail,
           maxLines: 1,
@@ -734,13 +733,16 @@ class _MetricGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
+      // Mobile shows the metric row as 2x2, matching the reference; it only
+      // collapses to a single column on very narrow (small-phone) widths,
+      // and expands to a single 4-up row on desktop.
       final columns = constraints.maxWidth >= 900
           ? 4
-          : constraints.maxWidth >= 520
+          : constraints.maxWidth >= 340
           ? 2
           : 1;
       final width =
-          (constraints.maxWidth - (columns - 1) * 16) / columns;
+          (constraints.maxWidth - (columns - 1) * 12) / columns;
       final cards = [
         PlatformMetricCard(
           icon: Icons.account_balance_outlined,
@@ -777,8 +779,8 @@ class _MetricGrid extends StatelessWidget {
         ),
       ];
       return Wrap(
-        spacing: 16,
-        runSpacing: 16,
+        spacing: 12,
+        runSpacing: 12,
         children: [
           for (final card in cards) SizedBox(width: width, child: card),
         ],
