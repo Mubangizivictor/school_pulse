@@ -106,13 +106,10 @@ import 'package:school_pulse/features/admin/domain/repositories/admin_attendance
 import 'package:school_pulse/features/admin/data/repositories/admin_attendance_repository_impl.dart';
 
 // Super Admin
-import 'package:school_pulse/features/super_admin/domain/repositories/super_admin_repository.dart';
+import 'package:school_pulse/features/super_admin/super_admin_injection.dart';
 import 'package:school_pulse/features/subscription_payment/data/repositories/subscription_payment_repository_impl.dart';
 import 'package:school_pulse/features/subscription_payment/domain/repositories/subscription_payment_repository.dart';
 import 'package:school_pulse/features/subscription_payment/presentation/bloc/subscription_payment_cubit.dart';
-import 'package:school_pulse/features/super_admin/data/repositories/super_admin_repository_impl.dart';
-import 'package:school_pulse/features/super_admin/data/datasources/super_admin_remote_datasource.dart';
-import 'package:school_pulse/features/super_admin/presentation/bloc/super_admin_bloc.dart';
 
 // Admin / System Config
 import 'package:school_pulse/features/admin/data/repositories/system_config_repository.dart';
@@ -569,16 +566,10 @@ Future<void> init() async {
   // Features - Assessment
   sl.registerFactory(() => AssessmentBloc(repository: sl()));
 
-  // Features - Auth
-  sl.registerFactory(() => SuperAdminBloc(repository: sl(), auth: sl()));
-
-  sl.registerLazySingleton<SuperAdminRepository>(
-    () => SuperAdminRepositoryImpl(remoteDataSource: sl()),
-  );
-
-  sl.registerLazySingleton<SuperAdminRemoteDataSource>(
-    () => SuperAdminRemoteDataSourceImpl(firestore: sl(), auth: sl()),
-  );
+  // Features - Super Admin (SaaS owner console).
+  // Bloc + repository + datasource graph lives in the module:
+  // features/super_admin/super_admin_injection.dart
+  registerSuperAdmin(sl);
 
   sl.registerLazySingleton<AssessmentRepository>(
     () => AssessmentRepositoryImpl(remoteDataSource: sl(), networkInfo: sl()),
@@ -2394,6 +2385,9 @@ Future<void> init() async {
 
   sl.registerLazySingleton(() => FirebaseAuth.instance);
   sl.registerLazySingleton(() => FirebaseFirestore.instance);
+  // Super Admin (owner console) datasources - kept here, not in
+  // registerSuperAdmin(), because they must register immediately after the
+  // FirebaseFirestore singleton above (registration order matters).
   sl.registerLazySingleton<SecuritySettingsRemoteDataSource>(
     () => SecuritySettingsRemoteDataSourceImpl(firestore: sl()),
   );
