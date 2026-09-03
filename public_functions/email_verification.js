@@ -12,7 +12,7 @@ function text(value, max = 200) {
 }
 
 const VERIFICATION_ACTION_SETTINGS = {
-  url: `${WEBSITE_ORIGIN}/register?verified=1`,
+  url: `${WEBSITE_ORIGIN}/register-school?verified=1`,
   handleCodeInApp: false,
 };
 
