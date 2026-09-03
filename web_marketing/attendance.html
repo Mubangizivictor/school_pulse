@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance — School Pulse</title>
+<meta name="description" content="Mark attendance in seconds and notify parents automatically with School Pulse — built for teachers, admins and parents in Ugandan schools.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<main>
+  <section class="hero">
+    <div class="container">
+      <span class="eyebrow">Attendance</span>
+      <h1>Mark attendance in seconds. Notify parents instantly.</h1>
+      <p class="lead">No more paper registers. Teachers check in learners from a phone or tablet, and parents get notified the moment their child is marked absent or late.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="mockup">
+        <div class="mockup-chrome">
+          <span class="mockup-dot"></span><span class="mockup-dot"></span><span class="mockup-dot"></span>
+          <span class="mockup-url">app.schoolpulse.app/attendance</span>
+        </div>
+        <div class="mockup-body">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+            <div style="font-weight:800; font-size:16px;">P5 East · Wed, 3 Sep 2026</div>
+            <div class="btn-row">
+              <a href="#" class="btn btn-outline">◀ Previous day</a>
+              <a href="#" class="btn btn-outline">Next day ▶</a>
+            </div>
+          </div>
+          <div class="grid grid-3" style="margin-bottom:16px;">
+            <div class="card text-center" style="padding:16px;">
+              <span class="stat-pill green">Present · 36</span>
+            </div>
+            <div class="card text-center" style="padding:16px;">
+              <span class="stat-pill red">Absent · 3</span>
+            </div>
+            <div class="card text-center" style="padding:16px;">
+              <span class="stat-pill amber">Late · 2</span>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Learner</th><th>Class</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Nakato Grace</td><td>P5 East</td><td><span class="badge badge-green">Present</span></td></tr>
+              <tr><td>Okello Brian</td><td>P5 East</td><td><span class="badge badge-amber">Late</span></td></tr>
+              <tr><td>Achieng Mary</td><td>P5 East</td><td><span class="badge badge-red">Absent</span></td></tr>
+              <tr><td>Kintu Daniel</td><td>P5 East</td><td><span class="badge badge-green">Present</span></td></tr>
+              <tr><td>Namutebi Ruth</td><td>P5 East</td><td><span class="badge badge-green">Present</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Benefits for every role</span>
+        <h2>One register, three sets of needs.</h2>
+      </div>
+      <div class="grid grid-3">
+        <div class="card">
+          <h3>Teachers</h3>
+          <ul class="checklist">
+            <li id="ck-t-0"></li>
+            <li id="ck-t-1"></li>
+            <li id="ck-t-2"></li>
+            <li id="ck-t-3"></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Admin</h3>
+          <ul class="checklist">
+            <li id="ck-a-0"></li>
+            <li id="ck-a-1"></li>
+            <li id="ck-a-2"></li>
+            <li id="ck-a-3"></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Parents</h3>
+          <ul class="checklist">
+            <li id="ck-pr-0"></li>
+            <li id="ck-pr-1"></li>
+            <li id="ck-pr-2"></li>
+            <li id="ck-pr-3"></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">How it works</span>
+        <h2>Attendance in four simple steps.</h2>
+      </div>
+      <div class="steps steps-row">
+        <div class="step">
+          <div class="card-icon" id="icon-clock"></div>
+          <div><h3>Open the register</h3><p>Teacher opens today's class list, even offline.</p></div>
+        </div>
+        <div class="step">
+          <div class="card-icon" id="icon-check"></div>
+          <div><h3>Mark each learner</h3><p>Tap present, absent or late for every learner in seconds.</p></div>
+        </div>
+        <div class="step">
+          <div class="card-icon" id="icon-bell"></div>
+          <div><h3>Parents notified</h3><p>Automatic alerts go out for absences and late arrivals.</p></div>
+        </div>
+        <div class="step">
+          <div class="card-icon" id="icon-chart"></div>
+          <div><h3>Trends tracked</h3><p>Admins see attendance trends by class, stream and term.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <div class="cta-banner">
+        <h2>Stop chasing paper registers.</h2>
+        <p>Register your school and get attendance running by tomorrow morning.</p>
+        <div class="btn-row" style="justify-content:center;">
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/pricing-config.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/footer.js"></script>
+<script>
+  document.getElementById('icon-clock').innerHTML = window.ICONS.clock;
+  document.getElementById('icon-check').innerHTML = window.ICONS.check;
+  document.getElementById('icon-bell').innerHTML = window.ICONS.bell;
+  document.getElementById('icon-chart').innerHTML = window.ICONS.chart;
+
+  function fillChecklist(prefix, items) {
+    items.forEach(function (text, i) {
+      var el = document.getElementById(prefix + '-' + i);
+      if (el) el.innerHTML = window.ICONS.check + '<span>' + text + '</span>';
+    });
+  }
+
+  fillChecklist('ck-t', [
+    'Mark a full class register in under a minute',
+    'Works even with no internet — syncs automatically later',
+    'See at a glance who is absent or late',
+    'No more carrying paper registers between classrooms'
+  ]);
+  fillChecklist('ck-a', [
+    'School-wide attendance dashboards by class and stream',
+    'Spot patterns of chronic absenteeism early',
+    'Export attendance data for reports and inspections',
+    'Full audit trail of every register submitted'
+  ]);
+  fillChecklist('ck-pr', [
+    'Instant notification when a child is marked absent or late',
+    'View attendance history for each term',
+    'Peace of mind without calling the school',
+    'Works over SMS or the parent app'
+  ]);
+</script>
+</body>
+</html>

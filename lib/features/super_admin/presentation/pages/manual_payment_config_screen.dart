@@ -221,7 +221,7 @@ class _ManualPaymentConfigScreenState extends State<ManualPaymentConfigScreen> {
                     Container(
                       padding: const EdgeInsets.all(AppSpacing.l),
                       decoration: BoxDecoration(
-                        color: AppColors.primary(context),
+                        color: AppColors.primary(context).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Row(
@@ -239,7 +239,7 @@ class _ManualPaymentConfigScreenState extends State<ManualPaymentConfigScreen> {
                               'manual subscription payment. Changes apply '
                               'immediately for every school.',
                               style: AppTypography.bodySmall.copyWith(
-                                color: AppColors.textSecondary(context),
+                                color: AppColors.textPrimary(context),
                                 height: 1.5,
                               ),
                             ),
@@ -250,7 +250,7 @@ class _ManualPaymentConfigScreenState extends State<ManualPaymentConfigScreen> {
                     const SizedBox(height: AppSpacing.xl),
                     _ProviderCard(
                       icon: Icons.phone_android_rounded,
-                      iconColor: Colors.black,
+                      iconColor: AppColors.textPrimary(context),
                       title: 'MTN Mobile Money',
                       summary: _momoNumberController.text.isEmpty
                           ? 'Not set'
@@ -300,7 +300,7 @@ class _ManualPaymentConfigScreenState extends State<ManualPaymentConfigScreen> {
                     const SizedBox(height: AppSpacing.m),
                     _ProviderCard(
                       icon: Icons.phone_android_rounded,
-                      iconColor: Colors.black,
+                      iconColor: AppColors.textPrimary(context),
                       title: 'Airtel Money',
                       summary: _airtelNumberController.text.isEmpty
                           ? 'Not set'
@@ -432,7 +432,7 @@ class _ManualPaymentConfigScreenState extends State<ManualPaymentConfigScreen> {
                     const SizedBox(height: AppSpacing.m),
                     _ProviderCard(
                       icon: Icons.payments_rounded,
-                      iconColor: Colors.black,
+                      iconColor: AppColors.textPrimary(context),
                       title: 'Cash',
                       summary: !_cashEnabled
                           ? 'Disabled'
@@ -555,7 +555,7 @@ class _ProviderCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(AppSpacing.s),
                     decoration: BoxDecoration(
-                      color: iconColor,
+                      color: iconColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(icon, color: iconColor, size: 20),

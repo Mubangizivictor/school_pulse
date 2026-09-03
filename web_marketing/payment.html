@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Submit Payment — School Pulse</title>
+<meta name="description" content="Submit your School Pulse subscription payment for verification.">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .method-card { border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 18px; cursor: pointer; background: var(--color-card); }
+  .method-card.selected { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+  .method-card[data-disabled="true"] { opacity: .5; cursor: not-allowed; }
+  .method-card h4 { margin: 0 0 4px; font-size: 15px; }
+  .method-number { font-size: 18px; font-weight: 800; margin: 6px 0; }
+  .copy-btn { font-size: 12px; padding: 4px 10px; }
+  .upload-drop { border: 1px dashed var(--color-border); border-radius: var(--radius-sm); padding: 20px; text-align: center; cursor: pointer; }
+  .upload-drop.has-file { border-style: solid; border-color: var(--color-primary); }
+  .progress-bar { height: 6px; border-radius: 999px; background: var(--color-surface); overflow: hidden; margin-top: 10px; display:none; }
+  .progress-bar .fill { height: 100%; background: var(--color-primary); width: 0%; transition: width .2s; }
+</style>
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<main>
+  <section class="hero" style="padding-bottom:32px; text-align:center;">
+    <div class="container">
+      <span class="eyebrow">Registration</span>
+      <h1>Submit your subscription payment.</h1>
+      <p class="lead" style="max-width:560px; margin:0 auto;">Pay using any of the methods below, then submit your payment details for verification.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0;">
+    <div class="container" style="max-width:640px;">
+
+      <!-- Sign-in gate -->
+      <div class="card" id="signInPanel">
+        <h3 style="margin-top:0;">Sign in to continue</h3>
+        <p class="hint" style="margin-bottom:18px;">Use the email and password you used when you submitted your school application.</p>
+        <form id="signInForm" novalidate>
+          <div class="form-field" id="fieldEmail">
+            <label for="email">Email address</label>
+            <input type="email" id="email" autocomplete="email" required>
+            <div class="error-text">Enter the email you registered with.</div>
+          </div>
+          <div class="form-field" id="fieldPassword">
+            <label for="password">Password</label>
+            <input type="password" id="password" autocomplete="current-password" required>
+            <div class="error-text">Enter your password.</div>
+          </div>
+          <div class="form-field" id="signInError" style="display:none; color: var(--color-error); font-size: 13.5px;"></div>
+          <button type="submit" class="btn btn-primary btn-block" id="signInBtn">Sign in</button>
+        </form>
+      </div>
+
+      <!-- Loading -->
+      <div class="card" id="loadingPanel" style="display:none; text-align:center;">
+        <p>Loading your payment details…</p>
+      </div>
+
+      <!-- Not eligible / blocked states -->
+      <div class="card" id="blockedPanel" style="display:none; text-align:center;"></div>
+
+      <!-- Payment form -->
+      <div id="paymentFormWrap" style="display:none;">
+        <div class="card" style="margin-bottom:20px;">
+          <h3 style="margin-top:0;">Amount due</h3>
+          <p class="price-amount" id="amountDue">—</p>
+          <p class="hint" id="planLabel"></p>
+        </div>
+
+        <div class="card" style="margin-bottom:20px;">
+          <h3 style="margin-top:0;">1. Pay using one of these methods</h3>
+          <div class="grid grid-3" id="methodCards" style="gap:14px;"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-top:0;">2. Submit your payment details</h3>
+          <form id="paymentForm" novalidate>
+            <div class="form-field" id="fieldPayerName">
+              <label for="payerName">Payer name</label>
+              <input type="text" id="payerName" required>
+              <div class="error-text">Enter the name used to make the payment.</div>
+            </div>
+            <div class="form-row">
+              <div class="form-field" id="fieldReference">
+                <label for="reference">Transaction / receipt reference</label>
+                <input type="text" id="reference" required>
+                <div class="error-text">Enter the transaction reference (at least 3 characters).</div>
+              </div>
+              <div class="form-field" id="fieldPaymentDate">
+                <label for="paymentDate">Payment date &amp; time</label>
+                <input type="datetime-local" id="paymentDate" required>
+                <div class="error-text">Enter when the payment was made.</div>
+              </div>
+            </div>
+            <div class="form-field" id="fieldAmount">
+              <label for="amount">Amount paid (UGX)</label>
+              <input type="number" id="amount" min="0" step="1" required>
+              <div class="hint">Full payment is required — partial payments are not accepted.</div>
+              <div class="error-text">Enter the amount you paid.</div>
+            </div>
+            <div class="form-field">
+              <label for="note">Note (optional)</label>
+              <textarea id="note" rows="3"></textarea>
+            </div>
+            <div class="form-field" id="fieldProof">
+              <label>Payment proof (screenshot or receipt)</label>
+              <div class="upload-drop" id="uploadDrop">
+                <p id="uploadLabel">Click to choose an image or PDF (max 10MB)</p>
+                <div class="progress-bar" id="uploadProgress"><div class="fill" id="uploadProgressFill"></div></div>
+              </div>
+              <input type="file" id="proofFile" accept="image/*,application/pdf" style="display:none;">
+              <div class="error-text">Upload your payment proof.</div>
+            </div>
+            <div class="form-field" id="submitError" style="display:none; color: var(--color-error); font-size: 13.5px;"></div>
+            <button type="submit" class="btn btn-primary btn-block btn-lg" id="reviewBtn">Review and submit</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Confirm dialog (inline panel, not a native modal, to match site style) -->
+      <div class="card" id="confirmPanel" style="display:none;">
+        <h3 style="margin-top:0;">Confirm your payment submission</h3>
+        <p class="hint">Please double-check these details before submitting. You cannot edit a submission once sent for review.</p>
+        <table class="data-table" style="margin:16px 0;">
+          <tbody id="confirmTable"></tbody>
+        </table>
+        <div class="btn-row">
+          <button type="button" class="btn btn-outline" id="confirmBackBtn">Go back and edit</button>
+          <button type="button" class="btn btn-primary" id="confirmSubmitBtn">Confirm and submit</button>
+        </div>
+      </div>
+
+      <!-- Success -->
+      <div class="success-panel" id="successPanel" style="display:none;">
+        <div class="icon-circle"><span id="successIcon"></span></div>
+        <h3>Payment submitted for verification</h3>
+        <p>School Pulse will verify your payment, usually within one business day. You can check your status any time.</p>
+        <div class="btn-row" style="justify-content:center; margin-top:20px;">
+          <a href="application-status.html" class="btn btn-primary">Check application status</a>
+          <a href="login.html" class="btn btn-outline">Go to sign in</a>
+        </div>
+      </div>
+
+      <!-- Generic error -->
+      <div class="card" id="errorPanel" style="display:none; text-align:center;">
+        <span class="badge badge-red" style="margin-bottom:14px; display:inline-block;">Something went wrong</span>
+        <p id="errorMessage">Please try again in a moment.</p>
+        <button type="button" class="btn btn-primary" id="retryBtn" style="margin-top:12px;">Try again</button>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/footer.js"></script>
+<script src="js/registration-auth.js"></script>
+<script>
+(function () {
+  var signInPanel = document.getElementById('signInPanel');
+  var loadingPanel = document.getElementById('loadingPanel');
+  var blockedPanel = document.getElementById('blockedPanel');
+  var paymentFormWrap = document.getElementById('paymentFormWrap');
+  var confirmPanel = document.getElementById('confirmPanel');
+  var successPanel = document.getElementById('successPanel');
+  var errorPanel = document.getElementById('errorPanel');
+  var panels = [signInPanel, loadingPanel, blockedPanel, paymentFormWrap, confirmPanel, successPanel, errorPanel];
+
+  function show(panel) {
+    panels.forEach(function (p) { p.style.display = p === panel ? 'block' : 'none'; });
+  }
+
+  var context = null;
+  var selectedMethod = null;
+  var proofPath = null;
+  var submitting = false;
+
+  function fmtUgx(n) {
+    return 'UGX ' + Number(n || 0).toLocaleString('en-US');
+  }
+
+  // Method definitions rendered from the server's `instructions` object
+  // (public_functions/payments.js getManualPaymentContext), never
+  // hardcoded — if the owner hasn't configured a channel yet (enabled:false
+  // or blank number), that card is shown disabled rather than guessing a
+  // number, so the page never drifts from platform_billing_config/manual.
+  function methodDefs(instructions) {
+    var mm = instructions.mobileMoney || {};
+    var am = instructions.airtelMoney || {};
+    var bank = instructions.bank || {};
+    return [
+      {
+        id: 'mtn', label: (mm.network || 'MTN') + ' Mobile Money',
+        primary: mm.number, secondary: mm.accountName,
+        available: mm.enabled !== false && !!mm.number,
+      },
+      {
+        id: 'airtel', label: (am.network || 'Airtel') + ' Money',
+        primary: am.number, secondary: am.accountName,
+        available: am.enabled !== false && !!am.number,
+      },
+      {
+        id: 'bank', label: bank.bankName || 'Bank transfer',
+        primary: bank.accountNumber, secondary: [bank.accountName, bank.branch].filter(Boolean).join(' · '),
+        available: bank.enabled !== false && !!bank.accountNumber,
+      },
+    ];
+  }
+
+  function renderMethodCards() {
+    var wrap = document.getElementById('methodCards');
+    wrap.innerHTML = '';
+    var defs = methodDefs(context.instructions || {});
+    var anyAvailable = defs.some(function (d) { return d.available; });
+    if (!anyAvailable) {
+      wrap.innerHTML = '<p class="hint">Payment methods have not been configured yet. Please contact School Pulse support to arrange payment.</p>';
+      return;
+    }
+    defs.forEach(function (def) {
+      var card = document.createElement('div');
+      card.className = 'method-card';
+      card.dataset.method = def.id;
+      if (!def.available) {
+        card.dataset.disabled = 'true';
+        card.innerHTML = '<h4>' + def.label + '</h4><p class="hint">Not available</p>';
+        wrap.appendChild(card);
+        return;
+      }
+      card.innerHTML =
+        '<h4>' + def.label + '</h4>' +
+        '<div class="method-number">' + def.primary + '</div>' +
+        (def.secondary ? '<p class="hint">' + def.secondary + '</p>' : '') +
+        '<button type="button" class="btn btn-outline copy-btn">Copy number</button>';
+      card.addEventListener('click', function (e) {
+        if (e.target.classList.contains('copy-btn')) {
+          navigator.clipboard && navigator.clipboard.writeText(def.primary);
+          e.target.textContent = 'Copied!';
+          setTimeout(function () { e.target.textContent = 'Copy number'; }, 1500);
+          return;
+        }
+        document.querySelectorAll('.method-card').forEach(function (c) { c.classList.remove('selected'); });
+        card.classList.add('selected');
+        selectedMethod = def.id;
+      });
+      wrap.appendChild(card);
+    });
+  }
+
+  function renderContext() {
+    if (context.plan.pricingUnavailable) {
+      blockedPanel.innerHTML =
+        '<span class="badge badge-amber" style="margin-bottom:14px; display:inline-block;">Pricing not configured</span>' +
+        '<p>Your plan does not have a price configured yet. Please contact School Pulse support before submitting payment.</p>' +
+        '<a href="contact.html" class="btn btn-primary" style="margin-top:12px;">Contact support</a>';
+      show(blockedPanel);
+      return;
+    }
+    if (context.paymentStatus === 'under_review') {
+      blockedPanel.innerHTML =
+        '<span class="badge badge-amber" style="margin-bottom:14px; display:inline-block;">Payment under review</span>' +
+        '<p>We already have a payment submission from you being verified. You will be notified once it is reviewed.</p>' +
+        '<a href="application-status.html" class="btn btn-primary" style="margin-top:12px;">Check status</a>';
+      show(blockedPanel);
+      return;
+    }
+    if (context.paymentStatus === 'paid') {
+      blockedPanel.innerHTML =
+        '<span class="badge badge-green" style="margin-bottom:14px; display:inline-block;">Payment already confirmed</span>' +
+        '<p>Your subscription is already active. You can sign in to School Pulse now.</p>' +
+        '<a href="login.html" class="btn btn-primary" style="margin-top:12px;">Go to sign in</a>';
+      show(blockedPanel);
+      return;
+    }
+
+    document.getElementById('amountDue').textContent = fmtUgx(context.plan.expectedAmount);
+    document.getElementById('planLabel').textContent =
+      context.plan.name + ' plan · ' + context.plan.billingCycle +
+      (context.paymentStatus === 'rejected' ? ' · Previous submission was rejected: ' + (context.paymentRejectionReason || 'see details') : '');
+    document.getElementById('amount').value = context.plan.expectedAmount;
+    renderMethodCards();
+    show(paymentFormWrap);
+  }
+
+  function loadContext() {
+    show(loadingPanel);
+    SPAuth.callFunction('getManualPaymentContext', { method: 'GET' }).then(function (data) {
+      context = data;
+      renderContext();
+    }).catch(function (err) {
+      if (err && err.error === 'school_not_found') {
+        blockedPanel.innerHTML =
+          '<span class="badge badge-gray" style="margin-bottom:14px; display:inline-block;">No school found</span>' +
+          '<p>Your school has not been provisioned yet. Check your application status first.</p>' +
+          '<a href="application-status.html" class="btn btn-primary" style="margin-top:12px;">Check application status</a>';
+        show(blockedPanel);
+        return;
+      }
+      if (err && err.error === 'school_admin_required') {
+        blockedPanel.innerHTML =
+          '<span class="badge badge-gray" style="margin-bottom:14px; display:inline-block;">Not authorized</span>' +
+          '<p>Only the school administrator account can submit subscription payments.</p>';
+        show(blockedPanel);
+        return;
+      }
+      document.getElementById('errorMessage').textContent = (err && err.message) || 'Please try again in a moment.';
+      show(errorPanel);
+    });
+  }
+
+  document.getElementById('retryBtn').addEventListener('click', loadContext);
+
+  document.getElementById('signInForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var emailField = document.getElementById('fieldEmail');
+    var passwordField = document.getElementById('fieldPassword');
+    var email = document.getElementById('email').value.trim();
+    var password = document.getElementById('password').value;
+    var errorEl = document.getElementById('signInError');
+    errorEl.style.display = 'none';
+    emailField.classList.remove('has-error');
+    passwordField.classList.remove('has-error');
+
+    var valid = true;
+    if (!email) { emailField.classList.add('has-error'); valid = false; }
+    if (!password) { passwordField.classList.add('has-error'); valid = false; }
+    if (!valid) return;
+
+    var btn = document.getElementById('signInBtn');
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+
+    SPAuth.signIn(email, password).then(function () {
+      loadContext();
+    }).catch(function (err) {
+      errorEl.textContent = err && err.message ? err.message : 'Could not sign in. Check your email and password.';
+      errorEl.style.display = 'block';
+    }).finally(function () {
+      btn.disabled = false;
+      btn.textContent = 'Sign in';
+    });
+  });
+
+  // ---- File upload (client-side type/size validation before upload) ----
+  var MAX_BYTES = 10 * 1024 * 1024;
+  document.getElementById('uploadDrop').addEventListener('click', function () {
+    document.getElementById('proofFile').click();
+  });
+  document.getElementById('proofFile').addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    var fieldEl = document.getElementById('fieldProof');
+    fieldEl.classList.remove('has-error');
+    proofPath = null;
+    if (!file) return;
+    var okType = file.type.startsWith('image/') || file.type === 'application/pdf';
+    if (!okType) {
+      fieldEl.classList.add('has-error');
+      fieldEl.querySelector('.error-text').textContent = 'File must be an image or PDF.';
+      e.target.value = '';
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      fieldEl.classList.add('has-error');
+      fieldEl.querySelector('.error-text').textContent = 'File must be under 10MB.';
+      e.target.value = '';
+      return;
+    }
+    document.getElementById('uploadLabel').textContent = 'Uploading ' + file.name + '…';
+    document.getElementById('uploadDrop').classList.add('has-file');
+    var progressBar = document.getElementById('uploadProgress');
+    var progressFill = document.getElementById('uploadProgressFill');
+    progressBar.style.display = 'block';
+    SPAuth.uploadPaymentProof(file, function (pct) {
+      progressFill.style.width = Math.round(pct * 100) + '%';
+    }).then(function (path) {
+      proofPath = path;
+      document.getElementById('uploadLabel').textContent = 'Uploaded: ' + file.name;
+      progressBar.style.display = 'none';
+    }).catch(function () {
+      fieldEl.classList.add('has-error');
+      fieldEl.querySelector('.error-text').textContent = 'Upload failed. Please try again.';
+      document.getElementById('uploadLabel').textContent = 'Click to choose an image or PDF (max 10MB)';
+      document.getElementById('uploadDrop').classList.remove('has-file');
+      progressBar.style.display = 'none';
+    });
+  });
+
+  // ---- Form -> confirm step ----
+  document.getElementById('paymentForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var fields = [
+      { id: 'payerName', field: 'fieldPayerName' },
+      { id: 'reference', field: 'fieldReference', minLen: 3 },
+      { id: 'paymentDate', field: 'fieldPaymentDate' },
+      { id: 'amount', field: 'fieldAmount' },
+    ];
+    var valid = true;
+    fields.forEach(function (f) {
+      var input = document.getElementById(f.id);
+      var fieldEl = document.getElementById(f.field);
+      fieldEl.classList.remove('has-error');
+      var value = (input.value || '').trim();
+      if (!value || (f.minLen && value.length < f.minLen)) {
+        fieldEl.classList.add('has-error');
+        valid = false;
+      }
+    });
+    if (!selectedMethod) {
+      valid = false;
+      var errEl = document.getElementById('submitError');
+      errEl.textContent = 'Please choose a payment method above.';
+      errEl.style.display = 'block';
+    } else {
+      document.getElementById('submitError').style.display = 'none';
+    }
+    var proofField = document.getElementById('fieldProof');
+    if (!proofPath) {
+      proofField.classList.add('has-error');
+      proofField.querySelector('.error-text').textContent = 'Please upload your payment proof.';
+      valid = false;
+    }
+    var paymentDateMs = new Date(document.getElementById('paymentDate').value).getTime();
+    if (paymentDateMs > Date.now() + 24 * 60 * 60 * 1000) {
+      document.getElementById('fieldPaymentDate').classList.add('has-error');
+      valid = false;
+    }
+    if (!valid) return;
+
+    renderConfirm();
+    show(confirmPanel);
+  });
+
+  var methodLabels = { mtn: 'MTN Mobile Money', airtel: 'Airtel Money', bank: 'Bank transfer' };
+
+  function renderConfirm() {
+    var rows = [
+      ['Method', methodLabels[selectedMethod] || selectedMethod],
+      ['Payer name', document.getElementById('payerName').value.trim()],
+      ['Amount', fmtUgx(document.getElementById('amount').value)],
+      ['Reference', document.getElementById('reference').value.trim()],
+      ['Payment date', document.getElementById('paymentDate').value],
+      ['Proof', proofPath ? 'Uploaded' : '—'],
+    ];
+    var note = document.getElementById('note').value.trim();
+    if (note) rows.push(['Note', note]);
+    document.getElementById('confirmTable').innerHTML = rows.map(function (r) {
+      return '<tr><td style="font-weight:600; width:40%;">' + r[0] + '</td><td>' + escapeHtml(r[1]) + '</td></tr>';
+    }).join('');
+  }
+
+  function escapeHtml(s) {
+    var div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  document.getElementById('confirmBackBtn').addEventListener('click', function () {
+    show(paymentFormWrap);
+  });
+
+  document.getElementById('confirmSubmitBtn').addEventListener('click', function () {
+    if (submitting) return;
+    submitting = true;
+    var btn = document.getElementById('confirmSubmitBtn');
+    var backBtn = document.getElementById('confirmBackBtn');
+    btn.disabled = true;
+    backBtn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    var submissionId = 'sub_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+    var body = {
+      amount: Math.round(Number(document.getElementById('amount').value)),
+      method: selectedMethod,
+      payerName: document.getElementById('payerName').value.trim(),
+      reference: document.getElementById('reference').value.trim(),
+      paymentDate: new Date(document.getElementById('paymentDate').value).toISOString(),
+      note: document.getElementById('note').value.trim(),
+      proofStoragePath: proofPath,
+      submissionId: submissionId,
+    };
+
+    SPAuth.callFunction('submitManualPayment', { method: 'POST', body: body }).then(function () {
+      document.getElementById('successIcon').innerHTML = window.ICONS ? window.ICONS.check : '';
+      show(successPanel);
+    }).catch(function (err) {
+      submitting = false;
+      btn.disabled = false;
+      backBtn.disabled = false;
+      btn.textContent = 'Confirm and submit';
+      var errEl = document.getElementById('submitError');
+      errEl.textContent = (err && err.message) || 'Could not submit payment. Please try again.';
+      errEl.style.display = 'block';
+      show(paymentFormWrap);
+    });
+  });
+
+  // ---- Init ----
+  show(loadingPanel);
+  SPAuth.currentUser().then(function (user) {
+    if (user) {
+      loadContext();
+    } else {
+      show(signInPanel);
+    }
+  });
+})();
+</script>
+</body>
+</html>

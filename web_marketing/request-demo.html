@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Request a Demo — School Pulse</title>
+<meta name="description" content="See School Pulse in action. Book a live demo with our team and find out how your school can go paperless.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<main>
+  <section class="section">
+    <div class="container">
+      <div class="section-head left" style="max-width:640px; margin-bottom:40px;">
+        <span class="eyebrow">Request a demo</span>
+        <h1>See School Pulse in action.</h1>
+        <p class="lead">Tell us a bit about your school and we'll set up a live walkthrough tailored to how you run things.</p>
+      </div>
+
+      <div class="layout-2col">
+        <div>
+          <form id="demoForm" novalidate>
+            <div class="form-field">
+              <label for="schoolName">School name</label>
+              <input type="text" id="schoolName" name="schoolName" required>
+              <span class="error-text">Please enter your school's name.</span>
+            </div>
+
+            <div class="form-field">
+              <label for="schoolType">School type</label>
+              <select id="schoolType" name="schoolType" required>
+                <option value="">Select school type</option>
+                <option value="Nursery">Nursery</option>
+                <option value="Primary">Primary</option>
+                <option value="Secondary">Secondary</option>
+                <option value="International">International</option>
+              </select>
+              <span class="error-text">Please select a school type.</span>
+            </div>
+
+            <div class="form-field">
+              <label for="learnerCount">Learner count</label>
+              <select id="learnerCount" name="learnerCount" required>
+                <option value="">Select learner count</option>
+                <option value="1-300">1–300</option>
+                <option value="301-500">301–500</option>
+                <option value="501-800">501–800</option>
+                <option value="801-1200">801–1200</option>
+                <option value="1200+">1200+</option>
+              </select>
+              <span class="error-text">Please select a learner count.</span>
+            </div>
+
+            <div class="form-field">
+              <label for="workEmail">Work email</label>
+              <input type="email" id="workEmail" name="workEmail" required>
+              <span class="error-text">Please enter a valid work email.</span>
+            </div>
+
+            <div class="form-field">
+              <label>Preferred contact method</label>
+              <div class="radio-group">
+                <label class="radio-option">
+                  <input type="radio" name="preferredContact" value="Phone call">
+                  Phone call
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="preferredContact" value="WhatsApp">
+                  WhatsApp
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="preferredContact" value="Email">
+                  Email
+                </label>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg btn-block">Request demo</button>
+          </form>
+
+          <div id="demoSuccess" class="success-panel" style="display:none;">
+            <div class="icon-circle" id="demoSuccessIcon"></div>
+            <h3>Thanks — we'll be in touch to schedule your demo</h3>
+            <p class="muted">A member of our team will reach out shortly using your preferred contact method.</p>
+          </div>
+        </div>
+
+        <aside class="sidebar-panel">
+          <h4 style="margin-bottom:16px;">What to expect</h4>
+          <div class="steps">
+            <div class="step">
+              <div class="step-num">1</div>
+              <div>
+                <strong>Intro call</strong>
+                <p class="muted" style="margin:4px 0 0; font-size:14px;">A quick chat to understand your school's needs.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-num">2</div>
+              <div>
+                <strong>Live demo</strong>
+                <p class="muted" style="margin:4px 0 0; font-size:14px;">We walk you through School Pulse using a setup like yours.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-num">3</div>
+              <div>
+                <strong>Next steps</strong>
+                <p class="muted" style="margin:4px 0 0; font-size:14px;">We answer questions and outline a simple rollout plan.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-num">4</div>
+              <div>
+                <strong>Response time</strong>
+                <p class="muted" style="margin:4px 0 0; font-size:14px;">We typically respond within 1 business day.</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/footer.js"></script>
+<script src="js/forms.js"></script>
+<script src="js/main.js"></script>
+<script>
+  document.getElementById('demoSuccessIcon').innerHTML = window.ICONS.check;
+</script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parent Portal — School Pulse</title>
+<meta name="description" content="Give parents real-time attendance, fees and report card visibility, with data privacy and role-based access they can trust.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<main>
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <span class="eyebrow">Parent Portal</span>
+        <h1>Keep every parent in the loop.</h1>
+        <p class="lead">Attendance, fee balances, report cards and school updates — all in one simple app parents actually check, even on patchy internet.</p>
+        <div class="btn-row">
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+          <a href="pricing.html" class="btn btn-outline btn-lg">See pricing</a>
+        </div>
+      </div>
+      <div class="mockup">
+        <div class="mockup-chrome">
+          <span class="mockup-dot"></span><span class="mockup-dot"></span><span class="mockup-dot"></span>
+          <span class="mockup-url">app.schoolpulse.app/parent</span>
+        </div>
+        <div class="mockup-body">
+          <div class="grid grid-2" style="margin-bottom:16px;">
+            <div class="card" style="padding:16px;">
+              <div class="muted" style="font-size:12px;">Attendance this term</div>
+              <div style="font-size:24px; font-weight:800; margin-top:4px;">96.5%</div>
+              <span class="stat-pill green" style="margin-top:8px;">▲ Consistent</span>
+            </div>
+            <div class="card" style="padding:16px;">
+              <div class="muted" style="font-size:12px;">Fee balance</div>
+              <div style="font-size:24px; font-weight:800; margin-top:4px;">UGX 0</div>
+              <span class="stat-pill blue" style="margin-top:8px;">Cleared</span>
+            </div>
+          </div>
+          <div class="card" style="padding:16px; margin-bottom:16px;">
+            <div class="muted" style="font-size:12px;">Latest report card</div>
+            <div style="font-weight:700; margin-top:4px;">Term 2 — Overall: Distinction (88.4%)</div>
+          </div>
+          <div class="muted" style="font-size:12px; margin-bottom:8px;">Recent updates</div>
+          <ul class="checklist">
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+              Nakato Grace was marked present today at 7:52am
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+              Term 2 report card is now available
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+              School: Parent-teacher meeting on Saturday, 9am
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Privacy</span>
+        <h2>Privacy you can trust</h2>
+        <p>Parents only ever see what's relevant to their own children — nothing more.</p>
+      </div>
+      <div class="grid grid-3">
+        <div class="card">
+          <div class="card-icon" id="icon-secure"></div>
+          <h3>Data encrypted</h3>
+          <p>All information is encrypted in transit and at rest, protected by bank-grade security standards.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon" id="icon-key"></div>
+          <h3>Role-based access</h3>
+          <p>Parents, teachers and administrators each see only what their role permits — enforced at every level.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon" id="icon-eye"></div>
+          <h3>You control visibility</h3>
+          <p>Schools decide exactly what's shared with parents and when — full control stays with you.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="cta-banner">
+        <h2>Give parents the visibility they've been asking for.</h2>
+        <p>Register your school and open the parent portal in days, not months.</p>
+        <div class="btn-row" style="justify-content:center;">
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/pricing-config.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/footer.js"></script>
+<script>
+  document.getElementById('icon-secure').innerHTML = window.ICONS.secure;
+  document.getElementById('icon-key').innerHTML = window.ICONS.key;
+  document.getElementById('icon-eye').innerHTML = window.ICONS.eye;
+</script>
+</body>
+</html>

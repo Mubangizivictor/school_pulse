@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fees &amp; Payments — School Pulse</title>
+<meta name="description" content="Automate fee collection, give parents clear payment references, and see balances in real time — built for Ugandan schools using mobile money and bank payments.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<main>
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <span class="eyebrow">Fees &amp; Payments</span>
+        <h1>Stop chasing fees. Start seeing balances.</h1>
+        <p class="lead">Set up your fee structure once, give every learner a unique payment reference, and watch collections update in real time as parents pay by mobile money or bank.</p>
+        <div class="btn-row">
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+          <a href="pricing.html" class="btn btn-outline btn-lg">See pricing</a>
+        </div>
+      </div>
+      <div class="mockup">
+        <div class="mockup-chrome">
+          <span class="mockup-dot"></span><span class="mockup-dot"></span><span class="mockup-dot"></span>
+          <span class="mockup-url">app.schoolpulse.app/fees</span>
+        </div>
+        <div class="mockup-body">
+          <table class="data-table">
+            <thead>
+              <tr><th>Learner</th><th>Class</th><th>Due</th><th>Paid</th><th>Balance</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Nakato Grace</td><td>P5 East</td><td>UGX 850,000</td><td>UGX 850,000</td><td>UGX 0</td><td><span class="badge badge-green">Cleared</span></td></tr>
+              <tr><td>Okello Brian</td><td>S2 North</td><td>UGX 1,200,000</td><td>UGX 700,000</td><td>UGX 500,000</td><td><span class="badge badge-amber">Partial</span></td></tr>
+              <tr><td>Achieng Mary</td><td>P3 West</td><td>UGX 780,000</td><td>UGX 0</td><td>UGX 780,000</td><td><span class="badge badge-red">Overdue</span></td></tr>
+              <tr><td>Ssebunya Ivan</td><td>S4 Science</td><td>UGX 1,350,000</td><td>UGX 1,350,000</td><td>UGX 0</td><td><span class="badge badge-green">Cleared</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Why schools switch</span>
+        <h2>Fee collection that runs itself</h2>
+        <p>No more manual receipts, lost payment slips, or guessing who has paid.</p>
+      </div>
+      <div class="grid grid-4">
+        <div class="card">
+          <div class="card-icon" id="icon-refresh"></div>
+          <h3>Automate collections</h3>
+          <p>Set fee structures per class or stream once, and School Pulse handles invoicing every term automatically.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon" id="icon-key"></div>
+          <h3>Unique payment references</h3>
+          <p>Every learner gets a unique reference so mobile money and bank payments reconcile automatically — no manual matching.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon" id="icon-eye"></div>
+          <h3>Clear visibility</h3>
+          <p>Bursars and heads see live balances, collection rates and outstanding fees across the whole school at a glance.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon" id="icon-reminder"></div>
+          <h3>Smart reminders</h3>
+          <p>Automatic SMS and app reminders nudge parents before and after due dates — without your staff lifting a finger.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">How it works</span>
+        <h2>Three steps to full visibility</h2>
+      </div>
+      <div class="steps steps-row">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h3>Set up your fee structure</h3>
+          <p>Define fees per class, stream or boarding status once per term — School Pulse applies it automatically.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h3>Parents pay via mobile money or bank</h3>
+          <p>Each learner's unique reference means payments land and reconcile without any manual work.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h3>Track in real time</h3>
+          <p>Watch balances, receipts and collection rates update live on your dashboard, any time, any device.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="cta-banner">
+        <h2>Ready to stop chasing fees?</h2>
+        <p>Register your school today and start collecting with confidence next term.</p>
+        <div class="btn-row" style="justify-content:center;">
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/pricing-config.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/footer.js"></script>
+<script>
+  document.getElementById('icon-refresh').innerHTML = window.ICONS.refresh;
+  document.getElementById('icon-key').innerHTML = window.ICONS.key;
+  document.getElementById('icon-eye').innerHTML = window.ICONS.eye;
+  document.getElementById('icon-reminder').innerHTML = window.ICONS.reminder;
+</script>
+</body>
+</html>

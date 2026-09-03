@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pricing — School Pulse</title>
+<meta name="description" content="Simple, transparent termly pricing for School Pulse. Pay per learner, per term — no setup fees, no surprises. See which tier fits your school.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<main>
+  <section class="hero">
+    <div class="container">
+      <div class="section-head" style="margin:0 auto 8px;">
+        <span class="eyebrow">Pricing</span>
+        <h1>Pricing that grows with your school</h1>
+        <p class="lead">Pay per learner, per term. No setup fees, no hidden charges — just one predictable price based on how many learners you have.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-tight">
+    <div class="container">
+      <div class="slider-wrap">
+        <label for="estimatorSlider" style="font-weight:600; font-size:14.5px;">How many learners does your school have?</label>
+        <input type="range" id="estimatorSlider" min="1" max="2000" value="150">
+        <div class="slider-value">
+          Students: <span id="estimatorCount"></span>
+          &nbsp;·&nbsp; Recommended tier: <span id="estimatorTier"></span>
+          &nbsp;·&nbsp; Price: <span id="estimatorPrice"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="grid grid-5" id="pricingTiersGrid"></div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Compare</span>
+        <h2>What's included at every tier</h2>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="comparisonTable" style="min-width:760px;">
+          <thead><tr id="comparisonHeadRow"><th>Feature</th></tr></thead>
+          <tbody id="comparisonBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="card text-center" style="max-width:760px; margin:0 auto; padding:40px;">
+        <h3>Need a custom solution?</h3>
+        <p>Schools with more than 1,200 learners, multiple campuses, or special requirements — let's talk about a plan built for you.</p>
+        <a href="contact.html" class="btn btn-primary">Talk to us</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="cta-banner">
+        <h2>Ready to get started?</h2>
+        <p>Register your school today and pick the tier that fits — you can always change later.</p>
+        <div class="btn-row" style="justify-content:center;">
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/pricing-config.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/footer.js"></script>
+<script src="js/pricing-estimator.js"></script>
+<script>
+  var popularLabel = 'Standard';
+  var includesByTier = {
+    Starter:    ['All core modules', 'Unlimited staff accounts', 'Email support'],
+    Growth:     ['All core modules', 'Unlimited staff accounts', 'Email + WhatsApp support'],
+    Standard:   ['All core modules', 'Unlimited staff accounts', 'Email + WhatsApp support', 'Priority onboarding'],
+    Premium:    ['All core modules', 'Unlimited staff accounts', 'Priority support', 'Dedicated onboarding', 'Custom domain'],
+    Enterprise: ['All core modules', 'Unlimited staff accounts', 'Dedicated support', 'Dedicated onboarding', 'Custom domain', 'Multi-campus support']
+  };
+  var check = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--color-success);"><path d="M20 6L9 17l-5-5"/></svg>';
+  var supportByTier = { Starter: 'Email', Growth: 'Email + WhatsApp', Standard: 'Email + WhatsApp', Premium: 'Priority', Enterprise: 'Dedicated' };
+  var domainByTier = { Starter: '—', Growth: '—', Standard: '—', Premium: check, Enterprise: check };
+  var rows = [
+    { label: 'Students & Enrolment', cell: function () { return check; } },
+    { label: 'Attendance', cell: function () { return check; } },
+    { label: 'Fees & Payments', cell: function () { return check; } },
+    { label: 'Academics & Report Cards', cell: function () { return check; } },
+    { label: 'Parent Portal', cell: function () { return check; } },
+    { label: 'Support level', cell: function (tier) { return supportByTier[tier.label] || '—'; } },
+    { label: 'Custom domain', cell: function (tier) { return domainByTier[tier.label] || '—'; } }
+  ];
+
+  var grid = document.getElementById('pricingTiersGrid');
+  var headRow = document.getElementById('comparisonHeadRow');
+  var body = document.getElementById('comparisonBody');
+
+  function renderMessage(container, text) {
+    container.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:var(--color-muted, #666);">' + text + '</p>';
+  }
+
+  function renderPricing() {
+    var tiers = window.PRICING_TIERS;
+
+    if (!tiers.length) {
+      renderMessage(grid, 'Pricing is being updated — <a href="contact.html">contact us</a> for current rates.');
+      headRow.innerHTML = '<th>Feature</th>';
+      body.innerHTML = '';
+      return;
+    }
+
+    grid.innerHTML = '';
+    tiers.forEach(function (tier) {
+      var range = tier.max === null ? (tier.min + '+ learners') : (tier.min + '–' + tier.max + ' learners');
+      var isPopular = tier.label === popularLabel;
+      var items = includesByTier[tier.label] || [];
+      var itemsHtml = items.map(function (i) {
+        return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>' + i + '</li>';
+      }).join('');
+      grid.innerHTML += '' +
+        '<div class="price-card' + (isPopular ? ' popular' : '') + '" data-tier-card="' + tier.label + '">' +
+          (isPopular ? '<span class="tag">Most Popular</span>' : '') +
+          '<h3>' + tier.label + '</h3>' +
+          '<div class="price-range">' + range + '</div>' +
+          '<div class="price-amount">' + window.formatUGX(tier.price) + (tier.price ? '<small> / term</small>' : '') + '</div>' +
+          '<ul class="checklist" style="margin-bottom:16px;">' + itemsHtml + '</ul>' +
+          '<a href="register-school.html" class="btn btn-outline btn-block">Get started</a>' +
+        '</div>';
+    });
+
+    // Comparison table
+    headRow.innerHTML = '<th>Feature</th>';
+    tiers.forEach(function (tier) {
+      headRow.innerHTML += '<th>' + tier.label + '</th>';
+    });
+
+    body.innerHTML = '';
+    rows.forEach(function (row) {
+      var tr = '<tr><td style="font-weight:600; color:var(--color-ink);">' + row.label + '</td>';
+      tiers.forEach(function (tier) {
+        tr += '<td>' + row.cell(tier) + '</td>';
+      });
+      tr += '</tr>';
+      body.innerHTML += tr;
+    });
+  }
+
+  renderPricing();
+</script>
+</body>
+</html>

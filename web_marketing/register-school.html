@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register Your School — School Pulse</title>
+<meta name="description" content="Register your school with School Pulse in a few simple steps and get a live term-price estimate as you go.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<main>
+  <section class="section">
+    <div class="container">
+      <div class="section-head left" style="max-width:640px; margin-bottom:32px;">
+        <span class="eyebrow">Register your school</span>
+        <h1>Let's get your school set up.</h1>
+        <p class="lead">Answer a few questions about your school and we'll take it from there. This takes about 5 minutes.</p>
+      </div>
+
+      <div id="registerWizard">
+        <div id="wizardForm">
+          <div class="wizard-steps">
+            <div class="wizard-step" data-step="1"><div class="wizard-circle">1</div><div class="wizard-label">School details</div></div>
+            <div class="wizard-step" data-step="2"><div class="wizard-circle">2</div><div class="wizard-label">Administrator</div></div>
+            <div class="wizard-step" data-step="3"><div class="wizard-circle">3</div><div class="wizard-label">School year &amp; term</div></div>
+            <div class="wizard-step" data-step="4"><div class="wizard-circle">4</div><div class="wizard-label">Student count</div></div>
+            <div class="wizard-step" data-step="5"><div class="wizard-circle">5</div><div class="wizard-label">Address &amp; subdomain</div></div>
+            <div class="wizard-step" data-step="6"><div class="wizard-circle">6</div><div class="wizard-label">Review</div></div>
+          </div>
+
+          <div class="layout-2col">
+            <div>
+              <!-- Step 1: School details -->
+              <div class="wizard-panel" data-step="1">
+                <h3>School details</h3>
+                <div class="form-field">
+                  <label for="schoolName">School name</label>
+                  <input type="text" id="schoolName" name="schoolName" required>
+                  <span class="error-text">Please enter your school's name.</span>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="schoolType">School type</label>
+                    <select id="schoolType" name="schoolType" required>
+                      <option value="">Select school type</option>
+                      <option value="Nursery">Nursery</option>
+                      <option value="Primary">Primary</option>
+                      <option value="Secondary">Secondary</option>
+                      <option value="International">International</option>
+                    </select>
+                    <span class="error-text">Please select a school type.</span>
+                  </div>
+                  <div class="form-field">
+                    <label for="curriculum">Curriculum</label>
+                    <select id="curriculum" name="curriculum" required>
+                      <option value="">Select curriculum</option>
+                      <option value="Uganda National Curriculum">Uganda National Curriculum</option>
+                      <option value="Cambridge International">Cambridge International</option>
+                      <option value="IB">IB</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <span class="error-text">Please select a curriculum.</span>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="schoolEmail">School email</label>
+                    <input type="email" id="schoolEmail" name="schoolEmail" required>
+                    <span class="error-text">Please enter a valid school email.</span>
+                  </div>
+                  <div class="form-field">
+                    <label for="schoolPhone">School phone</label>
+                    <input type="tel" id="schoolPhone" name="schoolPhone" required>
+                    <span class="error-text">Please enter a school phone number.</span>
+                  </div>
+                </div>
+                <div class="form-field">
+                  <label for="schoolWebsite">School website <span class="muted">(optional)</span></label>
+                  <input type="text" id="schoolWebsite" name="schoolWebsite">
+                </div>
+                <div class="wizard-nav">
+                  <span></span>
+                  <button type="button" class="btn btn-primary" data-wizard-next>Next</button>
+                </div>
+              </div>
+
+              <!-- Step 2: Administrator -->
+              <div class="wizard-panel" data-step="2">
+                <h3>Administrator</h3>
+                <p class="muted">This is the person who will manage your School Pulse account.</p>
+                <div class="form-field">
+                  <label for="adminName">Administrator name</label>
+                  <input type="text" id="adminName" name="adminName" required>
+                  <span class="error-text">Please enter the administrator's name.</span>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="adminEmail">Administrator email</label>
+                    <input type="email" id="adminEmail" name="adminEmail" required>
+                    <span class="error-text">Please enter a valid email address.</span>
+                  </div>
+                  <div class="form-field">
+                    <label for="adminPhone">Administrator phone</label>
+                    <input type="tel" id="adminPhone" name="adminPhone" required>
+                    <span class="error-text">Please enter a phone number.</span>
+                  </div>
+                </div>
+                <div class="form-field">
+                  <label for="adminRole">Role</label>
+                  <select id="adminRole" name="adminRole" required>
+                    <option value="">Select role</option>
+                    <option value="Head Teacher">Head Teacher</option>
+                    <option value="Deputy Head">Deputy Head</option>
+                    <option value="Bursar">Bursar</option>
+                    <option value="Administrator">Administrator</option>
+                    <option value="Director">Director</option>
+                  </select>
+                  <span class="error-text">Please select a role.</span>
+                </div>
+                <div class="wizard-nav">
+                  <button type="button" class="btn btn-outline" data-wizard-back>Back</button>
+                  <button type="button" class="btn btn-primary" data-wizard-next>Next</button>
+                </div>
+              </div>
+
+              <!-- Step 3: School year & term -->
+              <div class="wizard-panel" data-step="3">
+                <h3>School year &amp; term</h3>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="schoolYear">School year</label>
+                    <select id="schoolYear" name="schoolYear" required>
+                      <option value="">Select year</option>
+                      <option value="2026">2026</option>
+                      <option value="2027">2027</option>
+                    </select>
+                    <span class="error-text">Please select a school year.</span>
+                  </div>
+                  <div class="form-field">
+                    <label for="term">Current term</label>
+                    <select id="term" name="term" required>
+                      <option value="">Select term</option>
+                      <option value="Term 1">Term 1</option>
+                      <option value="Term 2">Term 2</option>
+                      <option value="Term 3">Term 3</option>
+                    </select>
+                    <span class="error-text">Please select a term.</span>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="termStart">Term start date</label>
+                    <input type="date" id="termStart" name="termStart" required>
+                    <span class="error-text">Please enter the term start date.</span>
+                  </div>
+                  <div class="form-field">
+                    <label for="termEnd">Term end date</label>
+                    <input type="date" id="termEnd" name="termEnd" required>
+                    <span class="error-text">Please enter the term end date.</span>
+                  </div>
+                </div>
+                <div class="wizard-nav">
+                  <button type="button" class="btn btn-outline" data-wizard-back>Back</button>
+                  <button type="button" class="btn btn-primary" data-wizard-next>Next</button>
+                </div>
+              </div>
+
+              <!-- Step 4: Student count -->
+              <div class="wizard-panel" data-step="4">
+                <h3>Student count</h3>
+                <p class="muted">This helps us estimate your termly pricing tier — see the live summary alongside.</p>
+                <div class="form-field">
+                  <label for="studentCount">Number of students</label>
+                  <input type="number" id="studentCount" name="studentCount" min="1" required>
+                  <span class="error-text">Please enter your student count.</span>
+                </div>
+                <div class="wizard-nav">
+                  <button type="button" class="btn btn-outline" data-wizard-back>Back</button>
+                  <button type="button" class="btn btn-primary" data-wizard-next>Next</button>
+                </div>
+              </div>
+
+              <!-- Step 5: Address & subdomain -->
+              <div class="wizard-panel" data-step="5">
+                <h3>Address &amp; subdomain</h3>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="district">District</label>
+                    <select id="district" name="district" required>
+                      <option value="">Select district</option>
+                      <option value="Kampala">Kampala</option>
+                      <option value="Wakiso">Wakiso</option>
+                      <option value="Mukono">Mukono</option>
+                      <option value="Jinja">Jinja</option>
+                      <option value="Mbarara">Mbarara</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <span class="error-text">Please select a district.</span>
+                  </div>
+                  <div class="form-field">
+                    <label for="address">Address</label>
+                    <input type="text" id="address" name="address" required>
+                    <span class="error-text">Please enter your school's address.</span>
+                  </div>
+                </div>
+                <div class="form-field">
+                  <label for="subdomain">Desired subdomain</label>
+                  <input type="text" id="subdomain" name="subdomain" required placeholder="yourschool">
+                  <div class="hint">Your school will be reachable at <span id="subdomainPreview">yourschool.schoolpulse.app</span></div>
+                  <span class="error-text">Please choose a subdomain.</span>
+                </div>
+                <div class="wizard-nav">
+                  <button type="button" class="btn btn-outline" data-wizard-back>Back</button>
+                  <button type="button" class="btn btn-primary" data-wizard-next>Next</button>
+                </div>
+              </div>
+
+              <!-- Step 6: Review -->
+              <div class="wizard-panel" data-step="6">
+                <h3>Review</h3>
+                <p class="muted">Please check your details before submitting.</p>
+                <div id="wizardReview"></div>
+                <div class="wizard-nav">
+                  <button type="button" class="btn btn-outline" data-wizard-back>Back</button>
+                  <button type="button" class="btn btn-primary" id="wizardSubmit">Submit registration</button>
+                </div>
+              </div>
+            </div>
+
+            <aside class="sidebar-panel">
+              <h4 style="margin-bottom:16px;">Live term-price summary</h4>
+              <div class="summary-row"><span class="k">Students</span><span class="v" id="summaryStudentCount">—</span></div>
+              <div class="summary-row"><span class="k">Tier</span><span class="v" id="summaryTier">—</span></div>
+              <div class="summary-row"><span class="k">Price</span><span class="v" id="summaryPrice">Enter student count</span></div>
+            </aside>
+          </div>
+        </div>
+
+        <div id="wizardSuccess" class="success-panel" style="display:none;">
+          <div class="icon-circle" id="wizardSuccessIcon"></div>
+          <h3>Registration received</h3>
+          <p class="muted">Our team will set up your account and contact you shortly.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/pricing-config.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/footer.js"></script>
+<script src="js/wizard.js"></script>
+<script>
+  document.getElementById('wizardSuccessIcon').innerHTML = window.ICONS.check;
+</script>
+</body>
+</html>
