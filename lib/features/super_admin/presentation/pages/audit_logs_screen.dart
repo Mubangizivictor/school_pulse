@@ -2,11 +2,11 @@ import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
-import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -46,12 +46,15 @@ _AuditCategory _categoryOf(AuditLog log) {
   final action = log.action.toUpperCase();
   if (action.contains('PAYMENT') ||
       action.contains('PLAN') ||
-      action.contains('SUBSCRIPTION')) {
+      action.contains('SUBSCRIPTION') ||
+      action.contains('INVOICE')) {
     return _AuditCategory.billing;
   }
   if (action.contains('SIGN_IN') ||
       action.contains('SIGNIN') ||
+      action.contains('LOGIN') ||
       action.contains('BLOCK') ||
+      action.contains('DELETE') ||
       action.contains('SECURITY')) {
     return _AuditCategory.security;
   }
@@ -64,6 +67,91 @@ _AuditCategory _categoryOf(AuditLog log) {
   }
   return _AuditCategory.system;
 }
+
+/// A destructive or security-risk event — the only case where red chrome is
+/// used. Everything else stays monochrome / semantic-green.
+bool _isDestructive(AuditLog log) {
+  final a = log.action.toUpperCase();
+  return a.contains('DELETE') ||
+      a.contains('REMOVE') ||
+      a.contains('REVOKE') ||
+      a.contains('SUSPEND') ||
+      a.contains('BLOCK') ||
+      a.contains('FAILED') ||
+      a.contains('DENY') ||
+      a.contains('REJECT');
+}
+
+/// A successful / verified event — rendered with the semantic green accent.
+bool _isSuccess(AuditLog log) {
+  final a = log.action.toUpperCase();
+  return a.contains('SUCCESS') ||
+      a.contains('APPROVE') ||
+      a.contains('VERIFY') ||
+      a.contains('VERIFIED') ||
+      a.contains('ACTIVATE') ||
+      a.contains('REACTIVATE') ||
+      a.contains('CREATE') ||
+      a.contains('ADD') ||
+      a.contains('GRANT');
+}
+
+/// Meaningful glyph for an event, chosen from the action verb first and the
+/// category second — never a blank avatar.
+IconData _eventIcon(AuditLog log) {
+  final a = log.action.toUpperCase();
+  if (a.contains('LOGIN') || a.contains('SIGN_IN') || a.contains('SIGNIN')) {
+    return a.contains('FAIL')
+        ? Icons.gpp_bad_outlined
+        : Icons.verified_user_outlined;
+  }
+  if (a.contains('DELETE') || a.contains('REMOVE')) {
+    return Icons.delete_outline_rounded;
+  }
+  if (a.contains('SUSPEND') || a.contains('BLOCK')) return Icons.block_rounded;
+  if (a.contains('REVOKE') || a.contains('DENY') || a.contains('REJECT')) {
+    return Icons.gpp_bad_outlined;
+  }
+  if (a.contains('INVOICE')) return Icons.receipt_long_outlined;
+  if (a.contains('PAYMENT')) return Icons.payments_outlined;
+  if (a.contains('PLAN') || a.contains('SUBSCRIPTION')) {
+    return Icons.workspace_premium_outlined;
+  }
+  if (a.contains('API') || a.contains('KEY')) return Icons.vpn_key_outlined;
+  if (a.contains('ADMIN')) return Icons.person_add_alt_1_outlined;
+  if (a.contains('SCHOOL') && (a.contains('CREATE') || a.contains('ADD'))) {
+    return Icons.add_business_outlined;
+  }
+  if (a.contains('SCHOOL')) return Icons.school_outlined;
+  if (a.contains('SETTING')) return Icons.tune_rounded;
+  if (a.contains('IMPORT') || a.contains('EXPORT')) {
+    return Icons.swap_vert_rounded;
+  }
+  return switch (_categoryOf(log)) {
+    _AuditCategory.billing => Icons.credit_card_outlined,
+    _AuditCategory.schools => Icons.school_outlined,
+    _AuditCategory.security => Icons.shield_outlined,
+    _AuditCategory.system => Icons.settings_outlined,
+    _AuditCategory.all => Icons.bolt_outlined,
+  };
+}
+
+/// Accent color for an event's icon and status dot. Green for verified,
+/// red only for destructive / security-risk, otherwise near-black/white.
+Color _eventAccent(BuildContext context, AuditLog log) {
+  if (_isDestructive(log)) return AppColors.danger(context);
+  if (_isSuccess(log)) return AppColors.success(context);
+  return AppColors.textPrimary(context);
+}
+
+Color _categoryColor(BuildContext context, _AuditCategory category) =>
+    switch (category) {
+      _AuditCategory.billing => AppColors.information(context),
+      _AuditCategory.schools => AppColors.success(context),
+      _AuditCategory.security => AppColors.danger(context),
+      _AuditCategory.system => AppColors.textSecondary(context),
+      _AuditCategory.all => AppColors.textSecondary(context),
+    };
 
 /// Turns a machine event id like `APPROVE_INITIAL_SUBSCRIPTION_PAYMENT`
 /// into `Approve Initial Subscription Payment` for display. The raw
@@ -89,6 +177,42 @@ String _actorLabel(String ownerId) {
   final email = user?.email?.trim();
   if (email?.isNotEmpty ?? false) return email!;
   return 'SaaS Owner';
+}
+
+/// Owner display name (never derived from an email local-part), used as the
+/// primary actor line beside the avatar.
+String _actorName() {
+  final user = FirebaseAuth.instance.currentUser;
+  final name = user?.displayName?.trim();
+  if (name?.isNotEmpty ?? false) return name!;
+  return 'SaaS Owner';
+}
+
+String _actorInitials() {
+  final name = _actorName();
+  final parts = name.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  if (parts.isEmpty) return 'SO';
+  if (parts.length == 1) {
+    return parts.first.substring(0, parts.first.length >= 2 ? 2 : 1)
+        .toUpperCase();
+  }
+  return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+}
+
+/// The target school / entity a log entry acted on. Uses [AuditLog.schoolId]
+/// or [AuditLog.affectedUserId] when captured, otherwise an em dash — the
+/// raw record is never mutated.
+String _targetLabel(AuditLog log) {
+  if (log.schoolId?.trim().isNotEmpty ?? false) return log.schoolId!.trim();
+  if (log.affectedUserId?.trim().isNotEmpty ?? false) {
+    return log.affectedUserId!.trim();
+  }
+  final meta = log.metadata;
+  for (final key in const ['schoolName', 'targetName', 'school', 'target']) {
+    final v = meta[key];
+    if (v is String && v.trim().isNotEmpty) return v.trim();
+  }
+  return '—';
 }
 
 class AuditLogsScreen extends StatefulWidget {
@@ -137,11 +261,39 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
   int _page = 0;
   int _rowsPerPage = 10;
 
-  List<AuditLog> _filtered(List<AuditLog> logs) {
-    var result = _selected == _AuditCategory.all
-        ? logs
-        : logs.where((l) => _categoryOf(l) == _selected).toList();
-    result = result.where((l) => _period.includes(l.timestamp)).toList();
+  final TextEditingController _searchController = TextEditingController();
+  String _search = '';
+  String? _actorFilter; // null == "All actors"
+  AuditLog? _selectedLog;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  bool get _hasActiveFilters =>
+      _search.isNotEmpty ||
+      _dateRange != null ||
+      _actorFilter != null ||
+      _selected != _AuditCategory.all ||
+      _period != _Period.today;
+
+  int get _activeFilterCount {
+    var n = 0;
+    if (_search.isNotEmpty) n++;
+    if (_dateRange != null) n++;
+    if (_actorFilter != null) n++;
+    if (_selected != _AuditCategory.all) n++;
+    if (_period != _Period.today) n++;
+    return n;
+  }
+
+  /// Applies every non-category filter (period, date range, search text,
+  /// actor) to a list. Category is applied separately so the chip counts can
+  /// each reflect "everything else, then this category".
+  List<AuditLog> _applyNonCategory(List<AuditLog> logs) {
+    var result = logs.where((l) => _period.includes(l.timestamp)).toList();
 
     if (_dateRange != null) {
       final start = _dateRange!.start;
@@ -151,17 +303,68 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
           .toList();
     }
 
+    if (_actorFilter != null) {
+      result = result.where((l) => l.ownerId == _actorFilter).toList();
+    }
+
+    if (_search.isNotEmpty) {
+      final q = _search.toLowerCase();
+      result = result.where((l) {
+        return l.action.toLowerCase().contains(q) ||
+            _titleCaseAction(l.action).toLowerCase().contains(q) ||
+            _actorLabel(l.ownerId).toLowerCase().contains(q) ||
+            _targetLabel(l).toLowerCase().contains(q) ||
+            (l.reason?.toLowerCase().contains(q) ?? false) ||
+            l.id.toLowerCase().contains(q);
+      }).toList();
+    }
+
     return result;
   }
 
+  List<AuditLog> _filtered(List<AuditLog> logs) {
+    final base = _applyNonCategory(logs);
+    if (_selected == _AuditCategory.all) return base;
+    return base.where((l) => _categoryOf(l) == _selected).toList();
+  }
+
+  Map<_AuditCategory, int> _categoryCounts(List<AuditLog> logs) {
+    final base = _applyNonCategory(logs);
+    final counts = {for (final c in _AuditCategory.values) c: 0};
+    counts[_AuditCategory.all] = base.length;
+    for (final log in base) {
+      final c = _categoryOf(log);
+      counts[c] = (counts[c] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  /// Distinct actor ids present in the already-fetched logs, for the
+  /// "All actors" dropdown. In-memory only — no new query.
+  List<String> _actorOptions(List<AuditLog> logs) {
+    final seen = <String>{};
+    for (final l in logs) {
+      seen.add(l.ownerId);
+    }
+    final list = seen.toList()
+      ..sort((a, b) => _actorLabel(a).toLowerCase().compareTo(
+        _actorLabel(b).toLowerCase(),
+      ));
+    return list;
+  }
+
   Future<void> _exportAudit(List<AuditLog> logs) async {
-    final buffer = StringBuffer('Event,Actor,Category,Timestamp,Reason\n');
+    final buffer = StringBuffer(
+      'Event,EventCode,Actor,Target,Category,Timestamp,Reason\n',
+    );
     for (final log in logs) {
       String escape(String value) => '"${value.replaceAll('"', '""')}"';
       buffer.writeln(
         [
+          escape(_titleCaseAction(log.action)),
           escape(log.action),
-          escape(log.ownerId),
+          escape(_actorLabel(log.ownerId)),
+          escape(_targetLabel(log)),
           escape(_categoryOf(log).label),
           escape(log.timestamp.toIso8601String()),
           escape(log.reason ?? ''),
@@ -190,11 +393,43 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
     });
   }
 
+  void _clearFilters() {
+    setState(() {
+      _search = '';
+      _searchController.clear();
+      _dateRange = null;
+      _actorFilter = null;
+      _selected = _AuditCategory.all;
+      _period = _Period.today;
+      _page = 0;
+    });
+  }
+
+  void _openInspector(AuditLog log, {required bool wide}) {
+    if (wide) {
+      setState(() => _selectedLog = log);
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: AppColors.background(context),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (_) => _AuditInspector(
+          log: log,
+          isSheet: true,
+          onClose: () => Navigator.of(context).pop(),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final wide = isSuperAdminWide(context);
     return Scaffold(
-      backgroundColor: wide ? null : AppColors.background(context),
+      backgroundColor: AppColors.background(context),
       body: BlocBuilder<SuperAdminBloc, SuperAdminState>(
         builder: (context, state) {
           if (state.status == SuperAdminStatus.loading &&
@@ -205,17 +440,46 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
           final logs = List<AuditLog>.from(state.auditLogs)
             ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
           final filtered = _filtered(logs);
+          final counts = _categoryCounts(logs);
+          final actors = _actorOptions(logs);
+
+          // Keep the desktop inspector selection valid against the current
+          // filter set without ever discarding the underlying record.
+          if (_selectedLog != null &&
+              !filtered.any((l) => l.id == _selectedLog!.id)) {
+            _selectedLog = null;
+          }
 
           if (wide) {
             return _DesktopAuditLogsBody(
               logs: logs,
               filtered: filtered,
+              counts: counts,
+              actors: actors,
               selected: _selected,
+              period: _period,
               dateRange: _dateRange,
+              searchController: _searchController,
+              actorFilter: _actorFilter,
+              activeFilterCount: _activeFilterCount,
+              hasActiveFilters: _hasActiveFilters,
+              selectedLog: _selectedLog,
               page: _page,
               rowsPerPage: _rowsPerPage,
+              onSearch: (v) => setState(() {
+                _search = v;
+                _page = 0;
+              }),
               onSelectCategory: (c) => setState(() {
                 _selected = c;
+                _page = 0;
+              }),
+              onSelectPeriod: (p) => setState(() {
+                _period = p;
+                _page = 0;
+              }),
+              onSelectActor: (a) => setState(() {
+                _actorFilter = a;
                 _page = 0;
               }),
               onPickDateRange: () => _pickDateRange(context),
@@ -223,9 +487,13 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                 _dateRange = null;
                 _page = 0;
               }),
+              onClearFilters: _clearFilters,
+              onExport: () => _exportAudit(filtered),
               onRefresh: () => context.read<SuperAdminBloc>().add(
                 const LoadAuditLogsEvent(),
               ),
+              onOpenLog: (l) => _openInspector(l, wide: true),
+              onCloseInspector: () => setState(() => _selectedLog = null),
               onPageChanged: (p) => setState(() => _page = p),
               onRowsPerPageChanged: (n) => setState(() {
                 _rowsPerPage = n;
@@ -234,116 +502,38 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
             );
           }
 
-          final grouped = _groupByDay(filtered);
-
-          return SafeArea(
-            bottom: false,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text('Activity', style: _pageTitle(context)),
-                      const Spacer(),
-                      if (logs.isNotEmpty) ...[
-                        _IconAction(
-                          icon: Icons.ios_share_rounded,
-                          tooltip: 'Export audit',
-                          onTap: () => _exportAudit(filtered),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      _IconAction(
-                        icon: Icons.refresh_rounded,
-                        tooltip: 'Refresh activity',
-                        onTap: () => context.read<SuperAdminBloc>().add(
-                          const LoadAuditLogsEvent(),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      _PeriodPicker(
-                        period: _period,
-                        onChanged: (value) => setState(() {
-                          _period = value;
-                          _page = 0;
-                        }),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  if (logs.isNotEmpty)
-                    SizedBox(
-                      height: 34,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _AuditCategory.values.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          final category = _AuditCategory.values[index];
-                          final isSelected = category == _selected;
-                          return _CompactChip(
-                            label: category.label,
-                            isSelected: isSelected,
-                            onTap: () => setState(() {
-                              _selected = category;
-                              _page = 0;
-                            }),
-                          );
-                        },
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-                  if (logs.isEmpty)
-                    const _CompactState(
-                      icon: Icons.history_outlined,
-                      title: 'No audit logs found',
-                      message:
-                          'Owner actions on the platform will appear here as they happen.',
-                    )
-                  else if (filtered.isEmpty)
-                    _CompactState(
-                      icon: Icons.filter_list_off_rounded,
-                      title: 'No matching logs',
-                      message:
-                          'No audit logs match the "${_selected.label}" filter for ${_period.label.toLowerCase()}.',
-                    )
-                  else
-                    for (final group in grouped) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6, top: 4),
-                        child: Text(group.label, style: _groupLabel(context)),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceElevated(context),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.border(context)),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Column(
-                          children: [
-                            for (final (i, log) in group.logs.indexed) ...[
-                              if (i > 0)
-                                Divider(
-                                  height: 1,
-                                  color: AppColors.border(context),
-                                ),
-                              AuditActivityRow(log: log),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                    ],
-                ],
-              ),
+          return _MobileAuditLogsBody(
+            logs: logs,
+            filtered: filtered,
+            counts: counts,
+            selected: _selected,
+            period: _period,
+            dateRange: _dateRange,
+            searchController: _searchController,
+            hasActiveFilters: _hasActiveFilters,
+            onSearch: (v) => setState(() {
+              _search = v;
+              _page = 0;
+            }),
+            onSelectCategory: (c) => setState(() {
+              _selected = c;
+              _page = 0;
+            }),
+            onSelectPeriod: (p) => setState(() {
+              _period = p;
+              _page = 0;
+            }),
+            onPickDateRange: () => _pickDateRange(context),
+            onClearDateRange: () => setState(() {
+              _dateRange = null;
+              _page = 0;
+            }),
+            onClearFilters: _clearFilters,
+            onExport: () => _exportAudit(filtered),
+            onRefresh: () => context.read<SuperAdminBloc>().add(
+              const LoadAuditLogsEvent(),
             ),
+            onOpenLog: (l) => _openInspector(l, wide: false),
           );
         },
       ),
@@ -351,74 +541,357 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
   }
 }
 
-class _LogGroup {
-  const _LogGroup(this.label, this.logs);
+// ---------------------------------------------------------------------------
+// Shared small pieces
+// ---------------------------------------------------------------------------
+
+String _relativeTime(DateTime timestamp) {
+  final diff = DateTime.now().difference(timestamp);
+  if (diff.inMinutes < 1) return 'just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes} minutes ago';
+  if (diff.inHours < 24) return '${diff.inHours} hours ago';
+  return '${diff.inDays} days ago';
+}
+
+String _absoluteTime(DateTime timestamp) =>
+    DateFormat('MMM d, yyyy HH:mm:ss').format(timestamp.toLocal());
+
+/// Small square action button used in the compact headers (Export CSV,
+/// Refresh, Filters).
+class _HeaderButton extends StatelessWidget {
+  const _HeaderButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.badge,
+    this.filled = false,
+  });
+  final IconData icon;
   final String label;
-  final List<AuditLog> logs;
-}
+  final VoidCallback onTap;
+  final int? badge;
+  final bool filled;
 
-List<_LogGroup> _groupByDay(List<AuditLog> logs) {
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final yesterday = today.subtract(const Duration(days: 1));
-  final buckets = <String, List<AuditLog>>{};
-  final order = <String>[];
-  for (final log in logs) {
-    final day = DateTime(
-      log.timestamp.year,
-      log.timestamp.month,
-      log.timestamp.day,
+  @override
+  Widget build(BuildContext context) {
+    final fg = filled
+        ? AppColors.background(context)
+        : AppColors.textPrimary(context);
+    final bg = filled
+        ? AppColors.information(context)
+        : AppColors.surfaceElevated(context);
+    return Material(
+      color: bg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: filled
+              ? AppColors.information(context)
+              : AppColors.border(context),
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: fg),
+              const SizedBox(width: 7),
+              Text(
+                label,
+                style: AppTypography.labelMedium.copyWith(
+                  color: fg,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12.5,
+                ),
+              ),
+              if (badge != null && badge! > 0) ...[
+                const SizedBox(width: 7),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: filled
+                        ? AppColors.background(context).withValues(alpha: .25)
+                        : AppColors.textPrimary(context),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$badge',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: filled
+                          ? AppColors.background(context)
+                          : AppColors.background(context),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 10.5,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
-    final key = day == today
-        ? 'Today'
-        : day == yesterday
-        ? 'Yesterday'
-        : DateFormat('MMMM d, y').format(day);
-    if (!buckets.containsKey(key)) order.add(key);
-    buckets.putIfAbsent(key, () => []).add(log);
   }
-  return [for (final key in order) _LogGroup(key, buckets[key]!)];
 }
 
-/// Compact single-row rendering of one audit event: icon/status colour by
-/// category, an event sentence, actor/target, and relative time. Reused by
-/// the mobile Today/Yesterday grouped list.
-class AuditActivityRow extends StatelessWidget {
-  const AuditActivityRow({super.key, required this.log});
+/// A framed dropdown used by the dense filter toolbar (actor, category,
+/// per-page). Thin border, 10px radius, no elevation.
+class _FilterDropdown<T> extends StatelessWidget {
+  const _FilterDropdown({
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    this.leading,
+    this.width,
+  });
+  final T value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
+  final IconData? leading;
+  final double? width;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated(context),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (leading != null) ...[
+            Icon(leading, size: 15, color: AppColors.textSecondary(context)),
+            const SizedBox(width: 6),
+          ],
+          Flexible(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<T>(
+                value: value,
+                isDense: true,
+                isExpanded: width != null,
+                borderRadius: BorderRadius.circular(10),
+                icon: Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: AppColors.textSecondary(context),
+                ),
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12.5,
+                ),
+                dropdownColor: AppColors.surfaceElevated(context),
+                items: items,
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Category chip with a trailing count, e.g. "Billing 1,385".
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.category,
+    required this.count,
+    required this.isSelected,
+    required this.onTap,
+  });
+  final _AuditCategory category;
+  final int count;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = category == _AuditCategory.security
+        ? AppColors.danger(context)
+        : category == _AuditCategory.billing
+        ? AppColors.information(context)
+        : AppColors.textPrimary(context);
+    final selectedBg = category == _AuditCategory.security
+        ? AppColors.dangerSurface(context)
+        : AppColors.informationSurface(context);
+    return Material(
+      color: isSelected ? selectedBg : AppColors.surfaceElevated(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: isSelected ? accent : AppColors.border(context),
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                category.icon,
+                size: 15,
+                color: isSelected
+                    ? accent
+                    : AppColors.textSecondary(context),
+              ),
+              const SizedBox(width: 7),
+              Text(
+                category.label,
+                style: AppTypography.labelMedium.copyWith(
+                  color: isSelected
+                      ? AppColors.textPrimary(context)
+                      : AppColors.textSecondary(context),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12.5,
+                ),
+              ),
+              const SizedBox(width: 7),
+              Text(
+                NumberFormat.decimalPattern().format(count),
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textMuted(context),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Copyable value row used inside the inspector.
+class _CopyField extends StatelessWidget {
+  const _CopyField({required this.label, required this.value, this.mono = false});
+  final String label;
+  final String value;
+  final bool mono;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.labelSmall.copyWith(
+            color: AppColors.textMuted(context),
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: SelectableText(
+                value,
+                style: (mono
+                        ? AppTypography.bodySmall.copyWith(
+                            fontFamily: 'monospace',
+                          )
+                        : AppTypography.bodyMedium)
+                    .copyWith(color: AppColors.textPrimary(context)),
+              ),
+            ),
+            if (value != '—')
+              InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: value));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('$label copied'),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(
+                    Icons.copy_rounded,
+                    size: 15,
+                    color: AppColors.textSecondary(context),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// The responsive audit-detail inspector. Rendered as a fixed right-hand
+/// panel on desktop and as a scrollable bottom sheet on mobile. It is
+/// strictly read-only — there is no control here that can edit or delete
+/// an audit record.
+class _AuditInspector extends StatelessWidget {
+  const _AuditInspector({
+    required this.log,
+    required this.onClose,
+    this.isSheet = false,
+  });
   final AuditLog log;
+  final VoidCallback onClose;
+  final bool isSheet;
 
   @override
   Widget build(BuildContext context) {
     final category = _categoryOf(log);
-    final color = switch (category) {
-      _AuditCategory.billing => AppColors.information(context),
-      _AuditCategory.schools => AppColors.success(context),
-      _AuditCategory.security => AppColors.danger(context),
-      _AuditCategory.system => AppColors.warning(context),
-      _AuditCategory.all => AppColors.textSecondary(context),
-    };
-    final icon = switch (category) {
-      _AuditCategory.billing => Icons.credit_card_rounded,
-      _AuditCategory.schools => Icons.school_rounded,
-      _AuditCategory.security => Icons.shield_rounded,
-      _AuditCategory.system => Icons.settings_rounded,
-      _AuditCategory.all => Icons.circle_notifications_rounded,
-    };
-    return InkWell(
-      onTap: () => _showLogDetail(context, log),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
+    final accent = _eventAccent(context, log);
+    final success = _isSuccess(log) && !_isDestructive(log);
+
+    final body = ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+      shrinkWrap: isSheet,
+      physics: isSheet ? const ClampingScrollPhysics() : null,
+      children: [
+        if (isSheet)
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: AppColors.border(context),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+        Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: .14),
+                color: accent.withValues(alpha: .12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 17, color: color),
+              child: Icon(
+                success ? Icons.check_circle_outline_rounded : _eventIcon(log),
+                size: 18,
+                color: accent,
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -427,301 +900,290 @@ class AuditActivityRow extends StatelessWidget {
                 children: [
                   Text(
                     _titleCaseAction(log.action),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.labelLarge.copyWith(
+                    style: AppTypography.titleMedium.copyWith(
                       color: AppColors.textPrimary(context),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'by ${_actorLabel(log.ownerId)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textSecondary(context),
-                      fontSize: 12,
-                    ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          log.action,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.textMuted(context),
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      StatusBadge(
+                        label: _isDestructive(log)
+                            ? 'Risk'
+                            : success
+                            ? 'Success'
+                            : category.label,
+                        color: _isDestructive(log)
+                            ? AppColors.danger(context)
+                            : success
+                            ? AppColors.success(context)
+                            : _categoryColor(context, category),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Text(
-              _relativeTime(log.timestamp),
-              style: AppTypography.bodySmall.copyWith(
-                color: AppColors.textMuted(context),
-                fontSize: 11.5,
-              ),
-            ),
-            const SizedBox(width: 2),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: AppColors.textMuted(context),
+            IconButton(
+              tooltip: 'Close',
+              icon: const Icon(Icons.close_rounded, size: 18),
+              onPressed: onClose,
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  String _relativeTime(DateTime timestamp) {
-    final diff = DateTime.now().difference(timestamp);
-    if (diff.inMinutes < 1) return 'now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
-  }
-
-  void _showLogDetail(BuildContext context, AuditLog log) {
-    showModalBottomSheet(
-      context: context,
-      builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        const SizedBox(height: 18),
+        _sectionLabel(context, 'Action summary'),
+        const SizedBox(height: 6),
+        Text(
+          log.reason?.trim().isNotEmpty ?? false
+              ? log.reason!.trim()
+              : '${_actorLabel(log.ownerId)} performed '
+                    '${_titleCaseAction(log.action).toLowerCase()}'
+                    '${_targetLabel(log) != '—' ? ' on ${_targetLabel(log)}' : ''}.',
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+        const SizedBox(height: 18),
+        _CopyField(label: 'ACTOR', value: _actorLabel(log.ownerId)),
+        const SizedBox(height: 14),
+        _CopyField(label: 'TARGET', value: _targetLabel(log)),
+        const SizedBox(height: 14),
+        _CopyField(
+          label: 'TIMESTAMP',
+          value:
+              '${_absoluteTime(log.timestamp)}  (${_relativeTime(log.timestamp)})',
+        ),
+        const SizedBox(height: 14),
+        _CopyField(
+          label: 'SOURCE / DEVICE',
+          value: log.device.trim().isNotEmpty ? log.device.trim() : '—',
+        ),
+        if ((log.metadata['ip'] ?? log.metadata['ip_address']) != null) ...[
+          const SizedBox(height: 14),
+          _CopyField(
+            label: 'IP ADDRESS',
+            value:
+                '${log.metadata['ip'] ?? log.metadata['ip_address']}',
+          ),
+        ],
+        if (log.metadata['correlationId'] != null ||
+            log.metadata['correlation_id'] != null) ...[
+          const SizedBox(height: 14),
+          _CopyField(
+            label: 'CORRELATION ID',
+            mono: true,
+            value:
+                '${log.metadata['correlationId'] ?? log.metadata['correlation_id']}',
+          ),
+        ],
+        const SizedBox(height: 14),
+        _CopyField(label: 'EVENT ID', value: log.id, mono: true),
+        const SizedBox(height: 20),
+        Row(
           children: [
-            Text(
-              _titleCaseAction(log.action),
-              style: AppTypography.titleMedium.copyWith(
-                fontWeight: FontWeight.w800,
+            _sectionLabel(context, 'Metadata (immutable)'),
+            const Spacer(),
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () {
+                Clipboard.setData(
+                  ClipboardData(
+                    text: const JsonEncoder.withIndent(
+                      '  ',
+                    ).convert(_rawJson(log)),
+                  ),
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Raw JSON copied'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.copy_rounded,
+                      size: 14,
+                      color: AppColors.textSecondary(context),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Copy JSON',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textSecondary(context),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              'By ${_actorLabel(log.ownerId)} • ${log.device}',
-              style: AppTypography.bodySmall,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              DateFormat('MMM d, yyyy • h:mm a').format(log.timestamp),
-              style: AppTypography.bodySmall,
-            ),
-            if (log.reason != null) ...[
-              const SizedBox(height: 6),
-              Text('Reason: ${log.reason}', style: AppTypography.bodySmall),
-            ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _IconAction extends StatelessWidget {
-  const _IconAction({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => Tooltip(
-    message: tooltip,
-    child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 36,
-          height: 36,
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.surfaceElevated(context),
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.background(context),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(color: AppColors.border(context)),
           ),
-          child: Icon(icon, size: 20, color: AppColors.textPrimary(context)),
+          child: SelectableText(
+            const JsonEncoder.withIndent('  ').convert(_rawJson(log)),
+            style: AppTypography.bodySmall.copyWith(
+              fontFamily: 'monospace',
+              color: AppColors.textPrimary(context),
+              height: 1.45,
+            ),
+          ),
         ),
-      ),
-    ),
-  );
-}
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Icon(
+              Icons.lock_outline_rounded,
+              size: 13,
+              color: AppColors.textMuted(context),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Immutable audit record · read-only',
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textMuted(context),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
 
-class _PeriodPicker extends StatelessWidget {
-  const _PeriodPicker({required this.period, required this.onChanged});
-  final _Period period;
-  final ValueChanged<_Period> onChanged;
-  @override
-  Widget build(BuildContext context) => PopupMenuButton<_Period>(
-    tooltip: 'Select period',
-    onSelected: onChanged,
-    itemBuilder: (_) => [
-      for (final option in _Period.values)
-        PopupMenuItem(value: option, child: Text(option.label)),
-    ],
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+    if (isSheet) {
+      return SafeArea(
+        top: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+          ),
+          child: body,
+        ),
+      );
+    }
+
+    return Container(
+      width: 380,
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: AppRadius.large,
         border: Border.all(color: AppColors.border(context)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.calendar_today_outlined,
-            size: 16,
-            color: AppColors.textSecondary(context),
-          ),
-          const SizedBox(width: 7),
-          Text(
-            period.label,
-            style: AppTypography.labelMedium.copyWith(
-              color: AppColors.textPrimary(context),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Icon(
-            Icons.keyboard_arrow_down_rounded,
-            size: 18,
-            color: AppColors.textSecondary(context),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _CompactChip extends StatelessWidget {
-  const _CompactChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) {
-    final color = isSelected
-        ? AppColors.information(context)
-        : AppColors.textSecondary(context);
-    return Material(
-      color: isSelected
-          ? AppColors.informationSurface(context)
-          : AppColors.surfaceElevated(context),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(
-          color: isSelected
-              ? AppColors.information(context)
-              : AppColors.border(context),
-        ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Center(
-            child: Text(
-              label,
-              style: AppTypography.labelMedium.copyWith(
-                color: color,
-                fontWeight: FontWeight.w700,
-                fontSize: 12.5,
-              ),
-            ),
-          ),
-        ),
-      ),
+      clipBehavior: Clip.antiAlias,
+      child: body,
     );
   }
-}
 
-class _CompactState extends StatelessWidget {
-  const _CompactState({
-    required this.icon,
-    required this.title,
-    required this.message,
-  });
-  final IconData icon;
-  final String title, message;
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 40),
-    child: Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 28, color: AppColors.textMuted(context)),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: AppTypography.titleMedium.copyWith(
-              color: AppColors.textPrimary(context),
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              message,
-              textAlign: TextAlign.center,
-              style: AppTypography.bodySmall.copyWith(
-                color: AppColors.textSecondary(context),
-              ),
-            ),
-          ),
-        ],
-      ),
+  Widget _sectionLabel(BuildContext context, String text) => Text(
+    text,
+    style: AppTypography.labelSmall.copyWith(
+      color: AppColors.textSecondary(context),
+      fontWeight: FontWeight.w800,
+      letterSpacing: 0.4,
     ),
   );
+
+  /// A faithful, read-only projection of the audit record for the raw JSON
+  /// pane. Nothing here is written back.
+  Map<String, dynamic> _rawJson(AuditLog log) => {
+    'id': log.id,
+    'action': log.action,
+    'ownerId': log.ownerId,
+    'schoolId': log.schoolId,
+    'affectedUserId': log.affectedUserId,
+    'timestamp': log.timestamp.toIso8601String(),
+    'device': log.device,
+    'reason': log.reason,
+    'metadata': log.metadata,
+  };
 }
 
-TextStyle _pageTitle(BuildContext c) => AppTypography.headlineMedium.copyWith(
-  color: AppColors.textPrimary(c),
-  fontSize: 24,
-  fontWeight: FontWeight.w800,
-);
-TextStyle _groupLabel(BuildContext c) => AppTypography.titleMedium.copyWith(
-  color: AppColors.textPrimary(c),
-  fontSize: 15,
-  fontWeight: FontWeight.w800,
-);
+// ---------------------------------------------------------------------------
+// Desktop
+// ---------------------------------------------------------------------------
 
-/// Desktop table layout matching the reference: flat header with Refresh /
-/// Filters, category pill row, search + date range, an EVENT/ACTOR/
-/// CATEGORY/DATE & TIME table, and client-side pagination over the
-/// already-fetched `state.auditLogs` list (the repository has no server
-/// cursor to page against yet).
 class _DesktopAuditLogsBody extends StatelessWidget {
   const _DesktopAuditLogsBody({
     required this.logs,
     required this.filtered,
+    required this.counts,
+    required this.actors,
     required this.selected,
+    required this.period,
     required this.dateRange,
+    required this.searchController,
+    required this.actorFilter,
+    required this.activeFilterCount,
+    required this.hasActiveFilters,
+    required this.selectedLog,
     required this.page,
     required this.rowsPerPage,
+    required this.onSearch,
     required this.onSelectCategory,
+    required this.onSelectPeriod,
+    required this.onSelectActor,
     required this.onPickDateRange,
     required this.onClearDateRange,
+    required this.onClearFilters,
+    required this.onExport,
     required this.onRefresh,
+    required this.onOpenLog,
+    required this.onCloseInspector,
     required this.onPageChanged,
     required this.onRowsPerPageChanged,
   });
 
   final List<AuditLog> logs;
   final List<AuditLog> filtered;
+  final Map<_AuditCategory, int> counts;
+  final List<String> actors;
   final _AuditCategory selected;
+  final _Period period;
   final DateTimeRange? dateRange;
+  final TextEditingController searchController;
+  final String? actorFilter;
+  final int activeFilterCount;
+  final bool hasActiveFilters;
+  final AuditLog? selectedLog;
   final int page;
   final int rowsPerPage;
+  final ValueChanged<String> onSearch;
   final ValueChanged<_AuditCategory> onSelectCategory;
+  final ValueChanged<_Period> onSelectPeriod;
+  final ValueChanged<String?> onSelectActor;
   final VoidCallback onPickDateRange;
   final VoidCallback onClearDateRange;
+  final VoidCallback onClearFilters;
+  final VoidCallback onExport;
   final VoidCallback onRefresh;
+  final ValueChanged<AuditLog> onOpenLog;
+  final VoidCallback onCloseInspector;
   final ValueChanged<int> onPageChanged;
   final ValueChanged<int> onRowsPerPageChanged;
 
@@ -738,128 +1200,247 @@ class _DesktopAuditLogsBody extends StatelessWidget {
         : filtered.sublist(start, end);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.x2l,
-        AppSpacing.xl,
-        AppSpacing.x2l,
-        AppSpacing.xl,
-      ),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Compact header ---------------------------------------------------
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Audit Logs',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.headlineMedium.copyWith(
-                        color: AppColors.textPrimary(context),
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Review platform activity and owner actions.',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.textSecondary(context),
-                      ),
-                    ),
-                  ],
+              Text(
+                'Audit logs',
+                style: AppTypography.headlineMedium.copyWith(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              OutlinedButton.icon(
-                onPressed: onRefresh,
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Refresh'),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated(context),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppColors.border(context)),
+                ),
+                child: Text(
+                  '${NumberFormat.decimalPattern().format(logs.length)} events',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textSecondary(context),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
-              const SizedBox(width: AppSpacing.m),
-              OutlinedButton.icon(
-                onPressed: onPickDateRange,
-                icon: const Icon(Icons.filter_alt_outlined, size: 18),
-                label: const Text('Filters'),
+              const Spacer(),
+              _HeaderButton(
+                icon: Icons.file_upload_outlined,
+                label: 'Export CSV',
+                onTap: onExport,
+              ),
+              const SizedBox(width: 8),
+              _HeaderButton(
+                icon: Icons.refresh_rounded,
+                label: 'Refresh',
+                onTap: onRefresh,
+              ),
+              const SizedBox(width: 8),
+              _HeaderButton(
+                icon: Icons.filter_alt_outlined,
+                label: 'Filters',
+                filled: activeFilterCount > 0,
+                badge: activeFilterCount,
+                onTap: onPickDateRange,
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.l),
-          SizedBox(
-            height: 40,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _AuditCategory.values.length,
-              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.s),
-              itemBuilder: (context, index) {
-                final category = _AuditCategory.values[index];
-                final isSelected = category == selected;
-                return _CategoryPill(
-                  label: category.label,
-                  icon: category.icon,
-                  isSelected: isSelected,
-                  onTap: () => onSelectCategory(category),
-                );
-              },
+          const SizedBox(height: 16),
+          // Dense filter toolbar ------------------------------------------------
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceElevated(context),
+              borderRadius: AppRadius.large,
+              border: Border.all(color: AppColors.border(context)),
             ),
-          ),
-          if (dateRange != null) ...[
-            const SizedBox(height: AppSpacing.l),
-            _ActiveDateRangeChip(
-              dateRange: dateRange!,
-              onClear: onClearDateRange,
-            ),
-          ],
-          const SizedBox(height: AppSpacing.l),
-          Expanded(
-            child: logs.isEmpty
-                ? const EmptyState(
-                    icon: Icons.history_outlined,
-                    title: 'No audit logs found',
-                    message:
-                        'Owner actions on the platform will appear here as they happen.',
-                  )
-                : filtered.isEmpty
-                ? const EmptyState(
-                    icon: Icons.filter_list_off_rounded,
-                    title: 'No matching logs',
-                    message: 'Try a different search, category or date range.',
-                  )
-                : Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceElevated(context),
-                      borderRadius: AppRadius.large,
-                      border: Border.all(color: AppColors.border(context)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: _SearchField(
+                        controller: searchController,
+                        onChanged: onSearch,
+                      ),
                     ),
-                    child: Column(
-                      children: [
-                        _AuditTableHeader(),
-                        const Divider(height: 1),
-                        Expanded(
-                          child: ListView.separated(
-                            itemCount: pageItems.length,
-                            separatorBuilder: (_, _) =>
-                                const Divider(height: 1),
-                            itemBuilder: (context, index) =>
-                                _AuditTableRow(log: pageItems[index]),
-                          ),
-                        ),
-                        const Divider(height: 1),
-                        _AuditPaginationBar(
-                          totalItems: filtered.length,
-                          page: clampedPage,
-                          totalPages: totalPages,
-                          rowsPerPage: rowsPerPage,
-                          onPageChanged: onPageChanged,
-                          onRowsPerPageChanged: onRowsPerPageChanged,
-                        ),
+                    const SizedBox(width: 10),
+                    _DateRangeButton(
+                      dateRange: dateRange,
+                      onPick: onPickDateRange,
+                      onClear: onClearDateRange,
+                    ),
+                    const SizedBox(width: 10),
+                    _FilterDropdown<_Period>(
+                      leading: Icons.calendar_today_outlined,
+                      value: period,
+                      onChanged: (p) => p == null ? null : onSelectPeriod(p),
+                      items: [
+                        for (final p in _Period.values)
+                          DropdownMenuItem(value: p, child: Text(p.label)),
                       ],
                     ),
+                    const SizedBox(width: 10),
+                    _FilterDropdown<String?>(
+                      leading: Icons.person_outline_rounded,
+                      value: actorFilter,
+                      onChanged: onSelectActor,
+                      items: [
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('All actors'),
+                        ),
+                        for (final a in actors)
+                          DropdownMenuItem(
+                            value: a,
+                            child: Text(
+                              _actorLabel(a),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: 10),
+                    _FilterDropdown<_AuditCategory>(
+                      leading: Icons.category_outlined,
+                      value: selected,
+                      onChanged: (c) =>
+                          c == null ? null : onSelectCategory(c),
+                      items: [
+                        for (final c in _AuditCategory.values)
+                          DropdownMenuItem(
+                            value: c,
+                            child: Text(
+                              c == _AuditCategory.all
+                                  ? 'All categories'
+                                  : c.label,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: 10),
+                    TextButton(
+                      onPressed: hasActiveFilters ? onClearFilters : null,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.information(context),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      child: const Text('Clear filters'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 34,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _AuditCategory.values.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final c = _AuditCategory.values[index];
+                      return _CategoryChip(
+                        category: c,
+                        count: counts[c] ?? 0,
+                        isSelected: c == selected,
+                        onTap: () => onSelectCategory(c),
+                      );
+                    },
                   ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Table + inspector ------------------------------------------------
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: logs.isEmpty
+                      ? const EmptyState(
+                          icon: Icons.history_outlined,
+                          title: 'No audit logs found',
+                          message:
+                              'Owner actions on the platform will appear here as they happen.',
+                        )
+                      : filtered.isEmpty
+                      ? const EmptyState(
+                          icon: Icons.filter_list_off_rounded,
+                          title: 'No matching logs',
+                          message:
+                              'Try a different search, category or date range.',
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceElevated(context),
+                            borderRadius: AppRadius.large,
+                            border: Border.all(
+                              color: AppColors.border(context),
+                            ),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Column(
+                            children: [
+                              const _AuditTableHeader(),
+                              Divider(
+                                height: 1,
+                                color: AppColors.border(context),
+                              ),
+                              Expanded(
+                                child: ListView.separated(
+                                  itemCount: pageItems.length,
+                                  separatorBuilder: (_, _) => Divider(
+                                    height: 1,
+                                    color: AppColors.border(context),
+                                  ),
+                                  itemBuilder: (context, index) {
+                                    final log = pageItems[index];
+                                    return _AuditTableRow(
+                                      log: log,
+                                      selected: selectedLog?.id == log.id,
+                                      onTap: () => onOpenLog(log),
+                                    );
+                                  },
+                                ),
+                              ),
+                              Divider(
+                                height: 1,
+                                color: AppColors.border(context),
+                              ),
+                              _AuditPaginationBar(
+                                totalItems: filtered.length,
+                                page: clampedPage,
+                                totalPages: totalPages,
+                                rowsPerPage: rowsPerPage,
+                                onPageChanged: onPageChanged,
+                                onRowsPerPageChanged: onRowsPerPageChanged,
+                              ),
+                            ],
+                          ),
+                        ),
+                ),
+                if (selectedLog != null) ...[
+                  const SizedBox(width: 16),
+                  _AuditInspector(
+                    log: selectedLog!,
+                    onClose: onCloseInspector,
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),
@@ -867,109 +1448,124 @@ class _DesktopAuditLogsBody extends StatelessWidget {
   }
 }
 
-/// Shown under the category pills only while a date range filter is
-/// active, so "Filters" (which opens the date range picker) has a clear,
-/// dismissible indicator of the current filter state.
-class _ActiveDateRangeChip extends StatelessWidget {
-  const _ActiveDateRangeChip({required this.dateRange, required this.onClear});
-
-  final DateTimeRange dateRange;
-  final VoidCallback onClear;
+class _SearchField extends StatelessWidget {
+  const _SearchField({required this.controller, required this.onChanged});
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.m,
-          vertical: 6,
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      style: AppTypography.bodyMedium.copyWith(
+        color: AppColors.textPrimary(context),
+      ),
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: 'Search audit logs...',
+        hintStyle: AppTypography.bodyMedium.copyWith(
+          color: AppColors.textMuted(context),
         ),
-        decoration: BoxDecoration(
-          color: AppColors.primary(context),
-          borderRadius: AppRadius.full,
-          border: Border.all(color: AppColors.primary(context)),
+        prefixIcon: Icon(
+          Icons.search_rounded,
+          size: 18,
+          color: AppColors.textSecondary(context),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.calendar_today_outlined,
-              size: 14,
-              color: AppColors.primary(context),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            Text(
-              '${DateFormat('MMM d').format(dateRange.start)} - ${DateFormat('MMM d').format(dateRange.end)}',
-              style: AppTypography.labelMedium.copyWith(
-                color: AppColors.primary(context),
-                fontWeight: FontWeight.w700,
+        prefixIconConstraints: const BoxConstraints(minWidth: 38),
+        suffixIcon: controller.text.isEmpty
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.close_rounded, size: 16),
+                onPressed: () {
+                  controller.clear();
+                  onChanged('');
+                },
               ),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            InkWell(
-              onTap: onClear,
-              borderRadius: AppRadius.full,
-              child: Icon(
-                Icons.close_rounded,
-                size: 16,
-                color: AppColors.primary(context),
-              ),
-            ),
-          ],
+        filled: true,
+        fillColor: AppColors.background(context),
+        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: AppColors.border(context)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: AppColors.border(context)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: AppColors.textPrimary(context)),
         ),
       ),
     );
   }
 }
 
-class _CategoryPill extends StatelessWidget {
-  const _CategoryPill({
-    required this.label,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
+class _DateRangeButton extends StatelessWidget {
+  const _DateRangeButton({
+    required this.dateRange,
+    required this.onPick,
+    required this.onClear,
   });
-
-  final String label;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
+  final DateTimeRange? dateRange;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected
-        ? AppColors.primary(context)
-        : AppColors.textSecondary(context);
+    final active = dateRange != null;
+    final label = active
+        ? '${DateFormat('MMM d, yyyy').format(dateRange!.start)}  –  ${DateFormat('MMM d, yyyy').format(dateRange!.end)}'
+        : 'Date range';
     return Material(
-      color: isSelected
-          ? AppColors.primary(context)
-          : AppColors.surfaceElevated(context),
+      color: active
+          ? AppColors.informationSurface(context)
+          : AppColors.background(context),
       shape: RoundedRectangleBorder(
-        borderRadius: AppRadius.medium,
+        borderRadius: BorderRadius.circular(10),
         side: BorderSide(
-          color: isSelected
-              ? AppColors.primary(context)
+          color: active
+              ? AppColors.information(context)
               : AppColors.border(context),
         ),
       ),
       child: InkWell(
-        borderRadius: AppRadius.medium,
-        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        onTap: onPick,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: AppSpacing.s),
+              Icon(
+                Icons.calendar_today_outlined,
+                size: 15,
+                color: active
+                    ? AppColors.information(context)
+                    : AppColors.textSecondary(context),
+              ),
+              const SizedBox(width: 7),
               Text(
                 label,
                 style: AppTypography.labelMedium.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: color,
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12.5,
                 ),
               ),
+              if (active) ...[
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: onClear,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 15,
+                    color: AppColors.textSecondary(context),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -979,19 +1575,20 @@ class _CategoryPill extends StatelessWidget {
 }
 
 class _AuditTableHeader extends StatelessWidget {
+  const _AuditTableHeader();
+
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.l,
-        vertical: AppSpacing.m,
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Row(
         children: [
           _headCell(context, 'Event', flex: 4),
           _headCell(context, 'Actor', flex: 3),
+          _headCell(context, 'Target / School', flex: 3),
           _headCell(context, 'Category', flex: 2),
-          _headCell(context, 'Date & Time', flex: 2),
+          _headCell(context, 'Date & time', flex: 3),
+          const SizedBox(width: 24),
         ],
       ),
     );
@@ -1004,8 +1601,9 @@ class _AuditTableHeader extends StatelessWidget {
         label.toUpperCase(),
         style: AppTypography.labelSmall.copyWith(
           fontWeight: FontWeight.w700,
-          color: AppColors.textSecondary(context),
-          letterSpacing: 0.4,
+          color: AppColors.textMuted(context),
+          letterSpacing: 0.5,
+          fontSize: 10.5,
         ),
       ),
     );
@@ -1013,182 +1611,204 @@ class _AuditTableHeader extends StatelessWidget {
 }
 
 class _AuditTableRow extends StatelessWidget {
-  const _AuditTableRow({required this.log});
+  const _AuditTableRow({
+    required this.log,
+    required this.selected,
+    required this.onTap,
+  });
 
   final AuditLog log;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final category = _categoryOf(log);
-    final user = FirebaseAuth.instance.currentUser;
-    final actorName = (user?.displayName?.trim().isNotEmpty ?? false)
-        ? user!.displayName!.trim()
-        : 'SaaS Owner';
-    final actorEmail = user?.email?.trim().isNotEmpty ?? false
-        ? user!.email!.trim()
-        : log.ownerId;
+    final accent = _eventAccent(context, log);
+    final success = _isSuccess(log) && !_isDestructive(log);
+    final target = _targetLabel(log);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.l,
-        vertical: AppSpacing.m,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 4,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary(context),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.history_rounded,
-                    color: AppColors.primary(context),
-                    size: 16,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.m),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _titleCaseAction(log.action),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.labelLarge.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary(context),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        log.action,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary(context),
-                        ),
-                      ),
-                      if (log.reason != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          'Reason: ${log.reason}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.danger(context),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: AppColors.primary(context),
-                  child: Text(
-                    'MG',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
+    return Material(
+      color: selected
+          ? AppColors.informationSurface(context)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          decoration: selected
+              ? BoxDecoration(
+                  border: Border(
+                    left: BorderSide(
+                      color: AppColors.information(context),
+                      width: 3,
                     ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.s),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        actorName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary(context),
-                        ),
+                )
+              : null,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                flex: 4,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: .12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      Text(
-                        actorEmail,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary(context),
-                        ),
+                      child: Icon(
+                        success
+                            ? Icons.check_circle_outline_rounded
+                            : _eventIcon(log),
+                        size: 16,
+                        color: accent,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _titleCaseAction(log.action),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary(context),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            log.action,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.textMuted(context),
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: StatusBadge(
-                label: category.label,
-                color: _categoryColor(context, category),
               ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  DateFormat(
-                    'MMM d, yyyy HH:mm',
-                  ).format(log.timestamp.toLocal()),
+              Expanded(
+                flex: 3,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 26,
+                      height: 26,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.textPrimary(context),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        _actorInitials(),
+                        style: TextStyle(
+                          color: AppColors.background(context),
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _actorName(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.bodySmall.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary(context),
+                            ),
+                          ),
+                          Text(
+                            _actorLabel(log.ownerId),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.textMuted(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                flex: 3,
+                child: Text(
+                  target,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textPrimary(context),
+                    color: target == '—'
+                        ? AppColors.textMuted(context)
+                        : AppColors.textPrimary(context),
+                    fontWeight: target == '—'
+                        ? FontWeight.w400
+                        : FontWeight.w600,
                   ),
                 ),
-                Text(
-                  _relativeTime(log.timestamp),
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.textSecondary(context),
+              ),
+              Expanded(
+                flex: 2,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: StatusBadge(
+                    label: category.label,
+                    color: _categoryColor(context, category),
                   ),
                 ),
-              ],
-            ),
+              ),
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DateFormat(
+                        'MMM d, yyyy HH:mm:ss',
+                      ).format(log.timestamp.toLocal()),
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    Text(
+                      _relativeTime(log.timestamp),
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textMuted(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 24,
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppColors.textMuted(context),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
-  }
-
-  Color _categoryColor(BuildContext context, _AuditCategory category) =>
-      switch (category) {
-        _AuditCategory.billing => AppColors.information(context),
-        _AuditCategory.schools => AppColors.success(context),
-        _AuditCategory.security => AppColors.danger(context),
-        _AuditCategory.system => AppColors.warning(context),
-        _AuditCategory.all => AppColors.textSecondary(context),
-      };
-
-  String _relativeTime(DateTime timestamp) {
-    final diff = DateTime.now().difference(timestamp);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} minutes ago';
-    if (diff.inHours < 24) return '${diff.inHours} hours ago';
-    return '${diff.inDays} days ago';
   }
 }
 
@@ -1215,14 +1835,11 @@ class _AuditPaginationBar extends StatelessWidget {
     final end = ((page + 1) * rowsPerPage).clamp(0, totalItems);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.l,
-        vertical: AppSpacing.m,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
           Text(
-            'Showing $start to $end of $totalItems logs',
+            'Showing $start to $end of ${NumberFormat.decimalPattern().format(totalItems)} events',
             style: AppTypography.bodySmall.copyWith(
               color: AppColors.textSecondary(context),
             ),
@@ -1230,38 +1847,432 @@ class _AuditPaginationBar extends StatelessWidget {
           const Spacer(),
           IconButton(
             tooltip: 'Previous page',
-            icon: const Icon(Icons.chevron_left_rounded),
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.chevron_left_rounded, size: 20),
             onPressed: page > 0 ? () => onPageChanged(page - 1) : null,
           ),
           Text(
             '${page + 1} / $totalPages',
-            style: AppTypography.bodyMedium.copyWith(
+            style: AppTypography.bodySmall.copyWith(
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary(context),
             ),
           ),
           IconButton(
             tooltip: 'Next page',
-            icon: const Icon(Icons.chevron_right_rounded),
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.chevron_right_rounded, size: 20),
             onPressed: page < totalPages - 1
                 ? () => onPageChanged(page + 1)
                 : null,
           ),
-          const SizedBox(width: AppSpacing.m),
-          DropdownButton<int>(
+          const SizedBox(width: 8),
+          _FilterDropdown<int>(
             value: rowsPerPage,
-            underline: const SizedBox.shrink(),
+            onChanged: (v) => v == null ? null : onRowsPerPageChanged(v),
             items: const [10, 25, 50]
                 .map(
-                  (n) => DropdownMenuItem(value: n, child: Text('$n per page')),
+                  (n) =>
+                      DropdownMenuItem(value: n, child: Text('$n / page')),
                 )
                 .toList(),
-            onChanged: (value) {
-              if (value != null) onRowsPerPageChanged(value);
-            },
           ),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mobile
+// ---------------------------------------------------------------------------
+
+class _MobileAuditLogsBody extends StatelessWidget {
+  const _MobileAuditLogsBody({
+    required this.logs,
+    required this.filtered,
+    required this.counts,
+    required this.selected,
+    required this.period,
+    required this.dateRange,
+    required this.searchController,
+    required this.hasActiveFilters,
+    required this.onSearch,
+    required this.onSelectCategory,
+    required this.onSelectPeriod,
+    required this.onPickDateRange,
+    required this.onClearDateRange,
+    required this.onClearFilters,
+    required this.onExport,
+    required this.onRefresh,
+    required this.onOpenLog,
+  });
+
+  final List<AuditLog> logs;
+  final List<AuditLog> filtered;
+  final Map<_AuditCategory, int> counts;
+  final _AuditCategory selected;
+  final _Period period;
+  final DateTimeRange? dateRange;
+  final TextEditingController searchController;
+  final bool hasActiveFilters;
+  final ValueChanged<String> onSearch;
+  final ValueChanged<_AuditCategory> onSelectCategory;
+  final ValueChanged<_Period> onSelectPeriod;
+  final VoidCallback onPickDateRange;
+  final VoidCallback onClearDateRange;
+  final VoidCallback onClearFilters;
+  final VoidCallback onExport;
+  final VoidCallback onRefresh;
+  final ValueChanged<AuditLog> onOpenLog;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      bottom: false,
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Audit logs',
+                              style: AppTypography.headlineMedium.copyWith(
+                                color: AppColors.textPrimary(context),
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${NumberFormat.decimalPattern().format(logs.length)} events',
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.textSecondary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _MobileIconButton(
+                        icon: Icons.file_upload_outlined,
+                        tooltip: 'Export CSV',
+                        onTap: onExport,
+                      ),
+                      const SizedBox(width: 8),
+                      _MobileIconButton(
+                        icon: Icons.refresh_rounded,
+                        tooltip: 'Refresh',
+                        onTap: onRefresh,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _SearchField(
+                    controller: searchController,
+                    onChanged: onSearch,
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _DateRangeButton(
+                          dateRange: dateRange,
+                          onPick: onPickDateRange,
+                          onClear: onClearDateRange,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      _FilterDropdown<_Period>(
+                        leading: Icons.calendar_today_outlined,
+                        value: period,
+                        onChanged: (p) => p == null ? null : onSelectPeriod(p),
+                        items: [
+                          for (final p in _Period.values)
+                            DropdownMenuItem(value: p, child: Text(p.label)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 34,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _AuditCategory.values.length,
+                      separatorBuilder: (_, _) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final c = _AuditCategory.values[index];
+                        return _CategoryChip(
+                          category: c,
+                          count: counts[c] ?? 0,
+                          isSelected: c == selected,
+                          onTap: () => onSelectCategory(c),
+                        );
+                      },
+                    ),
+                  ),
+                  if (hasActiveFilters) ...[
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: onClearFilters,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.information(context),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          minimumSize: const Size(0, 32),
+                        ),
+                        icon: const Icon(Icons.close_rounded, size: 15),
+                        label: const Text('Clear filters'),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+          ),
+          if (logs.isEmpty)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: EmptyState(
+                icon: Icons.history_outlined,
+                title: 'No audit logs found',
+                message:
+                    'Owner actions on the platform will appear here as they happen.',
+              ),
+            )
+          else if (filtered.isEmpty)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: EmptyState(
+                icon: Icons.filter_list_off_rounded,
+                title: 'No matching logs',
+                message: 'Try a different search, category or date range.',
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              sliver: SliverList.separated(
+                itemCount: filtered.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                itemBuilder: (context, index) => _AuditCard(
+                  log: filtered[index],
+                  onTap: () => onOpenLog(filtered[index]),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MobileIconButton extends StatelessWidget {
+  const _MobileIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    child: Material(
+      color: AppColors.surfaceElevated(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: AppColors.border(context)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(9),
+          child: Icon(
+            icon,
+            size: 18,
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Detailed mobile card for one audit entry — icon, title + code, actor,
+/// target, category badge and precise timestamp. Tapping opens the
+/// inspector bottom sheet.
+class _AuditCard extends StatelessWidget {
+  const _AuditCard({required this.log, required this.onTap});
+  final AuditLog log;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final category = _categoryOf(log);
+    final accent = _eventAccent(context, log);
+    final success = _isSuccess(log) && !_isDestructive(log);
+    final target = _targetLabel(log);
+
+    return Material(
+      color: AppColors.surfaceElevated(context),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border(context)),
+          ),
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: .12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      success
+                          ? Icons.check_circle_outline_rounded
+                          : _eventIcon(log),
+                      size: 17,
+                      color: accent,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _titleCaseAction(log.action),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.bodyMedium.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary(context),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          log.action,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.textMuted(context),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  StatusBadge(
+                    label: category.label,
+                    color: _categoryColor(context, category),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _cardMeta(
+                context,
+                Icons.person_outline_rounded,
+                'Actor',
+                _actorLabel(log.ownerId),
+              ),
+              const SizedBox(height: 6),
+              _cardMeta(
+                context,
+                Icons.apartment_rounded,
+                'Target',
+                target,
+              ),
+              const SizedBox(height: 6),
+              _cardMeta(
+                context,
+                Icons.schedule_rounded,
+                'Time',
+                '${DateFormat('MMM d, yyyy HH:mm:ss').format(log.timestamp.toLocal())}  ·  ${_relativeTime(log.timestamp)}',
+              ),
+              if (log.reason?.trim().isNotEmpty ?? false) ...[
+                const SizedBox(height: 6),
+                _cardMeta(
+                  context,
+                  Icons.notes_rounded,
+                  'Reason',
+                  log.reason!.trim(),
+                ),
+              ],
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: AppColors.textMuted(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _cardMeta(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 14, color: AppColors.textMuted(context)),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 52,
+          child: Text(
+            label,
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textMuted(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: AppTypography.bodySmall.copyWith(
+              color: value == '—'
+                  ? AppColors.textMuted(context)
+                  : AppColors.textPrimary(context),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
