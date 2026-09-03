@@ -7,7 +7,7 @@
       <div class="footer-top">
         <div class="footer-brand">
           <a href="index.html" class="brand" style="color:#fff;">
-            <span class="brand-mark">SP</span>
+            <span class="brand-mark"><img src="assets/logos/icon-dark.png" alt="" width="32" height="32" style="height:100%;width:auto;display:block;"></span>
             School Pulse
           </a>
           <p>The multi-tenant school-management platform built for Ugandan schools &mdash; attendance, fees, academics and parent communication, all in one place.</p>

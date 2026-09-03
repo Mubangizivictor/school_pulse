@@ -4,7 +4,10 @@
   <header class="site-header">
     <div class="nav-wrap">
       <a href="index.html" class="brand">
-        <span class="brand-mark">SP</span>
+        <span class="brand-mark">
+          <img class="logo-light" src="assets/logos/icon-light.png" alt="" width="32" height="32">
+          <img class="logo-dark" src="assets/logos/icon-dark.png" alt="" width="32" height="32">
+        </span>
         School Pulse
       </a>
 

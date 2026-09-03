@@ -253,19 +253,31 @@ p { margin: 0 0 16px; color: var(--color-ink-soft); }
   align-items: center;
   gap: 10px;
   font-weight: 800;
-  font-size: 18px;
+  font-size: 22px;
   color: var(--color-ink);
   min-width: 0;
 }
+/* Logo mark: two <img> tags (logo-light/logo-dark), toggled by theme -
+   mirrors this file's existing light/dark custom-property pattern exactly
+   (system-dark media query guarded by :not([data-theme=light]), then a
+   manual [data-theme=dark] override that always wins) so the logo switches
+   in lockstep with every other themed color on the page. Sized to the
+   brand wordmark's own line-height (22px font, 1.2 line-height ~= 26px)
+   rather than a fixed px value, so they always match. */
 .brand-mark {
-  width: 32px; height: 32px;
-  background: var(--color-primary);
-  border-radius: 8px;
-  color: #fff;
+  height: 1.2em;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 13px;
   flex-shrink: 0;
 }
+.brand-mark img { height: 100%; width: auto; display: block; }
+.brand-mark .logo-dark { display: none; }
+.brand-mark .logo-light { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .brand-mark .logo-light { display: none; }
+  :root:not([data-theme="light"]) .brand-mark .logo-dark { display: block; }
+}
+:root[data-theme="dark"] .brand-mark .logo-light { display: none; }
+:root[data-theme="dark"] .brand-mark .logo-dark { display: block; }
 
 .nav-main {
   display: flex;
