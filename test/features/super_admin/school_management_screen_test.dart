@@ -21,6 +21,34 @@ void main() {
     expect(find.text('Suspended'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Summary cards stack without overflow at 360px', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: SchoolSummaryCards(
+                activeCount: 18,
+                applicationsCount: 4,
+                suspendedCount: 2,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Active schools'), findsOneWidget);
+    expect(find.text('Applications'), findsOneWidget);
+    expect(find.text('Suspended'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _SchoolsControlsHarness extends StatefulWidget {

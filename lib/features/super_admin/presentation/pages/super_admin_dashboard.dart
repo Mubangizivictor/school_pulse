@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/manual_subscription_payment.dart';
 
@@ -241,32 +240,29 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         ? user!.email!.trim()
         : 'SaaS Owner';
 
+    // Fixed dark rail, per the console reference: near-black panel in both
+    // themes, light-blue active pill, everything else white/grey on black.
+    const rail = Color(0xFF0B0B0C);
+    const railItemText = Color(0xFFBDBDBD);
+    final accent = AppColors.information(context);
+
     return Container(
-      width: 280,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated(context),
-        border: Border(
-          right: BorderSide(color: AppColors.border(context), width: 1),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow(context),
-            blurRadius: 20,
-            offset: const Offset(5, 0),
-          ),
-        ],
+      width: 264,
+      decoration: const BoxDecoration(
+        color: rail,
+        border: Border(right: BorderSide(color: Color(0xFF1E1E1F), width: 1)),
       ),
       child: Column(
         children: [
-          const SizedBox(height: AppSpacing.x4l),
+          const SizedBox(height: 28),
           const Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+            padding: EdgeInsets.symmetric(horizontal: 20),
             child: _SidebarBrand(),
           ),
-          const SizedBox(height: AppSpacing.x4l),
+          const SizedBox(height: 24),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
                 for (final (index, section) in _kSections.indexed)
                   _SidebarItem(
@@ -274,6 +270,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     selectedIcon: section.selectedIcon,
                     label: section.label,
                     isSelected: _selectedIndex == index,
+                    accent: accent,
+                    idleColor: railItemText,
                     onTap: () {
                       if (index == _selectedIndex) {
                         // Re-selecting the active section returns it to
@@ -292,17 +290,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               ],
             ),
           ),
-          const Divider(),
+          const Divider(height: 1, color: Color(0xFF1E1E1F)),
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.l,
-              vertical: AppSpacing.s,
-            ),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor: AppColors.primary(context),
+                  backgroundColor: Colors.white.withValues(alpha: .10),
                   child: Text(
                     _initialsOf(ownerLabel),
                     style: const TextStyle(
@@ -312,26 +307,25 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     ),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.m),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Flexible(
-                        child: Text(
-                          ownerLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.labelLarge.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary(context),
-                          ),
+                      Text(
+                        ownerLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.labelLarge.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
                         ),
                       ),
-                      Text(
+                      const Text(
                         'SaaS Owner',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary(context),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF9A9A9A),
                         ),
                       ),
                     ],
@@ -344,10 +338,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             icon: Icons.logout_rounded,
             label: 'Sign Out',
             isSelected: false,
+            accent: accent,
+            idleColor: railItemText,
             onTap: () => handleSuperAdminLogout(context),
             isDestructive: true,
           ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -376,30 +372,27 @@ class _SidebarBrand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final asset = isDark
-        ? 'assets/logos/icon_dark_mode.png'
-        : 'assets/logos/icon_light_Mode.png';
+    // The rail is always dark; use the dark-mode brand icon in both themes.
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Image.asset(
-          asset,
-          width: 40,
-          height: 40,
+          'assets/logos/icon_dark_mode.png',
+          width: 34,
+          height: 34,
           fit: BoxFit.contain,
           filterQuality: FilterQuality.medium,
         ),
-        const SizedBox(width: AppSpacing.l),
-        Flexible(
+        const SizedBox(width: 12),
+        const Flexible(
           child: Text(
             'School Pulse',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTypography.headlineSmall.copyWith(
-              color: AppColors.textPrimary(context),
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 19,
+              fontWeight: FontWeight.w700,
               height: 1.1,
             ),
           ),
@@ -416,6 +409,8 @@ class _SidebarItem extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final bool isDestructive;
+  final Color accent;
+  final Color idleColor;
 
   const _SidebarItem({
     required this.icon,
@@ -423,38 +418,50 @@ class _SidebarItem extends StatelessWidget {
     required this.label,
     required this.isSelected,
     required this.onTap,
+    required this.accent,
+    required this.idleColor,
     this.isDestructive = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final color = isDestructive
-        ? AppColors.danger(context)
-        : (isSelected
-              ? AppColors.primary(context)
-              : AppColors.textSecondary(context));
+        ? const Color(0xFFE5605F)
+        : (isSelected ? Colors.white : idleColor);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Material(
-        color: isSelected ? AppColors.primary(context) : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        child: ListTile(
+        color: isSelected ? accent : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
           onTap: onTap,
-          dense: true,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          leading: Icon(
-            isSelected ? (selectedIcon ?? icon) : icon,
-            color: color,
-            size: 22,
-          ),
-          title: Text(
-            label,
-            style: AppTypography.labelLarge.copyWith(
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: color,
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            child: Row(
+              children: [
+                Icon(
+                  isSelected ? (selectedIcon ?? icon) : icon,
+                  color: color,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

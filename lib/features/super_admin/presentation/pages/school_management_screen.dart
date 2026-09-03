@@ -1045,24 +1045,52 @@ class _MobileSchoolCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 20,
-            runSpacing: 10,
-            children: [
-              _MiniField(label: 'Code', value: _schoolCode(school)),
-              _MiniField(label: 'Location', value: _location(school)),
-              _MiniField(label: 'Students', value: _studentCount(school)),
-              _MiniField(
-                label: 'Plan',
-                value: plan?.name ?? _fallbackPlan(school),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final half = (constraints.maxWidth - 12) / 2;
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  SizedBox(
+                    width: half,
+                    child: _MiniField(
+                      label: 'Code',
+                      value: _schoolCode(school),
+                    ),
+                  ),
+                  SizedBox(
+                    width: half,
+                    child: _MiniField(
+                      label: 'Students',
+                      value: _studentCount(school),
+                    ),
+                  ),
+                  SizedBox(
+                    width: half,
+                    child: _MiniField(
+                      label: 'Location',
+                      value: _location(school),
+                    ),
+                  ),
+                  SizedBox(
+                    width: half,
+                    child: _MiniField(
+                      label: 'Plan',
+                      value: plan?.name ?? _fallbackPlan(school),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: _StatusStack(
+                  label: 'Payment status',
                   chip: payment.chip(context),
                   caption: payment.caption,
                 ),
@@ -1070,6 +1098,7 @@ class _MobileSchoolCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _StatusStack(
+                  label: 'Account status',
                   chip: account.chip(context),
                   caption: account.caption,
                 ),
@@ -1158,15 +1187,20 @@ class _RowOverflowMenu extends StatelessWidget {
 }
 
 class _StatusStack extends StatelessWidget {
-  const _StatusStack({required this.chip, required this.caption});
+  const _StatusStack({required this.chip, required this.caption, this.label});
   final Widget chip;
   final String caption;
+  final String? label;
 
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      chip,
+      if (label != null) ...[
+        Text(label!, style: _label(context)),
+        const SizedBox(height: 4),
+      ],
+      Align(alignment: Alignment.centerLeft, child: chip),
       if (caption.isNotEmpty) ...[
         const SizedBox(height: 3),
         Text(
@@ -1191,17 +1225,14 @@ class _MiniField extends StatelessWidget {
     children: [
       Text(label, style: _label(context)),
       const SizedBox(height: 2),
-      ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 160),
-        child: Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTypography.bodySmall.copyWith(
-            color: AppColors.textPrimary(context),
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
+      Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTypography.bodySmall.copyWith(
+          color: AppColors.textPrimary(context),
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
         ),
       ),
     ],
