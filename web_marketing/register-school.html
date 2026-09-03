@@ -209,7 +209,8 @@
                 <div class="form-field">
                   <label for="subdomain">Desired subdomain</label>
                   <input type="text" id="subdomain" name="subdomain" required placeholder="yourschool">
-                  <div class="hint">Your school will be reachable at <span id="subdomainPreview">yourschool.schoolpulse.app</span></div>
+                  <div class="hint">Your school will be reachable at <span id="subdomainPreview">yourschool.schoolpulseapp.com</span></div>
+                  <div id="subdomainStatus" class="hint" style="min-height:18px;"></div>
                   <span class="error-text">Please choose a subdomain.</span>
                 </div>
                 <div class="wizard-nav">
@@ -256,6 +257,7 @@
 <script src="js/nav.js"></script>
 <script src="js/footer.js"></script>
 <script src="js/wizard.js"></script>
+<script src="js/subdomain-check.js"></script>
 <script>
   document.getElementById('wizardSuccessIcon').innerHTML = window.ICONS.check;
 </script>

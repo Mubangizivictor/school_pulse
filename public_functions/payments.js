@@ -8,6 +8,12 @@ const db = admin.firestore();
 
 const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
 const APP_URL = WEBSITE_ORIGIN;
+// Matches portal_domains.js's ROOT/validSlug/RESERVED exactly - this is the
+// same subdomain namespace createSchoolPortal reserves into, so an approval
+// here must use identical rules or the two paths could collide.
+const PORTAL_ROOT = 'schoolpulseapp.com';
+const PORTAL_RESERVED_SLUGS = new Set(['admin', 'api', 'www', 'support', 'schoolpulse', 'app', 'mail', 'status', 'portal']);
+const validPortalSlug = (v) => /^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/.test(v) && !PORTAL_RESERVED_SLUGS.has(v);
 const CORE_MODULES = ['Students', 'Attendance', 'Academics', 'Administration'];
 const MODULE_MAP = {
   Students: 'students',
@@ -426,6 +432,25 @@ exports.approveSchoolApplication = onCall(
     }
 
     const schoolId = deterministicSchoolId;
+    // The applicant's chosen web address, captured at submission time
+    // (index.js:submitSchoolApplication) and re-validated here since this
+    // callable is the trust boundary that actually reserves it - a slug
+    // already taken by another portal (or newly reserved since submission)
+    // must not silently overwrite that reservation.
+    const slug = text(school.slug, 63).toLowerCase();
+    const slugValid = validPortalSlug(slug);
+    const portalHost = slugValid ? `${slug}.${PORTAL_ROOT}` : null;
+    const slugReservationRef = slugValid ? db.doc(`portal_slug_reservations/${slug}`) : null;
+    let slugAlreadyReservedByThisSchool = false;
+    if (slugReservationRef) {
+      const slugReservationSnap = await slugReservationRef.get();
+      if (slugReservationSnap.exists) {
+        slugAlreadyReservedByThisSchool = slugReservationSnap.data()?.schoolId === schoolId;
+        if (!slugAlreadyReservedByThisSchool) {
+          throw new HttpsError('already-exists', 'That school web address is already in use. The applicant must choose another before this can be approved.');
+        }
+      }
+    }
     const enabledFeatures = normalizedModules(application.selectedModules);
     const nowMs = Date.now();
     const administratorName = `${text(administrator.firstName, 100)} ${text(administrator.lastName, 100)}`.trim() || authUser.displayName || 'School Administrator';
@@ -476,10 +501,39 @@ exports.approveSchoolApplication = onCall(
       classificationOther: null,
       divisions: [],
       displayLabel: text(school.shortName, 40) || schoolName,
+      // Mirrors portal_domains.js:createSchoolPortal's school doc shape so
+      // both onboarding paths (owner-created portal vs. public application)
+      // produce a tenant portal_tenant_resolver.dart can resolve the same way.
+      ...(portalHost ? { portalSubdomain: portalHost, customDomains: [] } : {}),
+      branding: {
+        schoolName,
+        logoUrl: null,
+        primaryColor: null,
+        secondaryColor: null,
+        address,
+        phone: text(school.phone, 30),
+        email: text(school.email, 160).toLowerCase(),
+      },
     };
 
     const batch = db.batch();
     batch.set(schoolRef, schoolData, { merge: false });
+    if (portalHost && !slugAlreadyReservedByThisSchool) {
+      batch.set(slugReservationRef, { schoolId, slug, createdAt: serverTime });
+    }
+    if (portalHost) {
+      batch.set(db.doc(`portal_domains/${portalHost}`), {
+        schoolId,
+        slug,
+        hostname: portalHost,
+        status: 'active',
+        schoolName,
+        logoUrl: null,
+        primaryColor: null,
+        secondaryColor: null,
+        updatedAt: serverTime,
+      });
+    }
     batch.set(userRef, {
       id: applicantUid,
       name: administratorName,
@@ -559,7 +613,7 @@ exports.approveSchoolApplication = onCall(
       console.error('School approved but custom claims update failed', error);
     }
 
-    return { ok: true, schoolId, status: 'approved', paymentStatus: 'awaiting_payment', appReady: false };
+    return { ok: true, schoolId, status: 'approved', paymentStatus: 'awaiting_payment', appReady: false, portalUrl: portalHost ? `https://${portalHost}` : null };
   },
 );
 
@@ -594,6 +648,8 @@ exports.getSchoolApplicationStatus = onRequest({ region: 'europe-west1' }, async
     appUrl: text(data.appUrl, 300) || APP_URL,
     paymentUrl: `${WEBSITE_ORIGIN}/payment`,
     rejectionReason: text(data.rejectionReason, 500),
+    slug: text(data.school?.slug, 63),
+    portalUrl: data.school?.slug && validPortalSlug(text(data.school.slug, 63)) ? `https://${text(data.school.slug, 63)}.${PORTAL_ROOT}` : null,
   });
 });
 
@@ -935,6 +991,22 @@ exports.approveManualPayment = onCall({ region: 'europe-west1' }, async (request
     if (!schoolSnap.exists) throw new HttpsError('failed-precondition', 'The school linked to this payment no longer exists.');
     const school = schoolSnap.data() || {};
     const metadata = school.metadata && typeof school.metadata === 'object' ? school.metadata : {};
+
+    // Phase 2A term-based billing: find the earliest non-terminal
+    // subscription_cycles doc for this school (if any) so this payment can
+    // also mark it paid. Firestore transactions require ALL reads before any
+    // writes, so this query runs here - before the first tx.set below - even
+    // though the resulting write happens later in this same transaction.
+    // Schools with no subscription_cycles docs (the flat-expiry-only flow)
+    // simply get an empty snapshot here and nothing below changes for them.
+    const eligibleCycleSnap = await tx.get(
+      db.collection('subscription_cycles')
+        .where('schoolId', '==', schoolId)
+        .where('cycleStatus', 'in', ['invoiced', 'paymentPending', 'gracePeriod', 'overdue'])
+        .orderBy('termStart', 'asc')
+        .limit(1)
+    );
+    const targetCycleRef = eligibleCycleSnap.empty ? null : eligibleCycleSnap.docs[0].ref;
     const termLengthDays = Math.max(1, Math.round(Number(payment.termLengthDays || 120)));
     const existingExpiry = Number(school.subscriptionExpiry || 0);
     const startMs = payment.paymentType === 'renewal' && existingExpiry > nowMs ? existingExpiry : nowMs;
@@ -977,6 +1049,26 @@ exports.approveManualPayment = onCall({ region: 'europe-west1' }, async (request
       subscriptionExpiry: expiryMs,
       rejectionReason: null,
     }, { merge: true });
+
+    // Phase 2A: if this school has a subscription_cycles doc awaiting
+    // payment, mark the earliest eligible one paid in the same transaction.
+    // The schoolRef.set above already unconditionally writes
+    // status:'active'/accessMode:'full' regardless of whether a cycle
+    // exists (that's the pre-existing flat-expiry semantics, layered under
+    // here rather than altered) - so a previously-suspended school (Phase 2A
+    // auto-suspend, or an owner-initiated suspend) is restored to full
+    // access by that same existing write; this block only adds the cycle
+    // doc's own paid marker on top when a cycle is actually present. No-op,
+    // no throw, when eligibleCycleSnap was empty (flat-expiry-only school).
+    if (targetCycleRef) {
+      tx.set(targetCycleRef, {
+        cycleStatus: 'paid',
+        paymentStatus: 'paid',
+        paidPaymentId: paymentId,
+        paidAt: serverTime,
+        updatedAt: serverTime,
+      }, { merge: true });
+    }
     const receiptRef = db.collection('subscription_receipts').doc(paymentId);
     tx.set(receiptRef, {
       receiptNumber: paymentId,

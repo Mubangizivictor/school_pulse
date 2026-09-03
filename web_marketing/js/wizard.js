@@ -157,7 +157,7 @@
         var input = wizardEl.querySelector('[name="' + r[1] + '"]');
         var value = input ? input.value : '';
         if (!value) return;
-        if (r[1] === 'subdomain') value = value + '.schoolpulse.app';
+        if (r[1] === 'subdomain') value = value + '.schoolpulseapp.com';
         html += '<div class="summary-row"><span class="k">' + r[0] + '</span><span class="v">' + escapeHtml(value) + '</span></div>';
       });
       reviewEl.innerHTML = html || '<p class="muted">No details entered yet.</p>';
@@ -180,17 +180,8 @@
       });
     }
 
-    // ---- Subdomain availability-style text ----
-    var subdomainInput = wizardEl.querySelector('[name="subdomain"]');
-    var subdomainPreview = document.getElementById('subdomainPreview');
-    if (subdomainInput && subdomainPreview) {
-      function renderSubdomain() {
-        var val = (subdomainInput.value || 'yourschool').toLowerCase().replace(/[^a-z0-9-]/g, '');
-        subdomainPreview.textContent = (val || 'yourschool') + '.schoolpulse.app';
-      }
-      subdomainInput.addEventListener('input', renderSubdomain);
-      renderSubdomain();
-    }
+    // Subdomain preview + real availability checking now lives in
+    // js/subdomain-check.js (backed by the live checkPortalSlug callable).
 
     loadDraft();
     renderStep();

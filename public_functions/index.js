@@ -10,6 +10,11 @@ const ALLOWED_PLANS = ["Starter", "Growth", "Pro", "Enterprise"];
 const ALLOWED_MODULES = ["Students","Attendance","Academics","Administration","Finance","Boarding","Health","Library","Transport","Messaging"];
 const CORE_MODULES = ["Students", "Attendance", "Academics", "Administration"];
 const RESERVED_STATUSES = new Set(["pending_review", "approved"]);
+// Mirrors portal_domains.js's validSlug/RESERVED exactly - the slug chosen
+// here is the same one approveSchoolApplication later reserves in
+// portal_slug_reservations, so the rules must never drift apart.
+const RESERVED_SLUGS = new Set(["admin", "api", "www", "support", "schoolpulse", "app", "mail", "status", "portal"]);
+const validSlug = (v) => /^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$/.test(v) && !RESERVED_SLUGS.has(v);
 
 function cors(req, res) {
   const origin = req.get("origin");
@@ -78,7 +83,7 @@ async function requiresCapacityReview(studentCapacity) {
 // Pure so it can be unit-tested without mocking Firestore/Auth. Field names
 // mirror the request body shape (e.g. "location.address") for safe internal
 // logging - never expose this list to the client response.
-function validateSchoolApplicationFields({ school, location, administrator, plan, termsAccepted, schoolName, schoolEmail, schoolPhone, prefix, studentCapacity, adminEmail, adminPhone, identityEmail }) {
+function validateSchoolApplicationFields({ school, location, administrator, plan, termsAccepted, schoolName, schoolEmail, schoolPhone, prefix, studentCapacity, adminEmail, adminPhone, identityEmail, slug }) {
   const invalidFields = [];
   if (!schoolName || schoolName.length < 3) invalidFields.push("school.name");
   if (!schoolEmail) invalidFields.push("school.email");
@@ -95,6 +100,7 @@ function validateSchoolApplicationFields({ school, location, administrator, plan
   if (adminEmail !== String(identityEmail).toLowerCase()) invalidFields.push("administrator.email");
   if (!ALLOWED_PLANS.includes(plan)) invalidFields.push("plan");
   if (termsAccepted !== true) invalidFields.push("termsAccepted");
+  if (!validSlug(slug)) invalidFields.push("school.slug");
   return invalidFields;
 }
 
@@ -108,7 +114,8 @@ function validateSchoolApplicationBody(body, identityEmail) {
   const prefix = text(school.prefix, 12).toUpperCase().replace(/[^A-Z0-9]/g, "");
   const studentCapacity = Math.max(0, Math.min(1000000, Math.round(Number(school.studentCapacity || 0))));
   const adminEmail = text(administrator.email, 160).toLowerCase(), adminPhone = normalizePhone(administrator.phone);
-  return validateSchoolApplicationFields({ school, location, administrator, plan, termsAccepted: body?.termsAccepted, schoolName, schoolEmail, schoolPhone, prefix, studentCapacity, adminEmail, adminPhone, identityEmail });
+  const slug = text(school.slug, 63).toLowerCase();
+  return validateSchoolApplicationFields({ school, location, administrator, plan, termsAccepted: body?.termsAccepted, schoolName, schoolEmail, schoolPhone, prefix, studentCapacity, adminEmail, adminPhone, identityEmail, slug });
 }
 
 exports.submitSchoolApplication = onRequest({ region: "europe-west1" }, async (req, res) => {
@@ -125,8 +132,9 @@ exports.submitSchoolApplication = onRequest({ region: "europe-west1" }, async (r
   const prefix = text(school.prefix, 12).toUpperCase().replace(/[^A-Z0-9]/g, "");
   const studentCapacity = Math.max(0, Math.min(1000000, Math.round(Number(school.studentCapacity || 0))));
   const adminEmail = text(administrator.email, 160).toLowerCase(), adminPhone = normalizePhone(administrator.phone);
+  const slug = text(school.slug, 63).toLowerCase();
 
-  const invalidFields = validateSchoolApplicationFields({ school, location, administrator, plan, termsAccepted: req.body?.termsAccepted, schoolName, schoolEmail, schoolPhone, prefix, studentCapacity, adminEmail, adminPhone, identityEmail: identity.email });
+  const invalidFields = validateSchoolApplicationFields({ school, location, administrator, plan, termsAccepted: req.body?.termsAccepted, schoolName, schoolEmail, schoolPhone, prefix, studentCapacity, adminEmail, adminPhone, identityEmail: identity.email, slug });
 
   if (invalidFields.length) {
     console.warn("Invalid school application payload", { uid: identity.uid, invalidFields });
@@ -137,31 +145,34 @@ exports.submitSchoolApplication = onRequest({ region: "europe-west1" }, async (r
   const existing = await ref.get(); const existingStatus = String(existing.data()?.status ?? "");
   if (existing.exists && ["approved", "pending_review"].includes(existingStatus)) { res.status(409).json({ error: "application_exists", message: "A school application already exists for this account." }); return; }
 
-  const [prefixUsed, schoolPhoneUsed, adminPhoneUsedAsSchool, adminPhoneUsedAsAdmin, schoolEmailUsed] = await Promise.all([
+  const [prefixUsed, schoolPhoneUsed, adminPhoneUsedAsSchool, adminPhoneUsedAsAdmin, schoolEmailUsed, slugUsedByApplication, slugReserved] = await Promise.all([
     usedByOtherActiveApplication("school.prefix", prefix, identity.uid),
     usedByOtherActiveApplication("school.phone", schoolPhone, identity.uid),
     usedByOtherActiveApplication("school.phone", adminPhone, identity.uid),
     usedByOtherActiveApplication("administrator.phone", adminPhone, identity.uid),
     usedByOtherActiveApplication("school.email", schoolEmail, identity.uid),
+    usedByOtherActiveApplication("school.slug", slug, identity.uid),
+    db.doc(`portal_slug_reservations/${slug}`).get(),
   ]);
   if (prefixUsed) { res.status(409).json({ error: "prefix_in_use", message: "Those school initials are already in use. Choose another." }); return; }
   if (schoolPhoneUsed) { res.status(409).json({ error: "school_phone_in_use", message: "That school phone number is already linked to another School Pulse application." }); return; }
   if (adminPhoneUsedAsSchool || adminPhoneUsedAsAdmin) { res.status(409).json({ error: "admin_phone_in_use", message: "That administrator phone number is already linked to another School Pulse school." }); return; }
   if (schoolEmailUsed) { res.status(409).json({ error: "school_email_in_use", message: "That school email is already linked to another School Pulse application." }); return; }
+  if (slugUsedByApplication || slugReserved.exists) { res.status(409).json({ error: "slug_in_use", message: "That web address is already taken. Choose another." }); return; }
 
   const capacityReview = await requiresCapacityReview(studentCapacity);
   const now = admin.firestore.FieldValue.serverTimestamp();
   await ref.set({
     id: identity.uid, authUid: identity.uid, status: "pending_review", source: "public_website", plan, selectedModules,
     requiresCapacityReview: capacityReview,
-    school: { name: schoolName, shortName: text(school.shortName, 40), email: schoolEmail, phone: schoolPhone, category: text(school.category, 80), poBox: "", prefix, motto: "", studentCapacity },
+    school: { name: schoolName, shortName: text(school.shortName, 40), email: schoolEmail, phone: schoolPhone, category: text(school.category, 80), poBox: "", prefix, motto: "", studentCapacity, slug },
     location: { region: text(location.region, 40), district: text(location.district, 100), address: text(location.address, 240), country: "Uganda", website: "", locationName: text(location.locationName, 140), latitude: "", longitude: "" },
     administrator: { firstName: text(administrator.firstName, 100), lastName: text(administrator.lastName, 100), gender: text(administrator.gender, 40), phone: adminPhone, email: adminEmail, username: text(administrator.username, 120), emailVerified: true },
     marketingOptIn: req.body?.marketingOptIn === true, termsAccepted: true, termsAcceptedAt: now,
     createdAt: existing.exists ? (existing.data()?.createdAt ?? now) : now, updatedAt: now, reviewedAt: null, reviewedBy: null,
   }, { merge: true });
 
-  res.status(201).json({ ok: true, applicationId: identity.uid, status: "pending_review", schoolName, requiresCapacityReview: capacityReview });
+  res.status(201).json({ ok: true, applicationId: identity.uid, status: "pending_review", schoolName, slug, requiresCapacityReview: capacityReview });
 });
 
 exports.getSchoolApplicationStatus = onRequest({ region: "europe-west1" }, async (req, res) => {
