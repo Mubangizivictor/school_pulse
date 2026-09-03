@@ -3,24 +3,25 @@
 //     via SPAuth (js/registration-auth.js) — the same Firebase SDK
 //     lazy-load / callFunction pattern payment.html and
 //     application-status.html already use.
-//   - district -> region auto-fill in Step 5 (Address & subdomain), for the
-//     districts already in the existing <select>; "Other" leaves the region
-//     select for the visitor to pick themselves.
+//   - region -> district cascade in Step 5 (Address & subdomain): choosing a
+//     region populates the district <input list> with only that region's
+//     districts, so the visitor can't pick a mismatched pair.
 //   - the real Step 6 submit: builds the exact submitSchoolApplication body
 //     shape, maps the wizard's pricing tier label to the backend's plan
 //     enum, blocks submission for the "Custom"/1201+ tier (no fixed price
 //     to submit), and handles every documented error code inline.
 (function () {
-  // Mirrors public_functions/uganda_regions.json's mapping for exactly the
-  // districts offered in the Step 5 <select> today. Not a full copy of the
-  // backend's district list — if "Other" is chosen the visitor picks their
-  // own region, so this table only needs to cover the fixed options above.
-  var DISTRICT_REGION = {
-    Kampala: 'Central',
-    Wakiso: 'Central',
-    Mukono: 'Central',
-    Jinja: 'Eastern',
-    Mbarara: 'Western',
+  // Full district list per region, generated from
+  // public_functions/uganda_regions.json (the backend's own source of
+  // truth for district -> region, used to validate submitted applications).
+  // Two corrections vs. that raw file: "Ssembabule" is dropped as a
+  // duplicate spelling of "Sembabule", and "Kagame" is dropped as a data
+  // error (not a real Uganda district) — neither should reach visitors.
+  var DISTRICTS_BY_REGION = {
+    Central: ['Buikwe', 'Bukomansimbi', 'Butambala', 'Buvuma', 'Gomba', 'Kalangala', 'Kalungu', 'Kampala', 'Kayunga', 'Kiboga', 'Kyankwanzi', 'Kyotera', 'Luwero', 'Lyantonde', 'Masaka', 'Mityana', 'Mpigi', 'Mubende', 'Mukono', 'Nakaseke', 'Nakasongola', 'Rakai', 'Sembabule', 'Wakiso'],
+    Eastern: ['Amuria', 'Budaka', 'Bududa', 'Bugiri', 'Bukwo', 'Bulambuli', 'Busia', 'Butaleja', 'Buyende', 'Iganga', 'Jinja', 'Kaberamaido', 'Kalaki', 'Kaliro', 'Kamuli', 'Kapchorwa', 'Katakwi', 'Kibuku', 'Kween', 'Luuka', 'Manafwa', 'Mayuge', 'Mbale', 'Namayingo', 'Namisindwa', 'Namutumba', 'Ngora', 'Pallisa', 'Serere', 'Sironko', 'Soroti', 'Tororo'],
+    Northern: ['Abim', 'Adjumani', 'Agago', 'Alebtong', 'Amolatar', 'Amudat', 'Amuru', 'Apac', 'Arua', 'Dokolo', 'Gulu', 'Kaabong', 'Kitgum', 'Koboko', 'Kole', 'Kotido', 'Lamwo', 'Lira', 'Madi-Okollo', 'Maracha', 'Moroto', 'Moyo', 'Nakapiripirit', 'Napak', 'Nebbi', 'Nwoya', 'Obongi', 'Omoro', 'Otuke', 'Oyam', 'Pader', 'Pakwach', 'Terego', 'Yumbe', 'Zombo'],
+    Western: ['Buhweju', 'Buliisa', 'Bundibugyo', 'Bunyangabu', 'Bushenyi', 'Fort Portal', 'Hoima', 'Ibanda', 'Isingiro', 'Kabale', 'Kabarole', 'Kagadi', 'Kakumiro', 'Kamwenge', 'Kanungu', 'Kasese', 'Kibaale', 'Kikuube', 'Kiruhura', 'Kisoro', 'Kyegegwa', 'Kyenjojo', 'Masindi', 'Mbarara', 'Mitooma', 'Ntoroko', 'Ntungamo', 'Rubirizi', 'Rukiga', 'Rukungiri', 'Rwampara', 'Sheema'],
   };
 
   // Marketing site shows 5 tiers (incl. "Custom" for 1201+); the backend's
@@ -46,16 +47,48 @@
     return el ? (el.value || '').trim() : '';
   }
 
-  // ---- Step 5: district -> region auto-fill ----
-  function initRegionAutofill() {
-    var districtEl = byName('district');
+  // ---- Step 5: region -> district cascade ----
+  function initRegionDistrictCascade() {
     var regionEl = byName('region');
-    if (!districtEl || !regionEl) return;
-    districtEl.addEventListener('change', function () {
-      var mapped = DISTRICT_REGION[districtEl.value];
-      if (mapped) regionEl.value = mapped;
-      // "Other" (or any unmapped district): leave whatever the visitor has
-      // already chosen, or blank, for them to fill in themselves.
+    var districtEl = byName('district');
+    var districtList = document.getElementById('districtOptions');
+    if (!regionEl || !districtEl || !districtList) return;
+
+    // preserveValue: true when repopulating for a region restored from a
+    // saved draft (wizard.js's loadDraft sets .value directly without
+    // firing 'change') - the district value it also restored is already
+    // known-valid for that region since it was only ever saved after
+    // passing the same pairing this cascade enforces, so it must survive
+    // this repopulation rather than being wiped like a fresh region pick.
+    function populateDistricts(preserveValue) {
+      var currentValue = districtEl.value;
+      var districts = DISTRICTS_BY_REGION[regionEl.value] || [];
+      districtList.innerHTML = '';
+      districts.forEach(function (name) {
+        var opt = document.createElement('option');
+        opt.value = name;
+        districtList.appendChild(opt);
+      });
+      districtEl.value = preserveValue ? currentValue : '';
+      districtEl.disabled = districts.length === 0;
+      districtEl.placeholder = districts.length
+        ? 'Start typing your district…'
+        : 'Select a region first';
+    }
+
+    regionEl.addEventListener('change', function () { populateDistricts(false); });
+    // Restores the datalist for a region+district pair loaded from a saved
+    // draft (see loadDraft() in wizard.js) before the visitor interacts.
+    if (regionEl.value) populateDistricts(true);
+
+    // A visitor who picks a district then goes back and changes region
+    // shouldn't be able to submit a now-mismatched pair — re-validated
+    // again at submit time regardless, this just clears it eagerly.
+    districtEl.addEventListener('blur', function () {
+      var districts = DISTRICTS_BY_REGION[regionEl.value] || [];
+      if (districtEl.value && districts.indexOf(districtEl.value) === -1) {
+        districtEl.value = '';
+      }
     });
   }
 
@@ -312,7 +345,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    initRegionAutofill();
+    initRegionDistrictCascade();
     initAccountGate();
     initSubmit();
   });

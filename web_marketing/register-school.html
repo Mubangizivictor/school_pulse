@@ -228,19 +228,6 @@
               <div class="wizard-panel" data-step="5">
                 <h3>Address &amp; subdomain</h3>
                 <div class="form-row">
-                  <div class="form-field">
-                    <label for="district">District</label>
-                    <select id="district" name="district" required>
-                      <option value="">Select district</option>
-                      <option value="Kampala">Kampala</option>
-                      <option value="Wakiso">Wakiso</option>
-                      <option value="Mukono">Mukono</option>
-                      <option value="Jinja">Jinja</option>
-                      <option value="Mbarara">Mbarara</option>
-                      <option value="Other">Other</option>
-                    </select>
-                    <span class="error-text">Please select a district.</span>
-                  </div>
                   <div class="form-field" id="fieldRegion">
                     <label for="region">Region</label>
                     <select id="region" name="region" required>
@@ -251,6 +238,12 @@
                       <option value="Western">Western</option>
                     </select>
                     <span class="error-text">Please select a region.</span>
+                  </div>
+                  <div class="form-field">
+                    <label for="district">District</label>
+                    <input type="text" id="district" name="district" list="districtOptions" autocomplete="off" required placeholder="Select a region first" disabled>
+                    <datalist id="districtOptions"></datalist>
+                    <span class="error-text">Please select a valid district.</span>
                   </div>
                 </div>
                 <div class="form-field">
