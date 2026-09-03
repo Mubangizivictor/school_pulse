@@ -324,32 +324,49 @@
         customNotice.style.display = 'block';
         return;
       }
-      if (!verified) {
-        verifyNotice.style.display = 'block';
-        // Send the visitor back to the account step rather than just
-        // showing a message they might not connect to Step 2.
-        if (window.SPWizard) window.SPWizard.goToStep(2);
-        return;
-      }
 
       submitting = true;
       submitBtn.disabled = true;
       submitBtn.textContent = 'Submitting…';
 
-      SPAuth.callFunction('submitSchoolApplication', { method: 'POST', body: built.body }).then(function (data) {
-        document.getElementById('wizardForm').style.display = 'none';
-        document.getElementById('wizardSuccess').style.display = 'block';
-        document.getElementById('wizardSuccessId').textContent =
-          'Application ID: ' + (data && data.applicationId ? data.applicationId : '—');
-        try { localStorage.removeItem(window.SPWizard ? window.SPWizard.getStorageKey() : 'sp_register_school_draft_v1'); } catch (e) {}
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }).catch(function (err) {
-        var code = err && err.error;
-        setError((code && ERROR_MESSAGES[code]) || (err && err.message) || 'Could not submit your registration. Please try again.');
-      }).finally(function () {
-        submitting = false;
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit registration';
+      // Re-check verification live against Firebase Auth rather than
+      // trusting the module-level `verified` flag set by initAccountGate -
+      // a visitor who lands straight on this step (e.g. returning via the
+      // verification email's ?verified=1 link with Step 6 restored from
+      // localStorage) can reach here before that flag's own async
+      // currentUser() check has resolved, which used to bounce them back
+      // to Step 2 even though their email really was already verified.
+      SPAuth.ensureFirebase().then(function (firebase) {
+        var user = firebase.auth().currentUser;
+        if (!user) return false;
+        return user.reload().then(function () { return user.emailVerified; });
+      }).catch(function () { return false; }).then(function (isVerified) {
+        if (!isVerified) {
+          submitting = false;
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit registration';
+          verifyNotice.style.display = 'block';
+          // Send the visitor back to the account step rather than just
+          // showing a message they might not connect to Step 2.
+          if (window.SPWizard) window.SPWizard.goToStep(2);
+          return;
+        }
+
+        return SPAuth.callFunction('submitSchoolApplication', { method: 'POST', body: built.body }).then(function (data) {
+          document.getElementById('wizardForm').style.display = 'none';
+          document.getElementById('wizardSuccess').style.display = 'block';
+          document.getElementById('wizardSuccessId').textContent =
+            'Application ID: ' + (data && data.applicationId ? data.applicationId : '—');
+          try { localStorage.removeItem(window.SPWizard ? window.SPWizard.getStorageKey() : 'sp_register_school_draft_v1'); } catch (e) {}
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }).catch(function (err) {
+          var code = err && err.error;
+          setError((code && ERROR_MESSAGES[code]) || (err && err.message) || 'Could not submit your registration. Please try again.');
+        }).finally(function () {
+          submitting = false;
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit registration';
+        });
       });
     });
   }
