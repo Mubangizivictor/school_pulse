@@ -10,9 +10,17 @@ class PortalTenant {
     this.logoUrl,
     this.primaryColor,
     this.secondaryColor,
+    this.address,
+    this.phone,
+    this.email,
   });
   final String schoolId, hostname, slug, schoolName;
   final String? logoUrl, primaryColor, secondaryColor;
+  // Public-safe contact fields projected onto portal_domains/{host} by
+  // public_functions/portal_domains.js's publicDomain() - used by the
+  // public portal home page's contact block (PortalPublicHomeScreen),
+  // not by anything auth-gated.
+  final String? address, phone, email;
   SchoolBranding get branding => SchoolBranding(
     schoolId: schoolId,
     schoolName: schoolName,
@@ -30,5 +38,8 @@ class PortalTenant {
         logoUrl: data['logoUrl'] as String?,
         primaryColor: data['primaryColor'] as String?,
         secondaryColor: data['secondaryColor'] as String?,
+        address: data['address'] as String?,
+        phone: data['phone'] as String?,
+        email: data['email'] as String?,
       );
 }

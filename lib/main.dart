@@ -83,7 +83,9 @@ import 'package:school_pulse/features/branding/presentation/screens/branding_ini
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:school_pulse/features/portal/data/portal_tenant_resolver.dart';
 import 'package:school_pulse/features/portal/domain/portal_runtime.dart';
+import 'package:school_pulse/features/portal/domain/portal_tenant.dart';
 import 'package:school_pulse/features/portal/presentation/portal_not_found_screen.dart';
+import 'package:school_pulse/features/portal/presentation/portal_public_home_screen.dart';
 
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -107,7 +109,14 @@ void main() async {
   // build/run - production always talks to the real project.
   const useEmulator = bool.fromEnvironment('USE_FIREBASE_EMULATOR');
   if (useEmulator) {
-    const host = 'localhost';
+    // 127.0.0.1 rather than 'localhost': iOS Simulator's native networking
+    // stack can prefer the IPv6 loopback (::1) for the 'localhost' hostname
+    // and fail to fall back to IPv4, which the Functions SDK then surfaces
+    // as a generic "not-found" callable error indistinguishable from a real
+    // missing function - Auth/Firestore/Storage aren't affected since their
+    // transports handle this differently. The literal IPv4 address sidesteps
+    // the DNS/IPv6 resolution question entirely on every platform.
+    const host = '127.0.0.1';
     await FirebaseAuth.instance.useAuthEmulator(host, 9099);
     FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
     await FirebaseStorage.instance.useStorageEmulator(host, 9199);
@@ -206,11 +215,40 @@ void main() async {
   runApp(
     ChangeNotifierProvider.value(
       value: themeProvider,
-      child: portal.kind == PortalResolutionKind.notFound
-          ? const PortalNotFoundScreen()
-          : const SchoolPulseApp(),
+      child: switch (portal.kind) {
+        PortalResolutionKind.notFound => const PortalNotFoundScreen(),
+        PortalResolutionKind.tenant => _PortalEntryGate(tenant: portal.tenant!),
+        PortalResolutionKind.platform => const SchoolPulseApp(),
+      },
     ),
   );
+}
+
+/// A school's own subdomain (e.g. greenhill.schoolpulseapp.com) shows this
+/// public branded page first, rather than dropping straight into the app
+/// shell/login - "Sign in to School Pulse" swaps to the real app. The
+/// platform host (schoolpulseapp.com itself) is unaffected and still goes
+/// straight to SchoolPulseApp() as before; this gate only exists for the
+/// tenant-resolution branch.
+class _PortalEntryGate extends StatefulWidget {
+  const _PortalEntryGate({required this.tenant});
+  final PortalTenant tenant;
+
+  @override
+  State<_PortalEntryGate> createState() => _PortalEntryGateState();
+}
+
+class _PortalEntryGateState extends State<_PortalEntryGate> {
+  bool _continued = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_continued) return const SchoolPulseApp();
+    return PortalPublicHomeScreen(
+      tenant: widget.tenant,
+      onContinue: () => setState(() => _continued = true),
+    );
+  }
 }
 
 class SchoolPulseApp extends StatelessWidget {
