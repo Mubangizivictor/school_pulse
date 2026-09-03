@@ -160,6 +160,16 @@ class _OverviewBody extends StatelessWidget {
             onActionNeeded: onOpenSchools,
           ),
         const SizedBox(height: 20),
+        _SectionCard(
+          title: 'Quick actions',
+          child: _QuickActions(
+            onCreateSchool: onOpenSchools,
+            onApplications: onOpenBilling,
+            onPlans: () => context.go('/super-admin/plans'),
+            onAudit: () => context.go('/super-admin/audit-logs'),
+          ),
+        ),
+        const SizedBox(height: 20),
         LayoutBuilder(
           builder: (context, constraints) {
             final twoColumn = constraints.maxWidth >= 960;
@@ -192,16 +202,6 @@ class _OverviewBody extends StatelessWidget {
               ],
             );
           },
-        ),
-        const SizedBox(height: 20),
-        _SectionCard(
-          title: 'Quick actions',
-          child: _QuickActions(
-            onCreateSchool: onOpenSchools,
-            onApplications: onOpenBilling,
-            onPlans: () => context.go('/super-admin/plans'),
-            onAudit: () => context.go('/super-admin/audit-logs'),
-          ),
         ),
       ],
     );
