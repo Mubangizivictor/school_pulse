@@ -1,9 +1,9 @@
-// Proves the compact Settings redesign (profile card, grouped rows in the
-// spec order, ThemeModeSelector, red-outlined Log out with confirmation) is
-// wired in SuperAdminSettingsScreen, using the same source-inspection
-// approach as billing_home_screen_test.dart -- the real screen depends on
-// AuthBloc/SuperAdminBloc (Firestore), which this fast widget-test layer
-// doesn't set up.
+// Proves the redesigned Settings control centre (two-column: My Account /
+// Appearance / Security on the left, a Platform Configuration card grid on
+// the right) is wired in SuperAdminSettingsScreen, using the same
+// source-inspection approach as billing_home_screen_test.dart -- the real
+// screen depends on AuthBloc/ThemeProvider/Firestore, which this fast
+// widget-test layer doesn't set up.
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -17,43 +17,62 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('profile card shows Platform Owner role and reaches the edit profile screen', () {
-    expect(source.contains('class PlatformSettingsProfileCard'), isTrue);
+  test('account section shows Platform Owner role and reaches the edit profile screen', () {
+    expect(source.contains("title: 'My account'"), isTrue);
     expect(source.contains("'Platform Owner'"), isTrue);
     expect(source.contains('SuperAdminProfileScreen'), isTrue);
   });
 
-  test('settings rows are in the spec order with real routes/screens, not dead taps', () {
-    final order = [
-      'Billing & payment methods',
-      'Security & sessions',
-      'Platform audit logs',
-      'Support & legal',
-    ];
+  test('left column carries My Account, Appearance and Security in order', () {
+    final order = ["title: 'My account'", "title: 'Appearance'", "title: 'Security'"];
     var lastIndex = -1;
     for (final title in order) {
-      final index = source.indexOf("title: '$title'");
-      expect(index, greaterThan(-1), reason: '$title row missing');
+      final index = source.indexOf(title);
+      expect(index, greaterThan(-1), reason: '$title section missing');
       expect(index, greaterThan(lastIndex), reason: '$title out of order');
       lastIndex = index;
     }
-    // Notifications is reached from the Overview bell, not listed in
-    // Settings - Overview stays highlighted while it's open.
-    expect(source.contains("title: 'Notification delivery'"), isFalse);
-    expect(source.contains('ManualPaymentConfigScreen()'), isTrue);
-    expect(source.contains("/super-admin/settings/security"), isTrue);
-    expect(source.contains('AuditLogsScreen()'), isTrue);
-    expect(source.contains("/super-admin/settings/support"), isTrue);
+  });
+
+  test('Security card exposes 2FA, active sessions and change password, all routing to the security screen', () {
+    for (final title in const [
+      "title: 'Two-factor authentication'",
+      "title: 'Active sessions'",
+      "title: 'Change password'",
+    ]) {
+      expect(source.contains(title), isTrue, reason: '$title missing');
+    }
+    expect(source.contains("context.push('/super-admin/settings/security')"), isTrue);
+  });
+
+  test('platform configuration grid lists the six real destinations, not dead taps', () {
+    for (final entry in const {
+      "title: 'School onboarding'": "context.push('/super-admin/schools')",
+      "title: 'Custom domains'":
+          "context.push('/super-admin/settings/custom-domains')",
+      "title: 'Subdomain change requests'":
+          "context.push('/super-admin/settings/subdomain-requests')",
+      "title: 'Branding & communications'":
+          "context.push('/super-admin/settings/support')",
+      "title: 'Platform health'": "context.push('/super-admin/platform-health')",
+      "title: 'Support & legal'": "context.push('/super-admin/settings/support')",
+    }.entries) {
+      expect(source.contains(entry.key), isTrue, reason: '${entry.key} missing');
+      expect(source.contains(entry.value), isTrue,
+          reason: '${entry.key} not routed to ${entry.value}');
+    }
+  });
+
+  test('configuration status is shown only where real data exists (custom domains stream)', () {
+    expect(source.contains('CustomDomainService().watchRequests()'), isTrue);
+    // No fabricated "Configured" / "API enabled" style badges for surfaces
+    // that have no backing data.
+    expect(source.contains("'API enabled'"), isFalse);
+    expect(source.contains("'Branding configured'"), isFalse);
   });
 
   test('appearance uses the existing app-wide ThemeProvider, not new state', () {
-    expect(source.contains('class ThemeModeSelector'), isTrue);
     expect(source.contains('context.watch<ThemeProvider>()'), isTrue);
     expect(source.contains('context.read<ThemeProvider>().setThemeMode'), isTrue);
-  });
-
-  test('logout stays on the existing confirmed secure logout flow', () {
-    expect(source.contains('handleSuperAdminLogout(context)'), isTrue);
-    expect(source.contains("'Log out'"), isTrue);
   });
 }

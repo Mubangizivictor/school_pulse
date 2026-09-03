@@ -1,30 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/design_system/theme/app_radius.dart';
-import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 
-import '../../domain/entities/school.dart';
-import '../bloc/super_admin_bloc.dart';
+import '../../data/services/custom_domain_service.dart';
 import '../responsive.dart';
 import '../widgets/super_admin_logout_button.dart';
-import 'audit_logs_screen.dart';
-import 'manual_payment_config_screen.dart';
 import 'super_admin_profile_screen.dart';
 
-/// Real (non-placeholder) Settings screen for the SaaS owner console,
-/// scoped to what's honestly supportable right now: account identity,
-/// notifications, a link to the manual payment configuration info screen,
-/// a link to Audit Logs for security visibility, and logout. School
-/// deletion is deliberately not offered here — it's a per-school action
-/// that lives in School Details, not a global platform setting.
+/// Settings control centre for the SaaS owner console.
+///
+/// Two columns on desktop, stacked on tablet/mobile:
+///  - Left: My Account, Appearance, Security.
+///  - Right: a Platform Configuration card grid (School onboarding, Custom
+///    domains, Branding & communications, Integrations & API access, Data
+///    retention & exports, Support & legal).
+///
+/// Duplicated navigation is deliberately absent: billing / payment methods
+/// live only in the Billing section, audit logs only in Activity. Sign out
+/// is not offered here — it lives once, in the sidebar footer account row on
+/// desktop and the account menu in this screen's header on mobile.
 class SuperAdminSettingsScreen extends StatelessWidget {
   const SuperAdminSettingsScreen({super.key});
 
@@ -35,77 +35,185 @@ class SuperAdminSettingsScreen extends StatelessWidget {
     final ownerName = (user?.name.trim().isNotEmpty ?? false)
         ? user!.name.trim()
         : 'SaaS Owner';
-    final ownerEmail = user?.email.trim().isNotEmpty ?? false
+    final ownerEmail = (user?.email.trim().isNotEmpty ?? false)
         ? user!.email.trim()
         : 'Not signed in';
     final ownerPhone = user?.phoneNumber?.trim();
     final photoUrl = user?.photoUrl;
-    final schools = context.watch<SuperAdminBloc>().state.schools;
-    final activeSchools = schools
-        .where((s) => s.status == SchoolStatus.active)
-        .length;
     final wide = isSuperAdminWide(context);
 
-    List<PlatformSettingsRow> tiles({required bool standalone}) => [
-      PlatformSettingsRow(
-        standalone: standalone,
-        icon: Icons.credit_card_outlined,
-        title: 'Billing & payment methods',
-        subtitle: 'Manage subscriptions, invoices and payment methods',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ManualPaymentConfigScreen()),
-        ),
+    void openProfile() => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SuperAdminProfileScreen()),
+    );
+
+    final leftColumn = <Widget>[
+      _AccountCard(
+        name: ownerName,
+        email: ownerEmail,
+        phone: ownerPhone,
+        photoUrl: photoUrl,
+        onEdit: openProfile,
       ),
-      PlatformSettingsRow(
-        standalone: standalone,
-        icon: Icons.shield_outlined,
-        title: 'Security & sessions',
-        subtitle: 'Password, two-factor authentication and active sessions',
-        onTap: () => context.push('/super-admin/settings/security'),
-      ),
-      PlatformSettingsRow(
-        standalone: standalone,
-        icon: Icons.dns_outlined,
-        title: 'Custom domains',
-        subtitle: 'Verify and activate schools\' custom portal hostnames',
-        onTap: () => context.push('/super-admin/settings/custom-domains'),
-      ),
-      PlatformSettingsRow(
-        standalone: standalone,
-        icon: Icons.alternate_email_outlined,
-        title: 'Subdomain change requests',
-        subtitle: 'Review schools\' requests to change their subdomain',
-        onTap: () => context.push('/super-admin/settings/subdomain-requests'),
-      ),
-      PlatformSettingsRow(
-        standalone: standalone,
-        icon: Icons.assignment_outlined,
-        title: 'Platform audit logs',
-        subtitle: 'View system-wide audit logs and activity',
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AuditLogsScreen()),
-        ),
-      ),
-      PlatformSettingsRow(
-        standalone: standalone,
-        icon: Icons.headset_mic_outlined,
-        title: 'Support & legal',
-        subtitle: 'Help center, terms of service and privacy policy',
-        onTap: () => context.push('/super-admin/settings/support'),
-      ),
+      const _AppearanceCard(),
+      const _SecurityCard(),
     ];
+
+    final rightColumn = <Widget>[_PlatformConfigurationCard(wide: wide)];
 
     if (wide) {
       return Scaffold(
+        backgroundColor: AppColors.background(context),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.x2l,
-            AppSpacing.xl,
-            AppSpacing.x2l,
-            AppSpacing.x3l,
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Header(
+                onOpenAccountMenu: null,
+                name: ownerName,
+                email: ownerEmail,
+                photoUrl: photoUrl,
+              ),
+              const SizedBox(height: 24),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1180),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 380,
+                      child: Column(
+                        children: [
+                          for (final w in leftColumn) ...[
+                            w,
+                            const SizedBox(height: 20),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          for (final w in rightColumn) ...[
+                            w,
+                            const SizedBox(height: 20),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.background(context),
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          children: [
+            _Header(
+              onOpenAccountMenu: () => _showAccountMenu(context),
+              name: ownerName,
+              email: ownerEmail,
+              photoUrl: photoUrl,
+            ),
+            const SizedBox(height: 20),
+            for (final w in [...leftColumn, ...rightColumn]) ...[
+              w,
+              const SizedBox(height: 16),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showAccountMenu(BuildContext context) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.surfaceElevated(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            ListTile(
+              leading: Icon(
+                Icons.person_outline_rounded,
+                color: AppColors.textPrimary(sheetContext),
+              ),
+              title: const Text('Edit profile'),
+              onTap: () => Navigator.pop(sheetContext, 'profile'),
+            ),
+            Divider(height: 1, color: AppColors.border(sheetContext)),
+            ListTile(
+              leading: Icon(
+                Icons.logout_rounded,
+                color: AppColors.danger(sheetContext),
+              ),
+              title: Text(
+                'Sign out',
+                style: TextStyle(
+                  color: AppColors.danger(sheetContext),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              onTap: () => Navigator.pop(sheetContext, 'signout'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (!context.mounted) return;
+    switch (action) {
+      case 'profile':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SuperAdminProfileScreen()),
+        );
+      case 'signout':
+        await handleSuperAdminLogout(context);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Header
+// ---------------------------------------------------------------------------
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.onOpenAccountMenu,
+    required this.name,
+    required this.email,
+    required this.photoUrl,
+  });
+
+  /// When non-null a compact avatar button is shown that opens the account
+  /// menu (mobile — there is no sidebar footer to carry sign out).
+  final VoidCallback? onOpenAccountMenu;
+  final String name;
+  final String email;
+  final String? photoUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -120,141 +228,136 @@ class SuperAdminSettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Manage your platform settings and preferences.',
-                maxLines: 1,
+                'Manage your platform configuration, security, and preferences.',
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: AppTypography.bodyMedium.copyWith(
                   color: AppColors.textSecondary(context),
                 ),
               ),
-              const SizedBox(height: AppSpacing.xl),
-              _DesktopAccountCard(
-                name: ownerName,
-                email: ownerEmail,
-                phone: ownerPhone,
-                photoUrl: photoUrl,
-                totalSchools: schools.length,
-                activeSchools: activeSchools,
-                onEdit: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SuperAdminProfileScreen(),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              const ThemeModeSelector(),
-              const SizedBox(height: AppSpacing.xl),
-              for (final tile in tiles(standalone: true))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.m),
-                  child: tile,
-                ),
-              const SizedBox(height: AppSpacing.m),
-              Row(
-                children: [
-                  Expanded(
-                    child: _CompactDangerButton(
-                      icon: Icons.logout_rounded,
-                      label: 'Logout',
-                      onTap: () => handleSuperAdminLogout(context),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
-      );
-    }
+        if (onOpenAccountMenu != null) ...[
+          const SizedBox(width: 12),
+          _AvatarMenuButton(
+            name: name,
+            photoUrl: photoUrl,
+            onTap: onOpenAccountMenu!,
+          ),
+        ],
+      ],
+    );
+  }
+}
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      body: SafeArea(
-        bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-          children: [
-            Row(
-              children: [
-                Text('Settings', style: _pageTitle(context)),
-                const Spacer(),
-                _IconAction(
-                  icon: Icons.edit_outlined,
-                  tooltip: 'Edit profile',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const SuperAdminProfileScreen(),
+class _AvatarMenuButton extends StatelessWidget {
+  const _AvatarMenuButton({
+    required this.name,
+    required this.photoUrl,
+    required this.onTap,
+  });
+
+  final String name;
+  final String? photoUrl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(2),
+          child: CircleAvatar(
+            radius: 20,
+            backgroundColor: AppColors.informationSurface(context),
+            backgroundImage: (photoUrl?.isNotEmpty ?? false)
+                ? NetworkImage(photoUrl!)
+                : null,
+            child: (photoUrl?.isNotEmpty ?? false)
+                ? null
+                : Text(
+                    _initials(name),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.information(context),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            PlatformSettingsProfileCard(
-              name: ownerName,
-              email: ownerEmail,
-              photoUrl: photoUrl,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const SuperAdminProfileScreen(),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.surfaceElevated(context),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.border(context)),
-              ),
-              child: Column(
-                children: [
-                  for (final (i, tile) in tiles(standalone: false).indexed) ...[
-                    if (i > 0) Divider(height: 1, color: AppColors.border(context)),
-                    tile,
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            const ThemeModeSelector(),
-            const SizedBox(height: 14),
-            _CompactDangerButton(
-              icon: Icons.logout_rounded,
-              label: 'Log out',
-              onTap: () => handleSuperAdminLogout(context),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                'You will be signed out of School Pulse on this device.',
-                textAlign: TextAlign.center,
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textMuted(context),
-                  fontSize: 11.5,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// Desktop-styled owner profile card matching the reference: avatar +
-/// name + role badge + Edit Profile at top, phone/email/stat strip below.
-class _DesktopAccountCard extends StatelessWidget {
-  const _DesktopAccountCard({
+// ---------------------------------------------------------------------------
+// Shared card scaffold
+// ---------------------------------------------------------------------------
+
+class _SettingsCard extends StatelessWidget {
+  const _SettingsCard({
+    required this.title,
+    this.subtitle,
+    required this.child,
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppTypography.titleMedium.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle!,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textSecondary(context),
+                fontSize: 12.5,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Left column: My Account
+// ---------------------------------------------------------------------------
+
+class _AccountCard extends StatelessWidget {
+  const _AccountCard({
     required this.name,
     required this.email,
     required this.phone,
     required this.photoUrl,
-    required this.totalSchools,
-    required this.activeSchools,
     required this.onEdit,
   });
 
@@ -262,429 +365,137 @@ class _DesktopAccountCard extends StatelessWidget {
   final String email;
   final String? phone;
   final String? photoUrl;
-  final int totalSchools;
-  final int activeSchools;
   final VoidCallback onEdit;
 
-  String _initials(String value) => value
-      .trim()
-      .split(RegExp(r'\s+'))
-      .where((part) => part.isNotEmpty)
-      .take(2)
-      .map((part) => part[0].toUpperCase())
-      .join();
-
   @override
   Widget build(BuildContext context) {
-    final primary = AppColors.primary(context);
-
-    final avatar = CircleAvatar(
-      radius: 32,
-      backgroundColor: primary,
-      backgroundImage: photoUrl?.isNotEmpty == true
-          ? NetworkImage(photoUrl!)
-          : null,
-      child: photoUrl?.isNotEmpty == true
-          ? null
-          : Text(
-              _initials(name),
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: primary,
-              ),
-            ),
-    );
-
-    final identity = Expanded(
+    return _SettingsCard(
+      title: 'My account',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: AppSpacing.s,
-            runSpacing: 4,
-            children: [
-              Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.titleLarge.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.s,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: primary,
-                  borderRadius: AppRadius.full,
-                ),
-                child: Text(
-                  'Super Admin',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.labelSmall.copyWith(
-                    color: primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'Platform Owner',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary(context),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.m),
-          if (phone?.isNotEmpty ?? false) ...[
-            _ContactRow(icon: Icons.phone_outlined, value: phone!),
-            const SizedBox(height: AppSpacing.xs),
-          ],
-          _ContactRow(icon: Icons.email_outlined, value: email),
-        ],
-      ),
-    );
-
-    final statsAndEdit = Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: AppSpacing.xl,
-      runSpacing: AppSpacing.m,
-      children: [
-        _AccountStat(label: 'Schools', value: '$totalSchools'),
-        _AccountStat(label: 'Active', value: '$activeSchools'),
-        OutlinedButton.icon(
-          onPressed: onEdit,
-          icon: const Icon(Icons.edit_outlined, size: 16),
-          label: const Text('Edit Profile'),
-        ),
-      ],
-    );
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated(context),
-        borderRadius: AppRadius.large,
-        border: Border.all(color: AppColors.border(context)),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final stacked = constraints.maxWidth < 760;
-          if (stacked) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    avatar,
-                    const SizedBox(width: AppSpacing.l),
-                    identity,
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.l),
-                Divider(height: 1, color: AppColors.border(context)),
-                const SizedBox(height: AppSpacing.l),
-                statsAndEdit,
-              ],
-            );
-          }
-          return Row(
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              avatar,
-              const SizedBox(width: AppSpacing.l),
-              identity,
-              const SizedBox(width: AppSpacing.xl),
-              Container(width: 1, height: 64, color: AppColors.border(context)),
-              const SizedBox(width: AppSpacing.xl),
-              statsAndEdit,
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-/// Compact profile card matching the reference: avatar/initials, name,
-/// "Platform Owner" role, verified email, chevron to full profile screen.
-class PlatformSettingsProfileCard extends StatelessWidget {
-  const PlatformSettingsProfileCard({
-    super.key,
-    required this.name,
-    required this.email,
-    required this.photoUrl,
-    required this.onTap,
-  });
-
-  final String name;
-  final String email;
-  final String? photoUrl;
-  final VoidCallback onTap;
-
-  String _initials(String value) => value
-      .trim()
-      .split(RegExp(r'\s+'))
-      .where((part) => part.isNotEmpty)
-      .take(2)
-      .map((part) => part[0].toUpperCase())
-      .join();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: AppColors.surfaceElevated(context),
-        border: Border.all(color: AppColors.border(context)),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 26,
-              backgroundColor: AppColors.informationSurface(context),
-              backgroundImage: photoUrl?.isNotEmpty == true ? NetworkImage(photoUrl!) : null,
-              child: photoUrl?.isNotEmpty == true
-                  ? null
-                  : Text(
-                      _initials(name),
-                      style: TextStyle(
-                        fontSize: 17,
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: AppColors.informationSurface(context),
+                backgroundImage: (photoUrl?.isNotEmpty ?? false)
+                    ? NetworkImage(photoUrl!)
+                    : null,
+                child: (photoUrl?.isNotEmpty ?? false)
+                    ? null
+                    : Text(
+                        _initials(name),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.information(context),
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.titleMedium.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: AppColors.information(context),
+                        color: AppColors.textPrimary(context),
                       ),
                     ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    name,
+                    const SizedBox(height: 2),
+                    Text(
+                      email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary(context),
+                        fontSize: 12.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _Badge(
+                      label: 'Platform Owner',
+                      color: AppColors.information(context),
+                      surface: AppColors.informationSurface(context),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (phone?.isNotEmpty ?? false) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Icon(
+                  Icons.phone_outlined,
+                  size: 16,
+                  color: AppColors.textSecondary(context),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    phone!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
+                    style: AppTypography.bodyMedium.copyWith(
                       color: AppColors.textPrimary(context),
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Platform Owner',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textSecondary(context),
-                      fontSize: 12.5,
-                    ),
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    email,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textSecondary(context),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Icon(Icons.chevron_right_rounded, color: AppColors.textMuted(context)),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ContactRow extends StatelessWidget {
-  const _ContactRow({required this.icon, required this.value});
-
-  final IconData icon;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: AppColors.textSecondary(context)),
-        const SizedBox(width: AppSpacing.s),
-        Expanded(
-          child: Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textPrimary(context),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AccountStat extends StatelessWidget {
-  const _AccountStat({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: AppTypography.titleMedium.copyWith(
-            fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: AppTypography.bodySmall.copyWith(
-            color: AppColors.textSecondary(context),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Compact side-by-side button for the Delete School / Logout row.
-class _CompactDangerButton extends StatelessWidget {
-  const _CompactDangerButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = AppColors.danger(context);
-
-    return Material(
-      color: AppColors.surfaceElevated(context),
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.m,
-            vertical: AppSpacing.m,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border(context)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: color, size: 18),
-              const SizedBox(width: AppSpacing.xs),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.labelLarge.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_outlined, size: 16),
+              label: const Text('Edit profile'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.information(context),
+                side: BorderSide(color: AppColors.border(context)),
+                minimumSize: const Size.fromHeight(44),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Left column: Appearance
+// ---------------------------------------------------------------------------
 
 /// Light/Dark/System theme picker, backed by the app-wide [ThemeProvider]
 /// (the same one main.dart feeds into MaterialApp.themeMode) so a choice
 /// made here affects the whole app immediately and persists across
 /// restarts via SharedPreferences, not just this screen's own state.
-class ThemeModeSelector extends StatelessWidget {
-  const ThemeModeSelector({super.key});
+class _AppearanceCard extends StatelessWidget {
+  const _AppearanceCard();
 
   @override
   Widget build(BuildContext context) {
     final mode = context.watch<ThemeProvider>().themeMode;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated(context),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border(context)),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final selector = _ThemeSegmentedControl(
-            mode: mode,
-            onChanged: (value) => context.read<ThemeProvider>().setThemeMode(value),
-          );
-          final label = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Appearance',
-                style: AppTypography.labelLarge.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Choose how the app looks',
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textSecondary(context),
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          );
-          if (constraints.maxWidth < 360) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [label, const SizedBox(height: 10), selector],
-            );
-          }
-          return Row(
-            children: [
-              Expanded(child: label),
-              const SizedBox(width: 12),
-              selector,
-            ],
-          );
-        },
+    return _SettingsCard(
+      title: 'Appearance',
+      subtitle: 'Choose how the platform looks',
+      child: _ThemeSegmentedControl(
+        mode: mode,
+        onChanged: (value) =>
+            context.read<ThemeProvider>().setThemeMode(value),
       ),
     );
   }
@@ -694,22 +505,24 @@ class _ThemeSegmentedControl extends StatelessWidget {
   const _ThemeSegmentedControl({required this.mode, required this.onChanged});
   final ThemeMode mode;
   final ValueChanged<ThemeMode> onChanged;
+
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(3),
     decoration: BoxDecoration(
       color: AppColors.surfaceContainer(context),
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       border: Border.all(color: AppColors.border(context)),
     ),
     child: Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
         for (final option in ThemeMode.values)
-          _ThemeSegment(
-            mode: option,
-            selected: mode == option,
-            onTap: () => onChanged(option),
+          Expanded(
+            child: _ThemeSegment(
+              mode: option,
+              selected: mode == option,
+              onTap: () => onChanged(option),
+            ),
           ),
       ],
     ),
@@ -717,71 +530,362 @@ class _ThemeSegmentedControl extends StatelessWidget {
 }
 
 class _ThemeSegment extends StatelessWidget {
-  const _ThemeSegment({required this.mode, required this.selected, required this.onTap});
+  const _ThemeSegment({
+    required this.mode,
+    required this.selected,
+    required this.onTap,
+  });
   final ThemeMode mode;
   final bool selected;
   final VoidCallback onTap;
 
-  String get _label => switch (mode) {
-    ThemeMode.light => 'Light',
-    ThemeMode.dark => 'Dark',
-    ThemeMode.system => 'System',
+  ({String label, IconData icon}) get _meta => switch (mode) {
+    ThemeMode.light => (label: 'Light', icon: Icons.light_mode_outlined),
+    ThemeMode.dark => (label: 'Dark', icon: Icons.dark_mode_outlined),
+    ThemeMode.system => (label: 'System', icon: Icons.desktop_windows_outlined),
   };
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: selected ? AppColors.surfaceElevated(context) : Colors.transparent,
-    borderRadius: BorderRadius.circular(8),
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? AppColors.information(context) : Colors.transparent,
+  Widget build(BuildContext context) {
+    final meta = _meta;
+    return Material(
+      color: selected ? AppColors.surfaceElevated(context) : Colors.transparent,
+      borderRadius: BorderRadius.circular(9),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(9),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(
+              color: selected
+                  ? AppColors.information(context)
+                  : Colors.transparent,
+            ),
           ),
-        ),
-        child: Text(
-          _label,
-          style: AppTypography.labelMedium.copyWith(
-            fontWeight: FontWeight.w700,
-            fontSize: 12.5,
-            color: selected ? AppColors.information(context) : AppColors.textSecondary(context),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                meta.icon,
+                size: 15,
+                color: selected
+                    ? AppColors.information(context)
+                    : AppColors.textSecondary(context),
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  meta.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.labelMedium.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12.5,
+                    color: selected
+                        ? AppColors.information(context)
+                        : AppColors.textSecondary(context),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
-/// Compact settings row: icon, title, one-line subtitle, chevron. Used
-/// standalone (its own bordered card, desktop) or grouped inside a shared
-/// bordered container with dividers between rows (mobile).
-class PlatformSettingsRow extends StatelessWidget {
-  const PlatformSettingsRow({
-    super.key,
+// ---------------------------------------------------------------------------
+// Left column: Security
+// ---------------------------------------------------------------------------
+
+class _SecurityCard extends StatelessWidget {
+  const _SecurityCard();
+
+  @override
+  Widget build(BuildContext context) {
+    void openSecurity() => context.push('/super-admin/settings/security');
+
+    return _SettingsCard(
+      title: 'Security',
+      child: Column(
+        children: [
+          _RowItem(
+            icon: Icons.verified_user_outlined,
+            title: 'Two-factor authentication',
+            subtitle: 'Secure your account with 2FA',
+            onTap: openSecurity,
+          ),
+          _Sep(),
+          _RowItem(
+            icon: Icons.devices_outlined,
+            title: 'Active sessions',
+            subtitle: 'Review and revoke signed-in devices',
+            onTap: openSecurity,
+          ),
+          _Sep(),
+          _RowItem(
+            icon: Icons.lock_outline_rounded,
+            title: 'Change password',
+            subtitle: 'Update the password for this account',
+            onTap: openSecurity,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Right column: Platform configuration grid
+// ---------------------------------------------------------------------------
+
+class _PlatformConfigurationCard extends StatelessWidget {
+  const _PlatformConfigurationCard({required this.wide});
+
+  final bool wide;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SettingsCard(
+      title: 'Platform configuration',
+      subtitle: 'Configure how your platform operates and integrates.',
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final twoUp = constraints.maxWidth >= 520;
+          final tileWidth = twoUp
+              ? (constraints.maxWidth - 16) / 2
+              : constraints.maxWidth;
+          return Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              for (final tile in _tiles(context))
+                SizedBox(width: tileWidth, child: tile),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  List<Widget> _tiles(BuildContext context) => [
+    _ConfigTile(
+      icon: Icons.school_outlined,
+      title: 'School onboarding',
+      description:
+          'Review applications and onboard new schools onto the platform.',
+      onTap: () => context.push('/super-admin/schools'),
+    ),
+    _ConfigTile(
+      icon: Icons.language_outlined,
+      title: 'Custom domains',
+      description:
+          "Verify and activate schools' custom portal hostnames.",
+      status: const _CustomDomainsStatus(),
+      onTap: () => context.push('/super-admin/settings/custom-domains'),
+    ),
+    _ConfigTile(
+      icon: Icons.alternate_email_outlined,
+      title: 'Subdomain change requests',
+      description: "Review schools' requests to change their subdomain.",
+      onTap: () =>
+          context.push('/super-admin/settings/subdomain-requests'),
+    ),
+    _ConfigTile(
+      icon: Icons.campaign_outlined,
+      title: 'Branding & communications',
+      description:
+          'Platform branding, transactional emails and notifications.',
+      onTap: () => context.push('/super-admin/settings/support'),
+    ),
+    _ConfigTile(
+      icon: Icons.monitor_heart_outlined,
+      title: 'Platform health',
+      description: 'Live service status and platform-wide diagnostics.',
+      onTap: () => context.push('/super-admin/platform-health'),
+    ),
+    _ConfigTile(
+      icon: Icons.shield_outlined,
+      title: 'Support & legal',
+      description: 'Help center, terms of service and privacy policy.',
+      onTap: () => context.push('/super-admin/settings/support'),
+    ),
+  ];
+}
+
+class _ConfigTile extends StatelessWidget {
+  const _ConfigTile({
+    required this.icon,
+    required this.title,
+    required this.description,
+    this.status,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final Widget? status;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surfaceElevated(context),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border(context)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.informationSurface(context),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 19,
+                      color: AppColors.information(context),
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textMuted(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: AppTypography.labelLarge.copyWith(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textSecondary(context),
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+              if (status != null) ...[
+                const SizedBox(height: 12),
+                status!,
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Real status for the Custom domains tile — a live count from the same
+/// stream the Custom Domains screen renders. No row = nothing to report.
+class _CustomDomainsStatus extends StatelessWidget {
+  const _CustomDomainsStatus();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<CustomDomainRequest>>(
+      stream: CustomDomainService().watchRequests(),
+      builder: (context, snapshot) {
+        final requests = snapshot.data;
+        if (requests == null) return const SizedBox.shrink();
+        final active = requests.where((r) => r.isActive).length;
+        final pending =
+            requests.where((r) => r.isPending || r.isVerified).length;
+        if (active == 0 && pending == 0) return const SizedBox.shrink();
+        if (active > 0) {
+          return _StatusDot(
+            color: AppColors.success(context),
+            label: active == 1 ? '1 domain active' : '$active domains active',
+          );
+        }
+        return _StatusDot(
+          color: AppColors.information(context),
+          label: pending == 1
+              ? '1 request pending'
+              : '$pending requests pending',
+        );
+      },
+    );
+  }
+}
+
+class _StatusDot extends StatelessWidget {
+  const _StatusDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: AppTypography.labelSmall.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Small shared pieces
+// ---------------------------------------------------------------------------
+
+class _RowItem extends StatelessWidget {
+  const _RowItem({
     required this.icon,
     required this.title,
     required this.subtitle,
-    this.onTap,
-    this.standalone = true,
+    required this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback? onTap;
-  final bool standalone;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final row = InkWell(
+    return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(10),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: standalone ? 14 : 12, vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           children: [
             Container(
@@ -791,13 +895,16 @@ class PlatformSettingsRow extends StatelessWidget {
                 color: AppColors.informationSurface(context),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: AppColors.information(context), size: 18),
+              child: Icon(
+                icon,
+                size: 18,
+                color: AppColors.information(context),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     title,
@@ -822,54 +929,57 @@ class PlatformSettingsRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (onTap != null)
-              Icon(Icons.chevron_right_rounded, color: AppColors.textMuted(context)),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textMuted(context),
+            ),
           ],
         ),
       ),
     );
-    if (!standalone) return row;
+  }
+}
+
+class _Sep extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) =>
+      Divider(height: 1, color: AppColors.border(context));
+}
+
+class _Badge extends StatelessWidget {
+  const _Badge({
+    required this.label,
+    required this.color,
+    required this.surface,
+  });
+
+  final String label;
+  final Color color;
+  final Color surface;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: AppColors.surfaceElevated(context),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border(context)),
+        color: surface,
+        borderRadius: BorderRadius.circular(6),
       ),
-      child: row,
+      child: Text(
+        label,
+        style: AppTypography.labelSmall.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 }
 
-TextStyle _pageTitle(BuildContext c) => AppTypography.headlineMedium.copyWith(
-  color: AppColors.textPrimary(c),
-  fontSize: 24,
-  fontWeight: FontWeight.w800,
-);
-
-class _IconAction extends StatelessWidget {
-  const _IconAction({required this.icon, required this.tooltip, required this.onTap});
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => Tooltip(
-    message: tooltip,
-    child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceElevated(context),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border(context)),
-          ),
-          child: Icon(icon, size: 20, color: AppColors.textPrimary(context)),
-        ),
-      ),
-    ),
-  );
-}
+String _initials(String value) => value
+    .trim()
+    .split(RegExp(r'\s+'))
+    .where((part) => part.isNotEmpty)
+    .take(2)
+    .map((part) => part[0].toUpperCase())
+    .join();
