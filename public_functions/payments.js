@@ -499,6 +499,11 @@ exports.approveSchoolApplication = onCall(
       // Mirrors portal_domains.js:createSchoolPortal's school doc shape so
       // both onboarding paths (owner-created portal vs. public application)
       // produce a tenant portal_tenant_resolver.dart can resolve the same way.
+      // `slug` was missing here even though createSchoolPortal always sets
+      // it - portal_domains.js's publicDomain() reads school.slug directly,
+      // and Firestore rejects an explicit `undefined` value outright, which
+      // made every approval crash before this was added.
+      slug,
       portalSubdomain: portalHost,
       customDomains: [],
       branding: {
