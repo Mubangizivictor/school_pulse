@@ -840,11 +840,33 @@ class _CopyField extends StatelessWidget {
   }
 }
 
+/// A faithful, read-only projection of the audit record for the raw JSON
+/// pane. Nothing here is written back.
+Map<String, dynamic> _rawJson(AuditLog log) => {
+  'id': log.id,
+  'action': log.action,
+  'ownerId': log.ownerId,
+  'schoolId': log.schoolId,
+  'affectedUserId': log.affectedUserId,
+  'timestamp': log.timestamp.toIso8601String(),
+  'device': log.device,
+  'reason': log.reason,
+  'metadata': log.metadata,
+};
+
+String? _metaValue(AuditLog log, List<String> keys) {
+  for (final k in keys) {
+    final v = log.metadata[k];
+    if (v != null && '$v'.trim().isNotEmpty) return '$v';
+  }
+  return null;
+}
+
 /// The responsive audit-detail inspector. Rendered as a fixed right-hand
 /// panel on desktop and as a scrollable bottom sheet on mobile. It is
 /// strictly read-only — there is no control here that can edit or delete
 /// an audit record.
-class _AuditInspector extends StatelessWidget {
+class _AuditInspector extends StatefulWidget {
   const _AuditInspector({
     required this.log,
     required this.onClose,
@@ -855,6 +877,25 @@ class _AuditInspector extends StatelessWidget {
   final bool isSheet;
 
   @override
+  State<_AuditInspector> createState() => _AuditInspectorState();
+}
+
+class _AuditInspectorState extends State<_AuditInspector> {
+  int _tab = 0; // 0 = Details, 1 = Raw JSON
+
+  AuditLog get log => widget.log;
+
+  void _copy(String label, String value) {
+    Clipboard.setData(ClipboardData(text: value));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$label copied'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final category = _categoryOf(log);
     final accent = _eventAccent(context, log);
@@ -862,10 +903,10 @@ class _AuditInspector extends StatelessWidget {
 
     final body = ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-      shrinkWrap: isSheet,
-      physics: isSheet ? const ClampingScrollPhysics() : null,
+      shrinkWrap: widget.isSheet,
+      physics: widget.isSheet ? const ClampingScrollPhysics() : null,
       children: [
-        if (isSheet)
+        if (widget.isSheet)
           Center(
             child: Container(
               width: 36,
@@ -888,7 +929,7 @@ class _AuditInspector extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                success ? Icons.check_circle_outline_rounded : _eventIcon(log),
+                success ? Icons.check_circle_rounded : _eventIcon(log),
                 size: 18,
                 color: accent,
               ),
@@ -941,122 +982,30 @@ class _AuditInspector extends StatelessWidget {
             IconButton(
               tooltip: 'Close',
               icon: const Icon(Icons.close_rounded, size: 18),
-              onPressed: onClose,
+              onPressed: widget.onClose,
             ),
           ],
         ),
-        const SizedBox(height: 18),
-        _sectionLabel(context, 'Action summary'),
-        const SizedBox(height: 6),
-        Text(
-          log.reason?.trim().isNotEmpty ?? false
-              ? log.reason!.trim()
-              : '${_actorLabel(log.ownerId)} performed '
-                    '${_titleCaseAction(log.action).toLowerCase()}'
-                    '${_targetLabel(log) != '—' ? ' on ${_targetLabel(log)}' : ''}.',
-          style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-        const SizedBox(height: 18),
-        _CopyField(label: 'ACTOR', value: _actorLabel(log.ownerId)),
-        const SizedBox(height: 14),
-        _CopyField(label: 'TARGET', value: _targetLabel(log)),
-        const SizedBox(height: 14),
-        _CopyField(
-          label: 'TIMESTAMP',
-          value:
-              '${_absoluteTime(log.timestamp)}  (${_relativeTime(log.timestamp)})',
-        ),
-        const SizedBox(height: 14),
-        _CopyField(
-          label: 'SOURCE / DEVICE',
-          value: log.device.trim().isNotEmpty ? log.device.trim() : '—',
-        ),
-        if ((log.metadata['ip'] ?? log.metadata['ip_address']) != null) ...[
-          const SizedBox(height: 14),
-          _CopyField(
-            label: 'IP ADDRESS',
-            value:
-                '${log.metadata['ip'] ?? log.metadata['ip_address']}',
-          ),
-        ],
-        if (log.metadata['correlationId'] != null ||
-            log.metadata['correlation_id'] != null) ...[
-          const SizedBox(height: 14),
-          _CopyField(
-            label: 'CORRELATION ID',
-            mono: true,
-            value:
-                '${log.metadata['correlationId'] ?? log.metadata['correlation_id']}',
-          ),
-        ],
-        const SizedBox(height: 14),
-        _CopyField(label: 'EVENT ID', value: log.id, mono: true),
-        const SizedBox(height: 20),
-        Row(
-          children: [
-            _sectionLabel(context, 'Metadata (immutable)'),
-            const Spacer(),
-            InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () {
-                Clipboard.setData(
-                  ClipboardData(
-                    text: const JsonEncoder.withIndent(
-                      '  ',
-                    ).convert(_rawJson(log)),
-                  ),
-                );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Raw JSON copied'),
-                    duration: Duration(seconds: 1),
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.copy_rounded,
-                      size: 14,
-                      color: AppColors.textSecondary(context),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Copy JSON',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.textSecondary(context),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
+        // Details / Raw JSON tabs -----------------------------------------
         Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
             color: AppColors.background(context),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: AppColors.border(context)),
           ),
-          child: SelectableText(
-            const JsonEncoder.withIndent('  ').convert(_rawJson(log)),
-            style: AppTypography.bodySmall.copyWith(
-              fontFamily: 'monospace',
-              color: AppColors.textPrimary(context),
-              height: 1.45,
-            ),
+          child: Row(
+            children: [
+              _tabButton('Details', 0),
+              _tabButton('Raw JSON', 1),
+            ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
+        if (_tab == 0) ..._detailsPane(context, category, success) else
+          _rawJsonPane(context),
+        const SizedBox(height: 16),
         Row(
           children: [
             Icon(
@@ -1076,7 +1025,7 @@ class _AuditInspector extends StatelessWidget {
       ],
     );
 
-    if (isSheet) {
+    if (widget.isSheet) {
       return SafeArea(
         top: false,
         child: ConstrainedBox(
@@ -1100,6 +1049,208 @@ class _AuditInspector extends StatelessWidget {
     );
   }
 
+  Widget _tabButton(String label, int index) {
+    final selected = _tab == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _tab = index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.surfaceElevated(context)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: selected
+                ? Border.all(color: AppColors.border(context))
+                : null,
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: AppTypography.labelMedium.copyWith(
+                color: selected
+                    ? AppColors.textPrimary(context)
+                    : AppColors.textSecondary(context),
+                fontWeight: FontWeight.w700,
+                fontSize: 12.5,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _detailsPane(
+    BuildContext context,
+    _AuditCategory category,
+    bool success,
+  ) {
+    final ip = _metaValue(log, const ['ip', 'ip_address', 'ipAddress']);
+    final correlation = _metaValue(log, const [
+      'correlationId',
+      'correlation_id',
+    ]);
+    final userAgent = _metaValue(log, const ['user_agent', 'userAgent']);
+
+    // Key/value rows for the immutable metadata panel, mirroring the
+    // reference. Always includes the record's own structural fields, then
+    // every remaining metadata entry verbatim.
+    final metaRows = <MapEntry<String, String>>[
+      MapEntry('event_id', log.id),
+      const MapEntry('event_version', '1'),
+      if (ip != null) MapEntry('ip_address', ip),
+      if (userAgent != null) MapEntry('user_agent', userAgent),
+      MapEntry('device', log.device.trim().isNotEmpty ? log.device.trim() : '—'),
+      MapEntry('success', '${success && !_isDestructive(log)}'),
+      for (final e in log.metadata.entries)
+        if (!const {
+          'ip',
+          'ip_address',
+          'ipAddress',
+          'user_agent',
+          'userAgent',
+        }.contains(e.key))
+          MapEntry(e.key, '${e.value}'),
+    ];
+
+    return [
+      _sectionLabel(context, 'Action summary'),
+      const SizedBox(height: 6),
+      Text(
+        log.reason?.trim().isNotEmpty ?? false
+            ? log.reason!.trim()
+            : '${_actorLabel(log.ownerId)} performed '
+                  '${_titleCaseAction(log.action).toLowerCase()}'
+                  '${_targetLabel(log) != '—' ? ' on ${_targetLabel(log)}' : ''}.',
+        style: AppTypography.bodyMedium.copyWith(
+          color: AppColors.textPrimary(context),
+        ),
+      ),
+      const SizedBox(height: 18),
+      _CopyField(label: 'ACTOR', value: _actorLabel(log.ownerId)),
+      const SizedBox(height: 14),
+      _CopyField(label: 'TARGET', value: _targetLabel(log)),
+      const SizedBox(height: 14),
+      _CopyField(
+        label: 'TIMESTAMP',
+        value:
+            '${_absoluteTime(log.timestamp)}  (${_relativeTime(log.timestamp)})',
+      ),
+      const SizedBox(height: 14),
+      _CopyField(
+        label: 'SOURCE / DEVICE',
+        value: log.device.trim().isNotEmpty ? log.device.trim() : '—',
+      ),
+      if (ip != null) ...[
+        const SizedBox(height: 14),
+        _CopyField(label: 'IP ADDRESS', value: ip),
+      ],
+      if (correlation != null) ...[
+        const SizedBox(height: 14),
+        _CopyField(label: 'CORRELATION ID', mono: true, value: correlation),
+      ],
+      const SizedBox(height: 14),
+      _CopyField(label: 'EVENT ID', value: log.id, mono: true),
+      const SizedBox(height: 20),
+      Row(
+        children: [
+          _sectionLabel(context, 'Metadata (immutable)'),
+          const Spacer(),
+          _inlineCopy(context, 'Copy JSON', () {
+            _copy(
+              'Raw JSON',
+              const JsonEncoder.withIndent('  ').convert(_rawJson(log)),
+            );
+          }),
+        ],
+      ),
+      const SizedBox(height: 8),
+      Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.background(context),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.border(context)),
+        ),
+        child: Column(
+          children: [
+            for (final (i, row) in metaRows.indexed) ...[
+              if (i > 0)
+                Divider(height: 1, color: AppColors.border(context)),
+              _MetaKeyValueRow(
+                name: row.key,
+                value: row.value,
+                onCopy: () => _copy(row.key, row.value),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ];
+  }
+
+  Widget _rawJsonPane(BuildContext context) {
+    final json = const JsonEncoder.withIndent('  ').convert(_rawJson(log));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _sectionLabel(context, 'Raw record (immutable)'),
+            const Spacer(),
+            _inlineCopy(context, 'Copy', () => _copy('Raw JSON', json)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.background(context),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.border(context)),
+          ),
+          child: SelectableText(
+            json,
+            style: AppTypography.bodySmall.copyWith(
+              fontFamily: 'monospace',
+              color: AppColors.textPrimary(context),
+              height: 1.45,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _inlineCopy(BuildContext context, String label, VoidCallback onTap) =>
+      InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Row(
+            children: [
+              Icon(
+                Icons.copy_rounded,
+                size: 14,
+                color: AppColors.textSecondary(context),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textSecondary(context),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
   Widget _sectionLabel(BuildContext context, String text) => Text(
     text,
     style: AppTypography.labelSmall.copyWith(
@@ -1108,20 +1259,66 @@ class _AuditInspector extends StatelessWidget {
       letterSpacing: 0.4,
     ),
   );
+}
 
-  /// A faithful, read-only projection of the audit record for the raw JSON
-  /// pane. Nothing here is written back.
-  Map<String, dynamic> _rawJson(AuditLog log) => {
-    'id': log.id,
-    'action': log.action,
-    'ownerId': log.ownerId,
-    'schoolId': log.schoolId,
-    'affectedUserId': log.affectedUserId,
-    'timestamp': log.timestamp.toIso8601String(),
-    'device': log.device,
-    'reason': log.reason,
-    'metadata': log.metadata,
-  };
+/// One `key → value` line inside the immutable metadata panel, with its own
+/// copy control (matches the reference layout).
+class _MetaKeyValueRow extends StatelessWidget {
+  const _MetaKeyValueRow({
+    required this.name,
+    required this.value,
+    required this.onCopy,
+  });
+  final String name;
+  final String value;
+  final VoidCallback onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 9, 8, 9),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 104,
+            child: Text(
+              name,
+              style: AppTypography.labelSmall.copyWith(
+                fontFamily: 'monospace',
+                color: AppColors.textMuted(context),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SelectableText(
+              value,
+              style: AppTypography.bodySmall.copyWith(
+                fontFamily: 'monospace',
+                color: AppColors.textPrimary(context),
+                height: 1.4,
+              ),
+            ),
+          ),
+          if (value != '—')
+            InkWell(
+              borderRadius: BorderRadius.circular(6),
+              onTap: onCopy,
+              child: Padding(
+                padding: const EdgeInsets.all(3),
+                child: Icon(
+                  Icons.copy_rounded,
+                  size: 13,
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1662,7 +1859,7 @@ class _AuditTableRow extends StatelessWidget {
                       ),
                       child: Icon(
                         success
-                            ? Icons.check_circle_outline_rounded
+                            ? Icons.check_circle_rounded
                             : _eventIcon(log),
                         size: 16,
                         color: accent,
@@ -2155,7 +2352,7 @@ class _AuditCard extends StatelessWidget {
                     ),
                     child: Icon(
                       success
-                          ? Icons.check_circle_outline_rounded
+                          ? Icons.check_circle_rounded
                           : _eventIcon(log),
                       size: 17,
                       color: accent,
