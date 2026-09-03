@@ -3,10 +3,11 @@
 //
 // Intentionally static, not read live from Firestore: `student_pricing_bands`
 // (functions/student_pricing_bands.js) is a *different* feature that prices
-// already-active schools' termly renewal by verified enrollment — it is not
-// seeded with these registration tiers and reading it here would render an
-// empty/broken pricing page. See conversation history: this was confirmed
-// deliberately out of scope for registration pricing.
+// already-active schools' termly renewal by verified enrollment, and it is
+// currently unseeded (0 active bands) — reading it here renders an
+// empty/broken pricing page. Do not switch this back to a live Firestore
+// read without first seeding real bands and re-confirming that registration
+// and renewal pricing are meant to share one price list.
 window.PRICING_TIERS = [
   { min: 1, max: 300, price: 350000, label: 'Starter' },
   { min: 301, max: 500, price: 450000, label: 'Growth' },
