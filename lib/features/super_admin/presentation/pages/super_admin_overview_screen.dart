@@ -53,15 +53,16 @@ class _SuperAdminOverviewScreenState extends State<SuperAdminOverviewScreen> {
         onRefresh: _refresh,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1180),
+              constraints: const BoxConstraints(maxWidth: 1240),
               child: _OverviewBody(
                 state: state,
                 onRefresh: _refresh,
                 onOpenSchools: widget.onOpenSchools,
                 onOpenBilling: widget.onOpenBilling,
+                onSearchSchools: widget.onSearchSchools,
               ),
             ),
           ),
@@ -77,20 +78,28 @@ class _OverviewBody extends StatelessWidget {
     required this.onRefresh,
     required this.onOpenSchools,
     required this.onOpenBilling,
+    required this.onSearchSchools,
   });
   final SuperAdminState state;
   final Future<void> Function() onRefresh;
   final VoidCallback onOpenSchools, onOpenBilling;
+  final ValueChanged<String>? onSearchSchools;
 
   @override
   Widget build(BuildContext context) {
     if (state.status == SuperAdminStatus.failure) {
-      return _StateCard(
-        icon: Icons.cloud_off_outlined,
-        title: 'Platform overview is unavailable',
-        message:
-            state.errorMessage ?? 'Please check your connection and try again.',
-        action: onRefresh,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CompactTopBar(onSearchSchools: onSearchSchools),
+          _StateCard(
+            icon: Icons.cloud_off_outlined,
+            title: 'Platform overview is unavailable',
+            message: state.errorMessage ??
+                'Please check your connection and try again.',
+            action: onRefresh,
+          ),
+        ],
       );
     }
     final schools = state.schools;
@@ -108,14 +117,39 @@ class _OverviewBody extends StatelessWidget {
     final active = schools.where((s) => s.status == SchoolStatus.active).length;
     final needsAction = pendingApps + expired + unverified;
     final mrr = _estimatedMonthlyRevenue(schools, state.plans);
+    final loading = state.status == SuperAdminStatus.loading;
+
+    final reviewQueue = _ReviewQueueCard(
+      applications: state.applications,
+      schools: schools,
+      loading: loading,
+      onReviewAll: onOpenSchools,
+      onOpenApplication: onOpenSchools,
+    );
+    final health = _PlatformHealthCard(
+      totalSchools: schools.length,
+      activeSchools: active,
+      mrr: mrr,
+    );
+    final activity = PlatformActivityTimeline(
+      logs: state.auditLogs,
+      schools: schools,
+      onViewAll: () => context.go('/super-admin/audit-logs'),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _CompactTopBar(),
-        const SizedBox(height: 18),
-        const _PlatformHealthCard(),
-        const SizedBox(height: 16),
-        if (state.status == SuperAdminStatus.loading)
+        _CompactTopBar(onSearchSchools: onSearchSchools),
+        const SizedBox(height: 20),
+        if (needsAction > 0) ...[
+          _ReviewBanner(
+            count: needsAction,
+            onReviewNow: onOpenSchools,
+          ),
+          const SizedBox(height: 20),
+        ],
+        if (loading)
           const _MetricLoading()
         else
           _MetricGrid(
@@ -126,29 +160,110 @@ class _OverviewBody extends StatelessWidget {
             onActionNeeded: onOpenSchools,
           ),
         const SizedBox(height: 20),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final twoColumn = constraints.maxWidth >= 960;
+            if (!twoColumn) {
+              return Column(
+                children: [
+                  reviewQueue,
+                  const SizedBox(height: 20),
+                  health,
+                  const SizedBox(height: 20),
+                  activity,
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: reviewQueue),
+                const SizedBox(width: 20),
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    children: [
+                      health,
+                      const SizedBox(height: 20),
+                      activity,
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 20),
         _SectionCard(
           title: 'Quick actions',
           child: _QuickActions(
             onCreateSchool: onOpenSchools,
-            onApplications: onOpenSchools,
+            onApplications: onOpenBilling,
             onPlans: () => context.go('/super-admin/plans'),
             onAudit: () => context.go('/super-admin/audit-logs'),
           ),
         ),
-        const SizedBox(height: 20),
-        AttentionList(
-          pendingApplications: pendingApps,
-          expiredSubscriptions: expired,
-          unverifiedSchools: unverified,
-          onOpenSchools: onOpenSchools,
-        ),
-        const SizedBox(height: 20),
-        PlatformActivityTimeline(
-          logs: state.auditLogs,
-          schools: schools,
-          onViewAll: () => context.go('/super-admin/audit-logs'),
-        ),
       ],
+    );
+  }
+}
+
+/// Inline "items need review" banner. Urgent / action-needed => red, per the
+/// platform palette. Routes through the same schools destination the metric
+/// row and queue use.
+class _ReviewBanner extends StatelessWidget {
+  const _ReviewBanner({required this.count, required this.onReviewNow});
+  final int count;
+  final VoidCallback onReviewNow;
+  @override
+  Widget build(BuildContext context) {
+    final danger = AppColors.danger(context);
+    return PulseCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      backgroundColor: AppColors.dangerSurface(context),
+      borderColor: danger.withValues(alpha: .35),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline_rounded, color: danger, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              children: [
+                Text(
+                  '$count ${count == 1 ? 'item needs' : 'items need'} review',
+                  style: AppTypography.labelLarge.copyWith(
+                    color: danger,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  'Review pending schools, payments, and actions.',
+                  style: _body(context),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          TextButton(
+            onPressed: onReviewNow,
+            style: TextButton.styleFrom(
+              foregroundColor: danger,
+              minimumSize: Size.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Review now'),
+                Icon(Icons.chevron_right_rounded, size: 18),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -160,7 +275,12 @@ class _OverviewBody extends StatelessWidget {
 /// run yet) shows a neutral "checking" state, never a false-positive
 /// "All systems operational".
 class _PlatformHealthCard extends StatefulWidget {
-  const _PlatformHealthCard();
+  const _PlatformHealthCard({
+    required this.totalSchools,
+    required this.activeSchools,
+    required this.mrr,
+  });
+  final int totalSchools, activeSchools, mrr;
   @override
   State<_PlatformHealthCard> createState() => _PlatformHealthCardState();
 }
@@ -175,52 +295,105 @@ class _PlatformHealthCardState extends State<_PlatformHealthCard> {
       final summary = snapshot.data;
       final color = _colorFor(context, summary?.status);
       final healthy = summary?.status == PlatformHealthStatus.operational;
-      return PulseCard(
-        onTap: () => context.go('/super-admin/platform-health'),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
+      // The semantic state is 'Platform healthy' / 'Attention needed'; the
+      // status row renders the healthy case compactly as 'Operational' to
+      // match the platform status vocabulary, and exposes the full phrase as
+      // the row tooltip.
+      final statusTooltip = summary == null
+          ? 'Checking platform status…'
+          : healthy
+          ? 'Platform healthy'
+          : 'Attention needed';
+      return _SectionCard(
+        title: 'Platform health',
+        actionLabel: 'View system status',
+        onAction: () => context.go('/super-admin/platform-health'),
+        child: Column(
           children: [
-            Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    summary == null
-                        ? 'Checking platform status…'
-                        : healthy
-                        ? 'Platform healthy'
-                        : 'Attention needed',
-                    style: _section(context),
+            _HealthRow(
+              leading: Container(
+                width: 20,
+                height: 20,
+                alignment: Alignment.center,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration:
+                      BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+              ),
+              label: 'System status',
+              trailing: Tooltip(
+                message: statusTooltip,
+                child: Text(
+                  summary == null
+                      ? 'Checking platform status…'
+                      : healthy
+                      ? 'Operational'
+                      : 'Attention needed',
+                  style: AppTypography.labelLarge.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w800,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    summary == null
-                        ? 'No health check has run yet'
-                        : summary.summary,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: _body(context),
-                  ),
-                ],
+                ),
               ),
             ),
-            const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Live status'),
-                Icon(Icons.chevron_right_rounded, size: 18),
-              ],
+            _HealthRow(
+              leading: Icon(
+                Icons.school_outlined,
+                size: 18,
+                color: AppColors.textSecondary(context),
+              ),
+              label: 'Active schools',
+              trailing: Text(
+                '${widget.activeSchools}',
+                style: _valueStyle(context),
+              ),
+            ),
+            _HealthRow(
+              leading: Icon(
+                Icons.receipt_long_outlined,
+                size: 18,
+                color: AppColors.textSecondary(context),
+              ),
+              label: 'Subscription plans',
+              trailing: Text(
+                _formatUgx(widget.mrr),
+                style: _valueStyle(context),
+              ),
+            ),
+            _HealthRow(
+              leading: Icon(
+                Icons.error_outline_rounded,
+                size: 18,
+                color: summary == null
+                    ? AppColors.textMuted(context)
+                    : summary.summary.isEmpty
+                    ? AppColors.textMuted(context)
+                    : color,
+              ),
+              label: 'Status detail',
+              trailing: Flexible(
+                child: Text(
+                  summary == null
+                      ? 'No health check has run yet'
+                      : summary.summary,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: _body(context),
+                ),
+              ),
             ),
           ],
         ),
       );
     },
+  );
+
+  TextStyle _valueStyle(BuildContext c) => AppTypography.labelLarge.copyWith(
+    color: AppColors.textPrimary(c),
+    fontWeight: FontWeight.w800,
   );
 
   Color _colorFor(BuildContext context, PlatformHealthStatus? status) =>
@@ -234,30 +407,209 @@ class _PlatformHealthCardState extends State<_PlatformHealthCard> {
       };
 }
 
+class _HealthRow extends StatelessWidget {
+  const _HealthRow({
+    required this.leading,
+    required this.label,
+    required this.trailing,
+  });
+  final Widget leading;
+  final String label;
+  final Widget trailing;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 9),
+    child: Row(
+      children: [
+        leading,
+        const SizedBox(width: 12),
+        Expanded(child: Text(label, style: _section(context))),
+        const SizedBox(width: 12),
+        trailing,
+      ],
+    ),
+  );
+}
+
 class _CompactTopBar extends StatelessWidget {
-  const _CompactTopBar();
+  const _CompactTopBar({this.onSearchSchools});
+  final ValueChanged<String>? onSearchSchools;
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       bottom: false,
       child: LayoutBuilder(
-        builder: (context, constraints) => Row(
-          children: [
-            Text(
-              'School Pulse Admin',
-              style: AppTypography.titleMedium.copyWith(
-                color: AppColors.textPrimary(context),
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 720;
+          final title = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Super Admin Overview',
+                style: AppTypography.titleMedium.copyWith(
+                  color: AppColors.textPrimary(context),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            const Spacer(),
-            _NotificationsButton(),
-          ],
-        ),
+              const SizedBox(height: 4),
+              const _PlatformStatusPill(),
+            ],
+          );
+          final trailing = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _NotificationsButton(),
+              const SizedBox(width: 12),
+              const _OwnerAvatar(),
+            ],
+          );
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: title),
+                    trailing,
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _TopSearchField(onSubmitted: onSearchSchools),
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              title,
+              const SizedBox(width: 24),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 360),
+                    child: _TopSearchField(onSubmitted: onSearchSchools),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              trailing,
+            ],
+          );
+        },
       ),
     );
   }
+}
+
+class _PlatformStatusPill extends StatelessWidget {
+  const _PlatformStatusPill();
+  @override
+  Widget build(BuildContext context) => StreamBuilder<PlatformHealthSummary?>(
+    stream: PlatformHealthRepository().watchCurrent(),
+    builder: (context, snapshot) {
+      final summary = snapshot.data;
+      final healthy = summary?.status == PlatformHealthStatus.operational;
+      final color = summary == null
+          ? AppColors.textMuted(context)
+          : healthy
+          ? AppColors.success(context)
+          : AppColors.danger(context);
+      final label = summary == null
+          ? 'Checking status'
+          : healthy
+          ? 'All systems operational'
+          : 'Attention needed';
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: .12),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: AppTypography.labelMedium.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+class _TopSearchField extends StatelessWidget {
+  const _TopSearchField({this.onSubmitted});
+  final ValueChanged<String>? onSubmitted;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 40,
+    child: TextField(
+      onSubmitted: (value) {
+        final q = value.trim();
+        if (q.isNotEmpty) onSubmitted?.call(q);
+      },
+      style: AppTypography.bodyLarge.copyWith(
+        color: AppColors.textPrimary(context),
+      ),
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: 'Search schools, regions, or plans…',
+        hintStyle: _body(context),
+        prefixIcon: Icon(
+          Icons.search_rounded,
+          size: 18,
+          color: AppColors.textMuted(context),
+        ),
+        prefixIconConstraints: const BoxConstraints(minWidth: 38, minHeight: 0),
+        filled: true,
+        fillColor: AppColors.surfaceElevated(context),
+        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.border(context)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.focus(context)),
+        ),
+      ),
+    ),
+  );
+}
+
+class _OwnerAvatar extends StatelessWidget {
+  const _OwnerAvatar();
+  @override
+  Widget build(BuildContext context) => InkWell(
+    borderRadius: BorderRadius.circular(999),
+    onTap: () => context.go('/super-admin/settings'),
+    child: CircleAvatar(
+      radius: 16,
+      backgroundColor: AppColors.information(context),
+      child: Text(
+        'SA',
+        style: AppTypography.labelMedium.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    ),
+  );
 }
 
 class _NotificationsButton extends StatelessWidget {
@@ -267,15 +619,15 @@ class _NotificationsButton extends StatelessWidget {
     builder: (context, snapshot) {
       final unread = snapshot.data?.where((item) => item.isUnread).length ?? 0;
       return ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
-            width: 44,
-            height: 44,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: AppColors.surfaceElevated(context).withValues(alpha: .72),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: AppColors.border(context).withValues(alpha: .65),
               ),
@@ -289,11 +641,11 @@ class _NotificationsButton extends StatelessWidget {
               onPressed: () => context.go('/super-admin/notifications'),
               icon: Badge(
                 isLabelVisible: unread > 0,
-                smallSize: 8,
+                label: Text('$unread'),
                 child: Icon(
                   Icons.notifications_outlined,
                   color: AppColors.textSecondary(context),
-                  size: 22,
+                  size: 20,
                 ),
               ),
             ),
@@ -321,50 +673,48 @@ class PlatformMetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PulseCard(
     onTap: onTap,
-    padding: const EdgeInsets.all(14),
-    child: Row(
+    padding: const EdgeInsets.all(16),
+    child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: .12),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: color, size: 21),
+        Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const Spacer(),
+          ],
         ),
-        const SizedBox(width: 11),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: _label(context),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.headlineSmall.copyWith(
-                  color: color,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                detail,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: _body(context),
-              ),
-            ],
+        const SizedBox(height: 14),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: _label(context),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTypography.headlineSmall.copyWith(
+            color: AppColors.textPrimary(context),
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
           ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          detail,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: _body(context),
         ),
       ],
     ),
@@ -384,11 +734,16 @@ class _MetricGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final columns = constraints.maxWidth >= 900 ? 4 : 2;
-      final width = (constraints.maxWidth - (columns - 1) * 12) / columns;
+      final columns = constraints.maxWidth >= 900
+          ? 4
+          : constraints.maxWidth >= 520
+          ? 2
+          : 1;
+      final width =
+          (constraints.maxWidth - (columns - 1) * 16) / columns;
       final cards = [
         PlatformMetricCard(
-          icon: Icons.school_outlined,
+          icon: Icons.account_balance_outlined,
           color: AppColors.information(context),
           label: 'Total schools',
           value: '$total',
@@ -406,24 +761,24 @@ class _MetricGrid extends StatelessWidget {
         PlatformMetricCard(
           icon: Icons.account_balance_wallet_outlined,
           color: AppColors.information(context),
-          label: 'Est. MRR (UGX)',
+          label: 'Termly revenue (UGX)',
           value: _formatUgx(mrr),
           detail: 'Based on active plans',
         ),
         PlatformMetricCard(
-          icon: Icons.warning_amber_rounded,
+          icon: Icons.error_outline_rounded,
           color: actionNeeded == 0
               ? AppColors.success(context)
-              : AppColors.warning(context),
-          label: 'Action needed',
+              : AppColors.danger(context),
+          label: 'Pending reviews',
           value: '$actionNeeded',
-          detail: actionNeeded == 0 ? 'All caught up' : 'Requires attention',
+          detail: actionNeeded == 0 ? 'All caught up' : 'Needs your attention',
           onTap: actionNeeded == 0 ? null : onActionNeeded,
         ),
       ];
       return Wrap(
-        spacing: 12,
-        runSpacing: 12,
+        spacing: 16,
+        runSpacing: 16,
         children: [
           for (final card in cards) SizedBox(width: width, child: card),
         ],
@@ -436,7 +791,7 @@ class _MetricLoading extends StatelessWidget {
   const _MetricLoading();
   @override
   Widget build(BuildContext context) => const SizedBox(
-    height: 184,
+    height: 160,
     child: Center(child: CircularProgressIndicator()),
   );
 }
@@ -451,27 +806,58 @@ class _QuickActions extends StatelessWidget {
   final VoidCallback onCreateSchool, onApplications, onPlans, onAudit;
   @override
   Widget build(BuildContext context) {
-    final actions = [
-      (Icons.add_business_outlined, 'Create', onCreateSchool),
-      (Icons.assignment_outlined, 'Review', onApplications),
-      (Icons.sell_outlined, 'Student pricing', onPlans),
-      (Icons.shield_outlined, 'Audit', onAudit),
+    final actions = <(IconData, String, String, VoidCallback)>[
+      (
+        Icons.add_business_outlined,
+        'Register school',
+        'Add a new school to the platform',
+        onCreateSchool,
+      ),
+      (
+        Icons.credit_card_outlined,
+        'Confirm payment',
+        'Review and confirm payments',
+        onApplications,
+      ),
+      (
+        Icons.sell_outlined,
+        'Student pricing',
+        'Manage pricing and plans',
+        onPlans,
+      ),
+      (
+        Icons.shield_outlined,
+        'Audit log',
+        'View platform audit trail',
+        onAudit,
+      ),
     ];
     return LayoutBuilder(
-      builder: (context, _) => Row(
-        children: [
-          for (final (i, action) in actions.indexed) ...[
-            if (i > 0) const SizedBox(width: 8),
-            Expanded(
-              child: PlatformQuickAction(
-                icon: action.$1,
-                label: action.$2,
-                onTap: action.$3,
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 820
+            ? 4
+            : constraints.maxWidth >= 460
+            ? 2
+            : 1;
+        final width =
+            (constraints.maxWidth - (columns - 1) * 12) / columns;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            for (final action in actions)
+              SizedBox(
+                width: width,
+                child: PlatformQuickAction(
+                  icon: action.$1,
+                  label: action.$2,
+                  detail: action.$3,
+                  onTap: action.$4,
+                ),
               ),
-            ),
           ],
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -482,36 +868,171 @@ class PlatformQuickAction extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.detail,
   });
   final IconData icon;
   final String label;
+  final String? detail;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => PulseCard(
     onTap: onTap,
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    child: Row(
       children: [
         Container(
-          width: 32,
-          height: 32,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             color: AppColors.informationSurface(context),
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: AppColors.information(context), size: 18),
         ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: AppTypography.labelMedium.copyWith(
-            color: AppColors.textPrimary(context),
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.labelLarge.copyWith(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              if (detail != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  detail!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: _body(context),
+                ),
+              ],
+            ],
+          ),
+        ),
+        Icon(
+          Icons.chevron_right_rounded,
+          size: 18,
+          color: AppColors.textMuted(context),
+        ),
+      ],
+    ),
+  );
+}
+
+/// School onboarding & payment review queue. Presentation-only: it renders
+/// the real `SchoolApplication` list from bloc state and routes every row and
+/// the header action to the existing Schools destination.
+class _ReviewQueueCard extends StatelessWidget {
+  const _ReviewQueueCard({
+    required this.applications,
+    required this.schools,
+    required this.loading,
+    required this.onReviewAll,
+    required this.onOpenApplication,
+  });
+  final List<SchoolApplication> applications;
+  final List<School> schools;
+  final bool loading;
+  final VoidCallback onReviewAll;
+  final VoidCallback onOpenApplication;
+
+  @override
+  Widget build(BuildContext context) {
+    final queue = List<SchoolApplication>.from(applications)
+      ..sort((a, b) {
+        final ao = _pendingFirst(a.status);
+        final bo = _pendingFirst(b.status);
+        if (ao != bo) return ao.compareTo(bo);
+        final at = a.updatedAt ?? a.createdAt;
+        final bt = b.updatedAt ?? b.createdAt;
+        if (at == null && bt == null) return 0;
+        if (at == null) return 1;
+        if (bt == null) return -1;
+        return bt.compareTo(at);
+      });
+    final rows = queue.take(5).toList();
+    return _SectionCard(
+      title: 'School onboarding & payment queue',
+      actionLabel: rows.isEmpty ? null : 'Review all items',
+      onAction: rows.isEmpty ? null : onReviewAll,
+      child: loading
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          : rows.isEmpty
+          ? const _CompactEmpty(
+              'New school applications and payments will appear here for review.',
+            )
+          : Column(
+              children: [
+                _QueueHeaderRow(),
+                Divider(height: 1, color: AppColors.border(context)),
+                for (final (i, app) in rows.indexed) ...[
+                  if (i > 0)
+                    Divider(height: 1, color: AppColors.border(context)),
+                  _QueueRow(app: app, onTap: onOpenApplication),
+                ],
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: onReviewAll,
+                    style: TextButton.styleFrom(
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Review all items'),
+                        Icon(Icons.chevron_right_rounded, size: 18),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  int _pendingFirst(SchoolApplicationStatus status) =>
+      status == SchoolApplicationStatus.pendingReview ? 0 : 1;
+}
+
+class _QueueHeaderRow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      children: [
+        Expanded(
+          flex: 4,
+          child: Text('School / Request', style: _label(context)),
+        ),
+        Expanded(
+          flex: 3,
+          child: Text('Type', style: _label(context)),
+        ),
+        Expanded(
+          flex: 2,
+          child: Text('Submitted', style: _label(context)),
+        ),
+        Expanded(
+          flex: 2,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Text('Status', style: _label(context)),
           ),
         ),
       ],
@@ -519,6 +1040,136 @@ class PlatformQuickAction extends StatelessWidget {
   );
 }
 
+class _QueueRow extends StatelessWidget {
+  const _QueueRow({required this.app, required this.onTap});
+  final SchoolApplication app;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final submitted = app.updatedAt ?? app.createdAt;
+    final region = app.region.trim().isNotEmpty
+        ? app.region.trim()
+        : app.district.trim();
+    final pending = app.status == SchoolApplicationStatus.pendingReview;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              flex: 4,
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.informationSurface(context),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.account_balance_outlined,
+                      size: 16,
+                      color: AppColors.information(context),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          app.schoolName.trim().isEmpty
+                              ? 'Untitled school'
+                              : app.schoolName.trim(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: _section(context),
+                        ),
+                        if (region.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            region,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: _body(context),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 3,
+              child: Text(
+                'School application',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _body(context),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                submitted == null ? '—' : _relative(submitted),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _body(context),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: _StatusChip(
+                  label: app.status.label,
+                  color: pending
+                      ? AppColors.danger(context)
+                      : app.status == SchoolApplicationStatus.approved
+                      ? AppColors.success(context)
+                      : AppColors.textMuted(context),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.label, required this.color});
+  final String label;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .12),
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: AppTypography.labelSmall.copyWith(
+        color: color,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
+}
+
+/// Retained for source/behaviour compatibility. The standalone "Needs
+/// attention" panel was removed from the Overview layout in favour of the
+/// inline review banner and the onboarding/payment queue, but the derivation
+/// (real pending applications + expired subscriptions + explicitly
+/// unverified schools) still lives here so callers and tests keep working.
 class AttentionList extends StatelessWidget {
   const AttentionList({
     super.key,
@@ -535,7 +1186,7 @@ class AttentionList extends StatelessWidget {
       if (pendingApplications > 0)
         _AttentionItem(
           Icons.assignment_late_outlined,
-          AppColors.warning(context),
+          AppColors.danger(context),
           'Pending school applications',
           'Applications awaiting review',
           pendingApplications,
@@ -544,7 +1195,7 @@ class AttentionList extends StatelessWidget {
       if (expiredSubscriptions > 0)
         _AttentionItem(
           Icons.credit_card_off_outlined,
-          AppColors.warning(context),
+          AppColors.danger(context),
           'Expired subscriptions',
           'Schools with expired subscriptions',
           expiredSubscriptions,
@@ -667,7 +1318,7 @@ class PlatformActivityTimeline extends StatelessWidget {
     final recent = List<AuditLog>.from(logs)
       ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return _SectionCard(
-      title: 'Recent platform activity',
+      title: 'Recent activity',
       actionLabel: 'View all',
       onAction: onViewAll,
       child: recent.isEmpty
@@ -704,15 +1355,15 @@ class _ActivityRow extends StatelessWidget {
         Column(
           children: [
             Container(
-              width: 10,
-              height: 10,
-              margin: const EdgeInsets.only(top: 4),
+              width: 8,
+              height: 8,
+              margin: const EdgeInsets.only(top: 5),
               decoration: BoxDecoration(
                 color: AppColors.information(context),
                 shape: BoxShape.circle,
               ),
             ),
-            Container(width: 1, height: 26, color: AppColors.border(context)),
+            Container(width: 1, height: 24, color: AppColors.border(context)),
           ],
         ),
         const SizedBox(width: 12),
@@ -746,7 +1397,7 @@ class _SectionCard extends StatelessWidget {
   final VoidCallback? onAction;
   @override
   Widget build(BuildContext context) => PulseCard(
-    padding: const EdgeInsets.all(14),
+    padding: const EdgeInsets.all(18),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -768,7 +1419,7 @@ class _SectionCard extends StatelessWidget {
               ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         child,
       ],
     ),
