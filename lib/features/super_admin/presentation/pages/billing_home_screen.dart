@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,7 +9,9 @@ import 'package:school_pulse/design_system/components/pulse_card.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/billing/data/datasources/pricing_band_remote_data_source.dart';
 import 'package:school_pulse/features/billing/data/datasources/subscription_cycle_remote_data_source.dart';
+import 'package:school_pulse/features/billing/domain/entities/pricing_band.dart';
 import 'package:school_pulse/features/billing/domain/entities/subscription_cycle.dart';
 import 'package:school_pulse/features/billing/presentation/utils/subscription_cycle_status_ui.dart';
 import 'package:school_pulse/features/super_admin/data/services/manual_payment_service.dart';
@@ -60,14 +63,31 @@ extension on _Period {
   }
 }
 
+/// One configured manual payment method, folded from the owner-scoped
+/// `getManualPaymentConfig` Cloud Function so the payment-methods panel can
+/// show real account details instead of guessing from payment records. This
+/// is display-only here; [ManualPaymentConfigScreen] remains the sole place
+/// these are edited (and the callable is the sole writer).
+class _ConfiguredMethod {
+  const _ConfiguredMethod({
+    required this.name,
+    required this.icon,
+    required this.detail,
+    required this.configured,
+  });
+  final String name;
+  final IconData icon;
+  final String detail;
+  final bool configured;
+}
+
 /// Compact "Billing" workspace that replaced the old separate Payments and
-/// Plans nav destinations. It reuses BillingPage's existing
-/// ManualPaymentService for real payment data and the SuperAdminBloc's
-/// existing schools state -- no new backend logic. "Manage pricing bands"/
-/// "Manage payment methods" and payment/renewal rows push the pre-existing
-/// screens unchanged. Approve/reject on the confirmation queue call the same
-/// ManualPaymentService.approve/reject callables that PaymentReviewScreen
-/// uses, then reload.
+/// Plans nav destinations. Reuses BillingPage's ManualPaymentService for
+/// real payment data, the SuperAdminBloc's schools state, and the existing
+/// pricing-band / manual-payment-config Cloud Functions -- no new backend
+/// logic. Row actions and the "Manage" links push the pre-existing screens
+/// unchanged; inline Confirm/Reject call the same approve/reject callables
+/// PaymentReviewScreen uses, then reload.
 class BillingHomeScreen extends StatefulWidget {
   const BillingHomeScreen({super.key, this.initialFilter, this.initialTab = 0});
 
@@ -85,6 +105,10 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
   final ManualPaymentService _payments = ManualPaymentService();
   final SubscriptionCycleRemoteDataSource _cycles =
       SubscriptionCycleRemoteDataSource();
+  final PricingBandRemoteDataSource _bands = PricingBandRemoteDataSource();
+  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(
+    region: 'europe-west1',
+  );
   final NumberFormat _ugx = NumberFormat.currency(
     symbol: 'UGX ',
     decimalDigits: 0,
@@ -92,6 +116,8 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
 
   List<ManualSubscriptionPayment>? _items;
   List<SubscriptionCycle>? _upcomingCycles;
+  List<PricingBand> _pricingBands = const [];
+  List<_ConfiguredMethod> _methods = const [];
   bool _loading = true;
   String? _error;
   String? _workingPaymentId;
@@ -115,18 +141,32 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
     });
     try {
       final items = await _payments.getPayments();
-      // Upcoming renewals is best-effort: a failure here shouldn't block
-      // the rest of the billing workspace from loading.
+      // Everything below the core payment feed is best-effort: a failure in
+      // any one of these must not block the billing workspace from loading.
       List<SubscriptionCycle> cycles = const [];
       try {
         cycles = await _cycles.getAllUpcomingSubscriptionCycles();
       } catch (_) {
         cycles = const [];
       }
+      List<PricingBand> bands = const [];
+      try {
+        bands = await _bands.getPricingBands();
+      } catch (_) {
+        bands = const [];
+      }
+      List<_ConfiguredMethod> methods = const [];
+      try {
+        methods = await _loadMethods();
+      } catch (_) {
+        methods = const [];
+      }
       if (!mounted) return;
       setState(() {
         _items = items;
         _upcomingCycles = cycles;
+        _pricingBands = bands;
+        _methods = methods;
         _loading = false;
       });
     } catch (_) {
@@ -136,6 +176,68 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
         _error = 'Unable to load billing data.';
       });
     }
+  }
+
+  Future<List<_ConfiguredMethod>> _loadMethods() async {
+    final result = await _functions
+        .httpsCallable('getManualPaymentConfig')
+        .call<Map<String, dynamic>>();
+    final data = result.data;
+    final momo = Map<String, dynamic>.from(
+      (data['mobileMoney'] as Map?) ?? const {},
+    );
+    final airtel = Map<String, dynamic>.from(
+      (data['airtelMoney'] as Map?) ?? const {},
+    );
+    final bank = Map<String, dynamic>.from((data['bank'] as Map?) ?? const {});
+
+    String s(Map<String, dynamic> m, String k) => m[k]?.toString().trim() ?? '';
+
+    final momoNumber = s(momo, 'number');
+    final momoName = s(momo, 'accountName');
+    final airtelNumber = s(airtel, 'number');
+    final airtelName = s(airtel, 'accountName');
+    final bankName = s(bank, 'bankName');
+    final bankBranch = s(bank, 'branch');
+    final bankAccountName = s(bank, 'accountName');
+    final bankAccountNumber = s(bank, 'accountNumber');
+
+    return [
+      _ConfiguredMethod(
+        name: 'MTN MoMo',
+        icon: Icons.smartphone_outlined,
+        configured: momoNumber.isNotEmpty,
+        detail: momoNumber.isEmpty
+            ? 'Not configured'
+            : [
+                momoNumber,
+                if (momoName.isNotEmpty) '($momoName)',
+              ].join(' '),
+      ),
+      _ConfiguredMethod(
+        name: 'Airtel Money',
+        icon: Icons.smartphone_outlined,
+        configured: airtelNumber.isNotEmpty,
+        detail: airtelNumber.isEmpty
+            ? 'Not configured'
+            : [
+                airtelNumber,
+                if (airtelName.isNotEmpty) '($airtelName)',
+              ].join(' '),
+      ),
+      _ConfiguredMethod(
+        name: bankName.isEmpty ? 'Bank transfer' : bankName,
+        icon: Icons.account_balance_outlined,
+        configured: bankAccountNumber.isNotEmpty,
+        detail: bankAccountNumber.isEmpty
+            ? 'Not configured'
+            : [
+                if (bankAccountName.isNotEmpty) bankAccountName,
+                'Acc No: $bankAccountNumber',
+                if (bankBranch.isNotEmpty) '· $bankBranch',
+              ].join(' '),
+      ),
+    ];
   }
 
   Future<void> _refresh() async {
@@ -364,13 +466,13 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
         const SizedBox(height: 20),
         _twoColumn(
           wide: wide,
-          left: _confirmationQueueSection(context),
-          right: _renewalsSection(context, state),
+          left: _confirmationQueueSection(context, wide),
+          right: _renewalsSection(context, state, wide),
         ),
         const SizedBox(height: 20),
         _twoColumn(
           wide: wide,
-          left: _pricingBandsSection(context, state),
+          left: _pricingBandsSection(context, wide),
           right: _paymentMethodsSection(context),
         ),
       ],
@@ -469,17 +571,19 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
       0,
       (sum, p) => sum + p.submittedAmount,
     );
+    final schoolCount = scoped.map((p) => p.schoolId).toSet().length;
     final confirmedSchools = scoped
         .where((p) => p.status == ManualPaymentStatus.approved)
         .map((p) => p.schoolId)
         .toSet()
         .length;
-    final overdueSchoolsList = state.schools.where(
-      (s) =>
-          s.status == SchoolStatus.active &&
-          s.subscriptionExpiry.isBefore(DateTime.now()),
-    );
-    final overdueSchools = overdueSchoolsList.length;
+    final overdueSchools = state.schools
+        .where(
+          (s) =>
+              s.status == SchoolStatus.active &&
+              s.subscriptionExpiry.isBefore(DateTime.now()),
+        )
+        .length;
     final confirmedPct = expected > 0
         ? (confirmed / expected * 100).round()
         : 0;
@@ -493,8 +597,7 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
         color: AppColors.information(context),
         label: 'Expected term revenue (UGX)',
         value: _ugx.format(expected),
-        detail: 'Across ${scoped.map((p) => p.schoolId).toSet().length} '
-            '${scoped.map((p) => p.schoolId).toSet().length == 1 ? 'school' : 'schools'}',
+        detail: 'From $schoolCount ${schoolCount == 1 ? 'school' : 'schools'}',
         detailColor: AppColors.textSecondary(context),
       ),
       _MetricCard(
@@ -551,7 +654,7 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
   // Payment confirmation queue
   // ---------------------------------------------------------------------------
 
-  Widget _confirmationQueueSection(BuildContext context) {
+  Widget _confirmationQueueSection(BuildContext context, bool wide) {
     final pending = _scoped
         .where((p) => p.status == ManualPaymentStatus.pendingVerification)
         .toList()
@@ -577,43 +680,62 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
                   'No payments waiting for confirmation.',
                   title: 'All caught up',
                 )
-              : Column(
-                  children: [
-                    for (final (i, payment) in pending.take(6).indexed) ...[
-                      if (i > 0)
-                        Divider(height: 1, color: AppColors.border(context)),
-                      _PaymentQueueRow(
-                        payment: payment,
-                        amountLabel: _ugx.format(payment.submittedAmount),
-                        methodLabel: _methodLabel(payment.method),
-                        submittedLabel: DateFormat(
-                          'MMM d, yyyy · h:mm a',
-                        ).format(payment.submittedAt),
-                        working: _workingPaymentId == payment.id,
-                        anyWorking: _workingPaymentId != null,
-                        onTap: () => _openReview(context, payment),
-                        onApprove: () => _approvePayment(payment),
-                        onReject: () => _rejectPayment(payment),
-                      ),
-                    ],
-                  ],
-                ),
+              : wide
+                  ? _PaymentQueueTable(
+                      rows: pending.take(6).toList(),
+                      ugx: _ugx,
+                      methodLabel: _methodLabel,
+                      workingId: _workingPaymentId,
+                      onOpen: (p) => _openReview(context, p),
+                      onApprove: _approvePayment,
+                      onReject: _rejectPayment,
+                    )
+                  : Column(
+                      children: [
+                        for (final (i, payment) in pending.take(6).indexed) ...[
+                          if (i > 0)
+                            Divider(
+                              height: 1,
+                              color: AppColors.border(context),
+                            ),
+                          _PaymentQueueCard(
+                            payment: payment,
+                            amountLabel: _ugx.format(payment.submittedAmount),
+                            methodLabel: _methodLabel(payment.method),
+                            submittedLabel: DateFormat(
+                              'MMM d, yyyy · h:mm a',
+                            ).format(payment.submittedAt),
+                            working: _workingPaymentId == payment.id,
+                            anyWorking: _workingPaymentId != null,
+                            onTap: () => _openReview(context, payment),
+                            onApprove: () => _approvePayment(payment),
+                            onReject: () => _rejectPayment(payment),
+                          ),
+                        ],
+                      ],
+                    ),
     );
   }
 
   // ---------------------------------------------------------------------------
-  // Renewals due soon
+  // Renewals due soon (next 30 days)
   // ---------------------------------------------------------------------------
 
-  Widget _renewalsSection(BuildContext context, SuperAdminState state) {
+  Widget _renewalsSection(
+    BuildContext context,
+    SuperAdminState state,
+    bool wide,
+  ) {
     final schoolNames = {for (final s in state.schools) s.id: s.name};
+    final horizon = DateTime.now().add(const Duration(days: 30));
     final cycles = (_upcomingCycles ?? const [])
         .where((c) => schoolNames.containsKey(c.schoolId))
+        .where((c) => !c.paymentDueAt.isAfter(horizon))
         .toList()
       ..sort((a, b) => a.paymentDueAt.compareTo(b.paymentDueAt));
 
     return _SectionCard(
-      title: 'Renewals due soon',
+      title: 'Renewals due soon (next 30 days)',
       actionLabel: cycles.isEmpty ? null : 'View all renewals',
       onAction: cycles.isEmpty ? null : () => _openSubscriptions(context),
       child: _loading && _upcomingCycles == null
@@ -623,44 +745,43 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
             )
           : cycles.isEmpty
               ? const _CompactEmpty(
-                  'No term cycles are due for renewal soon.',
+                  'No term cycles are due for renewal in the next 30 days.',
                   title: 'Nothing upcoming',
                 )
-              : Column(
-                  children: [
-                    for (final (i, cycle) in cycles.take(6).indexed) ...[
-                      if (i > 0)
-                        Divider(height: 1, color: AppColors.border(context)),
-                      _RenewalRow(
-                        schoolName: schoolNames[cycle.schoolId] ?? '—',
-                        cycle: cycle,
-                        amountLabel: cycle.pricingSnapshot != null
-                            ? _ugx.format(cycle.pricingSnapshot!.amountUgx)
-                            : null,
-                      ),
-                    ],
-                  ],
-                ),
+              : wide
+                  ? _RenewalTable(
+                      rows: cycles.take(6).toList(),
+                      schoolNames: schoolNames,
+                    )
+                  : Column(
+                      children: [
+                        for (final (i, cycle) in cycles.take(6).indexed) ...[
+                          if (i > 0)
+                            Divider(
+                              height: 1,
+                              color: AppColors.border(context),
+                            ),
+                          _RenewalCard(
+                            schoolName: schoolNames[cycle.schoolId] ?? '—',
+                            cycle: cycle,
+                          ),
+                        ],
+                      ],
+                    ),
     );
   }
 
   // ---------------------------------------------------------------------------
-  // Student pricing bands
+  // Student pricing bands -- real band catalog, with active-school counts
+  // and termly revenue derived from the upcoming-cycles preview.
   // ---------------------------------------------------------------------------
 
-  /// Groups the upcoming-cycles preview (already loaded for the renewals
-  /// section) by `pricingSnapshot.bandId` and shows how many schools
-  /// currently fall in each band plus the termly revenue that band
-  /// represents. This is a preview derived from the same bounded (50-cycle)
-  /// cross-school feed as "Renewals due soon", not a full report -
-  /// [StudentPricingScreen] is the source of truth for the band catalog.
-  Widget _pricingBandsSection(BuildContext context, SuperAdminState state) {
+  Widget _pricingBandsSection(BuildContext context, bool wide) {
     final cycles = (_upcomingCycles ?? const [])
         .where((c) => c.pricingSnapshot != null)
         .toList();
     final schoolsByBand = <String, Set<String>>{};
     final revenueByBand = <String, int>{};
-    final rangeByBand = <String, (int, int?)>{};
     for (final cycle in cycles) {
       final pricing = cycle.pricingSnapshot!;
       schoolsByBand.putIfAbsent(pricing.bandId, () => {}).add(cycle.schoolId);
@@ -669,96 +790,99 @@ class _BillingHomeScreenState extends State<BillingHomeScreen> {
         (value) => value + pricing.amountUgx,
         ifAbsent: () => pricing.amountUgx,
       );
-      rangeByBand[pricing.bandId] = (pricing.minStudents, pricing.maxStudents);
     }
-    final bandIds = schoolsByBand.keys.toList()
-      ..sort(
-        (a, b) =>
-            (rangeByBand[a]?.$1 ?? 0).compareTo(rangeByBand[b]?.$1 ?? 0),
-      );
+
+    final bands = _pricingBands.toList()
+      ..sort((a, b) => a.minStudents.compareTo(b.minStudents));
 
     return _SectionCard(
       title: 'Student pricing bands',
       actionLabel: 'Manage pricing bands',
       onAction: () => _openPlans(context),
-      child: bandIds.isEmpty
-          ? const _CompactEmpty(
-              'No priced upcoming cycles yet.',
-              title: 'No pricing data',
-            )
-          : Column(
-              children: [
-                _PricingBandHeaderRow(),
-                Divider(height: 1, color: AppColors.border(context)),
-                for (final (i, bandId) in bandIds.indexed) ...[
-                  if (i > 0)
-                    Divider(height: 1, color: AppColors.border(context)),
-                  _PricingBandRow(
-                    rangeLabel: _bandRangeLabel(rangeByBand[bandId]),
-                    schoolCount: schoolsByBand[bandId]!.length,
-                    termlyRevenue: _ugx.format(revenueByBand[bandId] ?? 0),
-                    onTap: () => _openPlans(context),
-                  ),
-                ],
-              ],
-            ),
-    );
-  }
-
-  static String _bandRangeLabel((int, int?)? range) {
-    if (range == null) return 'Unknown band';
-    final formatter = NumberFormat('#,##0', 'en_UG');
-    final (min, max) = range;
-    if (max == null) return '${formatter.format(min)}+ learners';
-    return '${formatter.format(min)}–${formatter.format(max)} learners';
-  }
-
-  // ---------------------------------------------------------------------------
-  // Payment methods panel -- derived from the loaded, permission-scoped
-  // payment records (method + latest reference + latest transaction time).
-  // "Manage payment methods" opens the unchanged config screen.
-  // ---------------------------------------------------------------------------
-
-  Widget _paymentMethodsSection(BuildContext context) {
-    final byMethod = <ManualPaymentMethod, ManualSubscriptionPayment>{};
-    for (final p in (_items ?? const [])) {
-      final current = byMethod[p.method];
-      if (current == null || p.submittedAt.isAfter(current.submittedAt)) {
-        byMethod[p.method] = p;
-      }
-    }
-    final methods = ManualPaymentMethod.values;
-    return _SectionCard(
-      title: 'Payment methods',
-      actionLabel: 'Manage payment methods',
-      onAction: () => _openPaymentMethods(context),
       child: _loading && _items == null
           ? const Padding(
               padding: EdgeInsets.symmetric(vertical: 28),
               child: Center(child: SchoolPulseLoader()),
             )
-          : Column(
-              children: [
-                for (final (i, method) in methods.indexed) ...[
-                  if (i > 0)
-                    Divider(height: 1, color: AppColors.border(context)),
-                  _PaymentMethodRow(
-                    icon: method == ManualPaymentMethod.bank
-                        ? Icons.account_balance_outlined
-                        : Icons.smartphone_outlined,
-                    label: _methodLabel(method),
-                    lastTransaction: byMethod[method] == null
-                        ? 'No transactions yet'
-                        : DateFormat(
-                            'MMM d, yyyy · h:mm a',
-                          ).format(byMethod[method]!.submittedAt),
-                    reference: byMethod[method]?.reference,
-                  ),
-                ],
-              ],
-            ),
+          : bands.isEmpty
+              ? const _CompactEmpty(
+                  'No pricing bands are configured yet.',
+                  title: 'No pricing bands',
+                )
+              : wide
+                  ? _PricingBandTable(
+                      bands: bands,
+                      ugx: _ugx,
+                      schoolsByBand: schoolsByBand,
+                      revenueByBand: revenueByBand,
+                      onManage: () => _openPlans(context),
+                    )
+                  : Column(
+                      children: [
+                        for (final (i, band) in bands.indexed) ...[
+                          if (i > 0)
+                            Divider(
+                              height: 1,
+                              color: AppColors.border(context),
+                            ),
+                          _PricingBandCard(
+                            bandLabel: _bandLetter(i),
+                            rangeLabel: _bandRangeLabel(band),
+                            termly: _ugx.format(band.amountUgx),
+                            activeSchools:
+                                schoolsByBand[band.id]?.length ?? 0,
+                            isActive: band.isActive,
+                            onTap: () => _openPlans(context),
+                          ),
+                        ],
+                      ],
+                    ),
     );
   }
+
+  static String _bandLetter(int index) {
+    if (index < 26) return 'Band ${String.fromCharCode(65 + index)}';
+    return 'Band ${index + 1}';
+  }
+
+  static String _bandRangeLabel(PricingBand band) {
+    final formatter = NumberFormat('#,##0', 'en_UG');
+    if (band.maxStudents == null) {
+      return '${formatter.format(band.minStudents)}+';
+    }
+    return '${formatter.format(band.minStudents)} – '
+        '${formatter.format(band.maxStudents)}';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Payment methods panel -- real config from getManualPaymentConfig.
+  // "Manage payment methods" opens the unchanged config screen.
+  // ---------------------------------------------------------------------------
+
+  Widget _paymentMethodsSection(BuildContext context) => _SectionCard(
+    title: 'Payment methods',
+    actionLabel: 'Manage payment methods',
+    onAction: () => _openPaymentMethods(context),
+    child: _loading && _items == null
+        ? const Padding(
+            padding: EdgeInsets.symmetric(vertical: 28),
+            child: Center(child: SchoolPulseLoader()),
+          )
+        : _methods.isEmpty
+            ? const _CompactEmpty(
+                'Payment method details could not be loaded.',
+                title: 'Unavailable',
+              )
+            : Column(
+                children: [
+                  for (final (i, method) in _methods.indexed) ...[
+                    if (i > 0)
+                      Divider(height: 1, color: AppColors.border(context)),
+                    _PaymentMethodRow(method: method),
+                  ],
+                ],
+              ),
+  );
 
   // ---------------------------------------------------------------------------
   // Navigation -- unchanged targets.
@@ -1105,11 +1229,210 @@ class _MetricCard extends StatelessWidget {
 }
 
 // =============================================================================
-// Payment confirmation queue row
+// Payment confirmation queue -- desktop table
 // =============================================================================
 
-class _PaymentQueueRow extends StatelessWidget {
-  const _PaymentQueueRow({
+class _PaymentQueueTable extends StatelessWidget {
+  const _PaymentQueueTable({
+    required this.rows,
+    required this.ugx,
+    required this.methodLabel,
+    required this.workingId,
+    required this.onOpen,
+    required this.onApprove,
+    required this.onReject,
+  });
+  final List<ManualSubscriptionPayment> rows;
+  final NumberFormat ugx;
+  final String Function(ManualPaymentMethod) methodLabel;
+  final String? workingId;
+  final void Function(ManualSubscriptionPayment) onOpen;
+  final void Function(ManualSubscriptionPayment) onApprove;
+  final void Function(ManualSubscriptionPayment) onReject;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minWidth: MediaQuery.sizeOf(context).width < 700 ? 640 : 0,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _TableHeaderRow(
+              cells: const [
+                _Col('School', flex: 3),
+                _Col('Submitted', flex: 3),
+                _Col('Method', flex: 2),
+                _Col('Reference', flex: 2),
+                _Col('Amount (UGX)', flex: 2, alignEnd: true),
+                _Col('Status', flex: 2),
+                _Col('Actions', width: 92),
+              ],
+            ),
+            for (final (i, p) in rows.indexed) ...[
+              if (i > 0)
+                Divider(height: 1, color: AppColors.border(context)),
+              _PaymentQueueTableRow(
+                payment: p,
+                amountLabel: ugx.format(p.submittedAmount),
+                methodLabel: methodLabel(p.method),
+                submittedLabel:
+                    DateFormat('MMM d, yyyy\nh:mm a').format(p.submittedAt),
+                working: workingId == p.id,
+                anyWorking: workingId != null,
+                onOpen: () => onOpen(p),
+                onApprove: () => onApprove(p),
+                onReject: () => onReject(p),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentQueueTableRow extends StatelessWidget {
+  const _PaymentQueueTableRow({
+    required this.payment,
+    required this.amountLabel,
+    required this.methodLabel,
+    required this.submittedLabel,
+    required this.working,
+    required this.anyWorking,
+    required this.onOpen,
+    required this.onApprove,
+    required this.onReject,
+  });
+  final ManualSubscriptionPayment payment;
+  final String amountLabel, methodLabel, submittedLabel;
+  final bool working, anyWorking;
+  final VoidCallback onOpen, onApprove, onReject;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: anyWorking ? null : onOpen,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _cell(
+            flex: 3,
+            child: Text(
+              payment.schoolName,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: _rowTitle(context),
+            ),
+          ),
+          _cell(
+            flex: 3,
+            child: Text(
+              submittedLabel,
+              style: _rowBody(context),
+            ),
+          ),
+          _cell(
+            flex: 2,
+            child: Text(
+              methodLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: _rowBody(context).copyWith(
+                color: AppColors.textPrimary(context),
+              ),
+            ),
+          ),
+          _cell(
+            flex: 2,
+            child: Text(
+              payment.reference.isEmpty ? '—' : payment.reference,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: _rowBody(context),
+            ),
+          ),
+          _cell(
+            flex: 2,
+            alignEnd: true,
+            child: Text(
+              amountLabel,
+              style: AppTypography.labelLarge.copyWith(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          _cell(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _StatusPill(
+                label: 'Pending review',
+                color: AppColors.warning(context),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 92,
+            child: working
+                ? const Center(
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      _IconAction(
+                        icon: Icons.check_rounded,
+                        color: AppColors.success(context),
+                        tooltip: 'Confirm payment',
+                        onTap: anyWorking ? null : onApprove,
+                      ),
+                      const SizedBox(width: 6),
+                      _IconAction(
+                        icon: Icons.close_rounded,
+                        color: AppColors.danger(context),
+                        tooltip: 'Reject payment',
+                        onTap: anyWorking ? null : onReject,
+                      ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _cell({
+    required int flex,
+    required Widget child,
+    bool alignEnd = false,
+  }) =>
+      Expanded(
+        flex: flex,
+        child: Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: Align(
+            alignment:
+                alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+            child: child,
+          ),
+        ),
+      );
+}
+
+// Payment confirmation queue -- mobile stacked card
+class _PaymentQueueCard extends StatelessWidget {
+  const _PaymentQueueCard({
     required this.payment,
     required this.amountLabel,
     required this.methodLabel,
@@ -1121,14 +1444,9 @@ class _PaymentQueueRow extends StatelessWidget {
     required this.onReject,
   });
   final ManualSubscriptionPayment payment;
-  final String amountLabel;
-  final String methodLabel;
-  final String submittedLabel;
-  final bool working;
-  final bool anyWorking;
-  final VoidCallback onTap;
-  final VoidCallback onApprove;
-  final VoidCallback onReject;
+  final String amountLabel, methodLabel, submittedLabel;
+  final bool working, anyWorking;
+  final VoidCallback onTap, onApprove, onReject;
 
   @override
   Widget build(BuildContext context) => InkWell(
@@ -1233,6 +1551,49 @@ class _PaymentQueueRow extends StatelessWidget {
   );
 }
 
+class _IconAction extends StatelessWidget {
+  const _IconAction({
+    required this.icon,
+    required this.color,
+    required this.tooltip,
+    required this.onTap,
+  });
+  final IconData icon;
+  final Color color;
+  final String tooltip;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: enabled ? .12 : .05),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: color.withValues(alpha: enabled ? .30 : .12),
+              ),
+            ),
+            child: Icon(
+              icon,
+              size: 17,
+              color: color.withValues(alpha: enabled ? 1 : .4),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _QueueActionButton extends StatelessWidget {
   const _QueueActionButton({
     required this.icon,
@@ -1287,127 +1648,374 @@ class _QueueActionButton extends StatelessWidget {
 }
 
 // =============================================================================
-// Renewal row
+// Renewals -- desktop table
 // =============================================================================
 
-class _RenewalRow extends StatelessWidget {
-  const _RenewalRow({
-    required this.schoolName,
-    required this.cycle,
-    required this.amountLabel,
-  });
-  final String schoolName;
-  final SubscriptionCycle cycle;
-  final String? amountLabel;
+class _RenewalTable extends StatelessWidget {
+  const _RenewalTable({required this.rows, required this.schoolNames});
+  final List<SubscriptionCycle> rows;
+  final Map<String, String> schoolNames;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 12),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minWidth: MediaQuery.sizeOf(context).width < 700 ? 520 : 0,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _TableHeaderRow(
+              cells: const [
+                _Col('School', flex: 3),
+                _Col('Term end date', flex: 2),
+                _Col('Amount (UGX)', flex: 2, alignEnd: true),
+                _Col('Status', flex: 2),
+              ],
+            ),
+            for (final (i, cycle) in rows.indexed) ...[
+              if (i > 0)
+                Divider(height: 1, color: AppColors.border(context)),
+              _RenewalTableRow(
+                schoolName: schoolNames[cycle.schoolId] ?? '—',
+                cycle: cycle,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RenewalTableRow extends StatelessWidget {
+  const _RenewalTableRow({required this.schoolName, required this.cycle});
+  final String schoolName;
+  final SubscriptionCycle cycle;
+
+  @override
+  Widget build(BuildContext context) {
+    final amount = cycle.pricingSnapshot != null
+        ? NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0)
+            .format(cycle.pricingSnapshot!.amountUgx)
+        : '—';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Text(
                 schoolName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: _rowTitle(context),
               ),
-              const SizedBox(height: 3),
-              Text(
-                'Term ${cycle.termNumber} · Due '
-                '${DateFormat('MMM d, yyyy').format(cycle.paymentDueAt)}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Text(
+                DateFormat('MMM d, yyyy').format(cycle.termEnd),
                 style: _rowBody(context),
               ),
-            ],
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            if (amountLabel != null)
-              Text(
-                amountLabel!,
-                style: AppTypography.labelLarge.copyWith(
-                  color: AppColors.textPrimary(context),
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13.5,
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  amount,
+                  style: AppTypography.labelLarge.copyWith(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
                 ),
               ),
-            if (amountLabel != null) const SizedBox(height: 4),
-            StatusBadge(
-              label: cycleStatusLabel(cycle.cycleStatus),
-              color: cycleStatusColor(context, cycle.cycleStatus),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
-}
-
-// =============================================================================
-// Pricing band rows
-// =============================================================================
-
-class _PricingBandHeaderRow extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final style = AppTypography.labelSmall.copyWith(
-      color: AppColors.textMuted(context),
-      fontWeight: FontWeight.w700,
-      fontSize: 11,
-      letterSpacing: .3,
-    );
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8, top: 2),
-      child: Row(
-        children: [
-          Expanded(child: Text('STUDENT RANGE', style: style)),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 74,
-            child: Text(
-              'SCHOOLS',
-              style: style,
-              textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 116,
-            child: Text(
-              'TERMLY (UGX)',
-              style: style,
-              textAlign: TextAlign.end,
+          Expanded(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: StatusBadge(
+                label: cycleStatusLabel(cycle.cycleStatus),
+                color: cycleStatusColor(context, cycle.cycleStatus),
+              ),
             ),
           ),
-          const SizedBox(width: 24),
         ],
       ),
     );
   }
 }
 
-/// One pricing band's school count and termly revenue, derived from
-/// `subscription_cycles.pricingSnapshot`.
-class _PricingBandRow extends StatelessWidget {
-  const _PricingBandRow({
+// Renewals -- mobile stacked card
+class _RenewalCard extends StatelessWidget {
+  const _RenewalCard({required this.schoolName, required this.cycle});
+  final String schoolName;
+  final SubscriptionCycle cycle;
+
+  @override
+  Widget build(BuildContext context) {
+    final amount = cycle.pricingSnapshot != null
+        ? NumberFormat.currency(symbol: 'UGX ', decimalDigits: 0)
+            .format(cycle.pricingSnapshot!.amountUgx)
+        : null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  schoolName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: _rowTitle(context),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Term ${cycle.termNumber} · Ends '
+                  '${DateFormat('MMM d, yyyy').format(cycle.termEnd)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: _rowBody(context),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (amount != null)
+                Text(
+                  amount,
+                  style: AppTypography.labelLarge.copyWith(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13.5,
+                  ),
+                ),
+              if (amount != null) const SizedBox(height: 4),
+              StatusBadge(
+                label: cycleStatusLabel(cycle.cycleStatus),
+                color: cycleStatusColor(context, cycle.cycleStatus),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Pricing bands -- desktop table
+// =============================================================================
+
+class _PricingBandTable extends StatelessWidget {
+  const _PricingBandTable({
+    required this.bands,
+    required this.ugx,
+    required this.schoolsByBand,
+    required this.revenueByBand,
+    required this.onManage,
+  });
+  final List<PricingBand> bands;
+  final NumberFormat ugx;
+  final Map<String, Set<String>> schoolsByBand;
+  final Map<String, int> revenueByBand;
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minWidth: MediaQuery.sizeOf(context).width < 700 ? 560 : 0,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _TableHeaderRow(
+              cells: const [
+                _Col('Band', flex: 2),
+                _Col('Student range', flex: 3),
+                _Col('Termly (UGX)', flex: 3, alignEnd: true),
+                _Col('Active schools', flex: 2, alignEnd: true),
+                _Col('', width: 68),
+              ],
+            ),
+            for (final (i, band) in bands.indexed) ...[
+              if (i > 0)
+                Divider(height: 1, color: AppColors.border(context)),
+              _PricingBandTableRow(
+                bandLabel: _bandLetter(i),
+                rangeLabel: _range(band),
+                termly: ugx.format(band.amountUgx),
+                activeSchools: schoolsByBand[band.id]?.length ?? 0,
+                isActive: band.isActive,
+                onManage: onManage,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _bandLetter(int index) {
+    if (index < 26) return 'Band ${String.fromCharCode(65 + index)}';
+    return 'Band ${index + 1}';
+  }
+
+  static String _range(PricingBand band) {
+    final f = NumberFormat('#,##0', 'en_UG');
+    if (band.maxStudents == null) return '${f.format(band.minStudents)}+';
+    return '${f.format(band.minStudents)} – ${f.format(band.maxStudents)}';
+  }
+}
+
+class _PricingBandTableRow extends StatelessWidget {
+  const _PricingBandTableRow({
+    required this.bandLabel,
     required this.rangeLabel,
-    required this.schoolCount,
-    required this.termlyRevenue,
+    required this.termly,
+    required this.activeSchools,
+    required this.isActive,
+    required this.onManage,
+  });
+  final String bandLabel, rangeLabel, termly;
+  final int activeSchools;
+  final bool isActive;
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 11),
+    child: Row(
+      children: [
+        Expanded(
+          flex: 2,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    bandLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: _rowTitle(context),
+                  ),
+                ),
+                if (!isActive) ...[
+                  const SizedBox(width: 6),
+                  _StatusPill(
+                    label: 'Inactive',
+                    color: AppColors.textMuted(context),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 3,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Text(
+              '$rangeLabel learners',
+              style: _rowBody(context),
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 3,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                termly,
+                style: AppTypography.labelLarge.copyWith(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 2,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                '$activeSchools',
+                style: _rowBody(context).copyWith(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(
+          width: 68,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: onManage,
+              style: TextButton.styleFrom(
+                minimumSize: Size.zero,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                foregroundColor: AppColors.information(context),
+              ),
+              child: const Text('Manage'),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// Pricing bands -- mobile stacked card
+class _PricingBandCard extends StatelessWidget {
+  const _PricingBandCard({
+    required this.bandLabel,
+    required this.rangeLabel,
+    required this.termly,
+    required this.activeSchools,
+    required this.isActive,
     required this.onTap,
   });
-  final String rangeLabel;
-  final int schoolCount;
-  final String termlyRevenue;
+  final String bandLabel, rangeLabel, termly;
+  final int activeSchools;
+  final bool isActive;
   final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: onTap,
@@ -1416,38 +2024,37 @@ class _PricingBandRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              rangeLabel,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: _rowTitle(context),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(bandLabel, style: _rowTitle(context)),
+                    if (!isActive) ...[
+                      const SizedBox(width: 6),
+                      _StatusPill(
+                        label: 'Inactive',
+                        color: AppColors.textMuted(context),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$rangeLabel learners · $activeSchools '
+                  '${activeSchools == 1 ? 'school' : 'schools'}',
+                  style: _rowBody(context),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 8),
-          SizedBox(
-            width: 74,
-            child: Text(
-              '$schoolCount',
-              textAlign: TextAlign.center,
-              style: _rowBody(context).copyWith(
-                color: AppColors.textPrimary(context),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 116,
-            child: Text(
-              termlyRevenue,
-              textAlign: TextAlign.end,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.labelLarge.copyWith(
-                color: AppColors.textPrimary(context),
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-              ),
+          Text(
+            termly,
+            style: AppTypography.labelLarge.copyWith(
+              color: AppColors.textPrimary(context),
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
             ),
           ),
           Icon(
@@ -1465,16 +2072,8 @@ class _PricingBandRow extends StatelessWidget {
 // =============================================================================
 
 class _PaymentMethodRow extends StatelessWidget {
-  const _PaymentMethodRow({
-    required this.icon,
-    required this.label,
-    required this.lastTransaction,
-    required this.reference,
-  });
-  final IconData icon;
-  final String label;
-  final String lastTransaction;
-  final String? reference;
+  const _PaymentMethodRow({required this.method});
+  final _ConfiguredMethod method;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1489,7 +2088,7 @@ class _PaymentMethodRow extends StatelessWidget {
             border: Border.all(color: AppColors.border(context)),
           ),
           child: Icon(
-            icon,
+            method.icon,
             size: 17,
             color: AppColors.textPrimary(context),
           ),
@@ -1499,22 +2098,84 @@ class _PaymentMethodRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: _rowTitle(context)),
+              Text(method.name, style: _rowTitle(context)),
               const SizedBox(height: 2),
               Text(
-                (reference == null || reference!.isEmpty)
-                    ? lastTransaction
-                    : 'Last ref $reference · $lastTransaction',
-                maxLines: 1,
+                method.detail,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: _rowBody(context),
               ),
             ],
           ),
         ),
+        const SizedBox(width: 8),
+        _StatusPill(
+          label: method.configured ? 'Active' : 'Not set',
+          color: method.configured
+              ? AppColors.success(context)
+              : AppColors.textMuted(context),
+        ),
       ],
     ),
   );
+}
+
+// =============================================================================
+// Table primitives
+// =============================================================================
+
+class _Col {
+  const _Col(this.label, {this.flex = 1, this.width, this.alignEnd = false});
+  final String label;
+  final int flex;
+  final double? width;
+  final bool alignEnd;
+}
+
+class _TableHeaderRow extends StatelessWidget {
+  const _TableHeaderRow({required this.cells});
+  final List<_Col> cells;
+  @override
+  Widget build(BuildContext context) {
+    final style = AppTypography.labelSmall.copyWith(
+      color: AppColors.textMuted(context),
+      fontWeight: FontWeight.w700,
+      fontSize: 11,
+      letterSpacing: .3,
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, top: 2),
+      child: Row(
+        children: [
+          for (final col in cells)
+            if (col.width != null)
+              SizedBox(
+                width: col.width,
+                child: Text(
+                  col.label.toUpperCase(),
+                  style: style,
+                  textAlign:
+                      col.alignEnd ? TextAlign.end : TextAlign.start,
+                ),
+              )
+            else
+              Expanded(
+                flex: col.flex,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Text(
+                    col.label.toUpperCase(),
+                    style: style,
+                    textAlign:
+                        col.alignEnd ? TextAlign.end : TextAlign.start,
+                  ),
+                ),
+              ),
+        ],
+      ),
+    );
+  }
 }
 
 // =============================================================================
