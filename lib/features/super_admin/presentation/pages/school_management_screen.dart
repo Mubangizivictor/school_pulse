@@ -38,7 +38,7 @@ class SchoolManagementScreen extends StatefulWidget {
 
 class _SchoolManagementScreenState extends State<SchoolManagementScreen>
     with SingleTickerProviderStateMixin {
-  static const int _pageSize = 10;
+  static const List<int> _pageSizeOptions = [10, 20, 50];
 
   late final TabController _tabs = TabController(length: 3, vsync: this)
     ..addListener(_onTabChanged);
@@ -48,6 +48,7 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen>
   );
   SchoolFilter _filter = SchoolFilter.all;
   int _page = 0;
+  int _pageSize = 10;
 
   void _onTabChanged() {
     if (!_tabs.indexIsChanging) {
@@ -174,6 +175,11 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen>
       );
     }
 
+    void changePageSize(int value) => setState(() {
+      _pageSize = value;
+      _page = 0;
+    });
+
     switch (_tabs.index) {
       case 0:
         return _SchoolTableSection(
@@ -181,6 +187,8 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen>
           plans: state.plans,
           page: _page,
           pageSize: _pageSize,
+          pageSizeOptions: _pageSizeOptions,
+          onPageSizeChanged: changePageSize,
           onPageChanged: (value) => setState(() => _page = value),
           emptyTitle: 'No active schools yet',
           emptyMessage:
@@ -198,6 +206,8 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen>
           rows: data.applications,
           page: _page,
           pageSize: _pageSize,
+          pageSizeOptions: _pageSizeOptions,
+          onPageSizeChanged: changePageSize,
           onPageChanged: (value) => setState(() => _page = value),
         );
       default:
@@ -207,6 +217,8 @@ class _SchoolManagementScreenState extends State<SchoolManagementScreen>
           logs: state.auditLogs,
           page: _page,
           pageSize: _pageSize,
+          pageSizeOptions: _pageSizeOptions,
+          onPageSizeChanged: changePageSize,
           onPageChanged: (value) => setState(() => _page = value),
           emptyTitle: 'No suspended schools',
           emptyMessage:
@@ -746,6 +758,8 @@ class _SchoolTableSection extends StatelessWidget {
     required this.plans,
     required this.page,
     required this.pageSize,
+    required this.pageSizeOptions,
+    required this.onPageSizeChanged,
     required this.onPageChanged,
     required this.emptyTitle,
     required this.emptyMessage,
@@ -758,6 +772,8 @@ class _SchoolTableSection extends StatelessWidget {
   final List<SubscriptionPlan> plans;
   final List<AuditLog> logs;
   final int page, pageSize;
+  final List<int> pageSizeOptions;
+  final ValueChanged<int> onPageSizeChanged;
   final ValueChanged<int> onPageChanged;
   final String emptyTitle, emptyMessage;
   final String? emptyActionLabel;
@@ -817,6 +833,9 @@ class _SchoolTableSection extends StatelessWidget {
               rangeStart: start + 1,
               rangeEnd: start + visible.length,
               total: rows.length,
+              pageSize: pageSize,
+              pageSizeOptions: pageSizeOptions,
+              onPageSizeChanged: onPageSizeChanged,
               onPageChanged: onPageChanged,
             ),
           ],
@@ -1196,9 +1215,14 @@ class _PaginationBar extends StatelessWidget {
     required this.rangeStart,
     required this.rangeEnd,
     required this.total,
+    required this.pageSize,
+    required this.pageSizeOptions,
+    required this.onPageSizeChanged,
     required this.onPageChanged,
   });
-  final int page, pageCount, rangeStart, rangeEnd, total;
+  final int page, pageCount, rangeStart, rangeEnd, total, pageSize;
+  final List<int> pageSizeOptions;
+  final ValueChanged<int> onPageSizeChanged;
   final ValueChanged<int> onPageChanged;
 
   @override
@@ -1237,6 +1261,12 @@ class _PaginationBar extends StatelessWidget {
           enabled: page < pageCount - 1,
           onTap: () => onPageChanged(pageCount - 1),
         ),
+        const SizedBox(width: 8),
+        _PageSizeSelector(
+          value: pageSize,
+          options: pageSizeOptions,
+          onChanged: onPageSizeChanged,
+        ),
       ],
     );
 
@@ -1269,6 +1299,54 @@ class _PaginationBar extends StatelessWidget {
     }
     return [for (var i = start; i < end; i++) i];
   }
+}
+
+class _PageSizeSelector extends StatelessWidget {
+  const _PageSizeSelector({
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+  final int value;
+  final List<int> options;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) => PopupMenuButton<int>(
+    tooltip: 'Rows per page',
+    onSelected: onChanged,
+    itemBuilder: (_) => options
+        .map((option) => PopupMenuItem(value: option, child: Text('$option / page')))
+        .toList(),
+    child: Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$value / page',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 16,
+            color: AppColors.textSecondary(context),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _PageNumber extends StatelessWidget {
@@ -1366,10 +1444,14 @@ class _ApplicationsTableSection extends StatelessWidget {
     required this.rows,
     required this.page,
     required this.pageSize,
+    required this.pageSizeOptions,
+    required this.onPageSizeChanged,
     required this.onPageChanged,
   });
   final List<SchoolApplication> rows;
   final int page, pageSize;
+  final List<int> pageSizeOptions;
+  final ValueChanged<int> onPageSizeChanged;
   final ValueChanged<int> onPageChanged;
 
   @override
@@ -1424,6 +1506,9 @@ class _ApplicationsTableSection extends StatelessWidget {
               rangeStart: start + 1,
               rangeEnd: start + visible.length,
               total: rows.length,
+              pageSize: pageSize,
+              pageSizeOptions: pageSizeOptions,
+              onPageSizeChanged: onPageSizeChanged,
               onPageChanged: onPageChanged,
             ),
           ],
