@@ -45,7 +45,7 @@ void main() {
   });
 
   test('CSV export uses the already-fetched filtered logs, escaping quotes safely', () {
-    expect(source.contains('Event,Actor,Category,Timestamp,Reason'), isTrue);
+    expect(source.contains('Event,EventCode,Actor,Target,Category,Timestamp,Reason'), isTrue);
     expect(source.contains("value.replaceAll('\"', '\"\"')"), isTrue);
     expect(source.contains("mimeType: 'text/csv'"), isTrue);
   });

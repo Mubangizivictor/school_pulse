@@ -432,13 +432,17 @@ class _AuditStrip extends StatelessWidget {
             color: AppColors.textMuted(context),
           ),
           const SizedBox(width: 8),
-          Text(
-            openedAt == null
-                ? 'Opened by you'
-                : 'Opened by you  ·  ${time.format(openedAt!)}',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary(context),
+          Expanded(
+            child: Text(
+              openedAt == null
+                  ? 'Opened by you'
+                  : 'Opened by you  ·  ${time.format(openedAt!)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary(context),
+              ),
             ),
           ),
         ],

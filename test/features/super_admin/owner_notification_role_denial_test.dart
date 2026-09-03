@@ -32,7 +32,8 @@ void main() {
       expect(r.startsWith('/super-admin'), isTrue);
     }
     final router = File('lib/app/router.dart').readAsStringSync();
-    // The single guard that rejects every non-superAdmin session.
+    // The single synchronous guard that rejects every non-superAdmin
+    // session before it ever reaches the owner-console subtree.
     expect(
       router.contains("state.uri.path.startsWith('/super-admin')"),
       isTrue,
@@ -41,8 +42,17 @@ void main() {
       router.contains('authState.user.role != UserRole.superAdmin'),
       isTrue,
     );
-    // The owner notification route is a real child of /super-admin.
-    expect(router.contains("path: 'notifications'"), isTrue);
+    // The owner notification route is a real child of /super-admin, defined
+    // in the extracted subtree (commit d2d15ef1).
+    final routes = File(
+      'lib/features/super_admin/presentation/super_admin_routes.dart',
+    ).readAsStringSync();
+    expect(routes.contains("'notifications'"), isTrue);
+    // ...and the whole subtree carries its own async owner-session redirect.
+    expect(
+      routes.contains('redirect: (context, state) => _superAdminRedirect'),
+      isTrue,
+    );
   });
 
   test('the feed collection is the owner collection, not a role path', () {

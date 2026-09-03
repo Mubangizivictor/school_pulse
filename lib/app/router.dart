@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -288,7 +288,6 @@ import 'package:school_pulse/features/director/presentation/screens/communicatio
 import 'package:school_pulse/features/student_identity/presentation/screens/student_id_card_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/batch_id_card_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
-import 'package:school_pulse/features/super_admin/domain/owner_security_session_service.dart';
 import 'package:school_pulse/features/super_admin/presentation/super_admin_routes.dart';
 import 'package:school_pulse/features/portal/domain/portal_runtime.dart';
 import 'package:school_pulse/features/games/presentation/screens/games_dashboard_screen.dart';
@@ -430,17 +429,65 @@ import 'package:school_pulse/features/teacher/presentation/screens/resources/sto
 /// real Authenticated/Unauthenticated state lands.
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<dynamic> stream) {
-    notifyListeners();
-    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+    // No eager notifyListeners() here: GoRouter already evaluates `redirect`
+    // once on construction, and an extra synchronous refresh before the
+    // first route settles only invites a redirect race.
+    _subscription = stream.asBroadcastStream().listen((_) => _scheduleNotify());
   }
 
   late final StreamSubscription<dynamic> _subscription;
+  Timer? _debounce;
+  bool _disposed = false;
+
+  /// AuthBloc (and anything else feeding this) can emit a burst of states
+  /// in quick succession - e.g. entering the Super Admin console dispatches
+  /// several bloc events in `initState`, each landing here as a separate
+  /// async delivery. Collapsing a burst into a single trailing-edge
+  /// notification means GoRouter re-runs its (async) redirect once instead
+  /// of N times, which is what let a slow redirect resolve against a route
+  /// the user had already been navigated past. 16ms ~= one frame: short
+  /// enough to feel instant, long enough to swallow a same-turn burst.
+  void _scheduleNotify() {
+    if (_disposed) return;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 16), () {
+      if (!_disposed) notifyListeners();
+    });
+  }
 
   @override
   void dispose() {
+    _disposed = true;
+    _debounce?.cancel();
     _subscription.cancel();
     super.dispose();
   }
+}
+
+/// The single shared full-page transition for the app: a fast, subtle
+/// fade-through. No slide, scale, bounce, or platform-specific animation -
+/// so section-to-section navigation in shell-style consoles (notably Super
+/// Admin) and browser Back/Forward all look identical and calm.
+CustomTransitionPage<T> fadeThroughPage<T>({
+  required Widget child,
+  LocalKey? key,
+  String? name,
+  Object? arguments,
+}) {
+  return CustomTransitionPage<T>(
+    key: key,
+    name: name,
+    arguments: arguments,
+    transitionDuration: const Duration(milliseconds: 180),
+    reverseTransitionDuration: const Duration(milliseconds: 180),
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        child: child,
+      );
+    },
+  );
 }
 
 final router = GoRouter(
@@ -516,57 +563,18 @@ final router = GoRouter(
       return '/school-splash';
     }
 
-    // Protect Super Admin routes
+    // Protect Super Admin routes. Only the *synchronous* checks live here
+    // in the global redirect: the async mandatory-MFA-enrollment and
+    // owner-security-session validation moved onto `superAdminRoute`'s own
+    // `redirect` (see super_admin_routes.dart). Keeping an `await` out of
+    // this hot, every-navigation callback is what stops a slow session
+    // check from resolving against a route the user was already navigated
+    // past - the flash/return bug.
     if (state.uri.path.startsWith('/super-admin')) {
       if (authState is AuthAuthenticated) {
         if (authState.user.role != UserRole.superAdmin) {
           return UserRoleRouting.dashboardPath(authState.user.role);
         }
-        // DEV-ONLY local emulator bypass. The Firebase Auth Emulator cannot
-        // generate a TOTP secret, so the mandatory-MFA + owner-security-
-        // session gates below can never be satisfied against emulators.
-        // Triple-guarded: debug build + --dart-define=USE_FIREBASE_EMULATOR
-        // + --dart-define=SKIP_OWNER_MFA. Impossible to reach in a release
-        // build. Do not ship a build that sets these defines.
-        const _emulator = bool.fromEnvironment('USE_FIREBASE_EMULATOR');
-        const _skipOwnerMfa = bool.fromEnvironment('SKIP_OWNER_MFA');
-        if (kDebugMode && _emulator && _skipOwnerMfa) {
-          return null;
-        }
-        // Mandatory TOTP: Firebase only *enforces* an MFA challenge at
-        // sign-in for a user who already has a factor enrolled
-        // (FirebaseAuthMultiFactorException gates AuthAuthenticated from
-        // ever emitting in that case). It does not require enrollment to
-        // exist in the first place, so an owner who never set up an
-        // authenticator app reaches here on the first factor alone.
-        // Force enrollment before the console ever renders.
-        final currentUser = FirebaseAuth.instance.currentUser;
-        if (currentUser != null) {
-          final factors = await currentUser.multiFactor.getEnrolledFactors();
-          if (factors.isEmpty) return '/owner/mfa-setup';
-        }
-
-        // The unified elevated session every owner login path converges
-        // into (password+TOTP, Google+TOTP, recovery code) - re-validated
-        // live against the server on every navigation into /super-admin,
-        // never trusted from AuthBloc's client-side role state alone. A
-        // session explicitly revoked (Revoke All Sessions) fails closed
-        // here even though the underlying Firebase session is still valid -
-        // that's the whole point of a separate revocation surface.
-        //
-        // The in-memory sessionId does not survive an app restart (by
-        // design - never persisted to SharedPreferences/localStorage), so
-        // a restart re-establishes a fresh session here rather than
-        // bouncing an otherwise-fully-authenticated owner back to
-        // /owner-login: Firebase's own persisted session plus a still-live
-        // `currentUser.multiFactor` enrollment already prove the owner
-        // completed both factors previously, and requireOwner() gates the
-        // establish call itself, so this is not a weaker check - it is the
-        // same guarantee the original login already gave, just re-derived
-        // instead of re-proven.
-        final session = await OwnerSecuritySessionService.instance
-            .validateOrReestablish();
-        if (session == null) return '/owner-login';
       } else {
         return '/welcome';
       }

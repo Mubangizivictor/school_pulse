@@ -27,16 +27,18 @@ void main() {
     expect(source.contains("'Payments & Billing'"), isFalse);
   });
 
-  test('BillingHomeScreen surfaces payment review (needs-review) data', () {
-    expect(source.contains('_needsReviewSection'), isTrue);
+  test('BillingHomeScreen surfaces the manual-payment confirmation queue', () {
+    expect(source.contains('_confirmationQueueSection'), isTrue);
     expect(source.contains('ManualPaymentStatus.pendingVerification'), isTrue);
-    expect(source.contains('PaymentReviewRow'), isTrue);
+    // Rows in the queue open the real review screen.
+    expect(source.contains('onOpen: (p) => _openReview(context, p)'), isTrue);
   });
 
   test('BillingHomeScreen surfaces pricing-band performance, not plan performance', () {
     expect(source.contains('_pricingBandsSection'), isTrue);
-    expect(source.contains('_PricingBandRow'), isTrue);
-    expect(source.contains('pricingSnapshot'), isTrue);
+    expect(source.contains('_PricingBandTable'), isTrue);
+    expect(source.contains('_PricingBandCard'), isTrue);
+    expect(source.contains('_pricingBands'), isTrue);
     expect(source.contains('_planPerformanceSection'), isFalse);
     expect(source.contains('class PlanPerformanceRow'), isFalse);
   });
@@ -56,14 +58,15 @@ void main() {
     expect(source.contains('PaymentReviewScreen(payment: payment)'), isTrue);
   });
 
-  test('BillingHomeScreen surfaces an Upcoming renewals section sourced from subscription_cycles', () {
-    expect(source.contains('_upcomingRenewalsSection'), isTrue);
-    expect(source.contains("title: 'Upcoming renewals'"), isTrue);
+  test('BillingHomeScreen surfaces a renewals section sourced from subscription_cycles', () {
+    expect(source.contains('_renewalsSection'), isTrue);
+    expect(source.contains("title: 'Renewals due soon (next 30 days)'"), isTrue);
     expect(source.contains('getAllUpcomingSubscriptionCycles'), isTrue);
-    expect(source.contains('_UpcomingRenewalRow'), isTrue);
+    expect(source.contains('_RenewalTable'), isTrue);
+    expect(source.contains('_RenewalCard'), isTrue);
   });
 
-  test('upcoming renewals rows use the shared cycle-status badge mapping, not raw Colors', () {
+  test('renewal rows use the shared cycle-status badge mapping, not raw Colors', () {
     expect(source.contains('cycleStatusLabel(cycle.cycleStatus)'), isTrue);
     expect(source.contains('cycleStatusColor(context, cycle.cycleStatus)'), isTrue);
     expect(source.contains('StatusBadge('), isTrue);

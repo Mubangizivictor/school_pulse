@@ -1,5 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:school_pulse/app/router.dart' show fadeThroughPage;
+import 'package:school_pulse/features/super_admin/domain/owner_security_session_service.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_dashboard.dart';
 import 'package:school_pulse/features/super_admin/presentation/widgets/super_admin_mobile_nav_shell.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_notifications_screen.dart';
@@ -14,153 +19,206 @@ import 'package:school_pulse/features/super_admin/presentation/pages/support_tic
 import 'package:school_pulse/features/super_admin/presentation/pages/contact_about_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/privacy_policy_screen.dart';
 
+/// Async gate for the whole `/super-admin` subtree. This was previously
+/// inline in `lib/app/router.dart`'s global `redirect`, where it ran on
+/// *every* navigation anywhere in the app and, being `async`, let a slow
+/// Cloud Function call resolve against a route the user had already left -
+/// the flash/return behaviour. Here it only runs for `/super-admin*`, and
+/// [OwnerSecuritySessionService] now memoises a confirmed-valid session for
+/// a short window so repeated entries do not re-hit the backend.
+///
+/// The synchronous role check (`role != superAdmin`) still lives in the
+/// global redirect so a wrong-role user never even reaches this subtree.
+Future<String?> _superAdminRedirect(GoRouterState state) async {
+  // DEV-ONLY local emulator bypass. The Firebase Auth Emulator cannot
+  // generate a TOTP secret, so the mandatory-MFA + owner-security-session
+  // gates below can never be satisfied against emulators. Triple-guarded:
+  // debug build + --dart-define=USE_FIREBASE_EMULATOR + --dart-define=
+  // SKIP_OWNER_MFA. Impossible to reach in a release build.
+  const emulator = bool.fromEnvironment('USE_FIREBASE_EMULATOR');
+  const skipOwnerMfa = bool.fromEnvironment('SKIP_OWNER_MFA');
+  if (kDebugMode && emulator && skipOwnerMfa) {
+    return null;
+  }
+
+  // Mandatory TOTP enrollment. Firebase only *enforces* an MFA challenge at
+  // sign-in for a user who already has a factor enrolled; it does not
+  // require enrollment to exist, so an owner who never set up an
+  // authenticator app reaches here on the first factor alone. Force
+  // enrollment before the console renders. A transient failure reading the
+  // factor list must NOT bounce the user - treat only a definitive empty
+  // list as "needs setup".
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser != null) {
+    try {
+      final factors = await currentUser.multiFactor.getEnrolledFactors();
+      if (factors.isEmpty) return '/owner/mfa-setup';
+    } catch (_) {
+      // Could not read enrollment right now - stay put; the redirect
+      // re-evaluates on the next router refresh.
+    }
+  }
+
+  // The unified elevated session every owner login path converges into
+  // (password+TOTP, Google+TOTP, recovery code). Re-derived from the
+  // still-live Firebase session on an app restart rather than forcing a
+  // full re-login. A session explicitly revoked (Revoke All Sessions)
+  // fails closed here. A transport/availability failure is deliberately
+  // NOT a redirect - the current screen stays and we re-check later.
+  final outcome = await OwnerSecuritySessionService.instance
+      .validateOrReestablishOutcome();
+  if (outcome.isInvalid) return '/owner-login';
+  return null;
+}
+
+GoRoute _fadeRoute(
+  String path, {
+  required Widget Function(BuildContext, GoRouterState) child,
+  List<RouteBase> routes = const [],
+}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) =>
+        fadeThroughPage(key: state.pageKey, child: child(context, state)),
+    routes: routes,
+  );
+}
+
 /// The `/super-admin` (SaaS owner console) route subtree, extracted whole
 /// from `lib/app/router.dart` so every owner-console screen, path and nested
-/// Navigator lives inside `features/super_admin/`. `router.dart` splices this
-/// in with a single `superAdminRoute` entry - behaviour is byte-for-byte the
-/// same as when this block was inline.
+/// Navigator lives inside `features/super_admin/`.
 ///
 /// Deliberately outside every ShellRoute in `router.dart` - the owner
 /// console has its own complete navigation (sidebar on wide, bottom nav on
-/// mobile) and must never be wrapped in StaffShell's staff-facing bottom nav.
+/// mobile) and must never be wrapped in StaffShell's staff-facing bottom
+/// nav. Every route uses [fadeThroughPage] so switching sections via
+/// `context.go` is a single 180ms fade, with no platform slide/flicker and
+/// no animation when reselecting the current route.
 final RouteBase superAdminRoute = GoRoute(
   path: '/super-admin',
-  builder: (context, state) => const SuperAdminDashboard(),
+  redirect: (context, state) => _superAdminRedirect(state),
+  pageBuilder: (context, state) =>
+      fadeThroughPage(key: state.pageKey, child: const SuperAdminDashboard()),
   routes: [
     // Top-level sidebar/bottom-nav sections. Each renders the same
-    // SuperAdminDashboard, which reads the active section back out of
-    // the URL (see `_sectionIndexForLocation` in super_admin_dashboard
-    // .dart) - giving every section its own real, refreshable,
-    // back/forward-able address without duplicating the dashboard's
-    // IndexedStack/nested-Navigator shell per route.
+    // SuperAdminDashboard, which reads the active section back out of the
+    // URL (see `superAdminSectionForPath`) - giving every section its own
+    // real, refreshable, back/forward-able address without duplicating the
+    // dashboard's IndexedStack/nested-Navigator shell per route.
     //
-    // Detail screens (School Details, Application Review, Payment
-    // Review) are deliberately NOT full GoRoutes: they're pushed onto
-    // the section's own nested Navigator (SuperAdminTabNavigator) so
-    // the sidebar/bottom-nav stays visible, exactly as before this
-    // change. Their :id child routes below exist only so the URL bar
-    // reflects that a detail screen is open and Back/Forward has a
-    // history entry to land on - navigating to one directly (no
-    // `extra`, e.g. a cold refresh) falls back to the section list,
-    // since there is no fetch-by-id path yet for these entities.
-    GoRoute(
-      path: 'schools',
-      builder: (context, state) => const SuperAdminDashboard(),
+    // Detail screens (School Details, Application Review, Payment Review)
+    // are deliberately NOT full GoRoutes: they're pushed onto the section's
+    // own nested Navigator (SuperAdminTabNavigator) so the sidebar/bottom
+    // nav stays visible. Their :id child routes below exist only so the URL
+    // bar reflects that a detail screen is open and Back/Forward has a
+    // history entry to land on.
+    _fadeRoute(
+      'schools',
+      child: (context, state) => const SuperAdminDashboard(),
       routes: [
-        GoRoute(
-          path: ':schoolId',
-          builder: (context, state) => const SuperAdminDashboard(),
+        _fadeRoute(
+          ':schoolId',
+          child: (context, state) => const SuperAdminDashboard(),
           routes: [
-            // School Details' Screen B/C/D sub-pushes (Subscription,
-            // Modules, School Admins & Actions) each sync the URL via
-            // pushSuperAdminDetail before pushing onto the nested
-            // Navigator - same cosmetic-URL-only pattern as
-            // schools/:schoolId itself. Missing entries here throw a
-            // GoException (no matching route) that replaces the whole
-            // app with GoRouter's error page, since context.go() is
-            // called unconditionally on every push.
-            GoRoute(
-              path: 'subscription',
-              builder: (context, state) => const SuperAdminDashboard(),
+            _fadeRoute(
+              'subscription',
+              child: (context, state) => const SuperAdminDashboard(),
             ),
-            GoRoute(
-              path: 'modules',
-              builder: (context, state) => const SuperAdminDashboard(),
+            _fadeRoute(
+              'modules',
+              child: (context, state) => const SuperAdminDashboard(),
             ),
-            GoRoute(
-              path: 'admins',
-              builder: (context, state) => const SuperAdminDashboard(),
+            _fadeRoute(
+              'admins',
+              child: (context, state) => const SuperAdminDashboard(),
             ),
           ],
         ),
-        GoRoute(
-          path: 'applications/:applicationId',
-          builder: (context, state) => const SuperAdminDashboard(),
+        _fadeRoute(
+          'applications/:applicationId',
+          child: (context, state) => const SuperAdminDashboard(),
         ),
       ],
     ),
-    GoRoute(
-      path: 'payments',
-      builder: (context, state) => const SuperAdminDashboard(),
+    _fadeRoute(
+      'payments',
+      child: (context, state) => const SuperAdminDashboard(),
       routes: [
-        GoRoute(
-          path: ':paymentId',
-          builder: (context, state) => const SuperAdminDashboard(),
+        _fadeRoute(
+          ':paymentId',
+          child: (context, state) => const SuperAdminDashboard(),
         ),
       ],
     ),
-    GoRoute(
-      path: 'plans',
-      builder: (context, state) => const SuperAdminDashboard(),
+    _fadeRoute(
+      'plans',
+      child: (context, state) => const SuperAdminDashboard(),
     ),
-    GoRoute(
-      // Owner Notifications is reached from the Overview bell, not
-      // nested under Settings - the bottom nav highlights Overview
-      // while it's open (see superAdminSectionForPath). Owner alerts
-      // always deliver everything by default - there is deliberately
-      // no notification-settings screen to opt out of any category,
-      // channel or quiet hours.
-      path: 'notifications',
-      builder: (context, state) => const SuperAdminMobileNavShell(
+    _fadeRoute(
+      // Owner Notifications is reached from the Overview bell, not nested
+      // under Settings - the bottom nav highlights Overview while it's
+      // open (see superAdminSectionForPath).
+      'notifications',
+      child: (context, state) => const SuperAdminMobileNavShell(
         child: SuperAdminNotificationsScreen(),
       ),
       routes: [
-        GoRoute(
-          path: 'history',
-          builder: (context, state) => const SuperAdminMobileNavShell(
+        _fadeRoute(
+          'history',
+          child: (context, state) => const SuperAdminMobileNavShell(
             child: OwnerNotificationHistoryScreen(),
           ),
         ),
       ],
     ),
-    GoRoute(
-      path: 'audit-logs',
-      builder: (context, state) => const SuperAdminDashboard(),
+    _fadeRoute(
+      'audit-logs',
+      child: (context, state) => const SuperAdminDashboard(),
     ),
-    GoRoute(
-      path: 'settings',
-      builder: (context, state) => const SuperAdminDashboard(),
+    _fadeRoute(
+      'settings',
+      child: (context, state) => const SuperAdminDashboard(),
     ),
-    GoRoute(
-      path: 'settings/security',
-      builder: (context, state) =>
+    _fadeRoute(
+      'settings/security',
+      child: (context, state) =>
           const SuperAdminMobileNavShell(child: SecurityCenterScreen()),
     ),
-    GoRoute(
-      path: 'settings/custom-domains',
-      builder: (context, state) =>
+    _fadeRoute(
+      'settings/custom-domains',
+      child: (context, state) =>
           const SuperAdminMobileNavShell(child: CustomDomainsScreen()),
     ),
-    GoRoute(
-      path: 'settings/subdomain-requests',
-      builder: (context, state) => const SuperAdminMobileNavShell(
+    _fadeRoute(
+      'settings/subdomain-requests',
+      child: (context, state) => const SuperAdminMobileNavShell(
         child: SubdomainChangeRequestsScreen(),
       ),
     ),
-    GoRoute(
-      path: 'platform-health',
-      builder: (context, state) =>
+    _fadeRoute(
+      'platform-health',
+      child: (context, state) =>
           const SuperAdminMobileNavShell(child: PlatformHealthScreen()),
     ),
-    GoRoute(
-      path: 'settings/support',
-      builder: (context, state) =>
+    _fadeRoute(
+      'settings/support',
+      child: (context, state) =>
           const SuperAdminMobileNavShell(child: HelpSupportHomeScreen()),
       routes: [
-        GoRoute(
-          path: 'help-center',
-          builder: (context, state) => const SuperAdminMobileNavShell(
+        _fadeRoute(
+          'help-center',
+          child: (context, state) => const SuperAdminMobileNavShell(
             child: SupportHelpCenterScreen(),
           ),
         ),
-        GoRoute(
-          path: 'faqs',
-          builder: (context, state) =>
+        _fadeRoute(
+          'faqs',
+          child: (context, state) =>
               const SuperAdminMobileNavShell(child: SupportFaqsScreen()),
         ),
-        GoRoute(
-          path: 'new',
-          builder: (context, state) => SuperAdminMobileNavShell(
+        _fadeRoute(
+          'new',
+          child: (context, state) => SuperAdminMobileNavShell(
             child: SubmitSupportRequestScreen(
               args:
                   state.extra as SubmitSupportRequestArgs? ??
@@ -168,9 +226,9 @@ final RouteBase superAdminRoute = GoRoute(
             ),
           ),
         ),
-        GoRoute(
-          path: 'ticket/:id',
-          builder: (context, state) => SuperAdminMobileNavShell(
+        _fadeRoute(
+          'ticket/:id',
+          child: (context, state) => SuperAdminMobileNavShell(
             child: SupportTicketConversationScreen(
               ticketId: state.pathParameters['id']!,
             ),
@@ -178,14 +236,14 @@ final RouteBase superAdminRoute = GoRoute(
         ),
       ],
     ),
-    GoRoute(
-      path: 'settings/about',
-      builder: (context, state) =>
+    _fadeRoute(
+      'settings/about',
+      child: (context, state) =>
           const SuperAdminMobileNavShell(child: ContactAboutScreen()),
       routes: [
-        GoRoute(
-          path: 'privacy-policy',
-          builder: (context, state) =>
+        _fadeRoute(
+          'privacy-policy',
+          child: (context, state) =>
               const SuperAdminMobileNavShell(child: PrivacyPolicyScreen()),
         ),
       ],

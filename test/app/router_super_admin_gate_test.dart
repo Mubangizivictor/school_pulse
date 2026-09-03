@@ -74,4 +74,43 @@ void main() {
       );
     },
   );
+
+  test(
+    'the async MFA-enrollment + owner-security-session gate still runs, '
+    'now on the /super-admin subtree route',
+    () {
+      // The async gate moved OFF the global redirect (so a slow session
+      // check no longer runs on every navigation anywhere) and ONTO
+      // superAdminRoute\'s own redirect. It must still be there.
+      final routes = File(
+        'lib/features/super_admin/presentation/super_admin_routes.dart',
+      ).readAsStringSync();
+
+      expect(routes.contains('redirect: (context, state) => _superAdminRedirect'),
+          isTrue);
+      expect(routes.contains("return '/owner/mfa-setup'"), isTrue,
+          reason: 'mandatory TOTP enrollment gate must survive the move');
+      expect(
+        routes.contains('validateOrReestablishOutcome()'),
+        isTrue,
+        reason: 'owner-security-session validation must survive the move',
+      );
+      expect(routes.contains("if (outcome.isInvalid) return '/owner-login'"),
+          isTrue,
+          reason:
+              'only a server-confirmed-invalid session redirects to '
+              '/owner-login; a transient failure must leave the user in place');
+      // The global redirect must no longer await anything for /super-admin.
+      final guardIdx =
+          source.indexOf("state.uri.path.startsWith('/super-admin')");
+      final guardWindow = source.substring(
+        guardIdx,
+        (guardIdx + 700).clamp(0, source.length),
+      );
+      expect(guardWindow.contains('await'), isFalse,
+          reason:
+              'the global /super-admin guard must stay synchronous - the '
+              'await moved to the subtree redirect');
+    },
+  );
 }

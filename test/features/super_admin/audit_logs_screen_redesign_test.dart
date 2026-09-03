@@ -28,22 +28,24 @@ void main() {
     );
   });
 
-  test('Export audit is wired to a real CSV share action, not a placeholder', () {
-    expect(source.contains("'Export audit'"), isTrue);
+  test('Export is wired to a real CSV share action, not a placeholder', () {
+    expect(source.contains("'Export CSV'"), isTrue);
     expect(source.contains('_exportAudit'), isTrue);
     expect(source.contains('Share.shareXFiles'), isTrue);
+    // The export builds a real CSV in-process from the filtered logs.
+    expect(source.contains("mimeType: 'text/csv'"), isTrue);
   });
 
-  test('mobile list groups events by Today/Yesterday', () {
-    expect(source.contains("'Today'"), isTrue);
-    expect(source.contains("'Yesterday'"), isTrue);
-    expect(source.contains('_groupByDay'), isTrue);
+  test('the list is scoped by a period picker defaulting to Today', () {
+    expect(source.contains('enum _Period { today, thisWeek, thisMonth, all }'), isTrue);
+    expect(source.contains('_period = _Period.today'), isTrue);
+    expect(source.contains('_period.includes(l.timestamp)'), isTrue);
   });
 
-  test('AuditActivityRow renders icon, event sentence, actor and relative time', () {
-    expect(source.contains('class AuditActivityRow'), isTrue);
+  test('each row renders a title-cased event, the resolved actor and a category', () {
     expect(source.contains('_titleCaseAction(log.action)'), isTrue);
-    expect(source.contains("'by \${_actorLabel(log.ownerId)}'"), isTrue);
+    expect(source.contains('_actorLabel(log.ownerId)'), isTrue);
+    expect(source.contains('_categoryOf(log)'), isTrue);
   });
 
   test('actor label falls back off a raw device token to the real signed-in owner', () {

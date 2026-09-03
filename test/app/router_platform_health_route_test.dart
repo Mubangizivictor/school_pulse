@@ -12,14 +12,21 @@ void main() {
   late String source;
 
   setUpAll(() {
-    source = File('lib/app/router.dart').readAsStringSync();
+    // The /super-admin subtree lives in super_admin_routes.dart since the
+    // owner-console route extraction (commit d2d15ef1).
+    source = File(
+      'lib/features/super_admin/presentation/super_admin_routes.dart',
+    ).readAsStringSync();
   });
 
-  test('platform-health is registered as a path within the /super-admin route', () {
+  test('platform-health is registered as a route within the /super-admin subtree', () {
     final superAdminIndex = source.indexOf("path: '/super-admin'");
     expect(superAdminIndex, isNot(-1));
 
-    final platformHealthIndex = source.indexOf("path: 'platform-health'");
+    // The `_fadeRoute` helper takes the path as its first positional arg,
+    // so the route reads `_fadeRoute(\n  'platform-health',` rather than
+    // `path: 'platform-health'`.
+    final platformHealthIndex = source.indexOf("'platform-health'");
     expect(platformHealthIndex, isNot(-1), reason: 'platform-health route is missing');
     expect(
       platformHealthIndex,
@@ -29,13 +36,13 @@ void main() {
   });
 
   test('platform-health route renders PlatformHealthScreen wrapped in SuperAdminMobileNavShell', () {
-    final routeIndex = source.indexOf("path: 'platform-health'");
+    final routeIndex = source.indexOf("'platform-health'");
     final window = source.substring(routeIndex, (routeIndex + 200).clamp(0, source.length));
     expect(window.contains('SuperAdminMobileNavShell'), isTrue);
     expect(window.contains('PlatformHealthScreen()'), isTrue);
   });
 
-  test('router imports platform_health_screen.dart', () {
+  test('the subtree imports platform_health_screen.dart', () {
     expect(
       source.contains("import 'package:school_pulse/features/super_admin/presentation/pages/platform_health_screen.dart';"),
       isTrue,

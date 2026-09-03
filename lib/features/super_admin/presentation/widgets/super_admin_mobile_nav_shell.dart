@@ -3,6 +3,26 @@ import 'package:go_router/go_router.dart';
 
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 
+/// Process-wide rapid-tap guard for owner-console navigation. Both the
+/// dashboard sidebar and this bottom nav route through GoRouter; a
+/// double/triple tap otherwise fires back-to-back `context.go`s that read
+/// as a flash. Shared here (rather than per-widget state) because the
+/// bottom nav is a StatelessWidget rebuilt on every section change.
+DateTime _lastOwnerNavAt = DateTime.fromMillisecondsSinceEpoch(0);
+const Duration _kOwnerNavDebounce = Duration(milliseconds: 350);
+
+bool ownerNavThrottled() {
+  final now = DateTime.now();
+  if (now.difference(_lastOwnerNavAt) < _kOwnerNavDebounce) return true;
+  _lastOwnerNavAt = now;
+  return false;
+}
+
+@visibleForTesting
+void debugResetOwnerNavThrottle() {
+  _lastOwnerNavAt = DateTime.fromMillisecondsSinceEpoch(0);
+}
+
 /// Resolves a Super Admin URL to the owning console section. Keep this in
 /// the shared navigation layer so full-page routes and dashboard tab routes
 /// cannot drift apart.
@@ -100,7 +120,10 @@ class SuperAdminBottomNavigation extends StatelessWidget {
                 onReselect?.call();
                 return;
               }
-              context.go(_kSuperAdminSectionPaths[index]);
+              if (ownerNavThrottled()) return;
+              final target = _kSuperAdminSectionPaths[index];
+              if (GoRouterState.of(context).uri.path == target) return;
+              context.go(target);
             },
             destinations: const [
               NavigationDestination(
@@ -154,8 +177,12 @@ class SuperAdminMobileNavShell extends StatelessWidget {
       // pages. Keeping that Navigator inside this Scaffold means those pages
       // remain above the content, but below the persistent bottom navigation.
       body: Navigator(
-        onGenerateRoute: (settings) =>
-            MaterialPageRoute(builder: (_) => child, settings: settings),
+        onGenerateRoute: (settings) => PageRouteBuilder(
+          settings: settings,
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+          pageBuilder: (context, animation, secondaryAnimation) => child,
+        ),
       ),
       bottomNavigationBar: SuperAdminBottomNavigation(
         selectedIndex: _selectedIndex(context),

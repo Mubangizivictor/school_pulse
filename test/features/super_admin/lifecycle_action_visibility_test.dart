@@ -49,23 +49,19 @@ void main() {
   });
 
   test('SuperAdminDashboard is the only builder for every /super-admin* route', () {
-    final source = File('lib/app/router.dart').readAsStringSync();
-    final ownerSectionStart = source.indexOf("path: '/super-admin'");
-    expect(ownerSectionStart, isNot(-1));
-    // Find the matching top-level GoRoute block for /super-admin and confirm
-    // every nested builder in it is SuperAdminDashboard (or a screen that is
-    // itself gated the same way, e.g. settings/* sub-routes use
-    // SuperAdminMobileNavShell which is only reachable via the same guard).
-    final ownerSectionEnd = source.indexOf(
-      "GoRoute(\n      path: '/",
-      ownerSectionStart + 50,
-    );
-    final block = source.substring(
-      ownerSectionStart,
-      ownerSectionEnd == -1 ? source.length : ownerSectionEnd,
-    );
+    // The `/super-admin` subtree was extracted from router.dart into
+    // super_admin_routes.dart (commit d2d15ef1); router.dart splices it in
+    // as the single `superAdminRoute` entry.
+    final source = File(
+      'lib/features/super_admin/presentation/super_admin_routes.dart',
+    ).readAsStringSync();
+    expect(source.contains("path: '/super-admin'"), isTrue);
+    // Every top-level owner section renders SuperAdminDashboard (directly or
+    // via the `_fadeRoute` helper's `child:` callback); settings/* and
+    // other standalone screens use SuperAdminMobileNavShell, reachable only
+    // via the same subtree redirect guard.
     expect(
-      block.contains('const SuperAdminDashboard()'),
+      source.contains('const SuperAdminDashboard()'),
       isTrue,
       reason: 'top-level owner sections must render SuperAdminDashboard, '
           'which is what enforces the five-tab nav and hosts the '

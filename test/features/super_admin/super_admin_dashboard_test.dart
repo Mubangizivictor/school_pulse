@@ -63,6 +63,18 @@ void main() {
     );
   });
 
+  test('a section tap performs URL navigation only - didChangeDependencies moves the index', () {
+    // The tap handler must not also setState(_selectedIndex): one code path
+    // (didChangeDependencies) owns the index so the nav highlight can never
+    // disagree with the actual route.
+    expect(
+      source.contains('if (_navThrottled()) return;\n'
+          '                      // URL-only: didChangeDependencies moves _selectedIndex'),
+      isTrue,
+    );
+    expect(source.contains('_navThrottled() => ownerNavThrottled()'), isTrue);
+  });
+
   test('this device is registered for owner push notifications on dashboard entry', () {
     expect(source.contains('OwnerPushTokenService().registerCurrentDevice();'), isTrue);
   });
