@@ -64,6 +64,13 @@
     ],
     "rewrites": [
       {
+        "source": "/api/webhooks/resend",
+        "function": {
+          "functionId": "resendWebhook",
+          "region": "europe-west1"
+        }
+      },
+      {
         "source": "/verify",
         "function": {
           "functionId": "verifyOfficialDocument",

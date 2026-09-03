@@ -546,24 +546,57 @@ table.data-table tr:last-child td { border-bottom: none; }
 }
 
 /* ---------- Pricing cards ---------- */
+#pricingTiersGrid { gap: 14px; }
 .price-card {
   background: var(--color-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 28px 24px;
+  border-radius: 10px;
+  padding: 18px 16px;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
-.price-card.popular { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.price-card.popular {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
 .price-card .tag {
-  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-  background: var(--color-primary); color: #fff; font-size: 11.5px; font-weight: 700;
-  padding: 4px 12px; border-radius: 999px; white-space: nowrap;
+  position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+  background: var(--color-primary); color: #fff; font-size: 10px; font-weight: 700;
+  letter-spacing: .02em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 999px; white-space: nowrap;
 }
-.price-amount { font-size: 30px; font-weight: 800; margin: 8px 0 4px; }
-.price-amount small { font-size: 14px; font-weight: 500; color: var(--color-muted); }
-.price-range { font-size: 13px; color: var(--color-muted); margin-bottom: 16px; }
-@media (max-width: 480px) {
-  .price-card { padding: 22px 18px; }
+.price-card-head { margin-bottom: 10px; }
+.price-card h3 { font-size: 15px; font-weight: 700; margin: 0; }
+.price-range { font-size: 11.5px; color: var(--color-muted); margin: 2px 0 0; }
+
+.price-amount {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 0;
+  margin-bottom: 10px;
+  border-top: 1px solid var(--color-border);
+}
+.price-currency { font-size: 11px; font-weight: 600; color: var(--color-muted); }
+.price-value { font-size: 19px; font-weight: 800; color: var(--color-ink); letter-spacing: -.01em; }
+.price-per { font-size: 11px; font-weight: 500; color: var(--color-muted); }
+
+.price-features { margin: 0 0 14px; flex: 1; }
+.price-features li { padding: 2px 0; font-size: 12.5px; }
+.price-features svg { width: 14px; height: 14px; margin-top: 3px; }
+
+.price-card .btn-block { padding: 8px 12px; font-size: 13px; margin-top: auto; }
+
+@media (max-width: 900px) {
+  #pricingTiersGrid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px) {
+  #pricingTiersGrid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 420px) {
+  #pricingTiersGrid { grid-template-columns: 1fr; }
 }
 
 /* ---------- Forms ---------- */

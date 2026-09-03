@@ -2276,6 +2276,14 @@ service cloud.firestore {
     match /portal_slug_reservations/{slug} {
       allow read, write: if false;
     }
+    // A school's own request to change its platform subdomain
+    // (<slug>.ROOT). Mirrors portal_domain_requests: readable by the owner
+    // or by the requesting school only, never client-writable - creation,
+    // approval and rejection are all callable/Admin-SDK operations.
+    match /portal_subdomain_change_requests/{schoolId} {
+      allow read: if isSuperAdmin() || (isSignedIn() && resource.data.schoolId == myUser().schoolId);
+      allow write: if false;
+    }
     // These collections back the super_admin feature (school registry,
     // billing, audit trail). Only the seeded platform-owner account may
     // touch them; no school-scoped role gets any access, by design - this

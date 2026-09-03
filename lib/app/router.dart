@@ -21,6 +21,7 @@ import 'package:school_pulse/features/patron/presentation/screens/dormitory_mana
     as patron_scr;
 import 'package:school_pulse/features/admin/admin_dashboard_screen.dart';
 import 'package:school_pulse/features/admin/school_workspace_screen.dart';
+import 'package:school_pulse/features/admin/presentation/pages/school_subdomain_screen.dart';
 import 'package:school_pulse/features/institution/presentation/bloc/institution_context_cubit.dart';
 import 'package:school_pulse/features/institution/presentation/bloc/institution_context_state.dart';
 import 'package:school_pulse/app/screens/institution_suspended_screen.dart';
@@ -294,6 +295,7 @@ import 'package:school_pulse/features/super_admin/presentation/pages/super_admin
 import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_history_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/security_center_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/custom_domains_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/pages/subdomain_change_requests_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/platform_health_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/help_support_home_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/submit_support_request_screen.dart';
@@ -3335,6 +3337,10 @@ final router = GoRouter(
           builder: (context, state) => const SchoolWorkspaceScreen(),
         ),
         GoRoute(
+          path: '/staff/admin/school-subdomain',
+          builder: (context, state) => const SchoolSubdomainScreen(),
+        ),
+        GoRoute(
           path: '/staff/more',
           // A nurse must never fall through to the shared admin/teacher More
           // route. Their portal owns its own navigation and More screen.
@@ -3819,6 +3825,12 @@ final router = GoRouter(
           path: 'settings/custom-domains',
           builder: (context, state) =>
               const SuperAdminMobileNavShell(child: CustomDomainsScreen()),
+        ),
+        GoRoute(
+          path: 'settings/subdomain-requests',
+          builder: (context, state) => const SuperAdminMobileNavShell(
+            child: SubdomainChangeRequestsScreen(),
+          ),
         ),
         GoRoute(
           path: 'platform-health',

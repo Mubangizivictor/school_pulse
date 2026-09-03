@@ -134,18 +134,30 @@
     tiers.forEach(function (tier) {
       var range = tier.max === null ? (tier.min + '+ learners') : (tier.min + '–' + tier.max + ' learners');
       var isPopular = tier.label === popularLabel;
+      var isCustom = tier.price === null || tier.price === undefined;
       var items = includesByTier[tier.label] || [];
       var itemsHtml = items.map(function (i) {
         return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>' + i + '</li>';
       }).join('');
+
+      var priceHtml = isCustom
+        ? '<div class="price-amount"><span class="price-value">Talk to us</span></div>'
+        : '<div class="price-amount">' +
+            '<span class="price-currency">UGX</span>' +
+            '<span class="price-value">' + Number(tier.price).toLocaleString('en-UG') + '</span>' +
+            '<span class="price-per">/ term</span>' +
+          '</div>';
+
       grid.innerHTML += '' +
         '<div class="price-card' + (isPopular ? ' popular' : '') + '" data-tier-card="' + tier.label + '">' +
           (isPopular ? '<span class="tag">Most Popular</span>' : '') +
-          '<h3>' + tier.label + '</h3>' +
-          '<div class="price-range">' + range + '</div>' +
-          '<div class="price-amount">' + window.formatUGX(tier.price) + (tier.price ? '<small> / term</small>' : '') + '</div>' +
-          '<ul class="checklist" style="margin-bottom:16px;">' + itemsHtml + '</ul>' +
-          '<a href="register-school.html" class="btn btn-outline btn-block">Get started</a>' +
+          '<div class="price-card-head">' +
+            '<h3>' + tier.label + '</h3>' +
+            '<div class="price-range">' + range + '</div>' +
+          '</div>' +
+          priceHtml +
+          '<ul class="checklist price-features">' + itemsHtml + '</ul>' +
+          '<a href="register-school.html" class="btn ' + (isPopular ? 'btn-primary' : 'btn-outline') + ' btn-block">Get started</a>' +
         '</div>';
     });
 

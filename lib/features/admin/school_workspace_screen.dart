@@ -93,6 +93,12 @@ class _SchoolWorkspace extends StatelessWidget {
           route: '/staff/admin/structure/institution',
         ),
         _Row(
+          icon: Icons.alternate_email_outlined,
+          title: 'School subdomain',
+          subtitle: 'View and request a change to your portal subdomain',
+          route: '/staff/admin/school-subdomain',
+        ),
+        _Row(
           icon: Icons.tune_outlined,
           title: 'Modules & access',
           subtitle: 'Feature toggles and role permissions',

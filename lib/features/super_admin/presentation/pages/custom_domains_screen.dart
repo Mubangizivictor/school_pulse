@@ -146,6 +146,7 @@ class _CustomDomainsScreenState extends State<CustomDomainsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Custom Domains'),
+        leading: const BackButton(),
         actions: [
           if (_busy)
             const Padding(

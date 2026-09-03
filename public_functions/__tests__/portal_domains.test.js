@@ -36,3 +36,12 @@ test('manageSchoolAdmin only accepts the 4 real lifecycle actions this app model
   // product spec's promote/demote/primary-transfer language maps onto.
   assert.deepEqual([...__test__.ADMIN_ACTIONS].sort(), ['disable', 'enable', 'remove', 'setPrimary']);
 });
+test('suspend/archive block writes server-side; active/trial always restore full access', () => {
+  // schoolCanWrite()/schoolAccessMode() in firestore.rules only look at
+  // accessMode - setSchoolLifecycleStatus must set it, not just `status`,
+  // or a suspended school's writes are never actually rules-denied.
+  assert.equal(__test__.ACCESS_MODE_FOR_STATUS.suspended, 'blocked');
+  assert.equal(__test__.ACCESS_MODE_FOR_STATUS.archived, 'blocked');
+  assert.equal(__test__.ACCESS_MODE_FOR_STATUS.active, 'full');
+  assert.equal(__test__.ACCESS_MODE_FOR_STATUS.trial, 'full');
+});

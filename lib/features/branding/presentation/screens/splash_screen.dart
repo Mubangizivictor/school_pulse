@@ -48,19 +48,17 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     // The initial AuthCheckRequested read (Firebase session + Firestore
-    // profile fetch) may still be in flight, e.g. on a slow network or cold
-    // start. Resolving that as "unauthenticated" would force a valid session
-    // back to the login screen, so wait for the real result instead of
-    // racing a fixed timer, but cap the wait so a stuck check doesn't strand
-    // the user on the splash screen.
-    final resolvedState = await authBloc.stream
-        .firstWhere(
-          (state) => state is AuthAuthenticated || state is AuthUnauthenticated,
-        )
-        .timeout(
-          const Duration(milliseconds: 800),
-          onTimeout: () => AuthUnauthenticated(),
-        );
+    // profile fetch, plus a live verifyOwnerSession round trip for a
+    // superAdmin session) may still be in flight, e.g. on a slow network or
+    // cold start - routinely well over a second before a cold Cloud
+    // Function instance responds. Resolving that as "unauthenticated" would
+    // force a valid, still-persisted session back to the login screen, so
+    // wait for the real result instead of racing a fixed timer. AuthBloc's
+    // own internal timeouts (15s per network step) are the actual backstop
+    // against a stuck check stranding the user here.
+    final resolvedState = await authBloc.stream.firstWhere(
+      (state) => state is AuthAuthenticated || state is AuthUnauthenticated,
+    );
     FlutterNativeSplash.remove();
     if (!mounted) return;
     if (resolvedState is AuthAuthenticated) {

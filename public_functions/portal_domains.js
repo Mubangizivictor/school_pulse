@@ -489,6 +489,117 @@ exports.rejectCustomPortalDomain = onCall({ region: 'europe-west1' }, async r =>
   });
   return { hostname: host, status: 'rejected' };
 });
+// A school admin can ask to change their platform subdomain
+// (<slug>.ROOT, assigned at onboarding) after the fact - distinct from
+// requestCustomPortalDomain above, which is for a school bringing an
+// external vanity domain. This only reserves the *request*; the slug
+// itself isn't reserved in portal_slug_reservations until the owner
+// approves it below, so an unapproved request can't squat on a slug
+// another school might want. One pending request per school at a time
+// (doc id = schoolId) - a second call just overwrites the pending one.
+exports.requestPortalSubdomainChange = onCall({ region: 'europe-west1' }, async r => {
+  const actor = await schoolAdmin(r);
+  const requestedSlug = clean(r.data?.slug);
+  if (!validSlug(requestedSlug)) throw new HttpsError('invalid-argument', 'Enter a valid subdomain.');
+  const school = await db.doc(`schools/${actor.schoolId}`).get();
+  if (!school.exists) throw new HttpsError('not-found', 'School not found.');
+  const currentSlug = school.data().slug || null;
+  if (requestedSlug === currentSlug) throw new HttpsError('invalid-argument', 'That is already this school\'s subdomain.');
+  const ref = db.doc(`portal_subdomain_change_requests/${actor.schoolId}`);
+  await db.runTransaction(async tx => {
+    const reservation = await tx.get(db.doc(`portal_slug_reservations/${requestedSlug}`));
+    if (reservation.exists && reservation.data().schoolId !== actor.schoolId) {
+      throw new HttpsError('already-exists', 'That subdomain is already in use.');
+    }
+    tx.set(ref, {
+      schoolId: actor.schoolId,
+      currentSlug,
+      requestedSlug,
+      status: 'pending',
+      requestedBy: actor.uid,
+      requestedAt: admin.firestore.FieldValue.serverTimestamp(),
+      reviewedBy: null,
+      reviewedAt: null,
+      rejectionReason: null,
+    });
+  });
+  return { schoolId: actor.schoolId, requestedSlug, status: 'pending' };
+});
+// Owner approves a pending subdomain-change request: re-checks the target
+// slug is still free, moves the reservation from the old slug to the new
+// one, updates schools/{id}.slug/.portalSubdomain, and replaces the
+// portal_domains/{host} projection - old host removed, new host created via
+// the same publicDomain() shape every other projection uses. Mirrors
+// verifyAndActivateCustomPortalDomain's transaction/audit-log pattern.
+exports.approvePortalSubdomainChange = onCall({ region: 'europe-west1' }, async r => {
+  const actor = await owner(r);
+  const schoolId = String(r.data?.schoolId || '').trim();
+  if (!schoolId) throw new HttpsError('invalid-argument', 'A school ID is required.');
+  const ref = db.doc(`portal_subdomain_change_requests/${schoolId}`);
+  const request = await ref.get();
+  if (!request.exists) throw new HttpsError('not-found', 'Subdomain change request not found.');
+  const data = request.data();
+  if (data.status !== 'pending') throw new HttpsError('failed-precondition', 'This request has already been reviewed.');
+  const { requestedSlug, currentSlug } = data;
+  const schoolRef = db.doc(`schools/${schoolId}`);
+  await db.runTransaction(async tx => {
+    const [schoolSnap, reservationSnap] = await Promise.all([
+      tx.get(schoolRef),
+      tx.get(db.doc(`portal_slug_reservations/${requestedSlug}`)),
+    ]);
+    if (!schoolSnap.exists) throw new HttpsError('not-found', 'School not found.');
+    if (reservationSnap.exists && reservationSnap.data().schoolId !== schoolId) {
+      throw new HttpsError('already-exists', 'That subdomain was claimed by another school in the meantime.');
+    }
+    const school = schoolSnap.data();
+    const oldHost = `${currentSlug}.${ROOT}`, newHost = `${requestedSlug}.${ROOT}`;
+    const now = admin.firestore.FieldValue.serverTimestamp();
+    if (currentSlug) tx.delete(db.doc(`portal_slug_reservations/${currentSlug}`));
+    tx.set(db.doc(`portal_slug_reservations/${requestedSlug}`), { schoolId, slug: requestedSlug, createdAt: now });
+    tx.update(schoolRef, { slug: requestedSlug, portalSubdomain: newHost, updatedAt: now });
+    if (currentSlug) tx.delete(db.doc(`portal_domains/${oldHost}`));
+    tx.set(db.doc(`portal_domains/${newHost}`), publicDomain(schoolId, { ...school, slug: requestedSlug }, newHost));
+    tx.update(ref, { status: 'approved', reviewedBy: actor.uid, reviewedAt: now });
+    tx.set(db.collection('super_admin_audit_logs').doc(), {
+      action: 'APPROVE_PORTAL_SUBDOMAIN_CHANGE',
+      schoolId,
+      ownerId: actor.uid,
+      metadata: { previousSlug: currentSlug, newSlug: requestedSlug },
+      timestamp: now,
+    });
+  });
+  return { schoolId, slug: requestedSlug, status: 'approved' };
+});
+// Owner rejects a pending subdomain-change request - no slug/domain writes,
+// just marks the request so it stops appearing as actionable. Mirrors
+// rejectCustomPortalDomain's shape.
+exports.rejectPortalSubdomainChange = onCall({ region: 'europe-west1' }, async r => {
+  const actor = await owner(r);
+  const schoolId = String(r.data?.schoolId || '').trim();
+  const reason = String(r.data?.reason || '').trim().slice(0, 500);
+  if (!schoolId) throw new HttpsError('invalid-argument', 'A school ID is required.');
+  const ref = db.doc(`portal_subdomain_change_requests/${schoolId}`);
+  const request = await ref.get();
+  if (!request.exists) throw new HttpsError('not-found', 'Subdomain change request not found.');
+  if (request.data().status !== 'pending') throw new HttpsError('failed-precondition', 'This request has already been reviewed.');
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  await db.runTransaction(async tx => {
+    tx.update(ref, {
+      status: 'rejected',
+      rejectionReason: reason || 'No reason provided',
+      reviewedBy: actor.uid,
+      reviewedAt: now,
+    });
+    tx.set(db.collection('super_admin_audit_logs').doc(), {
+      action: 'REJECT_PORTAL_SUBDOMAIN_CHANGE',
+      schoolId,
+      ownerId: actor.uid,
+      reason: reason || null,
+      timestamp: now,
+    });
+  });
+  return { schoolId, status: 'rejected' };
+});
 // Keep the public projection in sync when the owner changes branding or
 // suspends a tenant. This is deliberately a one-way projection: no public
 // directory write can ever modify schools/{id}.

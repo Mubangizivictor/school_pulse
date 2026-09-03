@@ -29,7 +29,7 @@ process.env.FIREBASE_AUTH_EMULATOR_HOST =
 process.env.FIREBASE_CONFIG = JSON.stringify({ projectId });
 
 const { getSchoolCounts } = require('../school_counts');
-const { manageSchoolAdmin, requestSupportAccess } = require('../portal_domains');
+const { manageSchoolAdmin, requestSupportAccess, setSchoolLifecycleStatus } = require('../portal_domains');
 const { getManualPaymentsForOwner } = require('../payments');
 
 const admin = require('firebase-admin');
@@ -349,6 +349,68 @@ describe('school workspace owner-only callables', () => {
         () => requestSupportAccess.run(request(OWNER_UID, { schoolId: 'schoolDoesNotExist', reason: 'test' })),
         (err) => err.code === 'not-found',
       );
+    });
+  });
+
+  // ---- portal_domains.js: setSchoolLifecycleStatus (suspend/reactivate) ---
+
+  describe('setSchoolLifecycleStatus - suspend must have real impact, not just a status label', () => {
+    test('suspending sets accessMode:blocked - the field firestore.rules actually checks (schoolCanWrite/schoolAccessMode)', async () => {
+      await setSchoolLifecycleStatus.run(request(OWNER_UID, { schoolId: SCHOOL_A, status: 'suspended', reason: 'Non-payment' }));
+      const snap = await db.doc(`schools/${SCHOOL_A}`).get();
+      assert.equal(snap.data().status, 'suspended');
+      assert.equal(snap.data().accessMode, 'blocked');
+    });
+
+    test('reactivating restores accessMode:full', async () => {
+      await setSchoolLifecycleStatus.run(request(OWNER_UID, { schoolId: SCHOOL_A, status: 'suspended', reason: 'Non-payment' }));
+      await setSchoolLifecycleStatus.run(request(OWNER_UID, { schoolId: SCHOOL_A, status: 'active' }));
+      const snap = await db.doc(`schools/${SCHOOL_A}`).get();
+      assert.equal(snap.data().status, 'active');
+      assert.equal(snap.data().accessMode, 'full');
+    });
+
+    test('archiving also sets accessMode:blocked', async () => {
+      await setSchoolLifecycleStatus.run(request(OWNER_UID, { schoolId: SCHOOL_A, status: 'archived', reason: 'Closed permanently' }));
+      const snap = await db.doc(`schools/${SCHOOL_A}`).get();
+      assert.equal(snap.data().accessMode, 'blocked');
+    });
+
+    test('suspend/archive never touch students, users, or payments - only the school doc and an audit row', async () => {
+      const beforeStudent = (await db.doc('students/stuA1').get()).data();
+      const beforeAdmin = (await db.doc(`users/${ADMIN_A1}`).get()).data();
+      const beforePayment = (await db.doc('manual_subscription_payments/payA1').get()).data();
+      await setSchoolLifecycleStatus.run(request(OWNER_UID, { schoolId: SCHOOL_A, status: 'suspended', reason: 'Testing data preservation' }));
+      assert.deepEqual((await db.doc('students/stuA1').get()).data(), beforeStudent);
+      assert.deepEqual((await db.doc(`users/${ADMIN_A1}`).get()).data(), beforeAdmin);
+      assert.deepEqual((await db.doc('manual_subscription_payments/payA1').get()).data(), beforePayment);
+    });
+
+    test('suspending attempts session revocation for every user at the school (best-effort, never blocks the status write)', async () => {
+      // No real Auth-emulator users are seeded here (out of scope for this
+      // suite - see comment above); revokeRefreshTokens is expected to
+      // reject for a non-existent uid, which the callable swallows via
+      // .catch(() => {}) precisely so a revocation failure can never roll
+      // back or block the actual access-lockout write. This proves that
+      // contract: the status/accessMode write still succeeds even though
+      // every revocation call underneath it fails.
+      const result = await setSchoolLifecycleStatus.run(request(OWNER_UID, { schoolId: SCHOOL_A, status: 'suspended', reason: 'x' }));
+      assert.equal(result.status, 'suspended');
+      const snap = await db.doc(`schools/${SCHOOL_A}`).get();
+      assert.equal(snap.data().accessMode, 'blocked');
+    });
+
+    test('a non-owner cannot suspend a school', async () => {
+      await assert.rejects(
+        () => setSchoolLifecycleStatus.run(request(ADMIN_A1, { schoolId: SCHOOL_A, status: 'suspended', reason: 'Self-suspend attempt' })),
+        (err) => err.code === 'permission-denied',
+      );
+    });
+
+    test('setting the same status twice is a no-op that still succeeds (idempotent)', async () => {
+      await setSchoolLifecycleStatus.run(request(OWNER_UID, { schoolId: SCHOOL_A, status: 'suspended', reason: 'first' }));
+      const result = await setSchoolLifecycleStatus.run(request(OWNER_UID, { schoolId: SCHOOL_A, status: 'suspended', reason: 'second' }));
+      assert.equal(result.status, 'suspended');
     });
   });
 });

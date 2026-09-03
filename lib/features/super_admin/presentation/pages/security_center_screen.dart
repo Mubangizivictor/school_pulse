@@ -547,7 +547,7 @@ class _SecureStatusBanner extends StatelessWidget {
         ? AppColors.success(context)
         : AppColors.warning(context);
     return AppCard(
-      color: color,
+      color: color.withValues(alpha: 0.12),
       showBorder: true,
       borderColor: color,
       showShadow: false,
@@ -555,7 +555,10 @@ class _SecureStatusBanner extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(AppSpacing.l),
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.16),
+              shape: BoxShape.circle,
+            ),
             child: Icon(
               secure ? Icons.shield_rounded : Icons.gpp_maybe_rounded,
               color: color,
@@ -580,7 +583,7 @@ class _SecureStatusBanner extends StatelessWidget {
                       ? 'Two-step verification is protecting your account.'
                       : 'Enable two-step verification to secure your account.',
                   style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary(context),
+                    color: AppColors.textPrimary(context),
                   ),
                 ),
               ],
@@ -662,7 +665,7 @@ class _SecurityRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.l),
             decoration: BoxDecoration(
-              color: iconColor,
+              color: iconColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: iconColor, size: 22),

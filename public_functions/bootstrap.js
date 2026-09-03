@@ -25,6 +25,7 @@ const documentVerification = require('./documents/verification_endpoint');
 const studentCredentialVerification = require('./documents/student_verification_endpoint');
 const portalDomains = require('./portal_domains');
 const schoolCounts = require('./school_counts');
+const resendWebhook = require('./resend_webhook');
 
 // payments is intentionally spread after owner: it replaces the old
 // approval/status exports with the payment-gated onboarding lifecycle while
@@ -57,4 +58,5 @@ module.exports = {
   ...studentCredentialVerification,
   ...portalDomains,
   ...schoolCounts,
+  ...resendWebhook,
 };

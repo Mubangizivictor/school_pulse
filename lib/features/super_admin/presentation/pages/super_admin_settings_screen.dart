@@ -73,6 +73,13 @@ class SuperAdminSettingsScreen extends StatelessWidget {
       ),
       PlatformSettingsRow(
         standalone: standalone,
+        icon: Icons.alternate_email_outlined,
+        title: 'Subdomain change requests',
+        subtitle: 'Review schools\' requests to change their subdomain',
+        onTap: () => context.push('/super-admin/settings/subdomain-requests'),
+      ),
+      PlatformSettingsRow(
+        standalone: standalone,
         icon: Icons.assignment_outlined,
         title: 'Platform audit logs',
         subtitle: 'View system-wide audit logs and activity',
