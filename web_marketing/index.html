@@ -54,6 +54,19 @@
     </div>
   </section>
 
+  <section class="section-tight">
+    <div class="container">
+      <div class="hero-photo">
+        <picture>
+          <source media="(max-width: 640px)" srcset="assets/images/hero-community-960.webp" type="image/webp">
+          <source media="(max-width: 640px)" srcset="assets/images/hero-community-960.jpg">
+          <source srcset="assets/images/hero-community.webp" type="image/webp">
+          <img src="assets/images/hero-community.jpg" alt="Students, parents and teachers at a Ugandan school looking together at a tablet running School Pulse" loading="lazy" width="1672" height="941">
+        </picture>
+      </div>
+    </div>
+  </section>
+
   <section class="section">
     <div class="container">
       <div class="section-head">
@@ -137,13 +150,8 @@
   var popularLabel = 'Standard';
 
   function renderHomePricing() {
-    var status = window.PRICING_TIERS_STATUS;
     var tiers = window.PRICING_TIERS;
 
-    if (status === 'loading') {
-      grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:var(--color-muted, #666);">Loading pricing…</p>';
-      return;
-    }
     if (!tiers.length) {
       grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:var(--color-muted, #666);">Pricing is being updated — <a href="contact.html">contact us</a> for current rates.</p>';
       return;
@@ -165,7 +173,6 @@
   }
 
   renderHomePricing();
-  window.addEventListener('pricingtiersready', renderHomePricing);
 </script>
 </body>
 </html>
