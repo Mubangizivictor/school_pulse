@@ -39,6 +39,16 @@ class RelationshipRepositoryImpl implements RelationshipRepository {
   }
 
   @override
+  Future<Either<Failure, List<ParentStudentRelationship>>>
+  getRelationshipsForSchool(String schoolId) async {
+    try {
+      return Right(await remoteDataSource.getRelationshipsForSchool(schoolId));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, ParentStudentRelationship>> createRelationship({
     required String schoolId,
     required String studentId,

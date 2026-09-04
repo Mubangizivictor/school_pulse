@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
-import 'package:school_pulse/features/admin/presentation/screens/access_codes_screen.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 
@@ -69,9 +68,7 @@ final _actions = [
     label: 'Add Parent',
     icon: Icons.person_add_outlined,
     color: Colors.black,
-    onTap: (context) => Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const AccessCodesScreen())),
+    onTap: (context) => context.push('/staff/admin/parents'),
   ),
   _QuickAddAction(
     label: 'Create Announcement',

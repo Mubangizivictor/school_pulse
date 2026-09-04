@@ -12,6 +12,9 @@ abstract class RelationshipRepository {
   Future<Either<Failure, List<ParentStudentRelationship>>>
   getRelationshipsForParent(String schoolId, String userId);
 
+  Future<Either<Failure, List<ParentStudentRelationship>>>
+  getRelationshipsForSchool(String schoolId);
+
   Future<Either<Failure, ParentStudentRelationship>> createRelationship({
     required String schoolId,
     required String studentId,

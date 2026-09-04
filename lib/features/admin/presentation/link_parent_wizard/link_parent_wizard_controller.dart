@@ -1,10 +1,8 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 
+import 'package:school_pulse/features/admin/parent_access_workspace/domain/repositories/parent_access_repository.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
 
-/// The three visible wizard stages: pick parent + learners, review, then the
-/// generated-code reveal (a fourth, unlabeled state reached only on success).
 enum LinkParentStage { details, review, code }
 
 const List<LinkParentStage> kLinkParentStages = [
@@ -19,8 +17,6 @@ int linkParentStageIndexFor(LinkParentStage stage) {
   return i == -1 ? 0 : i;
 }
 
-/// One learner selected in the wizard, with its own per-learner relationship
-/// label (a mother may be "Mother" to one child and "Guardian" to another).
 class SelectedLearner {
   final Student student;
   String relationship;
@@ -28,14 +24,14 @@ class SelectedLearner {
   SelectedLearner({required this.student, this.relationship = 'Mother'});
 }
 
-/// Holds the Link Parent to Learners wizard's accumulating draft, current
-/// stage, and the submit() call that creates the parent access code invite
-/// via the `createParentAccessCode` callable. A plain ChangeNotifier to match
-/// the Add Staff wizard's controller convention.
 class LinkParentWizardController extends ChangeNotifier {
   final String schoolId;
+  final ParentAccessRepository repository;
 
-  LinkParentWizardController({required this.schoolId}) {
+  LinkParentWizardController({
+    required this.schoolId,
+    required this.repository,
+  }) {
     parentNameController.addListener(notifyListeners);
     phoneController.addListener(notifyListeners);
   }
@@ -65,9 +61,6 @@ class LinkParentWizardController extends ChangeNotifier {
   String get parentName => parentNameController.text.trim();
   String get rawPhone => phoneController.text.trim();
 
-  /// E.164 phone built from the selected country code and the digits typed
-  /// into the phone field (matches the createParentAccessCode contract,
-  /// which requires `^\+\d{8,15}$` with no spaces).
   String get e164Phone {
     final digits = rawPhone.replaceAll(RegExp(r'\D'), '');
     return '$countryCode$digits';
@@ -122,72 +115,45 @@ class LinkParentWizardController extends ChangeNotifier {
     submitting = true;
     submitError = null;
     notifyListeners();
-    try {
-      final result = await FirebaseFunctions.instance
-          .httpsCallable('createParentAccessCode')
-          .call({
-            'parentName': parentName,
-            'phoneNumber': e164Phone,
-            'learners': selectedLearners
-                .map(
-                  (l) => {
-                    'studentId': l.student.id,
-                    'relationship': l.relationship,
-                  },
-                )
-                .toList(),
-          });
-      final data = Map<String, dynamic>.from(result.data as Map);
-      resultCode = data['code'] as String?;
-      resultInviteId = data['inviteId'] as String?;
-      final expiresAtMs = data['expiresAt'];
-      resultExpiresAt = expiresAtMs is int
-          ? DateTime.fromMillisecondsSinceEpoch(expiresAtMs)
-          : null;
-      submitting = false;
-      _stage = LinkParentStage.code;
-      notifyListeners();
-      return true;
-    } on FirebaseFunctionsException catch (error) {
-      submitting = false;
-      submitError = _friendlyError(error);
-      notifyListeners();
-      return false;
-    } catch (_) {
-      submitting = false;
-      submitError = 'Could not create the parent access code. Try again.';
-      notifyListeners();
-      return false;
-    }
+
+    final result = await repository.issueParentAccessCode(
+      parentName: parentName,
+      phoneNumber: e164Phone,
+      learners: selectedLearners
+          .map(
+            (l) => LearnerLinkRequest(
+              studentId: l.student.id,
+              relationship: l.relationship,
+            ),
+          )
+          .toList(),
+    );
+
+    return result.fold(
+      (failure) {
+        submitting = false;
+        submitError = failure.message;
+        notifyListeners();
+        return false;
+      },
+      (issued) {
+        resultCode = issued.code;
+        resultInviteId = issued.inviteId;
+        resultExpiresAt = issued.expiresAt;
+        submitting = false;
+        _stage = LinkParentStage.code;
+        notifyListeners();
+        return true;
+      },
+    );
   }
 
   Future<bool> revoke() async {
     if (resultInviteId == null) return false;
-    try {
-      await FirebaseFunctions.instance
-          .httpsCallable('revokeParentAccessCode')
-          .call({'inviteId': resultInviteId});
-      return true;
-    } on FirebaseFunctionsException {
-      return false;
-    }
-  }
-
-  String _friendlyError(FirebaseFunctionsException error) {
-    switch (error.code) {
-      case 'failed-precondition':
-        return 'A learner can have a maximum of two parents.';
-      case 'already-exists':
-        return 'This parent is already linked to one of the selected learners.';
-      case 'permission-denied':
-        return 'One or more learners are unavailable, or you do not have permission to issue codes.';
-      case 'invalid-argument':
-        return error.message ??
-            'Enter the parent details and select at least one learner.';
-      default:
-        return error.message ??
-            'Could not create the parent access code. Try again.';
-    }
+    final result = await repository.revokeParentAccessCode(
+      inviteId: resultInviteId!,
+    );
+    return result.isRight();
   }
 
   @override

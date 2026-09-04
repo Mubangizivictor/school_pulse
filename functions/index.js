@@ -2277,6 +2277,11 @@ function newParentInviteCode(schoolPrefix) {
   const digits = String(randomBytes(4).readUInt32BE(0) % 1000000).padStart(6, "0");
   return `${schoolPrefix}-${digits}P`;
 }
+function maskPhoneNumber(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.length < 4) return "***";
+  return `***${digits.slice(-4)}`;
+}
 function parentInviteError() {
   return new HttpsError("permission-denied", "This code is invalid, expired, or already used.");
 }
@@ -2492,6 +2497,77 @@ exports.reallocateParentLink = onCall({ secrets: ["PARENT_ACCESS_CODE_PEPPER"] }
 
   if (isRemoval) return { success: true, removed: true };
   return { success: true, inviteId: result.inviteId, code: result.code, expiresAt: result.expiresAt };
+});
+
+/** Read-only, six-role gated (same as createParentAccessCode): lists this
+ * school's parent_access_code_invites so the admin UI can render an Access
+ * Codes tab without ever reading parent_access_code_invites/
+ * parent_learner_links directly (both are `allow read, write: if false`).
+ * Never returns phoneNumber or codeHash - only a server-masked phone and
+ * code-state fields. status is recomputed here (rather than trusted from the
+ * stored field) so an invite past its expiresAt is reported "expired" even
+ * if nothing has written that back to Firestore yet. Also returns
+ * pendingCount/expiringSoonCount (expiresAt within 48h) computed from this
+ * same query so the client never needs its own aggregation query against a
+ * collection it cannot read. */
+exports.listParentAccessInvites = onCall(async (request) => {
+  const actor = await parentInviteAdmin(request);
+  const schoolId = String(actor.schoolId || "");
+  if (!schoolId) throw new HttpsError("failed-precondition", "Your account is not assigned to a school.");
+
+  const pageSize = Math.min(Math.max(Number(request.data?.pageSize) || 25, 1), 100);
+  const cursor = String(request.data?.cursor || "");
+
+  const db = admin.firestore();
+  let query = db.collection("parent_access_code_invites")
+    .where("schoolId", "==", schoolId)
+    .orderBy("createdAt", "desc")
+    .limit(pageSize);
+  if (cursor) {
+    const cursorSnap = await db.collection("parent_access_code_invites").doc(cursor).get();
+    if (cursorSnap.exists) query = query.startAfter(cursorSnap);
+  }
+  const snap = await query.get();
+
+  const now = Date.now();
+  const expiringSoonMs = 48 * 60 * 60 * 1000;
+  const rows = snap.docs.map((doc) => {
+    const data = doc.data();
+    const expiresAtMs = data.expiresAt?.toMillis?.() ?? 0;
+    const isExpired = expiresAtMs > 0 && expiresAtMs < now;
+    const status = data.status === "revoked" ? "revoked" : isExpired ? "expired" : "active";
+    return {
+      inviteId: doc.id,
+      parentName: data.parentName || "",
+      maskedPhone: maskPhoneNumber(data.phoneNumber),
+      learnerCount: Array.isArray(data.learnerIds) ? data.learnerIds.length : 0,
+      status,
+      createdAt: data.createdAt?.toMillis?.() ?? null,
+      expiresAt: expiresAtMs || null,
+      expiringSoon: status === "active" && expiresAtMs > 0 && expiresAtMs - now <= expiringSoonMs,
+    };
+  });
+
+  // Aggregate counts reflect the full school (not just this page), so a
+  // second unpaginated query drives them rather than the page above.
+  const allSnap = await db.collection("parent_access_code_invites").where("schoolId", "==", schoolId).get();
+  let pendingCount = 0;
+  let expiringSoonCount = 0;
+  allSnap.docs.forEach((doc) => {
+    const data = doc.data();
+    if (data.status === "revoked") return;
+    const expiresAtMs = data.expiresAt?.toMillis?.() ?? 0;
+    if (expiresAtMs > 0 && expiresAtMs < now) return; // expired, not pending
+    pendingCount += 1;
+    if (expiresAtMs > 0 && expiresAtMs - now <= expiringSoonMs) expiringSoonCount += 1;
+  });
+
+  return {
+    rows,
+    nextCursor: snap.docs.length === pageSize ? snap.docs[snap.docs.length - 1].id : null,
+    pendingCount,
+    expiringSoonCount,
+  };
 });
 
 exports.revokeParentAccessCode = onCall(async (request) => {

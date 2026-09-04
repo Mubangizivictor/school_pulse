@@ -12,7 +12,7 @@ import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.d
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
-import '../screens/access_codes_screen.dart';
+import 'package:school_pulse/features/admin/parent_access_workspace/presentation/screens/parents_access_workspace_screen.dart';
 
 class UserManagementPage extends StatefulWidget {
   const UserManagementPage({super.key});
@@ -95,7 +95,9 @@ class UsersOverviewView extends StatelessWidget {
               color: AppColors.success(context),
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const AccessCodesScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const ParentsAccessWorkspaceScreen(),
+                ),
               ),
             ),
           ],

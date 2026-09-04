@@ -50,7 +50,8 @@ import 'package:school_pulse/features/teacher/presentation/screens/class_teacher
 import 'package:school_pulse/features/teacher/presentation/screens/class_activities_screen.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/presentation/pages/user_management_page.dart';
-import 'package:school_pulse/features/admin/presentation/screens/access_codes_screen.dart';
+import 'package:school_pulse/features/admin/parent_access_workspace/presentation/screens/parents_access_workspace_screen.dart';
+import 'package:school_pulse/features/admin/presentation/screens/school_setup_screen.dart';
 import 'package:school_pulse/features/admin/presentation/pages/staff_list_page.dart';
 import 'package:school_pulse/features/admin/presentation/pages/staff_detail_screen.dart';
 import 'package:school_pulse/features/admin/presentation/add_staff_wizard/add_staff_wizard_page.dart';
@@ -568,8 +569,9 @@ final router = GoRouter(
 
     // Protect Super Admin routes. Only the *synchronous* checks live here
     // in the global redirect: the async mandatory-MFA-enrollment and
-    // owner-security-session validation moved onto `superAdminRoute`'s own
-    // `redirect` (see super_admin_routes.dart). Keeping an `await` out of
+    // owner-security-session validation moved onto each route in
+    // `superAdminRoutes`'s own `redirect` (see super_admin_routes.dart).
+    // Keeping an `await` out of
     // this hot, every-navigation callback is what stops a slow session
     // check from resolving against a route the user was already navigated
     // past - the flash/return bug.
@@ -2335,6 +2337,27 @@ final router = GoRouter(
           builder: (context, state) => const AdminDashboardScreen(),
           routes: [
             GoRoute(
+              path: 'school-setup',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                // Same subset as the Structure hub's own admin-tier gate
+                // (UserRoleRouting.adminConsoleRoles) - a School Admin's own
+                // identity editor, never Bursar/Teacher/Parent/Student.
+                const allowedRoles = [
+                  UserRole.schoolAdmin,
+                  UserRole.headTeacher,
+                  UserRole.deputyHead,
+                  UserRole.director,
+                ];
+                if (!auth.user.roles.any(allowedRoles.contains)) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
+              builder: (context, state) => const SchoolSetupScreen(),
+            ),
+            GoRoute(
               path: 'data-management',
               redirect: (context, state) {
                 final auth = context.read<AuthBloc>().state;
@@ -2389,7 +2412,7 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'parents',
-              builder: (context, state) => const AccessCodesScreen(),
+              builder: (context, state) => const ParentsAccessWorkspaceScreen(),
             ),
             GoRoute(
               path: 'users',
@@ -2401,7 +2424,7 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'access-codes',
-                  builder: (context, state) => const AccessCodesScreen(),
+                  builder: (context, state) => const ParentsAccessWorkspaceScreen(),
                 ),
                 GoRoute(
                   path: 'add-staff',
@@ -3724,7 +3747,7 @@ final router = GoRouter(
     // owner-console screen, path and nested Navigator stays inside that
     // module. Deliberately outside every ShellRoute above - the console
     // has its own navigation and must never be wrapped in StaffShell.
-    superAdminRoute,
+    ...superAdminRoutes,
   ],
 );
 
