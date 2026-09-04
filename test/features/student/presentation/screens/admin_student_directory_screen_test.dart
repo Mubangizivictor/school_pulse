@@ -1,8 +1,10 @@
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_theme.dart';
+import 'package:school_pulse/features/student/data/datasources/student_profile_data_source.dart';
 import 'package:school_pulse/features/attendance_hub/domain/entities/attendance_category.dart';
 import 'package:school_pulse/features/attendance_hub/domain/entities/attendance_record.dart';
 import 'package:school_pulse/features/attendance_hub/presentation/bloc/attendance_bloc.dart';
@@ -175,7 +177,7 @@ void main() {
     if (di.sl.isRegistered<AttendanceBloc>()) di.sl.unregister<AttendanceBloc>();
   });
 
-  Widget buildSubject({Size size = const Size(390, 844)}) {
+  Widget buildSubject() {
     final router = GoRouter(
       initialLocation: '/students',
       routes: [
@@ -186,7 +188,11 @@ void main() {
               BlocProvider<AuthBloc>.value(value: authBloc),
               BlocProvider<StructureBloc>.value(value: structureBloc),
             ],
-            child: const AdminStudentDirectoryScreen(),
+            child: AdminStudentDirectoryScreen(
+              profileDataSource: StudentProfileDataSource(
+                firestore: FakeFirebaseFirestore(),
+              ),
+            ),
           ),
         ),
         GoRoute(
@@ -206,13 +212,20 @@ void main() {
       ],
     );
 
-    return MediaQuery(
-      data: MediaQueryData(size: size),
-      child: MaterialApp.router(
-        theme: AppTheme.light(),
-        routerConfig: router,
-      ),
+    return MaterialApp.router(
+      theme: AppTheme.light(),
+      routerConfig: router,
     );
+  }
+
+  Future<void> setSurfaceSize(WidgetTester tester, Size size) async {
+    await tester.binding.setSurfaceSize(size);
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
   }
 
   group('loading / error / empty states', () {
@@ -391,7 +404,10 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('50% present'), findsOneWidget);
+      expect(
+        find.textContaining('50% present', findRichText: true),
+        findsOneWidget,
+      );
       expect(find.text('View attendance'), findsOneWidget);
 
       await tester.tap(find.text('View attendance'));
@@ -419,7 +435,8 @@ void main() {
       studentsBloc.emit(
         StudentsLoaded([_student(id: 's1', name: 'Aarav Sharma')]),
       );
-      await tester.pumpWidget(buildSubject(size: const Size(390, 844)));
+      await setSurfaceSize(tester, const Size(390, 844));
+      await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
       expect(find.byType(ListTile), findsWidgets);
@@ -429,7 +446,8 @@ void main() {
       studentsBloc.emit(
         StudentsLoaded([_student(id: 's1', name: 'Aarav Sharma')]),
       );
-      await tester.pumpWidget(buildSubject(size: const Size(1440, 900)));
+      await setSurfaceSize(tester, const Size(1440, 900));
+      await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
       expect(find.text('Admission no.'), findsOneWidget);
@@ -441,10 +459,45 @@ void main() {
       studentsBloc.emit(
         StudentsLoaded([_student(id: 's1', name: 'Aarav Sharma')]),
       );
-      await tester.pumpWidget(buildSubject(size: const Size(768, 1024)));
+      await setSurfaceSize(tester, const Size(768, 1024));
+      await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('desktop shows a numbered pagination footer, not Show more', (
+      tester,
+    ) async {
+      studentsBloc.emit(
+        StudentsLoaded(
+          List.generate(45, (i) => _student(id: 's$i', name: 'Learner $i')),
+        ),
+      );
+      await setSurfaceSize(tester, const Size(1440, 900));
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Showing 1 to 40 of 45 learners'), findsOneWidget);
+      expect(find.textContaining('Show more'), findsNothing);
+
+      await tester.ensureVisible(find.text('2'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('2'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Showing 41 to 45 of 45 learners'), findsOneWidget);
+    });
+
+    testWidgets('desktop table shows a parent-link indicator', (tester) async {
+      studentsBloc.emit(
+        StudentsLoaded([_student(id: 's1', name: 'Aarav Sharma')]),
+      );
+      await setSurfaceSize(tester, const Size(1440, 900));
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Not linked'), findsOneWidget);
     });
   });
 
@@ -458,7 +511,8 @@ void main() {
           _student(id: 's2', name: 'Priya Singh', status: StudentStatus.withdrawn),
         ]),
       );
-      await tester.pumpWidget(buildSubject(size: const Size(1440, 900)));
+      await setSurfaceSize(tester, const Size(1440, 900));
+      await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
       expect(find.text('Clear filters'), findsNothing);
