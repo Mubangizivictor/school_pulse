@@ -9,6 +9,43 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16.png">
 <link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+<style>
+  .pp-dash { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; min-width: 0; max-width: 100%; }
+  .pp-dash-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--color-border); }
+  .pp-dash-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--color-surface); flex-shrink: 0; }
+  .pp-dash-head .name { font-weight: 800; font-size: 14.5px; color: var(--color-ink); }
+  .pp-dash-head .sub { font-size: 12px; color: var(--color-muted); }
+  .pp-dash-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 14px 18px; }
+  .pp-stat { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px 12px; min-width: 0; }
+  .pp-stat .k { font-size: 12px; font-weight: 600; color: var(--color-ink-soft); margin-bottom: 4px; }
+  .pp-stat .v { font-size: 20px; font-weight: 800; color: var(--color-ink); }
+  .pp-stat .v.green { color: var(--color-success-text); }
+  .pp-stat .foot { font-size: 11.5px; color: var(--color-muted); margin-top: 2px; }
+  .pp-stat .foot.green { color: var(--color-success-text); font-weight: 600; }
+  .pp-report { margin: 0 18px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .pp-report .k { font-size: 12px; font-weight: 600; color: var(--color-ink-soft); }
+  .pp-report .v { font-size: 18px; font-weight: 800; color: var(--color-ink); margin-top: 2px; }
+  .pp-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--color-success-bg); color: var(--color-success-text); }
+  .pp-updates { margin: 0 18px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px 12px; }
+  .pp-updates .hd { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--color-ink-soft); margin-bottom: 8px; }
+  .pp-update-row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 13px; }
+  .pp-update-row .ic { width: 20px; height: 20px; border-radius: 50%; background: var(--color-surface); color: var(--color-primary); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .pp-update-row .ic svg { width: 12px; height: 12px; }
+  .pp-update-row .txt { min-width: 0; }
+  .pp-update-row .txt .t { color: var(--color-ink); font-weight: 500; }
+  .pp-update-row .txt .d { font-size: 11px; color: var(--color-muted); }
+  .pp-calendar { margin: 0 18px 16px; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .pp-calendar .t { font-size: 13px; font-weight: 700; color: var(--color-ink); }
+  .pp-calendar .d { font-size: 11.5px; color: var(--color-muted); }
+  .pp-hero-trust { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 18px; }
+  .pp-hero-trust-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--color-muted); font-weight: 600; }
+  .pp-hero-trust-item svg { width: 15px; height: 15px; color: var(--color-primary); }
+  @media (max-width: 480px) {
+    .pp-dash-stats { gap: 8px; }
+    .pp-stat { padding: 8px 8px; }
+    .pp-stat .v { font-size: 17px; }
+  }
+</style>
 </head>
 <body>
 
@@ -20,49 +57,68 @@
       <div>
         <span class="eyebrow">Parent Portal</span>
         <h1>Keep every parent in the loop.</h1>
-        <p class="lead">Attendance, fee balances, report cards and school updates — all in one simple app parents actually check, even on patchy internet.</p>
+        <p class="lead">School Pulse Parent Portal keeps parents informed and engaged with real-time updates on attendance, fees, academics and school life.</p>
         <div class="btn-row">
-          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
-          <a href="pricing.html" class="btn btn-outline btn-lg">See pricing</a>
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school →</a>
+          <a href="#how-it-works" class="btn btn-outline btn-lg">See how it works</a>
+        </div>
+        <div class="pp-hero-trust">
+          <span class="pp-hero-trust-item" id="trust-0"></span>
+          <span class="pp-hero-trust-item" id="trust-1"></span>
+          <span class="pp-hero-trust-item" id="trust-2"></span>
         </div>
       </div>
-      <div class="mockup">
-        <div class="mockup-chrome">
-          <span class="mockup-dot"></span><span class="mockup-dot"></span><span class="mockup-dot"></span>
-          <span class="mockup-url">app.schoolpulseapp.com/parent</span>
+      <div class="pp-dash">
+        <div class="pp-dash-head">
+          <span class="pp-dash-avatar"></span>
+          <div>
+            <div class="name">Welcome, Jane</div>
+            <div class="sub">Parent of Michael Okello – S.3</div>
+          </div>
         </div>
-        <div class="mockup-body">
-          <div class="grid grid-2" style="margin-bottom:16px;">
-            <div class="card" style="padding:16px;">
-              <div class="muted" style="font-size:12px;">Attendance this term</div>
-              <div style="font-size:24px; font-weight:800; margin-top:4px;">96.5%</div>
-              <span class="stat-pill green" style="margin-top:8px;">▲ Consistent</span>
-            </div>
-            <div class="card" style="padding:16px;">
-              <div class="muted" style="font-size:12px;">Fee balance</div>
-              <div style="font-size:24px; font-weight:800; margin-top:4px;">UGX 0</div>
-              <span class="stat-pill blue" style="margin-top:8px;">Cleared</span>
-            </div>
+        <div class="pp-dash-stats">
+          <div class="pp-stat">
+            <div class="k">Attendance</div>
+            <div class="v green">96.5%</div>
+            <div class="foot green">Present</div>
+            <div class="foot">This Term</div>
           </div>
-          <div class="card" style="padding:16px; margin-bottom:16px;">
-            <div class="muted" style="font-size:12px;">Latest report card</div>
-            <div style="font-weight:700; margin-top:4px;">Term 2 — Overall: Distinction (88.4%)</div>
+          <div class="pp-stat">
+            <div class="k">Fee Balance</div>
+            <div class="v green">UGX 0</div>
+            <div class="foot green">Cleared ✓</div>
+            <div class="foot">No outstanding fees</div>
           </div>
-          <div class="muted" style="font-size:12px; margin-bottom:8px;">Recent updates</div>
-          <ul class="checklist">
-            <li>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
-              Nakato Grace was marked present today at 7:52am
-            </li>
-            <li>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
-              Term 2 report card is now available
-            </li>
-            <li>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
-              School: Parent-teacher meeting on Saturday, 9am
-            </li>
-          </ul>
+        </div>
+        <div class="pp-report">
+          <div>
+            <div class="k">Latest Report Card</div>
+            <div class="v">Term 2, 2024</div>
+            <div class="foot">Average Score: 78%</div>
+          </div>
+          <span class="pp-badge">Published</span>
+        </div>
+        <div class="pp-updates">
+          <div class="hd"><span>Recent Updates</span><span>View all</span></div>
+          <div class="pp-update-row">
+            <span class="ic" id="upd-ic-0"></span>
+            <span class="txt"><span class="t">Fee payment received</span><br><span class="d">May 20, 2024 • 10:24 AM</span></span>
+          </div>
+          <div class="pp-update-row">
+            <span class="ic" id="upd-ic-1"></span>
+            <span class="txt"><span class="t">Term 2 report card published</span><br><span class="d">May 15, 2024 • 08:15 AM</span></span>
+          </div>
+          <div class="pp-update-row">
+            <span class="ic" id="upd-ic-2"></span>
+            <span class="txt"><span class="t">Sports Day – May 30</span><br><span class="d">May 10, 2024 • 09:00 AM</span></span>
+          </div>
+        </div>
+        <div class="pp-calendar">
+          <div>
+            <div class="t">Staff Meeting</div>
+            <div class="d">May 24, 2024 • 2:00 PM – 4:00 PM</div>
+          </div>
+          <span class="muted" style="font-size:12px;">📅</span>
         </div>
       </div>
     </div>
@@ -72,36 +128,77 @@
     <div class="container">
       <div class="section-head">
         <span class="eyebrow">Privacy</span>
-        <h2>Privacy you can trust</h2>
-        <p>Parents only ever see what's relevant to their own children — nothing more.</p>
+        <h2>Privacy you can count on</h2>
+        <p>We protect your family's data with enterprise-grade security and give you control over what you share.</p>
       </div>
       <div class="grid grid-3">
         <div class="card">
           <div class="card-icon" id="icon-secure"></div>
           <h3>Data encrypted</h3>
-          <p>All information is encrypted in transit and at rest, protected by bank-grade security standards.</p>
+          <p>All data is encrypted in transit and at rest. We never share your information.</p>
         </div>
         <div class="card">
           <div class="card-icon" id="icon-key"></div>
           <h3>Role-based access</h3>
-          <p>Parents, teachers and administrators each see only what their role permits — enforced at every level.</p>
+          <p>Parents see only their children's data. Access is limited by role and permission.</p>
         </div>
         <div class="card">
           <div class="card-icon" id="icon-eye"></div>
           <h3>You control visibility</h3>
-          <p>Schools decide exactly what's shared with parents and when — full control stays with you.</p>
+          <p>Choose what information is visible and manage your communication preferences.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="section">
+  <section class="section" id="how-it-works">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Benefits for every role</span>
+        <h2>One portal, three sets of needs.</h2>
+      </div>
+      <div class="grid grid-3">
+        <div class="card">
+          <div class="card-icon" id="icon-parents"></div>
+          <h3>For Parents</h3>
+          <p style="font-size:14px; margin-bottom:10px;">Stay informed and involved in your child's education every step of the way.</p>
+          <ul class="checklist">
+            <li id="ck-p-0"></li>
+            <li id="ck-p-1"></li>
+            <li id="ck-p-2"></li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-icon" id="icon-teachers"></div>
+          <h3>For Teachers</h3>
+          <p style="font-size:14px; margin-bottom:10px;">Strengthen parent partnerships and support student success.</p>
+          <ul class="checklist">
+            <li id="ck-t-0"></li>
+            <li id="ck-t-1"></li>
+            <li id="ck-t-2"></li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-icon" id="icon-leaders"></div>
+          <h3>For School Leaders</h3>
+          <p style="font-size:14px; margin-bottom:10px;">Build trust, improve transparency and enhance school reputation.</p>
+          <ul class="checklist">
+            <li id="ck-l-0"></li>
+            <li id="ck-l-1"></li>
+            <li id="ck-l-2"></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
     <div class="container">
       <div class="cta-banner">
-        <h2>Give parents the visibility they've been asking for.</h2>
-        <p>Register your school and open the parent portal in days, not months.</p>
+        <h2>Ready to bring your school closer to every parent?</h2>
+        <p>Join hundreds of schools using School Pulse to keep parents informed and engaged.</p>
         <div class="btn-row" style="justify-content:center;">
-          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school →</a>
         </div>
       </div>
     </div>
@@ -118,6 +215,45 @@
   document.getElementById('icon-secure').innerHTML = window.ICONS.secure;
   document.getElementById('icon-key').innerHTML = window.ICONS.key;
   document.getElementById('icon-eye').innerHTML = window.ICONS.eye;
+  document.getElementById('icon-parents').innerHTML = window.ICONS.parents;
+  document.getElementById('icon-teachers').innerHTML = window.ICONS.user;
+  document.getElementById('icon-leaders').innerHTML = window.ICONS.building;
+
+  ['upd-ic-0','upd-ic-1','upd-ic-2'].forEach(function (id, i) {
+    var icon = i === 0 ? 'fees' : (i === 1 ? 'file' : 'calendar');
+    document.getElementById(id).innerHTML = window.ICONS[icon] || window.ICONS.check;
+  });
+
+  function fillChecklist(prefix, items) {
+    items.forEach(function (text, i) {
+      var el = document.getElementById(prefix + '-' + i);
+      if (el) el.innerHTML = window.ICONS.check + '<span>' + text + '</span>';
+    });
+  }
+
+  fillChecklist('ck-p', [
+    'Real-time updates',
+    'Easy fee payments',
+    'Track academics & attendance'
+  ]);
+  fillChecklist('ck-t', [
+    'Share updates instantly',
+    'Communicate effectively',
+    'Save time on admin'
+  ]);
+  fillChecklist('ck-l', [
+    'Centralized communication',
+    'Data-driven insights',
+    'Stronger community trust'
+  ]);
+
+  function fillTrust(id, icon, text) {
+    var el = document.getElementById(id);
+    el.innerHTML = window.ICONS[icon] + '<span>' + text + '</span>';
+  }
+  fillTrust('trust-0', 'secure', 'Secure by design');
+  fillTrust('trust-1', 'check', 'Easy for parents');
+  fillTrust('trust-2', 'phone', 'Works on any device');
 </script>
 </body>
 </html>
