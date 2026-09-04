@@ -18,6 +18,7 @@ class UserEntity extends Equatable {
   final String schoolId;
   final String? schoolName;
   final bool isActive;
+  final DateTime? lastActiveAt;
   final String? deactivationReason;
   final bool mustChangePassword;
   final bool mfaEnabled;
@@ -51,6 +52,7 @@ class UserEntity extends Equatable {
     this.assignedClass,
     this.subjects,
     this.isActive = true,
+    this.lastActiveAt,
     this.deactivationReason,
     this.mustChangePassword = false,
     this.mfaEnabled = false,
@@ -80,6 +82,7 @@ class UserEntity extends Equatable {
     String? assignedClass,
     List<SubjectAssignment>? subjects,
     bool? isActive,
+    DateTime? lastActiveAt,
     String? deactivationReason,
     bool? mustChangePassword,
     bool? mfaEnabled,
@@ -109,6 +112,7 @@ class UserEntity extends Equatable {
       assignedClass: assignedClass ?? this.assignedClass,
       subjects: subjects ?? this.subjects,
       isActive: isActive ?? this.isActive,
+      lastActiveAt: lastActiveAt ?? this.lastActiveAt,
       deactivationReason: deactivationReason ?? this.deactivationReason,
       mustChangePassword: mustChangePassword ?? this.mustChangePassword,
       mfaEnabled: mfaEnabled ?? this.mfaEnabled,
@@ -142,6 +146,7 @@ class UserEntity extends Equatable {
     subjects,
     mustChangePassword,
     isActive,
+    lastActiveAt,
     deactivationReason,
     mfaEnabled,
     departmentId,
