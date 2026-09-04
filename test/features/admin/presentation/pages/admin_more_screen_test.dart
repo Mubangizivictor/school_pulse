@@ -143,4 +143,45 @@ void main() {
     );
     expect(find.text('Personal'), findsOneWidget);
   });
+
+  final widths = <String, Size>{
+    'compact mobile (360)': const Size(360, 780),
+    'mobile (390)': const Size(390, 844),
+    'large mobile (480)': const Size(480, 900),
+    'tablet (600)': const Size(600, 900),
+    'tablet (768)': const Size(768, 1024),
+    'small desktop (1024)': const Size(1024, 800),
+    'desktop (1280)': const Size(1280, 900),
+    'large desktop (1440)': const Size(1440, 960),
+  };
+
+  for (final entry in widths.entries) {
+    testWidgets('no overflow or render errors at ${entry.key}', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildApp(schoolAdmin, size: entry.value));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('long name and school name do not overflow the account card', (
+    tester,
+  ) async {
+    const longUser = UserEntity(
+      id: 'admin-2',
+      name: 'Nakato Elizabeth Mubangizi-Nantongo',
+      email: 'admin2@schoolpulse.com',
+      schoolId: 'school-1',
+      schoolName:
+          'St. Mary of the Immaculate Conception International Academy and Boarding School',
+      roles: [UserRole.headTeacher],
+      isActive: true,
+    );
+    for (final size in [const Size(360, 780), const Size(1280, 900)]) {
+      await tester.pumpWidget(buildApp(longUser, size: size));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    }
+  });
 }
