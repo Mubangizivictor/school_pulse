@@ -1161,6 +1161,114 @@ input[type="range"] { width: 100%; accent-color: var(--color-primary); height: 2
 
 .reg-step-count { font-size: 13.5px; font-weight: 600; color: var(--color-muted); margin: 4px 0 0; }
 
+/* ---------- Step 1 reference-screenshot rail + feature strip (UI only) ---------- */
+/* Gated purely by :has() on the real .active state wizard.js already sets —
+   no JS, no changes to wizard.js/register-submit.js. Hides the generic
+   top step bar + heading while step 1 is shown, and lays the decorative
+   rail beside the step-1 card via CSS grid, restoring the normal single
+   column .layout-2col flow for every other step untouched. */
+.reg-step1-rail,
+.reg-step1-features { display: none; }
+#wizardForm:has(.reg-step1.active) { display: grid; grid-template-columns: 260px 1fr; gap: 24px; align-items: start; }
+#wizardForm:has(.reg-step1.active) #wizardStepsBar { display: none; }
+#wizardForm:has(.reg-step1.active) .reg-step1-rail { display: flex; grid-column: 1; grid-row: 1; }
+#wizardForm:has(.reg-step1.active) .layout-2col { grid-column: 2; grid-row: 1; grid-template-columns: 1fr; }
+#wizardForm:has(.reg-step1.active) .layout-2col > .sidebar-col { display: none; }
+/* the rail's own trust box replaces this inline duplicate while step 1 is active */
+#wizardForm:has(.reg-step1.active) .reg-step1-trust { display: none; }
+#registerWizard:has(.reg-step1.active) ~ .reg-step1-features { display: grid; }
+#wizardHead:has(~ #registerWizard .reg-step1.active) { display: none; }
+
+@media (max-width: 900px) {
+  #wizardForm:has(.reg-step1.active) { grid-template-columns: 1fr; }
+  #wizardForm:has(.reg-step1.active) .reg-step1-rail { grid-column: 1; grid-row: 1; }
+  #wizardForm:has(.reg-step1.active) .layout-2col { grid-column: 1; grid-row: 2; }
+}
+
+.reg-step1-rail {
+  flex-direction: column;
+  gap: 24px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  position: sticky;
+  top: 88px;
+}
+.reg-step1-rail-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.reg-step1-rail-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding-bottom: 26px;
+}
+.reg-step1-rail-item::before {
+  content: "";
+  position: absolute;
+  left: 15px; top: 32px; bottom: 4px;
+  width: 2px;
+  background: var(--color-border);
+  border-left: 2px dashed var(--color-border);
+  background: none;
+}
+.reg-step1-rail-item:last-child::before { display: none; }
+.reg-step1-rail-item:last-child { padding-bottom: 0; }
+.reg-step1-rail-dot {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 13.5px;
+  background: var(--color-card);
+  border: 2px solid var(--color-border);
+  color: var(--color-muted);
+  position: relative; z-index: 1;
+}
+.reg-step1-rail-item.is-active .reg-step1-rail-dot {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+.reg-step1-rail-text { display: flex; flex-direction: column; gap: 2px; padding-top: 5px; }
+.reg-step1-rail-text strong { font-size: 14.5px; color: var(--color-ink); font-weight: 700; }
+.reg-step1-rail-item.is-active .reg-step1-rail-text strong { color: var(--color-primary); }
+.reg-step1-rail-text span { font-size: 12.5px; color: var(--color-muted); }
+
+.reg-step1-rail-trust {
+  display: flex; gap: 12px;
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-soft-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+.reg-step1-rail-trust-icon { flex-shrink: 0; color: var(--color-primary); }
+.reg-step1-rail-trust strong { display: block; font-size: 14px; color: var(--color-primary-dark); margin-bottom: 4px; }
+.reg-step1-rail-trust p { margin: 0; font-size: 12.5px; color: var(--color-ink-soft); }
+
+.reg-step1-features {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 1px solid var(--color-border);
+}
+.reg-step1-feature { display: flex; gap: 14px; align-items: flex-start; }
+.reg-step1-feature-icon {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  display: flex; align-items: center; justify-content: center;
+}
+.reg-step1-feature strong { display: block; font-size: 14.5px; color: var(--color-ink); margin-bottom: 4px; }
+.reg-step1-feature p { margin: 0; font-size: 13px; color: var(--color-muted); line-height: 1.5; }
+
+@media (max-width: 760px) {
+  .reg-step1-features { grid-template-columns: 1fr; }
+}
+
 /* Left-column card wrapper for each step */
 .reg-card {
   background: var(--color-surface);
