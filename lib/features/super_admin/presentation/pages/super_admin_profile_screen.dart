@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, Uint8List;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -307,25 +308,35 @@ class _SuperAdminProfileScreenState extends State<SuperAdminProfileScreen> {
     if (image == null || !mounted) return;
     _markDirty();
 
-    final cropped = await ImageCropper().cropImage(
-      sourcePath: image.path,
-      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-      uiSettings: [
-        AndroidUiSettings(
-          toolbarTitle: 'Crop Photo',
-          lockAspectRatio: true,
-          hideBottomControls: false,
-        ),
-        IOSUiSettings(title: 'Crop Photo', aspectRatioLockEnabled: true),
-      ],
-    );
-    if (cropped == null || !mounted) return;
+    // image_cropper's native crop UI (AndroidUiSettings / IOSUiSettings) is
+    // a no-op on Flutter web and its sourcePath crop can resolve to null
+    // there, which silently aborted the whole upload. On web, skip the
+    // cropper and upload the picked image as-is; keep the square crop step
+    // on mobile.
+    final Uint8List bytes;
+    if (kIsWeb) {
+      bytes = await image.readAsBytes();
+    } else {
+      final cropped = await ImageCropper().cropImage(
+        sourcePath: image.path,
+        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Photo',
+            lockAspectRatio: true,
+            hideBottomControls: false,
+          ),
+          IOSUiSettings(title: 'Crop Photo', aspectRatioLockEnabled: true),
+        ],
+      );
+      if (cropped == null || !mounted) return;
+      bytes = await cropped.readAsBytes();
+    }
 
     setState(() => _uploadingPhoto = true);
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) throw StateError('You are not signed in.');
-      final bytes = await cropped.readAsBytes();
       final reference = FirebaseStorage.instance.ref(
         'profile_photos/$uid/profile.jpg',
       );
@@ -334,17 +345,24 @@ class _SuperAdminProfileScreenState extends State<SuperAdminProfileScreen> {
         SettableMetadata(contentType: 'image/jpeg'),
       );
       final url = await reference.getDownloadURL();
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
-        'photoUrl': url,
-      });
+      // set(merge:true), not update(): update() fails if users/{uid} does
+      // not exist yet for this owner.
+      await FirebaseFirestore.instance.collection('users').doc(uid).set(
+        {'photoUrl': url},
+        SetOptions(merge: true),
+      );
       if (mounted) {
         setState(() => _photoUrl = url);
         context.read<AuthBloc>().add(AuthCheckRequested());
       }
     } on FirebaseException catch (e) {
-      _showPhotoError(e.message ?? 'Could not upload the profile picture.');
-    } catch (_) {
-      _showPhotoError('Could not upload the profile picture.');
+      _showPhotoError(
+        e.message == null || e.message!.isEmpty
+            ? 'Could not upload the profile picture. (${e.code})'
+            : '${e.message} (${e.code})',
+      );
+    } catch (e) {
+      _showPhotoError('Could not upload the profile picture. $e');
     } finally {
       if (mounted) setState(() => _uploadingPhoto = false);
     }

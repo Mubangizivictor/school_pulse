@@ -57,19 +57,29 @@ void main() {
     expect(source.contains('Navigator.pop(context);'), isTrue);
   });
 
-  test('photo upload goes through Firebase Storage then updates users/{uid}.photoUrl', () {
+  test('photo upload goes through Firebase Storage then writes users/{uid}.photoUrl', () {
     expect(
       source.contains("FirebaseStorage.instance.ref(\n        'profile_photos/\$uid/profile.jpg',"),
       isTrue,
     );
+    // set(merge:true), not update(): the owner's users/{uid} doc may not
+    // exist yet, and update() would throw not-found.
     expect(
-      source.contains("FirebaseFirestore.instance.collection('users').doc(uid).update({\n        'photoUrl': url,"),
+      source.contains("FirebaseFirestore.instance.collection('users').doc(uid).set("),
       isTrue,
     );
+    expect(source.contains('SetOptions(merge: true)'), isTrue);
   });
 
-  test('photo upload failure surfaces a clean FirebaseException.message, not a raw toString', () {
-    expect(source.contains('e.message ?? '), isTrue);
+  test('the cropper is skipped on web (its native UI is a no-op there)', () {
+    expect(source.contains('if (kIsWeb) {'), isTrue);
+    expect(source.contains('bytes = await image.readAsBytes();'), isTrue);
+    // Mobile still crops.
+    expect(source.contains('ImageCropper().cropImage('), isTrue);
+  });
+
+  test('photo upload failure surfaces the FirebaseException code, not a raw toString', () {
     expect(source.contains('_showPhotoError('), isTrue);
+    expect(source.contains('(\${e.code})'), isTrue);
   });
 }
