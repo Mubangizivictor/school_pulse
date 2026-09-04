@@ -944,6 +944,12 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--c
 .reg-step1-trust p { margin: 0; font-size: 13px; color: var(--color-ink-soft); }
 
 .reg-step1 .wizard-nav button svg { margin-left: 4px; vertical-align: -3px; }
+/* Step 1's real, visible Continue button lives in #wizardActionBar (the
+   in-panel .wizard-nav is hidden, see the Step 4 comment below) — make it
+   full width to match the reference screenshot, step 1 only. */
+#wizardForm:has(.reg-step1.active) .wizard-action-bar { display: flex; grid-column: 2; }
+#wizardForm:has(.reg-step1.active) #wizardBarNext { flex: 1; justify-content: center; }
+#wizardForm:has(.reg-step1.active) #wizardBarBack[hidden] + #wizardBarNext { margin-left: 0; }
 
 .reg-step1-note {
   display: flex; align-items: flex-start; gap: 8px;
