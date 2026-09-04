@@ -248,11 +248,19 @@ class _DirectoryState extends State<_Directory> {
                       : const <attendance.AttendanceRecord>[];
                   final marks = _todayMarks(records);
                   final list = _filtered(all);
-                  final shown = list.take((_page + 1) * _pageSize).toList();
                   return LayoutBuilder(
                     builder: (context, constraints) {
                       final isDesktop =
                           constraints.maxWidth >= AppBreakpoints.smallDesktop;
+                      // Desktop shows one discrete page at a time (with a
+                      // numbered pagination footer); mobile/tablet keep the
+                      // cumulative "Show more" pattern instead.
+                      final shown = isDesktop
+                          ? list
+                                .skip(_page * _pageSize)
+                                .take(_pageSize)
+                                .toList()
+                          : list.take((_page + 1) * _pageSize).toList();
                       return RefreshIndicator(
                         onRefresh: () async => _refresh(),
                         child: SingleChildScrollView(
@@ -316,6 +324,9 @@ class _DirectoryState extends State<_Directory> {
                                       onTap: (id) => context.push(
                                         '/staff/admin/students/$id',
                                       ),
+                                      sort: _sort,
+                                      onSortChanged: (sort) =>
+                                          setState(() => _sort = sort),
                                     )
                                   else
                                     _MobileList(
@@ -326,7 +337,21 @@ class _DirectoryState extends State<_Directory> {
                                         '/staff/admin/students/$id',
                                       ),
                                     ),
-                                  if (shown.length < list.length)
+                                  if (list.isNotEmpty && isDesktop)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        top: AppSpacing.l,
+                                      ),
+                                      child: _PaginationFooter(
+                                        shownCount: shown.length,
+                                        totalCount: list.length,
+                                        page: _page,
+                                        pageSize: _pageSize,
+                                        onPageChanged: (page) =>
+                                            setState(() => _page = page),
+                                      ),
+                                    )
+                                  else if (shown.length < list.length)
                                     Padding(
                                       padding: const EdgeInsets.only(
                                         top: AppSpacing.l,
@@ -521,14 +546,28 @@ class _DirectoryState extends State<_Directory> {
     StructureState structure,
     bool isDesktop,
   ) {
-    final children = <Widget>[
-      _classStreamPill(context, structure),
-      _pillSelect('Academic year', _year, [
-        const DropdownMenuItem(value: null, child: Text('All years')),
-        ...structure.academicYears.map(
-          (x) => DropdownMenuItem(value: x.id, child: Text(x.name)),
+    if (!isDesktop) {
+      // Compact filter access on mobile/tablet: a class pill plus a single
+      // "N active" pill that opens the full filter sheet.
+      return SizedBox(
+        height: 44,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: [
+            _classPill(context, structure),
+            const SizedBox(width: AppSpacing.m),
+            _streamPill(context, structure),
+            const SizedBox(width: AppSpacing.m),
+            _activeFilterPill(context, structure),
+          ],
         ),
-      ], (x) => setState(() { _year = x; _page = 0; })),
+      );
+    }
+
+    final children = <Widget>[
+      _termPill(context, structure),
+      _classPill(context, structure),
+      _streamPill(context, structure),
       _pillSelect('Status', _status, [
         const DropdownMenuItem(value: null, child: Text('All statuses')),
         ...StudentStatus.values.map(
@@ -545,48 +584,8 @@ class _DirectoryState extends State<_Directory> {
         ),
       ], (x) => setState(() { _boarding = x; _page = 0; })),
       if (_hasCriteria)
-        TextButton.icon(
-          onPressed: _clear,
-          icon: const Icon(Icons.clear, size: 18),
-          label: const Text('Clear filters'),
-        ),
+        TextButton(onPressed: _clear, child: const Text('Clear filters')),
     ];
-
-    if (!isDesktop) {
-      // Compact filter access on mobile: a single button opening a bottom sheet.
-      return Row(
-        children: [
-          Expanded(
-            child: SizedBox(
-              height: 44,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _classStreamPill(context, structure),
-                  const SizedBox(width: AppSpacing.m),
-                  OutlinedButton.icon(
-                    onPressed: () => _openFilters(structure),
-                    icon: const Icon(Icons.tune, size: 18),
-                    label: Text(
-                      _activeFilterCount > 0
-                          ? 'Filters ($_activeFilterCount)'
-                          : 'Filters',
-                    ),
-                  ),
-                  if (_hasCriteria) ...[
-                    const SizedBox(width: AppSpacing.m),
-                    TextButton(
-                      onPressed: _clear,
-                      child: const Text('Clear'),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      );
-    }
 
     return SizedBox(
       height: 48,
@@ -599,81 +598,122 @@ class _DirectoryState extends State<_Directory> {
     );
   }
 
-  Widget _classStreamPill(BuildContext context, StructureState structure) {
+  Widget _termPill(BuildContext context, StructureState structure) {
+    final year = structure.academicYears
+        .where((y) => y.id == _year)
+        .firstOrNull;
+    final currentYear = structure.academicYears
+        .where((y) => y.isCurrent)
+        .firstOrNull;
+    final label = (year ?? currentYear)?.name ?? 'Academic year';
+    return PopupMenuButton<String?>(
+      tooltip: 'Academic year',
+      onSelected: (v) => setState(() {
+        _year = v;
+        _page = 0;
+      }),
+      itemBuilder: (_) => [
+        const PopupMenuItem(value: null, child: Text('All years')),
+        ...structure.academicYears.map(
+          (y) => PopupMenuItem(value: y.id, child: Text(y.name)),
+        ),
+      ],
+      child: _pillContainer(context, label),
+    );
+  }
+
+  Widget _classPill(BuildContext context, StructureState structure) {
     final className = structure.classes
         .where((item) => item.id == _classId)
         .map((item) => item.name)
         .firstOrNull;
+    return PopupMenuButton<String?>(
+      tooltip: 'Class',
+      onSelected: (value) => setState(() {
+        _classId = value;
+        _stream = null;
+        _page = 0;
+      }),
+      itemBuilder: (_) => [
+        const PopupMenuItem(value: null, child: Text('All classes')),
+        ...structure.classes.map(
+          (item) => PopupMenuItem(value: item.id, child: Text(item.name)),
+        ),
+      ],
+      child: _pillContainer(context, className ?? 'All classes'),
+    );
+  }
+
+  Widget _streamPill(BuildContext context, StructureState structure) {
     final streamName = structure.streams
         .where((item) => item.id == _stream)
         .map((item) => item.name)
         .firstOrNull;
-    final label =
-        '${className ?? 'All classes'} · ${streamName ?? 'All streams'}';
-    return PopupMenuButton<String>(
-      tooltip: 'Select class and stream',
-      onSelected: (value) {
-        setState(() {
-          if (value.startsWith('class:')) {
-            _classId = value.substring(6);
-            _stream = null;
-          } else if (value.startsWith('stream:')) {
-            _stream = value.substring(7);
-          } else {
-            _classId = _stream = null;
-          }
-          _page = 0;
-        });
-      },
+    return PopupMenuButton<String?>(
+      tooltip: 'Stream',
+      onSelected: (value) => setState(() {
+        _stream = value;
+        _page = 0;
+      }),
       itemBuilder: (_) => [
-        const PopupMenuItem(
-          value: 'all',
-          child: Text('All classes · All streams'),
-        ),
-        ...structure.classes.map(
-          (item) => PopupMenuItem(
-            value: 'class:${item.id}',
-            child: Text('${item.name} · All streams'),
-          ),
-        ),
+        const PopupMenuItem(value: null, child: Text('All streams')),
         ...structure.streams
             .where((item) => _classId == null || item.classId == _classId)
             .map(
-              (item) => PopupMenuItem(
-                value: 'stream:${item.id}',
-                child: Text(item.name),
-              ),
+              (item) => PopupMenuItem(value: item.id, child: Text(item.name)),
             ),
       ],
-      child: Semantics(
-        button: true,
-        label: 'Class and stream: $label',
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.m,
-          ),
-          decoration: BoxDecoration(
-            border: Border.all(color: AppColors.border(context)),
-            borderRadius: AppRadius.medium,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  label,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s),
-              const Icon(Icons.keyboard_arrow_down, size: 19),
-            ],
-          ),
-        ),
+      child: _pillContainer(context, streamName ?? 'All streams'),
+    );
+  }
+
+  Widget _pillContainer(BuildContext context, String label) => Semantics(
+    button: true,
+    label: label,
+    child: Container(
+      constraints: const BoxConstraints(minHeight: 44),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl,
+        vertical: AppSpacing.m,
       ),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.border(context)),
+        borderRadius: AppRadius.medium,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s),
+          const Icon(Icons.keyboard_arrow_down, size: 19),
+        ],
+      ),
+    ),
+  );
+
+  Widget _activeFilterPill(BuildContext context, StructureState structure) {
+    final active = _activeFilterCount;
+    if (active == 0) {
+      return OutlinedButton.icon(
+        onPressed: () => _openFilters(structure),
+        icon: const Icon(Icons.tune, size: 18),
+        label: const Text('Filters'),
+      );
+    }
+    return FilledButton.icon(
+      onPressed: () => _openFilters(structure),
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.informationSurface(context),
+        foregroundColor: AppColors.information(context),
+      ),
+      icon: const Icon(Icons.tune, size: 18),
+      label: Text('$active active'),
     );
   }
 
@@ -734,10 +774,16 @@ class _DirectoryState extends State<_Directory> {
     children: [
       Expanded(
         child: Text(
-          '$count learner${count == 1 ? '' : 's'}',
+          'All learners · $count',
           style: Theme.of(
             context,
           ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ),
+      Text(
+        'Sort by ',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: AppColors.textSecondary(context),
         ),
       ),
       PopupMenuButton<_DirectorySort>(
@@ -757,7 +803,10 @@ class _DirectoryState extends State<_Directory> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_sort.label),
+              Text(
+                _sort.label,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               const Icon(Icons.keyboard_arrow_down),
             ],
           ),
@@ -928,12 +977,16 @@ class _DesktopTable extends StatelessWidget {
   final StructureState structure;
   final Map<String, attendance.AttendanceStatus> marks;
   final ValueChanged<String> onTap;
+  final _DirectorySort sort;
+  final ValueChanged<_DirectorySort> onSortChanged;
 
   const _DesktopTable({
     required this.students,
     required this.structure,
     required this.marks,
     required this.onTap,
+    required this.sort,
+    required this.onSortChanged,
   });
 
   @override
@@ -953,7 +1006,37 @@ class _DesktopTable extends StatelessWidget {
           ),
           child: Row(
             children: [
-              _headCell(context, 'Learner', flex: 3),
+              Expanded(
+                flex: 3,
+                child: InkWell(
+                  onTap: () => onSortChanged(
+                    sort == _DirectorySort.name
+                        ? _DirectorySort.recentlyAdded
+                        : _DirectorySort.name,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Learner',
+                        style: Theme.of(context).textTheme.labelLarge
+                            ?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textSecondary(context),
+                            ),
+                      ),
+                      const SizedBox(width: AppSpacing.s),
+                      Icon(
+                        sort == _DirectorySort.name
+                            ? Icons.arrow_upward
+                            : Icons.unfold_more,
+                        size: 16,
+                        color: AppColors.textMuted(context),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               _headCell(context, 'Admission no.', flex: 2),
               _headCell(context, 'Class · Stream', flex: 2),
               _headCell(context, 'Attendance', flex: 2),
@@ -1068,14 +1151,7 @@ class _TableRow extends StatelessWidget {
               ),
             ),
             Expanded(flex: 2, child: _AttendanceDot(status: status)),
-            Expanded(
-              flex: 2,
-              child: Icon(
-                Icons.link,
-                size: 18,
-                color: AppColors.textMuted(context),
-              ),
-            ),
+            Expanded(flex: 2, child: _ParentLinkIndicator(student: student)),
             SizedBox(
               width: 40,
               child: Icon(
@@ -1190,6 +1266,37 @@ class _MobileRow extends StatelessWidget {
           const Icon(Icons.chevron_right),
         ],
       ),
+    );
+  }
+}
+
+class _ParentLinkIndicator extends StatelessWidget {
+  final Student student;
+  const _ParentLinkIndicator({required this.student});
+
+  @override
+  Widget build(BuildContext context) {
+    final linked = student.parentIds.isNotEmpty;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          linked ? Icons.link : Icons.link_off,
+          size: 16,
+          color: linked
+              ? AppColors.information(context)
+              : AppColors.textMuted(context),
+        ),
+        const SizedBox(width: AppSpacing.s),
+        Text(
+          linked ? 'Linked' : 'Not linked',
+          style: TextStyle(
+            color: linked
+                ? AppColors.information(context)
+                : AppColors.textMuted(context),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1430,6 +1537,99 @@ class _FilterSheetState extends State<_FilterSheet> {
     items: items,
     onChanged: (v) => onChanged(v as T),
   );
+}
+
+class _PaginationFooter extends StatelessWidget {
+  final int shownCount;
+  final int totalCount;
+  final int page;
+  final int pageSize;
+  final ValueChanged<int> onPageChanged;
+
+  const _PaginationFooter({
+    required this.shownCount,
+    required this.totalCount,
+    required this.page,
+    required this.pageSize,
+    required this.onPageChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pageCount = (totalCount / pageSize).ceil().clamp(1, 1 << 30);
+    final start = totalCount == 0 ? 0 : page * pageSize + 1;
+    final end = page * pageSize + shownCount;
+
+    // Cap the visible page-number buttons; a "…" placeholder covers the gap
+    // for large rosters instead of rendering hundreds of buttons.
+    const maxButtons = 5;
+    final buttons = <Widget>[];
+    if (pageCount <= maxButtons) {
+      for (var i = 0; i < pageCount; i++) {
+        buttons.add(_pageButton(context, i));
+      }
+    } else {
+      buttons.add(_pageButton(context, 0));
+      buttons.add(_pageButton(context, 1));
+      buttons.add(_pageButton(context, 2));
+      buttons.add(const Padding(
+        padding: EdgeInsets.symmetric(horizontal: AppSpacing.s),
+        child: Text('…'),
+      ));
+      buttons.add(_pageButton(context, pageCount - 1));
+    }
+
+    return Row(
+      children: [
+        Text(
+          'Showing $start to $end of $totalCount learners',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppColors.textSecondary(context),
+          ),
+        ),
+        const Spacer(),
+        IconButton(
+          tooltip: 'Previous page',
+          onPressed: page > 0 ? () => onPageChanged(page - 1) : null,
+          icon: const Icon(Icons.chevron_left),
+        ),
+        ...buttons,
+        IconButton(
+          tooltip: 'Next page',
+          onPressed: page < pageCount - 1
+              ? () => onPageChanged(page + 1)
+              : null,
+          icon: const Icon(Icons.chevron_right),
+        ),
+      ],
+    );
+  }
+
+  Widget _pageButton(BuildContext context, int index) {
+    final selected = index == page;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: SizedBox(
+        width: 36,
+        height: 36,
+        child: OutlinedButton(
+          onPressed: selected ? null : () => onPageChanged(index),
+          style: OutlinedButton.styleFrom(
+            padding: EdgeInsets.zero,
+            backgroundColor: selected
+                ? AppColors.primary(context)
+                : Colors.transparent,
+            foregroundColor: selected
+                ? AppColors.background(context)
+                : AppColors.textPrimary(context),
+            side: BorderSide(color: AppColors.border(context)),
+            shape: RoundedRectangleBorder(borderRadius: AppRadius.small),
+          ),
+          child: Text('${index + 1}'),
+        ),
+      ),
+    );
+  }
 }
 
 class _StateMessage extends StatelessWidget {
