@@ -551,43 +551,54 @@ class _MetricsGridState extends State<_MetricsGrid> {
       _CountsLoadState.loaded => _counts!.staffCount.toString(),
       _CountsLoadState.unavailable => '—',
     };
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: AppSpacing.s,
-      crossAxisSpacing: AppSpacing.s,
-      childAspectRatio: 2.4,
-      children: [
-        _metricTile(
-          context,
-          icon: Icons.groups_2_outlined,
-          label: 'Students',
-          value: studentValue,
-          onRetry: _state == _CountsLoadState.unavailable ? refresh : null,
-        ),
-        _metricTile(
-          context,
-          icon: Icons.badge_outlined,
-          label: 'Staff',
-          value: staffValue,
-          onRetry: _state == _CountsLoadState.unavailable ? refresh : null,
-        ),
-        _metricTile(
-          context,
-          icon: Icons.workspace_premium_outlined,
-          label: 'Current plan',
-          value: widget.school.subscriptionPlanId.isEmpty
-              ? 'Unassigned'
-              : widget.school.subscriptionPlanId,
-        ),
-        _metricTile(
-          context,
-          icon: Icons.event_available_outlined,
-          label: 'Renewal',
-          value: widget.dateFormat.format(widget.school.subscriptionExpiry),
-        ),
-      ],
+    final tiles = <Widget>[
+      _metricTile(
+        context,
+        icon: Icons.groups_2_outlined,
+        label: 'Students',
+        value: studentValue,
+        onRetry: _state == _CountsLoadState.unavailable ? refresh : null,
+      ),
+      _metricTile(
+        context,
+        icon: Icons.badge_outlined,
+        label: 'Staff',
+        value: staffValue,
+        onRetry: _state == _CountsLoadState.unavailable ? refresh : null,
+      ),
+      _metricTile(
+        context,
+        icon: Icons.workspace_premium_outlined,
+        label: 'Current plan',
+        value: widget.school.subscriptionPlanId.isEmpty
+            ? 'Unassigned'
+            : widget.school.subscriptionPlanId,
+      ),
+      _metricTile(
+        context,
+        icon: Icons.event_available_outlined,
+        label: 'Renewal',
+        value: widget.dateFormat.format(widget.school.subscriptionExpiry),
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 4-up once there's room, 2-up on narrow. Tiles keep a fixed
+        // height so a wide viewport can't stretch them into huge cards.
+        final perRow = constraints.maxWidth >= 640 ? 4 : 2;
+        final spacing = AppSpacing.s;
+        final tileWidth =
+            (constraints.maxWidth - spacing * (perRow - 1)) / perRow;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final tile in tiles)
+              SizedBox(width: tileWidth, height: 64, child: tile),
+          ],
+        );
+      },
     );
   }
 
@@ -599,13 +610,13 @@ class _MetricsGridState extends State<_MetricsGrid> {
     VoidCallback? onRetry,
   }) {
     return AppCard(
-      padding: const EdgeInsets.all(AppSpacing.m),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
       onTap: onRetry,
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               color: AppColors.primary(context).withValues(alpha: .12),
               borderRadius: BorderRadius.circular(10),
