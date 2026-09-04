@@ -416,6 +416,15 @@
             email: val('adminEmail'),
           };
         })(),
+        academicCalendar: {
+          schoolYear: val('schoolYear'),
+          term: (function () {
+            var checked = document.querySelector('input[name="term"]:checked');
+            return checked ? checked.value : '';
+          })(),
+          termStart: val('termStart'),
+          termEnd: val('termEnd'),
+        },
         plan: plan,
         selectedModules: [],
         // Step 6 has a real accuracy/terms checkbox now — send what the

@@ -960,6 +960,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--c
 /* One persistent bottom action bar — the in-panel nav is kept in the DOM for
    the existing JS wiring (step2 gate, submit handler) but hidden from view. */
 .wizard-panel .wizard-nav { display: none !important; }
+/* Step 4 has its own dedicated termly-estimate card (.price-card--estimate);
+   the generic running sidebar would duplicate that content, so hide it here. */
+#wizardForm:has(.wizard-panel[data-step="4"].active) .layout-2col > .sidebar-col { display: none; }
+#wizardForm:has(.wizard-panel[data-step="4"].active) .layout-2col { grid-template-columns: 1fr; }
 
 .wizard-action-bar {
   position: sticky; bottom: 0; z-index: 30;
