@@ -278,33 +278,47 @@ class _SuperAdminProfileScreenState extends State<SuperAdminProfileScreen> {
       .join();
 
   Future<void> _choosePhoto() async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose from gallery'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text('Take a photo'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-          ],
+    final XFile? image;
+    if (kIsWeb) {
+      // No camera / gallery sheet on web - just open the browser file
+      // picker. maxWidth/maxHeight/imageQuality are also skipped: the web
+      // resize path can silently return null in some browsers, which was
+      // making "nothing happen" when a photo was chosen.
+      try {
+        image = await ImagePicker().pickImage(source: ImageSource.gallery);
+      } catch (e) {
+        _showPhotoError('Could not open the file picker. $e');
+        return;
+      }
+    } else {
+      final source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        showDragHandle: true,
+        builder: (context) => SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Choose from gallery'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined),
+                title: const Text('Take a photo'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-    if (source == null || !mounted) return;
-    final image = await ImagePicker().pickImage(
-      source: source,
-      maxWidth: 1200,
-      maxHeight: 1200,
-      imageQuality: 85,
-    );
+      );
+      if (source == null || !mounted) return;
+      image = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 85,
+      );
+    }
     if (image == null || !mounted) return;
     _markDirty();
 
