@@ -41,10 +41,18 @@ class PaymentReviewScreen extends StatefulWidget {
     ManualSubscriptionPayment payment,
   ) async {
     const sectionUrl = '/super-admin/payments';
-    context.go('$sectionUrl/${payment.id}');
+    final detailUrl = '$sectionUrl/${payment.id}';
+
+    // Open the dialog / page FIRST, then sync the URL. Doing `context.go`
+    // before the push let the router settle a navigation while the push was
+    // still pending, which on desktop left you looking at the Billing list
+    // with the detail URL in the address bar (the "click Review, nothing
+    // opens, works on the 2nd try" bug). The whole /super-admin subtree
+    // shares one GoRouter page key, so this `context.go` is address-bar /
+    // history signalling only - it never rebuilds the console shell.
     final bool? result;
     if (isSuperAdminWide(context)) {
-      result = await showGeneralDialog<bool>(
+      final future = showGeneralDialog<bool>(
         context: context,
         barrierLabel: 'Payment Verification',
         barrierDismissible: true,
@@ -75,13 +83,17 @@ class PaymentReviewScreen extends StatefulWidget {
           );
         },
       );
+      if (context.mounted) context.go(detailUrl);
+      result = await future;
     } else {
-      result = await Navigator.push<bool>(
+      final future = Navigator.push<bool>(
         context,
         MaterialPageRoute(
           builder: (_) => PaymentReviewScreen(payment: payment),
         ),
       );
+      if (context.mounted) context.go(detailUrl);
+      result = await future;
     }
     if (context.mounted) context.go(sectionUrl);
     return result;

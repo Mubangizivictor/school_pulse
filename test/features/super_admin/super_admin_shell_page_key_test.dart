@@ -77,4 +77,26 @@ void main() {
           'sync cannot tear down the Navigator mid-push',
     );
   });
+
+  test('PaymentReviewScreen.open opens the dialog/page before syncing the URL', () {
+    final src = File(
+      'lib/features/super_admin/presentation/pages/payment_review_screen.dart',
+    ).readAsStringSync();
+    // The desktop dialog and the mobile page must both start before the
+    // detail-URL context.go, mirroring pushSuperAdminDetail.
+    final dialogIdx = src.indexOf('showGeneralDialog<bool>(');
+    final pushIdx = src.indexOf('Navigator.push<bool>(');
+    final firstGoDetail = src.indexOf('context.go(detailUrl);');
+    expect(dialogIdx, isNot(-1));
+    expect(pushIdx, isNot(-1));
+    expect(firstGoDetail, isNot(-1));
+    expect(dialogIdx < firstGoDetail, isTrue);
+    expect(pushIdx < src.lastIndexOf('context.go(detailUrl);'), isTrue);
+    // The old racy form set the URL as the very first statement.
+    expect(
+      src.contains("context.go('\$sectionUrl/\${payment.id}');\n    final bool? result;"),
+      isFalse,
+      reason: 'the leading context.go before the push was the flash bug',
+    );
+  });
 }
