@@ -1819,6 +1819,23 @@ input[type="range"] { width: 100%; accent-color: var(--color-primary); height: 2
 .fs-cta-card { background: var(--color-ink); border-color: var(--color-ink); }
 .fs-cta-card .fs-help-text h3 { color: #fff; }
 .fs-cta-card .fs-help-text p { color: #CBD5E1; }
+.fs-illustration { position: relative; color: var(--color-ink-soft); }
+.fs-illustration svg { width: 100%; height: auto; }
+.fs-illustration-badge {
+  position: absolute;
+  top: 8%;
+  right: 6%;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-lg);
+}
+.fs-illustration-badge svg { width: 20px; height: 20px; }
+@media (max-width: 900px) {
+  .fs-illustration { display: none; }
+}
 @media (max-width: 640px) {
   .fs-hero { padding: 32px 0 24px; }
   .fs-section { padding: 28px 0; }
