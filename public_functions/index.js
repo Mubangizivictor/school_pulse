@@ -17,6 +17,7 @@ const RESERVED_STATUSES = new Set(["pending_review", "approved"]);
 // so the three onboarding paths can never independently drift on what
 // counts as a valid/available slug.
 const { validSlug } = require("./portal_slug");
+const UGANDA_REGION_BY_DISTRICT = require("./uganda_regions.json");
 
 function cors(req, res) {
   const origin = req.get("origin");
@@ -95,6 +96,7 @@ function validateSchoolApplicationFields({ school, location, administrator, plan
   if (studentCapacity < 1) invalidFields.push("school.studentCapacity");
   if (!text(location.region, 40)) invalidFields.push("location.region");
   if (!text(location.district, 100)) invalidFields.push("location.district");
+  else if (UGANDA_REGION_BY_DISTRICT[text(location.district, 100).toLowerCase()] !== text(location.region, 40)) invalidFields.push("location.district");
   if (!text(location.address, 240)) invalidFields.push("location.address");
   if (!text(administrator.firstName, 100)) invalidFields.push("administrator.firstName");
   if (!text(administrator.lastName, 100)) invalidFields.push("administrator.lastName");
