@@ -909,6 +909,53 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--c
   .sidebar-col .verify-card[hidden] { display: none; }
 }
 
+/* ---------- Registration wizard: Step 1 ("Tell us about your school") ----------
+   Solid black header + light card + blue primary, matching the reference
+   design exactly regardless of system light/dark mode — a deliberate brand
+   choice for this page's chrome, not tied to the site's theme toggle. */
+.reg-header--dark {
+  background: #0A0A0A;
+  border-bottom-color: #0A0A0A;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.reg-header--dark .brand,
+.reg-header--dark .reg-header-link { color: #fff; }
+.reg-header--dark .reg-header-link:hover { color: var(--color-primary-light); background: rgba(255,255,255,.08); }
+.reg-header--dark .brand-mark .logo-dark { display: block; }
+.reg-header--dark .brand-mark .logo-light { display: none; }
+
+.reg-step1-head { margin-bottom: 24px; }
+.reg-step1-head h3 { font-size: 26px; margin: 0 0 8px; }
+.reg-step1-head .muted { font-size: 14.5px; line-height: 1.5; margin: 0; max-width: 52ch; }
+
+.field-icon-wrap { position: relative; }
+.field-icon-wrap .field-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--color-muted); pointer-events: none; }
+.field-icon-wrap input { padding-left: 40px; }
+
+.reg-step1-trust {
+  display: flex; align-items: flex-start; gap: 12px;
+  margin: 20px 0 24px; padding: 16px;
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-soft-border);
+  border-radius: var(--radius-md);
+}
+.reg-step1-trust-icon { flex-shrink: 0; color: var(--color-primary); }
+.reg-step1-trust strong { display: block; font-size: 14.5px; color: var(--color-primary-dark); margin-bottom: 2px; }
+.reg-step1-trust p { margin: 0; font-size: 13px; color: var(--color-ink-soft); }
+
+.reg-step1 .wizard-nav button svg { margin-left: 4px; vertical-align: -3px; }
+
+.reg-step1-note {
+  display: flex; align-items: flex-start; gap: 8px;
+  justify-content: center; text-align: center;
+  margin: 16px 0 0; font-size: 12.5px; color: var(--color-muted);
+}
+.reg-step1-note svg { flex-shrink: 0; margin-top: 2px; }
+@media (max-width: 480px) {
+  .reg-step1-head h3 { font-size: 22px; }
+  .reg-step1-trust { flex-direction: column; gap: 8px; }
+}
+
 /* ---------- Registration wizard: Step 4 (Student count / pricing) ---------- */
 /* One persistent bottom action bar — the in-panel nav is kept in the DOM for
    the existing JS wiring (step2 gate, submit handler) but hidden from view. */

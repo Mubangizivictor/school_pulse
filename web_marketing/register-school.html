@@ -14,7 +14,7 @@
 
 <!-- Focused wizard shell: no marketing nav dropdowns, no marketing footer.
      Just brand + Help + Sign in, per the registration redesign. -->
-<header class="reg-header">
+<header class="reg-header reg-header--dark">
   <div class="reg-header-wrap">
     <a href="index.html" class="brand">
       <span class="brand-mark">
@@ -58,22 +58,26 @@
 
           <div class="layout-2col">
             <div>
-              <!-- Step 1: School details -->
-              <div class="wizard-panel" data-step="1">
-                <h3>School details</h3>
-                <div class="form-row">
-                  <div class="form-field">
-                    <label for="schoolName">School name</label>
-                    <input type="text" id="schoolName" name="schoolName" required>
-                    <span class="error-text">Please enter your school's name.</span>
-                  </div>
-                  <div class="form-field">
-                    <label for="schoolPrefix">School initials <span class="muted">(short code)</span></label>
-                    <input type="text" id="schoolPrefix" name="schoolPrefix" maxlength="12" placeholder="e.g. SHS" required>
-                    <div class="hint">A short code used across School Pulse, e.g. student IDs. At least 2 letters/digits.</div>
-                    <span class="error-text">Please enter at least 2 letters or digits.</span>
-                  </div>
+              <!-- Step 1: School details — matches the "Tell us about your
+                   school" reference (light card, icon-prefixed fields, blue
+                   primary). All field id/name attributes are unchanged so
+                   wizard.js/register-submit.js validation and submit are
+                   untouched; schoolPrefix, curriculum and schoolWebsite are
+                   real required/optional fields the backend needs even
+                   though the reference screen doesn't show them, so they're
+                   kept in the same visual language rather than removed. -->
+              <div class="wizard-panel reg-step1" data-step="1">
+                <div class="reg-step1-head">
+                  <h3>Tell us about your school</h3>
+                  <p class="muted">This helps us set up your School Pulse account and tailor the experience for your school.</p>
                 </div>
+
+                <div class="form-field">
+                  <label for="schoolName">School name</label>
+                  <input type="text" id="schoolName" name="schoolName" placeholder="Enter your school name" required>
+                  <span class="error-text">Please enter your school's name.</span>
+                </div>
+
                 <div class="form-row">
                   <div class="form-field">
                     <label for="schoolType">School type</label>
@@ -98,26 +102,60 @@
                     <span class="error-text">Please select a curriculum.</span>
                   </div>
                 </div>
+
                 <div class="form-row">
                   <div class="form-field">
                     <label for="schoolEmail">School email</label>
-                    <input type="email" id="schoolEmail" name="schoolEmail" required>
+                    <div class="field-icon-wrap">
+                      <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>
+                      <input type="email" id="schoolEmail" name="schoolEmail" placeholder="name@school.ac.ug" required>
+                    </div>
                     <span class="error-text">Please enter a valid school email.</span>
                   </div>
                   <div class="form-field">
-                    <label for="schoolPhone">School phone</label>
-                    <input type="tel" id="schoolPhone" name="schoolPhone" required>
+                    <label for="schoolPhone">Contact phone</label>
+                    <div class="field-icon-wrap">
+                      <svg class="field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l1.5 4-2 1.5a13 13 0 0 0 6 6l1.5-2 4 1.5v4a2 2 0 0 1-2.2 2A18 18 0 0 1 3 6.2 2 2 0 0 1 5 4Z"/></svg>
+                      <input type="tel" id="schoolPhone" name="schoolPhone" placeholder="07XX XXX XXX" required>
+                    </div>
                     <span class="error-text">Please enter a school phone number.</span>
                   </div>
                 </div>
-                <div class="form-field">
-                  <label for="schoolWebsite">School website <span class="muted">(optional)</span></label>
-                  <input type="text" id="schoolWebsite" name="schoolWebsite">
+
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="schoolPrefix">School initials <span class="muted">(short code)</span></label>
+                    <input type="text" id="schoolPrefix" name="schoolPrefix" maxlength="12" placeholder="e.g. SHS" required>
+                    <div class="hint">A short code used across School Pulse, e.g. student IDs. At least 2 letters/digits.</div>
+                    <span class="error-text">Please enter at least 2 letters or digits.</span>
+                  </div>
+                  <div class="form-field">
+                    <label for="schoolWebsite">School website <span class="muted">(optional)</span></label>
+                    <input type="text" id="schoolWebsite" name="schoolWebsite" placeholder="e.g. yourschool.ac.ug">
+                  </div>
                 </div>
+
+                <div class="reg-step1-trust">
+                  <div class="reg-step1-trust-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                  </div>
+                  <div>
+                    <strong>No card required to register</strong>
+                    <p>You only pay after we verify your details.</p>
+                  </div>
+                </div>
+
                 <div class="wizard-nav">
                   <span></span>
-                  <button type="button" class="btn btn-primary" data-wizard-next>Next</button>
+                  <button type="button" class="btn btn-primary" data-wizard-next>Continue to review
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </button>
                 </div>
+
+                <p class="reg-step1-note">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V8a5 5 0 0 1 10 0v3"/></svg>
+                  Your information is safe with us. We'll never share your school details.
+                </p>
               </div>
 
               <!-- Step 2: Administrator -->
