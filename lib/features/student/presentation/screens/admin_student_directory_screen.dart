@@ -27,7 +27,11 @@ import 'package:school_pulse/injection_container.dart' as di;
 
 /// Learner-management workspace. School context comes only from AuthBloc.
 class AdminStudentDirectoryScreen extends StatelessWidget {
-  const AdminStudentDirectoryScreen({super.key});
+  /// Overridable only from tests, which cannot construct the real
+  /// Firestore-backed default without a live Firebase app.
+  final StudentProfileDataSource? profileDataSource;
+
+  const AdminStudentDirectoryScreen({super.key, this.profileDataSource});
   @override
   Widget build(BuildContext context) {
     final auth = context.read<AuthBloc>().state;
@@ -46,7 +50,7 @@ class AdminStudentDirectoryScreen extends StatelessWidget {
                   ..add(_todayRecordsRequest(schoolId, user)),
           ),
       ],
-      child: _Directory(schoolId, user),
+      child: _Directory(schoolId, user, profileDataSource),
     );
   }
 }
@@ -66,14 +70,15 @@ LoadRecordsRequested _todayRecordsRequest(String schoolId, UserEntity user) {
 class _Directory extends StatefulWidget {
   final String schoolId;
   final UserEntity? user;
-  const _Directory(this.schoolId, this.user);
+  final StudentProfileDataSource? profileDataSource;
+  const _Directory(this.schoolId, this.user, this.profileDataSource);
   @override
   State<_Directory> createState() => _DirectoryState();
 }
 
 class _DirectoryState extends State<_Directory> {
   final _search = TextEditingController();
-  final _profiles = StudentProfileDataSource();
+  late final _profiles = widget.profileDataSource ?? StudentProfileDataSource();
   String _query = '';
   String? _year, _classId, _stream;
   StudentStatus? _status;
@@ -267,7 +272,11 @@ class _DirectoryState extends State<_Directory> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   _header(context, list.length, isDesktop),
-                                  const SizedBox(height: AppSpacing.x2l),
+                                  if (!isDesktop) ...[
+                                    const SizedBox(height: AppSpacing.l),
+                                    _searchAndFilterRow(context, isDesktop),
+                                  ],
+                                  const SizedBox(height: AppSpacing.l),
                                   _filterRow(context, structure, isDesktop),
                                   const SizedBox(height: AppSpacing.xl),
                                   _AttendanceStrip(
@@ -369,15 +378,15 @@ class _DirectoryState extends State<_Directory> {
       ],
     );
 
+    // Desktop keeps the inline search box, filters, refresh and Add all in
+    // the sticky header row (room for it). Mobile/tablet collapse search and
+    // filters to compact icon buttons so the row never wraps or clips.
     if (isDesktop) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(child: title),
-          SizedBox(
-            width: 320,
-            child: _searchBox(context),
-          ),
+          SizedBox(width: 320, child: _searchBox(context)),
           const SizedBox(width: AppSpacing.m),
           _filterButton(context),
           const SizedBox(width: AppSpacing.m),
@@ -393,29 +402,28 @@ class _DirectoryState extends State<_Directory> {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(child: title),
-            _addLearnerButton(context),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.l),
-        Row(
-          children: [
-            Expanded(child: _searchBox(context)),
-            const SizedBox(width: AppSpacing.m),
-            _filterButton(context),
-            const SizedBox(width: AppSpacing.m),
-            _iconAction(
-              context,
-              icon: Icons.refresh,
-              tooltip: 'Refresh',
-              onPressed: _refresh,
-            ),
-          ],
+        Expanded(child: title),
+        _addLearnerButton(context),
+      ],
+    );
+  }
+
+  Widget _searchAndFilterRow(BuildContext context, bool isDesktop) {
+    if (isDesktop) return const SizedBox.shrink();
+    return Row(
+      children: [
+        Expanded(child: _searchBox(context)),
+        const SizedBox(width: AppSpacing.m),
+        _filterButton(context),
+        const SizedBox(width: AppSpacing.m),
+        _iconAction(
+          context,
+          icon: Icons.refresh,
+          tooltip: 'Refresh',
+          onPressed: _refresh,
         ),
       ],
     );
@@ -450,14 +458,14 @@ class _DirectoryState extends State<_Directory> {
     ),
   );
 
-  Widget _filterButton(BuildContext context) => Stack(
+  Widget _filterButton(BuildContext context, {StructureState? structure}) => Stack(
     clipBehavior: Clip.none,
     children: [
       _iconAction(
         context,
         icon: Icons.tune,
         tooltip: 'Filters',
-        onPressed: () {},
+        onPressed: () => _openFilters(structure ?? context.read<StructureBloc>().state),
       ),
       if (_activeFilterCount > 0)
         Positioned(
@@ -875,9 +883,11 @@ class _AttendanceStrip extends StatelessWidget {
               valueColor: AlwaysStoppedAnimation(AppColors.success(context)),
             ),
           );
-          final link = TextButton(
+          final link = TextButton.icon(
             onPressed: onViewAttendance,
-            child: const Text('View attendance'),
+            label: const Text('View attendance'),
+            icon: const Icon(Icons.chevron_right, size: 18),
+            iconAlignment: IconAlignment.end,
           );
 
           if (narrow) {
@@ -1019,7 +1029,9 @@ class _TableRow extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 18,
-                    backgroundColor: AppColors.surfaceContainerHigh(context),
+                    backgroundColor: student.photoUrl?.isNotEmpty == true
+                        ? AppColors.surfaceContainerHigh(context)
+                        : _avatarColor(context, student.name),
                     backgroundImage: student.photoUrl?.isNotEmpty == true
                         ? NetworkImage(student.photoUrl!)
                         : null,
@@ -1027,9 +1039,10 @@ class _TableRow extends StatelessWidget {
                         ? null
                         : Text(
                             _initials(student.name),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 12,
+                              color: _avatarTextColor(context, student.name),
                             ),
                           ),
                   ),
@@ -1142,7 +1155,9 @@ class _MobileRow extends StatelessWidget {
       minVerticalPadding: AppSpacing.m,
       leading: CircleAvatar(
         radius: 24,
-        backgroundColor: AppColors.surfaceContainerHigh(context),
+        backgroundColor: student.photoUrl?.isNotEmpty == true
+            ? AppColors.surfaceContainerHigh(context)
+            : _avatarColor(context, student.name),
         backgroundImage: student.photoUrl?.isNotEmpty == true
             ? NetworkImage(student.photoUrl!)
             : null,
@@ -1150,7 +1165,10 @@ class _MobileRow extends StatelessWidget {
             ? null
             : Text(
                 _initials(student.name),
-                style: const TextStyle(fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: _avatarTextColor(context, student.name),
+                ),
               ),
       ),
       title: Text(
@@ -1552,6 +1570,34 @@ class _DirectoryLoading extends StatelessWidget {
         ),
     ],
   );
+}
+
+Color _avatarColor(BuildContext context, String name) {
+  final palette = [
+    AppColors.information(context),
+    AppColors.success(context),
+    AppColors.warning(context),
+    AppColors.danger(context),
+  ];
+  final surfaces = [
+    AppColors.informationSurface(context),
+    AppColors.successSurface(context),
+    AppColors.warningSurface(context),
+    AppColors.dangerSurface(context),
+  ];
+  final index = name.isEmpty ? 0 : name.codeUnitAt(0) % palette.length;
+  return surfaces[index];
+}
+
+Color _avatarTextColor(BuildContext context, String name) {
+  final palette = [
+    AppColors.information(context),
+    AppColors.success(context),
+    AppColors.warning(context),
+    AppColors.danger(context),
+  ];
+  final index = name.isEmpty ? 0 : name.codeUnitAt(0) % palette.length;
+  return palette[index];
 }
 
 String _initials(String value) {
