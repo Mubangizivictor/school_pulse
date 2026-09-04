@@ -37,14 +37,32 @@
     });
   }
 
+  var CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  var X_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+
   function init() {
     var input = document.getElementById('subdomain');
     var preview = document.getElementById('subdomainPreview');
     var status = document.getElementById('subdomainStatus');
+    var pill = document.getElementById('subdomainResult');
+    var field = document.getElementById('fieldSubdomain');
     if (!input || !status) return;
 
     var timer = null;
     var latestSlug = null;
+
+    function renderPill(state, label) {
+      if (!pill) return;
+      if (state === 'idle') { pill.hidden = true; pill.innerHTML = ''; return; }
+      pill.hidden = false;
+      pill.className = 'subdomain-result ' +
+        (state === 'available' ? 'is-available'
+          : state === 'unavailable' ? 'is-unavailable'
+          : 'is-checking');
+      var ico = state === 'available' ? CHECK_ICON
+        : state === 'unavailable' ? X_ICON : '';
+      pill.innerHTML = ico + '<span>' + label + '</span>';
+    }
 
     function render(state, message) {
       status.textContent = message;
@@ -53,6 +71,18 @@
         : state === 'unavailable'
           ? 'var(--color-error)'
           : 'var(--color-muted)';
+      if (field) {
+        field.classList.toggle('has-error', state === 'unavailable');
+      }
+      renderPill(
+        state === 'available' ? 'available'
+          : state === 'unavailable' ? 'unavailable'
+          : state === 'checking' ? 'checking'
+          : 'idle',
+        state === 'available' ? 'Available'
+          : state === 'unavailable' ? 'Unavailable'
+          : 'Checking…'
+      );
     }
 
     function runCheck() {

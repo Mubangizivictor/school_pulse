@@ -95,44 +95,165 @@
   // ---- Step 2: account creation + email verification ----
   var verified = false;
   var pollTimer = null;
+  var countdownTimer = null;
+  var RESEND_SECONDS = 60;
 
   function initAccountGate() {
-    var createPanel = document.getElementById('accountCreatePanel');
-    var verifyPanel = document.getElementById('accountVerifyPanel');
-    var verifiedPanel = document.getElementById('accountVerifiedPanel');
+    var createPanel = document.getElementById('accountCreatePanel');   // "Secure your account"
+    var verifiedPanel = document.getElementById('accountVerifiedPanel'); // "Email verified"
+    var verifyCard = document.getElementById('accountVerifyPanel');     // "Check your email" dialog
+    var verifyBackdrop = document.getElementById('verifyDialogBackdrop');
     var createBtn = document.getElementById('createAccountBtn');
     var resendBtn = document.getElementById('resendVerificationBtn');
     var checkBtn = document.getElementById('checkVerifiedBtn');
+    var changeEmailBtn = document.getElementById('changeEmailBtn');
+    var verifyCloseBtn = document.getElementById('verifyClose');
+    var continueBtn = document.getElementById('step2Continue');
     var errorEl = document.getElementById('accountError');
     var pwField = document.getElementById('fieldAccountPassword');
+    var pwInput = document.getElementById('accountPassword');
+    var pwToggle = document.getElementById('pwToggle');
+    var pwMeter = document.getElementById('pwMeter');
+    var pwStatus = document.getElementById('pwStatus');
+    var verifyMsgEl = document.getElementById('accountVerifyMsg');
+    var verifyEmailEl = document.getElementById('verifyEmail');
+    var countdownEl = document.getElementById('resendCountdown');
+    var verifyFootEl = document.getElementById('verifyFoot');
     if (!createPanel || !createBtn) return;
 
-    function showPanel(which) {
-      createPanel.style.display = which === 'create' ? 'block' : 'none';
-      verifyPanel.style.display = which === 'verify' ? 'block' : 'none';
-      verifiedPanel.style.display = which === 'verified' ? 'block' : 'none';
+    // ---- password: show/hide + strength meter ----
+    if (pwToggle && pwInput) {
+      pwToggle.addEventListener('click', function () {
+        var show = pwInput.type === 'password';
+        pwInput.type = show ? 'text' : 'password';
+        pwToggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      });
+    }
+    function scorePassword(pw) {
+      if (!pw) return 0;
+      var score = 0;
+      if (pw.length >= 8) score++;
+      if (pw.length >= 12) score++;
+      if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) score++;
+      if (/\d/.test(pw)) score++;
+      if (/[^A-Za-z0-9]/.test(pw)) score++;
+      return Math.min(score, 4);
+    }
+    function renderStrength() {
+      if (!pwMeter || !pwInput) return;
+      var pw = pwInput.value;
+      var s = scorePassword(pw);
+      pwMeter.className = 'pw-meter' + (pw ? ' s' + s : '');
+      if (!pwStatus) return;
+      if (pw && pw.length >= 8 && s >= 3) {
+        pwStatus.innerHTML = '<span class="ok">' +
+          ((window.ICONS && window.ICONS.check) || '') + 'Strong password</span>';
+      } else if (pw && pw.length >= 8) {
+        pwStatus.innerHTML = '<span class="hint">Add capitals, numbers or symbols to strengthen it.</span>';
+      } else {
+        pwStatus.innerHTML = '<span class="hint">Use at least 8 characters with a mix of letters, numbers and symbols.</span>';
+      }
+    }
+    if (pwInput) pwInput.addEventListener('input', renderStrength);
+    renderStrength();
+
+    // ---- which of the three account states is visible ----
+    // create  -> "Secure your account" panel + disabled Continue
+    // verify  -> "Check your email" dialog (bottom sheet on mobile) + disabled Continue
+    // verified-> "Email verified" panel + enabled Continue
+    // Only one action set is ever shown at once (no simultaneous
+    // "Create account" / "I've verified" / "Save and continue").
+    function showState(which) {
+      createPanel.style.display = which === 'create' ? '' : 'none';
+      verifiedPanel.style.display = which === 'verified' ? '' : 'none';
+      if (verifyCard) verifyCard.hidden = which !== 'verify';
+      if (verifyBackdrop) verifyBackdrop.hidden = which !== 'verify';
+      if (continueBtn) continueBtn.disabled = which !== 'verified';
+      if (which !== 'verify') stopCountdown();
     }
 
     function markVerified(email) {
       verified = true;
       if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-      document.getElementById('accountVerifiedEmail').textContent = email || '';
-      showPanel('verified');
+      var el = document.getElementById('accountVerifiedEmail');
+      if (el) el.textContent = email || '';
+      showState('verified');
     }
 
     function setError(msg) {
       errorEl.textContent = msg;
       errorEl.style.display = msg ? 'block' : 'none';
     }
+    function setVerifyMsg(msg, isError) {
+      if (!verifyMsgEl) return;
+      verifyMsgEl.textContent = msg || '';
+      verifyMsgEl.style.display = msg ? 'block' : 'none';
+      verifyMsgEl.classList.toggle('is-error', !!isError);
+    }
 
+    // ---- resend countdown ----
+    function stopCountdown() {
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    }
+    function startCountdown() {
+      stopCountdown();
+      var left = RESEND_SECONDS;
+      function tick() {
+        if (countdownEl) {
+          var m = Math.floor(left / 60), s = left % 60;
+          countdownEl.textContent =
+            (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+        }
+        if (left <= 0) {
+          stopCountdown();
+          if (countdownEl) countdownEl.parentElement.style.display = 'none';
+          if (resendBtn) resendBtn.hidden = false;
+          return;
+        }
+        left--;
+      }
+      if (countdownEl && countdownEl.parentElement) countdownEl.parentElement.style.display = '';
+      if (resendBtn) resendBtn.hidden = true;
+      tick();
+      countdownTimer = setInterval(tick, 1000);
+    }
+
+    function openVerifyDialog(email, msg, isError) {
+      if (verifyEmailEl) verifyEmailEl.textContent = email || '';
+      setVerifyMsg(msg || '', isError);
+      showState('verify');
+      startCountdown();
+      startVerificationPolling();
+    }
+
+    // Live-poll Firebase so "I've verified my email" unlocks on its own the
+    // moment the user clicks the link in another tab — no manual click needed.
+    function startVerificationPolling() {
+      if (pollTimer) return;
+      pollTimer = setInterval(function () {
+        SPAuth.ensureFirebase().then(function (firebase) {
+          var user = firebase.auth().currentUser;
+          if (!user) return;
+          return user.reload().then(function () {
+            if (user.emailVerified) {
+              if (checkBtn) checkBtn.disabled = false;
+              if (verifyFootEl) verifyFootEl.textContent = 'Verified — you can continue now.';
+              return user.getIdToken(true);
+            }
+          });
+        }).catch(function () {});
+      }, 4000);
+    }
+
+    // ---- create account + send verification link ----
     createBtn.addEventListener('click', function () {
       setError('');
       var email = val('adminEmail');
-      var password = document.getElementById('accountPassword').value;
+      var password = pwInput.value;
       pwField.classList.remove('has-error');
 
       if (!email || !window.SPForms.EMAIL_RE.test(email)) {
-        setError('Enter a valid administrator email above first.');
+        setError('Enter a valid work email above first.');
         return;
       }
       if (!password || password.length < 8) {
@@ -141,6 +262,7 @@
       }
 
       createBtn.disabled = true;
+      var createLabel = createBtn.innerHTML;
       createBtn.textContent = 'Creating account…';
 
       SPAuth.ensureFirebase().then(function (firebase) {
@@ -161,17 +283,15 @@
           // The account itself now exists (created or signed into above) —
           // a failure past this point is only about sending the
           // verification email, not account creation, so it gets its own
-          // message and still lands on the verify panel (where "Resend
-          // verification email" can retry) rather than the generic
+          // message and still opens the "Check your email" dialog (where
+          // "Resend email" can retry) rather than the generic
           // account-creation failure below.
           return SPAuth.callFunction('requestEmailVerification', { method: 'POST' }).then(function () {
-            document.getElementById('accountVerifyMsg').innerHTML =
-              'We sent a verification link to <strong>' + email + '</strong>. Open it, then come back and click below.';
-            showPanel('verify');
+            openVerifyDialog(email, '');
           }).catch(function () {
-            document.getElementById('accountVerifyMsg').innerHTML =
-              'Your account was created, but we couldn\'t send the verification email to <strong>' + email + '</strong>. Use the button below to try again.';
-            showPanel('verify');
+            openVerifyDialog(email,
+              "Your account was created, but we couldn't send the verification email. Use Resend below to try again.",
+              true);
           });
         });
       }).catch(function (err) {
@@ -183,32 +303,55 @@
         setError(msg);
       }).finally(function () {
         createBtn.disabled = false;
-        createBtn.textContent = 'Create account & send verification email';
+        createBtn.innerHTML = createLabel;
       });
     });
 
     resendBtn.addEventListener('click', function () {
       resendBtn.disabled = true;
+      var label = resendBtn.textContent;
       resendBtn.textContent = 'Sending…';
-      SPAuth.callFunction('requestEmailVerification', { method: 'POST' }).catch(function () {
+      SPAuth.callFunction('requestEmailVerification', { method: 'POST' }).then(function () {
+        setVerifyMsg('Verification link sent again to ' + val('adminEmail') + '.', false);
+      }).catch(function () {
         // Best-effort — the endpoint rate-limits repeated sends; not worth a
         // hard error state here, the visitor can just try again shortly.
+        setVerifyMsg('Could not resend just now. Please wait a moment and try again.', true);
       }).finally(function () {
         resendBtn.disabled = false;
-        resendBtn.textContent = 'Resend verification email';
+        resendBtn.textContent = label;
+        startCountdown();
       });
     });
 
+    if (changeEmailBtn) {
+      changeEmailBtn.addEventListener('click', function () {
+        // Return to the form so the visitor can correct the work email,
+        // then create the account again with the corrected address.
+        showState('create');
+        setVerifyMsg('');
+        var emailEl = byName('adminEmail');
+        if (emailEl) { emailEl.focus(); emailEl.select && emailEl.select(); }
+      });
+    }
+    if (verifyCloseBtn) {
+      verifyCloseBtn.addEventListener('click', function () { showState('create'); });
+    }
+    if (verifyBackdrop) {
+      verifyBackdrop.addEventListener('click', function () { showState('create'); });
+    }
+
     checkBtn.addEventListener('click', function () {
       checkBtn.disabled = true;
+      var label = checkBtn.innerHTML;
       checkBtn.textContent = 'Checking…';
       SPAuth.ensureFirebase().then(function (firebase) {
         var user = firebase.auth().currentUser;
         if (!user) return Promise.reject(new Error('not_signed_in'));
         return user.reload().then(function () {
           if (!user.emailVerified) {
-            document.getElementById('accountVerifyMsg').innerHTML =
-              'Still not verified yet. Check your inbox (and spam folder), click the link, then try again.';
+            setVerifyMsg('Still not verified yet. Check your inbox (and spam folder), click the link, then try again.', true);
+            checkBtn.disabled = false;
             return;
           }
           // See the matching comment in initSubmit() - force-refresh the ID
@@ -218,9 +361,10 @@
           // the UI on.
           return user.getIdToken(true).then(function () { markVerified(user.email); });
         });
-      }).catch(function () {}).finally(function () {
+      }).catch(function () {
         checkBtn.disabled = false;
-        checkBtn.textContent = "I've verified — continue";
+      }).finally(function () {
+        checkBtn.innerHTML = label;
       });
     });
 
@@ -231,6 +375,9 @@
         markVerified(user.email);
       }
     });
+
+    // Baseline: nothing created yet.
+    showState('create');
   }
 
   // ---- Step 6: real submit ----
@@ -271,7 +418,12 @@
         })(),
         plan: plan,
         selectedModules: [],
-        termsAccepted: true,
+        // Step 6 has a real accuracy/terms checkbox now — send what the
+        // visitor actually confirmed, not a hardcoded true.
+        termsAccepted: (function () {
+          var box = document.getElementById('termsAccept');
+          return !!(box && box.checked);
+        })(),
         marketingOptIn: false,
       },
       plan: plan,
@@ -310,6 +462,15 @@
       customNotice.style.display = 'none';
       verifyNotice.style.display = 'none';
       setError('');
+
+      // Accuracy / terms acceptance is a hard gate — the button is already
+      // disabled until the box is ticked, this just covers a programmatic click.
+      var termsBox = document.getElementById('termsAccept');
+      if (termsBox && !termsBox.checked) {
+        var consent = document.getElementById('reviewConsent');
+        if (consent) consent.classList.add('has-error');
+        return;
+      }
 
       // The backend requires both first and last name; the wizard only
       // collects one "Administrator name" field, so a single-word entry

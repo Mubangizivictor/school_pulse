@@ -10,17 +10,39 @@
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16.png">
 <link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
 </head>
-<body>
+<body class="reg-body">
 
-<div id="site-nav"></div>
+<!-- Focused wizard shell: no marketing nav dropdowns, no marketing footer.
+     Just brand + Help + Sign in, per the registration redesign. -->
+<header class="reg-header">
+  <div class="reg-header-wrap">
+    <a href="index.html" class="brand">
+      <span class="brand-mark">
+        <img class="logo-light" src="assets/logos/icon-light.png" alt="" width="28" height="28">
+        <img class="logo-dark" src="assets/logos/icon-dark.png" alt="" width="28" height="28">
+      </span>
+      School Pulse
+    </a>
+    <div class="reg-header-actions">
+      <a href="contact.html" class="reg-header-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+        Help
+      </a>
+      <a href="login.html" class="reg-header-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Sign in
+      </a>
+    </div>
+  </div>
+</header>
 
-<main>
-  <section class="section">
-    <div class="container">
-      <div class="section-head left" style="max-width:640px; margin-bottom:32px;">
-        <span class="eyebrow">Register your school</span>
-        <h1>Let's get your school set up.</h1>
-        <p class="lead">Answer a few questions about your school and we'll take it from there. This takes about 5 minutes.</p>
+<main class="reg-main">
+    <div class="reg-container">
+      <div class="wizard-head">
+        <div class="wizard-head-text">
+          <h1>Register your school</h1>
+          <p class="reg-step-count" id="wizardStepCount">Step 1 of 6</p>
+        </div>
       </div>
 
       <div id="registerWizard">
@@ -100,175 +122,425 @@
 
               <!-- Step 2: Administrator -->
               <div class="wizard-panel" data-step="2">
-                <h3>Administrator</h3>
-                <p class="muted">This is the person who will manage your School Pulse account.</p>
-                <div class="form-field">
-                  <label for="adminName">Administrator name</label>
-                  <input type="text" id="adminName" name="adminName" required>
-                  <span class="error-text">Please enter the administrator's name.</span>
-                </div>
-                <div class="form-row">
-                  <div class="form-field">
-                    <label for="adminEmail">Administrator email</label>
-                    <input type="email" id="adminEmail" name="adminEmail" required>
-                    <div class="hint">You'll create your School Pulse sign-in with this email below.</div>
-                    <span class="error-text">Please enter a valid email address.</span>
-                  </div>
-                  <div class="form-field">
-                    <label for="adminPhone">Administrator phone</label>
-                    <input type="tel" id="adminPhone" name="adminPhone" required>
-                    <span class="error-text">Please enter a phone number.</span>
-                  </div>
-                </div>
-                <div class="form-field">
-                  <label for="adminRole">Role</label>
-                  <select id="adminRole" name="adminRole" required>
-                    <option value="">Select role</option>
-                    <option value="Head Teacher">Head Teacher</option>
-                    <option value="Deputy Head">Deputy Head</option>
-                    <option value="Bursar">Bursar</option>
-                    <option value="Administrator">Administrator</option>
-                    <option value="Director">Director</option>
-                  </select>
-                  <span class="error-text">Please select a role.</span>
-                </div>
+                <div class="admin-card">
+                  <h3>Administrator</h3>
+                  <p class="muted">This is the person who will manage your School Pulse account.</p>
 
-                <hr style="border:none; border-top:1px solid var(--color-border); margin:24px 0;">
-                <h4 style="margin-bottom:8px;">Create your account</h4>
-                <p class="muted" style="margin-bottom:16px;">Your application must be submitted from a verified email account. Create a password and verify your email — the address must match the administrator email above.</p>
-
-                <div id="accountCreatePanel">
-                  <div class="form-field" id="fieldAccountPassword">
-                    <label for="accountPassword">Choose a password</label>
-                    <input type="password" id="accountPassword" autocomplete="new-password" minlength="8">
-                    <div class="hint">At least 8 characters.</div>
-                    <span class="error-text">Please choose a password of at least 8 characters.</span>
+                  <div class="form-row">
+                    <div class="form-field">
+                      <label for="adminName">Full name</label>
+                      <input type="text" id="adminName" name="adminName" required>
+                      <span class="error-text">Please enter the administrator's full name.</span>
+                    </div>
+                    <div class="form-field">
+                      <label for="adminRole">Role</label>
+                      <select id="adminRole" name="adminRole" required>
+                        <option value="">Select role</option>
+                        <option value="Head Teacher">Head Teacher</option>
+                        <option value="Deputy Head">Deputy Head</option>
+                        <option value="Bursar">Bursar</option>
+                        <option value="Administrator">Administrator</option>
+                        <option value="Director">Director</option>
+                      </select>
+                      <span class="error-text">Please select a role.</span>
+                    </div>
                   </div>
-                  <div class="form-field" id="accountError" style="display:none; color: var(--color-error); font-size: 13.5px;"></div>
-                  <button type="button" class="btn btn-outline" id="createAccountBtn">Create account &amp; send verification email</button>
-                </div>
 
-                <div id="accountVerifyPanel" style="display:none;">
-                  <div class="form-field" id="accountVerifyMsg" style="font-size:13.5px;"></div>
-                  <div class="btn-row" style="gap:10px;">
-                    <button type="button" class="btn btn-outline" id="resendVerificationBtn">Resend verification email</button>
-                    <button type="button" class="btn btn-primary" id="checkVerifiedBtn">I've verified — continue</button>
+                  <div class="form-row">
+                    <div class="form-field">
+                      <label for="adminEmail">Work email</label>
+                      <input type="email" id="adminEmail" name="adminEmail" required>
+                      <div class="hint">We'll use this to create your School Pulse sign-in.</div>
+                      <span class="error-text">Please enter a valid email address.</span>
+                    </div>
+                    <div class="form-field">
+                      <label for="adminPhone">Phone number</label>
+                      <input type="tel" id="adminPhone" name="adminPhone" required>
+                      <div class="hint">Include country or area code.</div>
+                      <span class="error-text">Please enter a phone number.</span>
+                    </div>
                   </div>
                 </div>
 
-                <div id="accountVerifiedPanel" style="display:none;">
-                  <span class="badge badge-green">Email verified</span>
-                  <span class="hint" id="accountVerifiedEmail" style="margin-left:8px;"></span>
+                <div class="secure-card" id="accountCreatePanel">
+                  <div class="secure-card-head">
+                    <span class="secure-card-icon" id="secureCardIcon"></span>
+                    <div>
+                      <h4>Secure your account</h4>
+                      <p class="muted">Create a password to protect your account. We'll send a verification link to your email.</p>
+                    </div>
+                  </div>
+
+                  <div class="secure-card-body">
+                    <div class="secure-card-main">
+                      <div class="form-field" id="fieldAccountPassword">
+                        <label for="accountPassword">Password</label>
+                        <div class="pw-input">
+                          <input type="password" id="accountPassword" autocomplete="new-password" minlength="8">
+                          <button type="button" class="pw-toggle" id="pwToggle" aria-label="Show password"></button>
+                        </div>
+                        <div class="pw-meter" id="pwMeter" aria-hidden="true">
+                          <span></span><span></span><span></span><span></span>
+                        </div>
+                        <div class="pw-status" id="pwStatus">
+                          <span class="hint">Use at least 8 characters with a mix of letters, numbers and symbols.</span>
+                        </div>
+                        <span class="error-text">Please choose a password of at least 8 characters.</span>
+                      </div>
+                      <div class="form-field" id="accountError" style="display:none; color: var(--color-error); font-size: 13.5px;"></div>
+                      <button type="button" class="btn btn-primary" id="createAccountBtn" data-wizard-account>
+                        <span class="btn-ico" id="createAccountIcon"></span>Create account and send verification link
+                      </button>
+                    </div>
+
+                    <aside class="why-verify">
+                      <div class="why-verify-title"><span id="whyVerifyIcon"></span> Why verify?</div>
+                      <p>Verifying your email helps keep your account secure and lets you recover access if needed.</p>
+                    </aside>
+                  </div>
+                </div>
+
+                <div class="secure-card secure-card--verified" id="accountVerifiedPanel" style="display:none;">
+                  <div class="secure-card-head">
+                    <span class="secure-card-icon secure-card-icon--ok" id="verifiedCardIcon"></span>
+                    <div>
+                      <h4>Email verified</h4>
+                      <p class="muted">Your account is secured. <span id="accountVerifiedEmail"></span></p>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="wizard-nav">
-                  <button type="button" class="btn btn-outline" data-wizard-back>Back</button>
-                  <button type="button" class="btn btn-primary" data-wizard-next>Next</button>
+                  <button type="button" class="btn btn-outline" data-wizard-back>
+                    <span class="btn-ico btn-ico--flip" id="backIcon"></span>Back
+                  </button>
+                  <button type="button" class="btn btn-primary" data-wizard-next id="step2Continue" disabled>
+                    Save and continue <span class="btn-ico" id="step2ContinueIcon"></span>
+                  </button>
                 </div>
               </div>
 
               <!-- Step 3: School year & term -->
               <div class="wizard-panel" data-step="3">
-                <h3>School year &amp; term</h3>
-                <div class="form-row">
+                <div class="reg-card">
+                  <div class="reg-card-head">
+                    <span class="reg-card-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                    </span>
+                    <div>
+                      <h3>Set your academic calendar</h3>
+                      <p class="muted">Choose your school year and define the current term. You can adjust these later as your calendar evolves.</p>
+                    </div>
+                  </div>
+
                   <div class="form-field">
                     <label for="schoolYear">School year</label>
                     <select id="schoolYear" name="schoolYear" required>
                       <option value="">Select year</option>
                       <option value="2026">2026</option>
                       <option value="2027">2027</option>
+                      <option value="2028">2028</option>
                     </select>
                     <span class="error-text">Please select a school year.</span>
                   </div>
-                  <div class="form-field">
-                    <label for="term">Current term</label>
-                    <select id="term" name="term" required>
-                      <option value="">Select term</option>
-                      <option value="Term 1">Term 1</option>
-                      <option value="Term 2">Term 2</option>
-                      <option value="Term 3">Term 3</option>
-                    </select>
+
+                  <div class="form-field" id="fieldTerm">
+                    <label>Current term</label>
+                    <div class="term-cards" role="radiogroup" aria-label="Current term">
+                      <label class="term-card">
+                        <input type="radio" name="term" value="Term 1" required>
+                        <span class="term-card-body">
+                          <span class="term-card-radio" aria-hidden="true"></span>
+                          <span class="term-card-text">
+                            <span class="term-card-title">Term 1</span>
+                            <span class="term-card-sub">Jan – Apr</span>
+                          </span>
+                        </span>
+                      </label>
+                      <label class="term-card">
+                        <input type="radio" name="term" value="Term 2">
+                        <span class="term-card-body">
+                          <span class="term-card-radio" aria-hidden="true"></span>
+                          <span class="term-card-text">
+                            <span class="term-card-title">Term 2</span>
+                            <span class="term-card-sub">May – Aug</span>
+                          </span>
+                        </span>
+                      </label>
+                      <label class="term-card">
+                        <input type="radio" name="term" value="Term 3">
+                        <span class="term-card-body">
+                          <span class="term-card-radio" aria-hidden="true"></span>
+                          <span class="term-card-text">
+                            <span class="term-card-title">Term 3</span>
+                            <span class="term-card-sub">Sep – Dec</span>
+                          </span>
+                        </span>
+                      </label>
+                    </div>
                     <span class="error-text">Please select a term.</span>
                   </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-field">
-                    <label for="termStart">Term start date</label>
-                    <input type="date" id="termStart" name="termStart" required>
-                    <span class="error-text">Please enter the term start date.</span>
+
+                  <div class="form-row">
+                    <div class="form-field">
+                      <label for="termStart">Term start date</label>
+                      <input type="date" id="termStart" name="termStart" required>
+                      <span class="error-text">Please enter the term start date.</span>
+                    </div>
+                    <div class="form-field">
+                      <label for="termEnd">Term end date</label>
+                      <input type="date" id="termEnd" name="termEnd" required>
+                      <span class="error-text">Please enter the term end date.</span>
+                    </div>
                   </div>
-                  <div class="form-field">
-                    <label for="termEnd">Term end date</label>
-                    <input type="date" id="termEnd" name="termEnd" required>
-                    <span class="error-text">Please enter the term end date.</span>
+
+                  <div id="termDateError" class="reg-inline-error" style="display:none;"></div>
+
+                  <div class="reg-note">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                    <span>Terms can be adjusted later by an authorized school admin. This helps keep your academic calendar accurate.</span>
                   </div>
                 </div>
+
                 <div class="wizard-nav">
                   <button type="button" class="btn btn-outline" data-wizard-back>Back</button>
-                  <button type="button" class="btn btn-primary" data-wizard-next>Next</button>
+                  <button type="button" class="btn btn-primary" data-wizard-next>Continue</button>
                 </div>
               </div>
 
               <!-- Step 4: Student count -->
               <div class="wizard-panel" data-step="4">
-                <h3>Student count</h3>
-                <p class="muted">This helps us estimate your termly pricing tier — see the live summary alongside.</p>
-                <div class="form-field">
-                  <label for="studentCount">Number of students</label>
-                  <input type="number" id="studentCount" name="studentCount" min="1" required>
-                  <span class="error-text">Please enter your student count.</span>
+                <div class="price-step">
+                  <div class="price-card price-card--input">
+                    <span class="step-chip">Step 4 of 6</span>
+                    <h3>How many students will use School Pulse?</h3>
+                    <p class="muted">Use your current enrolled learners for the most accurate termly estimate.</p>
+
+                    <div class="form-field">
+                      <label for="studentCount">Number of students</label>
+                      <div class="stepper-input">
+                        <input type="number" id="studentCount" name="studentCount" min="1" step="1"
+                               inputmode="numeric" autocomplete="off" required>
+                        <div class="stepper-btns">
+                          <button type="button" class="stepper-btn" id="studentCountUp" aria-label="Increase student count">
+                            <span id="studentCountUpIcon"></span>
+                          </button>
+                          <button type="button" class="stepper-btn" id="studentCountDown" aria-label="Decrease student count">
+                            <span id="studentCountDownIcon"></span>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="hint">Enter a whole number (1 or more).</div>
+                      <span class="error-text" id="studentCountError">Please enter a whole number of 1 or more.</span>
+                    </div>
+
+                    <div class="price-note price-note--info">
+                      <span class="price-note-ico" id="priceInfoIcon"></span>
+                      <p>Schools pay per term according to the approved student-count pricing band. The estimate updates automatically as you change the count.</p>
+                    </div>
+                  </div>
+
+                  <div class="price-card price-card--estimate">
+                    <h4 class="price-card-title">Your termly estimate</h4>
+                    <div class="price-facts">
+                      <div class="price-fact">
+                        <span class="price-fact-k">Students</span>
+                        <span class="price-fact-v" id="estStudents">—</span>
+                      </div>
+                      <div class="price-fact">
+                        <span class="price-fact-k">Pricing band</span>
+                        <span class="price-fact-v" id="estBand">—</span>
+                      </div>
+                      <div class="price-fact">
+                        <span class="price-fact-k">Price per term</span>
+                        <span class="price-fact-v price-fact-v--muted" id="estUnit">&nbsp;</span>
+                      </div>
+                    </div>
+
+                    <div class="price-amount-wrap">
+                      <div class="price-amount" id="estAmount">Enter a student count</div>
+                      <div class="price-amount-sub" id="estAmountSub" hidden>per term</div>
+                    </div>
+
+                    <div class="price-included">
+                      <span class="price-included-title">What's included</span>
+                      <ul>
+                        <li><span class="price-tick" id="priceTick1"></span> All School Pulse modules and features</li>
+                        <li><span class="price-tick" id="priceTick2"></span> Training and onboarding for your staff</li>
+                        <li><span class="price-tick" id="priceTick3"></span> Ongoing support throughout your term</li>
+                      </ul>
+                    </div>
+
+                    <div class="price-confirm">
+                      <span class="price-confirm-ico" id="priceConfirmIcon"></span>
+                      <span>Pricing is confirmed after registration review.</span>
+                    </div>
+                  </div>
                 </div>
+
+                <div class="price-note price-note--amber" id="estBandNote" hidden>
+                  <span class="price-note-ico" id="priceAmberIcon"></span>
+                  <p>Your price changes only when your approved student count moves into another band.</p>
+                </div>
+
                 <div class="wizard-nav">
                   <button type="button" class="btn btn-outline" data-wizard-back>Back</button>
-                  <button type="button" class="btn btn-primary" data-wizard-next>Next</button>
+                  <button type="button" class="btn btn-primary" data-wizard-next>Continue</button>
                 </div>
               </div>
 
               <!-- Step 5: Address & subdomain -->
               <div class="wizard-panel" data-step="5">
-                <h3>Address &amp; subdomain</h3>
-                <div class="form-row">
-                  <div class="form-field" id="fieldRegion">
-                    <label for="region">Region</label>
-                    <select id="region" name="region" required>
-                      <option value="">Select region</option>
-                      <option value="Central">Central</option>
-                      <option value="Eastern">Eastern</option>
-                      <option value="Northern">Northern</option>
-                      <option value="Western">Western</option>
-                    </select>
-                    <span class="error-text">Please select a region.</span>
+                <!-- Location card -->
+                <div class="reg-card">
+                  <h3>Where is your school located?</h3>
+                  <p class="muted">Select your location so we can tailor School Pulse for your district.</p>
+
+                  <div class="form-row">
+                    <div class="form-field" id="fieldRegion">
+                      <label for="region">Region</label>
+                      <select id="region" name="region" required>
+                        <option value="">Select region</option>
+                        <option value="Central">Central</option>
+                        <option value="Eastern">Eastern</option>
+                        <option value="Northern">Northern</option>
+                        <option value="Western">Western</option>
+                      </select>
+                      <span class="error-text">Please select a region.</span>
+                    </div>
+
+                    <div class="form-field" id="fieldDistrict">
+                      <label for="district">District</label>
+                      <!-- Contained searchable combobox. #district stays a real
+                           <input name="district"> so the region->district
+                           cascade, draft persistence and submit body are all
+                           untouched; the popover below is a scoped overlay,
+                           never a full-page layer. -->
+                      <div class="combo" id="districtCombo">
+                        <div class="combo-input">
+                          <svg class="combo-search-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                          <input type="text" id="district" name="district" autocomplete="off" spellcheck="false"
+                                 role="combobox" aria-expanded="false" aria-autocomplete="list"
+                                 aria-controls="districtListbox" aria-haspopup="listbox"
+                                 required placeholder="Select a region first" disabled>
+                          <button type="button" class="combo-toggle" id="districtToggle" tabindex="-1" aria-label="Toggle district list">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                          </button>
+                        </div>
+                        <div class="combo-popover" id="districtPopover" hidden>
+                          <ul class="combo-list" id="districtListbox" role="listbox" aria-label="Districts"></ul>
+                          <div class="combo-empty" id="districtEmpty" hidden>No districts match your search.</div>
+                          <div class="combo-foot">Can't find your district? <a href="contact.html">Contact support</a></div>
+                        </div>
+                      </div>
+                      <!-- Kept for the existing cascade in register-submit.js:
+                           it still populates this with the region's districts.
+                           The combobox reads its options from here. -->
+                      <datalist id="districtOptions"></datalist>
+                      <span class="error-text">Please select a valid district.</span>
+                    </div>
                   </div>
-                  <div class="form-field">
-                    <label for="district">District</label>
-                    <input type="text" id="district" name="district" list="districtOptions" autocomplete="off" required placeholder="Select a region first" disabled>
-                    <datalist id="districtOptions"></datalist>
-                    <span class="error-text">Please select a valid district.</span>
+
+                  <div class="form-field" style="margin-bottom:0;">
+                    <label for="address">School address <span class="muted">(optional)</span></label>
+                    <input type="text" id="address" name="address" placeholder="e.g. Plot 12, Kyadondo Road, Kampala, Uganda">
+                    <div class="hint">This helps us personalize your setup and communications.</div>
                   </div>
                 </div>
-                <div class="form-field">
-                  <label for="address">Address</label>
-                  <input type="text" id="address" name="address" required>
-                  <span class="error-text">Please enter your school's address.</span>
+
+                <!-- Subdomain card -->
+                <div class="reg-card" style="margin-top:20px;">
+                  <h3>Choose your school address</h3>
+                  <p class="muted">This will be your unique School Pulse subdomain.</p>
+
+                  <div class="form-field" id="fieldSubdomain" style="margin-bottom:0;">
+                    <label for="subdomain">Subdomain</label>
+                    <div class="subdomain-field">
+                      <div class="subdomain-entry">
+                        <input type="text" id="subdomain" name="subdomain" autocomplete="off" spellcheck="false" required placeholder="yourschool">
+                        <span class="subdomain-result" id="subdomainResult" hidden></span>
+                      </div>
+                      <span class="subdomain-suffix">.schoolpulseapp.com</span>
+                    </div>
+                    <div class="hint">Your school will be reachable at <span id="subdomainPreview" class="subdomain-url">yourschool.schoolpulseapp.com</span></div>
+                    <div id="subdomainStatus" class="hint" style="min-height:18px;"></div>
+                    <span class="error-text">Please choose a subdomain.</span>
+                    <div class="reg-note" style="margin-top:16px;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                      <span>You can connect a custom domain (e.g. www.yourschool.ac.ug) after registration.</span>
+                    </div>
+                  </div>
                 </div>
-                <div class="form-field">
-                  <label for="subdomain">Desired subdomain</label>
-                  <input type="text" id="subdomain" name="subdomain" required placeholder="yourschool">
-                  <div class="hint">Your school will be reachable at <span id="subdomainPreview">yourschool.schoolpulseapp.com</span></div>
-                  <div id="subdomainStatus" class="hint" style="min-height:18px;"></div>
-                  <span class="error-text">Please choose a subdomain.</span>
-                </div>
+
                 <div class="wizard-nav">
                   <button type="button" class="btn btn-outline" data-wizard-back>Back</button>
-                  <button type="button" class="btn btn-primary" data-wizard-next>Next</button>
+                  <button type="button" class="btn btn-primary" data-wizard-next>Continue</button>
                 </div>
               </div>
 
-              <!-- Step 6: Review -->
+              <!-- Step 6: Review & submit -->
               <div class="wizard-panel" data-step="6">
-                <h3>Review</h3>
-                <p class="muted">Please check your details before submitting.</p>
-                <div id="wizardReview"></div>
+                <div class="review-head">
+                  <h2>Review your registration</h2>
+                  <p class="muted">Please review your details before submitting. You can edit any section if something needs to change.</p>
+                </div>
+
+                <!-- Four collapsible, editable summary cards. Each card's body
+                     is filled by renderReview() in wizard.js from the live
+                     form fields, so the draft is always the source of truth. -->
+                <div class="review-cards" id="reviewCards">
+                  <section class="review-card" data-review-card="school" data-edit-step="1">
+                    <button type="button" class="review-card-head" aria-expanded="true" aria-controls="reviewBodySchool">
+                      <span class="review-card-check" aria-hidden="true"></span>
+                      <span class="review-card-icon" data-icon="building" aria-hidden="true"></span>
+                      <span class="review-card-title">School details</span>
+                      <a href="#" class="review-card-edit" data-edit-step="1">
+                        <span data-icon="edit" aria-hidden="true"></span>Edit
+                      </a>
+                      <span class="review-card-chevron" data-icon="chevron-down" aria-hidden="true"></span>
+                    </button>
+                    <div class="review-card-body" id="reviewBodySchool" role="region"></div>
+                  </section>
+
+                  <section class="review-card" data-review-card="admin" data-edit-step="2">
+                    <button type="button" class="review-card-head" aria-expanded="true" aria-controls="reviewBodyAdmin">
+                      <span class="review-card-check" aria-hidden="true"></span>
+                      <span class="review-card-icon" data-icon="user" aria-hidden="true"></span>
+                      <span class="review-card-title">Administrator</span>
+                      <a href="#" class="review-card-edit" data-edit-step="2">
+                        <span data-icon="edit" aria-hidden="true"></span>Edit
+                      </a>
+                      <span class="review-card-chevron" data-icon="chevron-down" aria-hidden="true"></span>
+                    </button>
+                    <div class="review-card-body" id="reviewBodyAdmin" role="region"></div>
+                  </section>
+
+                  <section class="review-card" data-review-card="calendar" data-edit-step="3">
+                    <button type="button" class="review-card-head" aria-expanded="true" aria-controls="reviewBodyCalendar">
+                      <span class="review-card-check" aria-hidden="true"></span>
+                      <span class="review-card-icon" data-icon="calendar" aria-hidden="true"></span>
+                      <span class="review-card-title">Academic calendar</span>
+                      <a href="#" class="review-card-edit" data-edit-step="3">
+                        <span data-icon="edit" aria-hidden="true"></span>Edit
+                      </a>
+                      <span class="review-card-chevron" data-icon="chevron-down" aria-hidden="true"></span>
+                    </button>
+                    <div class="review-card-body" id="reviewBodyCalendar" role="region"></div>
+                  </section>
+
+                  <section class="review-card" data-review-card="location" data-edit-step="5">
+                    <button type="button" class="review-card-head" aria-expanded="true" aria-controls="reviewBodyLocation">
+                      <span class="review-card-check" aria-hidden="true"></span>
+                      <span class="review-card-icon" data-icon="pin" aria-hidden="true"></span>
+                      <span class="review-card-title">Location &amp; school address</span>
+                      <a href="#" class="review-card-edit" data-edit-step="5">
+                        <span data-icon="edit" aria-hidden="true"></span>Edit
+                      </a>
+                      <span class="review-card-chevron" data-icon="chevron-down" aria-hidden="true"></span>
+                    </button>
+                    <div class="review-card-body" id="reviewBodyLocation" role="region"></div>
+                  </section>
+                </div>
 
                 <div id="customTierNotice" class="form-field" style="display:none; padding:14px; border:1px solid var(--color-warning-bg); border-radius:var(--radius-sm); background:var(--color-warning-bg);">
                   <p style="margin:0 0 10px; font-size:13.5px;">Your student count is large enough that it needs a custom plan — this can't be submitted online yet. Please talk to our team and we'll set it up with you directly.</p>
@@ -284,6 +556,19 @@
 
                 <div id="submitError" class="form-field" style="display:none; color: var(--color-error); font-size: 13.5px;"></div>
 
+                <!-- Consent gate: the backend requires termsAccepted on every
+                     application, so this checkbox is a real submit gate — it is
+                     the source of the submitted flag, not a decoration. -->
+                <div class="review-consent" id="reviewConsent">
+                  <label class="review-consent-label">
+                    <input type="checkbox" id="termsAccept" name="termsAccept" required>
+                    <span>I confirm that the information provided is accurate and I agree to the
+                      <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and
+                      <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span>
+                  </label>
+                  <span class="error-text">Please confirm the information is accurate to continue.</span>
+                </div>
+
                 <div class="wizard-nav">
                   <button type="button" class="btn btn-outline" data-wizard-back>Back</button>
                   <button type="button" class="btn btn-primary" id="wizardSubmit">Submit registration</button>
@@ -291,12 +576,118 @@
               </div>
             </div>
 
-            <aside class="sidebar-panel">
-              <h4 style="margin-bottom:16px;">Live term-price summary</h4>
-              <div class="summary-row"><span class="k">Students</span><span class="v" id="summaryStudentCount">—</span></div>
-              <div class="summary-row"><span class="k">Tier</span><span class="v" id="summaryTier">—</span></div>
-              <div class="summary-row"><span class="k">Price</span><span class="v" id="summaryPrice">Enter student count</span></div>
-            </aside>
+            <div class="sidebar-col">
+              <aside class="sidebar-panel" id="livePricePanel">
+                <div class="reg-side-head">
+                  <span class="reg-side-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><path d="M7 7h.01"/></svg>
+                  </span>
+                  <h4>Live term-price summary</h4>
+                </div>
+                <div class="summary-row"><span class="k">Students</span><span class="v" id="summaryStudentCount">—</span></div>
+                <div class="summary-row"><span class="k">Tier</span><span class="v" id="summaryTier">—</span></div>
+                <div class="summary-row"><span class="k">Price</span><span class="v" id="summaryPrice">Enter student count</span></div>
+              </aside>
+
+              <!-- Step 6 only: the sticky subscription summary + what-happens-next
+                   panel. Shown by renderStep() when currentStep === 6. -->
+              <aside class="sidebar-panel" id="subscriptionSummaryPanel" hidden>
+                <div class="reg-side-head">
+                  <span class="reg-side-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><path d="M7 7h.01"/></svg>
+                  </span>
+                  <h4>Termly subscription summary</h4>
+                </div>
+                <div class="summary-row"><span class="k">Students</span><span class="v" id="subSummaryStudents">—</span></div>
+                <div class="summary-row"><span class="k">Pricing band</span><span class="v" id="subSummaryBand">—</span></div>
+                <div class="summary-row summary-row--price">
+                  <span class="k">Termly price</span>
+                  <span class="v"><span id="subSummaryPrice">—</span><span class="sub-summary-per">per term</span></span>
+                </div>
+                <div class="summary-row"><span class="k">Term selected</span><span class="v" id="subSummaryTerm">—</span></div>
+              </aside>
+
+              <aside class="sidebar-panel next-steps-panel" id="nextStepsPanel" hidden>
+                <div class="reg-side-head">
+                  <span class="reg-side-icon next-steps-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                  </span>
+                  <h4>What happens next?</h4>
+                </div>
+                <ol class="next-steps-list">
+                  <li>
+                    <span class="next-steps-num">1</span>
+                    <span class="next-steps-text">
+                      <strong>We review your registration</strong>
+                      Our team will verify your details.
+                    </span>
+                  </li>
+                  <li>
+                    <span class="next-steps-num">2</span>
+                    <span class="next-steps-text">
+                      <strong>You receive payment instructions</strong>
+                      We'll send the payment details to your email.
+                    </span>
+                  </li>
+                  <li>
+                    <span class="next-steps-num">3</span>
+                    <span class="next-steps-text">
+                      <strong>We confirm payment and activate your school</strong>
+                      You'll get access and can start using School Pulse.
+                    </span>
+                  </li>
+                </ol>
+              </aside>
+
+              <aside class="sidebar-panel" id="calendarPreviewPanel" hidden>
+                <div class="reg-side-head">
+                  <span class="reg-side-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  </span>
+                  <h4>Academic calendar preview</h4>
+                </div>
+                <div id="calendarPreviewBody">
+                  <p class="muted reg-preview-empty">Select a term and valid dates to see your calendar breakdown.</p>
+                </div>
+              </aside>
+
+              <div id="verifyDialogBackdrop" class="verify-backdrop" hidden></div>
+              <aside id="accountVerifyPanel" class="verify-card" hidden>
+                <button type="button" class="verify-close" id="verifyClose" aria-label="Close">&times;</button>
+                <div class="verify-icon" id="verifyIcon"></div>
+                <h4>Check your email</h4>
+                <p class="verify-sub">We've sent a verification link to<br><strong id="verifyEmail"></strong></p>
+                <div id="accountVerifyMsg" class="verify-msg" style="display:none;"></div>
+
+                <ul class="verify-steps">
+                  <li><span class="verify-step-ico" id="verifyStepMailIcon"></span> Click the link in the email to verify your address.</li>
+                  <li><span class="verify-step-ico" id="verifyStepLockIcon"></span> Once verified, you can continue to the next step.</li>
+                </ul>
+
+                <div class="verify-resend">
+                  <div class="verify-resend-row">
+                    <span>Didn't receive the email?</span>
+                  </div>
+                  <div class="verify-resend-row">
+                    <span>Resend in <strong id="resendCountdown" class="verify-countdown">00:60</strong></span>
+                    <button type="button" class="btn-ghost verify-resend-btn" id="resendVerificationBtn" hidden>Resend email</button>
+                  </div>
+                  <div class="verify-resend-row">
+                    <span>Wrong email? <button type="button" class="btn-ghost verify-inline-btn" id="changeEmailBtn">Change email</button></span>
+                  </div>
+                </div>
+
+                <button type="button" class="btn btn-primary btn-block" id="checkVerifiedBtn" disabled>
+                  <span class="btn-ico" id="checkVerifiedIcon"></span>I've verified my email
+                </button>
+                <p class="verify-foot" id="verifyFoot">This button unlocks after your email is verified.</p>
+              </aside>
+            </div>
+          </div>
+
+          <div id="wizardActionBar" class="wizard-action-bar">
+            <button type="button" class="btn btn-outline" id="wizardBarBack">Back</button>
+            <button type="button" class="btn btn-primary" id="wizardBarNext">Continue</button>
           </div>
         </div>
 
@@ -311,22 +702,48 @@
         </div>
       </div>
     </div>
-  </section>
 </main>
-
-<div id="site-footer"></div>
 
 <script src="js/icons.js"></script>
 <script src="js/pricing-config.js"></script>
-<script src="js/nav.js"></script>
-<script src="js/footer.js"></script>
 <script src="js/registration-auth.js"></script>
 <script src="js/forms.js"></script>
 <script src="js/wizard.js"></script>
+<script src="js/district-combo.js"></script>
 <script src="js/subdomain-check.js"></script>
 <script src="js/register-submit.js"></script>
 <script>
-  document.getElementById('wizardSuccessIcon').innerHTML = window.ICONS.check;
+  (function () {
+    var I = window.ICONS || {};
+    function set(id, name) { var el = document.getElementById(id); if (el && I[name]) el.innerHTML = I[name]; }
+    set('wizardSuccessIcon', 'check');
+    set('secureCardIcon', 'secure');
+    set('verifiedCardIcon', 'check');
+    set('createAccountIcon', 'mail');
+    set('whyVerifyIcon', 'secure');
+    set('step2ContinueIcon', 'link');
+    set('backIcon', 'link');
+    set('verifyIcon', 'mail');
+    set('verifyStepMailIcon', 'mail');
+    set('verifyStepLockIcon', 'secure');
+    set('checkVerifiedIcon', 'check');
+    set('studentCountUpIcon', 'chevron-up');
+    set('studentCountDownIcon', 'chevron-down');
+    set('priceInfoIcon', 'info');
+    set('priceAmberIcon', 'info');
+    set('priceConfirmIcon', 'info');
+    set('priceTick1', 'check');
+    set('priceTick2', 'check');
+    set('priceTick3', 'check');
+    var pt = document.getElementById('pwToggle');
+    if (pt && I.eye) pt.innerHTML = I.eye;
+
+    // Fill every [data-icon] node (the Step 6 review cards use these).
+    document.querySelectorAll('[data-icon]').forEach(function (el) {
+      var name = el.getAttribute('data-icon');
+      if (I[name]) el.innerHTML = I[name];
+    });
+  })();
 </script>
 </body>
 </html>
