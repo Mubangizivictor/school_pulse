@@ -247,9 +247,10 @@ class _StaffListPageState extends State<StaffListPage> {
                       context,
                       all: all,
                       isWeb: isWeb,
-                      showSort: useTable,
                       canInviteStaff: canInviteStaff,
                     ),
+                    if (all.isNotEmpty && filtered.isNotEmpty)
+                      _buildListSectionHeader(context, isWeb: isWeb),
                     Expanded(
                       child: all.isEmpty
                           ? _buildEmptyState(
@@ -309,11 +310,36 @@ class _StaffListPageState extends State<StaffListPage> {
     return staff.sublist(start, end);
   }
 
+  Widget _buildListSectionHeader(BuildContext context, {required bool isWeb}) {
+    final horizontalPadding = ResponsiveBuilder.isMobile(context) ? 16.0 : 24.0;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(horizontalPadding, 12, horizontalPadding, 8),
+      child: Row(
+        children: [
+          Text(
+            'All staff',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const Spacer(),
+          Flexible(
+            child: _SortDropdown(
+              value: _sortBy,
+              onChanged: (v) => setState(() => _sortBy = v),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeaderControls(
     BuildContext context, {
     required List<UserEntity> all,
     required bool isWeb,
-    required bool showSort,
     required bool canInviteStaff,
   }) {
     final activeCount = all.where((s) => s.isActive).length;
@@ -359,48 +385,28 @@ class _StaffListPageState extends State<StaffListPage> {
             ],
           ),
           const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              // Below ~560px the search field plus sort dropdown can no
-              // longer share a row without either clipping - stack them
-              // instead so both stay fully usable.
-              final canShareRow = constraints.maxWidth >= 560;
-              final search = AppSearchField(
-                hintText: 'Search staff name, role or department',
-                controller: _searchController,
-              );
-              if (!showSort) return search;
-              final sort = _SortDropdown(
-                value: _sortBy,
-                onChanged: (v) => setState(() => _sortBy = v),
-              );
-              if (canShareRow) {
-                return Row(
-                  children: [
-                    Expanded(child: search),
-                    const SizedBox(width: 12),
-                    sort,
-                  ],
-                );
-              }
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  search,
-                  const SizedBox(height: 8),
-                  Align(alignment: Alignment.centerLeft, child: sort),
-                ],
-              );
-            },
+          AppSearchField(
+            hintText: 'Search staff name, role or department',
+            controller: _searchController,
           ),
           const SizedBox(height: 10),
-          _buildFilterChipsRow(context),
+          _buildFilterChipsRow(
+            context,
+            allCount: all.length,
+            activeCount: activeCount,
+            inactiveCount: inactiveCount,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChipsRow(BuildContext context) {
+  Widget _buildFilterChipsRow(
+    BuildContext context, {
+    required int allCount,
+    required int activeCount,
+    required int inactiveCount,
+  }) {
     final hasMoreFilters =
         _departmentId != null || _designationId != null || _employmentType != null;
     return Row(
@@ -412,18 +418,21 @@ class _StaffListPageState extends State<StaffListPage> {
               children: [
                 _StatusChip(
                   label: 'All',
+                  count: allCount,
                   selected: _status == _StatusFilter.all,
                   onTap: () => setState(() => _status = _StatusFilter.all),
                 ),
                 const SizedBox(width: 8),
                 _StatusChip(
                   label: 'Active',
+                  count: activeCount,
                   selected: _status == _StatusFilter.active,
                   onTap: () => setState(() => _status = _StatusFilter.active),
                 ),
                 const SizedBox(width: 8),
                 _StatusChip(
                   label: 'Inactive',
+                  count: inactiveCount,
                   selected: _status == _StatusFilter.inactive,
                   onTap: () => setState(() => _status = _StatusFilter.inactive),
                 ),
@@ -605,27 +614,61 @@ class _SortDropdown extends StatelessWidget {
   final _SortBy value;
   final ValueChanged<_SortBy> onChanged;
 
+  static const _labels = {
+    _SortBy.recentlyAdded: 'Recently added',
+    _SortBy.name: 'Name',
+    _SortBy.role: 'Role',
+  };
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainer(context),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border(context)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<_SortBy>(
-          value: value,
-          onChanged: (v) => v != null ? onChanged(v) : null,
-          items: const [
-            DropdownMenuItem(
-              value: _SortBy.recentlyAdded,
-              child: Text('Recently added'),
-            ),
-            DropdownMenuItem(value: _SortBy.name, child: Text('Name')),
-            DropdownMenuItem(value: _SortBy.role, child: Text('Role')),
-          ],
+    // DropdownButton sizes its closed state to the WIDEST item in `items`
+    // regardless of selectedItemBuilder, so "Recently added" always drives
+    // its intrinsic width - wrapping it in Flexible alone does not stop it
+    // overflowing a narrow row. Cap it to a fixed max width instead and let
+    // the selected label ellipsize inside that.
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 132),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainer(context),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.border(context)),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<_SortBy>(
+            value: value,
+            isDense: true,
+            isExpanded: true,
+            icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+            onChanged: (v) => v != null ? onChanged(v) : null,
+            selectedItemBuilder: (context) => _labels.values
+                .map(
+                  (label) => Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+            items: _labels.entries
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e.key,
+                    child: Text(e.value),
+                  ),
+                )
+                .toList(),
+          ),
         ),
       ),
     );
@@ -635,37 +678,54 @@ class _SortDropdown extends StatelessWidget {
 class _StatusChip extends StatelessWidget {
   const _StatusChip({
     required this.label,
+    required this.count,
     required this.selected,
     required this.onTap,
   });
 
   final String label;
+  final int count;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = AppColors.primary(context);
+    final selectedFg = AppColors.information(context);
+    final unselectedFg = AppColors.textSecondary(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? color : AppColors.surfaceContainer(context),
+          color: selected
+              ? AppColors.informationSurface(context)
+              : AppColors.surfaceContainer(context),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? color : AppColors.border(context),
+            color: selected ? selectedFg : AppColors.border(context),
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected
-                ? AppColors.background(context)
-                : AppColors.textSecondary(context),
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? selectedFg : unselectedFg,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '$count',
+              style: TextStyle(
+                color: selected ? selectedFg : unselectedFg,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ],
         ),
       ),
     );
