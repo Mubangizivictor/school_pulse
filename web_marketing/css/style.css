@@ -1466,6 +1466,25 @@ input[type="range"] { width: 100%; accent-color: var(--color-primary); height: 2
 .reg-step1-rail-trust strong { display: block; font-size: 14px; color: var(--color-primary-dark); margin-bottom: 4px; }
 .reg-step1-rail-trust p { margin: 0; font-size: 12.5px; color: var(--color-ink-soft); }
 
+/* Below 640px the rail becomes a compact horizontal progress strip instead
+   of the full vertical list with descriptions — the vertical version was
+   pushing the actual step-1 form fields a full screen down on phones. */
+@media (max-width: 640px) {
+  .reg-step1-rail { position: static; padding: 14px 16px; gap: 14px; }
+  .reg-step1-rail-list { flex-direction: row; align-items: flex-start; justify-content: space-between; }
+  .reg-step1-rail-item { flex-direction: column; align-items: center; gap: 6px; padding-bottom: 0; flex: 1; text-align: center; }
+  .reg-step1-rail-item::before {
+    left: 50%; top: 15px; bottom: auto; right: auto; width: auto; height: 2px;
+    transform: translateX(16px);
+    border-left: none; border-top: 2px dashed var(--color-border);
+  }
+  .reg-step1-rail-dot { width: 28px; height: 28px; font-size: 12.5px; }
+  .reg-step1-rail-text { padding-top: 0; align-items: center; }
+  .reg-step1-rail-text span { display: none; }
+  .reg-step1-rail-text strong { font-size: 11.5px; line-height: 1.2; }
+  .reg-step1-rail-trust { padding: 12px; }
+}
+
 .reg-step1-features {
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
