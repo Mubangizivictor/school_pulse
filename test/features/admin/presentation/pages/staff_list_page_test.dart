@@ -230,4 +230,65 @@ void main() {
 
     expect(find.widgetWithText(FilledButton, 'Add staff'), findsNothing);
   });
+
+  testWidgets(
+    'narrow phone width collapses Add staff to an icon button with no overflow',
+    (tester) async {
+      when(
+        () => mockGetStaffMembers(any()),
+      ).thenAnswer((_) async => Right(staffList));
+
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(FilledButton, 'Add staff'), findsNothing);
+      expect(find.widgetWithIcon(IconButton, Icons.add), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('tablet width (768) renders the dense table, not the card list', (
+    tester,
+  ) async {
+    when(
+      () => mockGetStaffMembers(any()),
+    ).thenAnswer((_) async => Right(staffList));
+
+    tester.view.physicalSize = const Size(768, 1024);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    expect(find.text('James Brown'), findsOneWidget);
+    expect(find.byType(Table), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('desktop width (1440) renders the dense table with pagination', (
+    tester,
+  ) async {
+    when(
+      () => mockGetStaffMembers(any()),
+    ).thenAnswer((_) async => Right(staffList));
+
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Table), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Add staff'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -156,6 +156,12 @@ class _StaffListPageState extends State<StaffListPage> {
   @override
   Widget build(BuildContext context) {
     final canInviteStaff = _canInviteStaff(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Below this the "Add staff" label + refresh + filter icons no longer
+    // fit an AppBar's single-line actions row without clipping - collapse
+    // the button to an icon so every action stays reachable and unclipped
+    // even on the narrowest supported phones (~320px).
+    final compactAddButton = screenWidth < 400;
     return BlocProvider(
       create: (_) => di.sl<StructureBloc>(),
       child: Scaffold(
@@ -187,18 +193,33 @@ class _StaffListPageState extends State<StaffListPage> {
             if (canInviteStaff)
               Padding(
                 padding: const EdgeInsets.only(right: 8, left: 4),
-                child: FilledButton.icon(
-                  onPressed: () => context.push('/staff/admin/users/add-staff'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary(context),
-                    foregroundColor: AppColors.background(context),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add staff'),
-                ),
+                child: compactAddButton
+                    ? IconButton(
+                        tooltip: 'Add staff',
+                        onPressed: () =>
+                            context.push('/staff/admin/users/add-staff'),
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.primary(context),
+                          foregroundColor: AppColors.background(context),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        icon: const Icon(Icons.add, size: 20),
+                      )
+                    : FilledButton.icon(
+                        onPressed: () =>
+                            context.push('/staff/admin/users/add-staff'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary(context),
+                          foregroundColor: AppColors.background(context),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Add staff'),
+                      ),
               ),
           ],
         ),
@@ -216,12 +237,17 @@ class _StaffListPageState extends State<StaffListPage> {
             return ResponsiveBuilder(
               builder: (context, layout) {
                 final isWeb = layout == ResponsiveLayout.desktop;
+                // Tablet gets the same dense table as desktop (it has the
+                // width to show it usefully) - only true phones fall back
+                // to the compact card list.
+                final useTable = layout != ResponsiveLayout.mobile;
                 return Column(
                   children: [
                     _buildHeaderControls(
                       context,
                       all: all,
                       isWeb: isWeb,
+                      showSort: useTable,
                       canInviteStaff: canInviteStaff,
                     ),
                     Expanded(
@@ -242,7 +268,7 @@ class _StaffListPageState extends State<StaffListPage> {
                             )
                           : RefreshIndicator(
                               onRefresh: _refresh,
-                              child: isWeb
+                              child: useTable
                                   ? _StaffTable(
                                       staff: _paginate(filtered),
                                       total: filtered.length,
@@ -287,13 +313,20 @@ class _StaffListPageState extends State<StaffListPage> {
     BuildContext context, {
     required List<UserEntity> all,
     required bool isWeb,
+    required bool showSort,
     required bool canInviteStaff,
   }) {
     final activeCount = all.where((s) => s.isActive).length;
     final inactiveCount = all.where((s) => !s.isActive).length;
+    final horizontalPadding = ResponsiveBuilder.isMobile(context) ? 16.0 : 24.0;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(isWeb ? 24 : 16, 12, isWeb ? 24 : 16, 8),
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        12,
+        horizontalPadding,
+        8,
+      ),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(color: AppColors.border(context)),
@@ -326,22 +359,39 @@ class _StaffListPageState extends State<StaffListPage> {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: AppSearchField(
-                  hintText: 'Search staff name, role or department',
-                  controller: _searchController,
-                ),
-              ),
-              if (isWeb) ...[
-                const SizedBox(width: 12),
-                _SortDropdown(
-                  value: _sortBy,
-                  onChanged: (v) => setState(() => _sortBy = v),
-                ),
-              ],
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Below ~560px the search field plus sort dropdown can no
+              // longer share a row without either clipping - stack them
+              // instead so both stay fully usable.
+              final canShareRow = constraints.maxWidth >= 560;
+              final search = AppSearchField(
+                hintText: 'Search staff name, role or department',
+                controller: _searchController,
+              );
+              if (!showSort) return search;
+              final sort = _SortDropdown(
+                value: _sortBy,
+                onChanged: (v) => setState(() => _sortBy = v),
+              );
+              if (canShareRow) {
+                return Row(
+                  children: [
+                    Expanded(child: search),
+                    const SizedBox(width: 12),
+                    sort,
+                  ],
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  search,
+                  const SizedBox(height: 8),
+                  Align(alignment: Alignment.centerLeft, child: sort),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 10),
           _buildFilterChipsRow(context),
@@ -351,38 +401,42 @@ class _StaffListPageState extends State<StaffListPage> {
   }
 
   Widget _buildFilterChipsRow(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _StatusChip(
-            label: 'All',
-            selected: _status == _StatusFilter.all,
-            onTap: () => setState(() => _status = _StatusFilter.all),
+    final hasMoreFilters =
+        _departmentId != null || _designationId != null || _employmentType != null;
+    return Row(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _StatusChip(
+                  label: 'All',
+                  selected: _status == _StatusFilter.all,
+                  onTap: () => setState(() => _status = _StatusFilter.all),
+                ),
+                const SizedBox(width: 8),
+                _StatusChip(
+                  label: 'Active',
+                  selected: _status == _StatusFilter.active,
+                  onTap: () => setState(() => _status = _StatusFilter.active),
+                ),
+                const SizedBox(width: 8),
+                _StatusChip(
+                  label: 'Inactive',
+                  selected: _status == _StatusFilter.inactive,
+                  onTap: () => setState(() => _status = _StatusFilter.inactive),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(width: 8),
-          _StatusChip(
-            label: 'Active',
-            selected: _status == _StatusFilter.active,
-            onTap: () => setState(() => _status = _StatusFilter.active),
-          ),
-          const SizedBox(width: 8),
-          _StatusChip(
-            label: 'Inactive',
-            selected: _status == _StatusFilter.inactive,
-            onTap: () => setState(() => _status = _StatusFilter.inactive),
-          ),
-          const SizedBox(width: 8),
-          _StatusChip(
-            label: 'More filters',
-            selected: _departmentId != null ||
-                _designationId != null ||
-                _employmentType != null,
-            icon: Icons.tune,
-            onTap: () => _openFilters(context),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 8),
+        _FilterIconButton(
+          active: hasMoreFilters,
+          onTap: () => _openFilters(context),
+        ),
+      ],
     );
   }
 
@@ -583,13 +637,11 @@ class _StatusChip extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
-    this.icon,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
-  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -605,30 +657,47 @@ class _StatusChip extends StatelessWidget {
             color: selected ? color : AppColors.border(context),
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 14,
-                color: selected
-                    ? AppColors.background(context)
-                    : AppColors.textSecondary(context),
-              ),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                color: selected
-                    ? AppColors.background(context)
-                    : AppColors.textSecondary(context),
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ],
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected
+                ? AppColors.background(context)
+                : AppColors.textSecondary(context),
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterIconButton extends StatelessWidget {
+  const _FilterIconButton({required this.active, required this.onTap});
+
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = AppColors.primary(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: active ? color : AppColors.surfaceContainer(context),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: active ? color : AppColors.border(context)),
+        ),
+        child: Icon(
+          Icons.tune,
+          size: 18,
+          color: active
+              ? AppColors.background(context)
+              : AppColors.textSecondary(context),
         ),
       ),
     );
