@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -101,6 +102,9 @@ void main() {
     when(() => local.markSyncing(any())).thenAnswer((_) async {});
     when(
       () => local.markRetryableFailure(any(), error: any(named: 'error')),
+    ).thenAnswer((_) async {});
+    when(
+      () => local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
     ).thenAnswer((_) async {});
     repository = AttendanceRepositoryImpl(
       remoteDataSource: remote,
