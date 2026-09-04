@@ -99,7 +99,7 @@ class _HomeBody extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Header(user: user, isMobile: _isMobile),
+            _Header(user: user, isMobile: _isMobile, isDesktop: _isDesktop),
             SizedBox(height: _isMobile ? AppSpacing.xl : AppSpacing.x3l),
             _AttentionSection(
               user: user,
@@ -135,9 +135,20 @@ class _HomeBody extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.user, required this.isMobile});
+  const _Header({
+    required this.user,
+    required this.isMobile,
+    required this.isDesktop,
+  });
   final UserEntity user;
   final bool isMobile;
+  final bool isDesktop;
+
+  /// Only desktop has real horizontal room for the name block, both term/
+  /// date chips, and the two icon buttons on a single row. Mobile and
+  /// tablet always stack the context row below instead of squeezing it in,
+  /// so this never depends on exactly how wide "tablet" happens to be.
+  bool get _inlineContextRow => isDesktop;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -165,14 +176,18 @@ class _Header extends StatelessWidget {
               children: [
                 Text(
                   'Good morning, ${user.name.split(' ').first}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: isMobile ? 18 : 20,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary(context),
                   ),
                 ),
                 Text(
                   'School Admin · ${user.schoolName?.isNotEmpty == true ? user.schoolName! : 'School'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13,
                     color: AppColors.textSecondary(context),
@@ -181,7 +196,7 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          if (!isMobile) ...[
+          if (_inlineContextRow) ...[
             const SizedBox(width: AppSpacing.xl),
             _ContextRow(user: user, compact: true),
           ],
@@ -196,7 +211,7 @@ class _Header extends StatelessWidget {
           ),
         ],
       ),
-      if (isMobile) ...[
+      if (!_inlineContextRow) ...[
         const SizedBox(height: AppSpacing.l),
         _ContextRow(user: user, compact: false),
       ],
@@ -266,11 +281,20 @@ class _ContextRow extends StatelessWidget {
       ),
     ];
     if (compact) {
-      return Row(mainAxisSize: MainAxisSize.min, children: [
-        chips[0],
-        const SizedBox(width: AppSpacing.m),
-        chips[1],
-      ]);
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 160),
+            child: chips[0],
+          ),
+          const SizedBox(width: AppSpacing.m),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 140),
+            child: chips[1],
+          ),
+        ],
+      );
     }
     return Row(children: [
       Expanded(child: chips[0]),

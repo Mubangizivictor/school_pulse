@@ -125,7 +125,7 @@ void main() {
     }
   });
 
-  Widget wrap({double width = 390}) {
+  Widget wrap({double width = 390, ThemeData? theme}) {
     final router = GoRouter(
       initialLocation: '/staff/admin',
       routes: [
@@ -154,7 +154,7 @@ void main() {
     return MediaQuery(
       data: MediaQueryData(size: Size(width, 900)),
       child: MaterialApp.router(
-        theme: AppTheme.light(),
+        theme: theme ?? AppTheme.light(),
         routerConfig: router,
         builder: (context, child) => BlocProvider<AuthBloc>.value(
           value: mockAuthBloc,
@@ -165,34 +165,100 @@ void main() {
   }
 
   group('AdminDashboardScreen responsive layout', () {
-    testWidgets('renders without overflow at phone width (390px)', (
+    // Sweeps the full breakpoint range this screen has to survive: below
+    // the smallest supported phone, every named breakpoint boundary
+    // (AppBreakpoints.mobile/largeMobile/tablet/smallDesktop/desktop/
+    // largeDesktop), and well past the largest desktop monitor.
+    const widths = <String, double>{
+      'ultra-narrow phone (320px)': 320,
+      'small phone (360px, mobile breakpoint)': 360,
+      'large phone (480px, largeMobile breakpoint)': 480,
+      'phone (390px, common device width)': 390,
+      'tablet lower bound (600px, tablet breakpoint)': 600,
+      'tablet portrait (768px)': 768,
+      'tablet landscape (800px)': 800,
+      'tablet upper bound (1023px, just under smallDesktop)': 1023,
+      'small desktop (1024px, smallDesktop breakpoint)': 1024,
+      'desktop (1280px, desktop breakpoint)': 1280,
+      'large desktop (1440px, largeDesktop breakpoint)': 1440,
+      'ultra-wide desktop (1920px)': 1920,
+    };
+
+    for (final entry in widths.entries) {
+      testWidgets('renders without overflow at ${entry.key}', (tester) async {
+        await tester.pumpWidget(wrap(width: entry.value));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Active learners'), findsOneWidget);
+        expect(find.text('Add learner'), findsOneWidget);
+        expect(find.text('Take attendance'), findsOneWidget);
+        expect(find.text('Invite staff'), findsOneWidget);
+        expect(find.text('School structure'), findsOneWidget);
+      });
+    }
+
+    testWidgets('quick action tiles meet the 44px minimum touch target', (
       tester,
     ) async {
-      await tester.pumpWidget(wrap(width: 390));
-      await tester.pumpAndSettle();
+      for (final width in [320.0, 600.0, 1024.0, 1920.0]) {
+        await tester.pumpWidget(wrap(width: width));
+        await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull);
-      expect(find.text('Active learners'), findsOneWidget);
-      expect(find.text('Add learner'), findsOneWidget);
+        for (final label in [
+          'Add learner',
+          'Take attendance',
+          'Invite staff',
+          'School structure',
+        ]) {
+          final size = tester.getSize(
+            find
+                .ancestor(
+                  of: find.text(label),
+                  matching: find.byType(InkWell),
+                )
+                .first,
+          );
+          expect(
+            size.height,
+            greaterThanOrEqualTo(44),
+            reason: '"$label" tile at width=$width is ${size.height}px tall',
+          );
+        }
+      }
     });
 
-    testWidgets('renders without overflow at tablet width (800px)', (
+    testWidgets(
+      'header never truncates the notification/messages icons off-screen',
+      (tester) async {
+        for (final width in [320.0, 480.0, 600.0, 1024.0, 1920.0]) {
+          await tester.pumpWidget(wrap(width: width));
+          await tester.pumpAndSettle();
+
+          expect(
+            find.byIcon(Icons.notifications_none_rounded),
+            findsOneWidget,
+            reason: 'notification icon missing at width=$width',
+          );
+          expect(tester.takeException(), isNull);
+        }
+      },
+    );
+
+    testWidgets('renders without overflow in dark theme at every breakpoint', (
       tester,
     ) async {
-      await tester.pumpWidget(wrap(width: 800));
-      await tester.pumpAndSettle();
+      for (final width in [320.0, 600.0, 1024.0, 1920.0]) {
+        await tester.pumpWidget(wrap(width: width, theme: AppTheme.dark()));
+        await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('renders without overflow at desktop width (1280px)', (
-      tester,
-    ) async {
-      await tester.pumpWidget(wrap(width: 1280));
-      await tester.pumpAndSettle();
-
-      expect(tester.takeException(), isNull);
-      expect(find.text('Active learners'), findsOneWidget);
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'dark theme overflow at width=$width',
+        );
+        expect(find.text('Active learners'), findsOneWidget);
+      }
     });
   });
 
