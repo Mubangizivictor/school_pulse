@@ -435,4 +435,55 @@ void main() {
       expect(find.text('No recent activity'), findsOneWidget);
     });
   });
+
+  group('AdminDashboardScreen icon tile contrast', () {
+    // Regression test: icon tiles (school logo, metric icons, quick-action
+    // icons) must never paint an icon the same color as the box behind it -
+    // that renders as an invisible/blank square. This caught a real bug
+    // where AppColors.primarySoft and AppColors.primary resolved to the
+    // identical color (both white in dark mode, both black in light mode).
+    for (final isDark in [false, true]) {
+      testWidgets(
+        'icon tiles have visible contrast between icon and background '
+        '(${isDark ? "dark" : "light"} theme)',
+        (tester) async {
+          await tester.pumpWidget(
+            wrap(theme: isDark ? AppTheme.dark() : AppTheme.light()),
+          );
+          await tester.pumpAndSettle();
+
+          // Every icon-in-a-colored-box pattern on the screen: the school
+          // logo tile plus every quick-action tile icon container.
+          final containers = tester.widgetList<Container>(
+            find.byWidgetPredicate(
+              (w) =>
+                  w is Container &&
+                  w.decoration is BoxDecoration &&
+                  (w.decoration! as BoxDecoration).color != null &&
+                  w.child is Icon,
+            ),
+          );
+
+          expect(containers, isNotEmpty);
+          for (final container in containers) {
+            final bg = (container.decoration! as BoxDecoration).color!;
+            final icon = container.child! as Icon;
+            final iconColor = icon.color;
+            expect(
+              iconColor,
+              isNotNull,
+              reason: 'icon ${icon.icon} has no explicit color',
+            );
+            expect(
+              iconColor,
+              isNot(equals(bg)),
+              reason:
+                  'icon ${icon.icon} is the same color ($iconColor) as '
+                  'its background box ($bg) - it will render invisible',
+            );
+          }
+        },
+      );
+    }
+  });
 }

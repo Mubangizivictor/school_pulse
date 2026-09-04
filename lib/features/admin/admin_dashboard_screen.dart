@@ -161,12 +161,12 @@ class _Header extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppColors.primarySoft(context),
+              color: AppColors.surfaceContainerHigh(context),
               borderRadius: AppRadius.medium,
             ),
             child: Icon(
               Icons.school_outlined,
-              color: AppColors.primary(context),
+              color: AppColors.textPrimary(context),
             ),
           ),
           const SizedBox(width: AppSpacing.l),
@@ -637,10 +637,10 @@ class _MetricTile extends StatelessWidget {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: AppColors.primarySoft(context),
+            color: AppColors.surfaceContainerHigh(context),
             borderRadius: AppRadius.small,
           ),
-          child: Icon(icon, size: 16, color: AppColors.primary(context)),
+          child: Icon(icon, size: 16, color: AppColors.textPrimary(context)),
         ),
         const SizedBox(height: AppSpacing.m),
         FittedBox(
@@ -744,10 +744,14 @@ class _QuickActionTile extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: AppColors.primarySoft(context),
+              color: AppColors.surfaceContainerHigh(context),
               borderRadius: AppRadius.small,
             ),
-            child: Icon(shortcut.icon, size: 18, color: AppColors.primary(context)),
+            child: Icon(
+              shortcut.icon,
+              size: 18,
+              color: AppColors.textPrimary(context),
+            ),
           ),
           const SizedBox(width: AppSpacing.m),
           Expanded(
