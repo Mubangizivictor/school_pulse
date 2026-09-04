@@ -1403,6 +1403,11 @@ input[type="range"] { width: 100%; accent-color: var(--color-primary); height: 2
   #wizardForm:has(.reg-step1.active) { grid-template-columns: 1fr; }
   #wizardForm:has(.reg-step1.active) .reg-step1-rail { grid-column: 1; grid-row: 1; }
   #wizardForm:has(.reg-step1.active) .layout-2col { grid-column: 1; grid-row: 2; }
+  /* .wizard-action-bar is pinned to grid-column: 2 for the desktop two-column
+     layout (line ~1024); left unreset here it forced an implicit second grid
+     track on #wizardForm, shrinking the single 1fr column below and pushing
+     the rail/form off to one side instead of spanning full width on mobile. */
+  #wizardForm:has(.reg-step1.active) .wizard-action-bar { grid-column: 1; }
 }
 
 .reg-step1-rail {
