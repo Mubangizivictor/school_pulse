@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/app/school_splash_user_resolver.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/login_flow/welcome_screen.dart';
+import 'package:school_pulse/features/registration/presentation/pages/registration_root_page.dart'
+    as school_registration;
 import 'package:school_pulse/features/auth/login_flow/parent_login_screens.dart';
 import 'package:school_pulse/features/auth/login_flow/staff_login_screens.dart';
 import 'package:school_pulse/features/auth/login_flow/forgot_password_screen.dart';
@@ -503,6 +505,7 @@ final router = GoRouter(
         state.uri.path.contains('/welcome') ||
         state.uri.path == '/owner-login' ||
         state.uri.path == '/owner/mfa-setup' ||
+        state.uri.path == '/register-school' ||
         state.uri.path == '/';
 
     if (authState is AuthInitial && !isLoggingIn) return '/';
@@ -633,6 +636,11 @@ final router = GoRouter(
     GoRoute(
       path: '/welcome',
       builder: (context, state) => const WelcomeScreen(),
+    ),
+    GoRoute(
+      path: '/register-school',
+      builder: (context, state) =>
+          const school_registration.RegistrationRootPage(),
     ),
     GoRoute(
       path: '/institution-suspended',
