@@ -9,72 +9,127 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16.png">
 <link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+<style>
+  .fees-hero { padding: 40px 0 32px; }
+  .fees-hero-trust { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 16px; }
+  .fees-hero-trust-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--color-muted); font-weight: 600; }
+  .fees-hero-trust-item svg { width: 15px; height: 15px; color: var(--color-primary); }
+
+  .fees-panel { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+  .fees-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--color-border); }
+  .fees-panel-title { font-weight: 800; font-size: 15px; }
+  .fees-panel-period { font-size: 12.5px; color: var(--color-muted); display: flex; align-items: center; gap: 4px; }
+
+  .fees-table-wrap { overflow-x: auto; }
+  .fees-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .fees-table th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; color: var(--color-muted); padding: 10px 18px; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+  .fees-table td { padding: 10px 18px; border-bottom: 1px solid var(--color-border); color: var(--color-ink-soft); white-space: nowrap; }
+  .fees-table tr:last-child td { border-bottom: none; }
+  .fees-learner { display: flex; align-items: center; gap: 10px; color: var(--color-ink); font-weight: 500; }
+  .fees-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--color-surface); flex-shrink: 0; }
+  .fees-amt-paid { color: var(--color-success-text); font-weight: 600; }
+  .fees-amt-zero { color: var(--color-error-text); }
+
+  .fees-cards { display: none; padding: 4px 14px 14px; }
+  .fees-card-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 4px; border-bottom: 1px solid var(--color-border); }
+  .fees-card-row:last-child { border-bottom: none; }
+  .fees-card-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .fees-card-name { font-weight: 600; color: var(--color-ink); font-size: 14px; }
+  .fees-card-class { font-size: 12px; color: var(--color-muted); }
+  .fees-card-right { text-align: right; flex-shrink: 0; }
+  .fees-card-bal { font-weight: 700; font-size: 13.5px; color: var(--color-ink); margin-bottom: 4px; }
+
+  @media (max-width: 700px) {
+    .fees-table-wrap { display: none; }
+    .fees-cards { display: block; }
+  }
+
+  .fees-benefit-icons svg { width: 20px; height: 20px; }
+</style>
 </head>
 <body>
 
 <div id="site-nav"></div>
 
 <main>
-  <section class="hero">
+  <section class="hero fees-hero">
     <div class="container hero-grid">
       <div>
         <span class="eyebrow">Fees &amp; Payments</span>
         <h1>Stop chasing fees. Start seeing balances.</h1>
-        <p class="lead">Set up your fee structure once, give every learner a unique payment reference, and watch collections update in real time as parents pay by mobile money or bank.</p>
+        <p class="lead">School Pulse Fees &amp; Payments helps schools automate collections, give parents easy ways to pay, and track every balance in real time.</p>
         <div class="btn-row">
           <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
           <a href="pricing.html" class="btn btn-outline btn-lg">See pricing</a>
         </div>
-      </div>
-      <div class="mockup">
-        <div class="mockup-chrome">
-          <span class="mockup-dot"></span><span class="mockup-dot"></span><span class="mockup-dot"></span>
-          <span class="mockup-url">app.schoolpulseapp.com/fees</span>
+        <div class="fees-hero-trust">
+          <span class="fees-hero-trust-item" id="trust-0"></span>
+          <span class="fees-hero-trust-item" id="trust-1"></span>
+          <span class="fees-hero-trust-item" id="trust-2"></span>
         </div>
-        <div class="mockup-body">
-          <table class="data-table">
+      </div>
+
+      <div class="fees-panel">
+        <div class="fees-panel-head">
+          <span class="fees-panel-title">Fees overview</span>
+          <span class="fees-panel-period">This term ▾</span>
+        </div>
+        <div class="fees-table-wrap">
+          <table class="fees-table">
             <thead>
-              <tr><th>Learner</th><th>Class</th><th>Due</th><th>Paid</th><th>Balance</th><th>Status</th></tr>
+              <tr><th>Learner</th><th>Class</th><th>Due (UGX)</th><th>Paid (UGX)</th><th>Balance (UGX)</th><th>Status</th></tr>
             </thead>
             <tbody>
-              <tr><td>Nakato Grace</td><td>P5 East</td><td>UGX 850,000</td><td>UGX 850,000</td><td>UGX 0</td><td><span class="badge badge-green">Cleared</span></td></tr>
-              <tr><td>Okello Brian</td><td>S2 North</td><td>UGX 1,200,000</td><td>UGX 700,000</td><td>UGX 500,000</td><td><span class="badge badge-amber">Partial</span></td></tr>
-              <tr><td>Achieng Mary</td><td>P3 West</td><td>UGX 780,000</td><td>UGX 0</td><td>UGX 780,000</td><td><span class="badge badge-red">Overdue</span></td></tr>
-              <tr><td>Ssebunya Ivan</td><td>S4 Science</td><td>UGX 1,350,000</td><td>UGX 1,350,000</td><td>UGX 0</td><td><span class="badge badge-green">Cleared</span></td></tr>
+              <tr>
+                <td><span class="fees-learner"><span class="fees-avatar"></span>Akinyi Doreen</span></td>
+                <td>S.2 Blue</td><td>350,000</td><td class="fees-amt-paid">350,000</td><td>0</td>
+                <td><span class="badge badge-green">Cleared</span></td>
+              </tr>
+              <tr>
+                <td><span class="fees-learner"><span class="fees-avatar"></span>Mwangi Brian</span></td>
+                <td>S.2 Blue</td><td>350,000</td><td class="fees-amt-paid">150,000</td><td>200,000</td>
+                <td><span class="badge badge-amber">Partial</span></td>
+              </tr>
+              <tr>
+                <td><span class="fees-learner"><span class="fees-avatar"></span>Nabirye Sheila</span></td>
+                <td>S.1 Green</td><td>280,000</td><td class="fees-amt-zero">0</td><td>280,000</td>
+                <td><span class="badge badge-red">Overdue</span></td>
+              </tr>
+              <tr>
+                <td><span class="fees-learner"><span class="fees-avatar"></span>Okello Samuel</span></td>
+                <td>S.3 Blue</td><td>420,000</td><td class="fees-amt-paid">420,000</td><td>0</td>
+                <td><span class="badge badge-green">Cleared</span></td>
+              </tr>
+              <tr>
+                <td><span class="fees-learner"><span class="fees-avatar"></span>Turyamureeba L.</td>
+                <td>S.1 Green</td><td>280,000</td><td class="fees-amt-paid">100,000</td><td>180,000</td>
+                <td><span class="badge badge-amber">Partial</span></td>
+              </tr>
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
-  </section>
 
-  <section class="section">
-    <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">Why schools switch</span>
-        <h2>Fee collection that runs itself</h2>
-        <p>No more manual receipts, lost payment slips, or guessing who has paid.</p>
-      </div>
-      <div class="grid grid-4">
-        <div class="card">
-          <div class="card-icon" id="icon-refresh"></div>
-          <h3>Automate collections</h3>
-          <p>Set fee structures per class or stream once, and School Pulse handles invoicing every term automatically.</p>
-        </div>
-        <div class="card">
-          <div class="card-icon" id="icon-key"></div>
-          <h3>Unique payment references</h3>
-          <p>Every learner gets a unique reference so mobile money and bank payments reconcile automatically — no manual matching.</p>
-        </div>
-        <div class="card">
-          <div class="card-icon" id="icon-eye"></div>
-          <h3>Clear visibility</h3>
-          <p>Bursars and heads see live balances, collection rates and outstanding fees across the whole school at a glance.</p>
-        </div>
-        <div class="card">
-          <div class="card-icon" id="icon-reminder"></div>
-          <h3>Smart reminders</h3>
-          <p>Automatic SMS and app reminders nudge parents before and after due dates — without your staff lifting a finger.</p>
+        <div class="fees-cards">
+          <div class="fees-card-row">
+            <div class="fees-card-left"><span class="fees-avatar"></span><div><div class="fees-card-name">Akinyi Doreen</div><div class="fees-card-class">S.2 Blue</div></div></div>
+            <div class="fees-card-right"><div class="fees-card-bal">UGX 0</div><span class="badge badge-green">Cleared</span></div>
+          </div>
+          <div class="fees-card-row">
+            <div class="fees-card-left"><span class="fees-avatar"></span><div><div class="fees-card-name">Mwangi Brian</div><div class="fees-card-class">S.2 Blue</div></div></div>
+            <div class="fees-card-right"><div class="fees-card-bal">UGX 200,000</div><span class="badge badge-amber">Partial</span></div>
+          </div>
+          <div class="fees-card-row">
+            <div class="fees-card-left"><span class="fees-avatar"></span><div><div class="fees-card-name">Nabirye Sheila</div><div class="fees-card-class">S.1 Green</div></div></div>
+            <div class="fees-card-right"><div class="fees-card-bal">UGX 280,000</div><span class="badge badge-red">Overdue</span></div>
+          </div>
+          <div class="fees-card-row">
+            <div class="fees-card-left"><span class="fees-avatar"></span><div><div class="fees-card-name">Okello Samuel</div><div class="fees-card-class">S.3 Blue</div></div></div>
+            <div class="fees-card-right"><div class="fees-card-bal">UGX 0</div><span class="badge badge-green">Cleared</span></div>
+          </div>
+          <div class="fees-card-row">
+            <div class="fees-card-left"><span class="fees-avatar"></span><div><div class="fees-card-name">Turyamureeba L.</div><div class="fees-card-class">S.1 Green</div></div></div>
+            <div class="fees-card-right"><div class="fees-card-bal">UGX 180,000</div><span class="badge badge-amber">Partial</span></div>
+          </div>
         </div>
       </div>
     </div>
@@ -82,25 +137,26 @@
 
   <section class="section section-alt">
     <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">How it works</span>
-        <h2>Three steps to full visibility</h2>
-      </div>
-      <div class="steps steps-row">
-        <div class="step">
-          <div class="step-num">1</div>
-          <h3>Set up your fee structure</h3>
-          <p>Define fees per class, stream or boarding status once per term — School Pulse applies it automatically.</p>
+      <div class="grid grid-4">
+        <div class="card">
+          <div class="card-icon fees-benefit-icons" id="icon-refresh"></div>
+          <h3>Automate collections</h3>
+          <p>Create fee structures, assign learners, and automate billing by term or instalment.</p>
         </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <h3>Parents pay via mobile money or bank</h3>
-          <p>Each learner's unique reference means payments land and reconcile without any manual work.</p>
+        <div class="card">
+          <div class="card-icon fees-benefit-icons" id="icon-key"></div>
+          <h3>Unique payment references</h3>
+          <p>Every learner gets a unique reference for accurate, easy reconciliation.</p>
         </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <h3>Track in real time</h3>
-          <p>Watch balances, receipts and collection rates update live on your dashboard, any time, any device.</p>
+        <div class="card">
+          <div class="card-icon fees-benefit-icons" id="icon-eye"></div>
+          <h3>Clear visibility</h3>
+          <p>See who has paid, who owes, and aging balances in real time.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon fees-benefit-icons" id="icon-reminder"></div>
+          <h3>Smart reminders</h3>
+          <p>Send automated SMS reminders to parents and reduce overdue fees.</p>
         </div>
       </div>
     </div>
@@ -108,11 +164,35 @@
 
   <section class="section">
     <div class="container">
+      <div class="section-head left">
+        <span class="eyebrow">How it works</span>
+        <h2>How it works in 3 simple steps</h2>
+      </div>
+      <div class="steps steps-row" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div><h3>Set up fee structure</h3><p>Create fees, choose instalments and due dates, then assign to classes or learners.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div><h3>Parents pay via mobile money or bank</h3><p>Parents pay using the unique reference via mobile money or bank.</p></div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div><h3>Track in real time</h3><p>Payments update instantly. Monitor collections, balances and reports in real time.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
       <div class="cta-banner">
-        <h2>Ready to stop chasing fees?</h2>
-        <p>Register your school today and start collecting with confidence next term.</p>
+        <h2>Ready to simplify your school collections?</h2>
+        <p>Join hundreds of schools using School Pulse to get paid on time, every time.</p>
         <div class="btn-row" style="justify-content:center;">
           <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+          <a href="pricing.html" class="btn btn-outline btn-lg">See pricing</a>
         </div>
       </div>
     </div>
@@ -130,6 +210,14 @@
   document.getElementById('icon-key').innerHTML = window.ICONS.key;
   document.getElementById('icon-eye').innerHTML = window.ICONS.eye;
   document.getElementById('icon-reminder').innerHTML = window.ICONS.reminder;
+
+  function fillTrust(id, icon, text) {
+    var el = document.getElementById(id);
+    el.innerHTML = window.ICONS[icon] + '<span>' + text + '</span>';
+  }
+  fillTrust('trust-0', 'secure', 'Secure & compliant');
+  fillTrust('trust-1', 'building', 'Mobile money &amp; bank');
+  fillTrust('trust-2', 'clock', 'Real-time updates');
 </script>
 </body>
 </html>
