@@ -37,6 +37,7 @@
     "bucket": "school-pulse-3d95b.firebasestorage.app"
   },
   "hosting": {
+    "site": "school-pulse-3d95b",
     "public": "build/web",
     "ignore": [
       "firebase.json",
