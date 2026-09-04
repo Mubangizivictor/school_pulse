@@ -9,84 +9,147 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16.png">
 <link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+<style>
+  .res-hero { padding: 32px 0 28px; }
+  .res-hero h1 { font-size: 32px; line-height: 1.12; margin-bottom: 10px; }
+  .res-hero .lead { margin-bottom: 0; }
+  .res-hero .search-bar { max-width: 480px; margin-top: 18px; }
+
+  .res-cats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .res-cat-link { display: block; color: inherit; text-decoration: none; }
+  .res-cat { padding: 20px; height: 100%; }
+  .res-cat .card-icon { margin-bottom: 12px; }
+  .res-cat h3 { font-size: 15.5px; margin-bottom: 5px; }
+  .res-cat p { font-size: 13px; margin-bottom: 0; }
+
+  .res-sidebar { display: flex; flex-direction: column; gap: 16px; }
+  .res-panel { border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 18px; background: var(--color-card); }
+  .res-panel h4 { font-size: 14.5px; margin-bottom: 12px; }
+
+  .res-guides { list-style: none; margin: 0; padding: 0; }
+  .res-guide-link {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 10px 2px; border-bottom: 1px solid var(--color-border);
+    color: inherit; text-decoration: none; font-size: 13.5px; font-weight: 600;
+  }
+  .res-guides li:last-child .res-guide-link { border-bottom: none; }
+  .res-guide-link .chev { color: var(--color-muted); flex-shrink: 0; font-size: 15px; }
+  .res-guide-link:hover { color: var(--color-primary); }
+  .res-view-all { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700; color: var(--color-primary); text-decoration: none; margin-top: 12px; }
+
+  .res-support-icon { width: 38px; height: 38px; border-radius: var(--radius-sm); background: var(--color-surface); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+  .res-support-icon svg { width: 19px; height: 19px; color: var(--color-primary); }
+  .res-panel p { font-size: 13px; color: var(--color-muted); margin-bottom: 12px; }
+
+  .res-guides-toggle { display: none; }
+
+  @media (max-width: 860px) {
+    .layout-2col { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 560px) {
+    .res-hero { padding: 22px 0 20px; }
+    .res-hero h1 { font-size: 25px; }
+    .res-hero .search-bar { max-width: 100%; }
+    .res-cats { grid-template-columns: 1fr; }
+
+    .res-guides-panel .res-guides-toggle {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%; background: none; border: none; padding: 0; margin-bottom: 0;
+      font: inherit; font-size: 14.5px; font-weight: 700; color: var(--color-ink); cursor: pointer;
+    }
+    .res-guides-panel .res-guides-toggle svg { width: 16px; height: 16px; color: var(--color-muted); transition: transform 0.15s ease; }
+    .res-guides-panel.open .res-guides-toggle svg { transform: rotate(180deg); }
+    .res-guides-panel h4 { display: none; }
+    .res-guides-panel .res-guides,
+    .res-guides-panel .res-view-all { display: none; }
+    .res-guides-panel.open .res-guides,
+    .res-guides-panel.open .res-view-all { display: block; }
+    .res-guides-panel.open .res-guides { margin-top: 12px; }
+  }
+</style>
 </head>
 <body>
 
 <div id="site-nav"></div>
 
 <main>
-  <section class="hero" style="padding-bottom:32px;">
+  <section class="hero res-hero">
     <div class="container">
       <span class="eyebrow">Resources</span>
       <h1>Guides to help your school get the most out of School Pulse.</h1>
-      <p class="lead" style="max-width:640px;">Step-by-step help articles written for Ugandan school administrators, bursars and teachers.</p>
-      <div class="search-bar" style="max-width:520px; margin-top:8px;">
+      <p class="lead">Step-by-step help articles written for Ugandan school administrators, bursars and teachers.</p>
+      <div class="search-bar">
         <span id="icon-search" style="width:20px; height:20px; color:var(--color-muted); display:flex; align-items:center;"></span>
         <input type="text" placeholder="Search guides...">
       </div>
     </div>
   </section>
 
-  <section class="section" style="padding-top:16px;">
+  <section class="section" style="padding-top:0; padding-bottom:56px;">
     <div class="container">
       <div class="layout-2col">
-        <div>
-          <div class="section-head left">
-            <span class="eyebrow">Browse by topic</span>
-            <h2>Popular categories</h2>
-          </div>
-          <div class="grid grid-4">
-            <div class="card">
-              <div class="card-icon" id="icon-students"></div>
+        <div class="res-cats">
+          <a href="#" class="res-cat-link">
+            <div class="card res-cat">
+              <div class="card-icon" id="icon-getting-started"></div>
               <h3>Getting Started</h3>
-              <p>Set up your school, invite staff and learn the basics.</p>
-              <span class="muted" style="font-size:14px; font-weight:600;" aria-disabled="true">Guides coming soon</span>
+              <p>New to School Pulse? Start here to get set up with confidence.</p>
             </div>
-            <div class="card">
-              <div class="card-icon" id="icon-clock"></div>
+          </a>
+          <a href="#" class="res-cat-link">
+            <div class="card res-cat">
+              <div class="card-icon" id="icon-term-setup"></div>
               <h3>Term Setup</h3>
-              <p>Configure terms, classes and timetables correctly.</p>
-              <span class="muted" style="font-size:14px; font-weight:600;" aria-disabled="true">Guides coming soon</span>
+              <p>Set up terms, dates and calendars to keep your school running smoothly.</p>
             </div>
-            <div class="card">
+          </a>
+          <a href="#" class="res-cat-link">
+            <div class="card res-cat">
               <div class="card-icon" id="icon-fees"></div>
-              <h3>Fees and Payments</h3>
-              <p>Set up fee structures, collect payments and send reminders.</p>
-              <span class="muted" style="font-size:14px; font-weight:600;" aria-disabled="true">Guides coming soon</span>
+              <h3>Fees &amp; Payments</h3>
+              <p>Manage fee structures, invoices and payments effortlessly.</p>
             </div>
-            <div class="card">
+          </a>
+          <a href="#" class="res-cat-link">
+            <div class="card res-cat">
               <div class="card-icon" id="icon-parents"></div>
               <h3>Parents</h3>
-              <p>Help parents get set up on the app and portal.</p>
-              <span class="muted" style="font-size:14px; font-weight:600;" aria-disabled="true">Guides coming soon</span>
+              <p>Engage parents and keep them informed every step of the way.</p>
             </div>
-          </div>
+          </a>
         </div>
 
-        <aside class="sidebar-panel">
-          <h4 style="margin-bottom:4px;">Popular guides</h4>
-          <p class="muted" style="font-size:13px; margin-bottom:14px;">Coming soon — check back shortly.</p>
-          <ul style="margin-bottom:24px;">
-            <li class="muted" style="padding:8px 0; border-bottom:1px solid var(--color-border); font-size:14px; font-weight:600;">Setting up your first term</li>
-            <li class="muted" style="padding:8px 0; border-bottom:1px solid var(--color-border); font-size:14px; font-weight:600;">Adding staff accounts</li>
-            <li class="muted" style="padding:8px 0; border-bottom:1px solid var(--color-border); font-size:14px; font-weight:600;">Understanding fee tiers</li>
-            <li class="muted" style="padding:8px 0; border-bottom:1px solid var(--color-border); font-size:14px; font-weight:600;">Marking attendance offline</li>
-            <li class="muted" style="padding:8px 0; border-bottom:1px solid var(--color-border); font-size:14px; font-weight:600;">Generating report cards</li>
-            <li class="muted" style="padding:8px 0; font-size:14px; font-weight:600;">Inviting parents to the app</li>
-          </ul>
-
-          <div class="card" style="padding:18px; margin-bottom:16px;">
-            <div class="card-icon" id="icon-whatsapp" style="margin-bottom:10px;"></div>
-            <h4 style="margin-bottom:6px; font-size:15px;">Chat with support</h4>
-            <p style="font-size:13.5px; margin-bottom:12px;">Can't find what you need? Our team replies fast on WhatsApp.</p>
-            <a href="contact.html" class="btn btn-outline btn-block">Contact us</a>
+        <aside class="res-sidebar">
+          <div class="res-panel res-guides-panel">
+            <button type="button" class="res-guides-toggle" id="guides-toggle">
+              Popular guides
+              <span id="icon-chevron-down"></span>
+            </button>
+            <h4>Popular guides</h4>
+            <ul class="res-guides">
+              <li><a href="#" class="res-guide-link">Getting started with School Pulse <span class="chev">›</span></a></li>
+              <li><a href="#" class="res-guide-link">How to set up a new term <span class="chev">›</span></a></li>
+              <li><a href="#" class="res-guide-link">Creating fee structures <span class="chev">›</span></a></li>
+              <li><a href="#" class="res-guide-link">Taking and tracking payments <span class="chev">›</span></a></li>
+              <li><a href="#" class="res-guide-link">Inviting parents to School Pulse <span class="chev">›</span></a></li>
+            </ul>
+            <a href="#" class="res-view-all">View all guides →</a>
           </div>
 
-          <div class="card" style="padding:18px;">
-            <h4 style="margin-bottom:6px; font-size:15px;">Get guides by email</h4>
-            <p style="font-size:13.5px; margin-bottom:12px;">New guides and tips, occasionally, in your inbox.</p>
+          <div class="res-panel">
+            <div class="res-support-icon" id="icon-support"></div>
+            <h4 style="margin-bottom:4px;">Contact support</h4>
+            <p>Our friendly team is here to help Monday to Friday, 8am – 5pm.</p>
+            <a href="contact.html" class="btn btn-primary btn-block">Contact support</a>
+          </div>
+
+          <div class="res-panel">
+            <div class="res-support-icon" id="icon-mail"></div>
+            <h4 style="margin-bottom:4px;">Get the latest tips</h4>
+            <p>Subscribe to our newsletter for product updates and helpful tips.</p>
             <div class="form-field" style="margin-bottom:10px;">
-              <input type="email" placeholder="you@school.ac.ug">
+              <input type="email" placeholder="Enter your email">
             </div>
             <button type="button" class="btn btn-primary btn-block">Subscribe</button>
           </div>
@@ -103,11 +166,19 @@
 <script src="js/footer.js"></script>
 <script>
   document.getElementById('icon-search').innerHTML = window.ICONS.search;
-  document.getElementById('icon-students').innerHTML = window.ICONS.students;
-  document.getElementById('icon-clock').innerHTML = window.ICONS.clock;
+  document.getElementById('icon-getting-started').innerHTML = window.ICONS.check;
+  document.getElementById('icon-term-setup').innerHTML = window.ICONS.calendar;
   document.getElementById('icon-fees').innerHTML = window.ICONS.fees;
   document.getElementById('icon-parents').innerHTML = window.ICONS.parents;
-  document.getElementById('icon-whatsapp').innerHTML = window.ICONS.whatsapp;
+  document.getElementById('icon-support').innerHTML = window.ICONS.support;
+  document.getElementById('icon-mail').innerHTML = window.ICONS.mail;
+  document.getElementById('icon-chevron-down').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+
+  var toggle = document.getElementById('guides-toggle');
+  var panel = toggle.closest('.res-guides-panel');
+  toggle.addEventListener('click', function () {
+    panel.classList.toggle('open');
+  });
 </script>
 </body>
 </html>
