@@ -3,9 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:school_pulse/core/permissions/permission.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/admin/presentation/screens/admin_more_screen.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -72,12 +74,19 @@ class _ClassTeacherMoreScreenState extends State<ClassTeacherMoreScreen> {
     final auth = context.watch<AuthBloc>().state;
     if (auth is! AuthAuthenticated) return const SizedBox.shrink();
 
+    // School Admin / Head Teacher / Deputy Head / Director get the
+    // admin-operational More hub (School structure, Roles & access, Reports,
+    // School settings) instead of the generic personal-only screen.
+    if (auth.user.roles.any(UserRoleDisplay.adminConsoleRoles.contains)) {
+      return const AdminMoreScreen();
+    }
+
     // This screen only has a class-scoped More for roles.first in the
     // Class/Subject Teacher family - everyone else who lands on the shared
-    // `/staff/more` route (admin console roles, Bursar, ...) has no
-    // ClassTeacherContextBloc assignment to resolve, so waiting on it here
-    // would spin the skeleton forever. Route them to the generic profile
-    // More screen immediately instead of joining the BlocConsumer below.
+    // `/staff/more` route (Bursar, ...) has no ClassTeacherContextBloc
+    // assignment to resolve, so waiting on it here would spin the skeleton
+    // forever. Route them to the generic profile More screen immediately
+    // instead of joining the BlocConsumer below.
     if (!_teacherFamilyRoles.contains(auth.user.role)) {
       return const ProfileMoreScreen();
     }
