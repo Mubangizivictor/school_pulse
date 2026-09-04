@@ -9,6 +9,11 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16.png">
 <link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+<style>
+  .se-hero-trust { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 18px; }
+  .se-hero-trust-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--color-muted); font-weight: 600; }
+  .se-hero-trust-item svg { width: 15px; height: 15px; color: var(--color-primary); }
+</style>
 </head>
 <body>
 
@@ -16,50 +21,20 @@
 
 <main>
   <section class="hero">
-    <div class="container">
-      <span class="eyebrow">Students &amp; Enrolment</span>
-      <h1>Every learner, tracked from enquiry to enrolment.</h1>
-      <p class="lead">Replace scattered enquiry books and admission files with one pipeline that follows each family from first contact to a full learner profile.</p>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">Term 1, 2026</span>
-        <h2>Your enrolment pipeline, at a glance.</h2>
-      </div>
-      <div class="grid grid-5">
-        <div class="card text-center">
-          <span class="badge badge-blue">Enquiry</span>
-          <div style="font-size:28px; font-weight:800; margin-top:12px;">42</div>
-        </div>
-        <div class="card text-center">
-          <span class="badge badge-blue">Application</span>
-          <div style="font-size:28px; font-weight:800; margin-top:12px;">28</div>
-        </div>
-        <div class="card text-center">
-          <span class="badge badge-amber">Assessment</span>
-          <div style="font-size:28px; font-weight:800; margin-top:12px;">19</div>
-        </div>
-        <div class="card text-center">
-          <span class="badge badge-amber">Offer</span>
-          <div style="font-size:28px; font-weight:800; margin-top:12px;">15</div>
-        </div>
-        <div class="card text-center">
-          <span class="badge badge-green">Enrolled</span>
-          <div style="font-size:28px; font-weight:800; margin-top:12px;">312</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section section-alt">
     <div class="container hero-grid">
       <div>
-        <span class="eyebrow">Learner Profile</span>
-        <h2>One record for everything about a learner.</h2>
-        <p>Guardian contacts, attendance history, fee status, academic performance and more — all in a single profile your whole team can trust.</p>
+        <span class="eyebrow">Students &amp; Enrolment</span>
+        <h1>Every learner, tracked from enquiry to enrolment.</h1>
+        <p class="lead">Replace scattered enquiry books and admission files with one pipeline that follows each family from first contact to a full learner profile.</p>
+        <div class="btn-row">
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+          <a href="#how-it-works" class="btn btn-outline btn-lg">See how it works</a>
+        </div>
+        <div class="se-hero-trust">
+          <span class="se-hero-trust-item" id="trust-0"></span>
+          <span class="se-hero-trust-item" id="trust-1"></span>
+          <span class="se-hero-trust-item" id="trust-2"></span>
+        </div>
       </div>
       <div class="mockup">
         <div class="mockup-chrome">
@@ -90,32 +65,24 @@
     </div>
   </section>
 
-  <section class="section">
+  <section class="section" id="how-it-works">
     <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">Why schools love it</span>
-        <h2>Less admin, more visibility.</h2>
+      <div class="section-head left">
+        <span class="eyebrow">How it works</span>
+        <h2>From first enquiry to enrolled learner.</h2>
       </div>
-      <div class="grid grid-4">
-        <div class="card">
-          <div class="card-icon" id="icon-chart"></div>
-          <h3>Real-time pipeline</h3>
-          <p>See exactly how many enquiries convert to enrolled learners, every term.</p>
+      <div class="steps steps-row" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div><h3>Enquiry &amp; application</h3><p>A parent enquires, then submits an application with supporting documents.</p></div>
         </div>
-        <div class="card">
-          <div class="card-icon" id="icon-secure"></div>
-          <h3>Secure records</h3>
-          <p>Guardian and learner data protected with role-based access controls.</p>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div><h3>Assessment &amp; offer</h3><p>An entrance assessment is booked automatically, then an offer letter goes out.</p></div>
         </div>
-        <div class="card">
-          <div class="card-icon" id="icon-refresh"></div>
-          <h3>Always up to date</h3>
-          <p>Promote learners between classes and terms in a few clicks.</p>
-        </div>
-        <div class="card">
-          <div class="card-icon" id="icon-eye"></div>
-          <h3>Full history</h3>
-          <p>Every enquiry, assessment and offer stays on record for future reference.</p>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div><h3>Learner enrolled</h3><p>A full learner profile is created and the class register updates instantly.</p></div>
         </div>
       </div>
     </div>
@@ -124,35 +91,76 @@
   <section class="section section-alt">
     <div class="container">
       <div class="section-head">
-        <span class="eyebrow">Workflow</span>
-        <h2>From first enquiry to enrolled learner.</h2>
+        <span class="eyebrow">Term 1, 2026</span>
+        <h2>Your enrolment pipeline, at a glance.</h2>
       </div>
-      <div class="steps steps-row">
-        <div class="step">
-          <div class="step-num">1</div>
-          <div><h3>Enquiry received</h3><p>A parent enquires by phone, WhatsApp or the front desk.</p></div>
+      <div class="grid grid-5">
+        <div class="card text-center">
+          <span class="badge badge-blue">Enquiry</span>
+          <div style="font-size:28px; font-weight:800; margin-top:12px;">42</div>
         </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <div><h3>Application reviewed</h3><p>Admissions staff review the form and supporting documents.</p></div>
+        <div class="card text-center">
+          <span class="badge badge-blue">Application</span>
+          <div style="font-size:28px; font-weight:800; margin-top:12px;">28</div>
         </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <div><h3>Assessment scheduled</h3><p>An entrance assessment or interview is booked automatically.</p></div>
+        <div class="card text-center">
+          <span class="badge badge-amber">Assessment</span>
+          <div style="font-size:28px; font-weight:800; margin-top:12px;">19</div>
         </div>
-        <div class="step">
-          <div class="step-num">4</div>
-          <div><h3>Offer sent</h3><p>An offer letter goes out to the parent for confirmation.</p></div>
+        <div class="card text-center">
+          <span class="badge badge-amber">Offer</span>
+          <div style="font-size:28px; font-weight:800; margin-top:12px;">15</div>
         </div>
-        <div class="step">
-          <div class="step-num">5</div>
-          <div><h3>Learner enrolled</h3><p>A full learner profile is created and the class register updates.</p></div>
+        <div class="card text-center">
+          <span class="badge badge-green">Enrolled</span>
+          <div style="font-size:28px; font-weight:800; margin-top:12px;">312</div>
         </div>
       </div>
     </div>
   </section>
 
   <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Benefits for every role</span>
+        <h2>Less admin, more visibility.</h2>
+      </div>
+      <div class="grid grid-3">
+        <div class="card">
+          <div class="card-icon" id="icon-admissions"></div>
+          <h3>For Admissions Staff</h3>
+          <p style="font-size:14px; margin-bottom:10px;">Move every enquiry through the pipeline without losing track of a family.</p>
+          <ul class="checklist">
+            <li id="ck-ad-0"></li>
+            <li id="ck-ad-1"></li>
+            <li id="ck-ad-2"></li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-icon" id="icon-admin"></div>
+          <h3>For Admin</h3>
+          <p style="font-size:14px; margin-bottom:10px;">Real-time pipeline reporting and secure, centralised learner records.</p>
+          <ul class="checklist">
+            <li id="ck-a-0"></li>
+            <li id="ck-a-1"></li>
+            <li id="ck-a-2"></li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-icon" id="icon-parents"></div>
+          <h3>For Parents</h3>
+          <p style="font-size:14px; margin-bottom:10px;">A clear, guided application process with updates at every stage.</p>
+          <ul class="checklist">
+            <li id="ck-pr-0"></li>
+            <li id="ck-pr-1"></li>
+            <li id="ck-pr-2"></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
     <div class="container">
       <div class="cta-banner">
         <h2>Bring order to your admissions process.</h2>
@@ -172,10 +180,40 @@
 <script src="js/nav.js"></script>
 <script src="js/footer.js"></script>
 <script>
-  document.getElementById('icon-chart').innerHTML = window.ICONS.chart;
-  document.getElementById('icon-secure').innerHTML = window.ICONS.secure;
-  document.getElementById('icon-refresh').innerHTML = window.ICONS.refresh;
-  document.getElementById('icon-eye').innerHTML = window.ICONS.eye;
+  document.getElementById('icon-admissions').innerHTML = window.ICONS.file;
+  document.getElementById('icon-admin').innerHTML = window.ICONS.building;
+  document.getElementById('icon-parents').innerHTML = window.ICONS.parents;
+
+  function fillChecklist(prefix, items) {
+    items.forEach(function (text, i) {
+      var el = document.getElementById(prefix + '-' + i);
+      if (el) el.innerHTML = window.ICONS.check + '<span>' + text + '</span>';
+    });
+  }
+
+  fillChecklist('ck-ad', [
+    'One pipeline for every enquiry',
+    'Automated assessment scheduling',
+    'Offer letters sent in a click'
+  ]);
+  fillChecklist('ck-a', [
+    'Real-time conversion reporting',
+    'Role-based access controls',
+    'Full enquiry-to-enrolment history'
+  ]);
+  fillChecklist('ck-pr', [
+    'Simple online application',
+    'Status updates at every stage',
+    'One profile once enrolled'
+  ]);
+
+  function fillTrust(id, icon, text) {
+    var el = document.getElementById(id);
+    el.innerHTML = window.ICONS[icon] + '<span>' + text + '</span>';
+  }
+  fillTrust('trust-0', 'secure', 'Secure records');
+  fillTrust('trust-1', 'refresh', 'Always up to date');
+  fillTrust('trust-2', 'chart', 'Real-time pipeline');
 </script>
 </body>
 </html>
