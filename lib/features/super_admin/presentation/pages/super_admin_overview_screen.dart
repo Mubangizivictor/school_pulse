@@ -15,7 +15,6 @@ import 'package:school_pulse/features/super_admin/domain/entities/audit_log.dart
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/school.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/school_application.dart';
-import 'package:school_pulse/features/super_admin/domain/entities/subscription_plan.dart';
 
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
@@ -121,7 +120,11 @@ class _OverviewBody extends StatelessWidget {
         .length;
     final active = schools.where((s) => s.status == SchoolStatus.active).length;
     final needsAction = pendingApps + expired + unverified;
-    final mrr = _estimatedMonthlyRevenue(schools, state.plans);
+    // Real money collected: the sum of submittedAmount for payments staff
+    // have actually verified and approved, not an estimate from plan list
+    // prices (a school can be marked active with an assigned plan and have
+    // paid nothing yet).
+    final revenueTotal = state.approvedRevenueTotal;
     final loading = state.status == SuperAdminStatus.loading;
 
     final reviewQueue = _ReviewQueueCard(
@@ -134,7 +137,7 @@ class _OverviewBody extends StatelessWidget {
     final health = _PlatformHealthCard(
       totalSchools: schools.length,
       activeSchools: active,
-      mrr: mrr,
+      revenueTotal: revenueTotal,
     );
     final activity = PlatformActivityTimeline(
       logs: state.auditLogs,
@@ -160,7 +163,7 @@ class _OverviewBody extends StatelessWidget {
           _MetricGrid(
             total: schools.length,
             active: active,
-            mrr: mrr,
+            revenueTotal: revenueTotal,
             actionNeeded: needsAction,
             onActionNeeded: onOpenSchools,
           ),
@@ -283,9 +286,9 @@ class _PlatformHealthCard extends StatefulWidget {
   const _PlatformHealthCard({
     required this.totalSchools,
     required this.activeSchools,
-    required this.mrr,
+    required this.revenueTotal,
   });
-  final int totalSchools, activeSchools, mrr;
+  final int totalSchools, activeSchools, revenueTotal;
   @override
   State<_PlatformHealthCard> createState() => _PlatformHealthCardState();
 }
@@ -361,9 +364,9 @@ class _PlatformHealthCardState extends State<_PlatformHealthCard> {
                 size: 18,
                 color: AppColors.textSecondary(context),
               ),
-              label: 'Subscription plans',
+              label: 'Revenue collected',
               trailing: Text(
-                _formatUgx(widget.mrr),
+                _formatUgx(widget.revenueTotal),
                 style: _valueStyle(context),
               ),
             ),
@@ -729,11 +732,11 @@ class _MetricGrid extends StatelessWidget {
   const _MetricGrid({
     required this.total,
     required this.active,
-    required this.mrr,
+    required this.revenueTotal,
     required this.actionNeeded,
     required this.onActionNeeded,
   });
-  final int total, active, mrr, actionNeeded;
+  final int total, active, revenueTotal, actionNeeded;
   final VoidCallback onActionNeeded;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -768,9 +771,9 @@ class _MetricGrid extends StatelessWidget {
         PlatformMetricCard(
           icon: Icons.account_balance_wallet_outlined,
           color: AppColors.information(context),
-          label: 'Termly revenue (UGX)',
-          value: _formatUgx(mrr),
-          detail: 'Based on active plans',
+          label: 'Revenue collected (UGX)',
+          value: _formatUgx(revenueTotal),
+          detail: 'From approved payments',
         ),
         PlatformMetricCard(
           icon: Icons.error_outline_rounded,
@@ -1520,29 +1523,6 @@ String _relative(DateTime value) {
   if (d.inHours < 1) return '${d.inMinutes}m ago';
   if (d.inDays < 1) return '${d.inHours}h ago';
   return '${d.inDays}d ago';
-}
-
-/// Converts the existing plan prices into a monthly estimate. Custom-priced
-/// plans are intentionally skipped because their authoritative price is not
-/// represented in the current plan model.
-int _estimatedMonthlyRevenue(
-  List<School> schools,
-  List<SubscriptionPlan> plans,
-) {
-  final plansById = {for (final plan in plans) plan.id: plan};
-  return schools
-      .where((school) => school.status == SchoolStatus.active)
-      .fold<double>(0, (total, school) {
-        final plan = plansById[school.subscriptionPlanId];
-        if (plan == null || plan.customPricing) return total;
-        final monthlyPrice = switch (plan.billingCycle) {
-          BillingCycle.monthly => plan.price,
-          BillingCycle.termly => plan.price * 30 / plan.termLengthDays,
-          BillingCycle.yearly => plan.price / 12,
-        };
-        return total + monthlyPrice;
-      })
-      .round();
 }
 
 String _formatUgx(int value) => NumberFormat.compactCurrency(

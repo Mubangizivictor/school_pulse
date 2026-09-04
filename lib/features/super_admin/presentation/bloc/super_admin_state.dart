@@ -13,6 +13,7 @@ class SuperAdminState extends Equatable {
   final List<SubscriptionPlan> plans;
   final List<AuditLog> auditLogs;
   final Map<String, dynamic> stats;
+  final int approvedRevenueTotal;
   final String? errorMessage;
   final String? supportModeSchoolId;
   final String? reviewingApplicationId;
@@ -25,6 +26,7 @@ class SuperAdminState extends Equatable {
     this.plans = const [],
     this.auditLogs = const [],
     this.stats = const {},
+    this.approvedRevenueTotal = 0,
     this.errorMessage,
     this.supportModeSchoolId,
     this.reviewingApplicationId,
@@ -39,6 +41,7 @@ class SuperAdminState extends Equatable {
     plans,
     auditLogs,
     stats,
+    approvedRevenueTotal,
     errorMessage,
     supportModeSchoolId,
     reviewingApplicationId,
@@ -52,6 +55,7 @@ class SuperAdminState extends Equatable {
     List<SubscriptionPlan>? plans,
     List<AuditLog>? auditLogs,
     Map<String, dynamic>? stats,
+    int? approvedRevenueTotal,
     String? errorMessage,
     bool clearErrorMessage = false,
     String? supportModeSchoolId,
@@ -68,6 +72,7 @@ class SuperAdminState extends Equatable {
       plans: plans ?? this.plans,
       auditLogs: auditLogs ?? this.auditLogs,
       stats: stats ?? this.stats,
+      approvedRevenueTotal: approvedRevenueTotal ?? this.approvedRevenueTotal,
       errorMessage: clearErrorMessage
           ? null
           : (errorMessage ?? this.errorMessage),

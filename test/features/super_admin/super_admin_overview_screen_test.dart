@@ -1,8 +1,8 @@
 // Proves SuperAdminOverviewScreen's metric/attention/activity logic is
 // derived from real SuperAdminBloc state, not fabricated: "Action needed"
 // sums real pending applications + expired subscriptions + unverified
-// schools (an explicit metadata flag, never invented), estimated MRR skips
-// custom-priced plans (their authoritative price isn't in the model), and
+// schools (an explicit metadata flag, never invented), the revenue tile
+// reflects real approved payments rather than a plan-price estimate, and
 // a bloc failure shows a retry state rather than a blank/crashed screen.
 // There is already a companion
 // test/features/super_admin/super_admin_overview_screen_platform_health_card_test.dart
@@ -49,13 +49,12 @@ void main() {
     expect(source.contains("s.metadata['verified'] == false"), isTrue);
   });
 
-  test('estimated MRR skips custom-priced plans since their authoritative price is not modeled', () {
-    expect(
-      source.contains('if (plan == null || plan.customPricing) return total;'),
-      isTrue,
-    );
-    expect(source.contains('BillingCycle.monthly => plan.price,'), isTrue);
-    expect(source.contains('BillingCycle.yearly => plan.price / 12,'), isTrue);
+  test('revenue tile sums real approved payments, not an estimate from plan list prices', () {
+    expect(source.contains('final revenueTotal = state.approvedRevenueTotal;'), isTrue);
+    expect(source.contains("label: 'Revenue collected (UGX)',"), isTrue);
+    expect(source.contains('value: _formatUgx(revenueTotal),'), isTrue);
+    // The old plan-price estimate must be gone entirely, not just unused.
+    expect(source.contains('_estimatedMonthlyRevenue'), isFalse);
   });
 
   test('platform health signal is streamed from the real repository, never derived from local read success', () {
