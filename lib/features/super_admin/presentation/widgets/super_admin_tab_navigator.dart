@@ -77,19 +77,20 @@ Future<T?> pushSuperAdminDetail<T>({
   final detailUrl = '$sectionUrl/$detailPath';
 
   // Dedupe: a re-tap on a card that already opened this exact detail must
-  // not stack a second identical push (or fire a redundant router
-  // navigation). `settings.name` on the pushed route carries the detail
-  // URL so we can recognise it.
+  // not stack a second identical push.
   final navigator = Navigator.of(context);
   if (ModalRoute.of(context)?.settings.name == detailUrl) {
     return Future<T?>.value(null);
   }
 
-  if (GoRouterState.of(context).uri.path != detailUrl) {
-    context.go(detailUrl);
-  }
-
-  return navigator.push<T>(
+  // Push onto the section's nested Navigator FIRST, then sync the URL. The
+  // whole /super-admin subtree shares one GoRouter page key
+  // (_kConsoleShellPageKey), so `context.go` here only updates the address
+  // bar / history - it does not rebuild the dashboard or the nested
+  // Navigator this push targets. (Doing it the other way round, and without
+  // the shared key, was the "tap Review -> flashes back -> works on the
+  // 2nd/3rd try" bug: the go() tore down the Navigator mid-push.)
+  final result = navigator.push<T>(
     ownerDetailRoute<T>(
       PopScope(
         onPopInvokedWithResult: (didPop, _) {
@@ -100,4 +101,10 @@ Future<T?> pushSuperAdminDetail<T>({
       name: detailUrl,
     ),
   );
+
+  if (GoRouterState.of(context).uri.path != detailUrl) {
+    context.go(detailUrl);
+  }
+
+  return result;
 }

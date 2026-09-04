@@ -97,6 +97,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   // navigation instead of stacking section switches that read as a flash.
   bool _navThrottled() => ownerNavThrottled();
 
+  /// The `/super-admin/<section>` root for a section index, or `/super-admin`
+  /// for Overview - the shallowest URL that still belongs to that section.
+  String _sectionRootUrl(int index) => _kSectionPaths[index].isEmpty
+      ? '/super-admin'
+      : '/super-admin/${_kSectionPaths[index]}';
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -107,8 +113,28 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     // sidebar/bottom-nav highlight can never disagree with the route.
     final location = GoRouterState.of(context).uri.path;
     if (location == _lastSyncedLocation) return;
+    final previous = _lastSyncedLocation;
     _lastSyncedLocation = location;
     final index = _sectionIndexForLocation(location);
+
+    // The whole /super-admin subtree shares one GoRouter page key, so a
+    // detail screen (School Details, Application Review, Payment Review) is
+    // a Navigator.push on the section's nested Navigator, NOT a rebuild.
+    // That means browser Back / Forward, which only rewinds the URL, won't
+    // pop that pushed screen on its own. When the URL retreats from a
+    // detail path back to (or above) the section root, pop the nested
+    // Navigator so the detail screen actually closes.
+    if (previous != null &&
+        previous != location &&
+        previous.startsWith('$location/') &&
+        location == _sectionRootUrl(index)) {
+      // The popped route's PopScope will itself call context.go(sectionUrl);
+      // that's a no-op here since we're already at the section root.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _popToRoot(_navigatorKeys[index]);
+      });
+    }
+
     if (index != _selectedIndex) {
       setState(() => _selectedIndex = index);
     }

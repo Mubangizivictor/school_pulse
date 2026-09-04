@@ -71,6 +71,35 @@ Future<String?> _superAdminRedirect(GoRouterState state) async {
   return null;
 }
 
+/// One stable key for every page in the `/super-admin` subtree that renders
+/// the console shell ([SuperAdminDashboard]). Because it never changes,
+/// GoRouter treats a move between e.g. `/super-admin/schools` and
+/// `/super-admin/schools/applications/:id` as *the same page* - it does NOT
+/// dispose and rebuild the dashboard (and with it the section's nested
+/// Navigator). That rebuild was the bug behind "tap Review, it flashes back,
+/// works on the 2nd/3rd try": `pushSuperAdminDetail` calls `context.go` to
+/// sync the URL and then `Navigator.push` onto the section's nested
+/// Navigator, but the `context.go` was tearing down the very Navigator the
+/// push targeted. The dashboard already derives its active section from the
+/// URL, and detail screens live on the nested Navigator, so a single
+/// persistent shell page is correct.
+const ValueKey<String> _kConsoleShellPageKey = ValueKey('super-admin-shell');
+
+/// A shell route: renders [SuperAdminDashboard] under the shared shell key,
+/// so URL changes within the subtree don't rebuild it.
+GoRoute _shellRoute(String path, {List<RouteBase> routes = const []}) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => fadeThroughPage(
+      key: _kConsoleShellPageKey,
+      child: const SuperAdminDashboard(),
+    ),
+    routes: routes,
+  );
+}
+
+/// A standalone page route (its own screen, its own key) - used for the
+/// full-page owner screens wrapped in [SuperAdminMobileNavShell].
 GoRoute _fadeRoute(
   String path, {
   required Widget Function(BuildContext, GoRouterState) child,
@@ -97,8 +126,10 @@ GoRoute _fadeRoute(
 final RouteBase superAdminRoute = GoRoute(
   path: '/super-admin',
   redirect: (context, state) => _superAdminRedirect(state),
-  pageBuilder: (context, state) =>
-      fadeThroughPage(key: state.pageKey, child: const SuperAdminDashboard()),
+  pageBuilder: (context, state) => fadeThroughPage(
+    key: _kConsoleShellPageKey,
+    child: const SuperAdminDashboard(),
+  ),
   routes: [
     // Top-level sidebar/bottom-nav sections. Each renders the same
     // SuperAdminDashboard, which reads the active section back out of the
@@ -112,48 +143,27 @@ final RouteBase superAdminRoute = GoRoute(
     // nav stays visible. Their :id child routes below exist only so the URL
     // bar reflects that a detail screen is open and Back/Forward has a
     // history entry to land on.
-    _fadeRoute(
+    _shellRoute(
       'schools',
-      child: (context, state) => const SuperAdminDashboard(),
       routes: [
-        _fadeRoute(
+        _shellRoute(
           ':schoolId',
-          child: (context, state) => const SuperAdminDashboard(),
           routes: [
-            _fadeRoute(
-              'subscription',
-              child: (context, state) => const SuperAdminDashboard(),
-            ),
-            _fadeRoute(
-              'modules',
-              child: (context, state) => const SuperAdminDashboard(),
-            ),
-            _fadeRoute(
-              'admins',
-              child: (context, state) => const SuperAdminDashboard(),
-            ),
+            _shellRoute('subscription'),
+            _shellRoute('modules'),
+            _shellRoute('admins'),
           ],
         ),
-        _fadeRoute(
-          'applications/:applicationId',
-          child: (context, state) => const SuperAdminDashboard(),
-        ),
+        _shellRoute('applications/:applicationId'),
       ],
     ),
-    _fadeRoute(
+    _shellRoute(
       'payments',
-      child: (context, state) => const SuperAdminDashboard(),
       routes: [
-        _fadeRoute(
-          ':paymentId',
-          child: (context, state) => const SuperAdminDashboard(),
-        ),
+        _shellRoute(':paymentId'),
       ],
     ),
-    _fadeRoute(
-      'plans',
-      child: (context, state) => const SuperAdminDashboard(),
-    ),
+    _shellRoute('plans'),
     _fadeRoute(
       // Owner Notifications is reached from the Overview bell, not nested
       // under Settings - the bottom nav highlights Overview while it's
@@ -171,14 +181,8 @@ final RouteBase superAdminRoute = GoRoute(
         ),
       ],
     ),
-    _fadeRoute(
-      'audit-logs',
-      child: (context, state) => const SuperAdminDashboard(),
-    ),
-    _fadeRoute(
-      'settings',
-      child: (context, state) => const SuperAdminDashboard(),
-    ),
+    _shellRoute('audit-logs'),
+    _shellRoute('settings'),
     _fadeRoute(
       'settings/security',
       child: (context, state) =>
