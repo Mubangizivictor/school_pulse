@@ -9,13 +9,35 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16.png">
 <link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+<style>
+  .pricing-calc { padding: 22px; background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+  .pricing-calc-label { font-weight: 600; font-size: 14px; color: var(--color-ink-soft); margin-bottom: 10px; }
+  .pricing-calc-result {
+    display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px;
+    margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border);
+  }
+  .pricing-calc-tier { display: flex; align-items: center; gap: 8px; font-size: 14.5px; color: var(--color-ink-soft); }
+  .pricing-calc-tier .badge-tier {
+    display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; background: var(--color-success-bg); color: var(--color-success-text);
+  }
+  .pricing-calc-price { display: flex; align-items: baseline; gap: 6px; }
+  .pricing-calc-price .amt { font-size: 26px; font-weight: 800; color: var(--color-ink); letter-spacing: -.01em; }
+  .pricing-calc-price .per { font-size: 12.5px; font-weight: 500; color: var(--color-muted); }
+  @media (max-width: 480px) {
+    .pricing-calc { padding: 16px; }
+    .pricing-calc-price .amt { font-size: 22px; }
+  }
+  .section-compact { padding: 32px 0; }
+  @media (max-width: 640px) { .section-compact { padding: 22px 0; } }
+</style>
 </head>
 <body>
 
 <div id="site-nav"></div>
 
 <main>
-  <section class="hero">
+  <section class="hero" style="padding-bottom:0;">
     <div class="container">
       <div class="section-head" style="margin:0 auto 8px;">
         <span class="eyebrow">Pricing</span>
@@ -25,29 +47,33 @@
     </div>
   </section>
 
-  <section class="section-tight">
+  <section class="section-compact">
     <div class="container">
-      <div class="slider-wrap">
-        <label for="estimatorSlider" style="font-weight:600; font-size:14.5px;">How many learners does your school have?</label>
+      <div class="pricing-calc">
+        <label for="estimatorSlider" class="pricing-calc-label">How many learners does your school have?</label>
         <input type="range" id="estimatorSlider" min="1" max="2000" value="150">
-        <div class="slider-value">
-          Students: <span id="estimatorCount"></span>
-          &nbsp;·&nbsp; Recommended tier: <span id="estimatorTier"></span>
-          &nbsp;·&nbsp; Price: <span id="estimatorPrice"></span>
+        <div class="pricing-calc-result">
+          <span class="pricing-calc-tier">
+            <span id="estimatorCount"></span> students
+            &nbsp;·&nbsp; <span class="badge-tier" id="estimatorTier"></span>
+          </span>
+          <span class="pricing-calc-price" id="estimatorPriceWrap">
+            <span class="amt" id="estimatorPrice"></span>
+          </span>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="section">
+  <section class="section-compact">
     <div class="container">
       <div class="grid grid-5" id="pricingTiersGrid"></div>
     </div>
   </section>
 
-  <section class="section section-alt">
+  <section class="section-compact section-alt">
     <div class="container">
-      <div class="section-head">
+      <div class="section-head" style="margin-bottom:20px;">
         <span class="eyebrow">Compare</span>
         <h2>What's included at every tier</h2>
       </div>
@@ -60,17 +86,17 @@
     </div>
   </section>
 
-  <section class="section">
+  <section class="section-compact">
     <div class="container">
-      <div class="card text-center" style="max-width:760px; margin:0 auto; padding:40px;">
-        <h3>Need a custom solution?</h3>
-        <p>Schools with more than 1,200 learners, multiple campuses, or special requirements — let's talk about a plan built for you.</p>
+      <div class="card text-center" style="max-width:760px; margin:0 auto; padding:28px;">
+        <h3 style="margin-bottom:8px;">Need a custom solution?</h3>
+        <p style="margin-bottom:16px;">Schools with more than 1,200 learners, multiple campuses, or special requirements — let's talk about a plan built for you.</p>
         <a href="contact.html" class="btn btn-primary">Talk to us</a>
       </div>
     </div>
   </section>
 
-  <section class="section">
+  <section class="section-compact">
     <div class="container">
       <div class="cta-banner">
         <h2>Ready to get started?</h2>
