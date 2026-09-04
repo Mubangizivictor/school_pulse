@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
-import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_radius.dart';
+import 'package:school_pulse/design_system/theme/app_breakpoints.dart';
 import 'package:school_pulse/features/attendance_hub/domain/entities/attendance_category.dart';
 import 'package:school_pulse/features/attendance_hub/domain/entities/attendance_record.dart'
     as attendance;
@@ -23,7 +25,7 @@ import 'package:school_pulse/features/student/presentation/bloc/students_event.d
 import 'package:school_pulse/features/student/presentation/bloc/students_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
-/// Compact, tenant-scoped directory. School context comes only from AuthBloc.
+/// Learner-management workspace. School context comes only from AuthBloc.
 class AdminStudentDirectoryScreen extends StatelessWidget {
   const AdminStudentDirectoryScreen({super.key});
   @override
@@ -76,7 +78,6 @@ class _DirectoryState extends State<_Directory> {
   String? _year, _classId, _stream;
   StudentStatus? _status;
   StudentBoardingType? _boarding;
-  _AttendanceFilter _attendanceFilter = _AttendanceFilter.all;
   Set<String> _guardianHits = const {};
   bool _guardianLoading = false;
   int _page = 0;
@@ -134,16 +135,22 @@ class _DirectoryState extends State<_Directory> {
       _year = _classId = _stream = null;
       _status = null;
       _boarding = null;
-      _attendanceFilter = _AttendanceFilter.all;
       _guardianHits = const {};
       _page = 0;
     });
   }
 
-  List<Student> _filtered(
-    List<Student> students,
-    Map<String, attendance.AttendanceStatus> marks,
-  ) {
+  int get _activeFilterCount => [
+    _year,
+    _classId,
+    _stream,
+    _status,
+    _boarding,
+  ].where((x) => x != null).length;
+
+  bool get _hasCriteria => _query.isNotEmpty || _activeFilterCount > 0;
+
+  List<Student> _filtered(List<Student> students) {
     final q = _query.toLowerCase();
     final result = students.where((s) {
       final readable = s.admissionNumber.isNotEmpty
@@ -157,11 +164,7 @@ class _DirectoryState extends State<_Directory> {
           (_classId == null || s.classId == _classId) &&
           (_stream == null || s.streamId == _stream) &&
           (_status == null || s.status == _status) &&
-          (_boarding == null || s.boardingType == _boarding) &&
-          (_attendanceFilter == _AttendanceFilter.all ||
-              (_attendanceFilter == _AttendanceFilter.noData &&
-                  !marks.containsKey(s.id)) ||
-              marks[s.id]?.name == _attendanceFilter.name);
+          (_boarding == null || s.boardingType == _boarding);
     }).toList();
     // The roster's source order is retained for the default “Recently added”
     // view. Student does not expose a created timestamp, so inventing one here
@@ -172,6 +175,42 @@ class _DirectoryState extends State<_Directory> {
       );
     }
     return result;
+  }
+
+  Map<String, attendance.AttendanceStatus> _todayMarks(
+    List<attendance.AttendanceRecord> records,
+  ) => {for (final record in records) record.personId: record.status};
+
+  void _enrol() {
+    if (widget.schoolId.isNotEmpty) {
+      context.push('/staff/admin/admissions/register', extra: widget.schoolId);
+    }
+  }
+
+  void _openFilters(StructureState structure) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => _FilterSheet(
+        structure: structure,
+        year: _year,
+        classId: _classId,
+        stream: _stream,
+        status: _status,
+        boarding: _boarding,
+        onApply: (year, classId, stream, status, boarding) {
+          setState(() {
+            _year = year;
+            _classId = classId;
+            _stream = stream;
+            _status = status;
+            _boarding = boarding;
+            _page = 0;
+          });
+        },
+        onClear: _clear,
+      ),
+    );
   }
 
   @override
@@ -185,10 +224,11 @@ class _DirectoryState extends State<_Directory> {
           }
           if (state is StudentsError) {
             return _StateMessage(
-              'Could not load learners',
-              state.message,
-              'Retry',
-              _refresh,
+              icon: Icons.cloud_off,
+              title: 'Could not load learners',
+              message: state.message,
+              action: 'Retry',
+              onAction: _refresh,
             );
           }
           final all = state is StudentsLoaded
@@ -202,96 +242,103 @@ class _DirectoryState extends State<_Directory> {
                       ? attendanceState.records
                       : const <attendance.AttendanceRecord>[];
                   final marks = _todayMarks(records);
-                  final list = _filtered(all, marks);
+                  final list = _filtered(all);
                   final shown = list.take((_page + 1) * _pageSize).toList();
                   return LayoutBuilder(
-                    builder: (context, constraints) => RefreshIndicator(
-                      onRefresh: () async => _refresh(),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: constraints.maxWidth >= 900
-                                ? 1120
-                                : double.infinity,
+                    builder: (context, constraints) {
+                      final isDesktop =
+                          constraints.maxWidth >= AppBreakpoints.smallDesktop;
+                      return RefreshIndicator(
+                        onRefresh: () async => _refresh(),
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(
+                            isDesktop ? AppSpacing.x3l : AppSpacing.xl,
+                            AppSpacing.x2l,
+                            isDesktop ? AppSpacing.x3l : AppSpacing.xl,
+                            AppSpacing.x4l,
                           ),
-                          child: ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-                            children: [
-                              _header(),
-                              const SizedBox(height: 22),
-                              _classSelector(structure),
-                              const SizedBox(height: 30),
-                              Text(
-                                "Today's attendance",
-                                style: Theme.of(context).textTheme.headlineSmall
-                                    ?.copyWith(fontWeight: FontWeight.w800),
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: isDesktop ? 1280 : double.infinity,
                               ),
-                              const SizedBox(height: 14),
-                              _attendanceCards(
-                                all,
-                                marks,
-                                constraints.maxWidth,
-                              ),
-                              if (attendanceState is AttendanceError) ...[
-                                const SizedBox(height: 12),
-                                _AttendanceRetry(
-                                  message: attendanceState.message,
-                                  onRetry: _refresh,
-                                ),
-                              ],
-                              const SizedBox(height: 24),
-                              _searchBox(),
-                              const SizedBox(height: 12),
-                              _attendanceFilters(all, marks),
-                              const SizedBox(height: 12),
-                              _filters(structure),
-                              if (_hasCriteria) ...[
-                                const SizedBox(height: 12),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: TextButton.icon(
-                                    onPressed: _clear,
-                                    icon: const Icon(Icons.clear),
-                                    label: const Text('Clear filters'),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _header(context, list.length, isDesktop),
+                                  const SizedBox(height: AppSpacing.x2l),
+                                  _filterRow(context, structure, isDesktop),
+                                  const SizedBox(height: AppSpacing.xl),
+                                  _AttendanceStrip(
+                                    students: all,
+                                    marks: marks,
+                                    classId: _classId,
+                                    streamId: _stream,
+                                    error: attendanceState is AttendanceError
+                                        ? attendanceState.message
+                                        : null,
+                                    onRetry: _refresh,
+                                    onViewAttendance: () =>
+                                        context.push('/staff/attendance'),
                                   ),
-                                ),
-                              ],
-                              const SizedBox(height: 8),
-                              _listHeader(list.length),
-                              const SizedBox(height: 6),
-                              if (list.isEmpty)
-                                _StateMessage(
-                                  'No students found',
-                                  all.isEmpty && !_hasCriteria
-                                      ? 'There are no students enrolled in this class yet.'
-                                      : 'No students match your search or selected filter.',
-                                  _hasCriteria
-                                      ? 'Clear filters'
-                                      : 'Enrol learner',
-                                  _hasCriteria ? _clear : _enrol,
-                                )
-                              else ...[
-                                for (var i = 0; i < shown.length; i++) ...[
-                                  _row(shown[i], structure),
-                                  const Divider(height: 1, thickness: .6),
-                                ],
-                                if (shown.length < list.length)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 12),
-                                    child: OutlinedButton(
-                                      onPressed: () => setState(() => _page++),
-                                      child: Text(
-                                        'Show more (${list.length - shown.length})',
+                                  const SizedBox(height: AppSpacing.x2l),
+                                  _listHeader(context, list.length),
+                                  const SizedBox(height: AppSpacing.m),
+                                  if (list.isEmpty)
+                                    _StateMessage(
+                                      icon: Icons.manage_search_outlined,
+                                      title: 'No students found',
+                                      message: all.isEmpty && !_hasCriteria
+                                          ? 'There are no students enrolled yet.'
+                                          : 'No students match your search or selected filters.',
+                                      action: _hasCriteria
+                                          ? 'Clear filters'
+                                          : 'Add learner',
+                                      onAction: _hasCriteria
+                                          ? _clear
+                                          : _enrol,
+                                    )
+                                  else if (isDesktop)
+                                    _DesktopTable(
+                                      students: shown,
+                                      structure: structure,
+                                      marks: marks,
+                                      onTap: (id) => context.push(
+                                        '/staff/admin/students/$id',
+                                      ),
+                                    )
+                                  else
+                                    _MobileList(
+                                      students: shown,
+                                      structure: structure,
+                                      marks: marks,
+                                      onTap: (id) => context.push(
+                                        '/staff/admin/students/$id',
                                       ),
                                     ),
-                                  ),
-                              ],
-                            ],
+                                  if (shown.length < list.length)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        top: AppSpacing.l,
+                                      ),
+                                      child: Center(
+                                        child: OutlinedButton(
+                                          onPressed: () =>
+                                              setState(() => _page++),
+                                          child: Text(
+                                            'Show more (${list.length - shown.length})',
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   );
                 },
               );
@@ -301,255 +348,141 @@ class _DirectoryState extends State<_Directory> {
       ),
     ),
   );
-  Widget _header() => Row(
-    children: [
-      Expanded(
-        child: Text(
+
+  Widget _header(BuildContext context, int count, bool isDesktop) {
+    final title = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
           'Students',
           style: Theme.of(
             context,
           ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800),
         ),
-      ),
-      IconButton(
-        tooltip: 'Add student',
-        icon: const Icon(Icons.person_add_alt_1),
-        style: _headerActionStyle(),
-        onPressed: _enrol,
-      ),
-      const SizedBox(width: 8),
-      IconButton(
-        tooltip: 'Filter settings',
-        icon: const Icon(Icons.tune),
-        style: _headerActionStyle(),
-        onPressed: _openFilterSettings,
-      ),
-      const SizedBox(width: 8),
-      IconButton(
-        tooltip: 'Refresh students and attendance',
-        icon: const Icon(Icons.refresh),
-        style: _headerActionStyle(),
-        onPressed: _refresh,
-      ),
-    ],
-  );
-
-  ButtonStyle _headerActionStyle() => IconButton.styleFrom(
-    minimumSize: const Size(48, 48),
-    side: BorderSide(color: AppColors.border(context)),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-  );
-
-  Widget _classSelector(StructureState structure) {
-    final className = structure.classes
-        .where((item) => item.id == _classId)
-        .map((item) => item.name)
-        .firstOrNull;
-    final streamName = structure.streams
-        .where((item) => item.id == _stream)
-        .map((item) => item.name)
-        .firstOrNull;
-    final label =
-        '${className ?? 'All classes'} · ${streamName ?? 'All streams'}';
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: PopupMenuButton<String>(
-        tooltip: 'Select class and stream',
-        onSelected: (value) {
-          setState(() {
-            if (value.startsWith('class:')) {
-              _classId = value.substring(6);
-              _stream = null;
-            } else if (value.startsWith('stream:')) {
-              _stream = value.substring(7);
-            } else {
-              _classId = _stream = null;
-            }
-            _page = 0;
-          });
-        },
-        itemBuilder: (_) => [
-          const PopupMenuItem(
-            value: 'all',
-            child: Text('All classes · All streams'),
+        const SizedBox(height: 2),
+        Text(
+          '$count learner${count == 1 ? '' : 's'}',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppColors.textSecondary(context),
           ),
-          ...structure.classes.map(
-            (item) => PopupMenuItem(
-              value: 'class:${item.id}',
-              child: Text('${item.name} · All streams'),
-            ),
+        ),
+      ],
+    );
+
+    if (isDesktop) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: title),
+          SizedBox(
+            width: 320,
+            child: _searchBox(context),
           ),
-          ...structure.streams
-              .where((item) => _classId == null || item.classId == _classId)
-              .map(
-                (item) => PopupMenuItem(
-                  value: 'stream:${item.id}',
-                  child: Text(item.name),
-                ),
-              ),
+          const SizedBox(width: AppSpacing.m),
+          _filterButton(context),
+          const SizedBox(width: AppSpacing.m),
+          _iconAction(
+            context,
+            icon: Icons.refresh,
+            tooltip: 'Refresh',
+            onPressed: _refresh,
+          ),
+          const SizedBox(width: AppSpacing.m),
+          _addLearnerButton(context),
         ],
-        child: Semantics(
-          button: true,
-          label: 'Class and stream: $label',
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 52),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border(context)),
-              borderRadius: BorderRadius.circular(16),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(child: title),
+            _addLearnerButton(context),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.l),
+        Row(
+          children: [
+            Expanded(child: _searchBox(context)),
+            const SizedBox(width: AppSpacing.m),
+            _filterButton(context),
+            const SizedBox(width: AppSpacing.m),
+            _iconAction(
+              context,
+              icon: Icons.refresh,
+              tooltip: 'Refresh',
+              onPressed: _refresh,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    label,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(Icons.keyboard_arrow_down),
-              ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _addLearnerButton(BuildContext context) => ElevatedButton.icon(
+    onPressed: _enrol,
+    style: ElevatedButton.styleFrom(
+      backgroundColor: AppColors.primary(context),
+      foregroundColor: AppColors.background(context),
+      minimumSize: const Size(44, 48),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
+    ),
+    icon: const Icon(Icons.add),
+    label: const Text('Add learner'),
+  );
+
+  Widget _iconAction(
+    BuildContext context, {
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) => IconButton(
+    tooltip: tooltip,
+    icon: Icon(icon),
+    onPressed: onPressed,
+    style: IconButton.styleFrom(
+      minimumSize: const Size(48, 48),
+      side: BorderSide(color: AppColors.border(context)),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
+    ),
+  );
+
+  Widget _filterButton(BuildContext context) => Stack(
+    clipBehavior: Clip.none,
+    children: [
+      _iconAction(
+        context,
+        icon: Icons.tune,
+        tooltip: 'Filters',
+        onPressed: () {},
+      ),
+      if (_activeFilterCount > 0)
+        Positioned(
+          right: -4,
+          top: -4,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.information(context),
+              borderRadius: AppRadius.full,
+            ),
+            child: Text(
+              '$_activeFilterCount',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ),
-      ),
-    );
-  }
+    ],
+  );
 
-  Map<String, attendance.AttendanceStatus> _todayMarks(
-    List<attendance.AttendanceRecord> records,
-  ) => {for (final record in records) record.personId: record.status};
-
-  Widget _attendanceCards(
-    List<Student> students,
-    Map<String, attendance.AttendanceStatus> marks,
-    double width,
-  ) {
-    final scoped = students
-        .where(
-          (student) =>
-              (_classId == null || student.classId == _classId) &&
-              (_stream == null || student.streamId == _stream),
-        )
-        .toList();
-    final ids = scoped.map((student) => student.id).toSet();
-    final present = marks.entries
-        .where(
-          (item) =>
-              ids.contains(item.key) &&
-              item.value == attendance.AttendanceStatus.present,
-        )
-        .length;
-    final absent = marks.entries
-        .where(
-          (item) =>
-              ids.contains(item.key) &&
-              item.value == attendance.AttendanceStatus.absent,
-        )
-        .length;
-    final late = marks.entries
-        .where(
-          (item) =>
-              ids.contains(item.key) &&
-              item.value == attendance.AttendanceStatus.late,
-        )
-        .length;
-    final cards = [
-      _AttendanceStat(
-        'Total',
-        scoped.length,
-        Icons.groups_outlined,
-        AppColors.information(context),
-      ),
-      _AttendanceStat(
-        'Present',
-        present,
-        Icons.check_circle_outline,
-        AppColors.success(context),
-      ),
-      _AttendanceStat(
-        'Absent',
-        absent,
-        Icons.person_off_outlined,
-        AppColors.danger(context),
-      ),
-      _AttendanceStat(
-        'Late',
-        late,
-        Icons.schedule_outlined,
-        AppColors.warning(context),
-      ),
-    ];
-    final columns = width >= 900
-        ? 4
-        : width >= 560
-        ? 2
-        : 2;
-    return GridView.count(
-      crossAxisCount: columns,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: width >= 900 ? 1.35 : 1.08,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      children: cards,
-    );
-  }
-
-  Widget _attendanceFilters(
-    List<Student> students,
-    Map<String, attendance.AttendanceStatus> marks,
-  ) {
-    final scoped = students
-        .where(
-          (student) =>
-              (_classId == null || student.classId == _classId) &&
-              (_stream == null || student.streamId == _stream),
-        )
-        .toList();
-    int count(_AttendanceFilter filter) => filter == _AttendanceFilter.all
-        ? scoped.length
-        : scoped
-              .where(
-                (student) => filter == _AttendanceFilter.noData
-                    ? !marks.containsKey(student.id)
-                    : marks[student.id]?.name == filter.name,
-              )
-              .length;
-    return SizedBox(
-      height: 48,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _AttendanceFilter.values.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (_, index) {
-          final filter = _AttendanceFilter.values[index];
-          final selected = filter == _attendanceFilter;
-          final color = filter.color(context);
-          return ChoiceChip(
-            label: Text('${filter.label} ${count(filter)}'),
-            selected: selected,
-            selectedColor: color.withValues(alpha: .16),
-            side: BorderSide(
-              color: selected ? color : AppColors.border(context),
-            ),
-            labelStyle: TextStyle(
-              color: selected ? color : null,
-              fontWeight: FontWeight.w700,
-            ),
-            onSelected: (_) => setState(() {
-              _attendanceFilter = filter;
-              _page = 0;
-            }),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _searchBox() => TextField(
+  Widget _searchBox(BuildContext context) => TextField(
     controller: _search,
     onChanged: _onSearch,
     textInputAction: TextInputAction.search,
@@ -565,67 +498,178 @@ class _DirectoryState extends State<_Directory> {
               ),
             )
           : null,
-      hintText: 'Search students',
-      contentPadding: const EdgeInsets.symmetric(vertical: 15),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+      hintText: 'Search learners...',
+      contentPadding: const EdgeInsets.symmetric(vertical: 13),
+      border: OutlineInputBorder(borderRadius: AppRadius.medium),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+        borderRadius: AppRadius.medium,
+        borderSide: BorderSide(color: AppColors.border(context)),
       ),
     ),
   );
-  bool get _hasCriteria =>
-      _query.isNotEmpty ||
-      _year != null ||
-      _classId != null ||
-      _stream != null ||
-      _status != null ||
-      _boarding != null ||
-      _attendanceFilter != _AttendanceFilter.all;
 
-  Widget _filters(StructureState s) => SizedBox(
-    height: 48,
-    child: ListView(
-      scrollDirection: Axis.horizontal,
-      children: [
-        _select('Academic year', _year, [
-          const DropdownMenuItem(value: null, child: Text('All years')),
-          ...s.academicYears.map(
-            (x) => DropdownMenuItem(value: x.id, child: Text(x.name)),
+  Widget _filterRow(
+    BuildContext context,
+    StructureState structure,
+    bool isDesktop,
+  ) {
+    final children = <Widget>[
+      _classStreamPill(context, structure),
+      _pillSelect('Academic year', _year, [
+        const DropdownMenuItem(value: null, child: Text('All years')),
+        ...structure.academicYears.map(
+          (x) => DropdownMenuItem(value: x.id, child: Text(x.name)),
+        ),
+      ], (x) => setState(() { _year = x; _page = 0; })),
+      _pillSelect('Status', _status, [
+        const DropdownMenuItem(value: null, child: Text('All statuses')),
+        ...StudentStatus.values.map(
+          (x) => DropdownMenuItem(value: x, child: Text(_statusName(x))),
+        ),
+      ], (x) => setState(() { _status = x; _page = 0; })),
+      _pillSelect('Day / boarding', _boarding, [
+        const DropdownMenuItem(value: null, child: Text('Day / boarding')),
+        ...StudentBoardingType.values.map(
+          (x) => DropdownMenuItem(
+            value: x,
+            child: Text(x.name == 'boarding' ? 'Boarding' : 'Day'),
           ),
-        ], (x) => setState(() => _year = x)),
-        _select('Class', _classId, [
-          const DropdownMenuItem(value: null, child: Text('All classes')),
-          ...s.classes.map(
-            (x) => DropdownMenuItem(value: x.id, child: Text(x.name)),
-          ),
-        ], (x) => setState(() => _classId = x)),
-        _select('Stream', _stream, [
-          const DropdownMenuItem(value: null, child: Text('All streams')),
-          ...s.streams
-              .where((x) => _classId == null || x.classId == _classId)
-              .map((x) => DropdownMenuItem(value: x.id, child: Text(x.name))),
-        ], (x) => setState(() => _stream = x)),
-        _select('Status', _status, [
-          const DropdownMenuItem(value: null, child: Text('All statuses')),
-          ...StudentStatus.values.map(
-            (x) => DropdownMenuItem(value: x, child: Text(_statusName(x))),
-          ),
-        ], (x) => setState(() => _status = x)),
-        _select('Day / boarding', _boarding, [
-          const DropdownMenuItem(value: null, child: Text('Day / boarding')),
-          ...StudentBoardingType.values.map(
-            (x) => DropdownMenuItem(
-              value: x,
-              child: Text(x.name == 'boarding' ? 'Boarding' : 'Day'),
+        ),
+      ], (x) => setState(() { _boarding = x; _page = 0; })),
+      if (_hasCriteria)
+        TextButton.icon(
+          onPressed: _clear,
+          icon: const Icon(Icons.clear, size: 18),
+          label: const Text('Clear filters'),
+        ),
+    ];
+
+    if (!isDesktop) {
+      // Compact filter access on mobile: a single button opening a bottom sheet.
+      return Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _classStreamPill(context, structure),
+                  const SizedBox(width: AppSpacing.m),
+                  OutlinedButton.icon(
+                    onPressed: () => _openFilters(structure),
+                    icon: const Icon(Icons.tune, size: 18),
+                    label: Text(
+                      _activeFilterCount > 0
+                          ? 'Filters ($_activeFilterCount)'
+                          : 'Filters',
+                    ),
+                  ),
+                  if (_hasCriteria) ...[
+                    const SizedBox(width: AppSpacing.m),
+                    TextButton(
+                      onPressed: _clear,
+                      child: const Text('Clear'),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
-        ], (x) => setState(() => _boarding = x)),
-      ],
-    ),
-  );
+        ],
+      );
+    }
 
-  Widget _select<T>(
+    return SizedBox(
+      height: 48,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: children.length,
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.m),
+        itemBuilder: (_, i) => children[i],
+      ),
+    );
+  }
+
+  Widget _classStreamPill(BuildContext context, StructureState structure) {
+    final className = structure.classes
+        .where((item) => item.id == _classId)
+        .map((item) => item.name)
+        .firstOrNull;
+    final streamName = structure.streams
+        .where((item) => item.id == _stream)
+        .map((item) => item.name)
+        .firstOrNull;
+    final label =
+        '${className ?? 'All classes'} · ${streamName ?? 'All streams'}';
+    return PopupMenuButton<String>(
+      tooltip: 'Select class and stream',
+      onSelected: (value) {
+        setState(() {
+          if (value.startsWith('class:')) {
+            _classId = value.substring(6);
+            _stream = null;
+          } else if (value.startsWith('stream:')) {
+            _stream = value.substring(7);
+          } else {
+            _classId = _stream = null;
+          }
+          _page = 0;
+        });
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(
+          value: 'all',
+          child: Text('All classes · All streams'),
+        ),
+        ...structure.classes.map(
+          (item) => PopupMenuItem(
+            value: 'class:${item.id}',
+            child: Text('${item.name} · All streams'),
+          ),
+        ),
+        ...structure.streams
+            .where((item) => _classId == null || item.classId == _classId)
+            .map(
+              (item) => PopupMenuItem(
+                value: 'stream:${item.id}',
+                child: Text(item.name),
+              ),
+            ),
+      ],
+      child: Semantics(
+        button: true,
+        label: 'Class and stream: $label',
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.m,
+          ),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.border(context)),
+            borderRadius: AppRadius.medium,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s),
+              const Icon(Icons.keyboard_arrow_down, size: 19),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _pillSelect<T>(
     String label,
     T? value,
     List<DropdownMenuItem<T?>> items,
@@ -638,57 +682,47 @@ class _DirectoryState extends State<_Directory> {
                   .map((item) => (item.child as Text).data ?? label)
                   .firstOrNull ??
               label;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: PopupMenuButton<T?>(
-        tooltip: '$label filter',
-        onSelected: (next) {
-          changed(next);
-          setState(() => _page = 0);
-        },
-        itemBuilder: (_) => [
-          if (value != null)
-            PopupMenuItem<T?>(
-              onTap: () {
-                changed(null);
-                setState(() => _page = 0);
-              },
-              child: Text('Clear $label'),
+    return PopupMenuButton<T?>(
+      tooltip: '$label filter',
+      onSelected: changed,
+      itemBuilder: (_) => [
+        if (value != null)
+          PopupMenuItem<T?>(
+            onTap: () => changed(null),
+            child: Text('Clear $label'),
+          ),
+        ...items
+            .where((item) => item.value != null)
+            .map(
+              (item) => PopupMenuItem<T?>(value: item.value, child: item.child),
             ),
-          ...items
-              .where((item) => item.value != null)
-              .map(
-                (item) =>
-                    PopupMenuItem<T?>(value: item.value, child: item.child),
-              ),
-        ],
-        child: Semantics(
-          button: true,
-          label: value == null
-              ? '$label filter'
-              : '$label: $selectedLabel. Tap to change or clear.',
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).colorScheme.outline),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(selectedLabel, overflow: TextOverflow.ellipsis),
-                const SizedBox(width: 6),
-                const Icon(Icons.keyboard_arrow_down, size: 19),
-              ],
-            ),
+      ],
+      child: Semantics(
+        button: true,
+        label: value == null
+            ? '$label filter'
+            : '$label: $selectedLabel. Tap to change or clear.',
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.border(context)),
+            borderRadius: AppRadius.medium,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(selectedLabel, overflow: TextOverflow.ellipsis),
+              const SizedBox(width: AppSpacing.s),
+              const Icon(Icons.keyboard_arrow_down, size: 19),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _listHeader(int count) => Row(
+  Widget _listHeader(BuildContext context, int count) => Row(
     children: [
       Expanded(
         child: Text(
@@ -723,169 +757,9 @@ class _DirectoryState extends State<_Directory> {
       ),
     ],
   );
-  Widget _row(Student s, StructureState state) {
-    final c =
-        state.classes.where((x) => x.id == s.classId).firstOrNull?.name ??
-        'Unassigned';
-    final stream = state.streams
-        .where((x) => x.id == s.streamId)
-        .firstOrNull
-        ?.name;
-    final number = _studentNumber(s);
-    return ListTile(
-      onTap: () => context.push('/staff/admin/students/${s.id}'),
-      contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-      minVerticalPadding: 8,
-      leading: CircleAvatar(
-        radius: 27,
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        backgroundImage: s.photoUrl?.isNotEmpty == true
-            ? NetworkImage(s.photoUrl!)
-            : null,
-        child: s.photoUrl?.isNotEmpty == true
-            ? null
-            : Text(
-                _initials(s.name),
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-      ),
-      title: Text(
-        s.name,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontWeight: FontWeight.w700),
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(number, maxLines: 1, overflow: TextOverflow.ellipsis),
-          Text(
-            '$c${stream == null ? '' : ' · $stream'}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-      isThreeLine: true,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _Pill(_statusName(s.status)),
-          const Icon(Icons.chevron_right),
-        ],
-      ),
-    );
-  }
-
-  void _enrol() {
-    if (widget.schoolId.isNotEmpty) {
-      context.push('/staff/admin/admissions/register', extra: widget.schoolId);
-    }
-  }
-
-  void _openFilterSettings() {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Filter settings',
-                style: Theme.of(sheetContext).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _hasCriteria
-                    ? 'Individual filter chips can be changed or cleared.'
-                    : 'Choose a filter chip to narrow the learner list.',
-              ),
-              const SizedBox(height: 20),
-              if (_hasCriteria)
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(sheetContext);
-                      _clear();
-                    },
-                    icon: const Icon(Icons.clear),
-                    label: const Text('Clear all filters'),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 enum _DirectorySort { recentlyAdded, name }
-
-enum _AttendanceFilter { all, present, absent, late, noData }
-
-extension on _AttendanceFilter {
-  String get label => switch (this) {
-    _AttendanceFilter.all => 'All',
-    _AttendanceFilter.present => 'Present',
-    _AttendanceFilter.absent => 'Absent',
-    _AttendanceFilter.late => 'Late',
-    _AttendanceFilter.noData => 'No data',
-  };
-
-  Color color(BuildContext context) => switch (this) {
-    _AttendanceFilter.all => AppColors.information(context),
-    _AttendanceFilter.present => AppColors.success(context),
-    _AttendanceFilter.absent => AppColors.danger(context),
-    _AttendanceFilter.late => AppColors.warning(context),
-    _AttendanceFilter.noData => AppColors.textSecondary(context),
-  };
-}
-
-class _AttendanceStat extends StatelessWidget {
-  final String label;
-  final int value;
-  final IconData icon;
-  final Color color;
-
-  const _AttendanceStat(this.label, this.value, this.icon, this.color);
-
-  @override
-  Widget build(BuildContext context) => AppCard(
-    color: AppColors.surfaceContainer(context),
-    borderColor: AppColors.border(context),
-    padding: const EdgeInsets.all(16),
-    child: Semantics(
-      label: '$label attendance: $value',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(icon, color: color, size: 31),
-          Text(
-            '$value',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          Text(label, style: Theme.of(context).textTheme.titleMedium),
-          Container(
-            height: 4,
-            width: 60,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
 
 extension on _DirectorySort {
   String get label => switch (this) {
@@ -894,90 +768,703 @@ extension on _DirectorySort {
   };
 }
 
-class _Pill extends StatelessWidget {
-  final String label;
-  const _Pill(this.label);
+/// Compact today-attendance summary: percentage/count + progress line + link.
+class _AttendanceStrip extends StatelessWidget {
+  final List<Student> students;
+  final Map<String, attendance.AttendanceStatus> marks;
+  final String? classId;
+  final String? streamId;
+  final String? error;
+  final VoidCallback onRetry;
+  final VoidCallback onViewAttendance;
+
+  const _AttendanceStrip({
+    required this.students,
+    required this.marks,
+    required this.classId,
+    required this.streamId,
+    required this.error,
+    required this.onRetry,
+    required this.onViewAttendance,
+  });
+
   @override
-  Widget build(BuildContext c) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+  Widget build(BuildContext context) {
+    if (error != null) {
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.l),
+        decoration: BoxDecoration(
+          color: AppColors.dangerSurface(context),
+          borderRadius: AppRadius.medium,
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: AppColors.danger(context)),
+            const SizedBox(width: AppSpacing.m),
+            Expanded(
+              child: Text(
+                'Could not load today\'s attendance. $error',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            TextButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
+      );
+    }
+
+    final scoped = students
+        .where(
+          (s) =>
+              (classId == null || s.classId == classId) &&
+              (streamId == null || s.streamId == streamId),
+        )
+        .toList();
+
+    if (scoped.isEmpty || marks.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final total = scoped.length;
+    final present = scoped
+        .where((s) => marks[s.id] == attendance.AttendanceStatus.present)
+        .length;
+    final percent = total == 0 ? 0 : ((present / total) * 100).round();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xl,
+        vertical: AppSpacing.l,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer(context),
+        border: Border.all(color: AppColors.border(context)),
+        borderRadius: AppRadius.medium,
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final narrow = constraints.maxWidth < 460;
+          final label = RichText(
+            text: TextSpan(
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textPrimary(context),
+              ),
+              children: [
+                const TextSpan(
+                  text: "Today's attendance · ",
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                TextSpan(
+                  text: '$percent% present',
+                  style: TextStyle(
+                    color: AppColors.success(context),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                TextSpan(text: ' · $present / $total'),
+              ],
+            ),
+          );
+          final bar = ClipRRect(
+            borderRadius: AppRadius.full,
+            child: LinearProgressIndicator(
+              value: total == 0 ? 0 : present / total,
+              minHeight: 6,
+              backgroundColor: AppColors.border(context),
+              valueColor: AlwaysStoppedAnimation(AppColors.success(context)),
+            ),
+          );
+          final link = TextButton(
+            onPressed: onViewAttendance,
+            child: const Text('View attendance'),
+          );
+
+          if (narrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                label,
+                const SizedBox(height: AppSpacing.m),
+                bar,
+                Align(alignment: Alignment.centerRight, child: link),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    label,
+                    const SizedBox(height: AppSpacing.m),
+                    bar,
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xl),
+              link,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DesktopTable extends StatelessWidget {
+  final List<Student> students;
+  final StructureState structure;
+  final Map<String, attendance.AttendanceStatus> marks;
+  final ValueChanged<String> onTap;
+
+  const _DesktopTable({
+    required this.students,
+    required this.structure,
+    required this.marks,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
-      border: Border.all(color: Theme.of(c).colorScheme.outline),
-      borderRadius: BorderRadius.circular(7),
+      border: Border.all(color: AppColors.border(context)),
+      borderRadius: AppRadius.medium,
     ),
-    child: Text(
-      label,
-      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+    clipBehavior: Clip.antiAlias,
+    child: Column(
+      children: [
+        Container(
+          color: AppColors.surfaceContainer(context),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.m,
+          ),
+          child: Row(
+            children: [
+              _headCell(context, 'Learner', flex: 3),
+              _headCell(context, 'Admission no.', flex: 2),
+              _headCell(context, 'Class · Stream', flex: 2),
+              _headCell(context, 'Attendance', flex: 2),
+              _headCell(context, 'Parent', flex: 2),
+              const SizedBox(width: 40),
+            ],
+          ),
+        ),
+        for (final s in students) ...[
+          const Divider(height: 1, thickness: .6),
+          _TableRow(
+            student: s,
+            structure: structure,
+            status: marks[s.id],
+            onTap: () => onTap(s.id),
+          ),
+        ],
+      ],
     ),
+  );
+
+  Widget _headCell(BuildContext context, String text, {required int flex}) =>
+      Expanded(
+        flex: flex,
+        child: Text(
+          text,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textSecondary(context),
+          ),
+        ),
+      );
+}
+
+class _TableRow extends StatelessWidget {
+  final Student student;
+  final StructureState structure;
+  final attendance.AttendanceStatus? status;
+  final VoidCallback onTap;
+
+  const _TableRow({
+    required this.student,
+    required this.structure,
+    required this.status,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final className =
+        structure.classes
+            .where((x) => x.id == student.classId)
+            .firstOrNull
+            ?.name ??
+        'Unassigned';
+    final streamName = structure.streams
+        .where((x) => x.id == student.streamId)
+        .firstOrNull
+        ?.name;
+    final number = _studentNumber(student);
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.m,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: AppColors.surfaceContainerHigh(context),
+                    backgroundImage: student.photoUrl?.isNotEmpty == true
+                        ? NetworkImage(student.photoUrl!)
+                        : null,
+                    child: student.photoUrl?.isNotEmpty == true
+                        ? null
+                        : Text(
+                            _initials(student.name),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                  ),
+                  const SizedBox(width: AppSpacing.m),
+                  Flexible(
+                    child: Text(
+                      student.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(flex: 2, child: Text(number)),
+            Expanded(
+              flex: 2,
+              child: Text(
+                '$className${streamName == null ? '' : ' · $streamName'}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Expanded(flex: 2, child: _AttendanceDot(status: status)),
+            Expanded(
+              flex: 2,
+              child: Icon(
+                Icons.link,
+                size: 18,
+                color: AppColors.textMuted(context),
+              ),
+            ),
+            SizedBox(
+              width: 40,
+              child: Icon(
+                Icons.chevron_right,
+                color: AppColors.textMuted(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileList extends StatelessWidget {
+  final List<Student> students;
+  final StructureState structure;
+  final Map<String, attendance.AttendanceStatus> marks;
+  final ValueChanged<String> onTap;
+
+  const _MobileList({
+    required this.students,
+    required this.structure,
+    required this.marks,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      for (var i = 0; i < students.length; i++) ...[
+        _MobileRow(
+          student: students[i],
+          structure: structure,
+          status: marks[students[i].id],
+          onTap: () => onTap(students[i].id),
+        ),
+        if (i < students.length - 1)
+          const Divider(height: 1, thickness: .6),
+      ],
+    ],
+  );
+}
+
+class _MobileRow extends StatelessWidget {
+  final Student student;
+  final StructureState structure;
+  final attendance.AttendanceStatus? status;
+  final VoidCallback onTap;
+
+  const _MobileRow({
+    required this.student,
+    required this.structure,
+    required this.status,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final className =
+        structure.classes
+            .where((x) => x.id == student.classId)
+            .firstOrNull
+            ?.name ??
+        'Unassigned';
+    final streamName = structure.streams
+        .where((x) => x.id == student.streamId)
+        .firstOrNull
+        ?.name;
+    final number = _studentNumber(student);
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.s,
+        horizontal: 4,
+      ),
+      minVerticalPadding: AppSpacing.m,
+      leading: CircleAvatar(
+        radius: 24,
+        backgroundColor: AppColors.surfaceContainerHigh(context),
+        backgroundImage: student.photoUrl?.isNotEmpty == true
+            ? NetworkImage(student.photoUrl!)
+            : null,
+        child: student.photoUrl?.isNotEmpty == true
+            ? null
+            : Text(
+                _initials(student.name),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+      ),
+      title: Text(
+        student.name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text(
+        '$number · $className${streamName == null ? '' : ' · $streamName'}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _AttendanceDot(status: status),
+          const SizedBox(width: AppSpacing.s),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttendanceDot extends StatelessWidget {
+  final attendance.AttendanceStatus? status;
+  const _AttendanceDot({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color;
+    final String label;
+    switch (status) {
+      case attendance.AttendanceStatus.present:
+        color = AppColors.success(context);
+        label = 'Present';
+        break;
+      case attendance.AttendanceStatus.absent:
+        color = AppColors.danger(context);
+        label = 'Absent';
+        break;
+      case attendance.AttendanceStatus.late:
+        color = AppColors.warning(context);
+        label = 'Late';
+        break;
+      default:
+        color = AppColors.textMuted(context);
+        label = 'No data';
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: AppSpacing.s),
+        Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
+}
+
+class _FilterSheet extends StatefulWidget {
+  final StructureState structure;
+  final String? year;
+  final String? classId;
+  final String? stream;
+  final StudentStatus? status;
+  final StudentBoardingType? boarding;
+  final void Function(
+    String? year,
+    String? classId,
+    String? stream,
+    StudentStatus? status,
+    StudentBoardingType? boarding,
+  )
+  onApply;
+  final VoidCallback onClear;
+
+  const _FilterSheet({
+    required this.structure,
+    required this.year,
+    required this.classId,
+    required this.stream,
+    required this.status,
+    required this.boarding,
+    required this.onApply,
+    required this.onClear,
+  });
+
+  @override
+  State<_FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<_FilterSheet> {
+  late String? _year = widget.year;
+  late String? _classId = widget.classId;
+  late String? _stream = widget.stream;
+  late StudentStatus? _status = widget.status;
+  late StudentBoardingType? _boarding = widget.boarding;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: Padding(
+      padding: EdgeInsets.only(
+        left: AppSpacing.x2l,
+        right: AppSpacing.x2l,
+        top: AppSpacing.x2l,
+        bottom: AppSpacing.x2l + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Filters',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.x2l),
+            _dropdownField<String?>(
+              'Academic year',
+              _year,
+              [
+                const DropdownMenuItem(value: null, child: Text('All years')),
+                ...widget.structure.academicYears.map(
+                  (x) => DropdownMenuItem(value: x.id, child: Text(x.name)),
+                ),
+              ],
+              (v) => setState(() => _year = v),
+            ),
+            const SizedBox(height: AppSpacing.l),
+            _dropdownField<String?>(
+              'Class',
+              _classId,
+              [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('All classes'),
+                ),
+                ...widget.structure.classes.map(
+                  (x) => DropdownMenuItem(value: x.id, child: Text(x.name)),
+                ),
+              ],
+              (v) => setState(() {
+                _classId = v;
+                _stream = null;
+              }),
+            ),
+            const SizedBox(height: AppSpacing.l),
+            _dropdownField<String?>(
+              'Stream',
+              _stream,
+              [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('All streams'),
+                ),
+                ...widget.structure.streams
+                    .where(
+                      (x) => _classId == null || x.classId == _classId,
+                    )
+                    .map(
+                      (x) =>
+                          DropdownMenuItem(value: x.id, child: Text(x.name)),
+                    ),
+              ],
+              (v) => setState(() => _stream = v),
+            ),
+            const SizedBox(height: AppSpacing.l),
+            _dropdownField<StudentStatus?>(
+              'Status',
+              _status,
+              [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('All statuses'),
+                ),
+                ...StudentStatus.values.map(
+                  (x) =>
+                      DropdownMenuItem(value: x, child: Text(_statusName(x))),
+                ),
+              ],
+              (v) => setState(() => _status = v),
+            ),
+            const SizedBox(height: AppSpacing.l),
+            _dropdownField<StudentBoardingType?>(
+              'Day / boarding',
+              _boarding,
+              [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('Day / boarding'),
+                ),
+                ...StudentBoardingType.values.map(
+                  (x) => DropdownMenuItem(
+                    value: x,
+                    child: Text(x.name == 'boarding' ? 'Boarding' : 'Day'),
+                  ),
+                ),
+              ],
+              (v) => setState(() => _boarding = v),
+            ),
+            const SizedBox(height: AppSpacing.x2l),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      widget.onClear();
+                    },
+                    child: const Text('Clear all'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.l),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary(context),
+                      foregroundColor: AppColors.background(context),
+                      minimumSize: const Size(0, 48),
+                    ),
+                    onPressed: () {
+                      widget.onApply(
+                        _year,
+                        _classId,
+                        _stream,
+                        _status,
+                        _boarding,
+                      );
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Apply'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  Widget _dropdownField<T>(
+    String label,
+    T value,
+    List<DropdownMenuItem<T>> items,
+    ValueChanged<T> onChanged,
+  ) => DropdownButtonFormField<T>(
+    initialValue: value,
+    decoration: InputDecoration(
+      labelText: label,
+      border: OutlineInputBorder(borderRadius: AppRadius.medium),
+    ),
+    items: items,
+    onChanged: (v) => onChanged(v as T),
   );
 }
 
 class _StateMessage extends StatelessWidget {
+  final IconData icon;
   final String title, message, action;
   final VoidCallback onAction;
-  const _StateMessage(this.title, this.message, this.action, this.onAction);
+  const _StateMessage({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.action,
+    required this.onAction,
+  });
   @override
   Widget build(BuildContext c) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 26),
+    padding: const EdgeInsets.symmetric(vertical: AppSpacing.x3l),
     child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 46),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x3l,
+        vertical: AppSpacing.x5l,
+      ),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainer(c),
         border: Border.all(color: AppColors.border(c)),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppRadius.large,
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.manage_search_outlined,
-            size: 62,
-            color: AppColors.textSecondary(c),
-          ),
-          const SizedBox(height: 20),
+          Icon(icon, size: 56, color: AppColors.textMuted(c)),
+          const SizedBox(height: AppSpacing.x2l),
           Text(
             title,
             style: Theme.of(
               c,
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.m),
           Text(
             message,
             textAlign: TextAlign.center,
             style: Theme.of(c).textTheme.bodyLarge,
           ),
-          const SizedBox(height: 20),
-          OutlinedButton(onPressed: onAction, child: Text(action)),
+          const SizedBox(height: AppSpacing.x2l),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary(c),
+              foregroundColor: AppColors.background(c),
+            ),
+            onPressed: onAction,
+            child: Text(action),
+          ),
         ],
       ),
-    ),
-  );
-}
-
-class _AttendanceRetry extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _AttendanceRetry({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: AppColors.dangerSurface(context),
-      borderRadius: BorderRadius.circular(14),
-    ),
-    child: Row(
-      children: [
-        Icon(Icons.error_outline, color: AppColors.danger(context)),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            'Could not load today\'s attendance. $message',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        TextButton(onPressed: onRetry, child: const Text('Retry')),
-      ],
     ),
   );
 }
@@ -987,45 +1474,53 @@ class _DirectoryLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.all(AppSpacing.xl),
     children: [
       const SizedBox(height: 4),
       Container(
         height: 52,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.medium,
         ),
       ),
-      const SizedBox(height: 14),
+      const SizedBox(height: AppSpacing.l),
       SizedBox(
-        height: 48,
+        height: 44,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           itemCount: 5,
-          separatorBuilder: (_, _) => const SizedBox(width: 8),
+          separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.m),
           itemBuilder: (_, _) => Container(
             width: 108,
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: AppRadius.medium,
             ),
           ),
         ),
       ),
-      const SizedBox(height: 24),
+      const SizedBox(height: AppSpacing.x3l),
+      Container(
+        height: 64,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: AppRadius.medium,
+        ),
+      ),
+      const SizedBox(height: AppSpacing.x2l),
       for (var index = 0; index < 6; index++)
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
           child: Row(
             children: [
               CircleAvatar(
-                radius: 25,
+                radius: 24,
                 backgroundColor: Theme.of(
                   context,
                 ).colorScheme.surfaceContainerHighest,
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: AppSpacing.l),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1039,7 +1534,7 @@ class _DirectoryLoading extends StatelessWidget {
                         ).colorScheme.surfaceContainerHighest,
                       ),
                     ),
-                    const SizedBox(height: 9),
+                    const SizedBox(height: AppSpacing.s),
                     FractionallySizedBox(
                       widthFactor: .38,
                       child: Container(
