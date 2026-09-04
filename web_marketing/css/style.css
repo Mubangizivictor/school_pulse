@@ -606,7 +606,7 @@ table.data-table tr:last-child td { border-bottom: none; }
 .form-field .error-text { font-size: 12.5px; color: var(--color-error); margin-top: 6px; display: none; }
 .form-field.has-error .error-text { display: block; }
 .form-field.has-error input, .form-field.has-error select, .form-field.has-error textarea { border-color: var(--color-error); }
-input[type="text"], input[type="email"], input[type="tel"], input[type="number"], input[type="date"], select, textarea {
+input[type="text"], input[type="email"], input[type="tel"], input[type="number"], input[type="date"], input[type="password"], input[type="datetime-local"], select, textarea {
   width: 100%;
   padding: 11px 14px;
   border: 1px solid var(--color-border);
@@ -1577,3 +1577,78 @@ input[type="range"] { width: 100%; accent-color: var(--color-primary); height: 2
 }
 .next-steps-text { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; color: var(--color-muted); line-height: 1.5; }
 .next-steps-text strong { font-size: 13.5px; font-weight: 700; color: var(--color-ink); }
+
+/* ---------- Submit payment page ---------- */
+.pay-container { max-width: 1040px; }
+.pay-narrow { max-width: 480px; margin: 0 auto; }
+
+.pay-layout {
+  display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start;
+}
+.pay-col { display: flex; flex-direction: column; gap: 20px; }
+.pay-col--pay { position: sticky; top: 84px; }
+
+.pay-amount-card { padding: 20px 22px; }
+.pay-amount-card .price-amount--num { margin: 4px 0 8px; }
+
+.pay-section-title { margin: 0 0 14px; font-size: 15px; }
+
+.pay-methods { display: flex; flex-direction: column; gap: 12px; }
+.pay-method-card {
+  display: flex; align-items: flex-start; gap: 12px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  padding: 14px 16px; cursor: pointer; background: var(--color-card);
+}
+.pay-method-card.selected { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft); }
+.pay-method-card[data-disabled="true"] { opacity: .5; cursor: not-allowed; }
+.pay-method-body { flex: 1; min-width: 0; }
+.pay-method-card h4 { margin: 0 0 2px; font-size: 14.5px; }
+.pay-method-card .method-number { font-size: 16px; font-weight: 800; margin: 2px 0; word-break: break-word; }
+.pay-method-card .copy-btn { font-size: 12px; padding: 6px 12px; align-self: center; flex-shrink: 0; }
+.pay-method-icon {
+  flex-shrink: 0; width: 36px; height: 36px; border-radius: 10px;
+  background: var(--color-surface);
+}
+.pay-method-icon--mtn { background: #ffcc08; }
+.pay-method-icon--airtel { background: #ed1c24; }
+.pay-method-icon--bank { background: var(--color-primary-soft); }
+
+.pay-note {
+  display: flex; align-items: flex-start; gap: 8px; margin-top: 16px;
+  padding: 12px 14px; border-radius: var(--radius-sm);
+  background: var(--color-surface); color: var(--color-muted); font-size: 12.5px; line-height: 1.5;
+}
+
+.upload-drop {
+  border: 1px dashed var(--color-border); border-radius: var(--radius-sm);
+  padding: 22px; text-align: center; cursor: pointer; color: var(--color-muted);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.upload-drop svg { color: var(--color-muted); margin-bottom: 4px; }
+.upload-drop.has-file { border-style: solid; border-color: var(--color-primary); }
+.progress-bar { width: 100%; height: 6px; border-radius: 999px; background: var(--color-surface); overflow: hidden; margin-top: 10px; display: none; }
+.progress-bar .fill { height: 100%; background: var(--color-primary); width: 0%; transition: width .2s; }
+
+.pay-secure-line {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin: 12px 0 0; font-size: 12px; color: var(--color-muted);
+}
+
+.pay-footer { border-top: 1px solid var(--color-border); padding: 18px 0; margin-top: 40px; }
+.pay-footer-wrap {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--color-muted);
+}
+.pay-footer-links { display: flex; gap: 16px; }
+.pay-footer-links a { color: var(--color-muted); }
+.pay-footer-links a:hover { color: var(--color-primary); }
+
+@media (max-width: 900px) {
+  .pay-layout { grid-template-columns: 1fr; }
+  .pay-col--pay { position: static; }
+}
+@media (max-width: 640px) {
+  .pay-container { padding: 0 16px; }
+  .pay-method-card { flex-wrap: wrap; }
+  .pay-method-card .copy-btn { margin-left: 48px; }
+}
