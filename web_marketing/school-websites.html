@@ -9,6 +9,74 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16.png">
 <link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+<style>
+  .sw-hero-note { display: flex; align-items: center; gap: 8px; margin-top: 18px; font-size: 13px; color: var(--color-muted); font-weight: 600; }
+  .sw-hero-note svg { width: 15px; height: 15px; color: var(--color-primary); flex-shrink: 0; }
+
+  .sw-site {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .sw-site-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--color-border); }
+  .sw-site-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .sw-site-badge { width: 30px; height: 30px; border-radius: 8px; background: var(--color-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; }
+  .sw-site-brand-name { font-weight: 800; font-size: 13.5px; line-height: 1.15; }
+  .sw-site-links { display: flex; gap: 4px; }
+  .sw-site-links svg { width: 18px; height: 18px; color: var(--color-ink-soft); }
+  .sw-site-portal { display: inline-flex; align-items: center; gap: 6px; background: var(--color-ink); color: #fff; border-radius: 999px; padding: 6px 12px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+  .sw-site-portal svg { width: 12px; height: 12px; }
+
+  .sw-site-hero { padding: 18px; }
+  .sw-site-hero-img {
+    background: linear-gradient(180deg, rgba(15,23,42,0.05), rgba(15,23,42,0.02)), var(--color-surface);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    position: relative;
+  }
+  .sw-site-hero-img h3 { margin-bottom: 6px; font-size: 19px; }
+  .sw-site-hero-img p { font-size: 13px; margin-bottom: 12px; }
+
+  .sw-site-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 0 18px 18px; }
+  .sw-stat { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px 10px; text-align: center; min-width: 0; }
+  .sw-stat svg { width: 16px; height: 16px; color: var(--color-primary); margin-bottom: 4px; }
+  .sw-stat .v { font-size: 16px; font-weight: 800; color: var(--color-ink); }
+  .sw-stat .k { font-size: 11px; color: var(--color-muted); }
+
+  .sw-list { padding: 0 18px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .sw-list-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px 12px;
+  }
+  .sw-list-item .t { font-weight: 700; font-size: 13px; }
+  .sw-list-item .d { font-size: 11.5px; color: var(--color-muted); margin-top: 1px; }
+  .sw-list-item .chev { color: var(--color-muted); flex-shrink: 0; }
+  .sw-list-item .chev svg { width: 14px; height: 14px; }
+  .sw-list-item.locked .lock { color: var(--color-muted); flex-shrink: 0; }
+  .sw-list-item.locked .lock svg { width: 14px; height: 14px; }
+
+  .sw-benefit-card { position: relative; }
+  .sw-benefit-tag {
+    display: inline-block; margin-top: 10px; font-size: 12.5px; font-weight: 700;
+    background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 999px;
+    padding: 6px 12px; color: var(--color-ink-soft);
+  }
+  .sw-benefit-swatches { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  .sw-benefit-swatches .sw-icon-mini { width: 22px; height: 22px; border-radius: 6px; background: var(--color-ink); color: #fff; display: flex; align-items: center; justify-content: center; }
+  .sw-benefit-swatches .sw-icon-mini svg { width: 12px; height: 12px; }
+  .sw-swatch { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--color-border); }
+
+  @media (max-width: 480px) {
+    .sw-site-stats { gap: 8px; padding: 0 14px 14px; }
+    .sw-stat { padding: 8px 6px; }
+    .sw-stat .v { font-size: 14px; }
+    .sw-site-hero { padding: 14px; }
+    .sw-site-nav { padding: 10px 14px; }
+  }
+</style>
 </head>
 <body>
 
@@ -16,53 +84,52 @@
 
 <main>
   <section class="hero">
-    <div class="container">
-      <div style="max-width:700px;">
+    <div class="container hero-grid">
+      <div>
         <span class="eyebrow">School Websites</span>
         <h1>Every school gets a beautiful, branded website and portal.</h1>
-        <p class="lead">The moment you register, School Pulse builds your school a public website and a secure parent portal — no designer, no developer, no extra cost.</p>
+        <p class="lead">Showcase your school. Share updates. Keep parents connected — no designer, no developer, no extra cost.</p>
         <div class="btn-row">
-          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school →</a>
         </div>
+        <div class="sw-hero-note" id="hero-note"></div>
       </div>
-    </div>
-  </section>
 
-  <section class="section">
-    <div class="container">
-      <div class="mockup">
-        <div class="mockup-chrome">
-          <span class="mockup-dot"></span><span class="mockup-dot"></span><span class="mockup-dot"></span>
-          <span class="mockup-url">kampalahillside.schoolpulseapp.com</span>
+      <div class="sw-site">
+        <div class="sw-site-nav">
+          <div class="sw-site-brand">
+            <div class="sw-site-badge">GPS</div>
+            <div class="sw-site-brand-name">Greenfield<br>Public School</div>
+          </div>
+          <div class="sw-site-portal"><span id="icon-portal-mini"></span> Parent Portal</div>
         </div>
-        <div class="mockup-body">
-          <div style="display:flex; align-items:center; justify-content:space-between; padding-bottom:16px; border-bottom:1px solid var(--color-border); margin-bottom:20px; flex-wrap:wrap; gap:12px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <div style="width:36px; height:36px; border-radius:8px; background:var(--color-primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px;">KHA</div>
-              <div style="font-weight:800; font-size:15px;">Kampala Hillside Academy</div>
-            </div>
-            <div style="display:flex; gap:18px; font-size:13.5px; color:var(--color-ink-soft); flex-wrap:wrap;">
-              <span>About</span><span>Admissions</span><span>Academics</span><span>Contact</span>
+        <div class="sw-site-hero">
+          <div class="sw-site-hero-img">
+            <span class="badge badge-blue" style="margin-bottom:8px; display:inline-block;">Inspiring minds. Building futures.</span>
+            <h3>Nurturing learners today, leaders tomorrow.</h3>
+            <div class="btn-row">
+              <a href="#" class="btn btn-primary" style="pointer-events:none;">Learn More</a>
             </div>
           </div>
-          <div style="background:var(--color-surface); border-radius:var(--radius-lg); padding:28px; margin-bottom:20px;">
-            <span class="badge badge-blue" style="margin-bottom:10px; display:inline-block;">Admissions open for 2027</span>
-            <h3 style="margin-bottom:6px;">Nurturing excellence, one learner at a time.</h3>
-            <p style="margin-bottom:0; font-size:14px;">A caring, high-performing school in Naalya, Kampala — Nursery through S6.</p>
+        </div>
+        <div class="sw-site-stats">
+          <div class="sw-stat"><span id="icon-stat-0"></span><div class="v">620</div><div class="k">Students</div></div>
+          <div class="sw-stat"><span id="icon-stat-1"></span><div class="v">42</div><div class="k">Teachers</div></div>
+          <div class="sw-stat"><span id="icon-stat-2"></span><div class="v">15+</div><div class="k">Clubs</div></div>
+          <div class="sw-stat"><span id="icon-stat-3"></span><div class="v">98%</div><div class="k">Attendance</div></div>
+        </div>
+        <div class="sw-list">
+          <div class="sw-list-item">
+            <div><div class="t">Free subdomain</div><div class="d">your-school.schoolpulse.in</div></div>
+            <div class="chev" id="icon-chev-0"></div>
           </div>
-          <div class="grid grid-3">
-            <div class="card" style="padding:16px;">
-              <div class="muted" style="font-size:12px;">Learners</div>
-              <div style="font-size:20px; font-weight:800; margin-top:4px;">1,240</div>
-            </div>
-            <div class="card" style="padding:16px;">
-              <div class="muted" style="font-size:12px;">Pass rate</div>
-              <div style="font-size:20px; font-weight:800; margin-top:4px;">96%</div>
-            </div>
-            <div class="card" style="padding:16px;">
-              <div class="muted" style="font-size:12px;">Established</div>
-              <div style="font-size:20px; font-weight:800; margin-top:4px;">1998</div>
-            </div>
+          <div class="sw-list-item">
+            <div><div class="t">Custom domain support</div><div class="d">www.yourschool.edu.in</div></div>
+            <div class="chev" id="icon-chev-1"></div>
+          </div>
+          <div class="sw-list-item locked">
+            <div><div class="t">Parent portal access</div><div class="d">Secure access for parents</div></div>
+            <div class="lock" id="icon-lock-0"></div>
           </div>
         </div>
       </div>
@@ -77,25 +144,35 @@
         <p>No extra plan, no separate purchase — every registered school gets the full website and portal package.</p>
       </div>
       <div class="grid grid-4">
-        <div class="card">
+        <div class="card sw-benefit-card">
           <div class="card-icon" id="icon-globe"></div>
           <h3>Free subdomain</h3>
-          <p>Your school goes live instantly at yourschool.schoolpulseapp.com.</p>
+          <p>Your school goes live instantly on a School Pulse subdomain.</p>
+          <span class="sw-benefit-tag">your-school.schoolpulse.in</span>
         </div>
-        <div class="card">
+        <div class="card sw-benefit-card">
           <div class="card-icon" id="icon-link"></div>
           <h3>Custom domain support</h3>
-          <p>Already own yourschool.ac.ug? Point it at School Pulse in minutes.</p>
+          <p>Already own a domain? Point it at School Pulse in minutes.</p>
+          <span class="sw-benefit-tag">www.yourschool.edu.in</span>
         </div>
-        <div class="card">
+        <div class="card sw-benefit-card">
           <div class="card-icon" id="icon-palette"></div>
           <h3>Your colours &amp; logo</h3>
           <p>Upload your badge and pick your brand colours — the site matches your identity.</p>
+          <div class="sw-benefit-swatches">
+            <span class="sw-icon-mini" id="icon-shield-mini"></span>
+            <span class="sw-swatch" style="background:#0F172A;"></span>
+            <span class="sw-swatch" style="background:#60A5FA;"></span>
+            <span class="sw-swatch" style="background:#fff;"></span>
+            <span class="sw-swatch" style="background:#CBD5E1;"></span>
+          </div>
         </div>
-        <div class="card">
+        <div class="card sw-benefit-card">
           <div class="card-icon" id="icon-parents"></div>
           <h3>Parent portal access</h3>
-          <p>Parents log in through your school's own site to see fees, attendance and reports.</p>
+          <p>Parents get secure access to updates and student info.</p>
+          <span class="sw-benefit-tag">Parent Portal 🔒</span>
         </div>
       </div>
     </div>
@@ -104,10 +181,10 @@
   <section class="section">
     <div class="container">
       <div class="cta-banner">
-        <h2>This comes free with every school registration.</h2>
-        <p>No web developer needed. Register your school on School Pulse and your branded website and parent portal are ready the same day.</p>
+        <h2>Included with your School Pulse registration.</h2>
+        <p>No extra cost. No hidden fees. Just a powerful website and portal for your school.</p>
         <div class="btn-row" style="justify-content:center;">
-          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school →</a>
         </div>
       </div>
     </div>
@@ -124,6 +201,20 @@
   document.getElementById('icon-link').innerHTML = window.ICONS.link;
   document.getElementById('icon-palette').innerHTML = window.ICONS.palette;
   document.getElementById('icon-parents').innerHTML = window.ICONS.parents;
+  document.getElementById('icon-shield-mini').innerHTML = window.ICONS.palette;
+  document.getElementById('icon-portal-mini').innerHTML = window.ICONS.key;
+
+  document.getElementById('icon-stat-0').innerHTML = window.ICONS.parents;
+  document.getElementById('icon-stat-1').innerHTML = window.ICONS.user;
+  document.getElementById('icon-stat-2').innerHTML = window.ICONS.check;
+  document.getElementById('icon-stat-3').innerHTML = window.ICONS.chart;
+
+  document.getElementById('icon-chev-0').innerHTML = '›';
+  document.getElementById('icon-chev-1').innerHTML = '›';
+  document.getElementById('icon-lock-0').innerHTML = window.ICONS.key;
+
+  var note = document.getElementById('hero-note');
+  note.innerHTML = window.ICONS.check + '<span>Free with School Pulse registration</span>';
 </script>
 </body>
 </html>
