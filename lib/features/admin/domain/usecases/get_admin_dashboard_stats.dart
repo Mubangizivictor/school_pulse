@@ -67,6 +67,10 @@ class AdminDashboardStats extends Equatable {
   /// if it couldn't be computed (e.g. no attendance recorded yet).
   final double? studentAttendancePercent;
 
+  /// Raw present/late/absent/excused counts from submitted class attendance
+  /// sessions for today, or null if they couldn't be computed.
+  final AttendanceCounts? todayAttendanceCounts;
+
   /// Fees collected for the active term, in the school's base currency
   /// units (e.g. UGX), or null if Finance data isn't available.
   final double? termFeesCollected;
@@ -101,6 +105,7 @@ class AdminDashboardStats extends Equatable {
     this.dataSyncRatePercent = 100.0,
     this.failedOperationsCount = 0,
     this.studentAttendancePercent,
+    this.todayAttendanceCounts,
     this.termFeesCollected,
     this.currentPeriodLabel,
     this.pendingExpenditureRequestsCount = 0,
@@ -123,6 +128,7 @@ class AdminDashboardStats extends Equatable {
     dataSyncRatePercent,
     failedOperationsCount,
     studentAttendancePercent,
+    todayAttendanceCounts,
     termFeesCollected,
     currentPeriodLabel,
     pendingExpenditureRequestsCount,
@@ -222,6 +228,7 @@ class GetAdminDashboardStats
       final syncHealth = await _getSyncHealth();
 
       double? attendancePercent;
+      AttendanceCounts? todayCounts;
       double? feesCollected;
       String? periodLabel;
       int pendingExpenditure = 0;
@@ -237,6 +244,11 @@ class GetAdminDashboardStats
         (_) => null,
         (stats) => attendancePercent = stats.$1,
       );
+
+      final todayCountsResult = await adminAttendanceRepository
+          .getTodayAttendanceCounts(schoolId)
+          .timeout(const Duration(seconds: 10));
+      todayCountsResult.fold((_) => null, (counts) => todayCounts = counts);
 
       if (forTerm != null) {
         // A specific past/other term was requested - sum actual payments
@@ -304,6 +316,7 @@ class GetAdminDashboardStats
           dataSyncRatePercent: syncHealth.$1,
           failedOperationsCount: syncHealth.$2,
           studentAttendancePercent: attendancePercent,
+          todayAttendanceCounts: todayCounts,
           termFeesCollected: feesCollected,
           currentPeriodLabel: periodLabel,
           pendingExpenditureRequestsCount: pendingExpenditure,

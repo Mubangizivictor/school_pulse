@@ -5,7 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/components/pulse_card.dart';
+import 'package:school_pulse/design_system/components/pulse_button.dart';
 import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_radius.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/admin/data/models/audit_log.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_bloc.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_event.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/admin_dashboard_state.dart';
@@ -21,17 +28,22 @@ import 'package:school_pulse/injection_container.dart' as di;
 /// Tenant-scoped School Admin home. All metric values come from the existing
 /// dashboard BLoC; action counts and pins are read from the active tenant.
 class AdminDashboardScreen extends StatelessWidget {
-  const AdminDashboardScreen({super.key});
+  const AdminDashboardScreen({super.key, this.firestoreOverride});
+
+  /// Test-only override for the Firestore instance used by the "Needs
+  /// attention" live-work stream. Defaults to [FirebaseFirestore.instance].
+  final FirebaseFirestore? firestoreOverride;
 
   @override
   Widget build(BuildContext context) => BlocProvider(
     create: (_) => di.sl<AdminDashboardBloc>()..add(LoadAdminDashboardStats()),
-    child: const _AdminHome(),
+    child: _AdminHome(firestore: firestoreOverride ?? FirebaseFirestore.instance),
   );
 }
 
 class _AdminHome extends StatelessWidget {
-  const _AdminHome();
+  const _AdminHome({required this.firestore});
+  final FirebaseFirestore firestore;
 
   @override
   Widget build(BuildContext context) {
@@ -39,9 +51,10 @@ class _AdminHome extends StatelessWidget {
     if (auth is! AuthAuthenticated) return const SizedBox.shrink();
     final user = auth.user;
     return Scaffold(
+      backgroundColor: AppColors.background(context),
       body: SafeArea(
         child: RefreshIndicator(
-          color: _ink(context),
+          color: AppColors.textPrimary(context),
           onRefresh: () async {
             context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats());
             await context.read<AdminDashboardBloc>().stream.firstWhere(
@@ -49,9 +62,8 @@ class _AdminHome extends StatelessWidget {
             );
           },
           child: ResponsiveBuilder(
-            builder: (context, layout) => layout == ResponsiveLayout.mobile
-                ? _MobileHome(user: user)
-                : _WideHome(user: user, layout: layout),
+            builder: (context, layout) =>
+                _HomeBody(user: user, layout: layout, firestore: firestore),
           ),
         ),
       ),
@@ -59,29 +71,62 @@ class _AdminHome extends StatelessWidget {
   }
 }
 
-class _MobileHome extends StatelessWidget {
-  const _MobileHome({required this.user});
+class _HomeBody extends StatelessWidget {
+  const _HomeBody({
+    required this.user,
+    required this.layout,
+    required this.firestore,
+  });
   final UserEntity user;
+  final ResponsiveLayout layout;
+  final FirebaseFirestore firestore;
+
+  bool get _isMobile => layout == ResponsiveLayout.mobile;
+  bool get _isDesktop => layout == ResponsiveLayout.desktop;
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
     physics: const AlwaysScrollableScrollPhysics(),
-    padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
+    padding: EdgeInsets.fromLTRB(
+      _isMobile ? AppSpacing.xl : (_isDesktop ? AppSpacing.x4l : AppSpacing.x3l),
+      AppSpacing.xl,
+      _isMobile ? AppSpacing.xl : (_isDesktop ? AppSpacing.x4l : AppSpacing.x3l),
+      AppSpacing.x9l,
+    ),
     child: Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720),
+        constraints: BoxConstraints(maxWidth: _isDesktop ? 1200 : 760),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _Header(user: user),
-            const SizedBox(height: 28),
-            _ContextRow(user: user),
-            const SizedBox(height: 32),
-            _AttentionSection(user: user),
-            const SizedBox(height: 20),
-            const _PinnedSection(),
-            const SizedBox(height: 24),
-            _GlanceSection(user: user),
+            _Header(user: user, isMobile: _isMobile),
+            SizedBox(height: _isMobile ? AppSpacing.xl : AppSpacing.x3l),
+            _AttentionSection(
+              user: user,
+              isDesktop: _isDesktop,
+              firestore: firestore,
+            ),
+            SizedBox(height: AppSpacing.x3l),
+            _MetricsSection(user: user, isMobile: _isMobile),
+            SizedBox(height: AppSpacing.x3l),
+            _QuickActionsSection(isMobile: _isMobile),
+            SizedBox(height: AppSpacing.x3l),
+            if (_isDesktop || layout == ResponsiveLayout.tablet)
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _AttendanceSummarySection(user: user)),
+                    const SizedBox(width: AppSpacing.xl),
+                    Expanded(child: _RecentActivitySection()),
+                  ],
+                ),
+              )
+            else ...[
+              _AttendanceSummarySection(user: user),
+              SizedBox(height: AppSpacing.x3l),
+              _RecentActivitySection(),
+            ],
           ],
         ),
       ),
@@ -89,94 +134,77 @@ class _MobileHome extends StatelessWidget {
   );
 }
 
-/// Desktop (>=1024) and tablet (600-1023) layout: two-column body with the
-/// same sections/callbacks as mobile, just rearranged for wider viewports.
-class _WideHome extends StatelessWidget {
-  const _WideHome({required this.user, required this.layout});
-  final UserEntity user;
-  final ResponsiveLayout layout;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDesktop = layout == ResponsiveLayout.desktop;
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(
-        isDesktop ? 32 : 20,
-        24,
-        isDesktop ? 32 : 20,
-        48,
-      ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1200),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _Header(user: user),
-              const SizedBox(height: 8),
-              _ContextRow(user: user),
-              const SizedBox(height: 28),
-              _AttentionSection(user: user),
-              const SizedBox(height: 20),
-              const _PinnedSection(),
-              const SizedBox(height: 24),
-              _GlanceSection(user: user),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _Header extends StatelessWidget {
-  const _Header({required this.user});
+  const _Header({required this.user, required this.isMobile});
   final UserEntity user;
+  final bool isMobile;
 
   @override
-  Widget build(BuildContext context) => Row(
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          border: Border.all(color: _ink(context)),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Icon(Icons.school_outlined),
-      ),
-      const SizedBox(width: 14),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              user.schoolName?.isNotEmpty == true ? user.schoolName! : 'School',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft(context),
+              borderRadius: AppRadius.medium,
             ),
-            Text(
-              'School Admin',
-              style: TextStyle(fontSize: 12, color: _ink(context)),
+            child: Icon(
+              Icons.school_outlined,
+              color: AppColors.primary(context),
             ),
+          ),
+          const SizedBox(width: AppSpacing.l),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Good morning, ${user.name.split(' ').first}',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+                Text(
+                  'School Admin · ${user.schoolName?.isNotEmpty == true ? user.schoolName! : 'School'}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!isMobile) ...[
+            const SizedBox(width: AppSpacing.xl),
+            _ContextRow(user: user, compact: true),
           ],
-        ),
+          const SizedBox(width: AppSpacing.m),
+          _NotificationButton(user: user),
+          IconButton(
+            onPressed: () => context.push('/staff/messages'),
+            icon: const MessagesNavIcon(
+              icon: Icons.chat_bubble_outline_rounded,
+              size: 22,
+            ),
+          ),
+        ],
       ),
-      _NotificationButton(user: user),
-      IconButton(
-        onPressed: () => context.push('/staff/messages'),
-        icon: const MessagesNavIcon(
-          icon: Icons.chat_bubble_outline_rounded,
-          size: 22,
-        ),
-      ),
+      if (isMobile) ...[
+        const SizedBox(height: AppSpacing.l),
+        _ContextRow(user: user, compact: false),
+      ],
     ],
   );
 }
 
 /// Shows a badge only when the signed-in user has an unread notification.
-/// The former dot was decorative, so it incorrectly appeared even when there
-/// was nothing to open.
 class _NotificationButton extends StatelessWidget {
   const _NotificationButton({required this.user});
 
@@ -194,10 +222,14 @@ class _NotificationButton extends StatelessWidget {
         onPressed: () => context.push('/staff/notifications'),
         icon: Badge(
           isLabelVisible: unread > 0,
-          backgroundColor: Theme.of(context).colorScheme.error,
-          textColor: Colors.white,
+          backgroundColor: AppColors.danger(context),
+          textColor: AppColors.white,
           label: Text(unread > 99 ? '99+' : '$unread'),
-          child: const Icon(Icons.notifications_none_rounded, size: 22),
+          child: Icon(
+            Icons.notifications_none_rounded,
+            size: 22,
+            color: AppColors.textPrimary(context),
+          ),
         ),
       );
     },
@@ -205,148 +237,242 @@ class _NotificationButton extends StatelessWidget {
 }
 
 class _ContextRow extends StatelessWidget {
-  const _ContextRow({required this.user});
+  const _ContextRow({required this.user, required this.compact});
   final UserEntity user;
+  final bool compact;
+
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Expanded(
-        child: OutlinedButton.icon(
-          onPressed: () => _showTermPicker(context, user),
-          icon: const Icon(Icons.calendar_today_outlined),
-          label: BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
-            builder: (_, state) => Text(
-              state is AdminDashboardLoaded
-                  ? state.stats.currentPeriodLabel ?? 'Select term'
-                  : 'Select term',
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: _ink(context),
-            side: BorderSide(color: _ink(context)),
-            minimumSize: const Size.fromHeight(52),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-          ),
-        ),
-      ),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Container(
-          height: 52,
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            border: Border.all(color: _ink(context)),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            DateFormat('EEEE, d MMMM').format(DateTime.now()),
-            maxLines: 1,
+  Widget build(BuildContext context) {
+    final chips = [
+      _FilterChip(
+        icon: Icons.calendar_today_outlined,
+        label: BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
+          builder: (_, state) => Text(
+            state is AdminDashboardLoaded
+                ? state.stats.currentPeriodLabel ?? 'Select term'
+                : 'Select term',
             overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13),
           ),
         ),
+        onTap: () => _showTermPicker(context, user),
       ),
-    ],
-  );
+      _FilterChip(
+        icon: Icons.event_outlined,
+        label: Text(
+          DateFormat('EEE, d MMM').format(DateTime.now()),
+          overflow: TextOverflow.ellipsis,
+        ),
+        onTap: null,
+      ),
+    ];
+    if (compact) {
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        chips[0],
+        const SizedBox(width: AppSpacing.m),
+        chips[1],
+      ]);
+    }
+    return Row(children: [
+      Expanded(child: chips[0]),
+      const SizedBox(width: AppSpacing.m),
+      Expanded(child: chips[1]),
+    ]);
+  }
 }
 
-class _AttentionSection extends StatelessWidget {
-  const _AttentionSection({required this.user});
-  final UserEntity user;
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({required this.icon, required this.label, this.onTap});
+  final IconData icon;
+  final Widget label;
+  final VoidCallback? onTap;
+
   @override
-  Widget build(BuildContext context) => StreamBuilder<List<_WorkItem>>(
-    stream: _watchWork(user),
-    builder: (context, snapshot) {
-      if (snapshot.hasError) {
-        return _Retry(
-          message: 'Couldn\'t load work.',
-          onRetry: () =>
-              context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats()),
-        );
-      }
-      if (!snapshot.hasData) return const _LoadingBlock();
-      final items = snapshot.data!;
-      return Container(
-        padding: const EdgeInsets.all(14),
+  Widget build(BuildContext context) => Material(
+    color: AppColors.surfaceContainer(context),
+    borderRadius: AppRadius.medium,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: AppRadius.medium,
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
         decoration: BoxDecoration(
-          border: Border.all(color: _ink(context)),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadius.medium,
+          border: Border.all(color: AppColors.border(context)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Today needs your attention',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 12),
-            if (items.isEmpty)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: 10),
-                child: Text(
-                  'You’re all caught up.',
-                  style: TextStyle(fontSize: 13, color: _ink(context)),
+            Icon(icon, size: 16, color: AppColors.textSecondary(context)),
+            const SizedBox(width: AppSpacing.m),
+            Flexible(
+              child: DefaultTextStyle(
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textPrimary(context),
                 ),
-              )
-            else ...[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 64,
-                    child: Column(
-                      children: [
-                        Text(
-                          '${items.fold<int>(0, (value, item) => value + item.count)}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          'items',
-                          style: TextStyle(fontSize: 11, color: _ink(context)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  VerticalDivider(color: _ink(context), width: 1),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      children: items
-                          .take(3)
-                          .map((item) => _WorkRow(item: item))
-                          .toList(),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-            ],
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => context.go('/staff/admin/approvals'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _ink(context),
-                  foregroundColor: _paper(context),
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: Text('View all work', style: TextStyle(fontSize: 14)),
+                child: label,
               ),
             ),
           ],
         ),
+      ),
+    ),
+  );
+}
+
+class _AttentionSection extends StatelessWidget {
+  const _AttentionSection({
+    required this.user,
+    required this.isDesktop,
+    required this.firestore,
+  });
+  final UserEntity user;
+  final bool isDesktop;
+  final FirebaseFirestore firestore;
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<List<_WorkItem>>(
+    stream: _watchWork(user, firestore),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return PulseCard(
+          child: _Retry(
+            message: "Couldn't load work.",
+            onRetry: () =>
+                context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats()),
+          ),
+        );
+      }
+      if (!snapshot.hasData) return const _LoadingBlock();
+      final items = snapshot.data!;
+      return PulseCard(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Needs attention',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+                if (items.isNotEmpty) ...[
+                  const SizedBox(width: AppSpacing.m),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.m,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.dangerSurface(context),
+                      borderRadius: AppRadius.full,
+                    ),
+                    child: Text(
+                      '${items.fold<int>(0, (v, i) => v + i.count)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.danger(context),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: AppSpacing.l),
+            if (items.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 18,
+                      color: AppColors.success(context),
+                    ),
+                    const SizedBox(width: AppSpacing.m),
+                    Text(
+                      "You're all caught up.",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (isDesktop)
+              Wrap(
+                spacing: AppSpacing.l,
+                runSpacing: AppSpacing.l,
+                children: items.map((item) => _WorkChip(item: item)).toList(),
+              )
+            else
+              Column(
+                children: items.map((item) => _WorkRow(item: item)).toList(),
+              ),
+            if (items.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.l),
+              PulseButton(
+                label: 'View all work',
+                isFullWidth: true,
+                onPressed: () => context.go('/staff/admin/approvals'),
+              ),
+            ],
+          ],
+        ),
       );
     },
+  );
+}
+
+class _WorkChip extends StatelessWidget {
+  const _WorkChip({required this.item});
+  final _WorkItem item;
+  @override
+  Widget build(BuildContext context) => Material(
+    color: AppColors.surfaceContainer(context),
+    borderRadius: AppRadius.medium,
+    child: InkWell(
+      onTap: () => context.push(item.route),
+      borderRadius: AppRadius.medium,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 44),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.l,
+          vertical: AppSpacing.m,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.medium,
+          border: Border.all(color: AppColors.border(context)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(item.icon, size: 16, color: AppColors.textSecondary(context)),
+            const SizedBox(width: AppSpacing.m),
+            Text(
+              '${item.count} ${item.label}',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textPrimary(context),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.m),
+            Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: AppColors.textMuted(context),
+            ),
+          ],
+        ),
+      ),
+    ),
   );
 }
 
@@ -356,149 +482,379 @@ class _WorkRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: () => context.push(item.route),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+    borderRadius: AppRadius.medium,
+    child: Container(
+      constraints: const BoxConstraints(minHeight: 44),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
       child: Row(
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
-              color: _paper(context),
-              border: Border.all(color: _ink(context)),
-              borderRadius: BorderRadius.circular(8),
+              color: AppColors.dangerSurface(context),
+              borderRadius: AppRadius.small,
             ),
-            child: Icon(item.icon, size: 18),
+            child: Icon(item.icon, size: 18, color: AppColors.danger(context)),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.l),
           Expanded(
             child: Text(
               '${item.count} ${item.label}',
-              style: const TextStyle(fontSize: 13),
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textPrimary(context),
+              ),
             ),
           ),
-          const Icon(Icons.chevron_right, size: 18),
+          Icon(
+            Icons.chevron_right,
+            size: 18,
+            color: AppColors.textMuted(context),
+          ),
         ],
       ),
     ),
   );
 }
 
-class _GlanceSection extends StatelessWidget {
-  const _GlanceSection({required this.user});
+class _MetricsSection extends StatelessWidget {
+  const _MetricsSection({required this.user, required this.isMobile});
   final UserEntity user;
+  final bool isMobile;
+
   @override
   Widget build(
     BuildContext context,
   ) => BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
     builder: (context, state) {
       if (state is AdminDashboardError) {
-        return _Retry(
-          message: 'Couldn\'t load school metrics.',
-          onRetry: () =>
-              context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats()),
+        return PulseCard(
+          child: _Retry(
+            message: "Couldn't load school metrics.",
+            onRetry: () =>
+                context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats()),
+          ),
         );
       }
       if (state is! AdminDashboardLoaded) return const _LoadingBlock();
       final stats = state.stats;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      final todayPercent = stats.todayAttendanceCounts != null &&
+              stats.todayAttendanceCounts!.total > 0
+          ? stats.todayAttendanceCounts!.presentPercent * 100
+          : null;
+
+      final tiles = <Widget>[
+        _MetricTile(
+          label: 'Active learners',
+          value: '${stats.totalStudentsCount}',
+          icon: Icons.groups_2_outlined,
+        ),
+        _MetricTile(
+          label: 'Active staff',
+          value: '${stats.activeStaffCount}',
+          icon: Icons.badge_outlined,
+        ),
+        _MetricTile(
+          label: "Today's attendance",
+          value: todayPercent == null ? '—' : '${todayPercent.round()}%',
+          icon: Icons.check_circle_outline,
+        ),
+        if (_canSeeFinance(user))
+          _MetricTile(
+            label: 'Fees collected',
+            value: stats.termFeesCollected == null
+                ? '—'
+                : 'UGX ${_money(stats.termFeesCollected!)}',
+            icon: Icons.account_balance_wallet_outlined,
+          ),
+      ];
+
+      if (isMobile) {
+        return GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          mainAxisSpacing: AppSpacing.l,
+          crossAxisSpacing: AppSpacing.l,
+          childAspectRatio: 1.5,
+          children: tiles,
+        );
+      }
+      return Row(
         children: [
-          const Text(
-            'School at a glance',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _Metric(
-                  label: 'Active learners',
-                  value: '${stats.totalStudentsCount}',
-                  subtitle: stats.isHistoricalTerm
-                      ? 'Active now'
-                      : 'Selected term',
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _Metric(
-                  label: 'Staff',
-                  value: '${stats.activeStaffCount}',
-                  subtitle: 'Active staff',
-                ),
-              ),
-              if (_canSeeFinance(user)) ...[
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _Metric(
-                    label: 'Fees',
-                    value: stats.termFeesCollected == null
-                        ? '—'
-                        : 'UGX ${_money(stats.termFeesCollected!)}',
-                    subtitle:
-                        '${stats.currentPeriodLabel ?? 'Selected term'} collected',
-                  ),
-                ),
-              ],
-            ],
-          ),
+          for (var i = 0; i < tiles.length; i++) ...[
+            if (i > 0) const SizedBox(width: AppSpacing.l),
+            Expanded(child: tiles[i]),
+          ],
         ],
       );
     },
   );
 }
 
-class _Metric extends StatelessWidget {
-  const _Metric({
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({
     required this.label,
     required this.value,
-    required this.subtitle,
+    required this.icon,
   });
-  final String label, value, subtitle;
+  final String label, value;
+  final IconData icon;
+
   @override
-  Widget build(BuildContext context) => Container(
-    height: 96,
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      border: Border.all(color: _ink(context)),
-      borderRadius: BorderRadius.circular(12),
-    ),
+  Widget build(BuildContext context) => PulseCard(
+    padding: const EdgeInsets.all(AppSpacing.l),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppColors.primarySoft(context),
+            borderRadius: AppRadius.small,
+          ),
+          child: Icon(icon, size: 16, color: AppColors.primary(context)),
         ),
-        const Spacer(),
+        const SizedBox(height: AppSpacing.m),
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
           child: Text(
             value,
             maxLines: 1,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+            ),
           ),
         ),
-        const SizedBox(height: 3),
         Text(
-          subtitle,
+          label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: _ink(context), fontSize: 12),
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
         ),
       ],
     ),
   );
 }
 
-class _PinnedSection extends StatelessWidget {
-  const _PinnedSection();
+class _QuickActionsSection extends StatelessWidget {
+  const _QuickActionsSection({required this.isMobile});
+  final bool isMobile;
 
-  static const _shortcutIds = ['school', 'attendance'];
+  static const _shortcuts = [
+    _Shortcut(
+      'add_learner',
+      'Add learner',
+      'Register a new student',
+      Icons.person_add_alt_1_outlined,
+      '/staff/admin/admissions/register',
+    ),
+    _Shortcut(
+      'attendance',
+      'Take attendance',
+      'Open an attendance session',
+      Icons.check_circle_outline,
+      '/staff/attendance',
+    ),
+    _Shortcut(
+      'invite_staff',
+      'Invite staff',
+      'Add a new staff member',
+      Icons.person_add_outlined,
+      '/staff/admin/users/add-staff',
+    ),
+    _Shortcut(
+      'school',
+      'School structure',
+      'Manage school structure and setup',
+      Icons.school_outlined,
+      '/staff/admin/structure',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    if (isMobile) {
+      return GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: 2,
+        mainAxisSpacing: AppSpacing.l,
+        crossAxisSpacing: AppSpacing.l,
+        childAspectRatio: 2.4,
+        children: _shortcuts.map((s) => _QuickActionTile(shortcut: s)).toList(),
+      );
+    }
+    return Row(
+      children: [
+        for (var i = 0; i < _shortcuts.length; i++) ...[
+          if (i > 0) const SizedBox(width: AppSpacing.l),
+          Expanded(child: _QuickActionTile(shortcut: _shortcuts[i])),
+        ],
+      ],
+    );
+  }
+}
+
+class _QuickActionTile extends StatelessWidget {
+  const _QuickActionTile({required this.shortcut});
+  final _Shortcut shortcut;
+  @override
+  Widget build(BuildContext context) => PulseCard(
+    padding: const EdgeInsets.symmetric(
+      horizontal: AppSpacing.l,
+      vertical: AppSpacing.l,
+    ),
+    onTap: () => context.push(shortcut.route),
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 44),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft(context),
+              borderRadius: AppRadius.small,
+            ),
+            child: Icon(shortcut.icon, size: 18, color: AppColors.primary(context)),
+          ),
+          const SizedBox(width: AppSpacing.m),
+          Expanded(
+            child: Text(
+              shortcut.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary(context),
+              ),
+            ),
+          ),
+          Icon(
+            Icons.chevron_right,
+            size: 18,
+            color: AppColors.textMuted(context),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _AttendanceSummarySection extends StatelessWidget {
+  const _AttendanceSummarySection({required this.user});
+  final UserEntity user;
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) => BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
+    builder: (context, state) {
+      if (state is AdminDashboardError) {
+        return PulseCard(
+          child: _Retry(
+            message: "Couldn't load attendance.",
+            onRetry: () =>
+                context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats()),
+          ),
+        );
+      }
+      if (state is! AdminDashboardLoaded) return const _LoadingBlock();
+      final counts = state.stats.todayAttendanceCounts;
+
+      return PulseCard(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    "Today's attendance",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => context.push('/staff/attendance'),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
+                  ),
+                  child: const Text('View details'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.l),
+            if (counts == null || counts.total == 0)
+              EmptyState(
+                icon: Icons.event_busy_outlined,
+                title: 'No attendance yet today',
+                message: 'Attendance sessions submitted today will show up here.',
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: _AttendanceStat(
+                      label: 'Present',
+                      count: counts.present,
+                      percent: counts.presentPercent,
+                      color: AppColors.success(context),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.l),
+                  Expanded(
+                    child: _AttendanceStat(
+                      label: 'Late',
+                      count: counts.late,
+                      percent: counts.latePercent,
+                      color: AppColors.warning(context),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.l),
+                  Expanded(
+                    child: _AttendanceStat(
+                      label: 'Absent',
+                      count: counts.absent,
+                      percent: counts.absentPercent,
+                      color: AppColors.danger(context),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+class _AttendanceStat extends StatelessWidget {
+  const _AttendanceStat({
+    required this.label,
+    required this.count,
+    required this.percent,
+    required this.color,
+  });
+  final String label;
+  final int count;
+  final double percent;
+  final Color color;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -506,71 +862,127 @@ class _PinnedSection extends StatelessWidget {
     children: [
       Row(
         children: [
-          for (var index = 0; index < _shortcutIds.length; index++) ...[
-            if (index > 0) const SizedBox(width: 8),
-            Expanded(child: _Pin(shortcut: _catalog[_shortcutIds[index]]!)),
-          ],
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: AppSpacing.s),
+          Text(
+            label,
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+          ),
         ],
+      ),
+      const SizedBox(height: AppSpacing.s),
+      Text(
+        '${(percent * 100).round()}%',
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary(context),
+        ),
+      ),
+      Text(
+        '$count learners',
+        style: TextStyle(fontSize: 11, color: AppColors.textMuted(context)),
       ),
     ],
   );
 }
 
-class _Pin extends StatelessWidget {
-  const _Pin({required this.shortcut});
-  final _Shortcut shortcut;
+class _RecentActivitySection extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: 56,
-      child: Material(
-        color: colors.surfaceContainerHighest,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: colors.outlineVariant),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => context.push(shortcut.route),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: colors.primary,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: Icon(shortcut.icon, size: 18, color: colors.onPrimary),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    shortcut.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: colors.onSurface,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  size: 18,
-                  color: colors.onSurfaceVariant,
-                ),
-              ],
+  Widget build(
+    BuildContext context,
+  ) => BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
+    builder: (context, state) {
+      if (state is AdminDashboardError) {
+        return PulseCard(
+          child: _Retry(
+            message: "Couldn't load recent activity.",
+            onRetry: () =>
+                context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats()),
+          ),
+        );
+      }
+      if (state is! AdminDashboardLoaded) return const _LoadingBlock();
+      final logs = state.recentLogs;
+
+      return PulseCard(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Recent activity',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary(context),
+              ),
             ),
+            const SizedBox(height: AppSpacing.l),
+            if (logs.isEmpty)
+              EmptyState(
+                icon: Icons.history_outlined,
+                title: 'No recent activity',
+                message: 'Actions taken across the school will appear here.',
+              )
+            else
+              Column(
+                children: logs
+                    .take(6)
+                    .map((log) => _ActivityRow(log: log))
+                    .toList(),
+              ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+class _ActivityRow extends StatelessWidget {
+  const _ActivityRow({required this.log});
+  final AuditLog log;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: AppSpacing.m),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainer(context),
+            borderRadius: AppRadius.small,
+          ),
+          child: Icon(
+            Icons.circle_outlined,
+            size: 14,
+            color: AppColors.textSecondary(context),
           ),
         ),
-      ),
-    );
-  }
+        const SizedBox(width: AppSpacing.l),
+        Expanded(
+          child: Text(
+            log.description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 13, color: AppColors.textPrimary(context)),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.m),
+        Text(
+          DateFormat('h:mm a').format(log.timestamp),
+          style: TextStyle(fontSize: 11, color: AppColors.textMuted(context)),
+        ),
+      ],
+    ),
+  );
 }
 
 void _showTermPicker(BuildContext context, UserEntity user) {
@@ -585,7 +997,9 @@ void _showTermPicker(BuildContext context, UserEntity user) {
             return SizedBox(
               height: 160,
               child: Center(
-                child: CircularProgressIndicator(color: _ink(context)),
+                child: CircularProgressIndicator(
+                  color: AppColors.textPrimary(context),
+                ),
               ),
             );
           }
@@ -617,10 +1031,8 @@ void _showTermPicker(BuildContext context, UserEntity user) {
   );
 }
 
-Stream<List<_WorkItem>> _watchWork(UserEntity user) {
-  final school = FirebaseFirestore.instance
-      .collection('schools')
-      .doc(user.schoolId);
+Stream<List<_WorkItem>> _watchWork(UserEntity user, FirebaseFirestore firestore) {
+  final school = firestore.collection('schools').doc(user.schoolId);
   final streams = [
     school
         .collection('expenditures')
@@ -698,43 +1110,6 @@ class _Shortcut {
   final IconData icon;
 }
 
-const _catalog = <String, _Shortcut>{
-  'work': _Shortcut(
-    'work',
-    'Work',
-    'Review tasks and approvals',
-    Icons.assignment_outlined,
-    '/staff/work',
-  ),
-  'parents': _Shortcut(
-    'parents',
-    'Parents',
-    'Find parent and guardian contacts',
-    Icons.family_restroom_outlined,
-    '/staff/admin/students',
-  ),
-  'attendance': _Shortcut(
-    'attendance',
-    'Take attendance',
-    'Open an attendance session',
-    Icons.check_circle_outline,
-    '/staff/attendance',
-  ),
-  'finance': _Shortcut(
-    'finance',
-    'Finance',
-    'Fees and collections',
-    Icons.account_balance_wallet_outlined,
-    '/staff/bursar',
-  ),
-  'school': _Shortcut(
-    'school',
-    'School structure',
-    'Manage school structure and setup',
-    Icons.school_outlined,
-    '/staff/admin/structure',
-  ),
-};
 bool _canSeeFinance(UserEntity user) => user.roles.any(
   (role) =>
       role == UserRole.schoolAdmin ||
@@ -757,7 +1132,9 @@ class _LoadingBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     height: 100,
-    child: Center(child: CircularProgressIndicator(color: _ink(context))),
+    child: Center(
+      child: CircularProgressIndicator(color: AppColors.textPrimary(context)),
+    ),
   );
 }
 
@@ -766,15 +1143,17 @@ class _Retry extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
   @override
-  Widget build(BuildContext context) => OutlinedButton(
-    onPressed: onRetry,
-    style: OutlinedButton.styleFrom(
-      foregroundColor: _ink(context),
-      side: BorderSide(color: _ink(context)),
-    ),
-    child: Text('$message Retry'),
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: Text(message, style: TextStyle(color: AppColors.textSecondary(context))),
+      ),
+      PulseButton(
+        label: 'Retry',
+        variant: PulseButtonVariant.outline,
+        size: PulseButtonSize.small,
+        onPressed: onRetry,
+      ),
+    ],
   );
 }
-
-Color _ink(BuildContext context) => Theme.of(context).colorScheme.onSurface;
-Color _paper(BuildContext context) => Theme.of(context).colorScheme.surface;
