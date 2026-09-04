@@ -1,0 +1,10 @@
+{
+  "name": "school-pulse-marketing-site",
+  "private": true,
+  "scripts": {
+    "test": "node __tests__/register_wizard_step_rendering.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0"
+  }
+}

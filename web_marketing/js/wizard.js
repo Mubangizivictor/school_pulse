@@ -145,8 +145,21 @@
 
     // Keep the bar's disabled state fresh while register-submit.js toggles
     // #step2Continue asynchronously (account gate / email verification).
-    if (actionBar && typeof MutationObserver !== 'undefined') {
-      var moTarget = wizardEl;
+    //
+    // moTarget must be .layout-2col (the wizard panels + sidebar), NOT
+    // wizardEl/#wizardForm: both of those also contain #wizardActionBar
+    // itself, and syncActionBar() writes barBack.disabled/barNext.disabled
+    // on every call - a `disabled`-attribute write inside the observed
+    // subtree, which re-queues the very observer callback that just ran.
+    // That turned every ordinary renderStep() (which calls syncActionBar()
+    // as part of init) into an infinite mutate-observe-mutate loop that
+    // froze the entire tab on load (Chrome's "Page Unresponsive" /
+    // RESULT_CODE_HUNG - reproduced and bisected down to this exact block).
+    // .layout-2col holds the real source of truth (the panels' own
+    // buttons, e.g. #step2Continue) and never contains the action bar, so
+    // the bar's own mirrored writes can no longer feed back into it.
+    var moTarget = wizardEl.querySelector('.layout-2col');
+    if (actionBar && moTarget && typeof MutationObserver !== 'undefined') {
       new MutationObserver(function () { syncActionBar(); })
         .observe(moTarget, { attributes: true, subtree: true, attributeFilter: ['disabled', 'class'] });
     }

@@ -48,6 +48,7 @@ app.*.map.json
 /functions/node_modules/
 /functions/lib/
 /public_functions/node_modules/
+/web_marketing/node_modules/
 firebase-debug.log
 firebase-debug.*.log
 .firebase/
