@@ -141,15 +141,7 @@ class _MobileMore extends StatelessWidget {
         const SizedBox(height: AppSpacing.x3l),
         const _SectionTitle('School administration'),
         const SizedBox(height: AppSpacing.m),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          mainAxisSpacing: AppSpacing.m,
-          crossAxisSpacing: AppSpacing.m,
-          childAspectRatio: 1.05,
-          children: tools.map((t) => _ToolCard(tool: t)).toList(),
-        ),
+        _ToolGrid(tools: tools),
       ],
       const SizedBox(height: AppSpacing.x3l),
       const _SectionTitle('Personal'),
@@ -180,15 +172,7 @@ class _WideMore extends StatelessWidget {
         if (tools.isNotEmpty) ...[
           const _SectionTitle('School administration'),
           const SizedBox(height: AppSpacing.m),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            mainAxisSpacing: AppSpacing.m,
-            crossAxisSpacing: AppSpacing.m,
-            childAspectRatio: 1.3,
-            children: tools.map((t) => _ToolCard(tool: t)).toList(),
-          ),
+          _ToolGrid(tools: tools),
         ],
       ],
     );
@@ -410,6 +394,40 @@ class _AccountCardState extends State<_AccountCard> {
   }
 }
 
+/// Two-per-row tool grid whose cards hug their content instead of
+/// stretching to a forced aspect ratio, so a short title/subtitle pair
+/// doesn't leave dead space at the bottom of the card.
+class _ToolGrid extends StatelessWidget {
+  const _ToolGrid({required this.tools});
+  final List<_AdminTool> tools;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (var i = 0; i < tools.length; i += 2) {
+      final second = i + 1 < tools.length ? tools[i + 1] : null;
+      rows.add(
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _ToolCard(tool: tools[i])),
+              const SizedBox(width: AppSpacing.m),
+              Expanded(
+                child: second == null
+                    ? const SizedBox.shrink()
+                    : _ToolCard(tool: second),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (i + 2 < tools.length) rows.add(const SizedBox(height: AppSpacing.m));
+    }
+    return Column(children: rows);
+  }
+}
+
 class _ToolCard extends StatelessWidget {
   const _ToolCard({required this.tool});
   final _AdminTool tool;
@@ -417,20 +435,21 @@ class _ToolCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AppCard(
     onTap: () => context.push(tool.route),
-    padding: const EdgeInsets.all(AppSpacing.m),
+    padding: const EdgeInsets.all(AppSpacing.l),
     child: Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: AppColors.informationSurface(context),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(9),
               ),
-              child: Icon(tool.icon, size: 20, color: AppColors.information(context)),
+              child: Icon(tool.icon, size: 18, color: AppColors.information(context)),
             ),
             const Spacer(),
             Icon(Icons.chevron_right, size: 18, color: AppColors.textSecondary(context)),
