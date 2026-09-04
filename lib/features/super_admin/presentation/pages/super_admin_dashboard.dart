@@ -255,9 +255,20 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       child: Column(
         children: [
           const SizedBox(height: 28),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: _SidebarBrand(),
+          Padding(
+            // Match the nav items' left edge: ListView padding (12) + each
+            // item's own inner padding (12) = 24.
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: _SidebarBrand(
+              onTap: () {
+                if (_selectedIndex == 0) {
+                  _popToRoot(_navigatorKeys[0]);
+                  return;
+                }
+                if (_navThrottled()) return;
+                _syncRouteToSection(_kSectionPaths[0]);
+              },
+            ),
           ),
           const SizedBox(height: 24),
           Expanded(
@@ -368,12 +379,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
 /// followed by the "School Pulse" wordmark. Replaces the packaged
 /// `PulseLogo` so the console header uses the supplied brand icons.
 class _SidebarBrand extends StatelessWidget {
-  const _SidebarBrand();
+  const _SidebarBrand({this.onTap});
+
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     // The rail is always dark; use the dark-mode brand icon in both themes.
-    return Row(
+    final row = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Image.asset(
@@ -398,6 +411,15 @@ class _SidebarBrand extends StatelessWidget {
           ),
         ),
       ],
+    );
+    if (onTap == null) return row;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: row,
+      ),
     );
   }
 }
