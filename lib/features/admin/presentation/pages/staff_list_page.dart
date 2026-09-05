@@ -6,9 +6,10 @@ import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
-import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
+import 'package:school_pulse/design_system/theme/app_breakpoints.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
+import 'package:school_pulse/design_system/theme/app_radius.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -155,149 +156,101 @@ class _StaffListPageState extends State<StaffListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final canInviteStaff = _canInviteStaff(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    // Below this the "Add staff" label + refresh + filter icons no longer
-    // fit an AppBar's single-line actions row without clipping - collapse
-    // the button to an icon so every action stays reachable and unclipped
-    // even on the narrowest supported phones (~320px).
-    final compactAddButton = screenWidth < 400;
     return BlocProvider(
       create: (_) => di.sl<StructureBloc>(),
       child: Scaffold(
         backgroundColor: AppColors.background(context),
-        appBar: AdminAppBar(
-          title: 'Staff',
-          actions: [
-            IconButton(
-              tooltip: 'Refresh',
-              icon: const Icon(Icons.refresh),
-              onPressed: _refresh,
-            ),
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                IconButton(
-                  tooltip: 'Filters',
-                  icon: const Icon(Icons.filter_list),
-                  onPressed: () => _openFilters(context),
-                ),
-                if (_activeFilterCount > 0)
-                  Positioned(
-                    right: 6,
-                    top: 6,
-                    child: _CountBadge(count: _activeFilterCount),
-                  ),
-              ],
-            ),
-            if (canInviteStaff)
-              Padding(
-                padding: const EdgeInsets.only(right: 8, left: 4),
-                child: compactAddButton
-                    ? IconButton(
-                        tooltip: 'Add staff',
-                        onPressed: () =>
-                            context.push('/staff/admin/users/add-staff'),
-                        style: IconButton.styleFrom(
-                          backgroundColor: AppColors.primary(context),
-                          foregroundColor: AppColors.background(context),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        icon: const Icon(Icons.add, size: 20),
-                      )
-                    : FilledButton.icon(
-                        onPressed: () =>
-                            context.push('/staff/admin/users/add-staff'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.primary(context),
-                          foregroundColor: AppColors.background(context),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Add staff'),
+        body: SafeArea(
+          child: FutureBuilder<List<UserEntity>>(
+            future: _staffFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: SchoolPulseLoader());
+              }
+              if (snapshot.hasError) {
+                return _buildErrorState(context);
+              }
+              final all = snapshot.data ?? const [];
+              final filtered = _applyFilters(all);
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final isDesktop =
+                      constraints.maxWidth >= AppBreakpoints.smallDesktop;
+                  return RefreshIndicator(
+                    onRefresh: _refresh,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(
+                        isDesktop ? AppSpacing.x3l : AppSpacing.xl,
+                        AppSpacing.x2l,
+                        isDesktop ? AppSpacing.x3l : AppSpacing.xl,
+                        AppSpacing.x4l,
                       ),
-              ),
-          ],
-        ),
-        body: FutureBuilder<List<UserEntity>>(
-          future: _staffFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: SchoolPulseLoader());
-            }
-            if (snapshot.hasError) {
-              return _buildErrorState(context);
-            }
-            final all = snapshot.data ?? const [];
-            final filtered = _applyFilters(all);
-            return ResponsiveBuilder(
-              builder: (context, layout) {
-                final isWeb = layout == ResponsiveLayout.desktop;
-                // Tablet gets the same dense table as desktop (it has the
-                // width to show it usefully) - only true phones fall back
-                // to the compact card list.
-                final useTable = layout != ResponsiveLayout.mobile;
-                return Column(
-                  children: [
-                    _buildHeaderControls(
-                      context,
-                      all: all,
-                      isWeb: isWeb,
-                      canInviteStaff: canInviteStaff,
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isDesktop ? 1280 : double.infinity,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _header(context, all, isDesktop),
+                              if (!isDesktop) ...[
+                                const SizedBox(height: AppSpacing.l),
+                                _searchBox(context),
+                              ],
+                              const SizedBox(height: AppSpacing.l),
+                              _summaryStrip(context, all),
+                              const SizedBox(height: AppSpacing.l),
+                              _filterChipsRow(context, all),
+                              const SizedBox(height: AppSpacing.xl),
+                              if (all.isEmpty)
+                                _buildEmptyState(
+                                  context,
+                                  title: 'No staff yet',
+                                  message:
+                                      'Add your first staff member to get started.',
+                                  showAddAction: true,
+                                )
+                              else if (filtered.isEmpty)
+                                _buildEmptyState(
+                                  context,
+                                  title: 'No matching staff',
+                                  message: 'Try a different search or filter.',
+                                  showAddAction: false,
+                                )
+                              else if (isDesktop)
+                                _StaffTable(
+                                  staff: _paginate(filtered),
+                                  total: filtered.length,
+                                  page: _page,
+                                  pageSize: _pageSize,
+                                  onPageChanged: (p) =>
+                                      setState(() => _page = p),
+                                  departmentName: (id) =>
+                                      _departmentNameFor(context, id),
+                                  onTap: (s) => context.push(
+                                    '/staff/admin/users/${s.id}',
+                                  ),
+                                )
+                              else
+                                _StaffList(
+                                  staff: filtered,
+                                  departmentName: (id) =>
+                                      _departmentNameFor(context, id),
+                                  onTap: (s) =>
+                                      context.push('/staff/admin/users/${s.id}'),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                    if (all.isNotEmpty && filtered.isNotEmpty)
-                      _buildListSectionHeader(context, isWeb: isWeb),
-                    Expanded(
-                      child: all.isEmpty
-                          ? _buildEmptyState(
-                              context,
-                              title: 'No staff yet',
-                              message:
-                                  'Add your first staff member to get started.',
-                              showAddAction: true,
-                            )
-                          : filtered.isEmpty
-                          ? _buildEmptyState(
-                              context,
-                              title: 'No matching staff',
-                              message: 'Try a different search or filter.',
-                              showAddAction: false,
-                            )
-                          : RefreshIndicator(
-                              onRefresh: _refresh,
-                              child: useTable
-                                  ? _StaffTable(
-                                      staff: _paginate(filtered),
-                                      total: filtered.length,
-                                      page: _page,
-                                      pageSize: _pageSize,
-                                      onPageChanged: (p) =>
-                                          setState(() => _page = p),
-                                      departmentName: (id) =>
-                                          _departmentNameFor(context, id),
-                                      onTap: (s) => context.push(
-                                        '/staff/admin/users/${s.id}',
-                                      ),
-                                    )
-                                  : _StaffList(
-                                      staff: filtered,
-                                      departmentName: (id) =>
-                                          _departmentNameFor(context, id),
-                                      onTap: (s) => context.push(
-                                        '/staff/admin/users/${s.id}',
-                                      ),
-                                    ),
-                            ),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -310,142 +263,207 @@ class _StaffListPageState extends State<StaffListPage> {
     return staff.sublist(start, end);
   }
 
-  Widget _buildListSectionHeader(BuildContext context, {required bool isWeb}) {
-    final horizontalPadding = ResponsiveBuilder.isMobile(context) ? 16.0 : 24.0;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(horizontalPadding, 12, horizontalPadding, 8),
-      child: Row(
-        children: [
-          Text(
-            'All staff',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-              color: AppColors.textPrimary(context),
-            ),
-          ),
-          const Spacer(),
-          Flexible(
-            child: _SortDropdown(
-              value: _sortBy,
-              onChanged: (v) => setState(() => _sortBy = v),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderControls(
-    BuildContext context, {
-    required List<UserEntity> all,
-    required bool isWeb,
-    required bool canInviteStaff,
-  }) {
-    final activeCount = all.where((s) => s.isActive).length;
-    final inactiveCount = all.where((s) => !s.isActive).length;
-    final horizontalPadding = ResponsiveBuilder.isMobile(context) ? 16.0 : 24.0;
-
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        horizontalPadding,
-        12,
-        horizontalPadding,
-        8,
-      ),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppColors.border(context)),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${all.length} staff member${all.length == 1 ? '' : 's'}',
-            style: TextStyle(
-              color: AppColors.textSecondary(context),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _SummaryStat(
-                count: activeCount,
-                label: 'active',
-                color: AppColors.success(context),
-              ),
-              const SizedBox(width: 20),
-              _SummaryStat(
-                count: inactiveCount,
-                label: 'inactive',
-                color: AppColors.textMuted(context),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          AppSearchField(
-            hintText: 'Search staff name, role or department',
-            controller: _searchController,
-          ),
-          const SizedBox(height: 10),
-          _buildFilterChipsRow(
-            context,
-            allCount: all.length,
-            activeCount: activeCount,
-            inactiveCount: inactiveCount,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChipsRow(
-    BuildContext context, {
-    required int allCount,
-    required int activeCount,
-    required int inactiveCount,
-  }) {
-    final hasMoreFilters =
-        _departmentId != null || _designationId != null || _employmentType != null;
-    return Row(
+  Widget _header(BuildContext context, List<UserEntity> all, bool isDesktop) {
+    final canInviteStaff = _canInviteStaff(context);
+    final title = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _StatusChip(
-                  label: 'All',
-                  count: allCount,
-                  selected: _status == _StatusFilter.all,
-                  onTap: () => setState(() => _status = _StatusFilter.all),
-                ),
-                const SizedBox(width: 8),
-                _StatusChip(
-                  label: 'Active',
-                  count: activeCount,
-                  selected: _status == _StatusFilter.active,
-                  onTap: () => setState(() => _status = _StatusFilter.active),
-                ),
-                const SizedBox(width: 8),
-                _StatusChip(
-                  label: 'Inactive',
-                  count: inactiveCount,
-                  selected: _status == _StatusFilter.inactive,
-                  onTap: () => setState(() => _status = _StatusFilter.inactive),
-                ),
-              ],
-            ),
-          ),
+        Text(
+          'Staff',
+          style: Theme.of(
+            context,
+          ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800),
         ),
-        const SizedBox(width: 8),
-        _FilterIconButton(
-          active: hasMoreFilters,
-          onTap: () => _openFilters(context),
+        const SizedBox(height: 2),
+        Text(
+          '${all.length} staff member${all.length == 1 ? '' : 's'}',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary(context)),
         ),
       ],
+    );
+
+    final addButton = canInviteStaff ? _addStaffButton(context) : null;
+
+    // Desktop keeps the inline search box, filters, refresh and Add all in
+    // the sticky header row (room for it). Mobile/tablet collapse search to
+    // a full-width field below the title and filters to a compact icon
+    // button, matching the Students directory's established pattern.
+    if (isDesktop) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: title),
+          SizedBox(width: 320, child: _searchBox(context)),
+          const SizedBox(width: AppSpacing.m),
+          _filterButton(context),
+          const SizedBox(width: AppSpacing.m),
+          _iconAction(
+            context,
+            icon: Icons.refresh,
+            tooltip: 'Refresh',
+            onPressed: _refresh,
+          ),
+          if (addButton != null) ...[
+            const SizedBox(width: AppSpacing.m),
+            addButton,
+          ],
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: title),
+        _iconAction(
+          context,
+          icon: Icons.refresh,
+          tooltip: 'Refresh',
+          onPressed: _refresh,
+        ),
+        const SizedBox(width: AppSpacing.s),
+        _filterButton(context),
+        if (addButton != null) ...[
+          const SizedBox(width: AppSpacing.s),
+          addButton,
+        ],
+      ],
+    );
+  }
+
+  Widget _addStaffButton(BuildContext context) => ElevatedButton.icon(
+    onPressed: () => context.push('/staff/admin/users/add-staff'),
+    style: ElevatedButton.styleFrom(
+      backgroundColor: AppColors.primary(context),
+      foregroundColor: AppColors.background(context),
+      minimumSize: const Size(44, 48),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
+    ),
+    icon: const Icon(Icons.add),
+    label: const Text('Add staff'),
+  );
+
+  Widget _iconAction(
+    BuildContext context, {
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) => IconButton(
+    tooltip: tooltip,
+    icon: Icon(icon),
+    onPressed: onPressed,
+    style: IconButton.styleFrom(
+      minimumSize: const Size(48, 48),
+      side: BorderSide(color: AppColors.border(context)),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
+    ),
+  );
+
+  Widget _filterButton(BuildContext context) => Stack(
+    clipBehavior: Clip.none,
+    children: [
+      _iconAction(
+        context,
+        icon: Icons.tune,
+        tooltip: 'Filters',
+        onPressed: () => _openFilters(context),
+      ),
+      if (_activeFilterCount > 0)
+        Positioned(
+          right: -4,
+          top: -4,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.information(context),
+              borderRadius: AppRadius.full,
+            ),
+            child: Text(
+              '$_activeFilterCount',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
+
+  Widget _searchBox(BuildContext context) => TextField(
+    controller: _searchController,
+    textInputAction: TextInputAction.search,
+    decoration: InputDecoration(
+      prefixIcon: const Icon(Icons.search),
+      hintText: 'Search staff name, role or department',
+      contentPadding: const EdgeInsets.symmetric(vertical: 13),
+      border: OutlineInputBorder(borderRadius: AppRadius.medium),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: AppRadius.medium,
+        borderSide: BorderSide(color: AppColors.border(context)),
+      ),
+    ),
+  );
+
+  Widget _summaryStrip(BuildContext context, List<UserEntity> all) {
+    final activeCount = all.where((s) => s.isActive).length;
+    final inactiveCount = all.where((s) => !s.isActive).length;
+    return Row(
+      children: [
+        _SummaryStat(
+          count: activeCount,
+          label: 'active',
+          color: AppColors.success(context),
+        ),
+        const SizedBox(width: 20),
+        _SummaryStat(
+          count: inactiveCount,
+          label: 'inactive',
+          color: AppColors.textMuted(context),
+        ),
+      ],
+    );
+  }
+
+  Widget _filterChipsRow(BuildContext context, List<UserEntity> all) {
+    final allCount = all.length;
+    final activeCount = all.where((s) => s.isActive).length;
+    final inactiveCount = all.where((s) => !s.isActive).length;
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _StatusChip(
+            label: 'All',
+            count: allCount,
+            selected: _status == _StatusFilter.all,
+            onTap: () => setState(() => _status = _StatusFilter.all),
+          ),
+          const SizedBox(width: 8),
+          _StatusChip(
+            label: 'Active',
+            count: activeCount,
+            selected: _status == _StatusFilter.active,
+            onTap: () => setState(() => _status = _StatusFilter.active),
+          ),
+          const SizedBox(width: 8),
+          _StatusChip(
+            label: 'Inactive',
+            count: inactiveCount,
+            selected: _status == _StatusFilter.inactive,
+            onTap: () => setState(() => _status = _StatusFilter.inactive),
+          ),
+          const SizedBox(width: 8),
+          _SortDropdown(
+            value: _sortBy,
+            onChanged: (v) => setState(() => _sortBy = v),
+          ),
+        ],
+      ),
     );
   }
 
@@ -461,22 +479,27 @@ class _StaffListPageState extends State<StaffListPage> {
     required String message,
     required bool showAddAction,
   }) {
+    // Embedded directly in the page's own outer SingleChildScrollView (see
+    // build()), so this must lay out as a plain Column rather than a
+    // ListView - see the same fix on _StaffList above.
     final canInviteStaff = _canInviteStaff(context);
     final showCta = showAddAction && canInviteStaff;
-    return ListView(
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      children: [
-        const SizedBox(height: 48),
-        EmptyState(
-          icon: Icons.people_outline,
-          title: title,
-          message: message,
-          ctaLabel: showCta ? 'Add Staff' : null,
-          onCtaPressed: showCta
-              ? () => context.push('/staff/admin/users/add-staff')
-              : null,
-        ),
-      ],
+      child: Column(
+        children: [
+          const SizedBox(height: 48),
+          EmptyState(
+            icon: Icons.people_outline,
+            title: title,
+            message: message,
+            ctaLabel: showCta ? 'Add Staff' : null,
+            onCtaPressed: showCta
+                ? () => context.push('/staff/admin/users/add-staff')
+                : null,
+          ),
+        ],
+      ),
     );
   }
 
@@ -537,33 +560,6 @@ class _StaffListPageState extends State<StaffListPage> {
           ),
         );
       },
-    );
-  }
-}
-
-class _CountBadge extends StatelessWidget {
-  const _CountBadge({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-      decoration: BoxDecoration(
-        color: AppColors.information(context),
-        shape: BoxShape.circle,
-      ),
-      child: Text(
-        '$count',
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
     );
   }
 }
@@ -732,38 +728,6 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
-class _FilterIconButton extends StatelessWidget {
-  const _FilterIconButton({required this.active, required this.onTap});
-
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = AppColors.primary(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: active ? color : AppColors.surfaceContainer(context),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: active ? color : AppColors.border(context)),
-        ),
-        child: Icon(
-          Icons.tune,
-          size: 18,
-          color: active
-              ? AppColors.background(context)
-              : AppColors.textSecondary(context),
-        ),
-      ),
-    );
-  }
-}
-
 class _StaffList extends StatelessWidget {
   const _StaffList({
     required this.staff,
@@ -777,17 +741,19 @@ class _StaffList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      itemCount: staff.length,
-      itemBuilder: (context, index) {
-        final s = staff[index];
-        return _StaffCard(
-          staff: s,
-          departmentName: departmentName(s.departmentId),
-          onTap: () => onTap(s),
-        );
-      },
+    // Embedded directly in the page's own outer SingleChildScrollView (see
+    // StaffListPage.build), so this must lay out as a plain Column rather
+    // than a ListView - a ListView here would be an unbounded-height
+    // viewport nested inside another scrollable.
+    return Column(
+      children: [
+        for (final s in staff)
+          _StaffCard(
+            staff: s,
+            departmentName: departmentName(s.departmentId),
+            onTap: () => onTap(s),
+          ),
+      ],
     );
   }
 }
@@ -893,32 +859,36 @@ class _StaffTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Embedded directly in the page's own outer SingleChildScrollView, so
+    // this only needs its own *horizontal* scroller for narrow desktop
+    // widths - vertical scrolling is handled by the page, not here (an
+    // Expanded/vertical SingleChildScrollView pair here would need a
+    // bounded height that no longer exists once this isn't the sole
+    // Expanded child of a Scaffold body Column).
     final pageCount = (total / pageSize).ceil().clamp(1, 999999);
     return Column(
       children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 900),
-              child: Table(
-                columnWidths: const {
-                  0: FlexColumnWidth(2.4),
-                  1: FlexColumnWidth(2),
-                  2: FlexColumnWidth(2.2),
-                  3: FlexColumnWidth(1.4),
-                  4: FlexColumnWidth(0.6),
-                },
-                children: [
-                  _headerRow(context),
-                  for (final s in staff) _dataRow(context, s),
-                ],
-              ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 900),
+            child: Table(
+              columnWidths: const {
+                0: FlexColumnWidth(2.4),
+                1: FlexColumnWidth(2),
+                2: FlexColumnWidth(2.2),
+                3: FlexColumnWidth(1.4),
+                4: FlexColumnWidth(0.6),
+              },
+              children: [
+                _headerRow(context),
+                for (final s in staff) _dataRow(context, s),
+              ],
             ),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
