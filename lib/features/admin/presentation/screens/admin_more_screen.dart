@@ -83,6 +83,126 @@ const _adminTools = [
       UserRole.director,
     ],
   ),
+  _AdminTool(
+    icon: Icons.storage_outlined,
+    title: 'Data management',
+    subtitle: 'Import, export and manage school data',
+    route: '/staff/admin/data-management',
+    roles: [UserRole.schoolAdmin, UserRole.headTeacher, UserRole.director],
+  ),
+  _AdminTool(
+    icon: Icons.health_and_safety_outlined,
+    title: 'Institution health',
+    subtitle: 'Setup completeness and data integrity checks',
+    route: '/staff/admin/institution-health',
+    roles: [UserRole.schoolAdmin, UserRole.headTeacher, UserRole.director],
+  ),
+  _AdminTool(
+    icon: Icons.sms_outlined,
+    title: 'Broadcast SMS',
+    subtitle: 'Send bulk SMS to parents or staff',
+    route: '/staff/admin/broadcast-sms',
+    roles: UserRoleDisplay.adminConsoleRoles,
+  ),
+  _AdminTool(
+    icon: Icons.history_outlined,
+    title: 'Broadcast history',
+    subtitle: 'Past SMS and announcement campaigns',
+    route: '/staff/admin/broadcast-history',
+    roles: UserRoleDisplay.adminConsoleRoles,
+  ),
+  _AdminTool(
+    icon: Icons.tune_outlined,
+    title: 'System config',
+    subtitle: 'Platform-wide configuration options',
+    route: '/staff/admin/config',
+    roles: UserRoleDisplay.adminConsoleRoles,
+  ),
+  _AdminTool(
+    icon: Icons.extension_outlined,
+    title: 'Integrations',
+    subtitle: 'Connected providers and API access',
+    route: '/staff/admin/integrations',
+    roles: [UserRole.schoolAdmin, UserRole.headTeacher, UserRole.director],
+  ),
+  _AdminTool(
+    icon: Icons.badge_outlined,
+    title: 'Batch ID cards',
+    subtitle: 'Print ID cards for many learners at once',
+    route: '/staff/admin/batch-id-cards',
+    roles: [
+      UserRole.schoolAdmin,
+      UserRole.director,
+      UserRole.headTeacher,
+      UserRole.deputyHead,
+      UserRole.deanOfStudies,
+      UserRole.receptionist,
+      UserRole.hrOfficer,
+    ],
+  ),
+  _AdminTool(
+    icon: Icons.how_to_reg_outlined,
+    title: 'Admissions',
+    subtitle: 'Review and process new applications',
+    route: '/staff/admin/admissions',
+    roles: [
+      UserRole.schoolAdmin,
+      UserRole.director,
+      UserRole.headTeacher,
+      UserRole.deputyHead,
+      UserRole.deanOfStudies,
+      UserRole.receptionist,
+      UserRole.hrOfficer,
+    ],
+  ),
+  _AdminTool(
+    icon: Icons.fact_check_outlined,
+    title: 'Audit log',
+    subtitle: 'Track changes made across the system',
+    route: '/staff/admin/audit-log',
+    roles: [UserRole.director, UserRole.headTeacher, UserRole.schoolAdmin],
+  ),
+  _AdminTool(
+    icon: Icons.support_agent_outlined,
+    title: 'Support centre',
+    subtitle: 'Internal support tickets and resources',
+    route: '/staff/admin/support',
+    roles: [UserRole.director, UserRole.headTeacher, UserRole.schoolAdmin],
+  ),
+  _AdminTool(
+    icon: Icons.campaign_outlined,
+    title: 'Communication centre',
+    subtitle: 'Compose and track announcements',
+    route: '/staff/admin/communication-center',
+    roles: [
+      UserRole.director,
+      UserRole.headTeacher,
+      UserRole.schoolAdmin,
+      UserRole.deputyHead,
+      UserRole.securityHead,
+    ],
+  ),
+  _AdminTool(
+    icon: Icons.security_outlined,
+    title: 'Security centre',
+    subtitle: 'Access logs and security settings',
+    route: '/staff/admin/security',
+    roles: [UserRole.director, UserRole.headTeacher, UserRole.schoolAdmin],
+  ),
+  _AdminTool(
+    icon: Icons.workspace_premium_outlined,
+    title: 'Subscription',
+    subtitle: 'Plan, billing and usage',
+    route: '/staff/admin/subscription',
+    roles: UserRoleDisplay.adminConsoleRoles,
+  ),
+  _AdminTool(
+    icon: Icons.link_outlined,
+    title: 'School subdomain',
+    subtitle: 'Manage your school\'s web address',
+    route: '/staff/admin/school-subdomain',
+    roles: UserRoleDisplay.adminConsoleRoles,
+  ),
 ];
 
 class _AdminMorePage extends StatelessWidget {
@@ -93,9 +213,9 @@ class _AdminMorePage extends StatelessWidget {
       _adminTools.where((t) => user.roles.any(t.roles.contains)).toList();
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background(context),
-    body: SafeArea(
+  Widget build(BuildContext context) => Material(
+    color: AppColors.background(context),
+    child: SafeArea(
       child: ResponsiveBuilder(
         builder: (context, layout) => layout == ResponsiveLayout.mobile
             ? _MobileMore(user: user, tools: _authorizedTools)

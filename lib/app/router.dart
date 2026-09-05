@@ -21,7 +21,8 @@ import 'package:school_pulse/features/matron/presentation/screens/dormitory_mana
     as matron_scr;
 import 'package:school_pulse/features/patron/presentation/screens/dormitory_management_screen.dart'
     as patron_scr;
-import 'package:school_pulse/features/admin/admin_dashboard_screen.dart';
+import 'package:school_pulse/features/admin/presentation/shell/admin_section.dart';
+import 'package:school_pulse/features/admin/presentation/shell/admin_shell.dart';
 import 'package:school_pulse/features/admin/school_workspace_screen.dart';
 import 'package:school_pulse/features/admin/presentation/pages/school_subdomain_screen.dart';
 import 'package:school_pulse/features/institution/presentation/bloc/institution_context_cubit.dart';
@@ -52,7 +53,6 @@ import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/presentation/pages/user_management_page.dart';
 import 'package:school_pulse/features/admin/parent_access_workspace/presentation/screens/parents_access_workspace_screen.dart';
 import 'package:school_pulse/features/admin/presentation/screens/school_setup_screen.dart';
-import 'package:school_pulse/features/admin/presentation/pages/staff_list_page.dart';
 import 'package:school_pulse/features/admin/presentation/pages/staff_detail_screen.dart';
 import 'package:school_pulse/features/admin/presentation/add_staff_wizard/add_staff_wizard_page.dart';
 import 'package:school_pulse/features/admin/broadcast_sms_screen.dart';
@@ -90,8 +90,6 @@ import 'package:school_pulse/features/structure/presentation/screens/attendance_
 import 'package:school_pulse/features/structure/presentation/screens/communication_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/document_templates_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/custom_fields_screen.dart';
-import 'package:school_pulse/features/admin/admin_staff_attendance_screen.dart';
-import 'package:school_pulse/features/appointments/presentation/screens/appointments_workspace_screen.dart';
 import 'package:school_pulse/features/admin/audit_log_screen.dart';
 import 'package:school_pulse/features/admin/support_center_screen.dart';
 import 'package:school_pulse/features/communication_center/presentation/screens/communication_center_screen.dart';
@@ -144,7 +142,6 @@ import 'package:school_pulse/features/student/domain/entities/admission_applicat
 import 'package:school_pulse/features/student/presentation/screens/admission_review_screen.dart';
 import 'package:school_pulse/features/student/presentation/enrollment_setup/screens/enrollment_setup_wizard_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/admissions_list_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/admin_student_directory_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/admin_student_profile_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/admin_student_documents_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/student_portal_codes_screen.dart';
@@ -2334,7 +2331,8 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/admin',
-          builder: (context, state) => const AdminDashboardScreen(),
+          builder: (context, state) =>
+              const AdminShell(section: AdminSection.home),
           routes: [
             GoRoute(
               path: 'school-setup',
@@ -2392,7 +2390,8 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'approvals',
-              builder: (context, state) => const ApprovalCenterScreen(),
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.approvals),
               routes: [
                 GoRoute(
                   path: 'policies',
@@ -2412,11 +2411,13 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'parents',
-              builder: (context, state) => const ParentsAccessWorkspaceScreen(),
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.parents),
             ),
             GoRoute(
               path: 'users',
-              builder: (context, state) => const StaffListPage(),
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.staff),
               routes: [
                 GoRoute(
                   path: 'overview',
@@ -2791,7 +2792,26 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'staff-attendance',
-              builder: (context, state) => const AdminStaffAttendanceScreen(),
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.attendance),
+            ),
+            GoRoute(
+              path: 'fees',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                const permitted = {
+                  UserRole.schoolAdmin,
+                  UserRole.headTeacher,
+                  UserRole.director,
+                };
+                if (!auth.user.roles.any(permitted.contains)) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.fees),
             ),
             GoRoute(
               path: 'batch-id-cards',
@@ -2896,17 +2916,20 @@ final router = GoRouter(
               // Students is a working directory, not a dashboard. The
               // dashboard remains available from its own workspace entry;
               // this route deliberately matches the compact learner list.
-              builder: (context, state) => const AdminStudentDirectoryScreen(),
+              // Renders inside AdminShell so the persistent sidebar/bottom
+              // nav is present, matching every other admin console screen.
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.students),
               routes: [
                 GoRoute(
                   path: 'list',
                   builder: (context, state) =>
-                      const AdminStudentDirectoryScreen(),
+                      const AdminShell(section: AdminSection.students),
                 ),
                 GoRoute(
                   path: 'directory',
                   builder: (context, state) =>
-                      const AdminStudentDirectoryScreen(),
+                      const AdminShell(section: AdminSection.students),
                 ),
                 GoRoute(
                   path: ':id',
@@ -2965,7 +2988,8 @@ final router = GoRouter(
                     ? null
                     : UserRoleRouting.dashboardPath(auth.user.role);
               },
-              builder: (context, state) => const AppointmentsWorkspaceScreen(),
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.appointments),
             ),
             GoRoute(
               path: 'audit-log',

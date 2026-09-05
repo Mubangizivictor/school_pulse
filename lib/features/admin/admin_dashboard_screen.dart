@@ -50,9 +50,9 @@ class _AdminHome extends StatelessWidget {
     final auth = context.watch<AuthBloc>().state;
     if (auth is! AuthAuthenticated) return const SizedBox.shrink();
     final user = auth.user;
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      body: SafeArea(
+    return Material(
+      color: AppColors.background(context),
+      child: SafeArea(
         child: RefreshIndicator(
           color: AppColors.textPrimary(context),
           onRefresh: () async {

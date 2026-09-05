@@ -188,9 +188,11 @@ void main() {
               BlocProvider<AuthBloc>.value(value: authBloc),
               BlocProvider<StructureBloc>.value(value: structureBloc),
             ],
-            child: AdminStudentDirectoryScreen(
-              profileDataSource: StudentProfileDataSource(
-                firestore: FakeFirebaseFirestore(),
+            child: Scaffold(
+              body: AdminStudentDirectoryScreen(
+                profileDataSource: StudentProfileDataSource(
+                  firestore: FakeFirebaseFirestore(),
+                ),
               ),
             ),
           ),

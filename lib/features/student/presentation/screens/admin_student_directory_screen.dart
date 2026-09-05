@@ -219,9 +219,9 @@ class _DirectoryState extends State<_Directory> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppColors.background(context),
-    body: SafeArea(
+  Widget build(BuildContext context) => Material(
+    color: AppColors.background(context),
+    child: SafeArea(
       child: BlocBuilder<StudentsBloc, StudentsState>(
         builder: (context, state) {
           if (state is StudentsLoading) {
