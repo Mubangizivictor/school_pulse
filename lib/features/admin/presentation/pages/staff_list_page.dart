@@ -14,9 +14,34 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/structure/domain/entities/campus_entities.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
 import 'package:school_pulse/injection_container.dart' as di;
+
+/// Masks a contact string (email or phone) down to a short recognisable
+/// prefix, e.g. "amina.k@school.edu" -> "ami***@school.edu" and
+/// "+256701234567" -> "+256 ••• ••• 567" - mirrors the mockup's masked
+/// contact column so full contact details are only ever visible to roles
+/// permitted to see them (see [_StaffListPageState._canViewContactDetails]).
+String _maskEmail(String email) {
+  final at = email.indexOf('@');
+  if (at <= 0) return email;
+  final local = email.substring(0, at);
+  final domain = email.substring(at);
+  final visible = local.length <= 2 ? local : local.substring(0, 2);
+  return '$visible${'*' * (local.length - visible.length).clamp(2, 6)}$domain';
+}
+
+String _maskPhone(String phone) {
+  final digitsOnly = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+  if (digitsOnly.length <= 4) return phone;
+  final last3 = digitsOnly.substring(digitsOnly.length - 3);
+  final prefix = digitsOnly.startsWith('+')
+      ? digitsOnly.substring(0, digitsOnly.length > 4 ? 4 : digitsOnly.length)
+      : '';
+  return '$prefix ••• ••• $last3'.trim();
+}
 
 enum _StatusFilter { all, active, inactive }
 
@@ -49,6 +74,7 @@ class _StaffListPageState extends State<StaffListPage> {
   String? _departmentId;
   String? _designationId;
   String? _employmentType;
+  String? _campusId;
   _SortBy _sortBy = _SortBy.recentlyAdded;
 
   int _page = 0;
@@ -92,7 +118,19 @@ class _StaffListPageState extends State<StaffListPage> {
       (_status != _StatusFilter.all ? 1 : 0) +
       (_departmentId != null ? 1 : 0) +
       (_designationId != null ? 1 : 0) +
-      (_employmentType != null ? 1 : 0);
+      (_employmentType != null ? 1 : 0) +
+      (_campusId != null ? 1 : 0);
+
+  void _clearFilters() {
+    setState(() {
+      _status = _StatusFilter.all;
+      _departmentId = null;
+      _designationId = null;
+      _employmentType = null;
+      _campusId = null;
+      _page = 0;
+    });
+  }
 
   List<UserEntity> _applyFilters(List<UserEntity> staff) {
     final filtered = staff.where((s) {
@@ -105,6 +143,9 @@ class _StaffListPageState extends State<StaffListPage> {
         return false;
       }
       if (_employmentType != null && s.employmentType != _employmentType) {
+        return false;
+      }
+      if (_campusId != null && s.campusId != _campusId) {
         return false;
       }
       if (_query.isNotEmpty) {
@@ -152,6 +193,16 @@ class _StaffListPageState extends State<StaffListPage> {
     final authState = context.watch<AuthBloc>().state;
     return authState is AuthAuthenticated &&
         authState.user.roles.any(UserRoleDisplay.adminRoles.contains);
+  }
+
+  /// Full email/phone are HR-sensitive; only admin-console roles (the same
+  /// set permitted to navigate this console at all - see the `users` route
+  /// guard in router.dart) see them unmasked. Everyone else sees a masked
+  /// contact column, never the raw value.
+  bool _canViewContactDetails(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    return authState is AuthAuthenticated &&
+        authState.user.roles.any(UserRoleDisplay.adminConsoleRoles.contains);
   }
 
   @override
@@ -229,6 +280,9 @@ class _StaffListPageState extends State<StaffListPage> {
                                       setState(() => _page = p),
                                   departmentName: (id) =>
                                       _departmentNameFor(context, id),
+                                  canViewContact: _canViewContactDetails(
+                                    context,
+                                  ),
                                   onTap: (s) => context.push(
                                     '/staff/admin/users/${s.id}',
                                   ),
@@ -238,8 +292,12 @@ class _StaffListPageState extends State<StaffListPage> {
                                   staff: filtered,
                                   departmentName: (id) =>
                                       _departmentNameFor(context, id),
-                                  onTap: (s) =>
-                                      context.push('/staff/admin/users/${s.id}'),
+                                  canViewContact: _canViewContactDetails(
+                                    context,
+                                  ),
+                                  onTap: (s) => context.push(
+                                    '/staff/admin/users/${s.id}',
+                                  ),
                                 ),
                             ],
                           ),
@@ -277,9 +335,9 @@ class _StaffListPageState extends State<StaffListPage> {
         const SizedBox(height: 2),
         Text(
           '${all.length} staff member${all.length == 1 ? '' : 's'}',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary(context)),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppColors.textSecondary(context),
+          ),
         ),
       ],
     );
@@ -462,6 +520,13 @@ class _StaffListPageState extends State<StaffListPage> {
             value: _sortBy,
             onChanged: (v) => setState(() => _sortBy = v),
           ),
+          if (_activeFilterCount > 0) ...[
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: _clearFilters,
+              child: const Text('Clear filters'),
+            ),
+          ],
         ],
       ),
     );
@@ -535,26 +600,30 @@ class _StaffListPageState extends State<StaffListPage> {
           child: FutureBuilder<List<UserEntity>>(
             future: all,
             builder: (context, snapshot) {
-              final employmentTypes = (snapshot.data ?? const <UserEntity>[])
-                  .map((s) => s.employmentType)
-                  .whereType<String>()
-                  .where((e) => e.trim().isNotEmpty)
-                  .toSet()
-                  .toList()
-                ..sort();
+              final employmentTypes =
+                  (snapshot.data ?? const <UserEntity>[])
+                      .map((s) => s.employmentType)
+                      .whereType<String>()
+                      .where((e) => e.trim().isNotEmpty)
+                      .toSet()
+                      .toList()
+                    ..sort();
               return _FiltersSheet(
                 initialDepartmentId: _departmentId,
                 initialDesignationId: _designationId,
                 initialEmploymentType: _employmentType,
+                initialCampusId: _campusId,
                 employmentTypes: employmentTypes,
-                onApply: (departmentId, designationId, employmentType) {
-                  setState(() {
-                    _departmentId = departmentId;
-                    _designationId = designationId;
-                    _employmentType = employmentType;
-                    _page = 0;
-                  });
-                },
+                onApply:
+                    (departmentId, designationId, employmentType, campusId) {
+                      setState(() {
+                        _departmentId = departmentId;
+                        _designationId = designationId;
+                        _employmentType = employmentType;
+                        _campusId = campusId;
+                        _page = 0;
+                      });
+                    },
               );
             },
           ),
@@ -595,10 +664,7 @@ class _SummaryStat extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(color: AppColors.textSecondary(context)),
-        ),
+        Text(label, style: TextStyle(color: AppColors.textSecondary(context))),
       ],
     );
   }
@@ -658,10 +724,7 @@ class _SortDropdown extends StatelessWidget {
                 .toList(),
             items: _labels.entries
                 .map(
-                  (e) => DropdownMenuItem(
-                    value: e.key,
-                    child: Text(e.value),
-                  ),
+                  (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
                 )
                 .toList(),
           ),
@@ -728,15 +791,51 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
+/// Relative/short-date label for a staff member's last activity, e.g.
+/// "Today, 2:14 PM", "Yesterday, 4:27 PM" or "Apr 28, 2025". Returns "—" when
+/// unknown rather than guessing.
+String _lastActivityLabel(DateTime? at) {
+  if (at == null) return '—';
+  final local = at.toLocal();
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final day = DateTime(local.year, local.month, local.day);
+  final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+  final minute = local.minute.toString().padLeft(2, '0');
+  final period = local.hour >= 12 ? 'PM' : 'AM';
+  final time = '$hour:$minute $period';
+  if (day == today) return 'Today, $time';
+  if (day == today.subtract(const Duration(days: 1))) {
+    return 'Yesterday, $time';
+  }
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${months[local.month - 1]} ${local.day}, ${local.year}';
+}
+
 class _StaffList extends StatelessWidget {
   const _StaffList({
     required this.staff,
     required this.departmentName,
+    required this.canViewContact,
     required this.onTap,
   });
 
   final List<UserEntity> staff;
   final String? Function(String?) departmentName;
+  final bool canViewContact;
   final void Function(UserEntity) onTap;
 
   @override
@@ -751,6 +850,7 @@ class _StaffList extends StatelessWidget {
           _StaffCard(
             staff: s,
             departmentName: departmentName(s.departmentId),
+            canViewContact: canViewContact,
             onTap: () => onTap(s),
           ),
       ],
@@ -762,11 +862,13 @@ class _StaffCard extends StatelessWidget {
   const _StaffCard({
     required this.staff,
     required this.departmentName,
+    required this.canViewContact,
     required this.onTap,
   });
 
   final UserEntity staff;
   final String? departmentName;
+  final bool canViewContact;
   final VoidCallback onTap;
 
   @override
@@ -775,6 +877,7 @@ class _StaffCard extends StatelessWidget {
         ? '—'
         : UserRoleDisplay.name(staff.roles.first);
     final subtitle = [roleLabel, ?departmentName].join(' • ');
+    final contact = canViewContact ? staff.email : _maskEmail(staff.email);
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
@@ -808,10 +911,20 @@ class _StaffCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  staff.email,
+                  contact,
                   style: TextStyle(
                     color: AppColors.textMuted(context),
                     fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _lastActivityLabel(staff.lastActiveAt),
+                  style: TextStyle(
+                    color: AppColors.textMuted(context),
+                    fontSize: 11,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -846,6 +959,7 @@ class _StaffTable extends StatelessWidget {
     required this.pageSize,
     required this.onPageChanged,
     required this.departmentName,
+    required this.canViewContact,
     required this.onTap,
   });
 
@@ -855,6 +969,7 @@ class _StaffTable extends StatelessWidget {
   final int pageSize;
   final ValueChanged<int> onPageChanged;
   final String? Function(String?) departmentName;
+  final bool canViewContact;
   final void Function(UserEntity) onTap;
 
   @override
@@ -878,7 +993,8 @@ class _StaffTable extends StatelessWidget {
                 1: FlexColumnWidth(2),
                 2: FlexColumnWidth(2.2),
                 3: FlexColumnWidth(1.4),
-                4: FlexColumnWidth(0.6),
+                4: FlexColumnWidth(1.6),
+                5: FlexColumnWidth(0.6),
               },
               children: [
                 _headerRow(context),
@@ -929,28 +1045,31 @@ class _StaffTable extends StatelessWidget {
     );
     return TableRow(
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppColors.border(context)),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.border(context))),
       ),
       children: [
         cell('Staff member'),
         cell('Role · Department'),
         cell('Contact'),
         cell('Account status'),
+        cell('Last activity'),
         const SizedBox.shrink(),
       ],
     );
   }
 
   TableRow _dataRow(BuildContext context, UserEntity s) {
-    final roleLabel = s.roles.isEmpty ? '—' : UserRoleDisplay.name(s.roles.first);
+    final roleLabel = s.roles.isEmpty
+        ? '—'
+        : UserRoleDisplay.name(s.roles.first);
     final dept = departmentName(s.departmentId);
+    final email = canViewContact ? s.email : _maskEmail(s.email);
+    final phone = s.phoneNumber == null
+        ? null
+        : (canViewContact ? s.phoneNumber! : _maskPhone(s.phoneNumber!));
     return TableRow(
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppColors.border(context)),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.border(context))),
       ),
       children: [
         _rowCell(
@@ -995,7 +1114,10 @@ class _StaffTable extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(roleLabel, style: TextStyle(color: AppColors.textPrimary(context))),
+              Text(
+                roleLabel,
+                style: TextStyle(color: AppColors.textPrimary(context)),
+              ),
               if (dept != null)
                 Text(
                   dept,
@@ -1015,16 +1137,16 @@ class _StaffTable extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                s.email,
+                email,
                 style: TextStyle(
                   fontSize: 13,
                   color: AppColors.textPrimary(context),
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
-              if (s.phoneNumber != null)
+              if (phone != null)
                 Text(
-                  s.phoneNumber!,
+                  phone,
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary(context),
@@ -1041,6 +1163,18 @@ class _StaffTable extends StatelessWidget {
             color: s.isActive
                 ? AppColors.success(context)
                 : AppColors.textMuted(context),
+          ),
+        ),
+        _rowCell(
+          context,
+          onTap: () => onTap(s),
+          child: Text(
+            _lastActivityLabel(s.lastActiveAt),
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary(context),
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
         _rowCell(
@@ -1076,6 +1210,7 @@ class _FiltersSheet extends StatefulWidget {
     required this.initialDepartmentId,
     required this.initialDesignationId,
     required this.initialEmploymentType,
+    required this.initialCampusId,
     required this.employmentTypes,
     required this.onApply,
   });
@@ -1083,11 +1218,13 @@ class _FiltersSheet extends StatefulWidget {
   final String? initialDepartmentId;
   final String? initialDesignationId;
   final String? initialEmploymentType;
+  final String? initialCampusId;
   final List<String> employmentTypes;
   final void Function(
     String? departmentId,
     String? designationId,
     String? employmentType,
+    String? campusId,
   )
   onApply;
 
@@ -1099,6 +1236,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
   String? _departmentId;
   String? _designationId;
   String? _employmentType;
+  String? _campusId;
 
   @override
   void initState() {
@@ -1106,6 +1244,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
     _departmentId = widget.initialDepartmentId;
     _designationId = widget.initialDesignationId;
     _employmentType = widget.initialEmploymentType;
+    _campusId = widget.initialCampusId;
   }
 
   @override
@@ -1113,6 +1252,7 @@ class _FiltersSheetState extends State<_FiltersSheet> {
     final state = context.watch<StructureBloc>().state;
     final departments = state.departments;
     final designations = state.designations;
+    final campuses = state.campuses;
 
     return SafeArea(
       child: Padding(
@@ -1143,11 +1283,43 @@ class _FiltersSheetState extends State<_FiltersSheet> {
                       _departmentId = null;
                       _designationId = null;
                       _employmentType = null;
+                      _campusId = null;
                     }),
                     child: const Text('Clear'),
                   ),
                 ],
               ),
+              if (campuses.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Campus',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary(context),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String?>(
+                  initialValue: _campusId,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                  ),
+                  hint: const Text('All Campuses'),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('All Campuses'),
+                    ),
+                    ...campuses.map(
+                      (Campus c) => DropdownMenuItem<String?>(
+                        value: c.id,
+                        child: Text(c.name),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() => _campusId = value),
+                ),
+              ],
               const SizedBox(height: 12),
               Text(
                 'Department',
@@ -1224,7 +1396,8 @@ class _FiltersSheetState extends State<_FiltersSheet> {
                       child: Text('All Types'),
                     ),
                     ...widget.employmentTypes.map(
-                      (t) => DropdownMenuItem<String?>(value: t, child: Text(t)),
+                      (t) =>
+                          DropdownMenuItem<String?>(value: t, child: Text(t)),
                     ),
                   ],
                   onChanged: (value) => setState(() => _employmentType = value),
@@ -1235,7 +1408,12 @@ class _FiltersSheetState extends State<_FiltersSheet> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    widget.onApply(_departmentId, _designationId, _employmentType);
+                    widget.onApply(
+                      _departmentId,
+                      _designationId,
+                      _employmentType,
+                      _campusId,
+                    );
                     Navigator.of(context).pop();
                   },
                   child: const Text('Apply Filters'),

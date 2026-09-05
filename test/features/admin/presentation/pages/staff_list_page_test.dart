@@ -117,10 +117,8 @@ void main() {
     return MaterialApp.router(
       theme: AppTheme.light(),
       routerConfig: router,
-      builder: (context, child) => BlocProvider<AuthBloc>.value(
-        value: mockAuthBloc,
-        child: child,
-      ),
+      builder: (context, child) =>
+          BlocProvider<AuthBloc>.value(value: mockAuthBloc, child: child),
     );
   }
 
@@ -168,9 +166,7 @@ void main() {
     expect(find.text('Lisa Martinez'), findsNothing);
   });
 
-  testWidgets('empty state shows Add Staff cta for admin role', (
-    tester,
-  ) async {
+  testWidgets('empty state shows Add Staff cta for admin role', (tester) async {
     when(
       () => mockGetStaffMembers(any()),
     ).thenAnswer((_) async => const Right(<UserEntity>[]));
@@ -194,9 +190,7 @@ void main() {
     expect(find.text('Retry'), findsOneWidget);
   });
 
-  testWidgets('tapping a staff row navigates to staff detail', (
-    tester,
-  ) async {
+  testWidgets('tapping a staff row navigates to staff detail', (tester) async {
     when(
       () => mockGetStaffMembers(any()),
     ).thenAnswer((_) async => Right(staffList));
@@ -290,5 +284,64 @@ void main() {
     expect(find.byType(Table), findsOneWidget);
     expect(find.widgetWithText(ElevatedButton, 'Add staff'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('admin-console role sees unmasked staff email', (tester) async {
+    when(
+      () => mockGetStaffMembers(any()),
+    ).thenAnswer((_) async => Right(staffList));
+
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    expect(find.text('james.brown@schoolpulse.com'), findsOneWidget);
+  });
+
+  testWidgets('non-admin-console role sees masked staff email, never raw', (
+    tester,
+  ) async {
+    const teacherUser = UserEntity(
+      id: 'teacher-1',
+      name: 'Deputy Teacher',
+      email: 'deputy@schoolpulse.com',
+      schoolId: 'school-1',
+      roles: [UserRole.subjectTeacher],
+    );
+    when(
+      () => mockAuthBloc.state,
+    ).thenReturn(const AuthAuthenticated(teacherUser));
+    when(
+      () => mockGetStaffMembers(any()),
+    ).thenAnswer((_) async => Right(staffList));
+
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    expect(find.text('james.brown@schoolpulse.com'), findsNothing);
+    expect(find.textContaining('*'), findsWidgets);
+  });
+
+  testWidgets('Clear filters only appears once a filter is active', (
+    tester,
+  ) async {
+    when(
+      () => mockGetStaffMembers(any()),
+    ).thenAnswer((_) async => Right(staffList));
+
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Clear filters'), findsNothing);
+
+    await tester.tap(find.text('Active'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Clear filters'), findsOneWidget);
+
+    await tester.tap(find.text('Clear filters'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Clear filters'), findsNothing);
+    expect(find.text('Lisa Martinez'), findsOneWidget);
   });
 }
