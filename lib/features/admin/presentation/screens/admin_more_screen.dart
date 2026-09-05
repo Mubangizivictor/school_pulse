@@ -152,7 +152,7 @@ class _MobileMore extends StatelessWidget {
       const SizedBox(height: AppSpacing.m),
       _RowGroup(rows: _supportRows()),
       const SizedBox(height: AppSpacing.x3l),
-      _LogoutButton(user: user),
+      const _LogoutRow(),
     ],
   );
 }
@@ -182,10 +182,6 @@ class _WideMore extends StatelessWidget {
         const _SectionTitle('Personal'),
         const SizedBox(height: AppSpacing.m),
         _RowGroup(rows: _personalRows(user)),
-        const SizedBox(height: AppSpacing.x3l),
-        const _SectionTitle('Support'),
-        const SizedBox(height: AppSpacing.m),
-        _RowGroup(rows: _supportRows()),
       ],
     );
     return SingleChildScrollView(
@@ -222,7 +218,11 @@ class _WideMore extends StatelessWidget {
                 right,
               ],
               const SizedBox(height: AppSpacing.x3l),
-              _LogoutButton(user: user),
+              const _SectionTitle('Support'),
+              const SizedBox(height: AppSpacing.m),
+              _SupportRow(),
+              const SizedBox(height: AppSpacing.x3l),
+              const _LogoutRow(),
             ],
           ),
         ),
@@ -231,6 +231,10 @@ class _WideMore extends StatelessWidget {
   }
 }
 
+/// Offline & storage is gated on the actual platform ([kIsWeb]), not on
+/// screen width - a real tablet/desktop build of the mobile app still has
+/// Isar-backed offline sync, while any web build (regardless of viewport)
+/// does not.
 List<Widget> _personalRows(UserEntity user) => [
   _MoreRow(
     icon: Icons.person_outline,
@@ -257,6 +261,7 @@ List<Widget> _personalRows(UserEntity user) => [
           title: 'Offline & storage',
           subtitle: 'Available in the mobile app',
           onTap: null,
+          locked: true,
         )
       : _MoreRow(
           icon: Icons.cloud_outlined,
@@ -518,62 +523,74 @@ class _MoreRow extends StatelessWidget {
     this.subtitle,
     this.value,
     required this.onTap,
+    this.locked = false,
   });
   final IconData icon;
   final String title;
   final String? subtitle, value;
   final void Function(BuildContext context)? onTap;
+  final bool locked;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap == null ? null : () => onTap!(context),
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainer(context),
-              borderRadius: BorderRadius.circular(10),
+  Widget build(BuildContext context) {
+    final disabled = onTap == null;
+    final textColor = disabled
+        ? AppColors.textSecondary(context)
+        : AppColors.textPrimary(context);
+    return InkWell(
+      onTap: disabled ? null : () => onTap!(context),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainer(context),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 20, color: textColor),
             ),
-            child: Icon(icon, size: 18, color: AppColors.textPrimary(context)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary(context),
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 1),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    subtitle!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: textColor,
+                    ),
                   ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          if (value != null) ...[
-            Text(value!, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
-            const SizedBox(width: 4),
+            if (value != null) ...[
+              Text(value!, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+              const SizedBox(width: 4),
+            ],
+            Icon(
+              locked ? Icons.lock_outline : Icons.chevron_right,
+              size: locked ? 18 : 16,
+              color: AppColors.textSecondary(context),
+            ),
           ],
-          Icon(Icons.chevron_right, size: 16, color: AppColors.textSecondary(context)),
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _AppearanceRow extends StatelessWidget {
@@ -652,21 +669,77 @@ Future<void> _appearancePicker(BuildContext context, ThemeProvider theme) async 
   if (mode != null) await theme.setThemeMode(mode);
 }
 
-class _LogoutButton extends StatelessWidget {
-  const _LogoutButton({required this.user});
-  final UserEntity user;
+/// Full-width bordered card row matching the reference: icon, title +
+/// subtitle, chevron - all in the destructive red, not a plain button.
+class _LogoutRow extends StatelessWidget {
+  const _LogoutRow();
 
   @override
-  Widget build(BuildContext context) => OutlinedButton.icon(
-    onPressed: () => _signOut(context, user),
-    icon: Icon(Icons.logout_outlined, size: 20, color: AppColors.danger(context)),
-    label: Text('Log out', style: TextStyle(color: AppColors.danger(context))),
-    style: OutlinedButton.styleFrom(
-      side: BorderSide(color: AppColors.danger(context)),
-      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
-      alignment: Alignment.centerLeft,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      minimumSize: const Size.fromHeight(48),
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return const SizedBox.shrink();
+    final danger = AppColors.danger(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: danger),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _signOut(context, auth.user),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(Icons.logout_outlined, size: 20, color: danger),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Log out',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: danger,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      'Sign out of School Pulse',
+                      style: TextStyle(fontSize: 12, color: danger.withValues(alpha: 0.8)),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, size: 18, color: danger),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Horizontal 3-up support row for tablet/desktop, matching the reference.
+class _SupportRow extends StatelessWidget {
+  const _SupportRow();
+
+  @override
+  Widget build(BuildContext context) => AppCard(
+    padding: EdgeInsets.zero,
+    child: IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: _supportRows()[0]),
+          VerticalDivider(width: 1, color: AppColors.border(context)),
+          Expanded(child: _supportRows()[1]),
+          VerticalDivider(width: 1, color: AppColors.border(context)),
+          Expanded(child: _supportRows()[2]),
+        ],
+      ),
     ),
   );
 }

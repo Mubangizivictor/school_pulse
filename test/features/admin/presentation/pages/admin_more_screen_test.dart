@@ -129,6 +129,39 @@ void main() {
     verifyNever(() => mockAuthBloc.add(any()));
   });
 
+  testWidgets('log out row shows its subtitle like every other More row', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp(schoolAdmin));
+    await tester.pumpAndSettle();
+
+    await tester.dragUntilVisible(
+      find.text('Sign out of School Pulse'),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    expect(find.text('Sign out of School Pulse'), findsOneWidget);
+  });
+
+  testWidgets('support items render side by side on desktop', (tester) async {
+    await tester.pumpWidget(buildApp(schoolAdmin, size: const Size(1280, 900)));
+    await tester.pumpAndSettle();
+
+    await tester.dragUntilVisible(
+      find.text('Help centre'),
+      find.byType(SingleChildScrollView),
+      const Offset(0, -200),
+    );
+    final helpCentre = tester.getTopLeft(find.text('Help centre'));
+    final contactSupport = tester.getTopLeft(find.text('Contact support'));
+    final about = tester.getTopLeft(find.text('About School Pulse'));
+
+    expect(contactSupport.dx, greaterThan(helpCentre.dx));
+    expect(about.dx, greaterThan(contactSupport.dx));
+    expect(helpCentre.dy, contactSupport.dy);
+    expect(contactSupport.dy, about.dy);
+  });
+
   testWidgets('renders two-column grid layout at desktop width', (
     tester,
   ) async {
