@@ -31,17 +31,28 @@ enum AdminSection {
     icon: Icons.people_outline,
     mobileTab: 1,
   ),
-  staff(slug: 'staff', label: 'Staff', icon: Icons.badge_outlined),
+  // The router mounts this section at /staff/admin/users (the historical
+  // Staff route), not /staff/admin/staff - routeSegment carries that
+  // divergence so navigation code never has to special-case it.
+  staff(
+    slug: 'staff',
+    label: 'Staff',
+    icon: Icons.badge_outlined,
+    routeSegment: 'users',
+  ),
   parents(
     slug: 'parents',
     label: 'Parents',
     icon: Icons.family_restroom_outlined,
   ),
+  // Same divergence as staff above: the router mounts this at
+  // /staff/admin/staff-attendance, not /staff/admin/attendance.
   attendance(
     slug: 'attendance',
     label: 'Attendance',
     icon: Icons.event_available_outlined,
     mobileTab: 2,
+    routeSegment: 'staff-attendance',
   ),
   fees(slug: 'fees', label: 'Fees', icon: Icons.payments_outlined),
   approvals(
@@ -66,12 +77,19 @@ enum AdminSection {
     required this.label,
     required this.icon,
     this.mobileTab,
-  });
+    String? routeSegment,
+  }) : _routeSegment = routeSegment;
 
   final String slug;
   final String label;
   final IconData icon;
   final int? mobileTab;
+  final String? _routeSegment;
+
+  /// The actual `/staff/admin/<segment>` path segment this section is
+  /// mounted at - use this (never [slug]) when building a navigable URL.
+  /// Equal to [slug] for every section except the two noted above.
+  String get routeSegment => _routeSegment ?? slug;
 
   /// The Admin bottom-nav "More" tab index — the fallback host for sections
   /// without their own tab.

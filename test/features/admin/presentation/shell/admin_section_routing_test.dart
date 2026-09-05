@@ -97,6 +97,45 @@ void main() {
     });
   });
 
+  group('AdminSection.routeSegment', () {
+    test(
+      'diverges from slug exactly where the router path differs (staff, attendance)',
+      () {
+        expect(AdminSection.staff.routeSegment, 'users');
+        expect(AdminSection.attendance.routeSegment, 'staff-attendance');
+      },
+    );
+
+    test('every routeSegment round-trips through fromLocation', () {
+      for (final s in [
+        AdminSection.students,
+        AdminSection.staff,
+        AdminSection.parents,
+        AdminSection.attendance,
+        AdminSection.fees,
+        AdminSection.approvals,
+        AdminSection.appointments,
+      ]) {
+        expect(
+          AdminSection.fromLocation('/staff/admin/${s.routeSegment}'),
+          s,
+          reason:
+              '/staff/admin/${s.routeSegment} (built from ${s.name}.routeSegment) '
+              'must resolve back to ${s.name} - this is the exact bug where the '
+              'sidebar built a URL from .slug instead and 404'
+              'd on Staff/Attendance',
+        );
+      }
+    });
+
+    test('every other section keeps routeSegment == slug', () {
+      for (final s in AdminSection.values) {
+        if (s == AdminSection.staff || s == AdminSection.attendance) continue;
+        expect(s.routeSegment, s.slug, reason: '$s should not diverge');
+      }
+    });
+  });
+
   group('AdminSection mobile-tab mapping', () {
     test('exactly the four bottom-nav sections carry a mobileTab', () {
       final withTab = AdminSection.values
@@ -213,6 +252,18 @@ void main() {
       expect(shell.contains('AdminFeesScreen'), isTrue);
       expect(webShell.contains('AdminFeesScreen'), isTrue);
     });
+
+    test(
+      'the desktop sidebar builds its nav URL from routeSegment, not slug',
+      () {
+        // Regression guard: `/staff/admin/${s.slug}` 404s for Staff (real
+        // route is /staff/admin/users) and Attendance (real route is
+        // /staff/admin/staff-attendance) - the sidebar must use
+        // `s.routeSegment` instead.
+        expect(webShell.contains(r'${s.slug}'), isFalse);
+        expect(webShell.contains(r'${s.routeSegment}'), isTrue);
+      },
+    );
 
     test('every in-shell section appears in the desktop sidebar nav', () {
       final navBlock = webShell.substring(

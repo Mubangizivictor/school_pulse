@@ -107,7 +107,9 @@ class _AdminWebShellState extends State<AdminWebShell> {
       _navKeys[s]!.currentState?.popUntil((r) => r.isFirst);
       return;
     }
-    context.go(s == AdminSection.home ? '/staff/admin' : '/staff/admin/${s.slug}');
+    context.go(
+      s == AdminSection.home ? '/staff/admin' : '/staff/admin/${s.routeSegment}',
+    );
   }
 
   @override
