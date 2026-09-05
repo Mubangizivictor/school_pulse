@@ -86,6 +86,7 @@ Student _student({
   String? streamId = 'stream-1',
   StudentStatus status = StudentStatus.enrolled,
   StudentBoardingType? boardingType = StudentBoardingType.day,
+  List<String> parentIds = const [],
 }) => Student(
   id: id,
   schoolId: 'school-123',
@@ -99,7 +100,7 @@ Student _student({
   academicYearId: 'year-1',
   status: status,
   emergencyContacts: const [],
-  parentIds: const [],
+  parentIds: parentIds,
   documents: const {},
   level: EducationLevel.secondary,
   boardingType: boardingType,
@@ -116,8 +117,16 @@ final _structureState = StructureState(
       endDate: DateTime(2026, 12, 31),
     ),
   ],
+  levels: const [
+    EducationalLevel(id: 'level-1', schoolId: 'school-123', name: 'Secondary'),
+  ],
   classes: const [
-    SchoolClass(id: 'class-1', schoolId: 'school-123', name: '10-A'),
+    SchoolClass(
+      id: 'class-1',
+      schoolId: 'school-123',
+      name: '10-A',
+      levelId: 'level-1',
+    ),
   ],
   streams: const [
     ClassStream(
@@ -500,6 +509,78 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Not linked'), findsOneWidget);
+    });
+  });
+
+  group('status tabs', () {
+    testWidgets('All/Active/Pending tabs show real counts and filter the list', (
+      tester,
+    ) async {
+      studentsBloc.emit(
+        StudentsLoaded([
+          _student(id: 's1', name: 'Aarav Sharma', status: StudentStatus.active),
+          _student(id: 's2', name: 'Priya Singh', status: StudentStatus.pendingAdmission),
+          _student(id: 's3', name: 'Zara Khan', status: StudentStatus.withdrawn),
+        ]),
+      );
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      expect(find.text('All (3)'), findsOneWidget);
+      expect(find.text('Active (1)'), findsOneWidget);
+      expect(find.text('Pending (1)'), findsOneWidget);
+
+      await tester.tap(find.text('Active (1)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aarav Sharma'), findsOneWidget);
+      expect(find.text('Priya Singh'), findsNothing);
+      expect(find.text('Zara Khan'), findsNothing);
+
+      await tester.tap(find.text('Pending (1)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Priya Singh'), findsOneWidget);
+      expect(find.text('Aarav Sharma'), findsNothing);
+    });
+  });
+
+  group('parent link and day/boarding', () {
+    testWidgets('desktop table shows numeric parent-link count and boarding type', (
+      tester,
+    ) async {
+      final linked = _student(
+        id: 's1',
+        name: 'Aarav Sharma',
+        parentIds: const ['p1', 'p2'],
+      );
+      studentsBloc.emit(StudentsLoaded([linked]));
+      await setSurfaceSize(tester, const Size(1440, 900));
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Linked · 2'), findsOneWidget);
+      expect(find.text('Day scholar'), findsOneWidget);
+    });
+  });
+
+  group('education level filter', () {
+    testWidgets('selecting a level cascades to clear class/stream selection', (
+      tester,
+    ) async {
+      studentsBloc.emit(
+        StudentsLoaded([_student(id: 's1', name: 'Aarav Sharma')]),
+      );
+      await setSurfaceSize(tester, const Size(1440, 900));
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('All levels'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Secondary').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aarav Sharma'), findsOneWidget);
     });
   });
 

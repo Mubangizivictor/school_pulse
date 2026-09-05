@@ -80,9 +80,10 @@ class _DirectoryState extends State<_Directory> {
   final _search = TextEditingController();
   late final _profiles = widget.profileDataSource ?? StudentProfileDataSource();
   String _query = '';
-  String? _year, _classId, _stream;
+  String? _year, _levelId, _classId, _stream;
   StudentStatus? _status;
   StudentBoardingType? _boarding;
+  _StatusTab _statusTab = _StatusTab.all;
   Set<String> _guardianHits = const {};
   bool _guardianLoading = false;
   int _page = 0;
@@ -137,9 +138,10 @@ class _DirectoryState extends State<_Directory> {
     _search.clear();
     setState(() {
       _query = '';
-      _year = _classId = _stream = null;
+      _year = _levelId = _classId = _stream = null;
       _status = null;
       _boarding = null;
+      _statusTab = _StatusTab.all;
       _guardianHits = const {};
       _page = 0;
     });
@@ -147,17 +149,22 @@ class _DirectoryState extends State<_Directory> {
 
   int get _activeFilterCount => [
     _year,
+    _levelId,
     _classId,
     _stream,
     _status,
     _boarding,
   ].where((x) => x != null).length;
 
-  bool get _hasCriteria => _query.isNotEmpty || _activeFilterCount > 0;
+  bool get _hasCriteria =>
+      _query.isNotEmpty || _activeFilterCount > 0 || _statusTab != _StatusTab.all;
 
-  List<Student> _filtered(List<Student> students) {
+  List<Student> _byCriteria(
+    List<Student> students, {
+    bool applyStatusTab = true,
+  }) {
     final q = _query.toLowerCase();
-    final result = students.where((s) {
+    return students.where((s) {
       final readable = s.admissionNumber.isNotEmpty
           ? s.admissionNumber
           : s.studentCode;
@@ -166,11 +173,26 @@ class _DirectoryState extends State<_Directory> {
               readable.toLowerCase().contains(q) ||
               _guardianHits.contains(s.id)) &&
           (_year == null || s.academicYearId == _year) &&
+          (_levelId == null || _classInLevel(s.classId)) &&
           (_classId == null || s.classId == _classId) &&
           (_stream == null || s.streamId == _stream) &&
           (_status == null || s.status == _status) &&
-          (_boarding == null || s.boardingType == _boarding);
+          (_boarding == null || s.boardingType == _boarding) &&
+          (!applyStatusTab || _statusTab.matches(s.status));
     }).toList();
+  }
+
+  bool _classInLevel(String classId) {
+    if (_levelId == null) return true;
+    final structure = context.read<StructureBloc>().state;
+    final schoolClass = structure.classes
+        .where((c) => c.id == classId)
+        .firstOrNull;
+    return schoolClass?.levelId == _levelId;
+  }
+
+  List<Student> _filtered(List<Student> students) {
+    final result = _byCriteria(students);
     // The roster's source order is retained for the default “Recently added”
     // view. Student does not expose a created timestamp, so inventing one here
     // would make the sort misleading. Alphabetical sorting remains available.
@@ -199,13 +221,15 @@ class _DirectoryState extends State<_Directory> {
       builder: (sheetContext) => _FilterSheet(
         structure: structure,
         year: _year,
+        levelId: _levelId,
         classId: _classId,
         stream: _stream,
         status: _status,
         boarding: _boarding,
-        onApply: (year, classId, stream, status, boarding) {
+        onApply: (year, levelId, classId, stream, status, boarding) {
           setState(() {
             _year = year;
+            _levelId = levelId;
             _classId = classId;
             _stream = stream;
             _status = status;
@@ -248,6 +272,11 @@ class _DirectoryState extends State<_Directory> {
                       : const <attendance.AttendanceRecord>[];
                   final marks = _todayMarks(records);
                   final list = _filtered(all);
+                  final preTabList = _byCriteria(all, applyStatusTab: false);
+                  final tabCounts = {
+                    for (final tab in _StatusTab.values)
+                      tab: preTabList.where((s) => tab.matches(s.status)).length,
+                  };
                   return LayoutBuilder(
                     builder: (context, constraints) {
                       final isDesktop =
@@ -280,6 +309,8 @@ class _DirectoryState extends State<_Directory> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   _header(context, list.length, isDesktop),
+                                  const SizedBox(height: AppSpacing.l),
+                                  _statusTabRow(context, tabCounts),
                                   if (!isDesktop) ...[
                                     const SizedBox(height: AppSpacing.l),
                                     _searchAndFilterRow(context, isDesktop),
@@ -554,6 +585,8 @@ class _DirectoryState extends State<_Directory> {
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: [
+            _levelPill(context, structure),
+            const SizedBox(width: AppSpacing.m),
             _classPill(context, structure),
             const SizedBox(width: AppSpacing.m),
             _streamPill(context, structure),
@@ -566,6 +599,7 @@ class _DirectoryState extends State<_Directory> {
 
     final children = <Widget>[
       _termPill(context, structure),
+      _levelPill(context, structure),
       _classPill(context, structure),
       _streamPill(context, structure),
       _pillSelect('Status', _status, [
@@ -595,6 +629,71 @@ class _DirectoryState extends State<_Directory> {
         separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.m),
         itemBuilder: (_, i) => children[i],
       ),
+    );
+  }
+
+  Widget _statusTabRow(
+    BuildContext context,
+    Map<_StatusTab, int> counts,
+  ) => SizedBox(
+    height: 44,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: _StatusTab.values.length,
+      separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.m),
+      itemBuilder: (_, i) {
+        final tab = _StatusTab.values[i];
+        final selected = _statusTab == tab;
+        return Semantics(
+          button: true,
+          selected: selected,
+          label: '${tab.label} (${counts[tab] ?? 0})',
+          child: ChoiceChip(
+            label: Text('${tab.label} (${counts[tab] ?? 0})'),
+            selected: selected,
+            onSelected: (_) => setState(() {
+              _statusTab = tab;
+              _page = 0;
+            }),
+            selectedColor: AppColors.informationSurface(context),
+            labelStyle: TextStyle(
+              color: selected
+                  ? AppColors.information(context)
+                  : AppColors.textPrimary(context),
+              fontWeight: FontWeight.w700,
+            ),
+            side: BorderSide(
+              color: selected
+                  ? AppColors.information(context)
+                  : AppColors.border(context),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s),
+          ),
+        );
+      },
+    ),
+  );
+
+  Widget _levelPill(BuildContext context, StructureState structure) {
+    final levelName = structure.levels
+        .where((item) => item.id == _levelId)
+        .map((item) => item.name)
+        .firstOrNull;
+    return PopupMenuButton<String?>(
+      tooltip: 'Education level',
+      onSelected: (value) => setState(() {
+        _levelId = value;
+        _classId = null;
+        _stream = null;
+        _page = 0;
+      }),
+      itemBuilder: (_) => [
+        const PopupMenuItem(value: null, child: Text('All levels')),
+        ...structure.levels.map(
+          (item) => PopupMenuItem(value: item.id, child: Text(item.name)),
+        ),
+      ],
+      child: _pillContainer(context, levelName ?? 'All levels'),
     );
   }
 
@@ -636,9 +735,11 @@ class _DirectoryState extends State<_Directory> {
       }),
       itemBuilder: (_) => [
         const PopupMenuItem(value: null, child: Text('All classes')),
-        ...structure.classes.map(
-          (item) => PopupMenuItem(value: item.id, child: Text(item.name)),
-        ),
+        ...structure.classes
+            .where((item) => _levelId == null || item.levelId == _levelId)
+            .map(
+              (item) => PopupMenuItem(value: item.id, child: Text(item.name)),
+            ),
       ],
       child: _pillContainer(context, className ?? 'All classes'),
     );
@@ -814,6 +915,26 @@ class _DirectoryState extends State<_Directory> {
       ),
     ],
   );
+}
+
+enum _StatusTab { all, active, pending }
+
+extension on _StatusTab {
+  String get label => switch (this) {
+    _StatusTab.all => 'All',
+    _StatusTab.active => 'Active',
+    _StatusTab.pending => 'Pending',
+  };
+
+  bool matches(StudentStatus status) => switch (this) {
+    _StatusTab.all => true,
+    _StatusTab.active => status == StudentStatus.active ||
+        status == StudentStatus.enrolled,
+    _StatusTab.pending => status == StudentStatus.applicant ||
+        status == StudentStatus.pendingAdmission ||
+        status == StudentStatus.admitted ||
+        status == StudentStatus.enrollmentInProgress,
+  };
 }
 
 enum _DirectorySort { recentlyAdded, name }
@@ -1039,6 +1160,7 @@ class _DesktopTable extends StatelessWidget {
               ),
               _headCell(context, 'Admission no.', flex: 2),
               _headCell(context, 'Class · Stream', flex: 2),
+              _headCell(context, 'Day / boarding', flex: 2),
               _headCell(context, 'Attendance', flex: 2),
               _headCell(context, 'Parent', flex: 2),
               const SizedBox(width: 40),
@@ -1150,6 +1272,7 @@ class _TableRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            Expanded(flex: 2, child: Text(_boardingLabel(student.boardingType))),
             Expanded(flex: 2, child: _AttendanceDot(status: status)),
             Expanded(flex: 2, child: _ParentLinkIndicator(student: student)),
             SizedBox(
@@ -1254,7 +1377,8 @@ class _MobileRow extends StatelessWidget {
         style: const TextStyle(fontWeight: FontWeight.w700),
       ),
       subtitle: Text(
-        '$number · $className${streamName == null ? '' : ' · $streamName'}',
+        '$number · $className${streamName == null ? '' : ' · $streamName'} · '
+        '${_boardingLabel(student.boardingType)}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -1276,7 +1400,8 @@ class _ParentLinkIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final linked = student.parentIds.isNotEmpty;
+    final count = student.parentIds.length;
+    final linked = count > 0;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1289,7 +1414,7 @@ class _ParentLinkIndicator extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.s),
         Text(
-          linked ? 'Linked' : 'Not linked',
+          linked ? 'Linked · $count' : 'Not linked',
           style: TextStyle(
             color: linked
                 ? AppColors.information(context)
@@ -1344,12 +1469,14 @@ class _AttendanceDot extends StatelessWidget {
 class _FilterSheet extends StatefulWidget {
   final StructureState structure;
   final String? year;
+  final String? levelId;
   final String? classId;
   final String? stream;
   final StudentStatus? status;
   final StudentBoardingType? boarding;
   final void Function(
     String? year,
+    String? levelId,
     String? classId,
     String? stream,
     StudentStatus? status,
@@ -1361,6 +1488,7 @@ class _FilterSheet extends StatefulWidget {
   const _FilterSheet({
     required this.structure,
     required this.year,
+    required this.levelId,
     required this.classId,
     required this.stream,
     required this.status,
@@ -1375,6 +1503,7 @@ class _FilterSheet extends StatefulWidget {
 
 class _FilterSheetState extends State<_FilterSheet> {
   late String? _year = widget.year;
+  late String? _levelId = widget.levelId;
   late String? _classId = widget.classId;
   late String? _stream = widget.stream;
   late StudentStatus? _status = widget.status;
@@ -1412,6 +1541,22 @@ class _FilterSheetState extends State<_FilterSheet> {
             ),
             const SizedBox(height: AppSpacing.l),
             _dropdownField<String?>(
+              'Education level',
+              _levelId,
+              [
+                const DropdownMenuItem(value: null, child: Text('All levels')),
+                ...widget.structure.levels.map(
+                  (x) => DropdownMenuItem(value: x.id, child: Text(x.name)),
+                ),
+              ],
+              (v) => setState(() {
+                _levelId = v;
+                _classId = null;
+                _stream = null;
+              }),
+            ),
+            const SizedBox(height: AppSpacing.l),
+            _dropdownField<String?>(
               'Class',
               _classId,
               [
@@ -1419,9 +1564,14 @@ class _FilterSheetState extends State<_FilterSheet> {
                   value: null,
                   child: Text('All classes'),
                 ),
-                ...widget.structure.classes.map(
-                  (x) => DropdownMenuItem(value: x.id, child: Text(x.name)),
-                ),
+                ...widget.structure.classes
+                    .where(
+                      (x) => _levelId == null || x.levelId == _levelId,
+                    )
+                    .map(
+                      (x) =>
+                          DropdownMenuItem(value: x.id, child: Text(x.name)),
+                    ),
               ],
               (v) => setState(() {
                 _classId = v;
@@ -1505,6 +1655,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                     onPressed: () {
                       widget.onApply(
                         _year,
+                        _levelId,
                         _classId,
                         _stream,
                         _status,
@@ -1826,6 +1977,12 @@ String _statusName(StudentStatus s) {
   );
   return '${v[0].toUpperCase()}${v.substring(1)}';
 }
+
+String _boardingLabel(StudentBoardingType? boarding) => switch (boarding) {
+  StudentBoardingType.boarding => 'Boarding',
+  StudentBoardingType.day => 'Day scholar',
+  null => 'Unspecified',
+};
 
 String _studentNumber(Student student) {
   final candidate = student.admissionNumber.trim().isNotEmpty
