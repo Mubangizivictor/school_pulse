@@ -138,16 +138,6 @@ import 'package:school_pulse/features/parent/boarding_screen.dart';
 import 'package:school_pulse/features/parent/security_activity_screen.dart';
 import 'package:school_pulse/features/shared/shell_screen.dart';
 import 'package:school_pulse/features/shared/presentation/staff_hub_screen.dart';
-import 'package:school_pulse/features/student/domain/entities/admission_application.dart';
-import 'package:school_pulse/features/student/presentation/screens/admission_review_screen.dart';
-import 'package:school_pulse/features/student/presentation/enrollment_setup/screens/enrollment_setup_wizard_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/admissions_list_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/admin_student_profile_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/admin_student_documents_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/student_portal_codes_screen.dart';
-import 'package:school_pulse/features/student_identity/presentation/screens/identity_and_cards_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/new_application_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/direct_student_registration_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/personal_information_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/security_privacy_screen.dart';
@@ -490,7 +480,10 @@ CustomTransitionPage<T> fadeThroughPage<T>({
   );
 }
 
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final router = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   // di.sl<AuthBloc>() is a lazy singleton (see injection_container.dart),
   // so this is the exact same instance main.dart's BlocProvider supplies
@@ -2425,7 +2418,8 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'access-codes',
-                  builder: (context, state) => const ParentsAccessWorkspaceScreen(),
+                  builder: (context, state) =>
+                      const ParentsAccessWorkspaceScreen(),
                 ),
                 GoRoute(
                   path: 'add-staff',
@@ -2518,6 +2512,14 @@ final router = GoRouter(
               // `StructureScreen` once every step is complete. Old deep
               // links that used to carry `?section=...` now land on the
               // same gate rather than jumping into an obsolete tabbed view.
+              //
+              // parentNavigatorKey pins this route (and its children) to the
+              // root Navigator so it always renders as a standalone full
+              // page, even when pushed from AdminMoreScreen/AdminShell's
+              // nested per-section Navigator — otherwise it stacks on top of
+              // that nested Navigator and AdminShell's sidebar stays mounted
+              // underneath, producing a double sidebar.
+              parentNavigatorKey: rootNavigatorKey,
               builder: (context, state) => const StructureWizardScreen(),
               routes: [
                 GoRoute(
@@ -2857,38 +2859,32 @@ final router = GoRouter(
                 }
                 return null;
               },
-              builder: (context, state) => const AdmissionsListScreen(),
+              // Renders through AdminShell (AdminStudentsSectionBody resolves
+              // the URL to the right admission screen) so the persistent
+              // sidebar/bottom-nav stays mounted with Students highlighted,
+              // instead of these steps opening as bare standalone Scaffolds.
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.students),
               routes: [
                 GoRoute(
                   path: 'new',
                   builder: (context, state) =>
-                      NewApplicationScreen(schoolId: state.extra as String),
+                      const AdminShell(section: AdminSection.students),
                 ),
                 GoRoute(
                   path: 'register',
-                  builder: (context, state) => DirectStudentRegistrationScreen(
-                    schoolId: state.extra as String,
-                  ),
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.students),
                 ),
                 GoRoute(
                   path: 'review',
-                  builder: (context, state) => AdmissionReviewScreen(
-                    application: state.extra as AdmissionApplication,
-                  ),
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.students),
                   routes: [
                     GoRoute(
                       path: 'enroll',
-                      builder: (context, state) {
-                        final extra =
-                            state.extra as EnrollmentSetupWizardRouteExtra;
-                        return EnrollmentSetupWizardScreen(
-                          application: extra.application,
-                          studentId: extra.studentId,
-                          schoolCode: extra.schoolCode,
-                          uniqueSystemId: extra.uniqueSystemId,
-                          studentCode: extra.studentCode,
-                        );
-                      },
+                      builder: (context, state) =>
+                          const AdminShell(section: AdminSection.students),
                     ),
                   ],
                 ),
@@ -2933,39 +2929,28 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: ':id',
-                  // An optional `?tab=` query parameter selects the initial
-                  // profile tab (used by the enrolment success screen's "Set
-                  // up fee plan" action). Omitting it - the existing plain
-                  // `students/:id` deep link - still lands on Overview.
-                  builder: (context, state) => AdminStudentProfileScreen(
-                    studentId: state.pathParameters['id']!,
-                    initialTab:
-                        int.tryParse(state.uri.queryParameters['tab'] ?? '') ??
-                        StudentProfileTab.overview,
-                  ),
+                  // Renders through AdminShell (AdminStudentsSectionBody
+                  // resolves the studentId/`?tab=`/`extra` from the live
+                  // URL) so the persistent sidebar/bottom-nav stays mounted
+                  // with Students highlighted, instead of the profile and
+                  // its subpages opening as bare standalone Scaffolds.
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.students),
                   routes: [
                     GoRoute(
                       path: 'documents',
-                      builder: (context, state) => AdminStudentDocumentsScreen(
-                        student: state.extra as Student,
-                        canMutate: true,
-                      ),
+                      builder: (context, state) =>
+                          const AdminShell(section: AdminSection.students),
                     ),
                     GoRoute(
                       path: 'identity',
-                      builder: (context, state) => BlocProvider(
-                        create: (_) => di.sl<StudentIdentityBloc>(),
-                        child: IdentityAndCardsScreen(
-                          student: state.extra as Student,
-                          canMutate: true,
-                        ),
-                      ),
+                      builder: (context, state) =>
+                          const AdminShell(section: AdminSection.students),
                     ),
                     GoRoute(
                       path: 'portal',
-                      builder: (context, state) => StudentPortalCodesScreen(
-                        student: state.extra as Student,
-                      ),
+                      builder: (context, state) =>
+                          const AdminShell(section: AdminSection.students),
                     ),
                   ],
                 ),

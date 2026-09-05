@@ -11,7 +11,7 @@ import 'package:school_pulse/features/admin/presentation/shell/admin_fees_screen
 import 'package:school_pulse/features/admin/presentation/shell/admin_web_shell.dart';
 import 'package:school_pulse/features/approvals/presentation/screens/approval_center_screen.dart';
 import 'package:school_pulse/features/appointments/presentation/screens/appointments_workspace_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/admin_student_directory_screen.dart';
+import 'package:school_pulse/features/admin/presentation/shell/admin_students_section_body.dart';
 
 /// Width-adaptive shell for the School Admin console.
 ///
@@ -160,7 +160,7 @@ class _AdminMobileShellState extends State<_AdminMobileShell> {
       case 0:
         return const AdminDashboardScreen();
       case 1:
-        return const AdminStudentDirectoryScreen();
+        return const AdminStudentsSectionBody();
       case 2:
         return const AdminStaffAttendanceScreen();
       case 3:

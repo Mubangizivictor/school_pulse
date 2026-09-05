@@ -18,7 +18,7 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
 import 'package:school_pulse/features/branding/presentation/widgets/school_badge.dart';
-import 'package:school_pulse/features/student/presentation/screens/admin_student_directory_screen.dart';
+import 'package:school_pulse/features/admin/presentation/shell/admin_students_section_body.dart';
 
 /// The School Admin console for tablet-rail-and-up widths (used by
 /// [AdminShell]'s `ResponsiveBuilder` branch at >= 600px; the tablet
@@ -83,7 +83,7 @@ class _AdminWebShellState extends State<AdminWebShell> {
       case _Section.home:
         return const AdminDashboardScreen();
       case _Section.students:
-        return const AdminStudentDirectoryScreen();
+        return const AdminStudentsSectionBody();
       case _Section.staff:
         return const StaffListPage();
       case _Section.parents:
@@ -108,7 +108,9 @@ class _AdminWebShellState extends State<AdminWebShell> {
       return;
     }
     context.go(
-      s == AdminSection.home ? '/staff/admin' : '/staff/admin/${s.routeSegment}',
+      s == AdminSection.home
+          ? '/staff/admin'
+          : '/staff/admin/${s.routeSegment}',
     );
   }
 
