@@ -620,43 +620,65 @@ class StaffShell extends StatelessWidget {
                     ),
                   ),
                   Expanded(
-                    child: NavigationRail(
-                      backgroundColor: Colors.transparent,
-                      extended: MediaQuery.of(context).size.width > 1200,
-                      selectedIndex: _calculateSelectedIndex(context),
-                      onDestinationSelected: (idx) =>
-                          _onItemTapped(idx, context),
-                      minExtendedWidth: 280,
-                      labelType: MediaQuery.of(context).size.width > 1200
-                          ? NavigationRailLabelType.none
-                          : NavigationRailLabelType.all,
-                      unselectedLabelTextStyle: AppTypography.labelMedium
-                          .copyWith(color: AppColors.textMuted(context)),
-                      selectedLabelTextStyle: AppTypography.labelMedium
-                          .copyWith(
-                            color: AppColors.primary(context),
-                            fontWeight: FontWeight.bold,
-                          ),
-                      useIndicator: true,
-                      indicatorColor: AppColors.primary(context),
-                      unselectedIconTheme: IconThemeData(
-                        color: AppColors.textMuted(context),
-                      ),
-                      selectedIconTheme: IconThemeData(
-                        color: AppColors.background(context),
-                      ),
-                      destinations: destinations
-                          .map(
-                            (d) => NavigationRailDestination(
-                              icon: d.icon,
-                              selectedIcon: d.selectedIcon,
-                              label: Text(d.label),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: AppSpacing.m,
-                              ),
+                    // NavigationRail lays out every destination at its
+                    // natural height with no built-in scrolling - on a
+                    // short window (small laptop viewport, heavy browser
+                    // zoom) that overflows past the available height
+                    // instead of clipping gracefully. Wrapping it in a
+                    // scroll view lets the rail scroll internally on short
+                    // windows without affecting its normal fixed layout on
+                    // any reasonably tall one.
+                    child: SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight:
+                              MediaQuery.of(context).size.height -
+                              (_hasMultipleRoles(context) ? 160 : 120),
+                        ),
+                        child: IntrinsicHeight(
+                          child: NavigationRail(
+                            backgroundColor: Colors.transparent,
+                            extended:
+                                MediaQuery.of(context).size.width > 1200,
+                            selectedIndex: _calculateSelectedIndex(context),
+                            onDestinationSelected: (idx) =>
+                                _onItemTapped(idx, context),
+                            minExtendedWidth: 280,
+                            labelType:
+                                MediaQuery.of(context).size.width > 1200
+                                ? NavigationRailLabelType.none
+                                : NavigationRailLabelType.all,
+                            unselectedLabelTextStyle: AppTypography
+                                .labelMedium
+                                .copyWith(color: AppColors.textMuted(context)),
+                            selectedLabelTextStyle: AppTypography.labelMedium
+                                .copyWith(
+                                  color: AppColors.primary(context),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                            useIndicator: true,
+                            indicatorColor: AppColors.primary(context),
+                            unselectedIconTheme: IconThemeData(
+                              color: AppColors.textMuted(context),
                             ),
-                          )
-                          .toList(),
+                            selectedIconTheme: IconThemeData(
+                              color: AppColors.background(context),
+                            ),
+                            destinations: destinations
+                                .map(
+                                  (d) => NavigationRailDestination(
+                                    icon: d.icon,
+                                    selectedIcon: d.selectedIcon,
+                                    label: Text(d.label),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: AppSpacing.m,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   if (_hasMultipleRoles(context))

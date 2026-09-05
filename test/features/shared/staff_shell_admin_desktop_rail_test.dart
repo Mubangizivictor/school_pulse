@@ -204,4 +204,22 @@ void main() {
     expect(find.byType(NavigationRail), findsNothing);
     expect(find.text('Finance body'), findsOneWidget);
   });
+
+  // Regression test: NavigationRail lays out every destination at its
+  // natural height with no built-in scrolling, so a short window (a small
+  // laptop viewport, or heavy browser zoom) previously overflowed past the
+  // available rail height instead of scrolling.
+  testWidgets(
+    'StaffShell rail scrolls instead of overflowing on a short window',
+    (tester) async {
+      await _setViewSize(tester, 1440, 420);
+      await tester.pumpWidget(
+        _wrap(initialLocation: '/staff/admin/school-setup'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
