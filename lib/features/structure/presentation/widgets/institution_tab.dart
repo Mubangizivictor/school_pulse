@@ -1060,168 +1060,179 @@ class _InstitutionFormState extends State<_InstitutionForm> {
         displayColor: Colors.black,
       ),
     );
-    return Theme(
-      data: monochromeTheme,
-      child: Form(
-        key: _formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isNarrow = constraints.maxWidth < 340;
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-              children: [
-                const Text(
-                  'Tell us about your school.',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'This information helps us set up your school on School '
-                  'Pulse. Required fields marked *',
-                  style: TextStyle(color: Colors.black54, fontSize: 13),
-                ),
-                const SizedBox(height: 16),
-                _wizardEssentialInfoCard(isNarrow),
-                const SizedBox(height: 12),
-                _WizardExpandableSection(
-                  icon: Icons.description_outlined,
-                  title: 'More profile details (optional)',
-                  subtitle: 'Short name, motto, vision and mission.',
-                  children: [
-                    _wizardField(
-                      controller: _shortName,
-                      label: 'Short name (optional)',
-                      hint: 'Enter short name',
-                    ),
-                    _wizardField(
-                      controller: _motto,
-                      label: 'Motto (optional)',
-                      hint: 'Enter motto',
-                    ),
-                    _wizardField(
-                      controller: _vision,
-                      label: 'Vision (optional)',
-                      hint: 'Enter vision',
-                      maxLines: 3,
-                    ),
-                    _wizardField(
-                      controller: _mission,
-                      label: 'Mission (optional)',
-                      hint: 'Enter mission',
-                      maxLines: 3,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _WizardExpandableSection(
-                  icon: Icons.account_balance_outlined,
-                  title: 'Branding, registration & location (optional)',
-                  subtitle:
-                      'Logo, crest, registration details, website and GPS '
-                      'location.',
-                  children: [
-                    _wizardSectionTitle('Brand identity'),
-                    _WizardTwoColumn(
-                      isNarrow: isNarrow,
-                      left: _BrandImagePicker(
-                        label: 'School logo (optional)',
-                        actionLabel: _logoUrl.isEmpty
-                            ? 'Upload logo'
-                            : 'Replace logo',
-                        imageUrl: _logoUrl,
-                        isUploading: _isUploadingLogo,
-                        monochrome: true,
-                        onPick: () => _pickBrandingImage(isLogo: true),
-                        onRemove: () => _removeBrandingImage(isLogo: true),
+    return ColoredBox(
+      // The monochrome theme above forces black text/borders regardless of
+      // device theme, but that only recolors content - it does not paint a
+      // background. On the web wizard shell (near-black scaffold) that left
+      // this step rendering black-on-black. Force the white surface behind
+      // it to match the theme's own `scaffoldBackgroundColor`.
+      color: Colors.white,
+      child: Theme(
+        data: monochromeTheme,
+        child: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 340;
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+                children: [
+                  const Text(
+                    'Tell us about your school.',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'This information helps us set up your school on School '
+                    'Pulse. Required fields marked *',
+                    style: TextStyle(color: Colors.black54, fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  _wizardEssentialInfoCard(isNarrow),
+                  const SizedBox(height: 12),
+                  _WizardExpandableSection(
+                    icon: Icons.description_outlined,
+                    title: 'More profile details (optional)',
+                    subtitle: 'Short name, motto, vision and mission.',
+                    children: [
+                      _wizardField(
+                        controller: _shortName,
+                        label: 'Short name (optional)',
+                        hint: 'Enter short name',
                       ),
-                      right: _BrandImagePicker(
-                        label: 'School crest (optional)',
-                        actionLabel: _badgeUrl.isEmpty
-                            ? 'Upload crest'
-                            : 'Replace crest',
-                        imageUrl: _badgeUrl,
-                        isUploading: _isUploadingBadge,
-                        monochrome: true,
-                        onPick: () => _pickBrandingImage(isLogo: false),
-                        onRemove: () => _removeBrandingImage(isLogo: false),
+                      _wizardField(
+                        controller: _motto,
+                        label: 'Motto (optional)',
+                        hint: 'Enter motto',
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _wizardSectionTitle('Registration details'),
-                    _wizardField(
-                      controller: _registrationNumber,
-                      label: 'Registration number (optional)',
-                      hint: 'Enter registration number',
-                    ),
-                    _wizardField(
-                      controller: _ministryRegistrationNumber,
-                      label: 'Ministry registration (optional)',
-                      hint: 'Enter ministry registration',
-                    ),
-                    _wizardField(
-                      controller: _taxNumber,
-                      label: 'TIN (optional)',
-                      hint: 'Enter TIN',
-                      keyboardType: TextInputType.number,
-                    ),
-                    _wizardField(
-                      controller: _website,
-                      label: 'Website (optional)',
-                      hint: 'Enter website',
-                      keyboardType: TextInputType.url,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.deny(RegExp(r'\s')),
-                      ],
-                      validator: _websiteValidator,
-                    ),
-                    const SizedBox(height: 12),
-                    _wizardSectionTitle('Location coordinates'),
-                    _wizardCountryField(),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: _detectLocation,
-                        icon: const Icon(Icons.my_location_outlined, size: 16),
-                        label: const Text(
-                          'Use current location',
-                          style: TextStyle(fontSize: 13),
+                      _wizardField(
+                        controller: _vision,
+                        label: 'Vision (optional)',
+                        hint: 'Enter vision',
+                        maxLines: 3,
+                      ),
+                      _wizardField(
+                        controller: _mission,
+                        label: 'Mission (optional)',
+                        hint: 'Enter mission',
+                        maxLines: 3,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _WizardExpandableSection(
+                    icon: Icons.account_balance_outlined,
+                    title: 'Branding, registration & location (optional)',
+                    subtitle:
+                        'Logo, crest, registration details, website and GPS '
+                        'location.',
+                    children: [
+                      _wizardSectionTitle('Brand identity'),
+                      _WizardTwoColumn(
+                        isNarrow: isNarrow,
+                        left: _BrandImagePicker(
+                          label: 'School logo (optional)',
+                          actionLabel: _logoUrl.isEmpty
+                              ? 'Upload logo'
+                              : 'Replace logo',
+                          imageUrl: _logoUrl,
+                          isUploading: _isUploadingLogo,
+                          monochrome: true,
+                          onPick: () => _pickBrandingImage(isLogo: true),
+                          onRemove: () => _removeBrandingImage(isLogo: true),
+                        ),
+                        right: _BrandImagePicker(
+                          label: 'School crest (optional)',
+                          actionLabel: _badgeUrl.isEmpty
+                              ? 'Upload crest'
+                              : 'Replace crest',
+                          imageUrl: _badgeUrl,
+                          isUploading: _isUploadingBadge,
+                          monochrome: true,
+                          onPick: () => _pickBrandingImage(isLogo: false),
+                          onRemove: () => _removeBrandingImage(isLogo: false),
                         ),
                       ),
-                    ),
-                    _WizardTwoColumn(
-                      isNarrow: isNarrow,
-                      left: _wizardField(
-                        controller: _gpsLat,
-                        label: 'GPS latitude (optional)',
-                        hint: 'Enter latitude',
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                          signed: true,
+                      const SizedBox(height: 12),
+                      _wizardSectionTitle('Registration details'),
+                      _wizardField(
+                        controller: _registrationNumber,
+                        label: 'Registration number (optional)',
+                        hint: 'Enter registration number',
+                      ),
+                      _wizardField(
+                        controller: _ministryRegistrationNumber,
+                        label: 'Ministry registration (optional)',
+                        hint: 'Enter ministry registration',
+                      ),
+                      _wizardField(
+                        controller: _taxNumber,
+                        label: 'TIN (optional)',
+                        hint: 'Enter TIN',
+                        keyboardType: TextInputType.number,
+                      ),
+                      _wizardField(
+                        controller: _website,
+                        label: 'Website (optional)',
+                        hint: 'Enter website',
+                        keyboardType: TextInputType.url,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                        ],
+                        validator: _websiteValidator,
+                      ),
+                      const SizedBox(height: 12),
+                      _wizardSectionTitle('Location coordinates'),
+                      _wizardCountryField(),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: _detectLocation,
+                          icon: const Icon(
+                            Icons.my_location_outlined,
+                            size: 16,
+                          ),
+                          label: const Text(
+                            'Use current location',
+                            style: TextStyle(fontSize: 13),
+                          ),
                         ),
                       ),
-                      right: _wizardField(
-                        controller: _gpsLng,
-                        label: 'GPS longitude (optional)',
-                        hint: 'Enter longitude',
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                          signed: true,
+                      _WizardTwoColumn(
+                        isNarrow: isNarrow,
+                        left: _wizardField(
+                          controller: _gpsLat,
+                          label: 'GPS latitude (optional)',
+                          hint: 'Enter latitude',
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                            signed: true,
+                          ),
+                        ),
+                        right: _wizardField(
+                          controller: _gpsLng,
+                          label: 'GPS longitude (optional)',
+                          hint: 'Enter longitude',
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                            signed: true,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const _WizardInfoNote(
-                  text:
-                      'You can update this later. You can edit all optional '
-                      'details from your school settings any time after '
-                      'setup.',
-                ),
-              ],
-            );
-          },
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const _WizardInfoNote(
+                    text:
+                        'You can update this later. You can edit all optional '
+                        'details from your school settings any time after '
+                        'setup.',
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

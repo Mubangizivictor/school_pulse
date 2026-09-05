@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -42,6 +43,7 @@ class OperationsConfigScreen extends StatelessWidget {
           'documents',
           'custom',
           'fees',
+          'enrolment',
         }.contains(requested)
         ? requested
         : 'timetable';
@@ -64,6 +66,7 @@ class OperationsConfigScreen extends StatelessWidget {
           ),
           'custom' => _CustomFieldsSection(state: state, schoolId: schoolId),
           'fees' => _FeeCategoriesSection(state: state, schoolId: schoolId),
+          'enrolment' => _EnrolmentPolicySection(schoolId: schoolId),
           _ => _TimetableSection(
             key: timetableSectionKey,
             config: state.timetableConfig,
@@ -80,8 +83,152 @@ class OperationsConfigScreen extends StatelessWidget {
     'documents' => 'Document Templates',
     'custom' => 'Custom Fields',
     'fees' => 'Finance Foundation',
+    'enrolment' => 'Enrolment Policy',
     _ => 'School day & periods',
   };
+}
+
+/// Minimal editor for tenant-configured direct-enrolment entry types
+/// (`schools/{id}.enrolmentPolicy.entryTypes`), consumed by the Direct
+/// Enrolment wizard's "Entry type" dropdowns. Defaults (New admission,
+/// Transfer, Returning) apply until a school configures its own list.
+class _EnrolmentPolicySection extends StatefulWidget {
+  final String schoolId;
+  const _EnrolmentPolicySection({required this.schoolId});
+
+  @override
+  State<_EnrolmentPolicySection> createState() =>
+      _EnrolmentPolicySectionState();
+}
+
+class _EnrolmentPolicySectionState extends State<_EnrolmentPolicySection> {
+  static const _defaults = ['New admission', 'Transfer', 'Returning'];
+  final _newEntryType = TextEditingController();
+  List<String> _entryTypes = List.of(_defaults);
+  bool _loading = true;
+  bool _saving = false;
+
+  DocumentReference<Map<String, dynamic>> get _schoolDoc =>
+      FirebaseFirestore.instance.collection('schools').doc(widget.schoolId);
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final doc = await _schoolDoc.get();
+    final policy = Map<String, dynamic>.from(
+      doc.data()?['enrolmentPolicy'] ?? {},
+    );
+    final configured = List<String>.from(
+      policy['entryTypes'] as List? ?? const [],
+    );
+    if (!mounted) return;
+    setState(() {
+      _entryTypes = configured.isNotEmpty ? configured : List.of(_defaults);
+      _loading = false;
+    });
+  }
+
+  Future<void> _persist() async {
+    setState(() => _saving = true);
+    try {
+      await _schoolDoc.set({
+        'enrolmentPolicy': {'entryTypes': _entryTypes},
+      }, SetOptions(merge: true));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _add() {
+    final value = _newEntryType.text.trim();
+    if (value.isEmpty || _entryTypes.contains(value)) return;
+    setState(() {
+      _entryTypes = [..._entryTypes, value];
+      _newEntryType.clear();
+    });
+    _persist();
+  }
+
+  void _remove(String value) {
+    setState(() => _entryTypes = _entryTypes.where((x) => x != value).toList());
+    _persist();
+  }
+
+  @override
+  void dispose() {
+    _newEntryType.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          'Choose the entry-type options shown when staff enrol a learner. '
+          'Defaults apply until you customise this list.',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 16),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Entry types',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _entryTypes
+                    .map(
+                      (type) => Chip(
+                        label: Text(type),
+                        onDeleted: _saving ? null : () => _remove(type),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _newEntryType,
+                      decoration: const InputDecoration(
+                        labelText: 'New entry type',
+                      ),
+                      onSubmitted: (_) => _add(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: _saving ? null : _add,
+                    child: const Text('Add'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _TimetableSection extends StatefulWidget {

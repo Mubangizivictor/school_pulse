@@ -37,7 +37,9 @@ class AdminDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => BlocProvider(
     create: (_) => di.sl<AdminDashboardBloc>()..add(LoadAdminDashboardStats()),
-    child: _AdminHome(firestore: firestoreOverride ?? FirebaseFirestore.instance),
+    child: _AdminHome(
+      firestore: firestoreOverride ?? FirebaseFirestore.instance,
+    ),
   );
 }
 
@@ -88,9 +90,13 @@ class _HomeBody extends StatelessWidget {
   Widget build(BuildContext context) => SingleChildScrollView(
     physics: const AlwaysScrollableScrollPhysics(),
     padding: EdgeInsets.fromLTRB(
-      _isMobile ? AppSpacing.xl : (_isDesktop ? AppSpacing.x4l : AppSpacing.x3l),
+      _isMobile
+          ? AppSpacing.xl
+          : (_isDesktop ? AppSpacing.x4l : AppSpacing.x3l),
       AppSpacing.xl,
-      _isMobile ? AppSpacing.xl : (_isDesktop ? AppSpacing.x4l : AppSpacing.x3l),
+      _isMobile
+          ? AppSpacing.xl
+          : (_isDesktop ? AppSpacing.x4l : AppSpacing.x3l),
       AppSpacing.x9l,
     ),
     child: Center(
@@ -109,7 +115,7 @@ class _HomeBody extends StatelessWidget {
             SizedBox(height: AppSpacing.x3l),
             _MetricsSection(user: user, isMobile: _isMobile),
             SizedBox(height: AppSpacing.x3l),
-            _QuickActionsSection(isMobile: _isMobile),
+            _QuickActionsSection(isMobile: _isMobile, schoolId: user.schoolId),
             SizedBox(height: AppSpacing.x3l),
             if (_isDesktop || layout == ResponsiveLayout.tablet)
               IntrinsicHeight(
@@ -296,11 +302,13 @@ class _ContextRow extends StatelessWidget {
         ],
       );
     }
-    return Row(children: [
-      Expanded(child: chips[0]),
-      const SizedBox(width: AppSpacing.m),
-      Expanded(child: chips[1]),
-    ]);
+    return Row(
+      children: [
+        Expanded(child: chips[0]),
+        const SizedBox(width: AppSpacing.m),
+        Expanded(child: chips[1]),
+      ],
+    );
   }
 }
 
@@ -363,8 +371,9 @@ class _AttentionSection extends StatelessWidget {
         return PulseCard(
           child: _Retry(
             message: "Couldn't load work.",
-            onRetry: () =>
-                context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats()),
+            onRetry: () => context.read<AdminDashboardBloc>().add(
+              LoadAdminDashboardStats(),
+            ),
           ),
         );
       }
@@ -548,73 +557,74 @@ class _MetricsSection extends StatelessWidget {
   final bool isMobile;
 
   @override
-  Widget build(
-    BuildContext context,
-  ) => BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
-    builder: (context, state) {
-      if (state is AdminDashboardError) {
-        return PulseCard(
-          child: _Retry(
-            message: "Couldn't load school metrics.",
-            onRetry: () =>
-                context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats()),
-          ),
-        );
-      }
-      if (state is! AdminDashboardLoaded) return const _LoadingBlock();
-      final stats = state.stats;
-      final todayPercent = stats.todayAttendanceCounts != null &&
-              stats.todayAttendanceCounts!.total > 0
-          ? stats.todayAttendanceCounts!.presentPercent * 100
-          : null;
+  Widget build(BuildContext context) =>
+      BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
+        builder: (context, state) {
+          if (state is AdminDashboardError) {
+            return PulseCard(
+              child: _Retry(
+                message: "Couldn't load school metrics.",
+                onRetry: () => context.read<AdminDashboardBloc>().add(
+                  LoadAdminDashboardStats(),
+                ),
+              ),
+            );
+          }
+          if (state is! AdminDashboardLoaded) return const _LoadingBlock();
+          final stats = state.stats;
+          final todayPercent =
+              stats.todayAttendanceCounts != null &&
+                  stats.todayAttendanceCounts!.total > 0
+              ? stats.todayAttendanceCounts!.presentPercent * 100
+              : null;
 
-      final tiles = <Widget>[
-        _MetricTile(
-          label: 'Active learners',
-          value: '${stats.totalStudentsCount}',
-          icon: Icons.groups_2_outlined,
-        ),
-        _MetricTile(
-          label: 'Active staff',
-          value: '${stats.activeStaffCount}',
-          icon: Icons.badge_outlined,
-        ),
-        _MetricTile(
-          label: "Today's attendance",
-          value: todayPercent == null ? '—' : '${todayPercent.round()}%',
-          icon: Icons.check_circle_outline,
-        ),
-        if (_canSeeFinance(user))
-          _MetricTile(
-            label: 'Fees collected',
-            value: stats.termFeesCollected == null
-                ? '—'
-                : 'UGX ${_money(stats.termFeesCollected!)}',
-            icon: Icons.account_balance_wallet_outlined,
-          ),
-      ];
+          final tiles = <Widget>[
+            _MetricTile(
+              label: 'Active learners',
+              value: '${stats.totalStudentsCount}',
+              icon: Icons.groups_2_outlined,
+            ),
+            _MetricTile(
+              label: 'Active staff',
+              value: '${stats.activeStaffCount}',
+              icon: Icons.badge_outlined,
+            ),
+            _MetricTile(
+              label: "Today's attendance",
+              value: todayPercent == null ? '—' : '${todayPercent.round()}%',
+              icon: Icons.check_circle_outline,
+            ),
+            if (_canSeeFinance(user))
+              _MetricTile(
+                label: 'Fees collected',
+                value: stats.termFeesCollected == null
+                    ? '—'
+                    : 'UGX ${_money(stats.termFeesCollected!)}',
+                icon: Icons.account_balance_wallet_outlined,
+              ),
+          ];
 
-      if (isMobile) {
-        return GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          mainAxisSpacing: AppSpacing.l,
-          crossAxisSpacing: AppSpacing.l,
-          childAspectRatio: 1.5,
-          children: tiles,
-        );
-      }
-      return Row(
-        children: [
-          for (var i = 0; i < tiles.length; i++) ...[
-            if (i > 0) const SizedBox(width: AppSpacing.l),
-            Expanded(child: tiles[i]),
-          ],
-        ],
+          if (isMobile) {
+            return GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              mainAxisSpacing: AppSpacing.l,
+              crossAxisSpacing: AppSpacing.l,
+              childAspectRatio: 1.5,
+              children: tiles,
+            );
+          }
+          return Row(
+            children: [
+              for (var i = 0; i < tiles.length; i++) ...[
+                if (i > 0) const SizedBox(width: AppSpacing.l),
+                Expanded(child: tiles[i]),
+              ],
+            ],
+          );
+        },
       );
-    },
-  );
 }
 
 class _MetricTile extends StatelessWidget {
@@ -660,7 +670,10 @@ class _MetricTile extends StatelessWidget {
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.textSecondary(context),
+          ),
         ),
       ],
     ),
@@ -668,8 +681,9 @@ class _MetricTile extends StatelessWidget {
 }
 
 class _QuickActionsSection extends StatelessWidget {
-  const _QuickActionsSection({required this.isMobile});
+  const _QuickActionsSection({required this.isMobile, required this.schoolId});
   final bool isMobile;
+  final String schoolId;
 
   static const _shortcuts = [
     _Shortcut(
@@ -712,14 +726,18 @@ class _QuickActionsSection extends StatelessWidget {
         mainAxisSpacing: AppSpacing.l,
         crossAxisSpacing: AppSpacing.l,
         childAspectRatio: 2.4,
-        children: _shortcuts.map((s) => _QuickActionTile(shortcut: s)).toList(),
+        children: _shortcuts
+            .map((s) => _QuickActionTile(shortcut: s, schoolId: schoolId))
+            .toList(),
       );
     }
     return Row(
       children: [
         for (var i = 0; i < _shortcuts.length; i++) ...[
           if (i > 0) const SizedBox(width: AppSpacing.l),
-          Expanded(child: _QuickActionTile(shortcut: _shortcuts[i])),
+          Expanded(
+            child: _QuickActionTile(shortcut: _shortcuts[i], schoolId: schoolId),
+          ),
         ],
       ],
     );
@@ -727,15 +745,26 @@ class _QuickActionsSection extends StatelessWidget {
 }
 
 class _QuickActionTile extends StatelessWidget {
-  const _QuickActionTile({required this.shortcut});
+  const _QuickActionTile({required this.shortcut, required this.schoolId});
   final _Shortcut shortcut;
+  final String schoolId;
   @override
   Widget build(BuildContext context) => PulseCard(
     padding: const EdgeInsets.symmetric(
       horizontal: AppSpacing.l,
       vertical: AppSpacing.l,
     ),
-    onTap: () => context.push(shortcut.route),
+    // `go`, not `push`: these shortcuts navigate to standalone flows/shells
+    // (e.g. the Structure setup wizard) that render their own full-page
+    // chrome. `push` kept this dashboard's AdminWebShell (rail + all)
+    // mounted underneath, which showed through behind the destination's
+    // own sidebar instead of being replaced by it.
+    // Direct enrolment additionally requires `schoolId` via `state.extra`
+    // (see AdminStudentsSectionBody) - `go()` still supports `extra`.
+    onTap: () => context.go(
+      shortcut.route,
+      extra: shortcut.id == 'add_learner' ? schoolId : null,
+    ),
     child: ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 44),
       child: Row(
@@ -790,8 +819,9 @@ class _AttendanceSummarySection extends StatelessWidget {
         return PulseCard(
           child: _Retry(
             message: "Couldn't load attendance.",
-            onRetry: () =>
-                context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats()),
+            onRetry: () => context.read<AdminDashboardBloc>().add(
+              LoadAdminDashboardStats(),
+            ),
           ),
         );
       }
@@ -821,7 +851,9 @@ class _AttendanceSummarySection extends StatelessWidget {
                 TextButton(
                   onPressed: () => context.push('/staff/attendance'),
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.m),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.m,
+                    ),
                   ),
                   child: const Text('View details'),
                 ),
@@ -832,7 +864,8 @@ class _AttendanceSummarySection extends StatelessWidget {
               EmptyState(
                 icon: Icons.event_busy_outlined,
                 title: 'No attendance yet today',
-                message: 'Attendance sessions submitted today will show up here.',
+                message:
+                    'Attendance sessions submitted today will show up here.',
               )
             else
               Row(
@@ -898,7 +931,10 @@ class _AttendanceStat extends StatelessWidget {
           const SizedBox(width: AppSpacing.s),
           Text(
             label,
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary(context),
+            ),
           ),
         ],
       ),
@@ -921,54 +957,55 @@ class _AttendanceStat extends StatelessWidget {
 
 class _RecentActivitySection extends StatelessWidget {
   @override
-  Widget build(
-    BuildContext context,
-  ) => BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
-    builder: (context, state) {
-      if (state is AdminDashboardError) {
-        return PulseCard(
-          child: _Retry(
-            message: "Couldn't load recent activity.",
-            onRetry: () =>
-                context.read<AdminDashboardBloc>().add(LoadAdminDashboardStats()),
-          ),
-        );
-      }
-      if (state is! AdminDashboardLoaded) return const _LoadingBlock();
-      final logs = state.recentLogs;
+  Widget build(BuildContext context) =>
+      BlocBuilder<AdminDashboardBloc, AdminDashboardState>(
+        builder: (context, state) {
+          if (state is AdminDashboardError) {
+            return PulseCard(
+              child: _Retry(
+                message: "Couldn't load recent activity.",
+                onRetry: () => context.read<AdminDashboardBloc>().add(
+                  LoadAdminDashboardStats(),
+                ),
+              ),
+            );
+          }
+          if (state is! AdminDashboardLoaded) return const _LoadingBlock();
+          final logs = state.recentLogs;
 
-      return PulseCard(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Recent activity',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary(context),
-              ),
+          return PulseCard(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Recent activity',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.l),
+                if (logs.isEmpty)
+                  EmptyState(
+                    icon: Icons.history_outlined,
+                    title: 'No recent activity',
+                    message:
+                        'Actions taken across the school will appear here.',
+                  )
+                else
+                  Column(
+                    children: logs
+                        .take(6)
+                        .map((log) => _ActivityRow(log: log))
+                        .toList(),
+                  ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.l),
-            if (logs.isEmpty)
-              EmptyState(
-                icon: Icons.history_outlined,
-                title: 'No recent activity',
-                message: 'Actions taken across the school will appear here.',
-              )
-            else
-              Column(
-                children: logs
-                    .take(6)
-                    .map((log) => _ActivityRow(log: log))
-                    .toList(),
-              ),
-          ],
-        ),
+          );
+        },
       );
-    },
-  );
 }
 
 class _ActivityRow extends StatelessWidget {
@@ -1000,7 +1037,10 @@ class _ActivityRow extends StatelessWidget {
             log.description,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 13, color: AppColors.textPrimary(context)),
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.textPrimary(context),
+            ),
           ),
         ),
         const SizedBox(width: AppSpacing.m),
@@ -1059,7 +1099,10 @@ void _showTermPicker(BuildContext context, UserEntity user) {
   );
 }
 
-Stream<List<_WorkItem>> _watchWork(UserEntity user, FirebaseFirestore firestore) {
+Stream<List<_WorkItem>> _watchWork(
+  UserEntity user,
+  FirebaseFirestore firestore,
+) {
   final school = firestore.collection('schools').doc(user.schoolId);
   final streams = [
     school
@@ -1174,7 +1217,10 @@ class _Retry extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     children: [
       Expanded(
-        child: Text(message, style: TextStyle(color: AppColors.textSecondary(context))),
+        child: Text(
+          message,
+          style: TextStyle(color: AppColors.textSecondary(context)),
+        ),
       ),
       PulseButton(
         label: 'Retry',

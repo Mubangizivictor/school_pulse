@@ -101,6 +101,11 @@ Widget _wrap({required String initialLocation}) {
                 const Scaffold(body: Text('AdminShell staff body')),
           ),
           GoRoute(
+            path: '/staff/admin/structure',
+            builder: (context, state) =>
+                const Scaffold(body: Text('Structure wizard body')),
+          ),
+          GoRoute(
             path: '/staff/bursar',
             builder: (context, state) =>
                 const Scaffold(body: Text('Finance body')),
@@ -175,6 +180,20 @@ void main() {
       expect(find.byType(NavigationBar), findsNothing);
       expect(find.byType(NavigationRail), findsNothing);
       expect(find.text('AdminShell staff body'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'StaffShell renders the Structure wizard bare so its own rail is the only sidebar',
+    (tester) async {
+      await _setViewSize(tester, 1440, 900);
+      await tester.pumpWidget(_wrap(initialLocation: '/staff/admin/structure'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.text('Structure wizard body'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

@@ -243,6 +243,11 @@ class SchoolClass extends Equatable {
   final String description;
   final bool isActive;
 
+  /// Optional campus restriction. Empty means "no campus restriction" —
+  /// available at any campus. Same pattern as [levelId]: existing
+  /// classes/schools without campus setup keep working unchanged.
+  final String campusId;
+
   const SchoolClass({
     required this.id,
     required this.schoolId,
@@ -253,6 +258,7 @@ class SchoolClass extends Equatable {
     this.capacity = 0,
     this.description = '',
     this.isActive = true,
+    this.campusId = '',
   });
 
   SchoolClass copyWith({
@@ -265,6 +271,7 @@ class SchoolClass extends Equatable {
     int? capacity,
     String? description,
     bool? isActive,
+    String? campusId,
   }) {
     return SchoolClass(
       id: id ?? this.id,
@@ -276,6 +283,7 @@ class SchoolClass extends Equatable {
       capacity: capacity ?? this.capacity,
       description: description ?? this.description,
       isActive: isActive ?? this.isActive,
+      campusId: campusId ?? this.campusId,
     );
   }
 
@@ -290,6 +298,7 @@ class SchoolClass extends Equatable {
     capacity,
     description,
     isActive,
+    campusId,
   ];
 }
 

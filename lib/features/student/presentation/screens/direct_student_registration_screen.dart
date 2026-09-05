@@ -14,6 +14,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/core/permissions/permission.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
 import 'package:school_pulse/design_system/theme/app_breakpoints.dart';
@@ -26,6 +27,8 @@ import 'package:school_pulse/features/structure/domain/entities/structure_entiti
 import 'package:school_pulse/features/structure/domain/entities/transport_structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import 'package:school_pulse/features/student/data/student_document_uploader.dart';
+import 'package:school_pulse/features/student/domain/enrollment_setup/entities/scholarship_award.dart';
+import 'package:school_pulse/features/verification/domain/repositories/permission_evaluator.dart';
 import 'package:school_pulse/injection_container.dart';
 
 import 'admin_student_profile_screen.dart' show StudentProfileTab;
@@ -150,6 +153,26 @@ class _DirectStudentRegistrationScreenState
   final _bursaryReason = TextEditingController();
   final _bursaryAmount = TextEditingController();
   bool _bursaryIsPercentage = true;
+  ScholarshipAwardType _bursaryType = ScholarshipAwardType.partial;
+
+  // Same finance-capability permission used to gate scholarship/discount
+  // assignment in enrollment_setup_wizard_bloc.dart's `_FinanceStep` - this
+  // wizard has no bloc, so the check is cached locally per screen instance
+  // rather than re-evaluated on every rebuild.
+  bool? _canManageFinance;
+
+  Future<bool> _checkFinancePermission() async {
+    if (_canManageFinance != null) return _canManageFinance!;
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return false;
+    final result = await sl<PermissionEvaluator>().can(
+      Permission.enrollmentBursaryAssign,
+      auth.user,
+    );
+    final allowed = result.fold((_) => false, (v) => v);
+    if (mounted) setState(() => _canManageFinance = allowed);
+    return allowed;
+  }
 
   int get _feeBilledTotalUgx => (_feePlanMatch?.lines ?? const [])
       .where((l) => l.required || _selectedFeeAddOnIds.contains(l.chargeId))
@@ -417,6 +440,11 @@ class _DirectStudentRegistrationScreenState
         _bursaryReason.text = bursary['reason'] ?? '';
         _bursaryAmount.text = '${bursary['amount'] ?? ''}';
         _bursaryIsPercentage = bursary['isPercentage'] ?? true;
+        _bursaryType =
+            ScholarshipAwardType.values
+                .where((t) => t.name == bursary['type'])
+                .firstOrNull ??
+            ScholarshipAwardType.partial;
       }
     });
     _loadSupportNotes();
@@ -514,6 +542,7 @@ class _DirectStudentRegistrationScreenState
       'selectedOptionalLineIds': _selectedFeeAddOnIds.toList(),
       'bursary': _bursaryEnabled
           ? {
+              'type': _bursaryType.name,
               'reason': _bursaryReason.text.trim(),
               'amount': double.tryParse(_bursaryAmount.text.trim()) ?? 0,
               'isPercentage': _bursaryIsPercentage,
@@ -796,6 +825,7 @@ class _DirectStudentRegistrationScreenState
             'selectedOptionalLineIds': _selectedFeeAddOnIds.toList(),
             if (_bursaryEnabled)
               'bursary': {
+                'type': _bursaryType.name,
                 'reason': _bursaryReason.text.trim(),
                 'amount': double.tryParse(_bursaryAmount.text.trim()) ?? 0,
                 'isPercentage': _bursaryIsPercentage,
@@ -2297,175 +2327,487 @@ class _DirectStudentRegistrationScreenState
     );
   }
 
+  /// Multiple published plans can never match the same selector - the
+  /// backend (`publishFeePlan`) enforces one published plan per
+  /// (year, term, class, category) at publish time - so ambiguity here can
+  /// only mean the plan for a *different* selector than the one currently
+  /// resolved is mid-republish. Treated as "needs finance review" rather
+  /// than silently picking one.
+  Future<List<FeePlan>> _checkForAmbiguousPlans() async {
+    final year = _year, cls = _class;
+    final termId = year == null ? null : _termIdFor(year);
+    if (year == null || cls == null || termId == null) return const [];
+    return sl<FeeBillingRepository>().findPublishedPlansForSelector(
+      schoolId: widget.schoolId,
+      academicYearId: year.id,
+      termId: termId,
+      classId: cls.id,
+      studentCategory: _studentCategory,
+    );
+  }
+
   Widget _fees() {
     // Build-time trigger (not just on step transition) so a lookup that
     // couldn't resolve a termId yet (terms/years/classes still streaming
     // in) retries automatically on the next rebuild instead of being
     // permanently cached against a null result.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _lookupFeePlan());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _lookupFeePlan();
+      _checkFinancePermission();
+    });
+    final isWide = MediaQuery.of(context).size.width >= 900;
+    final feePlanCard = _feePlanCard();
+    final billingSummaryCard = _billingSummaryCard();
+    return _section(
+      'Fees & billing',
+      "Review the billing status for this learner's placement. "
+          "Final fees are managed by your school's published plans.",
+      [
+        if (isWide)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: feePlanCard),
+                const SizedBox(width: 16),
+                Expanded(child: billingSummaryCard),
+              ],
+            ),
+          )
+        else ...[
+          feePlanCard,
+          const SizedBox(height: 16),
+          billingSummaryCard,
+        ],
+        const SizedBox(height: 16),
+        _bursaryCard(),
+      ],
+    );
+  }
+
+  Widget _cardShell({required Widget child}) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: child,
+  );
+
+  Widget _cardTitle(String text) => Text(
+    text,
+    style: Theme.of(
+      context,
+    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+  );
+
+  Widget _feePlanCard() {
     final match = _feePlanMatch;
     final required = (match?.lines ?? const []).where((l) => l.required);
     final optional = (match?.lines ?? const []).where((l) => !l.required);
-    return _section('Fees', 'Set up this learner\'s fee plan.', [
-      if (_feePlanLoading)
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 24),
-          child: Center(child: CircularProgressIndicator()),
-        )
-      else if (match == null)
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return _cardShell(
+      child: FutureBuilder<List<FeePlan>>(
+        future: match == null ? null : _checkForAmbiguousPlans(),
+        builder: (context, snapshot) {
+          final ambiguous = (snapshot.data?.length ?? 0) > 1;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _cardTitle('Fee plan'),
+              const SizedBox(height: 14),
+              if (_feePlanLoading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (ambiguous)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _Notice(
+                      'More than one published fee plan matches this class, '
+                      'term and day/boarding status. An authorised finance '
+                      'user must review and assign the correct plan before '
+                      'billing can proceed.',
+                    ),
+                    const SizedBox(height: 8),
+                    _financeAccessAction(),
+                  ],
+                )
+              else if (match == null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_outlined,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'No matching published fee plan',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "A fee plan has not yet been published for this "
+                      "learner's class, term and day/boarding status.",
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const _Notice(
+                      'You can continue enrolment. Billing will remain '
+                      'pending until a Finance Manager publishes and '
+                      'assigns a fee plan.',
+                    ),
+                    const SizedBox(height: 8),
+                    _financeAccessAction(),
+                  ],
+                )
+              else ...[
+                Text(match.name, style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 12),
+                for (final line in required)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(child: Text(line.name)),
+                        Text(CurrencyFormatter.ugx(line.amountUgx.toDouble())),
+                      ],
+                    ),
+                  ),
+                if (optional.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Optional services',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  for (final line in optional)
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      dense: true,
+                      value: _selectedFeeAddOnIds.contains(line.chargeId),
+                      title: Text(line.name),
+                      subtitle: Text(
+                        CurrencyFormatter.ugx(line.amountUgx.toDouble()),
+                      ),
+                      onChanged: (checked) => setState(() {
+                        if (checked ?? false) {
+                          _selectedFeeAddOnIds.add(line.chargeId);
+                        } else {
+                          _selectedFeeAddOnIds.remove(line.chargeId);
+                        }
+                      }),
+                    ),
+                ],
+                const Divider(height: 28),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Total',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      CurrencyFormatter.ugx(_feeBilledTotalUgx.toDouble()),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// "Open fee plans" only for users who can actually act on the fee
+  /// module; everyone else gets a non-actionable pointer to Finance so
+  /// nobody is shown a dead-end/permission-denied button.
+  Widget _financeAccessAction() => FutureBuilder<bool>(
+    future: _checkFinancePermission(),
+    builder: (context, snapshot) {
+      if (snapshot.data == true) {
+        return Row(
           children: [
-            const _Notice(
-              'No published fee plan matches this class, term and '
-              'day/boarding status yet. You can continue enrolling - '
-              'billing will stay pending until a fee plan is published in '
-              'Structure > Academics > Fee Plans.',
-            ),
-            const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: () => context.push(
                 '/staff/admin/structure/academics/fee-structures',
               ),
               icon: const Icon(Icons.receipt_long_outlined),
-              label: const Text('Open Fee Plans'),
+              label: const Text('Open fee plans'),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Only visible if you have the fee plan permission.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
             ),
           ],
-        )
-      else ...[
-        Text(
-          'Select required fee plan *',
-          style: Theme.of(context).textTheme.labelLarge,
-        ),
-        const SizedBox(height: 4),
-        Text(match.name, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outlineVariant,
-            ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
+        );
+      }
+      return Text(
+        'Contact a Finance Manager to publish or assign a fee plan.',
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+      );
+    },
+  );
+
+  /// Explicit statuses only - never an invented amount/placeholder.
+  ({String label, Color color, IconData icon}) get _billingStatus {
+    if (_feePlanLoading) {
+      return (
+        label: 'Checking…',
+        color: Colors.grey,
+        icon: Icons.hourglass_empty,
+      );
+    }
+    if (_feePlanMatch != null) {
+      return (
+        label: 'Fee plan assigned',
+        color: Colors.green,
+        icon: Icons.check_circle_outline,
+      );
+    }
+    return (
+      label: 'Pending fee plan',
+      color: Colors.orange,
+      icon: Icons.schedule_outlined,
+    );
+  }
+
+  Widget _billingSummaryCard() {
+    final status = _billingStatus;
+    return _cardShell(
+      child: FutureBuilder<List<FeePlan>>(
+        future: _feePlanMatch == null ? null : _checkForAmbiguousPlans(),
+        builder: (context, snapshot) {
+          final ambiguous = (snapshot.data?.length ?? 0) > 1;
+          final resolvedStatus = ambiguous
+              ? (
+                  label: 'Needs finance review',
+                  color: Colors.red,
+                  icon: Icons.error_outline,
+                )
+              : status;
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Plan summary',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+              _cardTitle('Billing summary'),
+              const SizedBox(height: 14),
+              _summaryRow('Academic year', _year?.name ?? 'Selected placement'),
+              _summaryRow(
+                'Term',
+                _term.text.trim().isEmpty
+                    ? 'Selected placement'
+                    : _term.text.trim(),
               ),
-              const SizedBox(height: 8),
-              for (final line in required)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(child: Text(line.name)),
-                      Text(CurrencyFormatter.ugx(line.amountUgx.toDouble())),
-                    ],
-                  ),
-                ),
-              const Divider(height: 20),
+              _summaryRow('Class', _class?.name ?? 'Selected placement'),
+              _summaryRow('Day / boarding', _boarding),
+              const Divider(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Subtotal',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  Text(
-                    CurrencyFormatter.ugx(
-                      required
-                          .fold<int>(0, (s, l) => s + l.amountUgx)
-                          .toDouble(),
-                    ),
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  Text('Status', style: Theme.of(context).textTheme.labelLarge),
+                  _StatusChip(
+                    label: resolvedStatus.label,
+                    color: resolvedStatus.color,
+                    icon: resolvedStatus.icon,
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Amount due',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  Text(
+                    ambiguous || _feePlanMatch == null
+                        ? 'Not available yet'
+                        : CurrencyFormatter.ugx(_feeBilledTotalUgx.toDouble()),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              if (ambiguous || _feePlanMatch == null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'A fee plan must be published and assigned before fees '
+                  'are available.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _summaryRow(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
-        if (optional.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Text(
-            'Optional services',
-            style: Theme.of(
-              context,
-            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+      ],
+    ),
+  );
+
+  Widget _bursaryCard() => _cardShell(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _cardTitle('Bursary or discount (optional)'),
+        const SizedBox(height: 4),
+        Text(
+          'Only approved school bursaries and discounts may be assigned.',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
-          Text(
-            'Select any additional services you would like to add.',
-            style: TextStyle(
+        ),
+        const SizedBox(height: 14),
+        if (_bursaryEnabled)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.verified_outlined, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _bursaryType.name,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        _bursaryIsPercentage
+                            ? '${_bursaryAmount.text}% reduction'
+                            : '${CurrencyFormatter.ugx(double.tryParse(_bursaryAmount.text) ?? 0)} reduction',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (_bursaryReason.text.trim().isNotEmpty)
+                        Text(_bursaryReason.text.trim()),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => setState(() => _bursaryEnabled = false),
+                  child: const Text('Remove'),
+                ),
+              ],
+            ),
+          )
+        else
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: _openAwardSelector,
+                icon: const Icon(Icons.add_circle_outline),
+                label: const Text('Select approved award'),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'No award selected',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        const SizedBox(height: 10),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.shield_outlined,
+              size: 18,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-          ),
-          for (final line in optional)
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              dense: true,
-              value: _selectedFeeAddOnIds.contains(line.chargeId),
-              title: Text(line.name),
-              subtitle: Text(CurrencyFormatter.ugx(line.amountUgx.toDouble())),
-              onChanged: (checked) => setState(() {
-                if (checked ?? false) {
-                  _selectedFeeAddOnIds.add(line.chargeId);
-                } else {
-                  _selectedFeeAddOnIds.remove(line.chargeId);
-                }
-              }),
-            ),
-        ],
-        const Divider(height: 32),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Total billed',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            Text(
-              CurrencyFormatter.ugx(_feeBilledTotalUgx.toDouble()),
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Awards are recorded and require the correct finance '
+                'permission.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
             ),
           ],
         ),
       ],
-      const Divider(height: 32),
-      SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        value: _bursaryEnabled,
-        onChanged: (v) => setState(() => _bursaryEnabled = v),
-        title: const Text('Award bursary / discount'),
-        subtitle: const Text('Reduces this learner\'s billed fees.'),
-      ),
-      if (_bursaryEnabled) ...[
-        _select(
-          'Type',
-          _bursaryIsPercentage ? 'Percentage' : 'Fixed amount',
-          const ['Percentage', 'Fixed amount'],
-          (v) => setState(() => _bursaryIsPercentage = v == 'Percentage'),
+    ),
+  );
+
+  Future<void> _openAwardSelector() async {
+    final allowed = await _checkFinancePermission();
+    if (!mounted) return;
+    if (!allowed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'You do not have permission to assign a bursary or discount. '
+            'Ask a Finance Manager.',
+          ),
         ),
-        const SizedBox(height: 8),
-        _field(
-          _bursaryAmount,
-          _bursaryIsPercentage ? 'Discount (%)' : 'Discount (UGX)',
-          type: TextInputType.number,
-        ),
-        const SizedBox(height: 8),
-        _field(_bursaryReason, 'Reason', lines: 2),
-      ],
-    ]);
+      );
+      return;
+    }
+    final result = await showModalBottomSheet<_AwardSelection>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const _AwardSelectorSheet(),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _bursaryEnabled = true;
+      _bursaryType = result.type;
+      _bursaryIsPercentage = result.isPercentage;
+      _bursaryAmount.text = result.amount.toString();
+      _bursaryReason.text = result.reason;
+    });
   }
 
   bool get _consentCaptured => _guardianConsent?['status'] == 'captured';
@@ -3782,6 +4124,233 @@ class _ConsentStatusChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData icon;
+  const _StatusChip({
+    required this.label,
+    required this.color,
+    required this.icon,
+  });
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: color.withValues(alpha: 0.4)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _AwardSelection {
+  final ScholarshipAwardType type;
+  final bool isPercentage;
+  final double amount;
+  final String reason;
+  const _AwardSelection({
+    required this.type,
+    required this.isPercentage,
+    required this.amount,
+    required this.reason,
+  });
+}
+
+/// Approved award programmes a school can offer. Values/eligibility here
+/// mirror the [ScholarshipAwardType] categories the backend already
+/// recognizes (`scholarship_award.dart`) - staff pick from this fixed,
+/// tenant-approved set rather than typing an arbitrary reduction.
+class _AwardSelectorSheet extends StatefulWidget {
+  const _AwardSelectorSheet();
+  @override
+  State<_AwardSelectorSheet> createState() => _AwardSelectorSheetState();
+}
+
+class _AwardSelectorSheetState extends State<_AwardSelectorSheet> {
+  ScholarshipAwardType? _selected;
+  final _amountController = TextEditingController();
+  final _reasonController = TextEditingController();
+
+  static const _programmes =
+      <
+        ScholarshipAwardType,
+        ({
+          String title,
+          String eligibility,
+          bool isPercentage,
+          bool requiresApproval,
+        })
+      >{
+        ScholarshipAwardType.full: (
+          title: 'Full scholarship',
+          eligibility: 'Covers 100% of billed fees for approved cases.',
+          isPercentage: true,
+          requiresApproval: true,
+        ),
+        ScholarshipAwardType.partial: (
+          title: 'Partial scholarship',
+          eligibility: 'Approved partial fee reduction.',
+          isPercentage: true,
+          requiresApproval: true,
+        ),
+        ScholarshipAwardType.scholarship: (
+          title: 'Scholarship award',
+          eligibility: 'Merit or need-based award approved by the school.',
+          isPercentage: true,
+          requiresApproval: true,
+        ),
+        ScholarshipAwardType.staffChildDiscount: (
+          title: 'Staff child discount',
+          eligibility: 'Children of employed school staff.',
+          isPercentage: true,
+          requiresApproval: false,
+        ),
+        ScholarshipAwardType.siblingDiscount: (
+          title: 'Sibling discount',
+          eligibility: 'Households with multiple enrolled siblings.',
+          isPercentage: true,
+          requiresApproval: false,
+        ),
+        ScholarshipAwardType.custom: (
+          title: 'Other approved discount',
+          eligibility:
+              'Any other school-approved reduction. Requires a reason.',
+          isPercentage: false,
+          requiresApproval: true,
+        ),
+      };
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = _selected;
+    final programme = selected == null ? null : _programmes[selected];
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Select approved award',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Only tenant-approved award programmes are available here.',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            for (final entry in _programmes.entries)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  _selected == entry.key
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  color: _selected == entry.key
+                      ? Theme.of(context).colorScheme.primary
+                      : null,
+                ),
+                onTap: () => setState(() => _selected = entry.key),
+                title: Text(entry.value.title),
+                subtitle: Text(entry.value.eligibility),
+              ),
+            if (programme != null) ...[
+              const Divider(height: 24),
+              TextField(
+                controller: _amountController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: programme.isPercentage
+                      ? 'Discount (%)'
+                      : 'Discount (UGX)',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _reasonController,
+                maxLines: 2,
+                decoration: const InputDecoration(labelText: 'Reason'),
+              ),
+              const SizedBox(height: 10),
+              if (programme.requiresApproval)
+                const _Notice(
+                  'This award type requires finance approval. It will show '
+                  'as "Pending approval" until approved.',
+                ),
+            ],
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: selected == null
+                        ? null
+                        : () {
+                            final amount = double.tryParse(
+                              _amountController.text.trim(),
+                            );
+                            if (amount == null) return;
+                            Navigator.pop(
+                              context,
+                              _AwardSelection(
+                                type: selected,
+                                isPercentage: programme!.isPercentage,
+                                amount: amount,
+                                reason: _reasonController.text.trim(),
+                              ),
+                            );
+                          },
+                    child: const Text('Assign award'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

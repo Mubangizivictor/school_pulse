@@ -32,7 +32,12 @@ class InstitutionSettingsScreen extends StatelessWidget {
       // wizard step shell). Nesting a second Scaffold here used to give the
       // form's LayoutBuilder a zero-height constraint in some layouts -
       // returning the body directly avoids that entirely.
-      return ColoredBox(color: Colors.transparent, child: tab);
+      //
+      // The background must be opaque, not transparent: this widget sits on
+      // top of a full-screen page pushed over the admin dashboard shell, and
+      // a transparent gap here let that shell's sidebar show through behind
+      // the form on web.
+      return ColoredBox(color: Colors.white, child: tab);
     }
     return Scaffold(
       appBar: AdminAppBar(

@@ -77,3 +77,8 @@ firebase-debug.*.log
 *.p8
 *service-account*.json
 *serviceAccountKey*.json
+
+# Isar's native binary, copied to the project root so `flutter test` can
+# dlopen() it on macOS (Isar looks in the working directory) - vendored from
+# isar_flutter_libs' own macos/ build output, never checked in.
+/libisar.dylib

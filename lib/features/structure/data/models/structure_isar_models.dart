@@ -167,6 +167,7 @@ class SchoolClassIsar {
   late int capacity;
   late String description;
   late bool isActive;
+  String campusId = '';
 
   SchoolClassIsar();
 
@@ -179,7 +180,8 @@ class SchoolClassIsar {
       ..levelId = e.levelId
       ..capacity = e.capacity
       ..description = e.description
-      ..isActive = e.isActive;
+      ..isActive = e.isActive
+      ..campusId = e.campusId;
   }
 
   SchoolClass toEntity() {
@@ -192,6 +194,7 @@ class SchoolClassIsar {
       capacity: capacity,
       description: description,
       isActive: isActive,
+      campusId: campusId,
     );
   }
 }

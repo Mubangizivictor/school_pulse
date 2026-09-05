@@ -80,6 +80,7 @@ dev_dependencies:
   isar_generator: ^3.1.0+1
   fake_cloud_firestore: ^3.1.0
   flutter_launcher_icons: ^0.13.1
+  firebase_core_platform_interface: ^6.0.0
 
 flutter_native_splash:
   # The OS selects the dark variant before Flutter has restored the saved

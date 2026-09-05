@@ -689,6 +689,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       capacity: map['capacity'] ?? 0,
       description: map['description'] ?? '',
       isActive: map['isActive'] ?? true,
+      campusId: map['campusId'] ?? '',
     );
   }
 
@@ -701,6 +702,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'capacity': e.capacity,
     'description': e.description,
     'isActive': e.isActive,
+    'campusId': e.campusId,
     'updatedAt': FieldValue.serverTimestamp(),
   };
 

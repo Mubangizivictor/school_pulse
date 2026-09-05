@@ -333,6 +333,11 @@ class StaffShell extends StatelessWidget {
       '/staff/admin/students/list',
       '/staff/admin/students/directory',
       '/staff/admin/appointments',
+      '/staff/admin/admissions',
+      '/staff/admin/admissions/new',
+      '/staff/admin/admissions/register',
+      '/staff/admin/admissions/review',
+      '/staff/admin/admissions/review/enroll',
     };
     final isAdminSection = adminShellPaths.contains(
       GoRouterState.of(context).uri.path,
@@ -341,11 +346,10 @@ class StaffShell extends StatelessWidget {
       context,
     ).uri.path.startsWith('/staff/nurse');
     // The Structure setup wizard (bare '/staff/admin/structure') owns its
-    // own per-step header and sticky Save & Continue footer and must render
-    // full-screen, matching every other step's treatment - stacking this
-    // shell's bottom nav on top of it hides content (e.g. the last field
-    // above a fixed-height wizard footer) and violates the wizard's "no
-    // bottom navigation" requirement. Named sub-routes under
+    // own per-step rail, header and sticky Save & Continue footer and must
+    // render full-screen. Wrapping it in this shell produces two sidebars on
+    // desktop/tablet (the staff rail plus the wizard rail), and can overlay
+    // the footer with this shell's mobile navigation. Named sub-routes under
     // '/staff/admin/structure/...' (institution settings, academics, etc.)
     // are regular management screens and keep the shared nav.
     final isStructureWizardSection =
@@ -363,7 +367,7 @@ class StaffShell extends StatelessWidget {
     // on mobile / two sidebars on desktop, so hand it the routed child bare
     // at every width. (Dean/Nurse are still handled below by the
     // bottom-nav suppression only, since they have no desktop shell yet.)
-    if (isBursarSection || isAdminSection) {
+    if (isBursarSection || isAdminSection || isStructureWizardSection) {
       return child;
     }
 
