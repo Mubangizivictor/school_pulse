@@ -81,41 +81,32 @@ Widget _wrap({required String initialLocation}) {
             builder: (context, state) =>
                 const Scaffold(body: Text('Home body')),
           ),
+          // Routes AdminShell owns end-to-end (home/students/staff/parents/
+          // attendance/fees/appointments/approvals) - StaffShell must render
+          // these bare, since AdminShell supplies its own full responsive
+          // shell (sidebar on desktop/tablet, bottom nav on mobile).
+          GoRoute(
+            path: '/staff/admin',
+            builder: (context, state) =>
+                const Scaffold(body: Text('AdminShell home body')),
+          ),
           GoRoute(
             path: '/staff/admin/students',
             builder: (context, state) =>
-                const Scaffold(body: Text('Students body')),
+                const Scaffold(body: Text('AdminShell students body')),
           ),
           GoRoute(
             path: '/staff/admin/users',
             builder: (context, state) =>
-                const Scaffold(body: Text('Staff body')),
-          ),
-          GoRoute(
-            path: '/staff/admin/parents',
-            builder: (context, state) =>
-                const Scaffold(body: Text('Parents body')),
-          ),
-          GoRoute(
-            path: '/staff/admin/staff-attendance',
-            builder: (context, state) =>
-                const Scaffold(body: Text('Attendance body')),
-          ),
-          GoRoute(
-            path: '/staff/admin/communication-center',
-            builder: (context, state) =>
-                const Scaffold(body: Text('Communications body')),
+                const Scaffold(body: Text('AdminShell staff body')),
           ),
           GoRoute(
             path: '/staff/bursar',
             builder: (context, state) =>
                 const Scaffold(body: Text('Finance body')),
           ),
-          GoRoute(
-            path: '/staff/admin/reports',
-            builder: (context, state) =>
-                const Scaffold(body: Text('Reports body')),
-          ),
+          // Sibling admin routes that are NOT part of AdminShell - these
+          // are standalone screens and must keep StaffShell's own chrome.
           GoRoute(
             path: '/staff/admin/school-setup',
             builder: (context, state) =>
@@ -151,8 +142,13 @@ Future<void> _setViewSize(WidgetTester tester, double width, double height) asyn
 }
 
 void main() {
+  // Regression coverage for a real bug: AdminShell (home/students/staff/
+  // parents/attendance/fees/appointments/approvals) owns a full responsive
+  // shell of its own, identical in spirit to BursarShell. StaffShell must
+  // never wrap those routes in its own rail/bottom-nav too, or every admin
+  // screen renders two sidebars on desktop and two bottom navs on mobile.
   testWidgets(
-    'desktop admin rail shows all 9 sections, Staff selected on /staff/admin/users',
+    'StaffShell renders AdminShell-owned routes bare, with no rail of its own, on desktop',
     (tester) async {
       await _setViewSize(tester, 1440, 900);
       await tester.pumpWidget(
@@ -160,62 +156,52 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      for (final label in const [
-        'Home',
-        'Students',
-        'Staff',
-        'Parents',
-        'Attendance',
-        'Communications',
-        'Finance',
-        'Reports',
-        'Settings',
-      ]) {
-        expect(
-          find.text(label),
-          findsOneWidget,
-          reason: 'Expected a "$label" rail destination on desktop',
-        );
-      }
-
-      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(NavigationRail), findsNothing);
       expect(find.byType(NavigationBar), findsNothing);
-      expect(find.text('Staff body'), findsOneWidget);
+      expect(find.text('AdminShell staff body'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
 
-  testWidgets('tapping Finance in the desktop rail navigates to /staff/bursar', (
+  testWidgets(
+    'StaffShell renders AdminShell-owned routes bare, with no bottom nav of its own, on mobile',
+    (tester) async {
+      await _setViewSize(tester, 390, 900);
+      await tester.pumpWidget(
+        _wrap(initialLocation: '/staff/admin/users'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.text('AdminShell staff body'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'StaffShell still renders its own chrome for sibling admin routes AdminShell does not own',
+    (tester) async {
+      await _setViewSize(tester, 1440, 900);
+      await tester.pumpWidget(
+        _wrap(initialLocation: '/staff/admin/school-setup'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.text('Settings body'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Bursar routes are also rendered bare by StaffShell', (
     tester,
   ) async {
     await _setViewSize(tester, 1440, 900);
-    await tester.pumpWidget(
-      _wrap(initialLocation: '/staff/admin/users'),
-    );
+    await tester.pumpWidget(_wrap(initialLocation: '/staff/bursar'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Finance'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Finance body'), findsOneWidget);
-  });
-
-  testWidgets('mobile keeps the original 5-item bottom nav for admin', (
-    tester,
-  ) async {
-    await _setViewSize(tester, 390, 900);
-    await tester.pumpWidget(
-      _wrap(initialLocation: '/staff/admin/users'),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.byType(NavigationRail), findsNothing);
-    for (final label in const ['Home', 'Students', 'Staff', 'Parents', 'More']) {
-      expect(find.text(label), findsOneWidget);
-    }
-    expect(find.text('Attendance'), findsNothing);
-    expect(find.text('Finance'), findsNothing);
-    expect(tester.takeException(), isNull);
+    expect(find.text('Finance body'), findsOneWidget);
   });
 }

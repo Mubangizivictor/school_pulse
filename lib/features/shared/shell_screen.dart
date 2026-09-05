@@ -376,6 +376,30 @@ class StaffShell extends StatelessWidget {
     final isBursarSection = GoRouterState.of(
       context,
     ).uri.path.startsWith('/staff/bursar');
+    // The School Admin console's home/approvals/parents/staff/attendance/
+    // fees/students/appointments routes render through AdminShell, which
+    // owns a full-screen responsive shell of its own (AdminWebShell on
+    // desktop/tablet, its own 4-tab bottom nav on mobile) - same reasoning
+    // as Bursar below. This must be an exact-path allowlist, not a prefix
+    // match on '/staff/admin': sibling routes like school-setup, the
+    // Structure wizard, add-staff wizard, student profile, and audit-log
+    // are standalone screens that still rely on this shell's own chrome/
+    // opt-outs, and would lose their nav entirely under a prefix match.
+    const adminShellPaths = {
+      '/staff/admin',
+      '/staff/admin/approvals',
+      '/staff/admin/parents',
+      '/staff/admin/users',
+      '/staff/admin/staff-attendance',
+      '/staff/admin/fees',
+      '/staff/admin/students',
+      '/staff/admin/students/list',
+      '/staff/admin/students/directory',
+      '/staff/admin/appointments',
+    };
+    final isAdminSection = adminShellPaths.contains(
+      GoRouterState.of(context).uri.path,
+    );
     final isNurseSection = GoRouterState.of(
       context,
     ).uri.path.startsWith('/staff/nurse');
@@ -402,7 +426,7 @@ class StaffShell extends StatelessWidget {
     // on mobile / two sidebars on desktop, so hand it the routed child bare
     // at every width. (Dean/Nurse are still handled below by the
     // bottom-nav suppression only, since they have no desktop shell yet.)
-    if (isBursarSection) {
+    if (isBursarSection || isAdminSection) {
       return child;
     }
 
