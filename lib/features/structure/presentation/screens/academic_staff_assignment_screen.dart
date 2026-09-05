@@ -274,7 +274,6 @@ class _AcademicStaffAssignmentScreenState
     var streamId = '';
     var subjectId = '';
     var departmentId = '';
-    var notes = '';
     var saving = false;
 
     Widget buildForm(BuildContext context, StateSetter setSheet) {
@@ -488,14 +487,6 @@ class _AcademicStaffAssignmentScreenState
                 (value) => setSheet(() => departmentId = value ?? ''),
               ),
             ],
-            const SizedBox(height: 14),
-            TextFormField(
-              maxLines: 2,
-              decoration: const InputDecoration(
-                labelText: 'Notes (optional)',
-              ),
-              onChanged: (value) => notes = value,
-            ),
             const SizedBox(height: 18),
             Container(
               width: double.infinity,

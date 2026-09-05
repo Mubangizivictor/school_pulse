@@ -92,7 +92,9 @@ class AcademicDepartmentsScreen extends StatelessWidget {
                           style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
                         ),
                         Text(
-                          'Subject grouping is flexible and every subject belongs to at most one department.',
+                          MediaQuery.sizeOf(context).width >= 700
+                              ? 'Subject grouping is flexible and every subject belongs to at most one department.'
+                              : 'Manage later',
                           textAlign: TextAlign.end,
                           style: TextStyle(
                             fontSize: 11.5,
