@@ -328,7 +328,8 @@ void main() {
         ),
       ).captured;
       expect(captured, hasLength(1));
-      expect(find.textContaining('saved'), findsOneWidget);
+      final event = captured.first as UpdateInstitutionProfileRequested;
+      expect(event.profile.name, '');
     },
   );
 

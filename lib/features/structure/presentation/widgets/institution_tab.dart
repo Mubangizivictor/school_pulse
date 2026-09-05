@@ -420,9 +420,9 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     timeFormat: _timeFormat,
   );
 
-  Future<void> _save() async {
+  Future<void> _save({bool requireValid = true}) async {
     if (_isSaving) return;
-    if (!_formKey.currentState!.validate()) return;
+    if (requireValid && !_formKey.currentState!.validate()) return;
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
     if (!await di.sl<NetworkInfo>().isConnected) {
@@ -570,7 +570,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
   /// legitimately be incomplete.
   Future<void> saveDraft() async {
     if (!_isDirty) return;
-    await _save();
+    await _save(requireValid: false);
   }
 
   Future<bool> confirmDiscardIfDirty(BuildContext context) async {
