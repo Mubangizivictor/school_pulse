@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/design_system/theme/app_theme.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -12,12 +13,21 @@ import 'package:school_pulse/features/structure/domain/entities/institution_prof
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_event.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_state.dart';
+import 'package:school_pulse/features/structure/presentation/screens/institution_settings_screen.dart';
 import 'package:school_pulse/features/structure/presentation/widgets/institution_tab.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 class MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
 
 class MockStructureBloc extends MockBloc<StructureEvent, StructureState>
     implements StructureBloc {}
+
+class _FakeNetworkInfo implements NetworkInfo {
+  _FakeNetworkInfo({this.connected = true});
+  final bool connected;
+  @override
+  Future<bool> get isConnected async => connected;
+}
 
 void main() {
   late MockAuthBloc authBloc;
@@ -53,6 +63,12 @@ void main() {
     when(() => structureBloc.state).thenReturn(
       const StructureState(isLoading: false, institutionProfile: profile),
     );
+    if (di.sl.isRegistered<NetworkInfo>()) di.sl.unregister<NetworkInfo>();
+    di.sl.registerLazySingleton<NetworkInfo>(() => _FakeNetworkInfo());
+  });
+
+  tearDown(() {
+    if (di.sl.isRegistered<NetworkInfo>()) di.sl.unregister<NetworkInfo>();
   });
 
   Widget buildSubject({GlobalKey<InstitutionTabState>? tabKey}) {
@@ -133,6 +149,93 @@ void main() {
       final event = captured.first as UpdateInstitutionProfileRequested;
       expect(event.schoolId, 'school-123');
       expect(event.profile.name, 'New Name');
+    },
+  );
+
+  testWidgets('blocks the save while offline and leaves the edit unsent', (
+    tester,
+  ) async {
+    if (di.sl.isRegistered<NetworkInfo>()) di.sl.unregister<NetworkInfo>();
+    di.sl.registerLazySingleton<NetworkInfo>(
+      () => _FakeNetworkInfo(connected: false),
+    );
+    addTearDown(() {
+      if (di.sl.isRegistered<NetworkInfo>()) di.sl.unregister<NetworkInfo>();
+      di.sl.registerLazySingleton<NetworkInfo>(() => _FakeNetworkInfo());
+    });
+
+    tester.view.physicalSize = const Size(430, 4000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final tabKey = GlobalKey<InstitutionTabState>();
+    await tester.pumpWidget(buildSubject(tabKey: tabKey));
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Institution Name'),
+      'Offline Edit',
+    );
+    await tester.pump();
+
+    await tabKey.currentState!.saveIfDirty();
+    await tester.pump();
+
+    verifyNever(() => structureBloc.add(any()));
+    expect(find.textContaining('offline'), findsOneWidget);
+  });
+
+  testWidgets(
+    'wizard step 1 fields render when embedded in the real wizard shell '
+    '(regression: a nested Scaffold here used to collapse the form to '
+    'zero height)',
+    (tester) async {
+      tester.view.physicalSize = const Size(430, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<AuthBloc>.value(value: authBloc),
+            BlocProvider<StructureBloc>.value(value: structureBloc),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.dark(),
+            // Mirrors _InstitutionProfileStep in structure_screen.dart: a
+            // Scaffold whose body gives the embedded InstitutionSettingsScreen
+            // a bounded height via Expanded, not the full screen directly.
+            home: Scaffold(
+              body: Column(
+                children: [
+                  const SizedBox(height: 80, child: Text('header')),
+                  Expanded(
+                    child: InstitutionSettingsScreen(
+                      showAppBar: false,
+                      wizardMode: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Institution name *'), findsOneWidget);
+      final nameField = find.ancestor(
+        of: find.text('Institution name *'),
+        matching: find.byType(Column),
+      );
+      final field = find.descendant(
+        of: nameField.first,
+        matching: find.byType(TextFormField),
+      );
+      expect(field, findsOneWidget);
+      expect(tester.getSize(field).height, greaterThan(0));
+      expect(find.text('Tell us about your institution.'), findsOneWidget);
     },
   );
 }

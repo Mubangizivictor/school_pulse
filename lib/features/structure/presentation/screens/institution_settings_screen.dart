@@ -25,20 +25,27 @@ class InstitutionSettingsScreen extends StatelessWidget {
   final bool wizardMode;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: showAppBar
-        ? AdminAppBar(
-            title: 'Institution Settings',
-            bottom: wizardStep == null || wizardTotal == null
-                ? null
-                : StructureWizardBanner(
-                    stepId: wizardStepId,
-                    stepNumber: wizardStep!,
-                    totalSteps: wizardTotal!,
-                  ),
-          )
-        : null,
-    backgroundColor: showAppBar ? null : Colors.transparent,
-    body: InstitutionTab(key: tabKey, wizardMode: wizardMode),
-  );
+  Widget build(BuildContext context) {
+    final tab = InstitutionTab(key: tabKey, wizardMode: wizardMode);
+    if (!showAppBar) {
+      // No app bar means this is embedded inside another Scaffold (the
+      // wizard step shell). Nesting a second Scaffold here used to give the
+      // form's LayoutBuilder a zero-height constraint in some layouts -
+      // returning the body directly avoids that entirely.
+      return ColoredBox(color: Colors.transparent, child: tab);
+    }
+    return Scaffold(
+      appBar: AdminAppBar(
+        title: 'Institution Settings',
+        bottom: wizardStep == null || wizardTotal == null
+            ? null
+            : StructureWizardBanner(
+                stepId: wizardStepId,
+                stepNumber: wizardStep!,
+                totalSteps: wizardTotal!,
+              ),
+      ),
+      body: tab,
+    );
+  }
 }
