@@ -149,6 +149,69 @@ class StaffShell extends StatelessWidget {
     return 0;
   }
 
+  /// Desktop-only counterpart to [_calculateSelectedIndex] for the 9-item
+  /// admin rail (adminDesktopDestinations) - kept separate from the shared
+  /// resolver above so mobile's 5-item bottom nav indices are untouched.
+  int _calculateAdminDesktopIndex(BuildContext context) {
+    final String location = GoRouterState.of(context).uri.path;
+    if (location.startsWith('/staff/admin/students') ||
+        location.startsWith('/staff/admin/admissions')) {
+      return 1;
+    }
+    if (location.startsWith('/staff/admin/users')) return 2;
+    if (location.startsWith('/staff/admin/parents')) return 3;
+    if (location.startsWith('/staff/admin/staff-attendance') ||
+        location.startsWith('/staff/roll-call') ||
+        location.startsWith('/staff/attendance')) {
+      return 4;
+    }
+    if (location.startsWith('/staff/admin/communication-center') ||
+        location.startsWith('/staff/admin/broadcast-sms')) {
+      return 5;
+    }
+    if (location.startsWith('/staff/bursar')) return 6;
+    if (location.startsWith('/staff/admin/reports')) return 7;
+    if (location.startsWith('/staff/admin/school-setup') ||
+        location.startsWith('/staff/admin/structure') ||
+        location.startsWith('/staff/admin/data-management')) {
+      return 8;
+    }
+    if (location.startsWith('/staff/admin')) return 0;
+    return 0;
+  }
+
+  void _onAdminDesktopItemTapped(int index, BuildContext context) {
+    switch (index) {
+      case 0:
+        context.go(_homePath(context));
+        break;
+      case 1:
+        context.go('/staff/admin/students');
+        break;
+      case 2:
+        context.go('/staff/admin/users');
+        break;
+      case 3:
+        context.go('/staff/admin/parents');
+        break;
+      case 4:
+        context.go('/staff/admin/staff-attendance');
+        break;
+      case 5:
+        context.go('/staff/admin/communication-center');
+        break;
+      case 6:
+        context.go('/staff/bursar');
+        break;
+      case 7:
+        context.go('/staff/admin/reports');
+        break;
+      case 8:
+        context.go('/staff/admin/school-setup');
+        break;
+    }
+  }
+
   String _homePath(BuildContext context) {
     final state = context.read<AuthBloc>().state;
     if (state is AuthAuthenticated) {
@@ -427,6 +490,59 @@ class StaffShell extends StatelessWidget {
       ),
     ];
 
+    // Desktop-only: the wider rail has room to surface School Admin's most
+    // used sections directly instead of folding them behind "More" (mobile
+    // keeps the 5-item adminDestinations above - there's no room for 9
+    // labelled items in a bottom nav). Every route here is a real,
+    // already-permission-gated destination reachable today via More.
+    final List<NavigationDestination> adminDesktopDestinations = [
+      const NavigationDestination(
+        icon: Icon(Icons.home_outlined, size: 24),
+        selectedIcon: Icon(Icons.home_rounded, size: 24),
+        label: 'Home',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.people_outline_rounded, size: 24),
+        selectedIcon: Icon(Icons.people_rounded, size: 24),
+        label: 'Students',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.badge_outlined, size: 24),
+        selectedIcon: Icon(Icons.badge_rounded, size: 24),
+        label: 'Staff',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.family_restroom_outlined, size: 24),
+        selectedIcon: Icon(Icons.family_restroom_rounded, size: 24),
+        label: 'Parents',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.event_available_outlined, size: 24),
+        selectedIcon: Icon(Icons.event_available_rounded, size: 24),
+        label: 'Attendance',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.campaign_outlined, size: 24),
+        selectedIcon: Icon(Icons.campaign_rounded, size: 24),
+        label: 'Communications',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.payments_outlined, size: 24),
+        selectedIcon: Icon(Icons.payments_rounded, size: 24),
+        label: 'Finance',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.insights_outlined, size: 24),
+        selectedIcon: Icon(Icons.insights_rounded, size: 24),
+        label: 'Reports',
+      ),
+      const NavigationDestination(
+        icon: Icon(Icons.settings_outlined, size: 24),
+        selectedIcon: Icon(Icons.settings_rounded, size: 24),
+        label: 'Settings',
+      ),
+    ];
+
     final List<NavigationDestination> boardingDestinations = [
       const NavigationDestination(
         icon: Icon(Icons.home_outlined, size: 24),
@@ -521,7 +637,7 @@ class StaffShell extends StatelessWidget {
     final destinations = isDirector
         ? directorDestinations
         : isAdmin
-        ? adminDestinations
+        ? (isMobile ? adminDestinations : adminDesktopDestinations)
         : isTeacher
         ? (_isSubjectTeacherActive(context)
               ? subjectTeacherDestinations
@@ -599,9 +715,12 @@ class StaffShell extends StatelessWidget {
                     child: NavigationRail(
                       backgroundColor: Colors.transparent,
                       extended: MediaQuery.of(context).size.width > 1200,
-                      selectedIndex: _calculateSelectedIndex(context),
-                      onDestinationSelected: (idx) =>
-                          _onItemTapped(idx, context),
+                      selectedIndex: isAdmin
+                          ? _calculateAdminDesktopIndex(context)
+                          : _calculateSelectedIndex(context),
+                      onDestinationSelected: (idx) => isAdmin
+                          ? _onAdminDesktopItemTapped(idx, context)
+                          : _onItemTapped(idx, context),
                       minExtendedWidth: 280,
                       labelType: MediaQuery.of(context).size.width > 1200
                           ? NavigationRailLabelType.none
