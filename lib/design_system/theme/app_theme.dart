@@ -304,19 +304,76 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         headerBackgroundColor: foreground,
         headerForegroundColor: background,
-        dayForegroundColor: WidgetStatePropertyAll(foreground),
-        todayForegroundColor: WidgetStatePropertyAll(foreground),
+        weekdayStyle: TextStyle(color: secondaryText),
+        dayBackgroundColor: WidgetStateProperty.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? foreground : null,
+        ),
+        dayForegroundColor: WidgetStateProperty.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? background : foreground,
+        ),
+        dayOverlayColor: WidgetStatePropertyAll(
+          foreground.withValues(alpha: 0.08),
+        ),
+        todayForegroundColor: WidgetStateProperty.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? background : foreground,
+        ),
+        todayBackgroundColor: WidgetStateProperty.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? foreground : null,
+        ),
         todayBorder: BorderSide(color: foreground),
-        yearForegroundColor: WidgetStatePropertyAll(foreground),
+        yearBackgroundColor: WidgetStateProperty.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? foreground : null,
+        ),
+        yearForegroundColor: WidgetStateProperty.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? background : foreground,
+        ),
+        yearOverlayColor: WidgetStatePropertyAll(
+          foreground.withValues(alpha: 0.08),
+        ),
+        rangePickerBackgroundColor: background,
+        rangePickerHeaderBackgroundColor: foreground,
+        rangePickerHeaderForegroundColor: background,
+        rangeSelectionBackgroundColor: surfaceMuted,
+        cancelButtonStyle: TextButton.styleFrom(foregroundColor: foreground),
+        confirmButtonStyle: TextButton.styleFrom(foregroundColor: foreground),
       ),
       timePickerTheme: TimePickerThemeData(
         backgroundColor: background,
         dialBackgroundColor: surfaceMuted,
         dialHandColor: foreground,
-        dialTextColor: foreground,
-        hourMinuteColor: background,
-        hourMinuteTextColor: foreground,
+        dialTextColor: WidgetStateColor.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? background : foreground,
+        ),
+        hourMinuteColor: WidgetStateColor.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? foreground
+              : surfaceMuted,
+        ),
+        hourMinuteTextColor: WidgetStateColor.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? background : foreground,
+        ),
+        dayPeriodColor: WidgetStateColor.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? foreground
+              : surfaceMuted,
+        ),
+        dayPeriodTextColor: WidgetStateColor.resolveWith(
+          (states) =>
+              states.contains(WidgetState.selected) ? background : foreground,
+        ),
+        dayPeriodBorderSide: outline,
         entryModeIconColor: foreground,
+        cancelButtonStyle: TextButton.styleFrom(foregroundColor: foreground),
+        confirmButtonStyle: TextButton.styleFrom(foregroundColor: foreground),
+        helpTextStyle: TextStyle(color: secondaryText),
       ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: foreground,
