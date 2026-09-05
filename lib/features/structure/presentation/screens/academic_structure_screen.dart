@@ -1817,6 +1817,7 @@ class _SystemCard extends StatelessWidget {
   }
 }
 
+
 /// Step 2 (Academic years): a direct inline setup workspace, replacing the
 /// old empty-state + "Add academic year" modal. The form always renders
 /// (no giant empty state); once fields are valid a live preview card shows
@@ -2530,6 +2531,11 @@ class _SavedAcademicYearTile extends StatelessWidget {
   }
 }
 
+/// Per-level classes configuration workspace: a level switcher, editable
+/// suggested classes, a reorderable "Your classes" list and a custom-class
+/// flow. On wide (web) layouts a right-hand summary card shows every level's
+/// configured count side by side; on mobile the switcher becomes a
+/// horizontal scroller above a single-column editor.
 class _ClassesBulkSetup extends StatefulWidget {
   const _ClassesBulkSetup({
     required this.state,
@@ -2572,6 +2578,14 @@ class _ClassesBulkSetupState extends State<_ClassesBulkSetup> {
     _levelId = level?.id;
   }
 
+  void _selectLevel(String levelId) {
+    if (levelId == _levelId) return;
+    setState(() {
+      _levelId = levelId;
+      _selected.clear();
+    });
+  }
+
   List<String> _suggestions(EducationalLevel level) =>
       const ClassSuggestionResolver().resolve(
         level: level,
@@ -2586,14 +2600,9 @@ class _ClassesBulkSetupState extends State<_ClassesBulkSetup> {
             item.name.trim().toLowerCase() == name.trim().toLowerCase(),
       );
 
-  String _levelLabel(EducationalLevel level) {
-    final count = widget.state.classes
-        .where((item) => item.levelId == level.id && item.isActive)
-        .length;
-    return count == 0
-        ? level.name
-        : '${level.name} · $count class${count == 1 ? '' : 'es'}';
-  }
+  int _classCount(EducationalLevel level) => widget.state.classes
+      .where((item) => item.levelId == level.id && item.isActive)
+      .length;
 
   Future<void> _addCustom() async {
     final controller = TextEditingController();
@@ -2773,197 +2782,563 @@ class _ClassesBulkSetupState extends State<_ClassesBulkSetup> {
     capacity.dispose();
   }
 
+  List<EducationalLevel> get _levels =>
+      widget.state.levels.where((item) => item.isActive).toList()
+        ..sort((a, b) => a.order.compareTo(b.order));
+
+  List<SchoolClass> _classesForLevel(String levelId) {
+    final items = widget.state.classes
+        .where((item) => item.levelId == levelId && item.isActive)
+        .toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    return items;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final levels = widget.state.levels.where((item) => item.isActive).toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
-    final level = _level;
+    final levels = _levels;
     if (levels.isEmpty)
       return const Center(
         child: Text('Add an education level before creating classes.'),
       );
-    final suggestions = _suggestions(level!);
-    final configured = [...widget.state.classes]
-      ..sort((a, b) {
-        final levelOrder = levels
-            .indexWhere((item) => item.id == a.levelId)
-            .compareTo(levels.indexWhere((item) => item.id == b.levelId));
-        return levelOrder != 0
-            ? levelOrder
-            : (a.order != b.order
-                  ? a.order.compareTo(b.order)
-                  : a.name.compareTo(b.name));
+    final level = _level ?? levels.first;
+    if (_levelId != level.id) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _levelId = level.id);
       });
+    }
+
     return SafeArea(
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
-              children: [
-                DropdownButtonFormField<String>(
-                  value: _levelId,
-                  decoration: const InputDecoration(
-                    labelText: 'Education level',
-                    prefixIcon: Icon(Icons.school_outlined),
-                  ),
-                  items: levels
-                      .map(
-                        (item) => DropdownMenuItem(
-                          value: item.id,
-                          child: Text(_levelLabel(item)),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) => setState(() {
-                    _levelId = value;
-                    _selected.clear();
-                  }),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Choose the classes this level offers.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Text(
-                      'Suggested classes',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: suggestions.isEmpty
-                          ? null
-                          : () => setState(() => _selected.addAll(suggestions)),
-                      child: const Text('Select all'),
-                    ),
-                  ],
-                ),
-                if (suggestions.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      'No configured suggestions for this level. Add the class names your school uses.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: suggestions
-                      .map(
-                        (name) => FilterChip(
-                          label: Text(name),
-                          selected: _selected.contains(name),
-                          onSelected: (value) => setState(
-                            () => value
-                                ? _selected.add(name)
-                                : _selected.remove(name),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _addCustom,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add a custom class'),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Capacity and streams are configured later. Streams are added in the next step.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                if (configured.isNotEmpty) ...[
-                  const SizedBox(height: 28),
-                  Text(
-                    'Configured classes',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  for (final configuredLevel in levels) ...[
-                    if (configured.any(
-                      (item) =>
-                          item.levelId == configuredLevel.id &&
-                          item.isActive,
-                    )) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12, bottom: 4),
-                        child: Text(
-                          configuredLevel.name,
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                      _ClassLevelGroup(
-                        levelClasses: configured
-                            .where(
-                              (item) =>
-                                  item.levelId == configuredLevel.id &&
-                                  item.isActive,
-                            )
-                            .toList(),
-                        hasStreams: (classId) => widget.state.streams.any(
-                          (stream) => stream.classId == classId,
-                        ),
-                        onEdit: (classItem) => showClassFormDialog(
-                          context,
-                          schoolId: widget.schoolId,
-                          existing: classItem,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 900;
+          final workspace = _LevelWorkspace(
+            level: level,
+            selected: _selected,
+            suggestions: _suggestions(level),
+            onSelectAll: (names) => setState(() => _selected.addAll(names)),
+            onClearAll: () => setState(() => _selected.clear()),
+            onToggle: (name, value) => setState(
+              () => value ? _selected.add(name) : _selected.remove(name),
+            ),
+            onAddCustom: _addCustom,
+            onCreateSelected: _selected.isEmpty ? null : _openCreateSheet,
+            configured: _classesForLevel(level.id),
+            hasStreams: (classId) =>
+                widget.state.streams.any((stream) => stream.classId == classId),
+            onEdit: (classItem) => showClassFormDialog(
+              context,
+              schoolId: widget.schoolId,
+              existing: classItem,
+              levels: levels,
+              onSave: widget.onEdit,
+            ),
+            onArchive: (classItem) => context.read<StructureBloc>().add(
+              ArchiveClassRequested(classItem.id),
+            ),
+            onDelete: (classItem) async {
+              final confirmed = await showDeleteConfirmDialog(
+                context,
+                title: 'Delete class',
+                message: 'Delete "${classItem.name}"? This cannot be undone.',
+              );
+              if (confirmed == true && context.mounted) {
+                context.read<StructureBloc>().add(
+                  DeleteClassRequested(classItem.id),
+                );
+              }
+            },
+            onReorder: (reordered) => context.read<StructureBloc>().add(
+              ReorderClassesRequested(reordered),
+            ),
+          );
+
+          if (isWide) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _LevelSwitcher(
                           levels: levels,
-                          onSave: widget.onEdit,
+                          selectedId: level.id,
+                          classCount: _classCount,
+                          onSelect: _selectLevel,
                         ),
-                        onArchive: (classItem) => context
-                            .read<StructureBloc>()
-                            .add(ArchiveClassRequested(classItem.id)),
-                        onDelete: (classItem) async {
-                          final confirmed = await showDeleteConfirmDialog(
-                            context,
-                            title: 'Delete class',
-                            message: 'Delete "${classItem.name}"? This cannot be undone.',
-                          );
-                          if (confirmed == true && context.mounted) {
-                            context.read<StructureBloc>().add(
-                              DeleteClassRequested(classItem.id),
-                            );
-                          }
-                        },
-                        onReorder: (reordered) => context
-                            .read<StructureBloc>()
-                            .add(ReorderClassesRequested(reordered)),
+                        const SizedBox(height: 20),
+                        Expanded(child: SingleChildScrollView(child: workspace)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  SizedBox(
+                    width: 300,
+                    child: _EducationLevelsSummary(
+                      levels: levels,
+                      selectedId: level.id,
+                      classCount: _classCount,
+                      totalClasses: widget.state.classes
+                          .where((item) => item.isActive)
+                          .length,
+                      onSelect: _selectLevel,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: _LevelSwitcher(
+                  levels: levels,
+                  selectedId: level.id,
+                  classCount: _classCount,
+                  onSelect: _selectLevel,
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                  children: [workspace],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Horizontal, scrollable level switcher shared by mobile and web layouts.
+/// Never hides or reorders levels based on school type — every active level
+/// chosen in Step 4 shows up here exactly as configured.
+class _LevelSwitcher extends StatelessWidget {
+  const _LevelSwitcher({
+    required this.levels,
+    required this.selectedId,
+    required this.classCount,
+    required this.onSelect,
+  });
+
+  final List<EducationalLevel> levels;
+  final String selectedId;
+  final int Function(EducationalLevel) classCount;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 64,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: levels.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final item = levels[index];
+          final selected = item.id == selectedId;
+          final count = classCount(item);
+          return Semantics(
+            button: true,
+            selected: selected,
+            label: '${item.name}, $count class${count == 1 ? '' : 'es'}',
+            child: InkWell(
+              onTap: () => onSelect(item.id),
+              borderRadius: BorderRadius.circular(12),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? scheme.primaryContainer
+                        : scheme.surface,
+                    border: Border.all(
+                      color: selected ? scheme.primary : scheme.outlineVariant,
+                      width: selected ? 1.5 : 1,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: selected
+                              ? scheme.onPrimaryContainer
+                              : scheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        count == 0 ? 'No classes' : '$count classes',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: selected
+                              ? scheme.onPrimaryContainer.withValues(alpha: 0.8)
+                              : scheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
-                  ],
-                ],
-              ],
-            ),
-          ),
-          if (_selected.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: FilledButton(
-                  onPressed: _openCreateSheet,
-                  child: Text(
-                    'Create ${_selected.length} class${_selected.length == 1 ? '' : 'es'}',
                   ),
                 ),
               ),
             ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// The right-hand "Education levels summary" card shown on wide (web)
+/// layouts: every level's configured count plus a completion banner. A
+/// level with zero classes is shown as "Not set up" rather than blocked —
+/// intentionally configured empty levels are allowed.
+class _EducationLevelsSummary extends StatelessWidget {
+  const _EducationLevelsSummary({
+    required this.levels,
+    required this.selectedId,
+    required this.classCount,
+    required this.totalClasses,
+    required this.onSelect,
+  });
+
+  final List<EducationalLevel> levels;
+  final String selectedId;
+  final int Function(EducationalLevel) classCount;
+  final int totalClasses;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final configuredLevels = levels.where((l) => classCount(l) > 0).length;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Education levels summary',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Classes configured for each level.',
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 16),
+          for (final level in levels) ...[
+            _LevelSummaryRow(
+              level: level,
+              count: classCount(level),
+              selected: level.id == selectedId,
+              onTap: () => onSelect(level.id),
+            ),
+            const SizedBox(height: 8),
+          ],
+          const SizedBox(height: 4),
+          if (totalClasses > 0)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.08),
+                border: Border.all(color: Colors.green.withValues(alpha: 0.4)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Looks good!',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$totalClasses class${totalClasses == 1 ? '' : 'es'} across '
+                          '$configuredLevels level${configuredLevels == 1 ? '' : 's'}. '
+                          'You can edit these later.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
+    );
+  }
+}
+
+class _LevelSummaryRow extends StatelessWidget {
+  const _LevelSummaryRow({
+    required this.level,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final EducationalLevel level;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? scheme.primaryContainer : null,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      level.name,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      count == 0 ? 'Not set up' : '$count classes',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, size: 18, color: scheme.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The single-level editor: suggested-classes chips with select-all/clear-all
+/// and the reorderable "Your classes" list. Identical widget tree is reused
+/// for mobile (inside a ListView) and web (inside the left configuration
+/// panel), so behavior never diverges between platforms.
+class _LevelWorkspace extends StatelessWidget {
+  const _LevelWorkspace({
+    required this.level,
+    required this.selected,
+    required this.suggestions,
+    required this.onSelectAll,
+    required this.onClearAll,
+    required this.onToggle,
+    required this.onAddCustom,
+    required this.onCreateSelected,
+    required this.configured,
+    required this.hasStreams,
+    required this.onEdit,
+    required this.onArchive,
+    required this.onDelete,
+    required this.onReorder,
+  });
+
+  final EducationalLevel level;
+  final Set<String> selected;
+  final List<String> suggestions;
+  final ValueChanged<List<String>> onSelectAll;
+  final VoidCallback onClearAll;
+  final void Function(String name, bool value) onToggle;
+  final VoidCallback onAddCustom;
+  final VoidCallback? onCreateSelected;
+  final List<SchoolClass> configured;
+  final bool Function(String classId) hasStreams;
+  final ValueChanged<SchoolClass> onEdit;
+  final ValueChanged<SchoolClass> onArchive;
+  final ValueChanged<SchoolClass> onDelete;
+  final ValueChanged<List<SchoolClass>> onReorder;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final allSelected =
+        suggestions.isNotEmpty && suggestions.every(selected.contains);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                level.name,
+                style: Theme.of(
+                  context,
+                ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Suggested classes for a standard ${level.name.toLowerCase()} setup. '
+          'You can edit, remove or add your own.',
+          style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(color: scheme.outlineVariant),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.lightbulb_outline, size: 18, color: scheme.onSurfaceVariant),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Suggested classes',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (suggestions.isNotEmpty)
+                    TextButton(
+                      onPressed: allSelected
+                          ? onClearAll
+                          : () => onSelectAll(suggestions),
+                      child: Text(allSelected ? 'Clear all' : 'Select all'),
+                    ),
+                ],
+              ),
+              if (suggestions.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'No configured suggestions for this level. Add the class names your school uses.',
+                    style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: suggestions
+                        .map(
+                          (name) => FilterChip(
+                            label: Text(name),
+                            selected: selected.contains(name),
+                            onSelected: (value) => onToggle(name, value),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 44,
+          child: OutlinedButton.icon(
+            onPressed: onAddCustom,
+            icon: const Icon(Icons.add),
+            label: const Text('Add custom class'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Streams are configured next — this step only sets up class names.',
+          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+        ),
+        if (onCreateSelected != null) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton(
+              onPressed: onCreateSelected,
+              child: Text(
+                'Create ${selected.length} class${selected.length == 1 ? '' : 'es'}',
+              ),
+            ),
+          ),
+        ],
+        if (configured.isNotEmpty) ...[
+          const SizedBox(height: 28),
+          Row(
+            children: [
+              Text(
+                'Your classes (${configured.length})',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const Spacer(),
+              Text(
+                'Drag to reorder',
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _ClassLevelGroup(
+            levelClasses: configured,
+            hasStreams: hasStreams,
+            onEdit: onEdit,
+            onArchive: onArchive,
+            onDelete: onDelete,
+            onReorder: onReorder,
+          ),
+        ],
+      ],
     );
   }
 }
