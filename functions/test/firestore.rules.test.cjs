@@ -3331,3 +3331,149 @@ describe('Term billing Phase 3A: student_pricing_bands', () => {
   });
 });
 
+describe('Direct enrolment: draft + restricted support notes', () => {
+  async function seedDraft() {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'direct_enrolment_drafts', 'draft1'), {
+        schoolId: 'schoolA', createdBy: 'drafterA', status: 'draft', guardianConsent: null,
+      });
+      await setDoc(
+        doc(context.firestore(), 'direct_enrolment_drafts', 'draft1', 'restricted', 'support'),
+        { schoolId: 'schoolA', notes: 'seeded note' },
+      );
+    });
+  }
+
+  test('draft: creator can read/update their own draft, other-school staff cannot', async () => {
+    await seedDraft();
+    await assertSucceeds(getDoc(doc(dbFor('drafterA'), 'direct_enrolment_drafts', 'draft1')));
+    await assertSucceeds(updateDoc(doc(dbFor('drafterA'), 'direct_enrolment_drafts', 'draft1'), {
+      schoolId: 'schoolA', createdBy: 'drafterA', status: 'draft', guardianConsent: null, step: 3,
+    }));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'direct_enrolment_drafts', 'draft1')));
+  });
+
+  test('draft: a client can never set status to anything but draft/cancelled', async () => {
+    await seedDraft();
+    await assertFails(updateDoc(doc(dbFor('drafterA'), 'direct_enrolment_drafts', 'draft1'), {
+      schoolId: 'schoolA', createdBy: 'drafterA', status: 'active', guardianConsent: null,
+    }));
+  });
+
+  test('restricted support notes: only an approved clinical role (nurse/schoolAdmin) may read, not the draft creator or an ordinary teacher', async () => {
+    await seedDraft();
+    await assertSucceeds(getDoc(
+      doc(dbFor('nurseA'), 'direct_enrolment_drafts', 'draft1', 'restricted', 'support'),
+    ));
+    await assertSucceeds(getDoc(
+      doc(dbFor('adminA'), 'direct_enrolment_drafts', 'draft1', 'restricted', 'support'),
+    ));
+    await assertFails(getDoc(
+      doc(dbFor('drafterA'), 'direct_enrolment_drafts', 'draft1', 'restricted', 'support'),
+    ));
+    await assertFails(getDoc(
+      doc(dbFor('teacherA'), 'direct_enrolment_drafts', 'draft1', 'restricted', 'support'),
+    ));
+  });
+
+  test('restricted support notes: cross-school clinical staff cannot read or write another school\'s notes', async () => {
+    await seedDraft();
+    await assertFails(getDoc(
+      doc(dbFor('nurseB'), 'direct_enrolment_drafts', 'draft1', 'restricted', 'support'),
+    ));
+    // Also cannot forge access by asserting their own schoolId in the payload.
+    await assertFails(setDoc(
+      doc(dbFor('nurseB'), 'direct_enrolment_drafts', 'draft1', 'restricted', 'support'),
+      { schoolId: 'schoolB', notes: 'forged' },
+    ));
+  });
+
+  test('restricted support notes: an ordinary teacher cannot write notes even for their own draft', async () => {
+    await seedDraft();
+    await assertFails(setDoc(
+      doc(dbFor('drafterA'), 'direct_enrolment_drafts', 'draft1', 'restricted', 'support'),
+      { schoolId: 'schoolA', notes: 'should not be allowed' },
+    ));
+  });
+
+  test('restricted support notes: nurse can update notes for their own school', async () => {
+    await seedDraft();
+    await assertSucceeds(setDoc(
+      doc(dbFor('nurseA'), 'direct_enrolment_drafts', 'draft1', 'restricted', 'support'),
+      { schoolId: 'schoolA', notes: 'updated by nurse' },
+      { merge: true },
+    ));
+  });
+
+  test('draft: a client update can never introduce or change guardianConsent directly', async () => {
+    // Structured guardian consent is written only by guardian_consent.js's
+    // callables (Cloud Functions bypass rules). A client merge-update must
+    // echo back the existing value untouched.
+    await seedDraft();
+    await assertFails(updateDoc(doc(dbFor('drafterA'), 'direct_enrolment_drafts', 'draft1'), {
+      schoolId: 'schoolA', createdBy: 'drafterA', status: 'draft',
+      guardianConsent: { status: 'captured', method: 'guardian_signs_now' },
+    }));
+    // A merge write that never mentions guardianConsent leaves it untouched
+    // and is allowed - this is how the wizard's autosave actually writes.
+    await assertSucceeds(updateDoc(doc(dbFor('drafterA'), 'direct_enrolment_drafts', 'draft1'), {
+      step: 5,
+    }));
+  });
+});
+
+describe('Guardian consent (direct enrolment Step 6)', () => {
+  async function seedConsentRecord() {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'guardian_consent_records', 'record1'), {
+        schoolId: 'schoolA', draftId: 'draft1', guardianId: 'g1', guardianName: 'Jane Doe',
+        method: 'guardian_signs_now', status: 'captured', policyVersion: 'v1',
+        consentTextHash: 'abc123',
+      });
+      await setDoc(doc(context.firestore(), 'guardian_consent_links', 'token1'), {
+        id: 'token1', schoolId: 'schoolA', draftId: 'draft1', guardianId: 'g1',
+        guardianName: 'Jane Doe', email: 'jane@example.com', used: false,
+      });
+    });
+  }
+
+  test('guardian_consent_records: same-school staff can read, other-school staff cannot', async () => {
+    await seedConsentRecord();
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'guardian_consent_records', 'record1')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'guardian_consent_records', 'record1')));
+  });
+
+  test('guardian_consent_records: unauthenticated read fails', async () => {
+    await seedConsentRecord();
+    await assertFails(getDoc(
+      doc(testEnv.unauthenticatedContext().firestore(), 'guardian_consent_records', 'record1'),
+    ));
+  });
+
+  test('guardian_consent_records: no client, including a school admin, may write directly - append-only via callables only', async () => {
+    await assertFails(setDoc(doc(dbFor('adminA'), 'guardian_consent_records', 'forged'), {
+      schoolId: 'schoolA', draftId: 'draft1', guardianId: 'g1', guardianName: 'x',
+      method: 'guardian_signs_now', status: 'captured', policyVersion: 'v1', consentTextHash: 'x',
+    }));
+    await seedConsentRecord();
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'guardian_consent_records', 'record1'), {
+      status: 'withdrawn',
+    }));
+    await assertFails(deleteDoc(doc(dbFor('adminA'), 'guardian_consent_records', 'record1')));
+  });
+
+  test('guardian_consent_links: no client may read or write a token doc directly - only resolveGuardianConsentLink may, and it is unauthenticated by design', async () => {
+    await seedConsentRecord();
+    // Not even the school admin who could have created it, and not the
+    // guardian (who has no account) - the token is resolved exclusively
+    // through the callable's own expiry/single-use transaction.
+    await assertFails(getDoc(doc(dbFor('adminA'), 'guardian_consent_links', 'token1')));
+    await assertFails(getDoc(
+      doc(testEnv.unauthenticatedContext().firestore(), 'guardian_consent_links', 'token1'),
+    ));
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'guardian_consent_links', 'token1'), {
+      used: true,
+    }));
+  });
+});
+

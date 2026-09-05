@@ -593,8 +593,30 @@ service cloud.firestore {
         resource.data.createdBy == request.auth.uid &&
         request.resource.data.createdBy == resource.data.createdBy &&
         request.resource.data.status in ['draft', 'cancelled'] &&
+        // Structured guardian consent is written only by guardian_consent.js's
+        // callables (Cloud Functions bypass rules); a client update must
+        // never introduce or change it directly.
+        request.resource.data.guardianConsent == resource.data.guardianConsent &&
         schoolCanWrite(resource.data.schoolId);
       allow delete: if false;
+
+      // Restricted support/health notes captured during enrolment. Stricter
+      // than the draft doc itself: only staff holding an approved
+      // support/health role may read or write these, mirroring
+      // student_medical_support below. The draft's own creator gets no
+      // implicit access here.
+      match /restricted/{docId} {
+        // Validate against the parent draft's own schoolId, not merely the
+        // value the write claims for itself - otherwise a clinical-role
+        // account at another tenant could write a doc under someone else's
+        // draftId by simply asserting its own schoolId in the payload.
+        allow read: if isSameSchool(get(/databases/$(database)/documents/direct_enrolment_drafts/$(draftId)).data.schoolId) &&
+          canManageClinicalRecords();
+        allow write: if isSameSchool(get(/databases/$(database)/documents/direct_enrolment_drafts/$(draftId)).data.schoolId) &&
+          request.resource.data.schoolId == get(/databases/$(database)/documents/direct_enrolment_drafts/$(draftId)).data.schoolId &&
+          canManageClinicalRecords() &&
+          schoolCanWrite(get(/databases/$(database)/documents/direct_enrolment_drafts/$(draftId)).data.schoolId);
+      }
     }
 
     // These are written by the callable finaliser. Client reads are kept
@@ -1569,6 +1591,26 @@ service cloud.firestore {
       allow read: if isStaff() && isSameSchool(resource.data.schoolId);
       allow create: if isStaff() && isSameSchool(request.resource.data.schoolId);
       allow update, delete: if false;
+    }
+
+    // Guardian consent for direct-enrolment Step 6. Append-only audit trail
+    // of every capture/pending/withdrawal event - written exclusively by
+    // guardian_consent.js's callables (Cloud Functions bypass rules); no
+    // client, including staff, may write here directly, matching how
+    // directEnrolLearner itself is the only writer of student activation.
+    match /guardian_consent_records/{id} {
+      allow read: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow write: if false;
+    }
+
+    // Single-use, time-limited secure consent link tokens. The guardian who
+    // redeems one is unauthenticated (they may have no account), so
+    // resolution happens only through the resolveGuardianConsentLink
+    // callable - never a direct client read/write of the token doc, which
+    // would let anyone holding a link probe its contents outside the
+    // callable's expiry/single-use checks.
+    match /guardian_consent_links/{token} {
+      allow read, write: if false;
     }
 
     // School-wide configuration, plus its archived-term history.

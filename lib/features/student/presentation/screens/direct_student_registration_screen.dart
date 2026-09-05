@@ -9,17 +9,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
+import 'package:school_pulse/design_system/theme/app_breakpoints.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
 import 'package:school_pulse/features/finance/domain/entities/fee_plan.dart';
 import 'package:school_pulse/features/finance/domain/repositories/fee_billing_repository.dart';
+import 'package:school_pulse/features/structure/domain/entities/campus_entities.dart';
 import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/features/structure/domain/entities/transport_structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
+import 'package:school_pulse/features/student/data/student_document_uploader.dart';
 import 'package:school_pulse/injection_container.dart';
 
 import 'admin_student_profile_screen.dart' show StudentProfileTab;
@@ -46,6 +52,7 @@ class _DirectStudentRegistrationScreenState
   String _selectedPath = 'direct';
   bool _draftPersisted = false;
   bool _saving = false, _enrolling = false, _consent = false, _override = false;
+  bool _reviewed = false;
   bool _submittedCurrentStep = false;
   final _firstInvalidKey = GlobalKey();
   String _entry = 'New admission',
@@ -56,11 +63,49 @@ class _DirectStudentRegistrationScreenState
   AcademicYear? _year;
   SchoolClass? _class;
   String? _stream;
+  EducationalLevel? _selectedLevel;
+  Campus? _selectedCampus;
   List<AcademicYear> _years = [];
   List<SchoolClass> _classes = [];
   List<ClassStream> _allStreams = [];
+  List<EducationalLevel> _levels = [];
+  List<Campus> _campuses = [];
+  bool _levelsLoaded = false;
+  bool _classesLoaded = false;
+  bool _campusesLoaded = false;
   Map<String, dynamic> _modules = {};
   List<Map<String, dynamic>> _documentRequirements = const [];
+  // Tenant-configured guardian-consent policy
+  // (`schools/{id}.enrolmentPolicy`). Defaults mirror
+  // guardian_consent.js's DEFAULT_CONSENT_METHODS so the wizard works even
+  // for a school that hasn't set enrolmentPolicy yet.
+  List<String> _consentMethods = const ['guardian_signs_now', 'secure_link'];
+  String _consentPolicyVersion = 'v1';
+  String? _privacyNoticeUrl;
+  String _consentText =
+      'I consent to the enrolment of this learner and confirm that the '
+      'information provided is true and correct. We collect and use '
+      'personal information in accordance with the Privacy Notice for '
+      'Learner Enrolment.';
+  // Locally selected method for the active guardian, before capture.
+  String? _selectedConsentMethod;
+  bool _consentActionInFlight = false;
+  final _witnessName = TextEditingController();
+  final _witnessRelationship = TextEditingController();
+  List<String> _mealOptions = const [];
+  String? _supportNotesPolicyUrl;
+  List<TransportRoute> _routes = const [];
+  List<TransportVehicle> _vehicles = const [];
+  final Map<String, int> _routeOccupancy = {};
+  StreamSubscription? _routesSub, _vehiclesSub, _occupancySub;
+  final _audit = AuditRepository();
+  // 'none' | 'school' — separate from the free-text legacy `_transport`
+  // controller, which is retained only for the boarding/house field.
+  String _transportChoice = 'none';
+  String? _selectedRouteId;
+  String? _mealChoice;
+  String? _lastSavedSupportText;
+  bool _supportNotesAccessDenied = false;
   final _first = TextEditingController(),
       _middle = TextEditingController(),
       _last = TextEditingController(),
@@ -73,9 +118,26 @@ class _DirectStudentRegistrationScreenState
       _support = TextEditingController();
   final _guardianSearch = TextEditingController();
   final List<Map<String, dynamic>> _guardians = [], _documents = [];
-  StreamSubscription? _yearsSub, _classesSub, _streamsSub, _termsSub;
+  // Mirror of draft.guardianConsent, written server-side only by
+  // guardian_consent.js's callables — never set directly by this client.
+  Map<String, dynamic>? _guardianConsent;
+  StreamSubscription? _yearsSub,
+      _classesSub,
+      _streamsSub,
+      _termsSub,
+      _levelsSub,
+      _campusesSub;
   StreamSubscription? _schoolSub;
+  StreamSubscription? _draftConsentSub;
   List<AcademicTerm> _terms = [];
+
+  /// Tenant-configured entry types (`schools/{id}.enrolmentPolicy.entryTypes`).
+  /// Defaults are used only when the school hasn't configured any.
+  List<String> _entryTypeOptions = const [
+    'New admission',
+    'Transfer',
+    'Returning',
+  ];
 
   // Fees step state. The matched plan is a read-only snapshot from
   // `findMatchingFeePlan` (see enrollment_setup_wizard_screen.dart's
@@ -93,29 +155,113 @@ class _DirectStudentRegistrationScreenState
       .where((l) => l.required || _selectedFeeAddOnIds.contains(l.chargeId))
       .fold(0, (sum, l) => sum + l.amountUgx);
 
+  void _retrySnack(String message, VoidCallback retry) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: SnackBarAction(label: 'Retry', onPressed: retry),
+      ),
+    );
+  }
+
+  void _subscribeYears() {
+    _yearsSub?.cancel();
+    _yearsSub = _repo.watchAcademicYears(widget.schoolId).listen(
+      (v) {
+        if (mounted)
+          setState(() {
+            _years = v.where((x) => !x.isArchived).toList();
+            _year ??= _years.where((x) => x.isCurrent).firstOrNull;
+          });
+      },
+      onError: (_) =>
+          _retrySnack('Could not load academic years.', _subscribeYears),
+    );
+  }
+
+  void _subscribeClasses() {
+    _classesSub?.cancel();
+    _classesSub = _repo.watchClasses(widget.schoolId).listen(
+      (v) {
+        if (mounted)
+          setState(() => _classes = v.where((x) => x.isActive).toList());
+        _classesLoaded = true;
+      },
+      onError: (_) => _retrySnack('Could not load classes.', _subscribeClasses),
+    );
+  }
+
+  void _subscribeStreams() {
+    _streamsSub?.cancel();
+    _streamsSub = _repo.watchStreams(widget.schoolId).listen(
+      (v) {
+        if (mounted) setState(() => _allStreams = v);
+      },
+      onError: (_) =>
+          _retrySnack('Could not load class streams.', _subscribeStreams),
+    );
+  }
+
+  void _subscribeTerms() {
+    _termsSub?.cancel();
+    _termsSub = _repo.watchAcademicTerms(widget.schoolId).listen(
+      (v) {
+        if (mounted)
+          setState(() => _terms = v.where((x) => !x.isArchived).toList());
+      },
+      onError: (_) =>
+          _retrySnack('Could not load academic terms.', _subscribeTerms),
+    );
+  }
+
+  void _subscribeLevels() {
+    _levelsSub?.cancel();
+    _levelsSub = _repo.watchLevels(widget.schoolId).listen(
+      (v) {
+        if (mounted)
+          setState(() {
+            _levels = v.where((x) => x.isActive).toList();
+            _selectedLevel ??= _levels
+                .where((x) => x.id == _class?.levelId)
+                .firstOrNull;
+            _levelsLoaded = true;
+          });
+      },
+      onError: (_) =>
+          _retrySnack('Could not load education levels.', _subscribeLevels),
+    );
+  }
+
+  void _subscribeCampuses() {
+    _campusesSub?.cancel();
+    _campusesSub = _repo.watchCampuses(widget.schoolId).listen(
+      (v) {
+        if (mounted)
+          setState(() {
+            _campuses = v.where((x) => x.isActive).toList();
+            _selectedCampus ??=
+                _campuses.where((x) => x.isPrimary).firstOrNull ??
+                _campuses.firstOrNull;
+            _campusesLoaded = true;
+          });
+      },
+      onError: (_) =>
+          _retrySnack('Could not load campuses.', _subscribeCampuses),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     _draftId = _uuid.v4();
     _studentId = _uuid.v4();
-    _yearsSub = _repo.watchAcademicYears(widget.schoolId).listen((v) {
-      if (mounted)
-        setState(() {
-          _years = v.where((x) => !x.isArchived).toList();
-          _year ??= _years.where((x) => x.isCurrent).firstOrNull;
-        });
-    });
-    _classesSub = _repo.watchClasses(widget.schoolId).listen((v) {
-      if (mounted)
-        setState(() => _classes = v.where((x) => x.isActive).toList());
-    });
-    _streamsSub = _repo.watchStreams(widget.schoolId).listen((v) {
-      if (mounted) setState(() => _allStreams = v);
-    });
-    _termsSub = _repo.watchAcademicTerms(widget.schoolId).listen((v) {
-      if (mounted)
-        setState(() => _terms = v.where((x) => !x.isArchived).toList());
-    });
+    _subscribeYears();
+    _subscribeClasses();
+    _subscribeStreams();
+    _subscribeTerms();
+    _subscribeLevels();
+    _subscribeCampuses();
     _schoolSub = _db
         .collection('schools')
         .doc(widget.schoolId)
@@ -130,14 +276,91 @@ class _DirectStudentRegistrationScreenState
                         const [])
                     .map((item) => Map<String, dynamic>.from(item as Map)),
               );
+              final policy = Map<String, dynamic>.from(
+                data['enrolmentPolicy'] ?? {},
+              );
+              _mealOptions = List<String>.from(
+                policy['mealOptions'] as List? ?? const [],
+              );
+              _supportNotesPolicyUrl =
+                  policy['supportNotesPolicyUrl'] as String?;
+              final configuredConsentMethods = List<String>.from(
+                policy['consentMethods'] as List? ?? const [],
+              );
+              _consentMethods = configuredConsentMethods.isNotEmpty
+                  ? configuredConsentMethods
+                  : const ['guardian_signs_now', 'secure_link'];
+              _consentPolicyVersion =
+                  policy['consentPolicyVersion'] as String? ?? 'v1';
+              _privacyNoticeUrl = policy['privacyNoticeUrl'] as String?;
+              _consentText =
+                  (policy['consentText'] as String?)?.trim().isNotEmpty == true
+                  ? policy['consentText'] as String
+                  : _consentText;
+              if (_selectedConsentMethod != null &&
+                  !_consentMethods.contains(_selectedConsentMethod)) {
+                _selectedConsentMethod = null;
+              }
+              final configuredEntryTypes = List<String>.from(
+                policy['entryTypes'] as List? ?? const [],
+              );
+              _entryTypeOptions = configuredEntryTypes.isNotEmpty
+                  ? configuredEntryTypes
+                  : const ['New admission', 'Transfer', 'Returning'];
+              if (!_entryTypeOptions.contains(_entry)) {
+                _entry = _entryTypeOptions.first;
+              }
             });
         });
+    _routesSub = _repo.watchTransportRoutes(widget.schoolId).listen((v) {
+      if (mounted)
+        setState(() => _routes = v.where((x) => x.isActive).toList());
+    });
+    _vehiclesSub = _repo.watchTransportVehicles(widget.schoolId).listen((v) {
+      if (mounted)
+        setState(() => _vehicles = v.where((x) => x.isActive).toList());
+    });
+    _occupancySub = _db
+        .collection('students')
+        .where('schoolId', isEqualTo: widget.schoolId)
+        .where('services.transportRouteId', isNotEqualTo: null)
+        .snapshots()
+        .listen((snap) {
+          if (!mounted) return;
+          final counts = <String, int>{};
+          for (final doc in snap.docs) {
+            final routeId =
+                (doc.data()['services']
+                        as Map<String, dynamic>?)?['transportRouteId']
+                    as String?;
+            if (routeId == null) continue;
+            counts[routeId] = (counts[routeId] ?? 0) + 1;
+          }
+          setState(
+            () => _routeOccupancy
+              ..clear()
+              ..addAll(counts),
+          );
+        });
   }
+
+  int _routeCapacity(String routeId) => _vehicles
+      .where((v) => v.routeId == routeId)
+      .fold(0, (sum, v) => sum + v.capacity);
+  int _routeAvailable(String routeId) {
+    final capacity = _routeCapacity(routeId);
+    if (capacity <= 0) return 0;
+    return capacity - (_routeOccupancy[routeId] ?? 0);
+  }
+
+  List<TransportRoute> get _availableRoutes =>
+      _routes.where((r) => _routeAvailable(r.id) > 0).toList();
 
   void _load(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data()!;
     final l = Map<String, dynamic>.from(d['learner'] ?? {});
     final p = Map<String, dynamic>.from(d['placement'] ?? {});
+    final s = Map<String, dynamic>.from(d['services'] ?? {});
     setState(() {
       _draftId = doc.id;
       _draftPersisted = true;
@@ -156,6 +379,16 @@ class _DirectStudentRegistrationScreenState
       _year = _years.where((x) => x.id == p['academicYearId']).firstOrNull;
       _class = _classes.where((x) => x.id == p['classId']).firstOrNull;
       _stream = p['stream'];
+      _selectedLevel = _levels
+          .where((x) => x.id == (p['levelId'] ?? _class?.levelId))
+          .firstOrNull;
+      _selectedCampus = _campuses
+          .where((x) => x.id == (p['campusId'] ?? _class?.campusId))
+          .firstOrNull;
+      _boarding = s['boardingStatus'] as String? ?? _boarding;
+      _transportChoice = s['transportChoice'] as String? ?? _transportChoice;
+      _selectedRouteId = s['transportRouteId'] as String?;
+      _mealChoice = s['mealChoice'] as String?;
       _guardians
         ..clear()
         ..addAll(
@@ -171,6 +404,9 @@ class _DirectStudentRegistrationScreenState
           ),
         );
       _consent = d['consentAcknowledged'] == true;
+      _guardianConsent = d['guardianConsent'] != null
+          ? Map<String, dynamic>.from(d['guardianConsent'] as Map)
+          : null;
       final fees = Map<String, dynamic>.from(d['fees'] ?? {});
       _selectedFeeAddOnIds
         ..clear()
@@ -183,6 +419,51 @@ class _DirectStudentRegistrationScreenState
         _bursaryIsPercentage = bursary['isPercentage'] ?? true;
       }
     });
+    _loadSupportNotes();
+    _watchDraftConsent();
+  }
+
+  /// A secure consent link is redeemed by the guardian outside this app (an
+  /// unauthenticated web page hitting `resolveGuardianConsentLink`), so
+  /// staff need a live view of `draft.guardianConsent` rather than only the
+  /// snapshot taken when the draft was first opened.
+  void _watchDraftConsent() {
+    _draftConsentSub?.cancel();
+    _draftConsentSub = _db
+        .collection('direct_enrolment_drafts')
+        .doc(_draftId)
+        .snapshots()
+        .listen((snap) {
+          if (!mounted) return;
+          final consent = snap.data()?['guardianConsent'];
+          setState(
+            () => _guardianConsent = consent != null
+                ? Map<String, dynamic>.from(consent as Map)
+                : null,
+          );
+        });
+  }
+
+  Future<void> _loadSupportNotes() async {
+    try {
+      final snap = await _db
+          .collection('direct_enrolment_drafts')
+          .doc(_draftId)
+          .collection('restricted')
+          .doc('support')
+          .get();
+      final notes = snap.data()?['notes'] as String? ?? '';
+      if (!mounted) return;
+      setState(() {
+        _support.text = notes;
+        _lastSavedSupportText = notes;
+        _supportNotesAccessDenied = false;
+      });
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied' && mounted) {
+        setState(() => _supportNotesAccessDenied = true);
+      }
+    }
   }
 
   Map<String, dynamic> get _data => {
@@ -205,6 +486,10 @@ class _DirectStudentRegistrationScreenState
     'placement': {
       'academicYearId': _year?.id,
       'academicYear': _year?.name,
+      'levelId': _selectedLevel?.id,
+      'levelName': _selectedLevel?.name,
+      'campusId': _selectedCampus?.id,
+      'campusName': _selectedCampus?.name,
       'classId': _class?.id,
       'className': _class?.name,
       'stream': _stream,
@@ -212,10 +497,15 @@ class _DirectStudentRegistrationScreenState
     },
     'services': {
       'boardingStatus': _boarding,
-      'transportRoute': _transport.text.trim(),
+      'transportChoice': _boarding == 'Boarding learner'
+          ? 'none'
+          : _transportChoice,
+      'transportRouteId': _boarding == 'Boarding learner'
+          ? null
+          : (_transportChoice == 'school' ? _selectedRouteId : null),
+      'mealChoice': _mealOptions.isEmpty ? null : _mealChoice,
       'house': _house.text.trim(),
     },
-    'support': _support.text.trim(),
     'documents': _documents,
     'consentAcknowledged': _consent,
     'guardianOverride': _override ? {'reason': _overrideReason} : null,
@@ -256,12 +546,17 @@ class _DirectStudentRegistrationScreenState
       );
     }
     try {
-      await _db.collection('direct_enrolment_drafts').doc(_draftId).set({
-        ..._data,
-        'createdBy': auth.user.id,
-        'updatedAt': FieldValue.serverTimestamp(),
-        if (!_draftPersisted) 'createdAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      await _db
+          .collection('direct_enrolment_drafts')
+          .doc(_draftId)
+          .set({
+            ..._data,
+            'createdBy': auth.user.id,
+            'updatedAt': FieldValue.serverTimestamp(),
+            if (!_draftPersisted) 'createdAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true))
+          .timeout(const Duration(seconds: 10));
+      await _saveSupportNotes(auth.user.id);
       _draftPersisted = true;
       if (!quiet && mounted)
         ScaffoldMessenger.of(
@@ -274,9 +569,54 @@ class _DirectStudentRegistrationScreenState
             content: Text('Unable to save — Retry (${e.message ?? e.code})'),
           ),
         );
+    } catch (_) {
+      // Any other failure (e.g. genuinely offline, no connectivity at all)
+      // must not trap the user on the current step - the draft simply
+      // stays unsaved locally and the next successful save reconciles it.
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Unable to save right now. Your progress will sync when you\'re back online.',
+            ),
+          ),
+        );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  // Support/health notes are never stored on the draft doc that ordinary
+  // enrolment staff can read — they live in a dedicated restricted
+  // subcollection gated by `canManageClinicalRecords()` in firestore.rules,
+  // mirroring the `student_medical_support` precedent. Every write is
+  // logged so an approved reviewer can see who recorded what and when.
+  Future<void> _saveSupportNotes(String userId) async {
+    final text = _support.text.trim();
+    if (text == _lastSavedSupportText) return;
+    await _db
+        .collection('direct_enrolment_drafts')
+        .doc(_draftId)
+        .collection('restricted')
+        .doc('support')
+        .set({
+          'schoolId': widget.schoolId,
+          'notes': text,
+          'updatedBy': userId,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+    await _audit.logAction(
+      schoolId: widget.schoolId,
+      title: 'Support & health notes updated',
+      description: text.isEmpty
+          ? 'Support notes cleared for draft enrolment $_draftId'
+          : 'Support notes recorded for draft enrolment $_draftId',
+      iconName: 'health_and_safety',
+      colorHex: '#F59E0B',
+      userId: userId,
+      relatedEntityId: _draftId,
+    );
+    _lastSavedSupportText = text;
   }
 
   bool get _isMeaningfulDraft =>
@@ -303,6 +643,8 @@ class _DirectStudentRegistrationScreenState
       }.contains(role),
     );
   }
+
+  bool get _canChangeAcademicContext => _canUseGuardianOverride;
 
   String? _dateOfBirthError(String? value) {
     final raw = value?.trim() ?? '';
@@ -335,18 +677,27 @@ class _DirectStudentRegistrationScreenState
               (_previousSchool.text.trim().isNotEmpty &&
                   _previousClass.text.trim().isNotEmpty)),
     1 => _guardianOk,
-    2 => _year != null && _class != null && _term.text.trim().isNotEmpty,
+    2 =>
+      _selectedLevel != null &&
+          _year != null &&
+          _class != null &&
+          _term.text.trim().isNotEmpty,
     3 =>
       (!_enabled('transport') ||
-              _boarding != 'Day learner' ||
-              _transport.text.trim().isNotEmpty) &&
+              _isBoarding ||
+              _transportChoice != 'school' ||
+              _selectedRouteId != null) &&
           (!_enabled('houses') ||
-              _boarding != 'Boarding learner' ||
+              !_isBoarding ||
               _house.text.trim().isNotEmpty),
-    5 => _consent && _requiredDocumentsComplete,
-    6 => _allRequiredComplete,
+    5 => _consentSatisfied && _requiredDocumentsComplete,
+    6 => _allRequiredComplete && _reviewed,
     _ => true,
   };
+
+  /// True once guardian consent is captured via a permitted method, or the
+  /// legacy single-checkbox flag was already set on an older draft.
+  bool get _consentSatisfied => _consent || _consentCaptured;
   bool get _requiredDocumentsComplete => _documentRequirements
       .where((requirement) => requirement['required'] == true)
       .every(
@@ -361,10 +712,11 @@ class _DirectStudentRegistrationScreenState
       _last.text.trim().isNotEmpty &&
       _dateOfBirthError(_dob.text) == null &&
       _guardianOk &&
+      _selectedLevel != null &&
       _year != null &&
       _class != null &&
       _term.text.trim().isNotEmpty &&
-      _consent &&
+      _consentSatisfied &&
       _requiredDocumentsComplete;
   Future<bool> _leave() async {
     await _save(quiet: true);
@@ -504,7 +856,13 @@ class _DirectStudentRegistrationScreenState
       _classesSub,
       _streamsSub,
       _termsSub,
+      _levelsSub,
+      _campusesSub,
       _schoolSub,
+      _draftConsentSub,
+      _routesSub,
+      _vehiclesSub,
+      _occupancySub,
     ]) {
       x?.cancel();
     }
@@ -819,23 +1177,35 @@ class _DirectStudentRegistrationScreenState
     final term =
         _terms.where((item) => item.isCurrent).firstOrNull?.name ??
         'Current term';
+    final campusLabel = !_campusesLoaded
+        ? 'Loading campus…'
+        : (_selectedCampus?.name ?? 'Main campus');
+    final canChange = _canChangeAcademicContext && _campuses.length > 1;
     return OutlinedButton.icon(
-      onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Academic context is set in School structure.'),
-        ),
-      ),
+      onPressed: canChange
+          ? _pickCampus
+          : (_canChangeAcademicContext
+                ? () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Only one campus is configured for this school.',
+                      ),
+                    ),
+                  )
+                : null),
       icon: const Icon(Icons.calendar_month_outlined),
       label: Row(
         children: [
           Expanded(
             child: Text(
-              '$year · $term · Main campus',
+              '$year · $term · $campusLabel',
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          const Text('Change', style: TextStyle(fontWeight: FontWeight.w700)),
-          const Icon(Icons.chevron_right_rounded),
+          if (_canChangeAcademicContext) ...[
+            const Text('Change', style: TextStyle(fontWeight: FontWeight.w700)),
+            const Icon(Icons.chevron_right_rounded),
+          ],
         ],
       ),
       style: OutlinedButton.styleFrom(
@@ -846,6 +1216,52 @@ class _DirectStudentRegistrationScreenState
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
+  }
+
+  Future<void> _pickCampus() async {
+    final picked = await showModalBottomSheet<Campus>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Text(
+                'Choose campus',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+            for (final campus in _campuses)
+              ListTile(
+                leading: Icon(
+                  campus.id == _selectedCampus?.id
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                ),
+                title: Text(campus.name),
+                onTap: () => Navigator.pop(sheetContext, campus),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null && picked.id != _selectedCampus?.id && mounted) {
+      setState(() {
+        _selectedCampus = picked;
+        // Re-filtering classes by campus may make the current selection
+        // incompatible; clear it (and the dependent stream) if so.
+        if (_class != null &&
+            _class!.campusId.isNotEmpty &&
+            _class!.campusId != picked.id) {
+          _class = null;
+          _stream = null;
+        }
+      });
+    }
   }
 
   bool _isResumable(Map<String, dynamic> data) {
@@ -1203,11 +1619,12 @@ class _DirectStudentRegistrationScreenState
         'Ugandan',
         'Other',
       ], (v) => setState(() => _nationality = v!)),
-      _select('Entry type', _entry, const [
-        'New admission',
-        'Transfer',
-        'Returning',
-      ], (v) => setState(() => _entry = v!)),
+      _select(
+        'Entry type',
+        _entry,
+        _entryTypeOptions,
+        (v) => setState(() => _entry = v!),
+      ),
       if (_entry == 'Transfer') ...[
         _field(_previousSchool, 'Previous school', required: true),
         _field(_previousClass, 'Previous class / level', required: true),
@@ -1273,81 +1690,613 @@ class _DirectStudentRegistrationScreenState
         ),
     ],
   );
-  List<ClassStream> get _streams =>
-      _allStreams.where((x) => x.classId == _class?.id).toList();
-  Widget _placement() => _section(
-    'Academic placement',
-    'Subjects and teachers come from the class curriculum.',
-    [
-      _object(
-        'Academic year',
-        _year,
-        _years,
-        (x) => x.name,
-        (v) => setState(() => _year = v),
-      ),
-      _object(
-        'Class',
-        _class,
-        _classes,
-        (x) => x.name,
-        (v) => setState(() {
-          _class = v;
-          _stream = null;
-        }),
-      ),
-      _select(
-        'Stream / section (optional)',
-        _stream ?? 'No stream',
-        ['No stream', ..._streams.map((x) => x.name)],
-        (v) => setState(() => _stream = v == 'No stream' ? null : v),
-        required: false,
-      ),
-      _field(_term, 'Entry term', required: true),
-      if ((_class?.capacity ?? 0) > 0)
-        _Notice(
-          'Capacity configured: ${_class!.capacity}. Availability is checked again on enrolment.',
+  List<SchoolClass> get _classesForSelectedLevel => _classes
+      .where(
+        (x) =>
+            (_selectedLevel == null || x.levelId == _selectedLevel!.id) &&
+            (x.campusId.isEmpty || x.campusId == _selectedCampus?.id),
+      )
+      .toList();
+  List<ClassStream> get _activeClassStreams =>
+      _allStreams.where((x) => x.classId == _class?.id && x.isActive).toList();
+
+  Widget _placement() {
+    final wide = MediaQuery.of(context).size.width >= AppBreakpoints.tablet;
+    final classStreams = _activeClassStreams;
+    final mainCard = _section(
+      'Academic placement',
+      'Choose where this learner will study for the selected academic year.',
+      [
+        _academicContext(),
+        if (!_levelsLoaded)
+          const _FieldLoadingPlaceholder(label: 'Education level')
+        else if (_levels.isEmpty)
+          _EmptyConfigNotice(
+            message: 'No education levels configured for this school yet.',
+            canOpenSetup: _canChangeAcademicContext,
+            onOpenSetup: () => context.push(
+              '/staff/admin/structure/academics/education-levels',
+            ),
+          )
+        else
+          _object<EducationalLevel>(
+            'Education level',
+            _selectedLevel,
+            _levels,
+            (x) => x.name,
+            (v) => setState(() {
+              _selectedLevel = v;
+              if (_class != null && _class!.levelId != v?.id) {
+                _class = null;
+                _stream = null;
+              }
+            }),
+          ),
+        if (!_classesLoaded && _selectedLevel != null)
+          const _FieldLoadingPlaceholder(label: 'Class')
+        else if (_selectedLevel != null && _classesForSelectedLevel.isEmpty)
+          _EmptyConfigNotice(
+            message: 'No classes configured for this education level yet.',
+            canOpenSetup: _canChangeAcademicContext,
+            onOpenSetup: () =>
+                context.push('/staff/admin/structure/academics/classes'),
+          )
+        else
+          IgnorePointer(
+            ignoring: _selectedLevel == null,
+            child: Opacity(
+              opacity: _selectedLevel == null ? 0.5 : 1,
+              child: _object<SchoolClass>(
+                'Class',
+                _class,
+                _classesForSelectedLevel,
+                (x) => x.name,
+                (v) => setState(() {
+                  _class = v;
+                  _stream = null;
+                }),
+              ),
+            ),
+          ),
+        if (_class != null && classStreams.isEmpty)
+          const Text('No streams for this class')
+        else if (classStreams.isNotEmpty)
+          _select(
+            'Stream / section (optional)',
+            _stream ?? 'No stream',
+            ['No stream', ...classStreams.map((x) => x.name)],
+            (v) => setState(() => _stream = v == 'No stream' ? null : v),
+            required: false,
+          ),
+        if (_enabled('boarding'))
+          _DayBoardingSelector(
+            value: _boarding,
+            onChanged: (v) => setState(() {
+              _boarding = v;
+              if (_boarding != 'Day learner') _transport.clear();
+            }),
+          ),
+        _object(
+          'Entry type',
+          _entryTypeOptions.contains(_entry) ? _entry : _entryTypeOptions.first,
+          _entryTypeOptions,
+          (x) => x,
+          (v) => setState(() => _entry = v!),
         ),
-    ],
-  );
-  bool _enabled(String key) => _modules.isEmpty || _modules[key] == true;
-  Widget _services() => _section(
-    'Support & services',
-    'Tell us about support or services this learner needs.',
-    [
-      if (_enabled('boarding'))
-        _select(
-          'Day or boarding status',
-          _boarding,
-          const ['Day learner', 'Boarding learner'],
-          (v) => setState(() {
-            _boarding = v!;
-            if (_boarding != 'Day learner') _transport.clear();
-          }),
-        ),
-      if (_enabled('transport') && _boarding == 'Day learner')
-        _field(_transport, 'Transport route', required: true),
-      if (_enabled('houses') && _boarding == 'Boarding learner')
-        _field(_house, 'House / dormitory', required: true),
-      if (_enabled('studentSupport')) ...[
-        _field(
-          _support,
-          'Health, medical or learning support (optional)',
-          lines: 4,
-        ),
-        const _Notice(
-          'Confidential support information is visible only to approved staff.',
-        ),
+        _field(_term, 'Entry term', required: true),
+        if ((_class?.capacity ?? 0) > 0)
+          _Notice(
+            'Capacity configured: ${_class!.capacity}. Availability is checked again on enrolment.',
+          ),
       ],
-      if (!_enabled('boarding') &&
-          !_enabled('transport') &&
-          !_enabled('houses') &&
-          !_enabled('studentSupport'))
+    );
+    final summaryCard = _enrolmentSummaryCard();
+    return wide
+        ? IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 2, child: mainCard),
+                const SizedBox(width: 20),
+                SizedBox(width: 340, child: summaryCard),
+              ],
+            ),
+          )
+        : Column(children: [mainCard, const SizedBox(height: 20), summaryCard]);
+  }
+
+  Widget _enrolmentSummaryCard() {
+    final scheme = Theme.of(context).colorScheme;
+    Widget row(String label, String value) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+    Widget checklistRow(String label, bool done) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(
+            done ? Icons.check_circle : Icons.circle_outlined,
+            size: 18,
+            color: done ? scheme.primary : scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(label)),
+        ],
+      ),
+    );
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Enrolment summary',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 12),
+          checklistRow('Learner details complete', true),
+          checklistRow('Guardian linked', true),
+          checklistRow(
+            _class != null ? 'Class selected' : 'Class not selected',
+            _class != null,
+          ),
+          const Divider(height: 24),
+          row('Academic year', _year?.name ?? 'Not selected'),
+          row(
+            'Campus',
+            _selectedCampus?.name ??
+                (_campuses.isEmpty ? 'Main campus' : 'Not selected'),
+          ),
+          row('Education level', _selectedLevel?.name ?? 'Not selected'),
+          row('Class', _class?.name ?? 'Not selected'),
+          row('Stream/section', _stream ?? 'Not set'),
+          row('Day/boarding', _boarding),
+          row('Entry type', _entry),
+          const SizedBox(height: 12),
+          const _Notice(
+            'What happens next? Health, support and document details can be completed now or later, depending on your school\'s policy.',
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _enabled(String key) => _modules.isEmpty || _modules[key] == true;
+  bool get _isBoarding => _boarding == 'Boarding learner';
+  bool get _mealsEnabled => _enabled('meals') && _mealOptions.isNotEmpty;
+
+  Widget _placementSummaryStrip() {
+    final scheme = Theme.of(context).colorScheme;
+    final parts = [
+      _year?.name,
+      _term.text.trim(),
+      'Main campus',
+      _class?.name,
+      _boarding,
+    ].where((x) => x != null && x.trim().isNotEmpty).join(' · ');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            _isBoarding ? Icons.home_work_outlined : Icons.school_outlined,
+            size: 20,
+            color: scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Selected placement',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                Text(
+                  parts.isEmpty ? 'Not selected yet' : parts,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _serviceCard(String title, List<Widget> children) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 14),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _choiceTile({
+    required IconData icon,
+    required String label,
+    required bool selected,
+    required VoidCallback? onTap,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? scheme.primary : scheme.outlineVariant,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                size: 18,
+                color: selected ? scheme.primary : scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Icon(icon, size: 18, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(label, style: const TextStyle(fontSize: 13)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _schoolServicesCard() {
+    final routeChoices = _availableRoutes;
+    return _serviceCard('School services', [
+      if (!_isBoarding && _enabled('transport')) ...[
+        Text('Transport', style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _choiceTile(
+              icon: Icons.directions_bus_filled_outlined,
+              label: 'No school transport',
+              selected: _transportChoice == 'none',
+              onTap: () => setState(() {
+                _transportChoice = 'none';
+                _selectedRouteId = null;
+              }),
+            ),
+            const SizedBox(width: 10),
+            _choiceTile(
+              icon: Icons.directions_bus_outlined,
+              label: 'Use school transport',
+              selected: _transportChoice == 'school',
+              onTap: () => setState(() => _transportChoice = 'school'),
+            ),
+          ],
+        ),
+        if (_transportChoice == 'none')
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              'Transport details are only needed if school transport is required.',
+              style: TextStyle(
+                fontSize: 12.5,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        if (_transportChoice == 'school') ...[
+          const SizedBox(height: 12),
+          if (_routes.isEmpty)
+            const _Notice(
+              'No transport routes are configured for this school yet.',
+            )
+          else if (routeChoices.isEmpty)
+            const _Notice(
+              'All configured transport routes are at full capacity. Choose "No school transport" or contact Structure > Transport to add capacity.',
+            )
+          else
+            DropdownButtonFormField<String>(
+              initialValue: routeChoices.any((r) => r.id == _selectedRouteId)
+                  ? _selectedRouteId
+                  : null,
+              decoration: const InputDecoration(labelText: 'Route *'),
+              items: routeChoices
+                  .map(
+                    (r) => DropdownMenuItem(
+                      value: r.id,
+                      child: Text(
+                        '${r.name} · ${_routeAvailable(r.id)} seats available',
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedRouteId = v),
+              validator: (v) => v == null ? 'Select a transport route' : null,
+              autovalidateMode: _submittedCurrentStep
+                  ? AutovalidateMode.always
+                  : AutovalidateMode.onUserInteraction,
+            ),
+        ],
+        const Divider(height: 30),
+      ],
+      if (_isBoarding && _enabled('houses')) ...[
+        _field(_house, 'House / dormitory', required: true),
+        const Divider(height: 30),
+      ],
+      if (_enabled('meals')) ...[
+        Text('Meals', style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 8),
+        if (!_mealsEnabled)
+          const _Notice('This school has not configured meal services yet.')
+        else ...[
+          Row(
+            children: [
+              _choiceTile(
+                icon: Icons.no_meals_outlined,
+                label: 'Not required',
+                selected: _mealChoice == null,
+                onTap: () => setState(() => _mealChoice = null),
+              ),
+              const SizedBox(width: 10),
+              _choiceTile(
+                icon: Icons.restaurant_outlined,
+                label: _mealOptions.first,
+                selected: _mealChoice != null,
+                onTap: () => setState(() => _mealChoice = _mealOptions.first),
+              ),
+            ],
+          ),
+          if (_mealOptions.length > 1 && _mealChoice != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: DropdownButtonFormField<String>(
+                initialValue: _mealOptions.contains(_mealChoice)
+                    ? _mealChoice
+                    : _mealOptions.first,
+                decoration: const InputDecoration(labelText: 'Meal option'),
+                items: _mealOptions
+                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                    .toList(),
+                onChanged: (v) => setState(() => _mealChoice = v),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              'Meal options are set by your school and can be updated later.',
+              style: TextStyle(
+                fontSize: 12.5,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ],
+      if (!_enabled('transport') && !_enabled('houses') && !_enabled('meals'))
         const _Notice(
           'No optional service modules are enabled for this school.',
         ),
-    ],
-  );
+    ]);
+  }
+
+  Widget _healthSupportCard() {
+    final scheme = Theme.of(context).colorScheme;
+    return _serviceCard('Health & learning support (optional)', [
+      if (_supportNotesAccessDenied)
+        const _Notice(
+          'You do not have permission to view or edit restricted support notes for this learner. Continue without changes, or ask an approved support/health staff member to complete this section.',
+        )
+      else ...[
+        Text(
+          'Support information',
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _support,
+          maxLines: 4,
+          maxLength: 1000,
+          decoration: const InputDecoration(
+            hintText:
+                'Share only information the school needs to support the learner.',
+          ),
+        ),
+      ],
+      const SizedBox(height: 4),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.shield_outlined,
+              size: 20,
+              color: scheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Restricted information',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    'Visible only to approved staff with support access.',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: _showSupportAccessSheet,
+                      icon: const Icon(Icons.open_in_new, size: 16),
+                      label: const Text('Review access'),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ),
+                  if (_supportNotesPolicyUrl != null) ...[
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: () =>
+                            launchUrlString(_supportNotesPolicyUrl!),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 28),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          'View school support & consent policy',
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ]);
+  }
+
+  void _showSupportAccessSheet() {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Who can see support notes',
+                style: Theme.of(
+                  c,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Restricted support and health information is visible only '
+                'to staff with an approved support/health role at this '
+                'school (e.g. School Nurse, designated support staff, '
+                'School Admin). Every view and edit is recorded in the '
+                'audit log.',
+              ),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.of(c).pop(),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _services() {
+    final wide = MediaQuery.of(context).size.width >= AppBreakpoints.tablet;
+    final schoolCard = _schoolServicesCard();
+    final healthCard = _healthSupportCard();
+    return _section(
+      'Support & services',
+      'Add the services this learner needs. Health and learning information is optional and restricted.',
+      [
+        _placementSummaryStrip(),
+        const SizedBox(height: 20),
+        wide
+            ? IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: schoolCard),
+                    const SizedBox(width: 20),
+                    Expanded(child: healthCard),
+                  ],
+                ),
+              )
+            : Column(
+                children: [schoolCard, const SizedBox(height: 16), healthCard],
+              ),
+        const SizedBox(height: 20),
+        const _Notice('You can update support plans later.'),
+      ],
+    );
+  }
+
   Widget _fees() {
     // Build-time trigger (not just on step transition) so a lookup that
     // couldn't resolve a termId yet (terms/years/classes still streaming
@@ -1519,9 +2468,61 @@ class _DirectStudentRegistrationScreenState
     ]);
   }
 
+  bool get _consentCaptured => _guardianConsent?['status'] == 'captured';
+  bool get _consentPending => _guardianConsent?['status'] == 'pending';
+
+  /// What's actually missing, surfaced verbatim under the disabled Continue
+  /// button so staff never has to guess.
+  String? get _documentsConsentBlockingReason {
+    final missing = _documentRequirements
+        .where(
+          (r) =>
+              r['required'] == true &&
+              !_documents.any(
+                (d) =>
+                    d['requirementId'] == r['id'] && d['status'] == 'uploaded',
+              ),
+        )
+        .map((r) => r['name'] as String? ?? 'A required document')
+        .toList();
+    final reasons = <String>[
+      if (missing.isNotEmpty) '${missing.join(', ')} still required',
+      if (!_consentCaptured && !_consentPending) 'Guardian consent not started',
+      if (_consentPending) 'Waiting on guardian to complete the secure link',
+    ];
+    return reasons.isEmpty ? null : reasons.join(' · ');
+  }
+
   Widget _documentsPage() {
     final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
-    final error = Theme.of(context).colorScheme.error;
+    final isWide = MediaQuery.of(context).size.width >= 900;
+    final blockingReason = _documentsConsentBlockingReason;
+    final documentsCard = _serviceCard('Supporting documents', [
+      Text(
+        'Upload any available documents. Items marked as optional can be completed later.',
+        style: TextStyle(color: onSurfaceVariant, fontSize: 12.5),
+      ),
+      const SizedBox(height: 12),
+      if (_documentRequirements.isEmpty)
+        const _Notice(
+          'No files uploaded yet. Missing-document status is checked at enrolment.',
+        )
+      else
+        for (final requirement in _documentRequirements)
+          _documentRequirementRow(requirement),
+      const SizedBox(height: 8),
+      OutlinedButton.icon(
+        onPressed: () => _upload(),
+        icon: const Icon(Icons.upload_file),
+        label: const Text('Upload document'),
+      ),
+      const SizedBox(height: 6),
+      Text(
+        'Only upload files you are authorised to share. Accepted formats and limits are shown before upload.',
+        style: TextStyle(color: onSurfaceVariant, fontSize: 11.5),
+      ),
+    ]);
+    final consentCard = _guardianConsentCard();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1531,119 +2532,230 @@ class _DirectStudentRegistrationScreenState
         ),
         const SizedBox(height: 6),
         Text(
-          'Requirements are configured by your school. Files may be completed later where policy permits.',
+          'Requirements are set by your school. You can complete permitted documents later.',
           style: TextStyle(color: onSurfaceVariant),
         ),
         const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Supporting files',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                if (_documentRequirements.isNotEmpty) ...[
-                  Text(
-                    'Required documents',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  for (final requirement in _documentRequirements.where(
-                    (r) => r['required'] == true,
-                  ))
-                    _documentRequirementRow(requirement),
-                  const SizedBox(height: 12),
-                  if (_documentRequirements.any(
-                    (r) => r['required'] != true,
-                  )) ...[
-                    Text(
-                      'Optional documents',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    for (final requirement in _documentRequirements.where(
-                      (r) => r['required'] != true,
-                    ))
-                      _documentRequirementRow(requirement),
-                  ],
-                ] else if (_documents.isEmpty)
-                  const _Notice(
-                    'No files uploaded yet. Missing-document status is checked at enrolment.',
-                  )
-                else
-                  ..._documents.map(
-                    (d) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.insert_drive_file_outlined),
-                        title: Text(d['name']),
-                        subtitle: Text(
-                          d['status'] == 'uploading'
-                              ? 'Uploading…'
-                              : 'Uploaded',
-                        ),
-                        trailing: IconButton(
-                          tooltip: 'Remove',
-                          onPressed: () => setState(() => _documents.remove(d)),
-                          icon: const Icon(Icons.delete_outline),
-                        ),
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 4),
-                OutlinedButton.icon(
-                  onPressed: () => _upload(),
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text('Upload document'),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
-            side: BorderSide(
-              color: _consent ? Theme.of(context).dividerColor : error,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+        if (isWide)
+          IntrinsicHeight(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Privacy and guardian consent',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'I consent to the enrolment of this learner and confirm that the information provided is true and correct. We collect and use personal information in accordance with the Privacy Notice for Learner Enrolment.',
-                        style: TextStyle(color: onSurfaceVariant),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Checkbox(
-                  value: _consent,
-                  onChanged: (v) => setState(() => _consent = v ?? false),
-                ),
+                Expanded(child: documentsCard),
+                const SizedBox(width: 16),
+                Expanded(child: consentCard),
               ],
             ),
+          )
+        else ...[
+          documentsCard,
+          const SizedBox(height: 16),
+          consentCard,
+        ],
+        const SizedBox(height: 16),
+        const _Notice(
+          'Consent records include method, guardian, timestamp, policy version and staff audit trail. '
+          'We collect and use personal information in accordance with the Privacy Notice for Learner Enrolment.',
+        ),
+        if (blockingReason != null) ...[
+          const SizedBox(height: 10),
+          Text(
+            'Complete required consent to continue: $blockingReason',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.error,
+              fontSize: 12.5,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _guardianConsentCard() {
+    final onSurfaceVariant = Theme.of(context).colorScheme.onSurfaceVariant;
+    final scheme = Theme.of(context).colorScheme;
+    final status = _guardianConsent?['status'] as String?;
+    return _serviceCard('Guardian consent', [
+      Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Consent must be captured from the linked guardian or using an approved school process.',
+              style: TextStyle(color: onSurfaceVariant, fontSize: 12.5),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _ConsentStatusChip(status: status),
+        ],
+      ),
+      const SizedBox(height: 4),
+      Text(
+        'Policy $_consentPolicyVersion',
+        style: TextStyle(color: onSurfaceVariant, fontSize: 11),
+      ),
+      const SizedBox(height: 10),
+      if (_consentMethods.contains('guardian_signs_now'))
+        _consentMethodTile(
+          method: 'guardian_signs_now',
+          icon: Icons.draw_outlined,
+          title: 'Guardian signs now',
+          subtitle:
+              'Capture consent with guardian present (digital signature).',
+        ),
+      if (_consentMethods.contains('secure_link'))
+        _consentMethodTile(
+          method: 'secure_link',
+          icon: Icons.link,
+          title: 'Send secure consent link',
+          subtitle:
+              'Send a secure link to the guardian to complete consent online.',
+        ),
+      if (_consentMethods.contains('verbal'))
+        _consentMethodTile(
+          method: 'verbal',
+          icon: Icons.record_voice_over_outlined,
+          title: 'Record approved in-person/verbal consent',
+          subtitle:
+              'Use when consent is obtained in person or via a phone call, in line with school policy.',
+        ),
+      if (_selectedConsentMethod == 'verbal') ...[
+        const SizedBox(height: 8),
+        TextField(
+          controller: _witnessName,
+          decoration: const InputDecoration(labelText: 'Witness name *'),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _witnessRelationship,
+          decoration: const InputDecoration(
+            labelText: 'Witness relationship *',
           ),
         ),
       ],
+      const SizedBox(height: 12),
+      SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed:
+              _consentActionInFlight ||
+                  _selectedConsentMethod == null ||
+                  _consentCaptured
+              ? null
+              : () async {
+                  if (_selectedConsentMethod == 'verbal') {
+                    if (_witnessName.text.trim().isEmpty ||
+                        _witnessRelationship.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Witness name and relationship are required for verbal consent.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    await _recordGuardianConsent(
+                      method: 'verbal',
+                      witnessName: _witnessName.text.trim(),
+                      witnessRelationship: _witnessRelationship.text.trim(),
+                    );
+                  } else if (_selectedConsentMethod == 'guardian_signs_now') {
+                    await _recordGuardianConsent(
+                      method: 'guardian_signs_now',
+                      signatureDataUrl:
+                          'staff-confirmed:${DateTime.now().toIso8601String()}',
+                    );
+                  } else {
+                    await _recordGuardianConsent(method: 'secure_link');
+                  }
+                },
+          icon: _consentActionInFlight
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.shield_outlined),
+          label: Text(
+            _consentCaptured ? 'Consent captured' : 'Capture guardian consent',
+          ),
+        ),
+      ),
+      const SizedBox(height: 6),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: _viewPrivacyNotice,
+          icon: const Icon(Icons.open_in_new, size: 16),
+          label: const Text('View privacy notice'),
+        ),
+      ),
+      if (status == 'withdrawn') ...[
+        const SizedBox(height: 6),
+        Text(
+          'Consent was withdrawn. Capture it again before enrolling.',
+          style: TextStyle(color: scheme.error, fontSize: 12),
+        ),
+      ],
+    ]);
+  }
+
+  Widget _consentMethodTile({
+    required String method,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final selected = _selectedConsentMethod == method;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        onTap: _consentCaptured
+            ? null
+            : () => setState(() => _selectedConsentMethod = method),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? scheme.primary : scheme.outlineVariant,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                size: 20,
+                color: selected ? scheme.primary : scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1653,43 +2765,284 @@ class _DirectStudentRegistrationScreenState
         .firstOrNull;
     final required = requirement['required'] == true;
     final types =
-        (requirement['allowedTypes'] as List?)?.join(', ') ?? 'PDF, JPG or PNG';
-    final limit = requirement['maxSizeMb'] ?? 10;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        uploaded == null
-            ? Icons.description_outlined
-            : Icons.check_circle_outline,
-      ),
-      title: Text(
-        '${requirement['name'] ?? 'Document'}${required ? ' *' : ' (optional)'}',
-      ),
-      subtitle: Text(
-        uploaded == null
-            ? '${required ? 'Missing — required' : 'Not uploaded'}\n$types up to $limit MB'
-            : '${uploaded['name']} · Uploaded',
-      ),
-      isThreeLine: true,
-      trailing: OutlinedButton(
-        onPressed: () => _upload(requirement: requirement),
-        child: Text(uploaded == null ? 'Upload' : 'Replace'),
+        (requirement['allowedTypes'] as List?)?.join(', ').toUpperCase() ??
+        'PDF, JPG OR PNG';
+    final limit =
+        requirement['maxSizeMb'] ?? StudentDocumentUploader.defaultMaxSizeMb;
+    final status = uploaded?['status'] as String?;
+    final scheme = Theme.of(context).colorScheme;
+
+    IconData leadingIcon;
+    Color? leadingColor;
+    String statusLabel;
+    if (uploaded == null) {
+      leadingIcon = Icons.description_outlined;
+      statusLabel = required ? 'Not uploaded' : 'Optional';
+    } else if (status == 'uploading') {
+      leadingIcon = Icons.cloud_upload_outlined;
+      statusLabel = 'Uploading…';
+    } else if (status == 'failed') {
+      leadingIcon = Icons.error_outline;
+      leadingColor = scheme.error;
+      statusLabel = 'Upload failed';
+    } else if (status == 'rejected') {
+      leadingIcon = Icons.cancel_outlined;
+      leadingColor = scheme.error;
+      statusLabel = 'Rejected — re-upload required';
+    } else {
+      leadingIcon = Icons.check_circle_outline;
+      leadingColor = Colors.green;
+      statusLabel = 'Uploaded';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: scheme.outlineVariant),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(leadingIcon, color: leadingColor),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          requirement['name'] as String? ?? 'Document',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          required ? 'Required' : 'Optional',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    uploaded == null
+                        ? '$statusLabel · $types up to $limit MB'
+                        : '${uploaded['name']} · $statusLabel',
+                    style: TextStyle(
+                      color: leadingColor ?? scheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton(
+              onPressed: () => _upload(requirement: requirement),
+              child: Text(
+                uploaded == null
+                    ? 'Upload'
+                    : (status == 'failed' || status == 'rejected')
+                    ? 'Retry'
+                    : 'Replace',
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _review() {
-    final missing = <String>[
-      if (_first.text.trim().isEmpty ||
-          _last.text.trim().isEmpty ||
-          _dateOfBirthError(_dob.text) != null)
-        'Learner details are incomplete',
-      if (!_guardianOk) 'Parent/guardian is incomplete',
-      if (_year == null || _class == null || _term.text.trim().isEmpty)
-        'Academic placement is incomplete',
-      if (!_consent) 'Guardian consent is required',
-      if (!_requiredDocumentsComplete) 'A required document is missing',
+    final learnerComplete =
+        _first.text.trim().isNotEmpty &&
+        _last.text.trim().isNotEmpty &&
+        _dateOfBirthError(_dob.text) == null;
+    final placementComplete =
+        _year != null && _class != null && _term.text.trim().isNotEmpty;
+    final documentsComplete = _consentSatisfied && _requiredDocumentsComplete;
+    final billingPending = _feePlanMatch == null;
+    final blocking = <_ChecklistItem>[
+      if (!learnerComplete)
+        const _ChecklistItem(step: 0, text: 'Learner details are incomplete'),
+      if (!_guardianOk)
+        const _ChecklistItem(step: 1, text: 'Parent or guardian is incomplete'),
+      if (!placementComplete)
+        const _ChecklistItem(step: 2, text: 'Academic placement is incomplete'),
+      if (!_consentSatisfied)
+        const _ChecklistItem(step: 5, text: 'Guardian consent is required'),
+      if (!_requiredDocumentsComplete)
+        const _ChecklistItem(step: 5, text: 'A required document is missing'),
     ];
+    final allRequiredComplete = blocking.isEmpty;
+    final canEnrol = allRequiredComplete && _reviewed;
+
+    final rows = [
+      _ReviewRow(
+        icon: Icons.person_outline,
+        title: 'Learner details',
+        summary: 'Basic details, enrolment type and start date.',
+        status: learnerComplete
+            ? _ReviewStatus.complete
+            : _ReviewStatus.blocked,
+        onEdit: () => _goToStep(0),
+      ),
+      _ReviewRow(
+        icon: Icons.people_outline,
+        title: 'Parent or guardian',
+        summary: 'Primary contact and consent recorded.',
+        status: _guardianOk ? _ReviewStatus.complete : _ReviewStatus.blocked,
+        onEdit: () => _goToStep(1),
+      ),
+      _ReviewRow(
+        icon: Icons.school_outlined,
+        title: 'Academic placement',
+        summary: 'Year level, campus and class placement.',
+        status: placementComplete
+            ? _ReviewStatus.complete
+            : _ReviewStatus.blocked,
+        onEdit: () => _goToStep(2),
+      ),
+      _ReviewRow(
+        icon: Icons.favorite_border,
+        title: 'Support & services',
+        summary: 'Learning needs and supports.',
+        status: _ReviewStatus.complete,
+        onEdit: () => _goToStep(3),
+      ),
+      _ReviewRow(
+        icon: Icons.credit_card_outlined,
+        title: 'Fees & billing',
+        summary: 'Fee plan setup and billing status.',
+        status: billingPending ? _ReviewStatus.pending : _ReviewStatus.complete,
+        statusLabel: billingPending ? 'Billing pending' : null,
+        onEdit: () => _goToStep(4),
+      ),
+      _ReviewRow(
+        icon: Icons.description_outlined,
+        title: 'Documents & consent',
+        summary: 'Consent confirmed and documents uploaded.',
+        status: documentsComplete
+            ? _ReviewStatus.complete
+            : _ReviewStatus.blocked,
+        onEdit: () => _goToStep(5),
+      ),
+    ];
+
+    final checklist = Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Text(
+              'Enrolment checklist',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+          for (final row in rows) row,
+        ],
+      ),
+    );
+
+    final readyCard = Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Ready to enrol',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 12),
+          _ReadinessLine(
+            ok: allRequiredComplete,
+            title: 'Required details complete',
+            detail:
+                'Learner details, academic placement and other required information have been provided.',
+          ),
+          const SizedBox(height: 10),
+          _ReadinessLine(
+            ok: _guardianOk,
+            title: 'Guardian consent captured',
+            detail: 'Primary contact consent has been recorded.',
+          ),
+          const SizedBox(height: 10),
+          _ReadinessLine(
+            ok: !billingPending,
+            pending: billingPending,
+            title: billingPending ? 'Billing pending' : 'Fee plan matched',
+            detail: billingPending
+                ? 'A fee plan has not been set up yet. This does not block enrolment.'
+                : 'A fee plan has been matched for this learner.',
+          ),
+          const SizedBox(height: 10),
+          _ReadinessLine(
+            ok: documentsComplete,
+            title: 'Supporting documents',
+            detail: documentsComplete
+                ? 'Required documents are complete.'
+                : 'Can be completed later where policy permits.',
+          ),
+          const SizedBox(height: 16),
+          const _Notice(
+            'When you enrol, School Pulse creates a duplicate-safe learner record and records this action in the audit log.',
+          ),
+          const SizedBox(height: 16),
+          Semantics(
+            liveRegion: !allRequiredComplete,
+            child: CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              value: _reviewed,
+              onChanged: allRequiredComplete
+                  ? (v) => setState(() => _reviewed = v ?? false)
+                  : null,
+              title: const Text('I have reviewed the information above *'),
+              subtitle: Text(
+                allRequiredComplete
+                    ? 'You must confirm to enable enrolment.'
+                    : blocking.first.text,
+                style: TextStyle(
+                  color: allRequiredComplete
+                      ? Theme.of(context).colorScheme.onSurfaceVariant
+                      : Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1701,13 +3054,13 @@ class _DirectStudentRegistrationScreenState
         ),
         const SizedBox(height: 4),
         Text(
-          'Check your information before you enrol.',
+          'Check the enrolment before creating the learner record.',
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 16),
-        if (missing.isNotEmpty)
+        if (blocking.isNotEmpty)
           Semantics(
             liveRegion: true,
             child: Container(
@@ -1740,13 +3093,17 @@ class _DirectStudentRegistrationScreenState
                     ],
                   ),
                   const SizedBox(height: 6),
-                  for (final m in missing)
+                  for (final item in blocking)
                     Padding(
                       padding: const EdgeInsets.only(left: 32, top: 2),
-                      child: Text(
-                        '• $m',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+                      child: InkWell(
+                        onTap: () => _goToStep(item.step),
+                        child: Text(
+                          '• ${item.text} — Edit',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                            decoration: TextDecoration.underline,
+                          ),
                         ),
                       ),
                     ),
@@ -1754,61 +3111,43 @@ class _DirectStudentRegistrationScreenState
               ),
             ),
           ),
-        _summary(
-          'Learner',
-          '${_first.text} ${_last.text}',
-          '${_dob.text} · $_entry',
-          complete:
-              _first.text.trim().isNotEmpty &&
-              _last.text.trim().isNotEmpty &&
-              _dateOfBirthError(_dob.text) == null,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 900;
+            if (!isWide) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [checklist, const SizedBox(height: 16), readyCard],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: checklist),
+                const SizedBox(width: 16),
+                Expanded(flex: 2, child: readyCard),
+              ],
+            );
+          },
         ),
-        _summary(
-          'Parent/guardian',
-          _guardians.isEmpty
-              ? 'Authorised override'
-              : _guardians.map((x) => x['name']).join(', '),
-          _override ? _overrideReason : 'Primary/contact consent recorded',
-          complete: _guardianOk,
-        ),
-        _summary(
-          'Academic placement',
-          '${_class?.name ?? 'Not selected'} · ${_year?.name ?? ''}',
-          _term.text,
-          complete:
-              _year != null && _class != null && _term.text.trim().isNotEmpty,
-        ),
-        _summary(
-          'Support & services',
-          _boarding,
-          _transport.text.isEmpty ? 'No transport selected' : _transport.text,
-          complete: true,
-        ),
-        _summary(
-          'Fees',
-          _feePlanMatch == null
-              ? 'Billing pending'
-              : CurrencyFormatter.ugx(_feeBilledTotalUgx.toDouble()),
-          _feePlanMatch == null
-              ? 'No fee plan matched yet'
-              : _bursaryEnabled
-              ? 'Bursary/discount will be applied'
-              : _feePlanMatch!.name,
-          complete: true,
-        ),
-        _summary(
-          'Documents & consent',
-          _consent ? 'Consent confirmed' : 'Consent missing',
-          '${_documents.length} file(s) uploaded',
-          complete: _consent && _requiredDocumentsComplete,
-        ),
-        const SizedBox(height: 8),
-        const _Notice(
-          'After you confirm, a duplicate-safe learner ID is generated. Fee setup does not block enrolment.',
-        ),
+        if (!canEnrol) ...[
+          const SizedBox(height: 8),
+          Text(
+            'You can edit any section before enrolling.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 13,
+            ),
+          ),
+        ],
       ],
     );
   }
+
+  void _goToStep(int step) => setState(() {
+    _submittedCurrentStep = false;
+    _step = step;
+  });
 
   Widget _section(String title, String sub, List<Widget> items) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1919,51 +3258,6 @@ class _DirectStudentRegistrationScreenState
     onChanged: changed,
     validator: required ? (x) => x == null ? '$label is required' : null : null,
   );
-  Widget _summary(
-    String title,
-    String value,
-    String detail, {
-    required bool complete,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        onTap: () => setState(() {
-          _submittedCurrentStep = false;
-          _step = switch (title) {
-            'Learner' => 0,
-            'Parent/guardian' => 1,
-            'Academic placement' => 2,
-            'Support & services' => 3,
-            'Fees' => 4,
-            _ => 5,
-          };
-        }),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: Text('$value\n$detail'),
-        isThreeLine: true,
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              complete ? Icons.check_circle_outline : Icons.error_outline,
-              size: 18,
-              color: complete ? scheme.primary : scheme.error,
-            ),
-            const SizedBox(width: 6),
-            Text(complete ? 'Complete' : 'Incomplete'),
-            const SizedBox(width: 8),
-            const Text('Edit'),
-            const Icon(Icons.chevron_right, size: 18),
-          ],
-        ),
-      ),
-    );
-  }
 
   static const _phoneCodes = ['+256', '+254', '+255', '+250', '+44', '+1'];
 
@@ -2150,46 +3444,155 @@ class _DirectStudentRegistrationScreenState
       );
   }
 
+  final _documentUploader = StudentDocumentUploader();
+
   Future<void> _upload({Map<String, dynamic>? requirement}) async {
     final picked = await FilePicker.pickFiles(withData: true);
     final f = picked?.files.single;
     if (f?.bytes == null) return;
+    final allowedTypes = (requirement?['allowedTypes'] as List?)
+        ?.map((e) => e.toString())
+        .toList();
+    final maxSizeMb = requirement?['maxSizeMb'] as int?;
+    final validation = _documentUploader.validate(
+      fileName: f!.name,
+      sizeBytes: f.size,
+      allowedTypes: allowedTypes,
+      maxSizeMb: maxSizeMb,
+    );
+    if (!validation.allowed) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(validation.reason ?? 'File not accepted.')),
+        );
+      }
+      return;
+    }
+    final existing = requirement == null
+        ? null
+        : _documents
+              .where((d) => d['requirementId'] == requirement['id'])
+              .firstOrNull;
     final doc = <String, dynamic>{
-      'id': _uuid.v4(),
-      'name': f!.name,
+      'id': existing?['id'] ?? _uuid.v4(),
+      'name': f.name,
       'status': 'uploading',
       'size': f.size,
       if (requirement != null) 'requirementId': requirement['id'],
     };
-    setState(() => _documents.add(doc));
+    setState(() {
+      if (existing != null) _documents.remove(existing);
+      _documents.add(doc);
+    });
     try {
-      final ref = FirebaseStorage.instance.ref(
-        'schools/${widget.schoolId}/students/$_studentId/documents/${doc['id']}',
+      final path = await _documentUploader.upload(
+        schoolId: widget.schoolId,
+        studentId: _studentId,
+        docId: doc['id'] as String,
+        fileName: f.name,
+        bytes: f.bytes!,
       );
-      await ref.putData(
-        f.bytes!,
-        SettableMetadata(
-          contentType: f.extension == 'pdf'
-              ? 'application/pdf'
-              : 'application/octet-stream',
-        ),
-      );
-      final url = await ref.getDownloadURL();
-      if (mounted)
+      final url = await FirebaseStorage.instance.ref(path).getDownloadURL();
+      if (mounted) {
         setState(
           () => doc
             ..['status'] = 'uploaded'
-            ..['path'] = ref.fullPath
+            ..['path'] = path
             ..['url'] = url,
         );
+      }
     } on FirebaseException catch (e) {
       if (mounted) {
-        setState(() => _documents.remove(doc));
+        setState(() => doc['status'] = 'failed');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: ${e.message ?? e.code}')),
+          SnackBar(
+            content: Text('Upload failed: ${e.message ?? e.code}'),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: () => _upload(requirement: requirement),
+            ),
+          ),
         );
       }
     }
+  }
+
+  Future<void> _recordGuardianConsent({
+    required String method,
+    String? signatureDataUrl,
+    String? witnessName,
+    String? witnessRelationship,
+  }) async {
+    final guardian = _guardians.firstOrNull;
+    if (guardian == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Link a guardian before capturing consent.'),
+        ),
+      );
+      return;
+    }
+    setState(() => _consentActionInFlight = true);
+    try {
+      if (method == 'secure_link') {
+        await FirebaseFunctions.instance
+            .httpsCallable('requestGuardianConsentLink')
+            .call({
+              'draftId': _draftId,
+              'guardianId': guardian['id'],
+              'schoolId': widget.schoolId,
+            });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Secure consent link sent to the guardian.'),
+            ),
+          );
+        }
+      } else {
+        await FirebaseFunctions.instance
+            .httpsCallable('recordGuardianConsentByStaff')
+            .call({
+              'draftId': _draftId,
+              'guardianId': guardian['id'],
+              'schoolId': widget.schoolId,
+              'method': method,
+              if (signatureDataUrl != null)
+                'signatureDataUrl': signatureDataUrl,
+              if (witnessName != null) 'witnessName': witnessName,
+              if (witnessRelationship != null)
+                'witnessRelationship': witnessRelationship,
+            });
+      }
+    } on FirebaseFunctionsException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message ?? 'Could not record consent.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _consentActionInFlight = false);
+    }
+  }
+
+  Future<void> _viewPrivacyNotice() async {
+    if (_privacyNoticeUrl == null || _privacyNoticeUrl!.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Privacy notice'),
+          content: SingleChildScrollView(child: Text(_consentText)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    await launchUrlString(_privacyNoticeUrl!);
   }
 }
 
@@ -2285,29 +3688,366 @@ class _ErrorSummary extends StatelessWidget {
   );
 }
 
-class _Notice extends StatelessWidget {
-  final String text;
-  const _Notice(this.text);
+class _DayBoardingSelector extends StatelessWidget {
+  final String value;
+  final ValueChanged<String> onChanged;
+  const _DayBoardingSelector({required this.value, required this.onChanged});
   @override
-  Widget build(BuildContext c) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-    decoration: BoxDecoration(
-      border: Border.all(),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Row(
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.centerLeft,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.info_outline, size: 22),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: Theme.of(c).textTheme.bodyMedium?.copyWith(fontSize: 15),
-          ),
+        Text('Day / boarding *', style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 8),
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(
+              value: 'Day learner',
+              label: Text('Day learner'),
+              icon: Icon(Icons.directions_walk_rounded),
+            ),
+            ButtonSegment(
+              value: 'Boarding learner',
+              label: Text('Boarding learner'),
+              icon: Icon(Icons.hotel_rounded),
+            ),
+          ],
+          selected: {value},
+          onSelectionChanged: (s) => onChanged(s.first),
         ),
       ],
     ),
   );
+}
+
+/// Status pill for guardian consent: Required, Pending guardian action,
+/// Captured, Expired, Withdrawn or Needs review.
+class _ConsentStatusChip extends StatelessWidget {
+  final String? status;
+  const _ConsentStatusChip({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    late final Color color;
+    late final String label;
+    switch (status) {
+      case 'captured':
+        color = Colors.green;
+        label = 'Captured';
+        break;
+      case 'pending':
+        color = Colors.orange;
+        label = 'Pending guardian action';
+        break;
+      case 'expired':
+        color = scheme.error;
+        label = 'Expired';
+        break;
+      case 'withdrawn':
+        color = scheme.error;
+        label = 'Withdrawn';
+        break;
+      case 'needs_review':
+        color = Colors.orange;
+        label = 'Needs review';
+        break;
+      default:
+        color = scheme.primary;
+        label = 'Consent required';
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            status == 'captured' ? Icons.check_circle : Icons.info_outline,
+            size: 14,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Notice extends StatelessWidget {
+  final String text;
+  const _Notice(this.text);
+  @override
+  Widget build(BuildContext c) {
+    final blue = Colors.lightBlue.shade200;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.lightBlue.withValues(alpha: 0.08),
+        border: Border.all(color: blue),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 22, color: blue),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(c).textTheme.bodyMedium?.copyWith(fontSize: 15),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown while a dropdown's backing list is still streaming in, so the
+/// step doesn't render an empty/misleading dropdown momentarily.
+class _FieldLoadingPlaceholder extends StatelessWidget {
+  final String label;
+  const _FieldLoadingPlaceholder({required this.label});
+  @override
+  Widget build(BuildContext context) => InputDecorator(
+    decoration: InputDecoration(labelText: label),
+    child: Row(
+      children: const [
+        SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        SizedBox(width: 12),
+        Text('Loading…'),
+      ],
+    ),
+  );
+}
+
+/// Empty-state notice for a loaded-but-empty structure list (e.g. no
+/// education levels/classes configured), with an optional deep link into
+/// Structure setup when the current user has permission to act on it.
+class _EmptyConfigNotice extends StatelessWidget {
+  final String message;
+  final bool canOpenSetup;
+  final VoidCallback onOpenSetup;
+  const _EmptyConfigNotice({
+    required this.message,
+    required this.canOpenSetup,
+    required this.onOpenSetup,
+  });
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _Notice(message),
+      if (canOpenSetup) ...[
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: onOpenSetup,
+          icon: const Icon(Icons.settings_outlined),
+          label: const Text('Open school structure setup'),
+        ),
+      ],
+    ],
+  );
+}
+
+enum _ReviewStatus { complete, pending, blocked }
+
+class _ChecklistItem {
+  final int step;
+  final String text;
+  const _ChecklistItem({required this.step, required this.text});
+}
+
+class _ReviewRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String summary;
+  final _ReviewStatus status;
+  final String? statusLabel;
+  final VoidCallback onEdit;
+  const _ReviewRow({
+    required this.icon,
+    required this.title,
+    required this.summary,
+    required this.status,
+    required this.onEdit,
+    this.statusLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final (color, label, chipIcon) = switch (status) {
+      _ReviewStatus.complete => (
+        Colors.green.shade600,
+        statusLabel ?? 'Complete',
+        Icons.check_circle,
+      ),
+      _ReviewStatus.pending => (
+        Colors.amber.shade700,
+        statusLabel ?? 'Pending',
+        Icons.schedule,
+      ),
+      _ReviewStatus.blocked => (
+        scheme.error,
+        statusLabel ?? 'Incomplete',
+        Icons.error_outline,
+      ),
+    };
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 20, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  summary,
+                  style: TextStyle(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Semantics(
+                label: '$title status: $label',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(chipIcon, size: 14, color: color),
+                      const SizedBox(width: 4),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          color: color,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: onEdit,
+                icon: const Icon(Icons.chevron_right, size: 16),
+                iconAlignment: IconAlignment.end,
+                label: const Text('Edit'),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReadinessLine extends StatelessWidget {
+  final bool ok;
+  final bool pending;
+  final String title;
+  final String detail;
+  const _ReadinessLine({
+    required this.ok,
+    required this.title,
+    required this.detail,
+    this.pending = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = ok
+        ? Colors.green.shade600
+        : pending
+        ? Colors.amber.shade700
+        : scheme.error;
+    final icon = ok
+        ? Icons.check_circle
+        : pending
+        ? Icons.schedule
+        : Icons.error_outline;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 2),
+              Text(
+                detail,
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _Success extends StatelessWidget {

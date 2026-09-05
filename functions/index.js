@@ -486,7 +486,13 @@ exports.directEnrolLearner = onCall(async (request) => {
       throw new HttpsError("permission-denied", "You do not have permission to use a guardian override.");
     }
     if (!guardians.length && !overrideReason) throw new HttpsError("failed-precondition", "Add a guardian or provide an authorised override reason.");
-    if (!draft.consentAcknowledged) throw new HttpsError("failed-precondition", "Privacy and guardian consent must be acknowledged.");
+    // `consentAcknowledged` is the legacy single-checkbox flag; structured
+    // consent (guardian_signs_now / secure_link / verbal) supersedes it via
+    // `draft.guardianConsent`, written only by guardian_consent.js's
+    // callables — never settable by the client directly.
+    const consentValid = draft.consentAcknowledged === true ||
+      (draft.guardianConsent && draft.guardianConsent.status === "captured");
+    if (!consentValid) throw new HttpsError("failed-precondition", "Guardian consent must be captured before enrolment.");
     const studentId = String(draft.studentId || "");
     if (!studentId) throw new HttpsError("failed-precondition", "Draft has no learner identifier.");
     const studentRef = db.collection("students").doc(studentId);
@@ -5904,3 +5910,14 @@ exports.normalizeLegacyAuditEvent = onDocumentCreated("audit_logs/{auditId}", as
     metadataSafe: {}, createdAt: data.timestamp || admin.firestore.FieldValue.serverTimestamp(),
   });
 });
+
+/**
+ * Guardian consent for direct-enrolment Step 6 (Documents & consent). See
+ * guardian_consent.js for the full scope note (three tenant-gated capture
+ * methods, append-only audit records, single-use time-limited links).
+ */
+const guardianConsentFunctions = require("./guardian_consent");
+exports.recordGuardianConsentByStaff = guardianConsentFunctions.recordGuardianConsentByStaff;
+exports.requestGuardianConsentLink = guardianConsentFunctions.requestGuardianConsentLink;
+exports.resolveGuardianConsentLink = guardianConsentFunctions.resolveGuardianConsentLink;
+exports.withdrawGuardianConsent = guardianConsentFunctions.withdrawGuardianConsent;
