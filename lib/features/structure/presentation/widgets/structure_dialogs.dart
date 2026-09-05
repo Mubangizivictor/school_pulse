@@ -4,14 +4,14 @@ import 'package:uuid/uuid.dart';
 import '../../domain/entities/structure_entities.dart';
 
 const List<Color> kSubjectColorSwatches = [
-  Colors.black,
-  Colors.black,
-  Colors.black,
-  Colors.black,
-  Colors.black,
-  Colors.black,
-  Colors.black,
-  Colors.black,
+  Color(0xFF1E88E5),
+  Color(0xFF43A047),
+  Color(0xFFE53935),
+  Color(0xFFFB8C00),
+  Color(0xFF8E24AA),
+  Color(0xFF00897B),
+  Color(0xFF3949AB),
+  Color(0xFF6D4C41),
 ];
 
 String _colorToHex(Color color) =>
@@ -354,7 +354,7 @@ Future<void> showAcademicYearFormDialog(
                       Row(
                         children: [
                           Expanded(
-                            child: _AcademicYearDateField(
+                            child: AcademicYearDateField(
                               label: 'Start date',
                               value: startDate == null
                                   ? 'Select start date'
@@ -365,7 +365,7 @@ Future<void> showAcademicYearFormDialog(
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: _AcademicYearDateField(
+                            child: AcademicYearDateField(
                               label: 'End date',
                               value: endDate == null
                                   ? 'Select end date'
@@ -498,8 +498,8 @@ Future<void> showAcademicYearFormDialog(
   );
 }
 
-class _AcademicYearDateField extends StatelessWidget {
-  const _AcademicYearDateField({
+class AcademicYearDateField extends StatelessWidget {
+  const AcademicYearDateField({
     required this.label,
     required this.value,
     required this.onTap,
@@ -655,7 +655,7 @@ Future<void> showAcademicTermFormDialog(
                         Row(
                           children: [
                             Expanded(
-                              child: _AcademicYearDateField(
+                              child: AcademicYearDateField(
                                 label: 'Start date',
                                 value: startDate == null
                                     ? 'Select start date'
@@ -680,7 +680,7 @@ Future<void> showAcademicTermFormDialog(
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: _AcademicYearDateField(
+                              child: AcademicYearDateField(
                                 label: 'End date',
                                 value: endDate == null
                                     ? 'Select end date'
@@ -1921,7 +1921,10 @@ Future<bool?> showDeleteConfirmDialog(
             const SizedBox(height: 8),
             Text(
               impactMessage,
-              style: const TextStyle(fontSize: 12, color: Colors.black),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ],
@@ -1933,7 +1936,10 @@ Future<bool?> showDeleteConfirmDialog(
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, true),
-          child: const Text('Delete', style: TextStyle(color: Colors.black)),
+          child: Text(
+            'Delete',
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
         ),
       ],
     ),

@@ -287,176 +287,13 @@ class AcademicStructureScreen extends StatelessWidget {
   }
 
   Widget _years(BuildContext context, StructureState state) {
-    final bloc = context.read<StructureBloc>();
-    final schoolId = _schoolId(context);
-    final fmt = DateFormat('dd MMM yyyy');
-    void onAddYear() => showAcademicYearFormDialog(
-      context,
-      schoolId: schoolId,
-      onSave: (value) => _dispatchIfValid(
-        context,
-        _validator.validateAcademicYear(value, state.academicYears),
-        () => bloc.add(SaveAcademicYearRequested(value)),
-      ),
-    );
     if (state.isLoading && state.academicYears.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Create the academic year your school is currently using.',
-              style: TextStyle(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: state.academicYears.isEmpty
-                  ? _AcademicYearEmptyState(onAdd: onAddYear)
-                  : ListView.separated(
-                      padding: EdgeInsets.zero,
-                      itemCount: state.academicYears.length + 1,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (_, index) {
-                        if (index == state.academicYears.length) {
-                          return _AddAcademicYearTile(onTap: onAddYear);
-                        }
-                        final year = state.academicYears[index];
-                        final scheme = Theme.of(context).colorScheme;
-                        final terms = state.academicTerms
-                            .where((term) => term.academicYearId == year.id)
-                            .length;
-                        return AppCard(
-                          borderColor: scheme.primary,
-                          showShadow: false,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 16,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            year.name,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 17,
-                                            ),
-                                          ),
-                                          Text(
-                                            '${fmt.format(year.startDate)} – ${fmt.format(year.endDate)}',
-                                            style: TextStyle(
-                                              color: scheme.onSurfaceVariant,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (year.isCurrent)
-                                      const Chip(label: Text('Current')),
-                                    PopupMenuButton<String>(
-                                      icon: const Icon(Icons.more_vert),
-                                      onSelected: (action) {
-                                        if (action == 'current') {
-                                          bloc.add(
-                                            SetCurrentAcademicYearRequested(
-                                              year.id,
-                                              schoolId,
-                                            ),
-                                          );
-                                          return;
-                                        }
-                                        if (action == 'archive') {
-                                          bloc.add(
-                                            ArchiveAcademicYearRequested(
-                                              year.id,
-                                            ),
-                                          );
-                                          return;
-                                        }
-                                        showAcademicYearFormDialog(
-                                          context,
-                                          schoolId: schoolId,
-                                          existing: year,
-                                          onSave: (value) => _dispatchIfValid(
-                                            context,
-                                            _validator.validateAcademicYear(
-                                              value,
-                                              state.academicYears,
-                                            ),
-                                            () => bloc.add(
-                                              SaveAcademicYearRequested(value),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      itemBuilder: (_) => [
-                                        if (!year.isCurrent)
-                                          const PopupMenuItem(
-                                            value: 'current',
-                                            child: Text('Set as current'),
-                                          ),
-                                        const PopupMenuItem(
-                                          value: 'edit',
-                                          child: Text('Edit'),
-                                        ),
-                                        if (!year.isCurrent && !year.isArchived)
-                                          const PopupMenuItem(
-                                            value: 'archive',
-                                            child: Text('Archive'),
-                                          ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                                const Divider(height: 28),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.calendar_month_outlined,
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        terms == 0
-                                            ? 'Terms not set up'
-                                            : '$terms term${terms == 1 ? '' : 's'} set up',
-                                      ),
-                                    ),
-                                    if (onSetUpTerms != null)
-                                      OutlinedButton(
-                                        onPressed: onSetUpTerms,
-                                        child: const Text('Set up terms'),
-                                      ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
+    return _AcademicYearSetupView(
+      state: state,
+      schoolId: _schoolId(context),
+      onSetUpTerms: onSetUpTerms,
     );
   }
 
@@ -1980,56 +1817,457 @@ class _SystemCard extends StatelessWidget {
   }
 }
 
-class _AcademicYearEmptyState extends StatelessWidget {
-  final VoidCallback onAdd;
+/// Step 2 (Academic years): a direct inline setup workspace, replacing the
+/// old empty-state + "Add academic year" modal. The form always renders
+/// (no giant empty state); once fields are valid a live preview card shows
+/// below, and after persistence the saved record renders with its actual
+/// Current/edit affordances. `onSetUpTerms` lets the just-saved year link
+/// straight into the Terms step, same as the old card list did.
+class _AcademicYearSetupView extends StatefulWidget {
+  const _AcademicYearSetupView({
+    required this.state,
+    required this.schoolId,
+    required this.onSetUpTerms,
+  });
 
-  const _AcademicYearEmptyState({required this.onAdd});
+  final StructureState state;
+  final String schoolId;
+  final VoidCallback? onSetUpTerms;
+
+  @override
+  State<_AcademicYearSetupView> createState() =>
+      _AcademicYearSetupViewState();
+}
+
+class _AcademicYearSetupViewState extends State<_AcademicYearSetupView> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  DateTime? _startDate;
+  DateTime? _endDate;
+  bool _isCurrent = true;
+  bool _advancedExpanded = false;
+  bool _isSaving = false;
+  String? _dateError;
+  AcademicYear? _editingYear;
+
+  @override
+  void initState() {
+    super.initState();
+    // First-time setup seeds sensible defaults for the current calendar
+    // year; editing an existing year loads its saved values instead.
+    final currentYear = DateTime.now().year;
+    _nameController.text = '$currentYear';
+    _startDate = DateTime(currentYear, 1, 1);
+    _endDate = DateTime(currentYear, 12, 31);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _loadForEditing(AcademicYear year) {
+    setState(() {
+      _editingYear = year;
+      _nameController.text = year.name;
+      _startDate = year.startDate;
+      _endDate = year.endDate;
+      _isCurrent = year.isCurrent;
+      _dateError = null;
+    });
+  }
+
+  void _resetForNewYear() {
+    final currentYear = DateTime.now().year;
+    setState(() {
+      _editingYear = null;
+      _nameController.text = '$currentYear';
+      _startDate = DateTime(currentYear, 1, 1);
+      _endDate = DateTime(currentYear, 12, 31);
+      _isCurrent = widget.state.academicYears.isEmpty;
+      _dateError = null;
+    });
+  }
+
+  Future<void> _pickDate({required bool isStart}) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: (isStart ? _startDate : _endDate) ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) return;
+    setState(() {
+      if (isStart) {
+        _startDate = picked;
+      } else {
+        _endDate = picked;
+      }
+      _dateError = null;
+    });
+  }
+
+  AcademicYear? _buildCandidate() {
+    if (_startDate == null || _endDate == null) return null;
+    return AcademicYear(
+      id: _editingYear?.id ?? const Uuid().v4(),
+      schoolId: _editingYear?.schoolId ?? widget.schoolId,
+      name: _nameController.text.trim(),
+      startDate: _startDate!,
+      endDate: _endDate!,
+      isCurrent: _isCurrent,
+      isArchived: _editingYear?.isArchived ?? false,
+    );
+  }
+
+  Future<void> _submit(StructureBloc bloc) async {
+    if (_isSaving) return;
+    if (!_formKey.currentState!.validate()) return;
+    if (_startDate == null || _endDate == null) {
+      setState(() => _dateError = 'Select a start and end date.');
+      return;
+    }
+    if (!_startDate!.isBefore(_endDate!)) {
+      setState(() => _dateError = 'End date must be after start date.');
+      return;
+    }
+    final candidate = _buildCandidate()!;
+    final validationError = _validator.validateAcademicYear(
+      candidate,
+      widget.state.academicYears,
+    );
+    if (validationError != null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(validationError)));
+      return;
+    }
+    setState(() => _isSaving = true);
+    bloc.add(SaveAcademicYearRequested(candidate));
+    if (mounted) {
+      setState(() {
+        _isSaving = false;
+        _editingYear = candidate;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final bloc = context.read<StructureBloc>();
     final scheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+    final fmt = DateFormat('dd MMM yyyy');
+    final years = widget.state.academicYears;
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.calendar_view_month_outlined,
-              size: 64,
-              color: scheme.primary,
+            Text(
+              'Set your academic year',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'This is the calendar used for terms, enrolments and reports.',
+              style: TextStyle(
+                fontSize: 14,
+                color: scheme.onSurfaceVariant,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 16),
-            Text(
-              'No academic year yet',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurface,
+            _InfoBanner(
+              title: 'A school needs one current academic year',
+              message:
+                  'Add the dates for the academic year you’re currently '
+                  'using. You can add future years later.',
+            ),
+            const SizedBox(height: 20),
+            Material(
+              color: scheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _editingYear == null
+                          ? 'Academic year details'
+                          : 'Editing ${_editingYear!.name}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'These details are required to continue.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Academic year name *',
+                        hintText: 'e.g. 2026',
+                        helperText:
+                            'Use a year (e.g. 2026) or a name (e.g. 2025/26).',
+                      ),
+                      onChanged: (_) => setState(() {}),
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                          ? 'Required'
+                          : null,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: AcademicYearDateField(
+                            label: 'Start date *',
+                            value: _startDate == null
+                                ? 'Select start date'
+                                : fmt.format(_startDate!),
+                            isPlaceholder: _startDate == null,
+                            onTap: () => _pickDate(isStart: true),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: AcademicYearDateField(
+                            label: 'End date *',
+                            value: _endDate == null
+                                ? 'Select end date'
+                                : fmt.format(_endDate!),
+                            isPlaceholder: _endDate == null,
+                            onTap: () => _pickDate(isStart: false),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_dateError != null) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 16,
+                            color: scheme.error,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _dateError!,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: scheme.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () =>
+                          setState(() => _isCurrent = !_isCurrent),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: scheme.surface,
+                          border: Border.all(color: scheme.outlineVariant),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Switch(
+                              value: _isCurrent,
+                              onChanged: (value) =>
+                                  setState(() => _isCurrent = value),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Set as current academic year'),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'This will be used for new enrolments '
+                                    'and terms.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: scheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Theme(
+                      data: Theme.of(
+                        context,
+                      ).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        initiallyExpanded: _advancedExpanded,
+                        onExpansionChanged: (value) =>
+                            setState(() => _advancedExpanded = value),
+                        tilePadding: EdgeInsets.zero,
+                        title: const Text(
+                          'Advanced dates (optional)',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        subtitle: Text(
+                          'Set term dates or multiple calendars '
+                          '(e.g. primary/secondary).',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        childrenPadding: const EdgeInsets.only(bottom: 8),
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              years.length > 1 ||
+                                      widget.onSetUpTerms == null
+                                  ? 'Manage term dates from the Terms / '
+                                        'semesters step after saving this '
+                                        'year.'
+                                  : 'Save this year first, then use "Set '
+                                        'up terms" below to add term dates.',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              textAlign: TextAlign.center,
+              ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 20),
             Text(
-              'Add your first academic year to continue.',
-              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
-              textAlign: TextAlign.center,
+              'Preview',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 4),
+            Text(
+              'This is how your academic year will appear.',
+              style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 10),
+            _AcademicYearPreviewCard(
+              name: _nameController.text.trim().isEmpty
+                  ? 'Untitled year'
+                  : _nameController.text.trim(),
+              dateLabel: _startDate != null && _endDate != null
+                  ? '${fmt.format(_startDate!)} – ${fmt.format(_endDate!)}'
+                  : 'Select start and end dates',
+              isCurrent: _isCurrent,
+            ),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton(
-                onPressed: onAdd,
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: scheme.primary),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: () => _submit(bloc),
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.check_rounded, size: 18),
+                label: Text(
+                  _editingYear == null
+                      ? 'Save academic year'
+                      : 'Save changes',
                 ),
-                child: const Text('Add academic year'),
               ),
             ),
+            if (years.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Your academic years',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'View and manage your academic years.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 10),
+              for (final year in years)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _SavedAcademicYearTile(
+                    year: year,
+                    dateLabel:
+                        '${fmt.format(year.startDate)} – ${fmt.format(year.endDate)}',
+                    termCount: widget.state.academicTerms
+                        .where((term) => term.academicYearId == year.id)
+                        .length,
+                    onEdit: () => _loadForEditing(year),
+                    onSetCurrent: year.isCurrent
+                        ? null
+                        : () => bloc.add(
+                            SetCurrentAcademicYearRequested(
+                              year.id,
+                              widget.schoolId,
+                            ),
+                          ),
+                    onArchive: year.isCurrent || year.isArchived
+                        ? null
+                        : () => bloc.add(ArchiveAcademicYearRequested(year.id)),
+                    onSetUpTerms: year.isCurrent ? widget.onSetUpTerms : null,
+                  ),
+                ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _resetForNewYear,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add another academic year'),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -2037,36 +2275,253 @@ class _AcademicYearEmptyState extends StatelessWidget {
   }
 }
 
-class _AddAcademicYearTile extends StatelessWidget {
-  const _AddAcademicYearTile({required this.onTap});
+class _InfoBanner extends StatelessWidget {
+  const _InfoBanner({required this.title, required this.message});
 
-  final VoidCallback onTap;
+  final String title;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: scheme.primary),
+    // Pale-blue explanatory banner: a fixed light-blue tone works in both
+    // themes because the banner is an informational accent, not a
+    // theme-derived surface (matches the reference screenshots exactly).
+    const bannerColor = Color(0xFFEAF2FE);
+    const bannerBorder = Color(0xFFBFD8FB);
+    const bannerText = Color(0xFF0B4EA2);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: bannerColor,
+        border: Border.all(color: bannerBorder),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline, color: bannerText),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: bannerText,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: const TextStyle(color: bannerText, fontSize: 12.5, height: 1.4),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AcademicYearPreviewCard extends StatelessWidget {
+  const _AcademicYearPreviewCard({
+    required this.name,
+    required this.dateLabel,
+    required this.isCurrent,
+  });
+
+  final String name;
+  final String dateLabel;
+  final bool isCurrent;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: scheme.primary.withValues(alpha: 0.12),
+            child: Icon(Icons.calendar_month_outlined, color: scheme.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    if (isCurrent) ...[
+                      const SizedBox(width: 8),
+                      const _CurrentBadge(),
+                    ],
+                  ],
+                ),
+                Text(
+                  dateLabel,
+                  style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded, color: scheme.onSurfaceVariant),
+        ],
+      ),
+    );
+  }
+}
+
+/// Green "Current" status pill, used both in the live preview and on saved
+/// academic year records, matching the reference screenshots.
+class _CurrentBadge extends StatelessWidget {
+  const _CurrentBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    const green = Color(0xFF1E8E3E);
+    const greenBg = Color(0xFFE6F4EA);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: greenBg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Text(
+        'Current',
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+          color: green,
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+      ),
+    );
+  }
+}
+
+class _SavedAcademicYearTile extends StatelessWidget {
+  const _SavedAcademicYearTile({
+    required this.year,
+    required this.dateLabel,
+    required this.termCount,
+    required this.onEdit,
+    required this.onSetCurrent,
+    required this.onArchive,
+    required this.onSetUpTerms,
+  });
+
+  final AcademicYear year;
+  final String dateLabel;
+  final int termCount;
+  final VoidCallback onEdit;
+  final VoidCallback? onSetCurrent;
+  final VoidCallback? onArchive;
+  final VoidCallback? onSetUpTerms;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AppCard(
+      borderColor: year.isCurrent ? scheme.primary : scheme.outlineVariant,
+      showShadow: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.add_circle_outline_rounded, color: scheme.primary),
-            const SizedBox(width: 10),
-            Text(
-              'Add another academic year',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: scheme.primary,
-                fontWeight: FontWeight.w700,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            year.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 17,
+                            ),
+                          ),
+                          if (year.isCurrent) ...[
+                            const SizedBox(width: 8),
+                            const _CurrentBadge(),
+                          ],
+                        ],
+                      ),
+                      Text(
+                        dateLabel,
+                        style: TextStyle(
+                          color: scheme.onSurfaceVariant,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  tooltip: 'Edit',
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (action) {
+                    if (action == 'current') onSetCurrent?.call();
+                    if (action == 'archive') onArchive?.call();
+                  },
+                  itemBuilder: (_) => [
+                    if (onSetCurrent != null)
+                      const PopupMenuItem(
+                        value: 'current',
+                        child: Text('Set as current'),
+                      ),
+                    if (onArchive != null)
+                      const PopupMenuItem(
+                        value: 'archive',
+                        child: Text('Archive'),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+            const Divider(height: 28),
+            Row(
+              children: [
+                const Icon(Icons.calendar_month_outlined, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    termCount == 0
+                        ? 'Terms not set up'
+                        : '$termCount term${termCount == 1 ? '' : 's'} set up',
+                  ),
+                ),
+                if (onSetUpTerms != null)
+                  OutlinedButton(
+                    onPressed: onSetUpTerms,
+                    child: const Text('Set up terms'),
+                  ),
+              ],
             ),
           ],
         ),
