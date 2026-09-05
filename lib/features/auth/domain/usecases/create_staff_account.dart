@@ -6,9 +6,9 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/repositories/auth_repository.dart';
 
 /// Creates a staff Firebase Auth account + Firestore profile via the
-/// `createStaffAccount` Cloud Function. No plaintext password is generated;
-/// the new staff member sets their own via an emailed password-reset link.
-/// Returns the created staffCode.
+/// `createStaffAccount` Cloud Function. No password is ever generated on,
+/// seen by, or returned to the client; the staff member sets their own via
+/// a verified invitation. Returns the created staffCode.
 class CreateStaffAccount implements UseCase<String, CreateStaffAccountParams> {
   final AuthRepository repository;
 
@@ -21,7 +21,7 @@ class CreateStaffAccount implements UseCase<String, CreateStaffAccountParams> {
       email: params.email,
       schoolId: params.schoolId,
       roles: params.roles,
-      password: params.password,
+      signInMethod: params.signInMethod,
       assignedClass: params.assignedClass,
       subjects: params.subjects,
       academicYearId: params.academicYearId,
@@ -31,7 +31,6 @@ class CreateStaffAccount implements UseCase<String, CreateStaffAccountParams> {
       employmentType: params.employmentType,
       dateJoined: params.dateJoined,
       idempotencyKey: params.idempotencyKey,
-      forcePasswordChange: params.forcePasswordChange,
       sendLoginDetailsViaEmail: params.sendLoginDetailsViaEmail,
       staffData: params.staffData,
       roleConfigs: params.roleConfigs,
@@ -44,7 +43,7 @@ class CreateStaffAccountParams extends Equatable {
   final String email;
   final String schoolId;
   final List<UserRole> roles;
-  final String password;
+  final String signInMethod;
   final String? assignedClass;
   final List<SubjectAssignment>? subjects;
   final String? academicYearId;
@@ -54,7 +53,6 @@ class CreateStaffAccountParams extends Equatable {
   final String? employmentType;
   final DateTime? dateJoined;
   final String? idempotencyKey;
-  final bool forcePasswordChange;
   final bool sendLoginDetailsViaEmail;
   final Map<String, dynamic>? staffData;
   final Map<String, dynamic>? roleConfigs;
@@ -64,7 +62,7 @@ class CreateStaffAccountParams extends Equatable {
     required this.email,
     required this.schoolId,
     required this.roles,
-    required this.password,
+    this.signInMethod = 'invite',
     this.assignedClass,
     this.subjects,
     this.academicYearId,
@@ -74,7 +72,6 @@ class CreateStaffAccountParams extends Equatable {
     this.employmentType,
     this.dateJoined,
     this.idempotencyKey,
-    this.forcePasswordChange = false,
     this.sendLoginDetailsViaEmail = false,
     this.staffData,
     this.roleConfigs,
@@ -86,7 +83,7 @@ class CreateStaffAccountParams extends Equatable {
     email,
     schoolId,
     roles,
-    password,
+    signInMethod,
     assignedClass,
     subjects,
     academicYearId,
@@ -96,7 +93,6 @@ class CreateStaffAccountParams extends Equatable {
     employmentType,
     dateJoined,
     idempotencyKey,
-    forcePasswordChange,
     sendLoginDetailsViaEmail,
     staffData,
     roleConfigs,

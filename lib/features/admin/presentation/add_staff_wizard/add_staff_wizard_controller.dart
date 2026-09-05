@@ -10,7 +10,9 @@ import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
 import 'package:school_pulse/features/admin/presentation/add_staff_wizard/models/add_staff_draft.dart';
+import 'package:school_pulse/features/admin/presentation/add_staff_wizard/models/responsibility_catalog.dart';
 import 'package:school_pulse/features/auth/domain/usecases/create_staff_account.dart';
+import 'package:school_pulse/features/auth/domain/usecases/create_staff_invitation.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 /// The five visible wizard stages, matching the reference design's stepper:
@@ -80,9 +82,9 @@ class AddStaffWizardController extends ChangeNotifier {
   String? resultStaffCode;
   String? resultUid;
 
-  /// Admin-set initial password must be at least 8 chars. Enforced before
-  /// leaving the Access stage and mirrored by the field validators in the UI.
-  bool get isInitialPasswordValid => draft.initialPassword.trim().length >= 8;
+  bool invitationSending = false;
+  String? invitationError;
+  String? invitationStatus;
 
   List<UserRole> get rolesNeedingConfig => draft.selectedRoles
       .where(
@@ -112,6 +114,60 @@ class AddStaffWizardController extends ChangeNotifier {
     UserRole.hrOfficer,
   };
 
+  /// Toggles a catalogue responsibility, enforcing the same incompatible-
+  /// pair exclusivity the old flat role list applied to Matron/Patron, and
+  /// keeping selectedRoles/roleConfigs in sync for any responsibility with a
+  /// mappedRole so the existing scope-configuration sub-step keeps firing.
+  void toggleResponsibility(String responsibilityId) {
+    final entry = responsibilityById[responsibilityId];
+    if (entry == null) return;
+    final selected = draft.selectedResponsibilityIds.contains(responsibilityId);
+    if (selected) {
+      draft.selectedResponsibilityIds.remove(responsibilityId);
+      if (entry.mappedRole != null &&
+          !_otherResponsibilityMapsToRole(
+            responsibilityId,
+            entry.mappedRole!,
+          )) {
+        draft.selectedRoles.remove(entry.mappedRole);
+        draft.roleConfigs.remove(entry.mappedRole);
+      }
+    } else {
+      for (final conflictId in incompatibleResponsibilitiesFor(
+        responsibilityId,
+      )) {
+        draft.selectedResponsibilityIds.remove(conflictId);
+        final conflictEntry = responsibilityById[conflictId];
+        if (conflictEntry?.mappedRole != null &&
+            !_otherResponsibilityMapsToRole(
+              conflictId,
+              conflictEntry!.mappedRole!,
+            )) {
+          draft.selectedRoles.remove(conflictEntry.mappedRole);
+          draft.roleConfigs.remove(conflictEntry.mappedRole);
+        }
+      }
+      draft.selectedResponsibilityIds.add(responsibilityId);
+      if (entry.mappedRole != null) {
+        draft.selectedRoles.add(entry.mappedRole!);
+      }
+    }
+    notifyDraftChanged();
+  }
+
+  bool _otherResponsibilityMapsToRole(String excludingId, UserRole role) {
+    return draft.selectedResponsibilityIds.any(
+      (id) => id != excludingId && responsibilityById[id]?.mappedRole == role,
+    );
+  }
+
+  void clearAllResponsibilities() {
+    draft.selectedResponsibilityIds.clear();
+    draft.selectedRoles.clear();
+    draft.roleConfigs.clear();
+    notifyDraftChanged();
+  }
+
   void goToStage(WizardStage stage) {
     _stage = stage;
     if (stage == WizardStage.roles) _rolesSubStep = RolesSubStep.select;
@@ -132,7 +188,6 @@ class AddStaffWizardController extends ChangeNotifier {
         _rolesNext();
         break;
       case WizardStage.access:
-        if (!isInitialPasswordValid) return;
         _stage = WizardStage.review;
         break;
       case WizardStage.review:
@@ -274,16 +329,17 @@ class AddStaffWizardController extends ChangeNotifier {
             restored.emergencyContactAlternatePhone
         ..idempotencyKey = restored.idempotencyKey
         ..employmentType = restored.employmentType
-        ..department = restored.department
         ..departmentId = restored.departmentId
-        ..designation = restored.designation
         ..designationId = restored.designationId
         ..campusId = restored.campusId
         ..dateJoined = restored.dateJoined
+        ..compensationSetUpNow = restored.compensationSetUpNow
+        ..selectedPayComponentIds = restored.selectedPayComponentIds
         ..selectedRoles = restored.selectedRoles
         ..roleConfigs = restored.roleConfigs
-        ..forcePasswordChange = restored.forcePasswordChange
-        ..sendLoginDetailsViaEmail = restored.sendLoginDetailsViaEmail;
+        ..selectedResponsibilityIds = restored.selectedResponsibilityIds
+        ..signInMethod = restored.signInMethod
+        ..invitationEmailOverride = restored.invitationEmailOverride;
       notifyListeners();
       return true;
     } catch (_) {
@@ -352,20 +408,18 @@ class AddStaffWizardController extends ChangeNotifier {
         name: draft.fullName,
         schoolId: schoolId,
         roles: draft.selectedRoles.toList(),
-        password: draft.initialPassword,
+        signInMethod: draft.signInMethod.name,
         assignedClass: classTeacherConfig?.className,
         subjects: subjectTeacherConfig?.subjectAssignments,
         academicYearId: currentAcademicYearId,
-        // Department is intentionally not part of staff onboarding. Role
-        // scope is configured separately in the following Roles stage.
-        departmentId: null,
-        designationId: null,
+        departmentId: draft.departmentId,
+        designationId: draft.designationId,
         campusId: draft.campusId,
         employmentType: draft.employmentType,
         dateJoined: draft.dateJoined,
         idempotencyKey: draft.idempotencyKey ??= const Uuid().v4(),
-        forcePasswordChange: draft.forcePasswordChange,
-        sendLoginDetailsViaEmail: draft.sendLoginDetailsViaEmail,
+        sendLoginDetailsViaEmail:
+            draft.signInMethod == StaffSignInMethod.invite,
         staffData: {
           'gender': draft.gender,
           'phoneNumber': draft.phoneNumber,
@@ -407,6 +461,26 @@ class AddStaffWizardController extends ChangeNotifier {
     return result;
   }
 
+  /// Resends (or sends for the first time, for a staff member created with
+  /// signInMethod noLogin) a verified sign-in invitation. Server enforces
+  /// the resend cooldown and tenant/permission checks; a cooldown failure
+  /// surfaces via [invitationError].
+  Future<void> resendInvitation() async {
+    final uid = resultUid;
+    if (uid == null) return;
+    invitationSending = true;
+    invitationError = null;
+    notifyListeners();
+
+    final result = await di.sl<CreateStaffInvitation>()(uid);
+    invitationSending = false;
+    result.fold(
+      (f) => invitationError = f.message,
+      (_) => invitationStatus = 'sent',
+    );
+    notifyListeners();
+  }
+
   /// The Cloud Function response only surfaces the temp password through
   /// the shared AuthRepository/CreateStaffAccount contract (used by other
   /// callers), not the created uid/staffCode - so this wizard looks the new
@@ -432,11 +506,17 @@ class AddStaffWizardController extends ChangeNotifier {
 
   Future<void> logAudit() async {
     try {
+      final responsibilityTitles = draft.selectedResponsibilityIds
+          .map((id) => responsibilityById[id]?.title)
+          .whereType<String>()
+          .toList();
+      final summary = responsibilityTitles.isNotEmpty
+          ? responsibilityTitles.join(', ')
+          : draft.selectedRoles.map(UserRoleDisplay.name).join(', ');
       await di.sl<AuditRepository>().logAction(
         schoolId: schoolId,
         title: 'Staff Account Created',
-        description:
-            '${draft.fullName} was added as ${draft.selectedRoles.map(UserRoleDisplay.name).join(', ')}.',
+        description: '${draft.fullName} was added as $summary.',
         iconName: 'person_add',
         colorHex: 'FF2196F3',
         userId: adminUid,

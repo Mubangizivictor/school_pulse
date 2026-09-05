@@ -20,6 +20,9 @@ import 'package:school_pulse/injection_container.dart' as di;
 /// functions/test/create_staff_account.emulator.test.cjs.
 class _RecordingAuthRepository implements AuthRepository {
   final List<String?> idempotencyKeysSeen = [];
+  final List<String?> departmentIdsSeen = [];
+  final List<String?> designationIdsSeen = [];
+  final List<String?> campusIdsSeen = [];
   int callCount = 0;
 
   @override
@@ -28,7 +31,7 @@ class _RecordingAuthRepository implements AuthRepository {
     required String email,
     required String schoolId,
     required List<UserRole> roles,
-    required String password,
+    String? signInMethod,
     String? assignedClass,
     List<SubjectAssignment>? subjects,
     String? academicYearId,
@@ -38,13 +41,15 @@ class _RecordingAuthRepository implements AuthRepository {
     String? employmentType,
     DateTime? dateJoined,
     String? idempotencyKey,
-    bool forcePasswordChange = false,
     bool sendLoginDetailsViaEmail = false,
     Map<String, dynamic>? staffData,
     Map<String, dynamic>? roleConfigs,
   }) async {
     callCount++;
     idempotencyKeysSeen.add(idempotencyKey);
+    departmentIdsSeen.add(departmentId);
+    designationIdsSeen.add(designationId);
+    campusIdsSeen.add(campusId);
     // Mirrors the real callable's idempotent-replay contract: a retry with
     // the same key that already succeeded returns the same staffCode
     // instead of minting a new account.
@@ -177,6 +182,115 @@ void main() {
     );
   });
 
+  group('toggleResponsibility', () {
+    test('adds a responsibility id and its mapped role together', () {
+      controller.toggleResponsibility('class_teacher');
+      expect(
+        controller.draft.selectedResponsibilityIds,
+        contains('class_teacher'),
+      );
+      expect(controller.draft.selectedRoles, contains(UserRole.classTeacher));
+    });
+
+    test(
+      'removes a responsibility id and its mapped role on second toggle',
+      () {
+        controller.toggleResponsibility('class_teacher');
+        controller.toggleResponsibility('class_teacher');
+        expect(controller.draft.selectedResponsibilityIds, isEmpty);
+        expect(
+          controller.draft.selectedRoles,
+          isNot(contains(UserRole.classTeacher)),
+        );
+      },
+    );
+
+    test('ignores an unknown responsibility id', () {
+      controller.toggleResponsibility('not_a_real_id');
+      expect(controller.draft.selectedResponsibilityIds, isEmpty);
+    });
+
+    test(
+      'leaves a descriptive-only responsibility (no mappedRole) with no system role added',
+      () {
+        controller.toggleResponsibility('board_secretary');
+        expect(
+          controller.draft.selectedResponsibilityIds,
+          contains('board_secretary'),
+        );
+        expect(controller.draft.selectedRoles, isEmpty);
+      },
+    );
+
+    test(
+      'selecting Boarding Master clears the incompatible Boarding Mistress choice',
+      () {
+        controller.toggleResponsibility('boarding_mistress');
+        controller.toggleResponsibility('boarding_master');
+
+        expect(controller.draft.selectedResponsibilityIds, {'boarding_master'});
+        expect(
+          controller.draft.selectedRoles,
+          contains(UserRole.boardingPatron),
+        );
+        expect(
+          controller.draft.selectedRoles,
+          isNot(contains(UserRole.boardingMatron)),
+        );
+      },
+    );
+
+    test(
+      'selecting Dormitory Matron clears the incompatible Dormitory Patron choice',
+      () {
+        controller.toggleResponsibility('dormitory_patron');
+        controller.toggleResponsibility('dormitory_matron');
+
+        expect(controller.draft.selectedResponsibilityIds, {
+          'dormitory_matron',
+        });
+      },
+    );
+
+    test(
+      'two responsibilities mapped to the same role both stay tagged, and removing one keeps the role while the other remains',
+      () {
+        // Boarding Master and Dormitory Patron both map to boardingPatron.
+        controller.toggleResponsibility('boarding_master');
+        controller.toggleResponsibility('dormitory_patron');
+        expect(
+          controller.draft.selectedRoles,
+          contains(UserRole.boardingPatron),
+        );
+
+        controller.toggleResponsibility('boarding_master');
+        expect(
+          controller.draft.selectedResponsibilityIds,
+          contains('dormitory_patron'),
+        );
+        expect(
+          controller.draft.selectedRoles,
+          contains(UserRole.boardingPatron),
+        );
+      },
+    );
+
+    test(
+      'clearAllResponsibilities clears responsibilities, roles and role configs',
+      () {
+        controller.toggleResponsibility('class_teacher');
+        controller.draft.roleConfigs[UserRole.classTeacher] =
+            RoleAssignmentDraft(role: UserRole.classTeacher, className: 'P4');
+
+        controller.clearAllResponsibilities();
+
+        expect(controller.draft.selectedResponsibilityIds, isEmpty);
+        expect(controller.draft.selectedRoles, isEmpty);
+        expect(controller.draft.roleConfigs, isEmpty);
+      },
+    );
+  });
+
   group('submit()', () {
     test(
       'rejects locally without reaching the repository when Class Teacher has no class',
@@ -234,7 +348,8 @@ void main() {
         expect(firstResult.isRight(), isTrue);
         expect(controller.submitError, isNull);
         expect(fakeAuthRepository.callCount, 1);
-        final firstIdempotencyKey = fakeAuthRepository.idempotencyKeysSeen.single;
+        final firstIdempotencyKey =
+            fakeAuthRepository.idempotencyKeysSeen.single;
         expect(firstIdempotencyKey, isNotNull);
 
         await controller.logAudit();
@@ -265,6 +380,45 @@ void main() {
         await controller.logAudit();
         expect(fakeAuditRepository.callCount, 2);
         expect(controller.submitError, isNull);
+      },
+    );
+  });
+
+  // Regression coverage for the Work details (Step 2) redesign: department
+  // and job title (designationId) are collected again on this step and must
+  // reach the Cloud Function, not be silently dropped as they were while
+  // onboarding treated them as legacy/unused.
+  group('submit() forwards Work details fields', () {
+    late _RecordingAuthRepository fakeAuthRepository;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      fakeAuthRepository = _RecordingAuthRepository();
+      await di.sl.reset();
+      di.sl.registerLazySingleton<CreateStaffAccount>(
+        () => CreateStaffAccount(fakeAuthRepository),
+      );
+      di.sl.registerLazySingleton<AuditRepository>(
+        () => _FailingAuditRepository()..shouldThrow = false,
+      );
+
+      controller.draft.email = 'work.details@example.com';
+      controller.draft.firstName = 'Work';
+      controller.draft.lastName = 'Details';
+      controller.draft.campusId = 'campus-1';
+      controller.draft.departmentId = 'department-1';
+      controller.draft.designationId = 'designation-1';
+      controller.draft.selectedRoles.add(UserRole.bursar);
+    });
+
+    test(
+      'campus, department and designation ids are sent as set on the draft',
+      () async {
+        final result = await controller.submit();
+        expect(result.isRight(), isTrue);
+        expect(fakeAuthRepository.campusIdsSeen, ['campus-1']);
+        expect(fakeAuthRepository.departmentIdsSeen, ['department-1']);
+        expect(fakeAuthRepository.designationIdsSeen, ['designation-1']);
       },
     );
   });

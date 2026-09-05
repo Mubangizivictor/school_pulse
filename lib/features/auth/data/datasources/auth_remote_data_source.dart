@@ -66,16 +66,19 @@ abstract class AuthRemoteDataSource {
 
   /// Calls the `createStaffAccount` Cloud Function, which verifies the
   /// caller is a school administrator before provisioning the Firebase Auth
-  /// account and Firestore profile with the Admin SDK. No plaintext password
-  /// is generated or returned - the new staff member sets their own password
-  /// via a Firebase password-reset action link (emailed to them when
-  /// [sendLoginDetailsViaEmail] is true). Returns the created staffCode.
+  /// account and Firestore profile with the Admin SDK. No password is ever
+  /// generated, seen, or transmitted by the client - the Auth user is
+  /// created with a securely random internal password, and the staff member
+  /// sets their own via a verified invitation (signInMethod "invite" issues
+  /// one immediately; "noLogin" leaves the profile unable to sign in until
+  /// an administrator later calls [createStaffInvitation]). Returns the
+  /// created staffCode.
   Future<String> createStaffAccount({
     required String name,
     required String email,
     required String schoolId,
     required List<UserRole> roles,
-    required String password,
+    String? signInMethod,
     String? assignedClass,
     List<SubjectAssignment>? subjects,
     String? academicYearId,
@@ -85,11 +88,19 @@ abstract class AuthRemoteDataSource {
     String? employmentType,
     DateTime? dateJoined,
     String? idempotencyKey,
-    bool forcePasswordChange = false,
     bool sendLoginDetailsViaEmail = false,
     Map<String, dynamic>? staffData,
     Map<String, dynamic>? roleConfigs,
   });
+
+  /// Calls `createStaffInvitation`, which generates a verified, time-limited
+  /// Firebase Auth password-reset action link and emails it to the staff
+  /// member. Server enforces resend cooldown, tenant match, and admin-only
+  /// access. No password or token is ever returned to the client.
+  Future<void> createStaffInvitation(String uid);
+
+  /// Calls `cancelStaffInvitation` to revoke a pending invitation.
+  Future<void> cancelStaffInvitation(String uid);
 
   /// Sets a new password for the currently signed-in user and clears their
   /// mustChangePassword flag. Used the first time a staff member logs in
@@ -526,7 +537,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String email,
     required String schoolId,
     required List<UserRole> roles,
-    required String password,
+    String? signInMethod,
     String? assignedClass,
     List<SubjectAssignment>? subjects,
     String? academicYearId,
@@ -536,7 +547,6 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     String? employmentType,
     DateTime? dateJoined,
     String? idempotencyKey,
-    bool forcePasswordChange = false,
     bool sendLoginDetailsViaEmail = false,
     Map<String, dynamic>? staffData,
     Map<String, dynamic>? roleConfigs,
@@ -548,7 +558,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'email': email,
         'schoolId': schoolId,
         'roles': roles.map((r) => r.name).toList(),
-        'password': password,
+        'signInMethod': signInMethod,
         'assignedClass': assignedClass,
         'subjects': subjects?.map((e) => e.toJson()).toList(),
         'academicYearId': academicYearId,
@@ -558,16 +568,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'employmentType': employmentType,
         'dateJoined': dateJoined?.toIso8601String(),
         'idempotencyKey': idempotencyKey,
-        'forcePasswordChange': forcePasswordChange,
         'sendLoginDetailsViaEmail': sendLoginDetailsViaEmail,
         ...?staffData,
         'roleConfigs': roleConfigs,
       });
-      // The callable never emails or returns a plaintext password (it
-      // provisions the account via a Firebase password-reset action link
-      // instead - see createStaffAccount in functions/index.js). The
+      // The callable never generates, sees, or returns a password - the
+      // Auth user is created with a securely random internal password and
+      // the staff member sets their own via a verified invitation (see
+      // createStaffAccount/issueStaffInvitation in functions/index.js). The
       // staffCode is the only meaningful identifier it returns; callers
-      // that need uid/setupEmailQueued look those up separately (see
+      // that need uid look it up separately (see
       // AddStaffWizardController._lookupStaffCodeAndUid).
       return (result.data['staffCode'] as String?) ?? '';
     } catch (e) {
@@ -577,6 +587,32 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // boundary and can leave a partial Auth/profile pair behind.
       if (e is FirebaseFunctionsException) {
         throw AuthFailure(e.message ?? 'Failed to create staff account');
+      }
+      throw AuthFailure(e.toString());
+    }
+  }
+
+  @override
+  Future<void> createStaffInvitation(String uid) async {
+    try {
+      final callable = functions.httpsCallable('createStaffInvitation');
+      await callable.call<Map<String, dynamic>>({'uid': uid});
+    } catch (e) {
+      if (e is FirebaseFunctionsException) {
+        throw AuthFailure(e.message ?? 'Failed to send invitation');
+      }
+      throw AuthFailure(e.toString());
+    }
+  }
+
+  @override
+  Future<void> cancelStaffInvitation(String uid) async {
+    try {
+      final callable = functions.httpsCallable('cancelStaffInvitation');
+      await callable.call<Map<String, dynamic>>({'uid': uid});
+    } catch (e) {
+      if (e is FirebaseFunctionsException) {
+        throw AuthFailure(e.message ?? 'Failed to cancel invitation');
       }
       throw AuthFailure(e.toString());
     }

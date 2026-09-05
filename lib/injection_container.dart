@@ -474,6 +474,7 @@ import 'package:school_pulse/features/student/domain/usecases/manage_parent_acce
 
 // Admin - Staff Accounts (part of Auth feature)
 import 'package:school_pulse/features/auth/domain/usecases/create_staff_account.dart';
+import 'package:school_pulse/features/auth/domain/usecases/create_staff_invitation.dart';
 import 'package:school_pulse/features/auth/domain/usecases/admin_reset_staff_password.dart';
 import 'package:school_pulse/features/auth/domain/usecases/delete_staff_member.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
@@ -2105,6 +2106,8 @@ Future<void> init() async {
   // Admin - Staff Accounts (AuthRepository already registered above)
   sl.registerLazySingleton(() => GetStaffMembers(sl()));
   sl.registerLazySingleton(() => CreateStaffAccount(sl()));
+  sl.registerLazySingleton(() => CreateStaffInvitation(sl()));
+  sl.registerLazySingleton(() => CancelStaffInvitation(sl()));
   sl.registerLazySingleton(() => ToggleStaffStatus(sl()));
   sl.registerLazySingleton(() => DeleteStaffMember(sl()));
   sl.registerLazySingleton(() => AdminResetStaffPassword(sl()));

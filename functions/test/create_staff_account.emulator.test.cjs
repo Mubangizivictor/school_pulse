@@ -80,7 +80,7 @@ function baseStaffPayload(overrides = {}) {
     schoolId: SCHOOL,
     designationId: "desigA",
     idempotencyKey: `idem-key-${counter}-000000000000`,
-    forcePasswordChange: false,
+    signInMethod: "invite",
     sendLoginDetailsViaEmail: false,
     ...overrides,
   };
@@ -98,32 +98,38 @@ describe("createStaffAccount", () => {
     await clearAuthUsers();
   });
 
-  // --- (a) 4 toggle combinations of forcePasswordChange x sendLoginDetailsViaEmail ---
-  const toggleCases = [
-    [false, false],
-    [false, true],
-    [true, false],
-    [true, true],
-  ];
-  for (const [forcePasswordChange, sendLoginDetailsViaEmail] of toggleCases) {
-    test(`toggles forcePasswordChange=${forcePasswordChange} sendLoginDetailsViaEmail=${sendLoginDetailsViaEmail}`, async () => {
+  // --- (a) signInMethod invite vs noLogin: an Auth invitation is only
+  // issued (and only ever emailed) for "invite"; "noLogin" creates just the
+  // profile with no email and no invitation record. mustChangePassword and
+  // setupRequired are always true - the staff member always sets their own
+  // password, never the admin. ---
+  const signInMethodCases = ["invite", "noLogin"];
+  for (const signInMethod of signInMethodCases) {
+    test(`signInMethod=${signInMethod} never persists a password and controls invitation issuance`, async () => {
       const result = await createStaffAccount.run(
-        request(ADMIN_UID, baseStaffPayload({ forcePasswordChange, sendLoginDetailsViaEmail }))
+        request(ADMIN_UID, baseStaffPayload({ signInMethod }))
       );
       assert.ok(result.uid);
 
       const userDoc = await db.doc(`users/${result.uid}`).get();
-      assert.equal(userDoc.data().mustChangePassword, forcePasswordChange);
-      assert.equal(userDoc.data().setupRequired, forcePasswordChange);
-      assert.equal(userDoc.data().sendLoginDetailsViaEmail, sendLoginDetailsViaEmail);
+      assert.equal(userDoc.data().mustChangePassword, true);
+      assert.equal(userDoc.data().setupRequired, true);
+      assert.equal(userDoc.data().signInMethod, signInMethod);
+      assert.equal(userDoc.data().password, undefined);
 
-      assert.equal(result.setupEmailQueued, sendLoginDetailsViaEmail);
-      // Query the queue by recipient rather than guessing the eventId, since
-      // idempotencyKey is generated per-call.
+      const shouldInvite = signInMethod === "invite";
+      assert.equal(result.setupEmailQueued, shouldInvite);
+      assert.equal(userDoc.data().invitationStatus, shouldInvite ? "sent" : undefined);
+
       const queueSnap = await db.collection("transactional_email_queue")
         .where("to", "==", userDoc.data().email)
         .get();
-      assert.equal(queueSnap.empty, !sendLoginDetailsViaEmail);
+      assert.equal(queueSnap.empty, !shouldInvite);
+
+      const invitesSnap = await db.collection("staff_invitations")
+        .where("uid", "==", result.uid)
+        .get();
+      assert.equal(invitesSnap.empty, !shouldInvite);
     });
   }
 

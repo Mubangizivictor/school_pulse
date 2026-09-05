@@ -593,6 +593,187 @@ async function generateStaffCode(schoolId, schoolPrefix) {
   return `${schoolPrefix}-T-${year}${String(sequence).padStart(4, "0")}`;
 }
 
+// Minimum time between invitations for the same staff member, mirroring the
+// client-side 60s resend cooldown convention used elsewhere (see
+// registration_bloc.dart) but enforced server-side since the client cannot
+// be trusted to self-limit.
+const STAFF_INVITATION_RESEND_COOLDOWN_MS = 60 * 1000;
+// How long an unaccepted invitation stays valid before it must be resent.
+const STAFF_INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Issues (or reissues) a verified, time-limited sign-in invitation for an
+ * existing staff Auth user. Never generates or stores a password - only a
+ * Firebase Auth password-reset action link, which itself expires and proves
+ * the recipient controls the mailbox before any password is set. Writes
+ * invitation status/metadata to the server-only `staff_invitations`
+ * collection; the raw link is emailed directly, never persisted or returned
+ * to the caller.
+ */
+async function issueStaffInvitation({ db, schoolId, uid, email, name, roleLabel, actorUid }) {
+  const invitationsRef = db.collection("staff_invitations");
+  const latest = await invitationsRef
+    .where("schoolId", "==", schoolId)
+    .where("uid", "==", uid)
+    .orderBy("createdAt", "desc")
+    .limit(1)
+    .get();
+
+  const now = Date.now();
+  if (!latest.empty) {
+    const last = latest.docs[0].data();
+    const lastCreatedMs = last.createdAt && last.createdAt.toMillis ? last.createdAt.toMillis() : 0;
+    if (last.status !== "cancelled" && now - lastCreatedMs < STAFF_INVITATION_RESEND_COOLDOWN_MS) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "Please wait before resending another invitation."
+      );
+    }
+  }
+
+  const schoolDoc = await db.collection("schools").doc(schoolId).get();
+  const setupLink = await admin.auth().generatePasswordResetLink(email.trim());
+  const inviteRef = invitationsRef.doc();
+  const expiresAt = admin.firestore.Timestamp.fromMillis(now + STAFF_INVITATION_TTL_MS);
+  await inviteRef.set({
+    schoolId,
+    uid,
+    email: email.trim(),
+    status: "sent",
+    createdBy: actorUid,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    expiresAt,
+  });
+
+  try {
+    await enqueueTransactionalEmail({
+      eventId: `staff_invite_${inviteRef.id}`,
+      templateId: "staff_account_created",
+      to: email.trim(),
+      data: {
+        schoolName: schoolDoc.exists ? (schoolDoc.data().name || "") : "",
+        roleLabel: roleLabel || "",
+        setupLink,
+        email: email.trim(),
+      },
+    });
+  } catch (err) {
+    console.error("staff invitation email enqueue failed", uid, err);
+    await inviteRef.set({ status: "failed" }, { merge: true });
+    throw new HttpsError("internal", "Could not send the invitation email. Please try again.");
+  }
+
+  await db.collection("users").doc(uid).set({
+    invitationStatus: "sent",
+    invitationId: inviteRef.id,
+  }, { merge: true });
+
+  return { inviteId: inviteRef.id, expiresAt: expiresAt.toMillis() };
+}
+
+exports.createStaffInvitation = onCall(async (request) => {
+  const auth = request.auth;
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "You must be signed in.");
+  }
+  const { uid } = request.data || {};
+  if (typeof uid !== "string" || !uid.trim()) {
+    throw new HttpsError("invalid-argument", "A staff member id is required.");
+  }
+
+  const db = admin.firestore();
+  const callerDoc = await db.collection("users").doc(auth.uid).get();
+  const callerData = callerDoc.exists ? callerDoc.data() : {};
+  const callerRoles = Array.isArray(callerData.roles)
+    ? callerData.roles
+    : (callerData.role ? [callerData.role] : []);
+  if (!callerRoles.some((r) => ADMIN_ROLES.includes(r))) {
+    throw new HttpsError("permission-denied", "Only school administrators can send invitations.");
+  }
+  const schoolId = callerData.schoolId || null;
+  if (!schoolId) {
+    throw new HttpsError("failed-precondition", "Your administrator account is not assigned to a school.");
+  }
+
+  const staffDoc = await db.collection("users").doc(uid).get();
+  if (!staffDoc.exists || staffDoc.data().schoolId !== schoolId) {
+    // Cross-tenant/unknown target: same generic denial either way so this
+    // cannot be used to probe which uids exist in other schools.
+    throw new HttpsError("permission-denied", "Staff member not found.");
+  }
+  const staffData = staffDoc.data();
+
+  const result = await issueStaffInvitation({
+    db,
+    schoolId,
+    uid,
+    email: staffData.email,
+    name: staffData.name,
+    roleLabel: staffData.role,
+    actorUid: auth.uid,
+  });
+
+  await db.collection("audit_logs").add({
+    schoolId,
+    type: "staff_invitation_sent",
+    targetUid: uid,
+    actorUid: auth.uid,
+    inviteId: result.inviteId,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { inviteId: result.inviteId, expiresAt: result.expiresAt, status: "sent" };
+});
+
+exports.cancelStaffInvitation = onCall(async (request) => {
+  const auth = request.auth;
+  if (!auth) {
+    throw new HttpsError("unauthenticated", "You must be signed in.");
+  }
+  const { uid } = request.data || {};
+  if (typeof uid !== "string" || !uid.trim()) {
+    throw new HttpsError("invalid-argument", "A staff member id is required.");
+  }
+
+  const db = admin.firestore();
+  const callerDoc = await db.collection("users").doc(auth.uid).get();
+  const callerData = callerDoc.exists ? callerDoc.data() : {};
+  const callerRoles = Array.isArray(callerData.roles)
+    ? callerData.roles
+    : (callerData.role ? [callerData.role] : []);
+  if (!callerRoles.some((r) => ADMIN_ROLES.includes(r))) {
+    throw new HttpsError("permission-denied", "Only school administrators can cancel invitations.");
+  }
+  const schoolId = callerData.schoolId || null;
+  if (!schoolId) {
+    throw new HttpsError("failed-precondition", "Your administrator account is not assigned to a school.");
+  }
+
+  const staffDoc = await db.collection("users").doc(uid).get();
+  if (!staffDoc.exists || staffDoc.data().schoolId !== schoolId) {
+    throw new HttpsError("permission-denied", "Staff member not found.");
+  }
+  const invitationId = staffDoc.data().invitationId;
+  if (invitationId) {
+    await db.collection("staff_invitations").doc(invitationId).set(
+      { status: "cancelled" },
+      { merge: true }
+    );
+  }
+  await db.collection("users").doc(uid).set({ invitationStatus: "cancelled" }, { merge: true });
+
+  await db.collection("audit_logs").add({
+    schoolId,
+    type: "staff_invitation_cancelled",
+    targetUid: uid,
+    actorUid: auth.uid,
+    inviteId: invitationId || null,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { status: "cancelled" };
+});
+
 exports.createStaffAccount = onCall(async (request) => {
   const auth = request.auth;
   if (!auth) {
@@ -604,14 +785,21 @@ exports.createStaffAccount = onCall(async (request) => {
     departmentId, designationId, campusId, employmentType, dateJoined,
     gender, phoneNumber, alternatePhone, address, nationality,
     emergencyContact, roleConfigs, idempotencyKey,
-    forcePasswordChange = false, sendLoginDetailsViaEmail = false,
-    selectedPayComponentIds, password,
+    sendLoginDetailsViaEmail = false,
+    selectedPayComponentIds,
   } = request.data || {};
   // Accept the current multi-role `roles` array, falling back to a legacy
   // singular `role` from any older client build still calling this.
   const roles = Array.isArray(request.data?.roles)
     ? request.data.roles
     : (request.data?.role ? [request.data.role] : []);
+  // "invite" (default): the staff member sets their own password through a
+  // verified, time-limited invitation (see createStaffInvitation). "noLogin":
+  // a staff profile with no ability to sign in until an administrator later
+  // issues an invitation. Administrators never choose, see, or transmit a
+  // password for either path - the Auth user below is always created with a
+  // securely random, unguessable, never-returned password.
+  const signInMethod = request.data?.signInMethod === "noLogin" ? "noLogin" : "invite";
 
   if (typeof name !== "string" || !name.trim()) {
     throw new HttpsError("invalid-argument", "Name is required.");
@@ -621,17 +809,6 @@ exports.createStaffAccount = onCall(async (request) => {
   }
   if (roles.length === 0 || !roles.every((r) => STAFF_ROLES.includes(r))) {
     throw new HttpsError("invalid-argument", "Invalid staff role.");
-  }
-  // The admin sets the staff member's initial password in the Add Staff
-  // wizard; the account is created with it and forcePasswordChange makes
-  // them pick their own on first sign-in. A missing/short value falls back
-  // to a generated temporary password below.
-  const adminPassword =
-    (typeof password === "string" && password.trim().length >= 8)
-      ? password
-      : null;
-  if (typeof password === "string" && password.length > 0 && !adminPassword) {
-    throw new HttpsError("invalid-argument", "Password must be at least 8 characters.");
   }
   // The Admin SDK bypasses Firestore rules entirely, so this check is the
   // only gate on who may create staff accounts - it must happen here.
@@ -720,9 +897,15 @@ exports.createStaffAccount = onCall(async (request) => {
   if (resolvedCampusId && !campusDocs.docs.some((doc) => doc.id === resolvedCampusId)) {
     throw new HttpsError("invalid-argument", "Selected campus does not belong to this school.");
   }
-  // Designations are optional. Staff roles and their scopes are assigned in
-  // the Roles stage; onboarding intentionally no longer asks for a legacy
-  // department or designation.
+  // Department and designation (job title) are optional but, when supplied,
+  // must belong to the calling school - same tenant-isolation check as
+  // campus above, since a client-supplied id is otherwise trusted as-is.
+  if (departmentId) {
+    const department = await db.collection("departments").doc(departmentId).get();
+    if (!department.exists || department.data().schoolId !== schoolId) {
+      throw new HttpsError("invalid-argument", "Selected department does not belong to this school.");
+    }
+  }
   if (designationId) {
     const designation = await db.collection("staff_designations").doc(designationId).get();
     if (!designation.exists || designation.data().schoolId !== schoolId) {
@@ -801,7 +984,12 @@ exports.createStaffAccount = onCall(async (request) => {
     });
   }
 
-  const temporaryPassword = adminPassword || generateTemporaryPassword();
+  // Never an admin-chosen or admin-visible value - only ever used once,
+  // internally, to satisfy Auth's createUser requirement, then discarded.
+  // The staff member's only path to a usable password is either the
+  // invitation flow (createStaffInvitation) or, for signInMethod "noLogin",
+  // a later invitation an administrator deliberately issues.
+  const temporaryPassword = generateTemporaryPassword();
 
   const schoolDoc = await db.collection("schools").doc(schoolId).get();
   const schoolPrefix = schoolPrefixFrom(schoolDoc.exists ? schoolDoc.data().name : null);
@@ -834,8 +1022,13 @@ exports.createStaffAccount = onCall(async (request) => {
       schoolId,
       staffCode,
       studentIds: [],
-      mustChangePassword: forcePasswordChange === true,
-      setupRequired: forcePasswordChange === true,
+      // The staff member always sets their own password (invite or a later
+      // deliberate invite for noLogin) - there is no admin-set password to
+      // force a change away from, so this simply tracks "has never signed
+      // in yet" for UI purposes.
+      mustChangePassword: true,
+      setupRequired: true,
+      signInMethod,
       sendLoginDetailsViaEmail: sendLoginDetailsViaEmail === true,
       createdBy: auth.uid,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -960,19 +1153,24 @@ exports.createStaffAccount = onCall(async (request) => {
     throw new HttpsError("internal", err.message || "Failed to save the staff profile.");
   }
 
+  // "noLogin" leaves the staff member unable to sign in until an
+  // administrator deliberately calls createStaffInvitation later - no Auth
+  // action link is generated or emailed here for that path.
   let setupEmailQueued = false;
-  if (sendLoginDetailsViaEmail) {
+  if (signInMethod === "invite") {
     try {
-      const setupLink = await admin.auth().generatePasswordResetLink(email.trim());
-      await enqueueTransactionalEmail({
-        eventId: `staff_setup_${schoolId}_${idempotencyKey}`,
-        templateId: "staff_account_created",
-        to: email.trim(),
-        data: { schoolName: schoolDoc.exists ? (schoolDoc.data().name || "") : "", roleLabel: roles[0], setupLink, email: email.trim() },
+      await issueStaffInvitation({
+        db,
+        schoolId,
+        uid: userRecord.uid,
+        email: email.trim(),
+        name: name.trim(),
+        roleLabel: roles[0],
+        actorUid: auth.uid,
       });
       setupEmailQueued = true;
     } catch (err) {
-      console.error("staff setup email enqueue failed", userRecord.uid, err);
+      console.error("staff invitation issue failed", userRecord.uid, err);
     }
   }
   await requestRef.set({ status: "completed", uid: userRecord.uid, staffCode,

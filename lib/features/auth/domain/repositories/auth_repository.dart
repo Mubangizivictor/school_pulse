@@ -51,7 +51,7 @@ abstract class AuthRepository {
     required String email,
     required String schoolId,
     required List<UserRole> roles,
-    required String password,
+    String? signInMethod,
     String? assignedClass,
     List<SubjectAssignment>? subjects,
     String? academicYearId,
@@ -61,11 +61,18 @@ abstract class AuthRepository {
     String? employmentType,
     DateTime? dateJoined,
     String? idempotencyKey,
-    bool forcePasswordChange,
     bool sendLoginDetailsViaEmail,
     Map<String, dynamic>? staffData,
     Map<String, dynamic>? roleConfigs,
   });
+
+  /// Issues (or resends) a verified, time-limited sign-in invitation for an
+  /// existing staff member via the `createStaffInvitation` Cloud Function.
+  /// No password is ever generated or returned by this call.
+  Future<Either<Failure, void>> createStaffInvitation(String uid);
+
+  /// Cancels a pending staff sign-in invitation via `cancelStaffInvitation`.
+  Future<Either<Failure, void>> cancelStaffInvitation(String uid);
   Future<Either<Failure, void>> completePasswordReset(String newPassword);
   Future<Either<Failure, List<UserEntity>>> getStaffMembers(String schoolId);
   Future<Either<Failure, void>> toggleStaffActiveStatus(

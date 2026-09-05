@@ -12,6 +12,7 @@ import 'package:school_pulse/features/admin/presentation/add_staff_wizard/widget
 import 'package:school_pulse/features/admin/presentation/pages/staff_detail_screen.dart';
 
 import '../add_staff_wizard_controller.dart';
+import '../models/add_staff_draft.dart';
 
 /// Stage 5 - Review: "Ready to add [Staff Name]?" Compact identity header,
 /// tappable grouped review rows (Personal / Work / Roles & scope / Pay /
@@ -157,12 +158,9 @@ class Stage05Review extends StatelessWidget {
           _ReviewRow(
             icon: Icons.lock_outline,
             title: 'Account access',
-            summary: [
-              'Initial password set by admin',
-              draft.forcePasswordChange
-                  ? 'password update required on first sign-in'
-                  : 'no forced password update',
-            ].join(' · '),
+            summary: draft.signInMethod == StaffSignInMethod.invite
+                ? 'Secure invitation will be sent to ${draft.email.trim()}'
+                : 'Profile only — no login until an admin sends an invitation',
             onEdit: () => controller.goToStage(WizardStage.access),
           ),
           const SizedBox(height: 20),
@@ -415,10 +413,11 @@ class _SuccessScreen extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      draft.forcePasswordChange
-                          ? 'Sign-in is ready with the password you set. The staff '
-                                'member will choose their own on first sign-in.'
-                          : 'Sign-in is ready with the password you set.',
+                      draft.signInMethod == StaffSignInMethod.invite
+                          ? 'A secure invitation has been sent to ${draft.email.trim()}. '
+                                'The staff member will set their own password to sign in.'
+                          : 'No login has been set up. An administrator can send a '
+                                'sign-in invitation from this staff member\'s profile at any time.',
                       style: TextStyle(color: AppColors.textPrimary(context)),
                     ),
                   ],

@@ -437,6 +437,12 @@ service cloud.firestore {
     match /parent_access_code_attempts/{attemptId} { allow read, write: if false; }
     match /parent_learner_links/{linkId} { allow read, write: if false; }
 
+    // Staff sign-in invitations (createStaffInvitation/cancelStaffInvitation
+    // in functions/index.js) are server-only: no password or reset token is
+    // ever stored here, only status metadata. Clients read invitation
+    // status via the `invitationStatus` field mirrored onto users/{uid}.
+    match /staff_invitations/{inviteId} { allow read, write: if false; }
+
     // Immutable audit trail for parent-learner link reallocations
     // (reallocateParentLink in functions/index.js). Server-only: written
     // exclusively via the Admin SDK, never mutated after creation, and not
