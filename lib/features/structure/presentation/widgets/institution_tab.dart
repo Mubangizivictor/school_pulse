@@ -82,144 +82,6 @@ class InstitutionTabState extends State<InstitutionTab> {
   }
 }
 
-const _ugandaDistricts = [
-  'Abim',
-  'Adjumani',
-  'Agago',
-  'Alebtong',
-  'Amolatar',
-  'Amudat',
-  'Amuria',
-  'Amuru',
-  'Apac',
-  'Arua',
-  'Budaka',
-  'Bududa',
-  'Bugiri',
-  'Bugweri',
-  'Buikwe',
-  'Bukedea',
-  'Bukomansimbi',
-  'Bukwo',
-  'Bulambuli',
-  'Buliisa',
-  'Bundibugyo',
-  'Bunyangabu',
-  'Bushenyi',
-  'Busia',
-  'Butaleja',
-  'Butambala',
-  'Butebo',
-  'Buvuma',
-  'Buyende',
-  'Gomba',
-  'Gulu',
-  'Hoima',
-  'Ibanda',
-  'Iganga',
-  'Isingiro',
-  'Jinja',
-  'Kaabong',
-  'Kabale',
-  'Kabarole',
-  'Kaberamaido',
-  'Kagadi',
-  'Kakumiro',
-  'Kalaki',
-  'Kalangala',
-  'Kaliro',
-  'Kalungu',
-  'Kampala',
-  'Kamuli',
-  'Kamwenge',
-  'Kanungu',
-  'Kapchorwa',
-  'Kapelebyong',
-  'Karenga',
-  'Kasanda',
-  'Kasese',
-  'Katakwi',
-  'Kayunga',
-  'Kazo',
-  'Kibaale',
-  'Kibale',
-  'Kiboga',
-  'Kibuku',
-  'Kikuube',
-  'Kiruhura',
-  'Kiryandongo',
-  'Kisoro',
-  'Kitagwenda',
-  'Kitgum',
-  'Koboko',
-  'Kole',
-  'Kotido',
-  'Kumi',
-  'Kwania',
-  'Kween',
-  'Kyankwanzi',
-  'Kyegegwa',
-  'Kyenjojo',
-  'Kyotera',
-  'Lamwo',
-  'Lira',
-  'Luuka',
-  'Luweero',
-  'Lwengo',
-  'Lyantonde',
-  'Madi-Okollo',
-  'Manafwa',
-  'Maracha',
-  'Masaka',
-  'Masindi',
-  'Mayuge',
-  'Mbale',
-  'Mbarara',
-  'Mitooma',
-  'Mityana',
-  'Moroto',
-  'Moyo',
-  'Mpigi',
-  'Mubende',
-  'Mukono',
-  'Nabilatuk',
-  'Nakapiripirit',
-  'Nakaseke',
-  'Nakasongola',
-  'Namayingo',
-  'Namisindwa',
-  'Namutumba',
-  'Napak',
-  'Nebbi',
-  'Ngora',
-  'Ntoroko',
-  'Ntungamo',
-  'Nwoya',
-  'Obongi',
-  'Omoro',
-  'Otuke',
-  'Oyam',
-  'Pader',
-  'Pakwach',
-  'Pallisa',
-  'Rakai',
-  'Rubanda',
-  'Rubirizi',
-  'Rukiga',
-  'Rukungiri',
-  'Rwampara',
-  'Sembabule',
-  'Serere',
-  'Sheema',
-  'Sironko',
-  'Soroti',
-  'Terego',
-  'Tororo',
-  'Wakiso',
-  'Yumbe',
-  'Zombo',
-];
-
 class _InstitutionForm extends StatefulWidget {
   const _InstitutionForm({
     super.key,
@@ -253,6 +115,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
   late final TextEditingController _countryText;
   late String _country;
   late String _district;
+  late final TextEditingController _districtText;
   late final TextEditingController _city;
   late final TextEditingController _address;
   late final TextEditingController _gpsLat;
@@ -307,9 +170,10 @@ class _InstitutionFormState extends State<_InstitutionForm> {
       text: p.ministryRegistrationNumber,
     );
     _taxNumber = TextEditingController(text: p.taxNumber);
-    _country = p.country.isEmpty ? 'Uganda' : p.country;
+    _country = p.country;
     _countryText = TextEditingController(text: _country);
     _district = p.district;
+    _districtText = TextEditingController(text: p.district);
     _city = TextEditingController(text: p.city);
     _address = TextEditingController(text: p.address);
     _gpsLat = TextEditingController(text: p.gpsLat?.toString() ?? '');
@@ -328,6 +192,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
       _ministryRegistrationNumber,
       _taxNumber,
       _countryText,
+      _districtText,
       _city,
       _address,
       _gpsLat,
@@ -361,7 +226,8 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     _registrationNumber.text = p.registrationNumber;
     _ministryRegistrationNumber.text = p.ministryRegistrationNumber;
     _taxNumber.text = p.taxNumber;
-    _countryText.text = p.country.isEmpty ? 'Uganda' : p.country;
+    _countryText.text = p.country;
+    _districtText.text = p.district;
     _city.text = p.city;
     _address.text = p.address;
     _gpsLat.text = p.gpsLat?.toString() ?? '';
@@ -374,7 +240,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
       _badgeUrl = p.badgeUrl;
       _schoolType = p.schoolType;
       _schoolCategory = p.schoolCategory;
-      _country = p.country.isEmpty ? 'Uganda' : p.country;
+      _country = p.country;
       _district = p.district;
     });
   }
@@ -405,7 +271,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     ministryRegistrationNumber: _ministryRegistrationNumber.text.trim(),
     taxNumber: _taxNumber.text.trim(),
     country: widget.wizardMode ? _countryText.text.trim() : _country,
-    district: _district,
+    district: widget.wizardMode ? _districtText.text.trim() : _district,
     city: _city.text.trim(),
     address: _address.text.trim(),
     gpsLat: double.tryParse(_gpsLat.text),
@@ -1032,23 +898,10 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                 children: [
                   _TwoCol(
                     isNarrow: isNarrow,
-                    left: _dropdown(
-                      label: 'Country',
-                      value: _country,
-                      values: const ['Uganda'],
-                      onChanged: (v) => setState(() {
-                        _country = v;
-                        _isDirty = true;
-                      }),
-                    ),
-                    right: _searchableDropdown(
-                      label: 'District',
-                      value: _district,
-                      values: _ugandaDistricts,
-                      onChanged: (v) => setState(() {
-                        _district = v;
-                        _isDirty = true;
-                      }),
+                    left: _field(controller: _countryText, label: 'Country'),
+                    right: _field(
+                      controller: _districtText,
+                      label: 'District / Region',
                     ),
                   ),
                   _TwoCol(
@@ -1329,10 +1182,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
                       alignment: Alignment.centerLeft,
                       child: TextButton.icon(
                         onPressed: _detectLocation,
-                        icon: const Icon(
-                          Icons.my_location_outlined,
-                          size: 16,
-                        ),
+                        icon: const Icon(Icons.my_location_outlined, size: 16),
                         label: const Text(
                           'Use current location',
                           style: TextStyle(fontSize: 13),
@@ -1456,9 +1306,7 @@ class _InstitutionFormState extends State<_InstitutionForm> {
           label: 'Main email *',
           hint: 'Enter main email address',
           keyboardType: TextInputType.emailAddress,
-          inputFormatters: [
-            FilteringTextInputFormatter.deny(RegExp(r'\s')),
-          ],
+          inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
           validator: _emailValidator,
         ),
       ],
@@ -1593,93 +1441,18 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     ),
   );
 
-  Widget _wizardDistrictField() => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: FormField<String>(
-      initialValue: _district,
-      validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-      builder: (state) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'District *',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          InkWell(
-            onTap: () async {
-              final result = await _selectDistrict();
-              if (result != null) {
-                setState(() {
-                  _district = result;
-                  _isDirty = true;
-                });
-                state.didChange(result);
-              }
-            },
-            child: _wizardOutlinedContainer(
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _district.isEmpty ? 'Select district' : _district,
-                      style: TextStyle(
-                        color: _district.isEmpty ? Colors.black : Colors.black,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  const Icon(Icons.keyboard_arrow_down_rounded),
-                ],
-              ),
-              state.hasError,
-            ),
-          ),
-          if (state.hasError)
-            Padding(
-              padding: const EdgeInsets.only(top: 6, left: 12),
-              child: Text(
-                state.errorText!,
-                style: const TextStyle(fontSize: 12),
-              ),
-            ),
-        ],
-      ),
-    ),
+  Widget _wizardDistrictField() => _wizardField(
+    controller: _districtText,
+    label: 'District / Region *',
+    hint: 'Enter district or region',
+    validator: (value) =>
+        value == null || value.trim().isEmpty ? 'Required' : null,
   );
-
-  Future<String?> _selectDistrict() async {
-    String? selected;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Select district'),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 400,
-          child: ListView(
-            children: _ugandaDistricts
-                .map(
-                  (district) => ListTile(
-                    title: Text(district),
-                    onTap: () {
-                      selected = district;
-                      Navigator.pop(dialogContext);
-                    },
-                  ),
-                )
-                .toList(),
-          ),
-        ),
-      ),
-    );
-    return selected;
-  }
 
   Widget _wizardCountryField() => _wizardField(
     controller: _countryText,
     label: 'Country (optional)',
-    hint: 'Uganda',
+    hint: 'Enter country',
   );
 
   Widget _wizardOutlinedContainer(Widget child, bool hasError) => Container(
@@ -1820,96 +1593,6 @@ class _InstitutionFormState extends State<_InstitutionForm> {
         ),
         child: Text(
           displayText.isEmpty ? ' ' : displayText,
-          style: const TextStyle(fontSize: 14),
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-    );
-  }
-
-  Widget _searchableDropdown({
-    required String label,
-    required String value,
-    required List<String> values,
-    required ValueChanged<String> onChanged,
-  }) {
-    return InkWell(
-      onTap: () async {
-        final result = await showDialog<String>(
-          context: context,
-          builder: (dialogContext) {
-            var query = '';
-            return StatefulBuilder(
-              builder: (context, setDialogState) {
-                final filtered = query.isEmpty
-                    ? values
-                    : values
-                          .where(
-                            (v) =>
-                                v.toLowerCase().contains(query.toLowerCase()),
-                          )
-                          .toList();
-                return AlertDialog(
-                  title: Text('Select $label'),
-                  content: SizedBox(
-                    width: double.maxFinite,
-                    height: 400,
-                    child: Column(
-                      children: [
-                        TextField(
-                          autofocus: true,
-                          decoration: const InputDecoration(
-                            prefixIcon: Icon(Icons.search),
-                            hintText: 'Search',
-                            isDense: true,
-                          ),
-                          onChanged: (v) => setDialogState(() => query = v),
-                        ),
-                        const SizedBox(height: 8),
-                        Expanded(
-                          child: filtered.isEmpty
-                              ? const Center(child: Text('No matches'))
-                              : ListView.builder(
-                                  itemCount: filtered.length,
-                                  itemBuilder: (context, index) {
-                                    final item = filtered[index];
-                                    return ListTile(
-                                      title: Text(item),
-                                      selected: item == value,
-                                      onTap: () =>
-                                          Navigator.of(dialogContext).pop(item),
-                                    );
-                                  },
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-        if (result != null) onChanged(result);
-      },
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 12,
-          ),
-          suffixIcon: const Icon(Icons.arrow_drop_down),
-        ),
-        child: Text(
-          value.isEmpty ? ' ' : value,
           style: const TextStyle(fontSize: 14),
           overflow: TextOverflow.ellipsis,
         ),

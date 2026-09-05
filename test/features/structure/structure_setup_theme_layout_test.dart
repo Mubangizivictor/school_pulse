@@ -119,11 +119,11 @@ void main() {
         const stepsBackedByStructureBloc = 6;
         for (var guard = 0; guard < stepsBackedByStructureBloc; guard++) {
           expect(
-            find.text('Save & continue'),
+            find.text('Save & Continue'),
             findsOneWidget,
             reason: 'step index $guard',
           );
-          await tester.tap(find.text('Save & continue'));
+          await tester.tap(find.text('Save & Continue'));
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull, reason: 'step index $guard');
         }

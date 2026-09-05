@@ -256,9 +256,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: AppTheme.dark(),
-            home: Scaffold(
-              body: InstitutionTab(wizardMode: true),
-            ),
+            home: Scaffold(body: InstitutionTab(wizardMode: true)),
           ),
         ),
       );
@@ -302,9 +300,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: AppTheme.dark(),
-            home: Scaffold(
-              body: InstitutionTab(key: tabKey, wizardMode: true),
-            ),
+            home: Scaffold(body: InstitutionTab(key: tabKey, wizardMode: true)),
           ),
         ),
       );
@@ -350,9 +346,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: AppTheme.dark(),
-            home: Scaffold(
-              body: InstitutionTab(key: tabKey, wizardMode: true),
-            ),
+            home: Scaffold(body: InstitutionTab(key: tabKey, wizardMode: true)),
           ),
         ),
       );
@@ -369,6 +363,65 @@ void main() {
 
       expect(canContinue, isFalse);
       verifyNever(() => structureBloc.add(any()));
+    },
+  );
+
+  testWidgets(
+    'regression: country is never defaulted to Uganda for a school that '
+    "hasn't set one yet - the field starts empty for the admin to fill in",
+    (tester) async {
+      tester.view.physicalSize = const Size(430, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      const blankCountryProfile = InstitutionProfile(
+        name: 'New School',
+        schoolType: 'Secondary',
+        schoolCategory: 'Private',
+        // country intentionally left unset, as a freshly-created school
+        // would arrive from Firestore.
+      );
+      when(() => structureBloc.state).thenReturn(
+        const StructureState(
+          isLoading: false,
+          institutionProfile: blankCountryProfile,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<AuthBloc>.value(value: authBloc),
+            BlocProvider<StructureBloc>.value(value: structureBloc),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.dark(),
+            home: const Scaffold(body: InstitutionTab(wizardMode: true)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The country field lives inside the collapsed
+      // "Branding, registration & location" section.
+      await tester.tap(
+        find.text('Branding, registration & location (optional)'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Uganda'), findsNothing);
+      final countryLabelColumn = find.ancestor(
+        of: find.text('Country (optional)'),
+        matching: find.byType(Column),
+      );
+      final countryField = tester.widget<TextFormField>(
+        find.descendant(
+          of: countryLabelColumn.first,
+          matching: find.byType(TextFormField),
+        ),
+      );
+      expect(countryField.controller!.text, isEmpty);
     },
   );
 }

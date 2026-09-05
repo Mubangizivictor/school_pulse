@@ -8,13 +8,24 @@ import '../../domain/services/structure_integrity_validator.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
+import '../widgets/setup_wizard_shell.dart';
 import '../widgets/structure_dialogs.dart';
 
 const _validator = StructureIntegrityValidator();
 
-/// Names for the required periods of a chosen calendar system, in order.
-/// Terms use 3 required periods, Semesters use 2 - matching the reference
-/// screenshots (Term 1/2/3 accordions, or Semester 1/2).
+/// Default seed labels for a newly-chosen calendar system's accordion rows,
+/// in order - Terms seeds 3 rows, Semesters seeds 2, matching the reference
+/// screenshots. These are only the initial suggested names: each row's
+/// "Name" field (see `_PeriodAccordion`) is a free-text `TextFormField` the
+/// school can rename freely (e.g. "Trimester 1", "First Half"), and
+/// `StructureIntegrityValidator.validateAcademicTerm` never checks the name
+/// - only dates/order - so nothing downstream enforces these two fixed
+/// option sets. Changing the period *count* itself (e.g. a school that
+/// wants 4 terms) would require a larger domain change - `AcademicTerm`
+/// entities are already schema-free per period, but this screen currently
+/// derives its row count from `AcademicPeriodType` (term/semester), which
+/// has no "custom count" variant - so that part is out of scope here per
+/// the minimal-viable-fix guidance.
 List<String> _requiredPeriodNames(AcademicPeriodType system) {
   return system == AcademicPeriodType.semester
       ? const ['Semester 1', 'Semester 2']
@@ -88,12 +99,19 @@ class AcademicCalendarStepScreen extends StatefulWidget {
     required this.onContinue,
     required this.stepIndex,
     required this.stepCount,
+    this.stepTitles,
+    this.onJumpToStep,
   });
 
   final Future<void> Function() onBack;
   final Future<void> Function() onContinue;
   final int stepIndex;
   final int stepCount;
+
+  /// Full step-title list, forwarded to [SetupWizardShell] so the wide-web
+  /// step rail can list every step, matching the other steps in the wizard.
+  final List<String>? stepTitles;
+  final ValueChanged<int>? onJumpToStep;
 
   @override
   State<AcademicCalendarStepScreen> createState() =>
@@ -259,7 +277,9 @@ class _AcademicCalendarStepScreenState
               action: SnackBarAction(
                 label: 'Retry',
                 onPressed: () => context.read<StructureBloc>().add(
-                  LoadStructureData(state.academicYears.firstOrNull?.schoolId ?? ''),
+                  LoadStructureData(
+                    state.academicYears.firstOrNull?.schoolId ?? '',
+                  ),
                 ),
               ),
             ),
@@ -279,10 +299,16 @@ class _AcademicCalendarStepScreenState
           if (!_initialisedFromState || _lastYearId != year.id) {
             _seedFromExisting(state, year);
           }
-          return _CalendarStepShell(
+          return SetupWizardShell(
+            title: 'Academic calendar',
             stepIndex: widget.stepIndex,
             stepCount: widget.stepCount,
+            stepTitles: widget.stepTitles,
+            onJumpToStep: widget.onJumpToStep,
+            isSaving: _isSaving,
+            continueEnabled: _allRequiredValid(state, year),
             onBack: widget.onBack,
+            onContinue: () => _save(state, year),
             body: _CalendarBody(
               state: state,
               year: year,
@@ -298,12 +324,6 @@ class _AcademicCalendarStepScreenState
               onChangeYear: () => _changeYear(context, state),
               validateDraft: (draft) => _validateDraft(draft, state, year),
               onDraftChanged: () => setState(() {}),
-            ),
-            footer: _CalendarFooter(
-              isSaving: _isSaving,
-              continueEnabled: _allRequiredValid(state, year),
-              onBack: widget.onBack,
-              onContinue: () => _save(state, year),
             ),
           );
         },
@@ -343,305 +363,6 @@ class _NoYearScaffold extends StatelessWidget {
   }
 }
 
-/// Mobile/tablet compact header + web step-rail shell, mirroring the
-/// treatment `_InstitutionProfileStep` gives Step 1 in structure_screen.dart.
-/// This step has no draft-save concept (live Firestore saves via bloc events
-/// already are the persistence), so unlike Step 1 there is no "Save draft"
-/// action here.
-class _CalendarStepShell extends StatelessWidget {
-  const _CalendarStepShell({
-    required this.stepIndex,
-    required this.stepCount,
-    required this.onBack,
-    required this.body,
-    required this.footer,
-  });
-
-  final int stepIndex;
-  final int stepCount;
-  final Future<void> Function() onBack;
-  final Widget body;
-  final Widget footer;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      backgroundColor: scheme.surface,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 900;
-            if (isWide) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _StepRail(stepIndex: stepIndex, stepCount: stepCount),
-                  VerticalDivider(width: 1, color: scheme.outlineVariant),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(32, 20, 32, 8),
-                          child: Row(
-                            children: [
-                              TextButton.icon(
-                                onPressed: onBack,
-                                icon: const Icon(
-                                  Icons.arrow_back_rounded,
-                                  size: 18,
-                                ),
-                                label: const Text('Back'),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Academic calendar',
-                                  style: TextStyle(
-                                    color: scheme.onSurface,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(child: body),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }
-            return Column(
-              children: [
-                _CompactHeader(
-                  onBack: onBack,
-                  stepIndex: stepIndex,
-                  stepCount: stepCount,
-                ),
-                Divider(height: 1, color: scheme.outlineVariant),
-                Expanded(child: body),
-              ],
-            );
-          },
-        ),
-      ),
-      bottomNavigationBar: SafeArea(top: false, child: footer),
-    );
-  }
-}
-
-/// Mobile/tablet sticky top bar: Back, then "N of 16 · Academic calendar"
-/// with a percent and a thin progress bar - same treatment as Step 1's
-/// `_WizardCompactHeader` in structure_screen.dart, without the Save-draft
-/// action (this step has no draft concept).
-class _CompactHeader extends StatelessWidget {
-  const _CompactHeader({
-    required this.onBack,
-    required this.stepIndex,
-    required this.stepCount,
-  });
-
-  final Future<void> Function() onBack;
-  final int stepIndex;
-  final int stepCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final percent = (((stepIndex + 1) / stepCount) * 100).round();
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 900),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: onBack,
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      size: 18,
-                    ),
-                    color: scheme.onSurface,
-                  ),
-                  const Expanded(
-                    child: Text(
-                      'School setup',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  const SizedBox(width: 48),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${stepIndex + 1} of $stepCount · Academic calendar',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '$percent%',
-                    style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: (stepIndex + 1) / stepCount,
-                  minHeight: 5,
-                  backgroundColor: scheme.primary.withValues(alpha: 0.15),
-                  color: scheme.primary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Narrow left step rail shown on wide/web layouts - a condensed version of
-/// structure_screen.dart's `_WizardStepNavigator`, without the full step
-/// title list (which lives only in the main wizard shell) or Save-draft.
-class _StepRail extends StatelessWidget {
-  const _StepRail({required this.stepIndex, required this.stepCount});
-
-  final int stepIndex;
-  final int stepCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final percent = (((stepIndex + 1) / stepCount) * 100).round();
-    return SizedBox(
-      width: 220,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'School setup',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              '${stepIndex + 1} of $stepCount · $percent% complete',
-              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 11.5),
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: LinearProgressIndicator(
-                value: (stepIndex + 1) / stepCount,
-                minHeight: 4,
-                backgroundColor: scheme.primary.withValues(alpha: 0.15),
-                color: scheme.primary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CalendarFooter extends StatelessWidget {
-  const _CalendarFooter({
-    required this.isSaving,
-    required this.continueEnabled,
-    required this.onBack,
-    required this.onContinue,
-  });
-
-  final bool isSaving;
-  final bool continueEnabled;
-  final Future<void> Function() onBack;
-  final VoidCallback onContinue;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border(top: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 900),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 48,
-                        child: OutlinedButton(
-                          onPressed: isSaving ? null : onBack,
-                          style: OutlinedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text('Back'),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: SizedBox(
-                        height: 48,
-                        child: FilledButton(
-                          onPressed: (!continueEnabled || isSaving)
-                              ? null
-                              : onContinue,
-                          style: FilledButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: isSaving
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text('Save & continue'),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// The scrollable form canvas: year card, system chooser, accordions,
 /// info note, copy-from-another-year row. On wide/web layouts a right-hand
 /// "Calendar summary" panel is shown alongside; mobile shows only the form.
@@ -673,7 +394,9 @@ class _CalendarBody extends StatelessWidget {
   bool get _hasOtherYearData => state.academicYears.any(
     (y) =>
         y.id != year.id &&
-        state.academicTerms.any((t) => t.academicYearId == y.id && !t.isArchived),
+        state.academicTerms.any(
+          (t) => t.academicYearId == y.id && !t.isArchived,
+        ),
   );
 
   @override
@@ -770,7 +493,8 @@ class _CalendarForm extends StatelessWidget {
       children: [
         _YearCard(
           year: year,
-          dateLabel: '${fmt.format(year.startDate)} – ${fmt.format(year.endDate)}',
+          dateLabel:
+              '${fmt.format(year.startDate)} – ${fmt.format(year.endDate)}',
           onChangeYear: onChangeYear,
         ),
         const SizedBox(height: 20),
@@ -828,9 +552,7 @@ class _CalendarForm extends StatelessWidget {
           ),
           if (showCopyRow) ...[
             const SizedBox(height: 12),
-            _CopyFromYearRow(
-              onTap: () => _showCopyFromYearSheet(context),
-            ),
+            _CopyFromYearRow(onTap: () => _showCopyFromYearSheet(context)),
           ],
         ],
       ],
@@ -838,7 +560,9 @@ class _CalendarForm extends StatelessWidget {
   }
 
   void _showCopyFromYearSheet(BuildContext context) {
-    final otherYears = state.academicYears.where((y) => y.id != year.id).toList();
+    final otherYears = state.academicYears
+        .where((y) => y.id != year.id)
+        .toList();
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -891,11 +615,17 @@ class _YearCard extends StatelessWidget {
               children: [
                 Text(
                   'Academic year ${year.name}',
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
                 Text(
                   dateLabel,
-                  style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -955,12 +685,18 @@ class _SystemChoiceCard extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
                       ),
                       if (badge != null) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: scheme.primaryContainer,
                             borderRadius: BorderRadius.circular(99),
@@ -979,13 +715,18 @@ class _SystemChoiceCard extends StatelessWidget {
                   ),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
             ),
             Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
               color: scheme.primary,
             ),
           ],
@@ -1054,21 +795,32 @@ class _PeriodAccordion extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          draft.name.trim().isEmpty ? draft.defaultName : draft.name,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                          draft.name.trim().isEmpty
+                              ? draft.defaultName
+                              : draft.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
                         ),
                         if (!isExpanded) ...[
                           const SizedBox(height: 2),
                           Text(
                             dateRangeLabel,
-                            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: scheme.onSurfaceVariant,
+                            ),
                           ),
                         ],
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: _statusColor(scheme).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(99),
@@ -1084,7 +836,9 @@ class _PeriodAccordion extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Icon(
-                    isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                    isExpanded
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
                   ),
                 ],
               ),
@@ -1218,7 +972,11 @@ class _PeriodAccordion extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.error_outline, size: 16, color: scheme.error),
+                        Icon(
+                          Icons.error_outline,
+                          size: 16,
+                          color: scheme.error,
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -1249,7 +1007,9 @@ class _InfoNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? Colors.blue.shade900.withValues(alpha: 0.25) : Colors.blue.shade50;
+    final bg = isDark
+        ? Colors.blue.shade900.withValues(alpha: 0.25)
+        : Colors.blue.shade50;
     final fg = isDark ? Colors.blue.shade100 : Colors.blue.shade900;
     return Container(
       width: double.infinity,
@@ -1264,7 +1024,10 @@ class _InfoNote extends StatelessWidget {
           Icon(Icons.info_outline, size: 18, color: fg),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(text, style: TextStyle(fontSize: 12.5, color: fg, height: 1.4)),
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 12.5, color: fg, height: 1.4),
+            ),
           ),
         ],
       ),
@@ -1336,7 +1099,11 @@ class _CalendarSummaryPanel extends StatelessWidget {
         children: [
           Text(
             'Calendar summary',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: scheme.onSurface),
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: scheme.onSurface,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -1385,19 +1152,29 @@ class _SummaryRow extends StatelessWidget {
             children: [
               Text(
                 draft.name.trim().isEmpty ? draft.defaultName : draft.name,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
               ),
               if (draft.hasRequiredDates)
                 Text(
                   '${fmt.format(draft.startDate!)} – ${fmt.format(draft.endDate!)}',
-                  style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
             ],
           ),
         ),
         Text(
           status,
-          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: color),
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
         ),
       ],
     );
@@ -1412,7 +1189,8 @@ class _YearPickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd MMM yyyy');
-    final sorted = [...years]..sort((a, b) => b.startDate.compareTo(a.startDate));
+    final sorted = [...years]
+      ..sort((a, b) => b.startDate.compareTo(a.startDate));
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
@@ -1422,15 +1200,21 @@ class _YearPickerSheet extends StatelessWidget {
           children: [
             Text(
               'Change year',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
             for (final year in sorted)
               ListTile(
                 key: Key('academicCalendar_yearOption_${year.id}'),
                 title: Text(year.name),
-                subtitle: Text('${fmt.format(year.startDate)} – ${fmt.format(year.endDate)}'),
-                trailing: year.isCurrent ? const Icon(Icons.check_circle) : null,
+                subtitle: Text(
+                  '${fmt.format(year.startDate)} – ${fmt.format(year.endDate)}',
+                ),
+                trailing: year.isCurrent
+                    ? const Icon(Icons.check_circle)
+                    : null,
                 onTap: () => Navigator.pop(context, year),
               ),
           ],
@@ -1459,7 +1243,11 @@ class _CopyFromYearSheetState extends State<_CopyFromYearSheet> {
   @override
   Widget build(BuildContext context) {
     final eligibleYears = widget.years
-        .where((y) => widget.terms.any((t) => t.academicYearId == y.id && !t.isArchived))
+        .where(
+          (y) => widget.terms.any(
+            (t) => t.academicYearId == y.id && !t.isArchived,
+          ),
+        )
         .toList();
     return SafeArea(
       child: Padding(
@@ -1470,7 +1258,9 @@ class _CopyFromYearSheetState extends State<_CopyFromYearSheet> {
           children: [
             Text(
               'Copy dates from another year',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
             if (eligibleYears.isEmpty)
@@ -1483,7 +1273,10 @@ class _CopyFromYearSheetState extends State<_CopyFromYearSheet> {
                   onTap: () {
                     final sourceTerms =
                         widget.terms
-                            .where((t) => t.academicYearId == year.id && !t.isArchived)
+                            .where(
+                              (t) =>
+                                  t.academicYearId == year.id && !t.isArchived,
+                            )
                             .toList()
                           ..sort((a, b) => a.startDate.compareTo(b.startDate));
                     widget.onPick(sourceTerms);

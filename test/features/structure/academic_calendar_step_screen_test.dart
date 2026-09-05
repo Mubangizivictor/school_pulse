@@ -113,25 +113,28 @@ void main() {
       );
     });
 
-    test('selected system persists: a mismatched second period is rejected', () {
-      final year = _year();
-      final existingTerm = _term();
-      final semesterAttempt = _term(
-        id: 'sem-1',
-        name: 'Semester 1',
-        startDate: DateTime(2026, 5, 1),
-        endDate: DateTime(2026, 8, 1),
-        periodType: AcademicPeriodType.semester,
-      );
-      expect(
-        validator.validateAcademicTerm(
-          semesterAttempt,
-          [year],
-          [existingTerm],
-        ),
-        contains('cannot be mixed'),
-      );
-    });
+    test(
+      'selected system persists: a mismatched second period is rejected',
+      () {
+        final year = _year();
+        final existingTerm = _term();
+        final semesterAttempt = _term(
+          id: 'sem-1',
+          name: 'Semester 1',
+          startDate: DateTime(2026, 5, 1),
+          endDate: DateTime(2026, 8, 1),
+          periodType: AcademicPeriodType.semester,
+        );
+        expect(
+          validator.validateAcademicTerm(
+            semesterAttempt,
+            [year],
+            [existingTerm],
+          ),
+          contains('cannot be mixed'),
+        );
+      },
+    );
   });
 
   group('Date validity', () {
@@ -222,23 +225,18 @@ void main() {
   });
 
   group('Copy-from-previous-year availability', () {
-    test(
-      'is available when another year already has non-archived periods',
-      () {
-        final years = [_year(id: 'year-2025'), _year(id: 'year-2026')];
-        final terms = [_term(id: 't-2025', academicYearId: 'year-2025')];
-        final otherYearsWithData = years
-            .where(
-              (y) =>
-                  y.id != 'year-2026' &&
-                  terms.any(
-                    (t) => t.academicYearId == y.id && !t.isArchived,
-                  ),
-            )
-            .toList();
-        expect(otherYearsWithData, hasLength(1));
-      },
-    );
+    test('is available when another year already has non-archived periods', () {
+      final years = [_year(id: 'year-2025'), _year(id: 'year-2026')];
+      final terms = [_term(id: 't-2025', academicYearId: 'year-2025')];
+      final otherYearsWithData = years
+          .where(
+            (y) =>
+                y.id != 'year-2026' &&
+                terms.any((t) => t.academicYearId == y.id && !t.isArchived),
+          )
+          .toList();
+      expect(otherYearsWithData, hasLength(1));
+    });
 
     test('is hidden when no other year has any periods', () {
       final years = [_year(id: 'year-2025'), _year(id: 'year-2026')];
@@ -263,119 +261,117 @@ void main() {
 
     setUp(() {
       repository = _MockStructureRepository();
-      when(() => repository.watchLevels(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchAcademicYears(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchAcademicTerms(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchClasses(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchStreams(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchSubjects(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchDepartments(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchDesignations(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchFeatureToggles(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchInstitutionProfile(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchCampuses(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchHouses(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchClubs(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchFacilities(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchHostels(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchHostelRooms(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchTransportRoutes(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchTransportStops(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchTransportVehicles(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchFeeCategories(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchAssessmentTypes(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchGradingSystems(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchGradeBands(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchTimetableConfig(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchAttendanceDefaultsConfig(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
+      when(
+        () => repository.watchLevels(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchAcademicYears(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchAcademicTerms(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchClasses(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchStreams(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchSubjects(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchDepartments(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchDesignations(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchFeatureToggles(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchInstitutionProfile(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchCampuses(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchHouses(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchClubs(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchFacilities(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchHostels(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchHostelRooms(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchTransportRoutes(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchTransportStops(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchTransportVehicles(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchFeeCategories(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchAssessmentTypes(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchGradingSystems(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchGradeBands(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchTimetableConfig(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchAttendanceDefaultsConfig(any()),
+      ).thenAnswer((_) => const Stream.empty());
       when(
         () => repository.watchCommunicationDefaultsConfig(any()),
       ).thenAnswer((_) => const Stream.empty());
-      when(() => repository.watchAttendanceTypes(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchAttendanceSessions(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchAnnouncementCategories(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchNotificationCategories(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchMessageTemplates(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchDocumentTemplates(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
-      when(() => repository.watchCustomFields(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
+      when(
+        () => repository.watchAttendanceTypes(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchAttendanceSessions(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchAnnouncementCategories(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchNotificationCategories(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchMessageTemplates(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchDocumentTemplates(any()),
+      ).thenAnswer((_) => const Stream.empty());
+      when(
+        () => repository.watchCustomFields(any()),
+      ).thenAnswer((_) => const Stream.empty());
     });
 
     blocTest<StructureBloc, StructureState>(
       'SaveAcademicTermRequested with a closure range persists via the '
       'existing repository call (no new bloc event needed)',
       build: () {
-        when(() => repository.addAcademicTerm(any())).thenAnswer(
-          (_) async {},
-        );
+        when(() => repository.addAcademicTerm(any())).thenAnswer((_) async {});
         return StructureBloc(repository: repository);
       },
-      seed: () => const StructureState(isLoading: false).copyWith(
-        academicYears: [_year()],
-      ),
+      seed: () => const StructureState(
+        isLoading: false,
+      ).copyWith(academicYears: [_year()]),
       act: (bloc) => bloc.add(
         SaveAcademicTermRequested(
           _term(
@@ -399,9 +395,9 @@ void main() {
     blocTest<StructureBloc, StructureState>(
       'an invalid period surfaces an errorMessage the screen can retry from',
       build: () => StructureBloc(repository: repository),
-      seed: () => const StructureState(isLoading: false).copyWith(
-        academicYears: [_year()],
-      ),
+      seed: () => const StructureState(
+        isLoading: false,
+      ).copyWith(academicYears: [_year()]),
       act: (bloc) => bloc.add(
         SaveAcademicTermRequested(
           _term(startDate: DateTime(2025, 1, 1), endDate: DateTime(2025, 4, 1)),
@@ -423,8 +419,18 @@ void main() {
       () {
         final year = _year();
         final terms = [
-          _term(id: 't1', name: 'Term 1', startDate: DateTime(2026, 1, 1), endDate: DateTime(2026, 4, 1)),
-          _term(id: 't2', name: 'Term 2', startDate: DateTime(2026, 4, 2), endDate: DateTime(2026, 8, 1)),
+          _term(
+            id: 't1',
+            name: 'Term 1',
+            startDate: DateTime(2026, 1, 1),
+            endDate: DateTime(2026, 4, 1),
+          ),
+          _term(
+            id: 't2',
+            name: 'Term 2',
+            startDate: DateTime(2026, 4, 2),
+            endDate: DateTime(2026, 8, 1),
+          ),
         ];
         bool allValid(List<AcademicTerm> periods) {
           for (final name in const ['Term 1', 'Term 2', 'Term 3']) {
@@ -443,7 +449,12 @@ void main() {
         expect(allValid(terms), isFalse); // Term 3 missing
         final complete = [
           ...terms,
-          _term(id: 't3', name: 'Term 3', startDate: DateTime(2026, 8, 2), endDate: DateTime(2026, 12, 1)),
+          _term(
+            id: 't3',
+            name: 'Term 3',
+            startDate: DateTime(2026, 8, 2),
+            endDate: DateTime(2026, 12, 1),
+          ),
         ];
         expect(allValid(complete), isTrue);
       },
@@ -491,9 +502,9 @@ void main() {
 
     setUp(() {
       repository = _MockStructureRepository();
-      when(() => repository.watchLevels(any())).thenAnswer(
-        (_) => const Stream.empty(),
-      );
+      when(
+        () => repository.watchLevels(any()),
+      ).thenAnswer((_) => const Stream.empty());
       bloc = StructureBloc(repository: repository);
     });
 
@@ -555,21 +566,49 @@ void main() {
       expect(find.text('Calendar summary'), findsOneWidget);
     });
 
-    testWidgets('offers Terms (Recommended) and Semesters with no forced default', (
-      tester,
-    ) async {
-      await pumpAt(tester, const Size(390, 844));
-      expect(find.text('Terms'), findsOneWidget);
-      expect(find.text('Semesters'), findsOneWidget);
-      expect(find.text('Recommended'), findsOneWidget);
-      // Continue is disabled until a system is chosen.
-      final continueButton = find.widgetWithText(
-        FilledButton,
-        'Save & continue',
-      );
-      expect(continueButton, findsOneWidget);
-      final button = tester.widget<FilledButton>(continueButton);
-      expect(button.onPressed, isNull);
-    });
+    testWidgets(
+      'offers Terms (Recommended) and Semesters with no forced default',
+      (tester) async {
+        await pumpAt(tester, const Size(390, 844));
+        expect(find.text('Terms'), findsOneWidget);
+        expect(find.text('Semesters'), findsOneWidget);
+        expect(find.text('Recommended'), findsOneWidget);
+        // Continue is disabled until a system is chosen.
+        final continueButton = find.widgetWithText(
+          ElevatedButton,
+          'Save & Continue',
+        );
+        expect(continueButton, findsOneWidget);
+        final button = tester.widget<ElevatedButton>(continueButton);
+        expect(button.onPressed, isNull);
+      },
+    );
+
+    testWidgets(
+      'regression: a period row Name field is freely editable, not locked '
+      'to the "Term N"/"Semester N" seed labels',
+      (tester) async {
+        await pumpAt(tester, const Size(390, 844));
+
+        await tester.tap(find.text('Terms'));
+        await tester.pumpAndSettle();
+
+        // The first period row is auto-expanded with its seed name "Term 1".
+        expect(find.text('Term 1'), findsWidgets);
+
+        final nameField = find.widgetWithText(TextFormField, 'Term 1');
+        expect(nameField, findsOneWidget);
+
+        await tester.enterText(nameField, 'Trimester 1');
+        await tester.pump();
+
+        // The custom name now replaces the seed label everywhere it's shown
+        // (accordion header + field), proving nothing enforces the fixed
+        // "Term 1/2/3" / "Semester 1/2" option sets once a school renames a
+        // period.
+        expect(find.text('Trimester 1'), findsWidgets);
+        expect(find.text('Term 1'), findsNothing);
+      },
+    );
   });
 }
