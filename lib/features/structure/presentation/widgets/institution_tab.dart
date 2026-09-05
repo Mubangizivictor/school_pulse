@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,8 +7,10 @@ import 'package:file_picker/file_picker.dart' as file_picker;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/branding/domain/entities/school_branding.dart';
@@ -56,6 +60,14 @@ class InstitutionTabState extends State<InstitutionTab> {
     final formState = _formKey.currentState;
     if (formState == null) return false;
     return formState.saveAndValidateForContinue();
+  }
+
+  /// Saves whatever is currently filled in without enforcing required-field
+  /// validation, so an incomplete Step 1 can still be saved as a draft.
+  Future<void> saveDraft() async {
+    final formState = _formKey.currentState;
+    if (formState == null) return;
+    return formState.saveDraft();
   }
 
   @override
@@ -413,16 +425,39 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     if (!_formKey.currentState!.validate()) return;
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
+    if (!await di.sl<NetworkInfo>().isConnected) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'You are offline. Reconnect to save institution profile changes.',
+          ),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
     setState(() => _isSaving = true);
     try {
+      final before = widget.profile;
       final profile = _buildProfile();
+      if (!mounted) return;
       context.read<StructureBloc>().add(
         UpdateInstitutionProfileRequested(profile, authState.user.schoolId),
+      );
+      unawaited(
+        _auditInstitutionProfileChange(
+          schoolId: authState.user.schoolId,
+          userId: authState.user.id,
+          before: before,
+          after: profile,
+        ),
       );
       // The profile stream remains the durable source of truth. This local
       // event gives the active tenant theme an immediate, safe refresh while
       // the Firestore acknowledgement and branding-version update arrive.
       try {
+        if (!mounted) return;
         context.read<BrandingBloc>().add(
           BrandingUpdateRequested(
             SchoolBranding(
@@ -468,6 +503,50 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     }
   }
 
+  /// One audit entry per successful save, naming only which fields changed
+  /// (no field values - identity contact details are not secrets, but this
+  /// keeps the log itself free of anything worth minimising) plus actor and
+  /// timestamps. Runs after the Firestore write is already dispatched, so a
+  /// failure here never blocks or rolls back the profile save itself.
+  Future<void> _auditInstitutionProfileChange({
+    required String schoolId,
+    required String userId,
+    required InstitutionProfile before,
+    required InstitutionProfile after,
+  }) async {
+    final changedFields = <String>[];
+    void diff(String field, Object? a, Object? b) {
+      if (a != b) changedFields.add(field);
+    }
+
+    diff('name', before.name, after.name);
+    diff('shortName', before.shortName, after.shortName);
+    diff('schoolType', before.schoolType, after.schoolType);
+    diff('schoolCategory', before.schoolCategory, after.schoolCategory);
+    diff('phone', before.phone, after.phone);
+    diff('email', before.email, after.email);
+    diff('website', before.website, after.website);
+    diff('address', before.address, after.address);
+    diff('district', before.district, after.district);
+    diff('city', before.city, after.city);
+    diff('country', before.country, after.country);
+    diff('logoUrl', before.logoUrl, after.logoUrl);
+    if (changedFields.isEmpty) return;
+    try {
+      await di.sl<AuditRepository>().logAction(
+        schoolId: schoolId,
+        title: 'School identity updated',
+        description: 'Changed: ${changedFields.join(', ')}',
+        iconName: 'school_outlined',
+        colorHex: '#3A6EA5',
+        userId: userId,
+        relatedEntityId: 'institution_profile',
+      );
+    } catch (_) {
+      // Audit is best-effort; never surface a failure here as a save error.
+    }
+  }
+
   /// Saves in place when the form has unsaved, valid edits. Returns false
   /// (and leaves validation errors visible) when the form is dirty but
   /// invalid, so the caller can keep the admin on this step.
@@ -484,6 +563,14 @@ class _InstitutionFormState extends State<_InstitutionForm> {
     if (!_formKey.currentState!.validate()) return false;
     if (_isDirty) await _save();
     return true;
+  }
+
+  /// Persists whatever is currently filled in without enforcing the
+  /// required-field validators used by "Save & continue" - a draft may
+  /// legitimately be incomplete.
+  Future<void> saveDraft() async {
+    if (!_isDirty) return;
+    await _save();
   }
 
   Future<bool> confirmDiscardIfDirty(BuildContext context) async {
@@ -1132,195 +1219,155 @@ class _InstitutionFormState extends State<_InstitutionForm> {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
               children: [
                 const Text(
-                  'Tell us about your institution.',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  'Tell us about your school.',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
                 ),
-                const SizedBox(height: 20),
-                _wizardField(
-                  controller: _name,
-                  label: 'Institution name *',
-                  hint: 'Enter institution name',
-                  validator: _requiredValidator,
+                const SizedBox(height: 6),
+                const Text(
+                  'This information helps us set up your school on School '
+                  'Pulse. Required fields marked *',
+                  style: TextStyle(color: Colors.black54, fontSize: 13),
                 ),
-                _wizardField(
-                  controller: _shortName,
-                  label: 'Short name (optional)',
-                  hint: 'Enter short name',
-                ),
-                _WizardTwoColumn(
-                  isNarrow: isNarrow,
-                  left: _wizardDropdown(
-                    label: 'School type *',
-                    hint: 'Select school type',
-                    value: _schoolType,
-                    values: _schoolTypes,
-                    required: true,
-                    onChanged: (value) => setState(() {
-                      _schoolType = value;
-                      _isDirty = true;
-                    }),
-                  ),
-                  right: _wizardDropdown(
-                    label: 'School category (optional)',
-                    hint: 'Select school category',
-                    value: _schoolCategory,
-                    values: _schoolCategories,
-                    onChanged: (value) => setState(() {
-                      _schoolCategory = value;
-                      _isDirty = true;
-                    }),
-                  ),
-                ),
-                _WizardTwoColumn(
-                  isNarrow: isNarrow,
-                  left: _wizardDistrictField(),
-                  right: _wizardField(
-                    controller: _city,
-                    label: 'Town *',
-                    hint: 'Enter town',
-                    validator: _requiredValidator,
-                  ),
-                ),
-                _wizardField(
-                  controller: _address,
-                  label: 'Physical address (optional)',
-                  hint: 'Enter physical address',
-                ),
-                _wizardField(
-                  controller: _phone,
-                  label: 'Main phone *',
-                  hint: 'Enter main phone number',
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+                const SizedBox(height: 16),
+                _wizardEssentialInfoCard(isNarrow),
+                const SizedBox(height: 12),
+                _WizardExpandableSection(
+                  icon: Icons.description_outlined,
+                  title: 'More profile details (optional)',
+                  subtitle: 'Short name, motto, vision and mission.',
+                  children: [
+                    _wizardField(
+                      controller: _shortName,
+                      label: 'Short name (optional)',
+                      hint: 'Enter short name',
+                    ),
+                    _wizardField(
+                      controller: _motto,
+                      label: 'Motto (optional)',
+                      hint: 'Enter motto',
+                    ),
+                    _wizardField(
+                      controller: _vision,
+                      label: 'Vision (optional)',
+                      hint: 'Enter vision',
+                      maxLines: 3,
+                    ),
+                    _wizardField(
+                      controller: _mission,
+                      label: 'Mission (optional)',
+                      hint: 'Enter mission',
+                      maxLines: 3,
+                    ),
                   ],
-                  validator: _phoneValidator,
-                ),
-                _wizardField(
-                  controller: _email,
-                  label: 'Main email *',
-                  hint: 'Enter main email address',
-                  keyboardType: TextInputType.emailAddress,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.deny(RegExp(r'\s')),
-                  ],
-                  validator: _emailValidator,
-                ),
-                const SizedBox(height: 8),
-                _wizardSectionTitle('About the institution'),
-                _wizardField(
-                  controller: _motto,
-                  label: 'Motto (optional)',
-                  hint: 'Enter motto',
-                ),
-                _wizardField(
-                  controller: _vision,
-                  label: 'Vision (optional)',
-                  hint: 'Enter vision',
-                  maxLines: 3,
-                ),
-                _wizardField(
-                  controller: _mission,
-                  label: 'Mission (optional)',
-                  hint: 'Enter mission',
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 8),
-                _wizardSectionTitle('Brand identity'),
-                _WizardTwoColumn(
-                  isNarrow: isNarrow,
-                  left: _BrandImagePicker(
-                    label: 'School logo (optional)',
-                    actionLabel: _logoUrl.isEmpty
-                        ? 'Upload logo'
-                        : 'Replace logo',
-                    imageUrl: _logoUrl,
-                    isUploading: _isUploadingLogo,
-                    monochrome: true,
-                    onPick: () => _pickBrandingImage(isLogo: true),
-                    onRemove: () => _removeBrandingImage(isLogo: true),
-                  ),
-                  right: _BrandImagePicker(
-                    label: 'School crest (optional)',
-                    actionLabel: _badgeUrl.isEmpty
-                        ? 'Upload crest'
-                        : 'Replace crest',
-                    imageUrl: _badgeUrl,
-                    isUploading: _isUploadingBadge,
-                    monochrome: true,
-                    onPick: () => _pickBrandingImage(isLogo: false),
-                    onRemove: () => _removeBrandingImage(isLogo: false),
-                  ),
                 ),
                 const SizedBox(height: 12),
-                _wizardSectionTitle('Registration details'),
-                _wizardField(
-                  controller: _registrationNumber,
-                  label: 'Registration number (optional)',
-                  hint: 'Enter registration number',
-                ),
-                _wizardField(
-                  controller: _ministryRegistrationNumber,
-                  label: 'Ministry registration (optional)',
-                  hint: 'Enter ministry registration',
-                ),
-                _wizardField(
-                  controller: _taxNumber,
-                  label: 'TIN (optional)',
-                  hint: 'Enter TIN',
-                  keyboardType: TextInputType.number,
-                ),
-                _wizardField(
-                  controller: _website,
-                  label: 'Website (optional)',
-                  hint: 'Enter website',
-                  keyboardType: TextInputType.url,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                _WizardExpandableSection(
+                  icon: Icons.account_balance_outlined,
+                  title: 'Branding, registration & location (optional)',
+                  subtitle:
+                      'Logo, crest, registration details, website and GPS '
+                      'location.',
+                  children: [
+                    _wizardSectionTitle('Brand identity'),
+                    _WizardTwoColumn(
+                      isNarrow: isNarrow,
+                      left: _BrandImagePicker(
+                        label: 'School logo (optional)',
+                        actionLabel: _logoUrl.isEmpty
+                            ? 'Upload logo'
+                            : 'Replace logo',
+                        imageUrl: _logoUrl,
+                        isUploading: _isUploadingLogo,
+                        monochrome: true,
+                        onPick: () => _pickBrandingImage(isLogo: true),
+                        onRemove: () => _removeBrandingImage(isLogo: true),
+                      ),
+                      right: _BrandImagePicker(
+                        label: 'School crest (optional)',
+                        actionLabel: _badgeUrl.isEmpty
+                            ? 'Upload crest'
+                            : 'Replace crest',
+                        imageUrl: _badgeUrl,
+                        isUploading: _isUploadingBadge,
+                        monochrome: true,
+                        onPick: () => _pickBrandingImage(isLogo: false),
+                        onRemove: () => _removeBrandingImage(isLogo: false),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _wizardSectionTitle('Registration details'),
+                    _wizardField(
+                      controller: _registrationNumber,
+                      label: 'Registration number (optional)',
+                      hint: 'Enter registration number',
+                    ),
+                    _wizardField(
+                      controller: _ministryRegistrationNumber,
+                      label: 'Ministry registration (optional)',
+                      hint: 'Enter ministry registration',
+                    ),
+                    _wizardField(
+                      controller: _taxNumber,
+                      label: 'TIN (optional)',
+                      hint: 'Enter TIN',
+                      keyboardType: TextInputType.number,
+                    ),
+                    _wizardField(
+                      controller: _website,
+                      label: 'Website (optional)',
+                      hint: 'Enter website',
+                      keyboardType: TextInputType.url,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                      ],
+                      validator: _websiteValidator,
+                    ),
+                    const SizedBox(height: 12),
+                    _wizardSectionTitle('Location coordinates'),
+                    _wizardCountryField(),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: _detectLocation,
+                        icon: const Icon(
+                          Icons.my_location_outlined,
+                          size: 16,
+                        ),
+                        label: const Text(
+                          'Use current location',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ),
+                    _WizardTwoColumn(
+                      isNarrow: isNarrow,
+                      left: _wizardField(
+                        controller: _gpsLat,
+                        label: 'GPS latitude (optional)',
+                        hint: 'Enter latitude',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                          signed: true,
+                        ),
+                      ),
+                      right: _wizardField(
+                        controller: _gpsLng,
+                        label: 'GPS longitude (optional)',
+                        hint: 'Enter longitude',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                          signed: true,
+                        ),
+                      ),
+                    ),
                   ],
-                  validator: _websiteValidator,
                 ),
-                const SizedBox(height: 12),
-                _wizardSectionTitle('Location coordinates'),
-                _wizardCountryField(),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: _detectLocation,
-                    icon: const Icon(Icons.my_location_outlined, size: 16),
-                    label: const Text(
-                      'Use current location',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                  ),
-                ),
-                _WizardTwoColumn(
-                  isNarrow: isNarrow,
-                  left: _wizardField(
-                    controller: _gpsLat,
-                    label: 'GPS latitude (optional)',
-                    hint: 'Enter latitude',
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                      signed: true,
-                    ),
-                  ),
-                  right: _wizardField(
-                    controller: _gpsLng,
-                    label: 'GPS longitude (optional)',
-                    hint: 'Enter longitude',
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                      signed: true,
-                    ),
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(top: 4),
-                  child: Text(
-                    'You can update optional details later.',
-                    style: TextStyle(color: Colors.black, fontSize: 12),
-                  ),
+                const SizedBox(height: 16),
+                const _WizardInfoNote(
+                  text:
+                      'You can update this later. You can edit all optional '
+                      'details from your school settings any time after '
+                      'setup.',
                 ),
               ],
             );
@@ -1329,6 +1376,94 @@ class _InstitutionFormState extends State<_InstitutionForm> {
       ),
     );
   }
+
+  Widget _wizardEssentialInfoCard(bool isNarrow) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF5F5F5),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Essential information',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 2),
+        const Text(
+          "Let's start with the basics.",
+          style: TextStyle(color: Colors.black54, fontSize: 12.5),
+        ),
+        const SizedBox(height: 14),
+        _wizardField(
+          controller: _name,
+          label: 'Institution name *',
+          hint: 'Enter institution name',
+          validator: _requiredValidator,
+        ),
+        _WizardTwoColumn(
+          isNarrow: isNarrow,
+          left: _wizardDropdown(
+            label: 'School type *',
+            hint: 'Select school type',
+            value: _schoolType,
+            values: _schoolTypes,
+            required: true,
+            onChanged: (value) => setState(() {
+              _schoolType = value;
+              _isDirty = true;
+            }),
+          ),
+          right: _wizardDropdown(
+            label: 'School category (optional)',
+            hint: 'Select school category',
+            value: _schoolCategory,
+            values: _schoolCategories,
+            onChanged: (value) => setState(() {
+              _schoolCategory = value;
+              _isDirty = true;
+            }),
+          ),
+        ),
+        _WizardTwoColumn(
+          isNarrow: isNarrow,
+          left: _wizardDistrictField(),
+          right: _wizardField(
+            controller: _city,
+            label: 'Town *',
+            hint: 'Enter town',
+            validator: _requiredValidator,
+          ),
+        ),
+        _wizardField(
+          controller: _address,
+          label: 'Physical address (optional)',
+          hint: 'Enter physical address',
+        ),
+        _wizardField(
+          controller: _phone,
+          label: 'Main phone *',
+          hint: 'Enter main phone number',
+          keyboardType: TextInputType.phone,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+          ],
+          validator: _phoneValidator,
+        ),
+        _wizardField(
+          controller: _email,
+          label: 'Main email *',
+          hint: 'Enter main email address',
+          keyboardType: TextInputType.emailAddress,
+          inputFormatters: [
+            FilteringTextInputFormatter.deny(RegExp(r'\s')),
+          ],
+          validator: _emailValidator,
+        ),
+      ],
+    ),
+  );
 
   Widget _wizardSectionTitle(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 14),
@@ -1913,6 +2048,86 @@ class _WizardTwoColumn extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(child: right),
       ],
+    );
+  }
+}
+
+/// Collapsed-by-default accordion section used by Step 1's optional field
+/// groups ("More profile details", "Branding, registration & location").
+class _WizardExpandableSection extends StatelessWidget {
+  const _WizardExpandableSection({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.children,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: Material(
+        color: const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          iconColor: Colors.black,
+          collapsedIconColor: Colors.black,
+          leading: Icon(icon, color: Colors.black, size: 20),
+          title: Text(
+            title,
+            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+          ),
+          subtitle: Text(
+            subtitle,
+            style: const TextStyle(color: Colors.black54, fontSize: 12),
+          ),
+          children: children,
+        ),
+      ),
+    );
+  }
+}
+
+/// Pale-blue "you can update this later" note shown under Step 1's optional
+/// sections.
+class _WizardInfoNote extends StatelessWidget {
+  const _WizardInfoNote({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F1FC),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            color: Color(0xFF1565C0),
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(color: Color(0xFF1565C0), fontSize: 12.5),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

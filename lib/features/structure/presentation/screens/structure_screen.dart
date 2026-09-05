@@ -405,6 +405,7 @@ class _StructureScreenState extends State<StructureScreen> {
           );
         }
         return _InstitutionProfileStep(
+          steps: _steps,
           onBack: () async {
             if (!await _confirmLeaveCurrentStep()) return;
             if (context.mounted) Navigator.of(context).maybePop();
@@ -413,6 +414,9 @@ class _StructureScreenState extends State<StructureScreen> {
             if (!await _confirmLeaveCurrentStep()) return;
             if (!mounted) return;
             setState(() => _index++);
+          },
+          onSaveDraft: () async {
+            await _institutionTabKey.currentState?.saveDraft();
           },
           child: InstitutionSettingsScreen(
             tabKey: _institutionTabKey,
@@ -620,80 +624,93 @@ class _Review extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: scheme.outlineVariant),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.check_circle_outline, color: Colors.black, size: 32),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 900),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: scheme.outlineVariant),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline,
+                        color: scheme.primary,
+                        size: 32,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Setup ready',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            Text(
+                              '$configuredCount configured'
+                              '${needsAttentionCount > 0 ? ' • $needsAttentionCount need attention' : ''}',
+                              style: TextStyle(color: scheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _ReviewCategory(
+                  title: 'Academic structure',
+                  icon: Icons.school_outlined,
+                  rows: academicStructure,
+                  onJump: onJump,
+                ),
+                const SizedBox(height: 12),
+                _ReviewCategory(
+                  title: 'People & assessment',
+                  icon: Icons.groups_2_outlined,
+                  rows: peopleAndAssessment,
+                  onJump: onJump,
+                ),
+                const SizedBox(height: 12),
+                _ReviewCategory(
+                  title: 'Facilities',
+                  icon: Icons.apartment_outlined,
+                  rows: facilities,
+                  onJump: onJump,
+                ),
+                const SizedBox(height: 12),
+                _ReviewCategory(
+                  title: 'Curriculum & scheduling',
+                  icon: Icons.event_note_outlined,
+                  rows: schedulingAndFeatures,
+                  onJump: onJump,
+                ),
+                const SizedBox(height: 16),
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Setup ready',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                    Icon(Icons.info_outline, size: 18, color: scheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'You can finish now and complete optional items later.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                    Text(
-                      '$configuredCount configured'
-                      '${needsAttentionCount > 0 ? ' • $needsAttentionCount need attention' : ''}',
-                      style: TextStyle(color: scheme.onSurfaceVariant),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        _ReviewCategory(
-          title: 'Academic structure',
-          icon: Icons.school_outlined,
-          rows: academicStructure,
-          onJump: onJump,
-        ),
-        const SizedBox(height: 12),
-        _ReviewCategory(
-          title: 'People & assessment',
-          icon: Icons.groups_2_outlined,
-          rows: peopleAndAssessment,
-          onJump: onJump,
-        ),
-        const SizedBox(height: 12),
-        _ReviewCategory(
-          title: 'Facilities',
-          icon: Icons.apartment_outlined,
-          rows: facilities,
-          onJump: onJump,
-        ),
-        const SizedBox(height: 12),
-        _ReviewCategory(
-          title: 'Curriculum & scheduling',
-          icon: Icons.event_note_outlined,
-          rows: schedulingAndFeatures,
-          onJump: onJump,
-        ),
-        const SizedBox(height: 16),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.info_outline, size: 18, color: scheme.primary),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'You can finish now and complete optional items later.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ],
     );
@@ -819,52 +836,81 @@ class _WizardStepScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isFirstStep = stepNumber <= 1;
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: SafeArea(
         child: Column(
           children: [
-            WizardStepProgress(
-              currentStep: stepNumber - 1,
-              stepCount: totalSteps,
-              stepTitle: title,
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 900),
+                child: WizardStepProgress(
+                  currentStep: stepNumber - 1,
+                  stepCount: totalSteps,
+                  stepTitle: title,
+                ),
+              ),
             ),
             const Divider(height: 1),
-            Expanded(child: child),
+            Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
+                  child: child,
+                ),
+              ),
+            ),
           ],
         ),
       ),
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            border: Border(
-              top: BorderSide(
-                color: Theme.of(context).colorScheme.outlineVariant,
-              ),
-            ),
+            color: scheme.surface,
+            border: Border(top: BorderSide(color: scheme.outlineVariant)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black,
+                color: scheme.shadow.withValues(alpha: 0.15),
                 blurRadius: 8,
                 offset: const Offset(0, -2),
               ),
             ],
           ),
-          child: Row(
+          // A bare Center expands to the full height offered by Scaffold's
+          // bottom-navigation slot. That left the body with zero height,
+          // making every wizard step appear blank except for this action.
+          // The shrink-wrapped Column keeps the footer at its content height
+          // while still allowing the action row to be centred on wide screens.
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (!isFirstStep)
-                Expanded(
-                  child: SecondaryButton(label: 'Back', onPressed: onBack),
-                ),
-              if (!isFirstStep) const SizedBox(width: 12),
-              Expanded(
-                child: PrimaryButton(
-                  label: continueLabel,
-                  icon: continueIcon,
-                  onPressed: continueEnabled ? onContinue : null,
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                    child: Row(
+                      children: [
+                        if (!isFirstStep)
+                          Expanded(
+                            child: SecondaryButton(
+                              label: 'Back',
+                              onPressed: onBack,
+                            ),
+                          ),
+                        if (!isFirstStep) const SizedBox(width: 12),
+                        Expanded(
+                          child: PrimaryButton(
+                            label: continueLabel,
+                            icon: continueIcon,
+                            onPressed: continueEnabled ? onContinue : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -877,128 +923,512 @@ class _WizardStepScreen extends StatelessWidget {
 
 /// The first setup screen intentionally has its own mobile treatment. Later
 /// setup steps continue using [_WizardStepScreen] unchanged.
-class _InstitutionProfileStep extends StatelessWidget {
+class _InstitutionProfileStep extends StatefulWidget {
   const _InstitutionProfileStep({
+    required this.steps,
     required this.onBack,
     required this.onContinue,
+    required this.onSaveDraft,
     required this.child,
   });
 
+  final List<_StructureStep> steps;
   final Future<void> Function() onBack;
   final Future<void> Function() onContinue;
+  final Future<void> Function() onSaveDraft;
   final Widget child;
 
   @override
+  State<_InstitutionProfileStep> createState() =>
+      _InstitutionProfileStepState();
+}
+
+class _InstitutionProfileStepState extends State<_InstitutionProfileStep> {
+  bool _isSavingDraft = false;
+
+  Future<void> _handleSaveDraft() async {
+    if (_isSavingDraft) return;
+    setState(() => _isSavingDraft = true);
+    try {
+      await widget.onSaveDraft();
+    } finally {
+      if (mounted) setState(() => _isSavingDraft = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-              child: Column(
-                children: [
-                  SizedBox(
-                    height: 36,
-                    child: Stack(
-                      alignment: Alignment.center,
+    // The institution form is intentionally a light monochrome setup
+    // surface (its fields use black labels and borders). Keep its enclosing
+    // scaffold on the same surface too; otherwise, in dark mode, the form's
+    // transparent inner scaffold exposes a dark page behind black controls.
+    final monochromeTheme = ThemeData.light(useMaterial3: true).copyWith(
+      colorScheme: const ColorScheme.light(
+        primary: Colors.black,
+        onPrimary: Colors.white,
+        surface: Colors.white,
+        onSurface: Colors.black,
+        outline: Colors.black,
+      ),
+      scaffoldBackgroundColor: Colors.white,
+    );
+    return Theme(
+      data: monochromeTheme,
+      child: Builder(
+        builder: (context) {
+          final scheme = Theme.of(context).colorScheme;
+          return Scaffold(
+            backgroundColor: scheme.surface,
+            body: SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth >= 900;
+                  if (isWide) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: IconButton(
-                            onPressed: onBack,
-                            icon: const Icon(
-                              Icons.arrow_back_ios_new_rounded,
-                              size: 20,
-                            ),
-                            color: Colors.black,
-                          ),
+                        _WizardStepNavigator(
+                          steps: widget.steps,
+                          currentIndex: 0,
+                          onSaveDraft: _isSavingDraft ? null : _handleSaveDraft,
                         ),
-                        const Text(
-                          'Institution profile',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
+                        VerticalDivider(width: 1, color: scheme.outlineVariant),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  32,
+                                  20,
+                                  32,
+                                  8,
+                                ),
+                                child: Row(
+                                  children: [
+                                    TextButton.icon(
+                                      onPressed: widget.onBack,
+                                      icon: const Icon(
+                                        Icons.arrow_back_rounded,
+                                        size: 18,
+                                      ),
+                                      label: const Text('Back'),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Institution profile',
+                                        style: TextStyle(
+                                          color: scheme.onSurface,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: _isSavingDraft
+                                          ? null
+                                          : _handleSaveDraft,
+                                      child: _isSavingDraft
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Text('Save draft'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                child: Center(
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 720,
+                                    ),
+                                    child: widget.child,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
+                    );
+                  }
+                  return Column(
+                    children: [
+                      _WizardCompactHeader(
+                        onBack: widget.onBack,
+                        onSaveDraft: _isSavingDraft ? null : _handleSaveDraft,
+                        stepIndex: 0,
+                        stepCount: widget.steps.length,
+                        stepTitle: 'Institution profile',
+                      ),
+                      Divider(height: 1, color: scheme.outlineVariant),
+                      Expanded(
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 900),
+                            child: widget.child,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            bottomNavigationBar: SafeArea(
+              top: false,
+              child: Container(
+                color: scheme.surface,
+                // Keep the footer intrinsic-height. A bare Center here expands to
+                // Scaffold's entire bottom-navigation constraint, leaving zero
+                // height for the institution form on desktop and mobile alike.
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 900),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+                          child: Row(
+                            children: [
+                              if (MediaQuery.sizeOf(context).width >= 900) ...[
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 52,
+                                    child: OutlinedButton.icon(
+                                      onPressed: _isSavingDraft
+                                          ? null
+                                          : _handleSaveDraft,
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: scheme.onSurface,
+                                        side: BorderSide(
+                                          color: scheme.outline,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                        ),
+                                      ),
+                                      icon: _isSavingDraft
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.description_outlined,
+                                              size: 18,
+                                            ),
+                                      label: const Text(
+                                        'Save draft',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                              Expanded(
+                                child: SizedBox(
+                                  height: 52,
+                                  child: FilledButton.icon(
+                                    onPressed: widget.onContinue,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: scheme.primary,
+                                      foregroundColor: scheme.onPrimary,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          14,
+                                        ),
+                                      ),
+                                    ),
+                                    iconAlignment: IconAlignment.end,
+                                    icon: const Icon(
+                                      Icons.arrow_forward_rounded,
+                                      size: 20,
+                                    ),
+                                    label: const Text(
+                                      'Save & continue',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Mobile/tablet sticky top bar for Step 1: Back, title, Save draft, then
+/// a slim "N of 16 · Institution profile" progress row with a percentage
+/// and a single filled progress bar (replacing the old 16-segment bar).
+class _WizardCompactHeader extends StatelessWidget {
+  const _WizardCompactHeader({
+    required this.onBack,
+    required this.onSaveDraft,
+    required this.stepIndex,
+    required this.stepCount,
+    required this.stepTitle,
+  });
+
+  final Future<void> Function() onBack;
+  final Future<void> Function()? onSaveDraft;
+  final int stepIndex;
+  final int stepCount;
+  final String stepTitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final percent = (((stepIndex + 1) / stepCount) * 100).round();
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 900),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: onBack,
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      size: 18,
+                    ),
+                    color: scheme.onSurface,
+                  ),
+                  const Expanded(
+                    child: Text(
+                      'School setup',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Step 1 of 16',
-                        style: TextStyle(color: Colors.black, fontSize: 13),
-                      ),
-                      Text(
-                        '6%',
-                        style: TextStyle(color: Colors.black, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      for (int i = 0; i < 16; i++) ...[
-                        if (i > 0) const SizedBox(width: 4),
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(3),
-                            child: LinearProgressIndicator(
-                              value: 1,
-                              minHeight: 5,
-                              // The active step is solid; the remaining
-                              // segments stay visible without reading as
-                              // completed progress.
-                              backgroundColor: Colors.black.withValues(
-                                alpha: 0.2,
-                              ),
-                              color: i == 0
-                                  ? Colors.black
-                                  : Colors.black.withValues(alpha: 0.2),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+                  TextButton(
+                    onPressed: onSaveDraft,
+                    child: onSaveDraft == null
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Save draft'),
                   ),
                 ],
               ),
-            ),
-            const Divider(height: 1, color: Colors.black),
-            Expanded(child: child),
-          ],
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-          child: SizedBox(
-            height: 52,
-            child: FilledButton.icon(
-              onPressed: onContinue,
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${stepIndex + 1} of $stepCount · $stepTitle',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '$percent%',
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(
+                  value: (stepIndex + 1) / stepCount,
+                  minHeight: 5,
+                  backgroundColor: scheme.primary.withValues(alpha: 0.15),
+                  color: scheme.primary,
                 ),
               ),
-              iconAlignment: IconAlignment.end,
-              icon: const Icon(Icons.arrow_forward_rounded, size: 20),
-              label: const Text(
-                'Save & continue',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-            ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Narrow left step navigator shown on wide/web layouts while Step 1 is
+/// active: a compact "School setup" heading, overall percent, and the
+/// 1-16 step list with the current step highlighted.
+class _WizardStepNavigator extends StatelessWidget {
+  const _WizardStepNavigator({
+    required this.steps,
+    required this.currentIndex,
+    required this.onSaveDraft,
+  });
+
+  final List<_StructureStep> steps;
+  final int currentIndex;
+  final Future<void> Function()? onSaveDraft;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final percent = (((currentIndex + 1) / steps.length) * 100).round();
+    return SizedBox(
+      width: 260,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'School setup',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Complete your school profile to get started on School '
+                  'Pulse.',
+                  style: TextStyle(color: Colors.black54, fontSize: 12),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Text(
+                      '$percent% complete',
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 11.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: LinearProgressIndicator(
+                    value: (currentIndex + 1) / steps.length,
+                    minHeight: 4,
+                    backgroundColor: scheme.primary.withValues(alpha: 0.15),
+                    color: scheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: onSaveDraft,
+                    icon: onSaveDraft == null
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.description_outlined, size: 16),
+                    label: const Text(
+                      'Save draft',
+                      style: TextStyle(fontSize: 12.5),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              itemCount: steps.length,
+              itemBuilder: (context, index) {
+                final isCurrent = index == currentIndex;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Material(
+                    color: isCurrent
+                        ? scheme.primary.withValues(alpha: 0.08)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 12,
+                            backgroundColor: isCurrent
+                                ? scheme.primary
+                                : Colors.black.withValues(alpha: 0.06),
+                            child: Text(
+                              '${index + 1}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: isCurrent
+                                    ? scheme.onPrimary
+                                    : Colors.black54,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              steps[index].title,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: isCurrent
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: isCurrent
+                                    ? scheme.primary
+                                    : Colors.black87,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

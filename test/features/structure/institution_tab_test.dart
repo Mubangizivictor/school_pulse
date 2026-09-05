@@ -235,7 +235,139 @@ void main() {
       );
       expect(field, findsOneWidget);
       expect(tester.getSize(field).height, greaterThan(0));
-      expect(find.text('Tell us about your institution.'), findsOneWidget);
+      expect(find.text('Tell us about your school.'), findsOneWidget);
+      expect(find.text('Essential information'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'wizard mode keeps the optional sections collapsed until tapped',
+    (tester) async {
+      tester.view.physicalSize = const Size(430, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<AuthBloc>.value(value: authBloc),
+            BlocProvider<StructureBloc>.value(value: structureBloc),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.dark(),
+            home: Scaffold(
+              body: InstitutionTab(wizardMode: true),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('More profile details (optional)'), findsOneWidget);
+      expect(
+        find.text('Branding, registration & location (optional)'),
+        findsOneWidget,
+      );
+      // Collapsed by default: fields inside the sections are not built.
+      expect(find.text('Motto (optional)'), findsNothing);
+      expect(find.text('Registration number (optional)'), findsNothing);
+
+      await tester.tap(find.text('More profile details (optional)'));
+      await tester.pumpAndSettle();
+      expect(find.text('Motto (optional)'), findsOneWidget);
+
+      await tester.tap(
+        find.text('Branding, registration & location (optional)'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Registration number (optional)'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'saveDraft persists an incomplete Step 1 without required-field errors',
+    (tester) async {
+      tester.view.physicalSize = const Size(430, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final tabKey = GlobalKey<InstitutionTabState>();
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<AuthBloc>.value(value: authBloc),
+            BlocProvider<StructureBloc>.value(value: structureBloc),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.dark(),
+            home: Scaffold(
+              body: InstitutionTab(key: tabKey, wizardMode: true),
+            ),
+          ),
+        ),
+      );
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Enter institution name'),
+        '',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Enter main phone number'),
+        'not-a-phone',
+      );
+      await tester.pump();
+
+      await tabKey.currentState!.saveDraft();
+      await tester.pumpAndSettle();
+
+      final captured = verify(
+        () => structureBloc.add(
+          captureAny(that: isA<UpdateInstitutionProfileRequested>()),
+        ),
+      ).captured;
+      expect(captured, hasLength(1));
+      expect(find.textContaining('saved'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'saveAndValidateForContinue still blocks on invalid required fields',
+    (tester) async {
+      tester.view.physicalSize = const Size(430, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final tabKey = GlobalKey<InstitutionTabState>();
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<AuthBloc>.value(value: authBloc),
+            BlocProvider<StructureBloc>.value(value: structureBloc),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.dark(),
+            home: Scaffold(
+              body: InstitutionTab(key: tabKey, wizardMode: true),
+            ),
+          ),
+        ),
+      );
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Enter institution name'),
+        '',
+      );
+      await tester.pump();
+
+      final canContinue = await tabKey.currentState!
+          .saveAndValidateForContinue();
+      await tester.pumpAndSettle();
+
+      expect(canContinue, isFalse);
+      verifyNever(() => structureBloc.add(any()));
     },
   );
 }
